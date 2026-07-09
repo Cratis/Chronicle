@@ -7,17 +7,10 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
 /// A read model carrying a <c>[Join]</c> whose source event is keyed by a string concept (an organization
-/// number) is spec-able: seeding the string-keyed source no longer force-converts the join key to the
-/// read model's Guid identifier and crashes the whole scenario. The read model materializes and its own
-/// properties can be asserted.
+/// number) both materializes and enriches: seeding the string-keyed source no longer force-converts the join
+/// key to the read model's Guid identifier and crashes the whole scenario, and the joined value is backfilled
+/// onto the root document — parity with a Guid-keyed join.
 /// </summary>
-/// <remarks>
-/// The joined value itself (<c>CustomerName</c>) is not asserted here: <c>ReadModelScenario</c> does not
-/// materialize root-level join enrichment (a pre-existing harness limitation that applies to Guid-keyed
-/// joins too — the real engine enriches via its join read-back, covered by the out-of-process integration
-/// specs). The point of this spec is that a string-concept-keyed join source no longer makes the read model
-/// entirely un-spec-able.
-/// </remarks>
 public class when_joining_a_string_concept_keyed_source : Specification
 {
     ReadModelScenario<EngagementSummary> _scenario;
@@ -39,4 +32,5 @@ public class when_joining_a_string_concept_keyed_source : Specification
 
     [Fact] void should_materialize_the_read_model() => _scenario.InstanceForEventSourceId(_engagementId).ShouldNotBeNull();
     [Fact] void should_keep_the_string_org_number() => _scenario.InstanceForEventSourceId(_engagementId)!.CustomerOrgNumber.Value.ShouldEqual("999888777");
+    [Fact] void should_backfill_the_joined_customer_name() => _scenario.InstanceForEventSourceId(_engagementId)!.CustomerName.ShouldEqual("Acme Corp");
 }

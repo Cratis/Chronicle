@@ -1,0 +1,28 @@
+# CHR0034: [PII] cannot be applied to an EventSourceId&lt;T&gt;
+
+## Rule Description
+
+A property or record parameter whose type derives from `EventSourceId<T>` is marked with `[PII]`. The event source id is the identity Chronicle uses to look up the encryption key for a subject, so it cannot itself be encrypted. Applying `[PII]` to it throws `PIINotSupportedOnEventSourceId` at runtime.
+
+Remove the `[PII]` attribute. The id is already the compliance subject.
+
+## Severity
+
+Error
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0034/violation" />
+
+## Why This Rule Exists
+
+Chronicle encrypts `[PII]` values per subject, and the subject is resolved from the event source id. That makes the id the key-lookup identity for every other encrypted value on the event. If the id itself were encrypted, there would be nothing left to resolve the key by — a circular dependency Chronicle cannot satisfy, so it throws `PIINotSupportedOnEventSourceId`.
+
+This analyzer turns that runtime failure into a compile-time error, caught the moment you write the attribute rather than the first time the event is appended.
+
+If the identifier itself is sensitive, do not try to encrypt the id. Instead use a random `Guid`-backed surrogate as the event source id and store the sensitive value in a separate `[PII]` property, which Chronicle can encrypt under the surrogate subject.
+
+## Related Rules
+
+- [CHR0026: [Key] or [Subject] on an EventSourceId&lt;T&gt; is redundant](CHR0026) — the id is already the key and the compliance subject.
+- [Subject](/chronicle/concepts/subject/) — how the compliance subject is resolved.

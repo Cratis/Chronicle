@@ -56,3 +56,11 @@
   href: CHR0031.mdx
 - name: CHR0032 - Reactor must not access storage directly
   href: CHR0032.mdx
+- name: CHR0034 - [PII] cannot be applied to an EventSourceId
+  href: CHR0034.mdx
+- name: CHR0035 - Read model declares a reserved '_subject' property
+  href: CHR0035.mdx
+- name: CHR0036 - Reducer must not have mutable state
+  href: CHR0036.mdx
+- name: CHR0037 - Event type migration generations must share one explicit [EventType] id
+  href: CHR0037.mdx

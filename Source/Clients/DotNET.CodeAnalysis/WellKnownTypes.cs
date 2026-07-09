@@ -117,6 +117,24 @@ public static class WellKnownTypes
     public const string NoAutoMapAttributeName = "Cratis.Chronicle.Projections.NoAutoMapAttribute";
 
     /// <summary>
+    /// The full name of the PII attribute.
+    /// </summary>
+    public const string PiiAttributeName = "Cratis.Chronicle.Compliance.GDPR.PIIAttribute";
+
+    /// <summary>
+    /// The full name of the Arc model-bound ReadModel attribute.
+    /// </summary>
+    /// <remarks>
+    /// Matched by full-name string so the analyzer does not need a reference to the Arc assembly.
+    /// </remarks>
+    public const string ReadModelAttributeName = "Cratis.Arc.Queries.ModelBound.ReadModelAttribute";
+
+    /// <summary>
+    /// The open-generic display string of the EventTypeMigration&lt;TUpgrade, TPrevious&gt; base class.
+    /// </summary>
+    public const string EventTypeMigrationGenericDisplay = "Cratis.Chronicle.Events.Migrations.EventTypeMigration<TUpgrade, TPrevious>";
+
+    /// <summary>
     /// The full name of the EventStreamId attribute.
     /// </summary>
     public const string EventStreamIdAttributeName = "Cratis.Chronicle.Events.EventStreamIdAttribute";
@@ -162,6 +180,63 @@ public static class WellKnownTypes
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Check whether a symbol carries an attribute with the given full name.
+    /// </summary>
+    /// <param name="symbol">The symbol to inspect.</param>
+    /// <param name="attributeFullName">The full display name of the attribute type.</param>
+    /// <returns>True if the symbol carries the attribute, false otherwise.</returns>
+    public static bool HasAttribute(ISymbol symbol, string attributeFullName) =>
+        symbol.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == attributeFullName);
+
+    /// <summary>
+    /// Find the <c>EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> base type of a type, if any.
+    /// </summary>
+    /// <param name="type">The type symbol to check.</param>
+    /// <returns>The constructed <c>EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> base, or <see langword="null"/> when the type does not derive from it.</returns>
+    public static INamedTypeSymbol? GetEventTypeMigrationBase(ITypeSymbol? type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (current is INamedTypeSymbol { IsGenericType: true } named &&
+                named.OriginalDefinition.ToDisplayString() == EventTypeMigrationGenericDisplay)
+            {
+                return named;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Get the <c>[EventType]</c> attribute data from a type, whether the client or kernel attribute.
+    /// </summary>
+    /// <param name="type">The type symbol to inspect.</param>
+    /// <returns>The <see cref="AttributeData"/> for the <c>[EventType]</c> attribute, or <see langword="null"/> when the type has none.</returns>
+    public static AttributeData? GetEventTypeAttributeData(ITypeSymbol type) =>
+        type.GetAttributes().FirstOrDefault(attribute =>
+        {
+            var attributeName = attribute.AttributeClass?.ToDisplayString();
+            return attributeName == KernelEventTypeAttributeName ||
+                   attributeName == ClientEventTypeAttributeName;
+        });
+
+    /// <summary>
+    /// Get the explicit id argument from an <c>[EventType]</c> attribute, or <see langword="null"/> when no explicit id was supplied.
+    /// </summary>
+    /// <param name="attributeData">The <c>[EventType]</c> attribute data.</param>
+    /// <returns>The explicit id string, or <see langword="null"/> when the id is absent or empty.</returns>
+    public static string? GetEventTypeExplicitId(AttributeData attributeData)
+    {
+        if (attributeData.ConstructorArguments.Length == 0)
+        {
+            return null;
+        }
+
+        var id = attributeData.ConstructorArguments[0].Value as string;
+        return string.IsNullOrEmpty(id) ? null : id;
     }
 
     /// <summary>

@@ -170,4 +170,24 @@ public static class DiagnosticIds
     /// A reactor injects a storage primitive (e.g. IMongoCollection&lt;T&gt;) directly.
     /// </summary>
     public const string ReactorMustNotAccessStorageDirectly = "CHR0032";
+
+    /// <summary>
+    /// A [PII] attribute is placed on a property or parameter whose type derives from EventSourceId&lt;T&gt;.
+    /// </summary>
+    public const string PiiOnEventSourceId = "CHR0034";
+
+    /// <summary>
+    /// A read model declares a property named '_subject', which Chronicle reserves as an internal field.
+    /// </summary>
+    public const string ReservedSubjectProperty = "CHR0035";
+
+    /// <summary>
+    /// A reducer declares mutable instance state or injects a storage primitive directly.
+    /// </summary>
+    public const string ReducerMustNotHaveMutableState = "CHR0036";
+
+    /// <summary>
+    /// The event type generations referenced by an event type migration must share one explicit [EventType] id.
+    /// </summary>
+    public const string MigrationGenerationEventTypeId = "CHR0037";
 }

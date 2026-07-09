@@ -1,0 +1,28 @@
+# CHR0035: Read model declares a reserved '_subject' property
+
+## Rule Description
+
+A read model — a record or class marked with `[ReadModel]` — declares a property or record parameter named exactly `_subject`. Chronicle reserves the `_subject` field in the MongoDB document backing a read model for internal compliance-subject tracking, so a same-named property silently collides with it.
+
+Rename the property.
+
+## Severity
+
+Error
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0035/violation" />
+
+## Why This Rule Exists
+
+Every managed read-model document carries an internal `_subject` field that Chronicle uses to track the compliance subject the document belongs to — the identity its `[PII]` values are encrypted under and erased by. That field is infrastructure, not part of your model.
+
+A read-model property named `_subject` maps to the same document field, so your value and Chronicle's internal tracking value fight over one slot. The projected value can overwrite the tracking value or read back as Chronicle's, and after a right-to-erasure key deletion the behavior is undefined. Because the collision is by name in the persisted document, nothing surfaces at compile time without this rule — it just misbehaves at runtime.
+
+Rename the property to anything else (for example `Subject`, without the leading underscore, if you genuinely need to expose the subject).
+
+## Related Rules
+
+- [Subject](/chronicle/concepts/subject/) — how the compliance subject is resolved and tracked.
+- [CHR0034: [PII] cannot be applied to an EventSourceId&lt;T&gt;](CHR0034) — the id is the compliance subject.

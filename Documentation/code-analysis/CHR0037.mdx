@@ -1,0 +1,35 @@
+# CHR0037: Event type migration generations must share one explicit [EventType] id
+
+## Rule Description
+
+A class deriving from `EventTypeMigration<TUpgrade, TPrevious>` references two event type generations whose `[EventType]` ids are absent or differ. Chronicle keys generations of the same event by their explicit `[EventType]` id, so both generations must carry the same id and differ only by their generation number.
+
+Give both event types the same explicit id, and set a distinct `generation:` on each.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0037/violation" />
+
+## Why This Rule Exists
+
+When an event's schema changes after events of the old shape are already stored, you add a new generation of the same event type and an `EventTypeMigration<TUpgrade, TPrevious>` that upcasts the stored events into the new shape. Chronicle recognizes the two records as generations of *one* event type by their shared `[EventType]` id — not by their C# type names.
+
+If the ids differ, or one generation has no explicit id (so it defaults to the type name), Chronicle sees two unrelated event types. The migration then never applies: stored events of the previous generation are never upcast, and consumers read the old shape. Because both records compile and the migration is discovered by convention, nothing surfaces the mistake without this rule.
+
+The correct shape is one id, two generations:
+
+```csharp
+[EventType("Customer.Registered", generation: 1)]
+public record CustomerRegisteredV1(string Name);
+
+[EventType("Customer.Registered", generation: 2)]
+public record CustomerRegisteredV2(string FirstName, string LastName);
+```
+
+## Related Rules
+
+- [CHR0021: Event types should be record types](CHR0021) — event types are immutable records.
