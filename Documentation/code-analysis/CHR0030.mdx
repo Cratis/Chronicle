@@ -1,0 +1,30 @@
+# CHR0030: [ChildrenFrom] child collection property auto-maps to nothing
+
+## Rule Description
+
+A collection property on a `[ChildrenFrom]` child is filled by AutoMap, which matches the event's property of the same name. When no source event carries a matching property and nothing maps it explicitly, the property silently projects as an empty collection. Rename the property to match the event, or bridge the names with `[SetFrom<TEvent>(nameof(...))]`.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0030/violation" />
+
+## Why This Rule Exists
+
+A `[ChildrenFrom]` child is projected from its own event, and each of its properties is filled by AutoMap — Chronicle copies the event property of the same name onto it. When the child declares a collection property whose name matches **no** property on that event, and no `[SetFrom]` (or other mapping attribute) bridges the gap, there is nothing for AutoMap to copy. The child still projects, but that collection is always empty — a silent data loss rather than a compile or runtime error.
+
+There are two fixes, depending on which name is right:
+
+- **Rename the property to match the event** — call the child property what the event calls it, and AutoMap wires it automatically.
+- **Bridge the names explicitly** — keep the property name and point it at the event property with `[SetFrom<TEvent>(nameof(TEvent.Property))]`.
+
+This is the child-collection mirror of the scalar mapping-source rules: the same empty-projection trap the runtime projection engine also reports as a warning, surfaced here at build time so it never reaches production data.
+
+## Related Rules
+
+- **CHR0024** — the scalar version: a read model property with no mapping source that AutoMap cannot populate.
+- **CHR0025** — the inverse collision: an explicitly sourced property that AutoMap *overwrites* from another event.
+- [Model-bound projections](/chronicle/projections/model-bound/) — the full reference.

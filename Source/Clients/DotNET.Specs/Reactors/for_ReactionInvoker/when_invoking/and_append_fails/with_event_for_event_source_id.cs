@@ -18,9 +18,11 @@ public class with_event_for_event_source_id : Specification
     IEventLog _eventLog;
     EventContext _eventContext;
     AppendManyResult _failedAppendResult;
+    EventSourceId _targetEventSourceId;
 
     void Establish()
     {
+        _targetEventSourceId = EventSourceId.New();
         var eventTypes = new EventTypesForSpecifications([typeof(MyEvent), typeof(MyOutboundEvent)]);
         _middlewares = Substitute.For<IReactorMiddlewares>();
 
@@ -42,7 +44,7 @@ public class with_event_for_event_source_id : Specification
             .ReturnsForAnyArgs(_failedAppendResult);
 
         var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventForEventSourceIdResultHandler()]));
-        var reactor = new ReactorWithEventForEventSourceIdReturnType();
+        var reactor = new ReactorWithEventForEventSourceIdReturnType(_targetEventSourceId);
 
         _invoker = new ReactorInvoker(
             eventTypes,
@@ -70,8 +72,15 @@ public class with_event_for_event_source_id : Specification
         violation.Message.ShouldEqual("Constraint violated");
     }
 
-    class ReactorWithEventForEventSourceIdReturnType : IReactor
+    [Fact] void should_capture_only_the_target_event_source_id() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().Count().ShouldEqual(1);
+    [Fact] void should_capture_the_target_event_source_id() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().ShouldContain(_targetEventSourceId);
+    [Fact] void should_include_target_event_source_id_in_messages() =>
+        _result.SideEffectFailure!.GetMessages().ShouldContain($"Append failure 1: Failed appending to event source id(s) '{_targetEventSourceId}'");
+
+    class ReactorWithEventForEventSourceIdReturnType(EventSourceId targetEventSourceId) : IReactor
     {
-        public EventForEventSourceId Handle(MyEvent @event) => new(EventSourceId.New(), new MyOutboundEvent());
+        public EventForEventSourceId Handle(MyEvent @event) => new(targetEventSourceId, new MyOutboundEvent());
     }
 }

@@ -1,0 +1,26 @@
+# CHR0032: Reactor must not access storage directly
+
+## Rule Description
+
+A class implementing `IReactor` injects a storage primitive such as `IMongoCollection<T>` through its constructor. Injecting a sink couples the reactor to the persistence layer and bypasses Chronicle's read-model abstraction.
+
+Read keyed state through an injected read model parameter or `IReadModels.GetInstanceById` instead.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0032/violation" />
+
+## Why This Rule Exists
+
+A reactor should express intent, not reach into the persistence layer. Injecting `IMongoCollection<T>` ties the reactor to a specific sink (the MongoDB collection backing a read model) and lets it read or write documents directly — outside the projection pipeline that owns that state. The reactor then depends on storage-layer details and can observe or corrupt read-model state that Chronicle is responsible for building.
+
+When a reactor needs current state, it reads it through the read-model abstraction: declare a read-model parameter on the handler (Chronicle materializes it strongly consistent for the event being handled) or call `IReadModels.GetInstanceById`. The read model stays the single source of derived state, and the reactor stays decoupled from where that state is persisted.
+
+## Related Rules
+
+- [CHR0031: Reactor must not have mutable state](CHR0031) — reactors must be stateless.
+- **CHR0022** — a reactor handler returning side-effect events must be marked `[OnceOnly]`.

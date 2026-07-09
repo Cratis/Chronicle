@@ -10,7 +10,7 @@ public class with_errors : Specification
     void Because()
     {
         var failure = new ReactorSideEffectFailure(
-            [new AppendFailure([], false, ["storage unavailable", "write concern failed"])]);
+            [new AppendFailure([], false, ["storage unavailable", "write concern failed"], [])]);
 
         _result = failure.GetMessages().ToArray();
     }

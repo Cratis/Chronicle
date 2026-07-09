@@ -102,6 +102,69 @@ public static class WellKnownTypes
     public const string IConstraintName = "Cratis.Chronicle.Events.Constraints.IConstraint";
 
     /// <summary>
+    /// The full name of the Key attribute.
+    /// </summary>
+    public const string KeyAttributeName = "Cratis.Chronicle.Keys.KeyAttribute";
+
+    /// <summary>
+    /// The full name of the Subject attribute.
+    /// </summary>
+    public const string SubjectAttributeName = "Cratis.Chronicle.SubjectAttribute";
+
+    /// <summary>
+    /// The full name of the NoAutoMap attribute.
+    /// </summary>
+    public const string NoAutoMapAttributeName = "Cratis.Chronicle.Projections.NoAutoMapAttribute";
+
+    /// <summary>
+    /// The full name of the EventStreamId attribute.
+    /// </summary>
+    public const string EventStreamIdAttributeName = "Cratis.Chronicle.Events.EventStreamIdAttribute";
+
+    /// <summary>
+    /// The full name of the ICanProvideEventStreamId interface.
+    /// </summary>
+    public const string ICanProvideEventStreamIdName = "Cratis.Chronicle.Events.ICanProvideEventStreamId";
+
+    /// <summary>
+    /// The full name of the open generic IMongoCollection interface.
+    /// </summary>
+    public const string IMongoCollectionName = "MongoDB.Driver.IMongoCollection`1";
+
+    /// <summary>
+    /// The open-generic display string of the client EventSourceId&lt;T&gt; type.
+    /// </summary>
+    public const string ClientEventSourceIdGenericDisplay = "Cratis.Chronicle.Events.EventSourceId<T>";
+
+    /// <summary>
+    /// The open-generic display string of the kernel EventSourceId&lt;T&gt; type.
+    /// </summary>
+    public const string KernelEventSourceIdGenericDisplay = "Cratis.Chronicle.Concepts.Events.EventSourceId<T>";
+
+    /// <summary>
+    /// Check whether a type is, or derives from, the strongly-typed <c>EventSourceId&lt;T&gt;</c>.
+    /// </summary>
+    /// <param name="type">The type symbol to check.</param>
+    /// <returns>True if the type is or derives from <c>EventSourceId&lt;T&gt;</c>, false otherwise.</returns>
+    public static bool DerivesFromEventSourceId(ITypeSymbol? type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (current is INamedTypeSymbol { IsGenericType: true } named)
+            {
+                var definition = named.OriginalDefinition.ToDisplayString();
+                if (definition == ClientEventSourceIdGenericDisplay ||
+                    definition == KernelEventSourceIdGenericDisplay)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Check if a type has the EventType attribute.
     /// </summary>
     /// <param name="typeSymbol">The type symbol to check.</param>
@@ -266,6 +329,35 @@ public static class WellKnownTypes
             MemberAccessExpressionSyntax memberAccess => IsPureMemberAccessChain(memberAccess.Expression),
             _ => false
         };
+
+    /// <summary>
+    /// Determines whether an expression is a supported projection property accessor - a member-access chain rooted in a lambda parameter.
+    /// </summary>
+    /// <param name="expression">The expression to check.</param>
+    /// <param name="semanticModel">The <see cref="SemanticModel"/> used to resolve the root identifier.</param>
+    /// <returns>True if the expression is a member-access chain that bottoms out at a lambda parameter, false otherwise.</returns>
+    /// <remarks>
+    /// This is stricter than <see cref="IsPureMemberAccessChain(ExpressionSyntax)"/>: it rejects member-access chains rooted in
+    /// something other than the lambda parameter (for example <c>_ =&gt; DateTimeOffset.UtcNow</c>, which reads a static member and
+    /// ignores the parameter), as well as a bare parameter reference that maps no property. Projection builder accessors extract a
+    /// property path at definition time and are never executed, so only <c>parameter.Property</c> chains are valid.
+    /// </remarks>
+    public static bool IsProjectionPropertyAccessor(ExpressionSyntax expression, SemanticModel semanticModel)
+    {
+        if (expression is not MemberAccessExpressionSyntax)
+        {
+            return false;
+        }
+
+        var current = expression;
+        while (current is MemberAccessExpressionSyntax memberAccess)
+        {
+            current = memberAccess.Expression;
+        }
+
+        return current is IdentifierNameSyntax identifier &&
+               semanticModel.GetSymbolInfo(identifier).Symbol is IParameterSymbol;
+    }
 
     /// <summary>
     /// Determines whether a statement is considered imperative (not a pure builder call).

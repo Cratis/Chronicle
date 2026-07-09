@@ -19,12 +19,14 @@ public class with_constraint_violation : Specification
     EventContext _eventContext;
     MyOutboundEvent _outboundEvent;
     AppendResult _failedAppendResult;
+    EventSourceId _contextEventSourceId;
 
     void Establish()
     {
         var eventTypes = new EventTypesForSpecifications([typeof(MyEvent), typeof(MyOutboundEvent)]);
         _middlewares = Substitute.For<IReactorMiddlewares>();
         _outboundEvent = new MyOutboundEvent();
+        _contextEventSourceId = EventSourceId.New();
 
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
@@ -57,7 +59,7 @@ public class with_constraint_violation : Specification
             _eventStore,
             ReactorContextValuesBuilders.ForSpecifications());
 
-        _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
+        _eventContext = EventContext.EmptyWithEventSourceId(_contextEventSourceId);
     }
 
     async Task Because()
@@ -75,6 +77,11 @@ public class with_constraint_violation : Specification
         violation.EventTypeId.ShouldEqual("MyOutboundEvent");
         violation.Message.ShouldEqual("Constraint violated");
     }
+
+    [Fact] void should_capture_only_one_target_event_source_id() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().Count().ShouldEqual(1);
+    [Fact] void should_capture_the_triggering_event_source_id_as_the_target() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().ShouldContain(_contextEventSourceId);
 
     class ReactorWithSyncEventReturnType(MyOutboundEvent outbound) : IReactor
     {

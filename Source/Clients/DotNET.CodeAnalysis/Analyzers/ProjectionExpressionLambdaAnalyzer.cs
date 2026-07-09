@@ -22,7 +22,7 @@ public class ProjectionExpressionLambdaAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "In Chronicle's projection builder API, parameters typed as Expression<Func<...>> are inspected at startup to extract property names and paths for the read-model mapping—the lambda body is never called at runtime. Writing method invocations, arithmetic, conditional expressions, or any non-member-access code in such a lambda will silently produce an incorrect or incomplete projection definition. Fix this by replacing the lambda body with a direct property access chain (e.g. x => x.Property or x => x.Parent.Child).");
+        description: "In Chronicle's projection builder API, parameters typed as Expression<Func<...>> are inspected at startup to extract property names and paths for the read-model mapping—the lambda body is never called at runtime. Writing method invocations, arithmetic, conditional expressions, or an accessor that ignores the parameter (e.g. _ => DateTimeOffset.UtcNow) in such a lambda will silently produce an incorrect or incomplete projection definition. Fix this by replacing the lambda body with a direct property access chain rooted in the parameter (e.g. x => x.Property or x => x.Parent.Child).");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -73,8 +73,8 @@ public class ProjectionExpressionLambdaAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // The lambda body must be a pure member-access chain
-        if (!WellKnownTypes.IsPureMemberAccessChain(body))
+        // The lambda body must be a member-access chain rooted in the lambda parameter
+        if (!WellKnownTypes.IsProjectionPropertyAccessor(body, context.SemanticModel))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Rule,

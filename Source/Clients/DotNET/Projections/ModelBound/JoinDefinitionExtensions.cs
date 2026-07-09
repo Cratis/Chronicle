@@ -41,9 +41,14 @@ static class JoinDefinitionExtensions
 
         if (!targetJoin.TryGetValue(eventTypeId, out var joinDef))
         {
+            // Normalize the join-on property to the read model's serialized naming (as every other property
+            // path here is) so it matches the stored document field. The fallback propertyName is already
+            // normalized; an explicit `on` (e.g. from nameof(...)) still carries the CLR casing and must be
+            // converted, otherwise a root-level join fails to locate the document to enrich.
+            var normalizedOn = on is not null ? namingPolicy.GetPropertyName(new PropertyPath(on)) : propertyName;
             joinDef = new JoinDefinition
             {
-                On = on ?? propertyName,
+                On = normalizedOn,
                 Key = WellKnownExpressions.EventSourceId,
                 Properties = new Dictionary<string, string>()
             };

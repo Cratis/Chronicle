@@ -21,6 +21,7 @@ public class with_multiple_events_and_second_fails : Specification
     MyOutboundEvent _firstEvent;
     MyOutboundEvent _secondEvent;
     AppendManyResult _failedAppendResult;
+    EventSourceId _contextEventSourceId;
 
     void Establish()
     {
@@ -28,6 +29,7 @@ public class with_multiple_events_and_second_fails : Specification
         _middlewares = Substitute.For<IReactorMiddlewares>();
         _firstEvent = new MyOutboundEvent();
         _secondEvent = new MyOutboundEvent();
+        _contextEventSourceId = EventSourceId.New();
 
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
@@ -59,7 +61,7 @@ public class with_multiple_events_and_second_fails : Specification
             _eventStore,
             ReactorContextValuesBuilders.ForSpecifications());
 
-        _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
+        _eventContext = EventContext.EmptyWithEventSourceId(_contextEventSourceId);
     }
 
     async Task Because()
@@ -82,6 +84,11 @@ public class with_multiple_events_and_second_fails : Specification
         var violation = _result.SideEffectFailure!.AppendFailures.First().ConstraintViolations.First();
         violation.Message.ShouldEqual("Constraint violated on second event");
     }
+
+    [Fact] void should_capture_only_one_target_event_source_id() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().Count().ShouldEqual(1);
+    [Fact] void should_capture_the_triggering_event_source_id_as_the_target() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().ShouldContain(_contextEventSourceId);
 
     class ReactorWithMultipleEventsReturnType(MyOutboundEvent firstEvent, MyOutboundEvent secondEvent) : IReactor
     {

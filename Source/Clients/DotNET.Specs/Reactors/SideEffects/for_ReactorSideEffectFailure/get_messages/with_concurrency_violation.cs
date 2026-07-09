@@ -10,7 +10,7 @@ public class with_concurrency_violation : Specification
     void Because()
     {
         var failure = new ReactorSideEffectFailure(
-            [new AppendFailure([], true, [])]);
+            [new AppendFailure([], true, [], [])]);
 
         _result = failure.GetMessages().ToArray();
     }

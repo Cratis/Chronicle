@@ -25,11 +25,12 @@ public class EventForEventSourceIdResultHandler : IReactorSideEffectHandler
     /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
-        var result = await eventStore.EventLog.AppendMany([(EventForEventSourceId)value]);
+        var eventForEventSourceId = (EventForEventSourceId)value;
+        var result = await eventStore.EventLog.AppendMany([eventForEventSourceId]);
 
         if (!result.IsSuccess)
         {
-            return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result));
+            return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventForEventSourceId.EventSourceId]));
         }
 
         return Result.Success<ReactorSideEffectFailure>();

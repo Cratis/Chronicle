@@ -59,6 +59,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     TReadModel? _instance;
     IReadOnlyDictionary<EventSourceId, TReadModel> _instances = new Dictionary<EventSourceId, TReadModel>();
     bool _processed;
+    bool _strictEventSubscription;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelScenario{TReadModel}"/> class.
@@ -163,6 +164,26 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
     public IReadModels ReadModels => _eventStore.ReadModels;
+
+    /// <summary>
+    /// Enables strict event subscription: seeding an event the projection does not subscribe to raises
+    /// <see cref="UnsubscribedEventSeeded"/> instead of being silently skipped.
+    /// </summary>
+    /// <returns>This <see cref="ReadModelScenario{TReadModel}"/> for chaining.</returns>
+    /// <remarks>
+    /// By default the scenario mirrors the production projection engine, which filters an event source's
+    /// stream to the projection's subscribed types — so a seeded audit/marker event unrelated to the
+    /// projection is silently ignored. Opt in to strict mode when a spec wants seeding an unsubscribed event
+    /// to fail loudly, e.g. to guard against accidentally seeding the wrong event type. This applies to
+    /// projection-backed read models; reducer-backed read models only invoke handlers for the event types
+    /// they declare, so an unsubscribed seeded event is inherently a no-op there, exactly as at runtime.
+    /// </remarks>
+    public ReadModelScenario<TReadModel> WithStrictEventSubscription()
+    {
+        _strictEventSubscription = true;
+        _processed = false;
+        return this;
+    }
 
     /// <summary>
     /// Gets the materialized read model instance for a specific event source id.
@@ -274,7 +295,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 eventsList,
                 _eventTypes,
                 _jsonSchemaGenerator,
-                _initialState);
+                _initialState,
+                _strictEventSubscription);
         }
 
         throw new NoReadModelHandlerFound(readModelType);

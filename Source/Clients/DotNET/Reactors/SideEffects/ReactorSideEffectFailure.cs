@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Reactors.SideEffects;
@@ -23,6 +24,14 @@ public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures
             var failure = appendFailures[failureIndex];
             var failureNumber = failureIndex + 1;
             var hasDetails = false;
+
+            var targetEventSourceIds = failure.TargetEventSourceIds.ToList();
+            if (targetEventSourceIds.Count > 0)
+            {
+                hasDetails = true;
+                var formattedIds = string.Join(", ", targetEventSourceIds.Select(id => $"'{id}'"));
+                yield return $"Append failure {failureNumber}: Failed appending to event source id(s) {formattedIds}";
+            }
 
             foreach (var constraintViolation in failure.ConstraintViolations)
             {
@@ -50,11 +59,19 @@ public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures
     }
 
     /// <summary>
+    /// Gets the distinct <see cref="EventSourceId"/> the failed side-effect events were being appended to.
+    /// </summary>
+    /// <returns>The collection of target <see cref="EventSourceId"/>.</returns>
+    public IEnumerable<EventSourceId> GetTargetEventSourceIds() =>
+        AppendFailures.SelectMany(failure => failure.TargetEventSourceIds).Distinct();
+
+    /// <summary>
     /// Creates a <see cref="ReactorSideEffectFailure"/> from a failed append operation.
     /// </summary>
     /// <param name="appendResult">The failed <see cref="IAppendResult"/> (e.g. <see cref="AppendResult"/> or <see cref="AppendManyResult"/>).</param>
+    /// <param name="targetEventSourceIds">The <see cref="EventSourceId"/> the failed side-effect events were being appended to.</param>
     /// <returns>A <see cref="ReactorSideEffectFailure"/> containing the append failure details.</returns>
-    public static ReactorSideEffectFailure FromAppendResult(IAppendResult appendResult)
+    public static ReactorSideEffectFailure FromAppendResult(IAppendResult appendResult, IEnumerable<EventSourceId> targetEventSourceIds)
     {
         var constraintViolations = appendResult.ConstraintViolations.Select(cv =>
             new ReactorConstraintViolation(cv.EventTypeId, cv.Message));
@@ -63,7 +80,8 @@ public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures
         var failure = new AppendFailure(
             constraintViolations,
             appendResult.HasConcurrencyViolations,
-            errors);
+            errors,
+            targetEventSourceIds.Distinct().ToList());
 
         return new([failure]);
     }

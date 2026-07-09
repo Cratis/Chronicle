@@ -1,0 +1,31 @@
+# CHR0024: Read model property has no mapping source
+
+## Rule Description
+
+In a model-bound projection read model, AutoMap populates a property only when a subscribed event carries a property of the same name. A property that has no property-level mapping attribute *and* no same-named property on any subscribed event will silently never be populated.
+
+Add an explicit mapping attribute (for example `[SetFrom<T>(nameof(...))]`), or subscribe to an event that carries the value.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0024/violation" />
+
+## Why This Rule Exists
+
+A model-bound projection builds its read model from the events it subscribes to. Chronicle wires each subscribed event's properties onto identically named read-model properties (AutoMap), and every other property is expected to carry a mapping attribute that names its source.
+
+When a property has neither — no mapping attribute, and no subscribed event with a matching name — nothing can ever write it. The read model compiles and the projection runs, but that property stays at its default value forever. This is a silent gap: no error, no warning at runtime, just a column that is always empty.
+
+The rule flags the property at the source so the omission surfaces at build time rather than as missing data in production. No code fix is offered, because no subscribed event carries the value — resolving it requires a human decision: subscribe to an event that carries the value, or add the mapping attribute that names its true source.
+
+The identifier property and any `EventSourceId<T>`-typed property are excluded — they resolve from the key/stream identity, not AutoMap. A property already sourced by a mapping attribute is excluded too.
+
+## Related Rules
+
+- **CHR0030** — the child-collection counterpart: a `[ChildrenFrom]` collection that auto-maps to *nothing*.
+- [CHR0025](CHR0025) — an explicitly sourced property that AutoMap can *overwrite* from another event.
+- [Model-bound projections](/chronicle/projections/model-bound/) — the full reference.

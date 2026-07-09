@@ -1,0 +1,24 @@
+# CHR0028: Redundant .AutoMap() call
+
+## Rule Description
+
+AutoMap is enabled by default on projection builders, so calling `.AutoMap()` explicitly has no effect. Remove the redundant call. Use `.NoAutoMap()` when you need to disable the default behavior.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0028/violation" />
+
+## Why This Rule Exists
+
+A fluent `IProjectionFor<T>` projection maps each referenced event's properties onto identically named read model properties on its own — AutoMap is on from the moment the builder starts. Calling `.AutoMap()` therefore only restates the default: it changes nothing and adds noise that suggests mapping is being configured when it is not.
+
+The method exists for one narrow purpose — re-enabling AutoMap inside a scope where you first turned it off with `.NoAutoMap()`. Outside that scope the call is redundant. When you actually want to take control of mapping, reach for `.NoAutoMap()` and set the properties yourself; a bare `.AutoMap()` never expresses intent.
+
+## Related Rules
+
+- **CHR0029** — a `.Set(...).To(...)` mapping whose source and target names match, which AutoMap already handles.
+- [Model-bound projections](/chronicle/projections/model-bound/) — the full reference.

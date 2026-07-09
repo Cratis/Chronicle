@@ -1,0 +1,26 @@
+# CHR0026: [Key] or [Subject] on an EventSourceId&lt;T&gt; is redundant
+
+## Rule Description
+
+A property or record parameter whose type derives from `EventSourceId<T>` already is both the key (stream identity) and the compliance subject. `[Key]` and `[Subject]` exist for non-`EventSourceId<T>` values; on an `EventSourceId<T>` they are at best redundant and at worst mask an ambiguous multi-identity design that should be split into distinct types rather than annotated around.
+
+Remove the attribute.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0026/violation" />
+
+## Why This Rule Exists
+
+`EventSourceId<T>` is the strongly-typed event-source identity. Being that identity, it is automatically the key Chronicle resolves the stream by, and it is automatically the compliance subject a value's PII is encrypted under. `[Key]` and `[Subject]` exist precisely to designate those roles on values that would not otherwise carry them — a plain `Guid`, a string, another concept. On an `EventSourceId<T>` there is nothing to designate; the type already says it.
+
+At best the attribute is noise. At worst it is a signal that the design is trying to carry more than one identity on a single type — for example annotating a second `EventSourceId<T>`-derived property as the `[Key]` to disambiguate. That ambiguity should be resolved by splitting the identities into distinct types, not papered over with an attribute. Removing the attribute keeps the identity's meaning where it belongs: in the type.
+
+## Related Rules
+
+- [Event source](/chronicle/concepts/event-source/) — how `EventSourceId<T>` identifies a stream.
+- [Subject](/chronicle/concepts/subject/) — how the compliance subject is resolved.

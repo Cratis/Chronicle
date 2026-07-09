@@ -1,0 +1,24 @@
+# CHR0029: Redundant .Set(...).To(...) with matching property names
+
+## Rule Description
+
+AutoMap is enabled by default and maps event properties to identically named read model properties. A `.Set(x => x.P).To(e => e.P)` mapping where the source and target property names are the same duplicates what AutoMap already does. Remove the redundant mapping and rely on AutoMap.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0029/violation" />
+
+## Why This Rule Exists
+
+`.Set(...).To(...)` is for the cases AutoMap cannot infer — a read model property whose name differs from the event property that feeds it. When both lambdas name the *same* property, the mapping restates the default AutoMap already applies, so the line carries no information and only obscures the mappings that do matter.
+
+The analyzer is deliberately conservative: it fires only when both lambdas are simple `param => param.Member` member accesses and the two names are identical. A mapping that renames (`Set(x => x.DisplayName).To(e => e.Name)`) or transforms the value is doing real work and is left alone.
+
+## Related Rules
+
+- **CHR0028** — an explicit `.AutoMap()` call, which is redundant for the same reason.
+- [Model-bound projections](/chronicle/projections/model-bound/) — the full reference.
