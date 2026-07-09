@@ -98,4 +98,22 @@ public interface IEventSequences
     /// <returns>A <see cref="CompleteStreamResponse"/> describing the outcome.</returns>
     [Operation]
     Task<CompleteStreamResponse> CompleteStream(CompleteStreamRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all event sequences for an event store and namespace.
+    /// </summary>
+    /// <param name="request">The <see cref="GetAllEventSequencesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetAllEventSequencesResponse"/> with all event sequences.</returns>
+    [Operation]
+    Task<GetAllEventSequencesResponse> GetAllEventSequences(GetAllEventSequencesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get a histogram of events in an event sequence, grouped by time bucket.
+    /// </summary>
+    /// <param name="request">The <see cref="GetHistogramRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetHistogramResponse"/> with the histogram buckets.</returns>
+    [Operation]
+    Task<GetHistogramResponse> GetHistogram(GetHistogramRequest request, CallContext context = default);
 }

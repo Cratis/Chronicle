@@ -29,6 +29,8 @@ public class and_child_creation_event_has_same_sequence_number_as_current_event 
                 Arg.Any<EventSequenceNumber>(),
                 (EventSourceId)SliceKey,
                 Arg.Any<IEnumerable<EventType>>(),
+                Arg.Any<DateTimeOffset?>(),
+                Arg.Any<DateTimeOffset?>(),
                 Arg.Any<CancellationToken>())
             .Returns(cursor);
 

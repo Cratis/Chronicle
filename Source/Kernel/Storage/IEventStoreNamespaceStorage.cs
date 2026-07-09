@@ -119,4 +119,10 @@ public interface IEventStoreNamespaceStorage
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
     /// <returns>The <see cref="IClosedStreamsConstraintStorage"/> instance.</returns>
     IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Get the identifiers of all event sequences that exist in this namespace.
+    /// </summary>
+    /// <returns>Collection of <see cref="EventSequenceId"/>.</returns>
+    Task<IEnumerable<EventSequenceId>> GetEventSequenceIds();
 }

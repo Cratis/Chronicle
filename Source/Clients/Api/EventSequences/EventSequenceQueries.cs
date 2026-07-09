@@ -36,13 +36,19 @@ public class EventSequenceQueries : ControllerBase
     /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
     /// <param name="eventSourceId">Optional event source id to get for.</param>
+    /// <param name="eventTypes">Optional event type ids to filter by.</param>
+    /// <param name="startTime">Optional inclusive lower-bound occurred-time filter (ISO-8601).</param>
+    /// <param name="endTime">Optional inclusive upper-bound occurred-time filter (ISO-8601).</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
     public async Task<IEnumerable<AppendedEvent>> AppendedEvents(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,
-        [FromQuery] string? eventSourceId = default)
+        [FromQuery] string? eventSourceId = default,
+        [FromQuery] string[]? eventTypes = default,
+        [FromQuery] DateTimeOffset? startTime = default,
+        [FromQuery] DateTimeOffset? endTime = default)
     {
         var queryContext = _queryContextManager.Current;
 
@@ -62,7 +68,10 @@ public class EventSequenceQueries : ControllerBase
             EventSequenceId = eventSequenceId,
             FromEventSequenceNumber = from,
             ToEventSequenceNumber = queryContext.Paging.IsPaged ? from + (ulong)(queryContext.Paging.Size - 1) : null,
-            EventSourceId = eventSourceId
+            EventSourceId = eventSourceId,
+            EventTypes = eventTypes?.Select(id => new Contracts.Events.EventType { Id = id, Generation = 1 }).ToList() ?? [],
+            From = startTime is null ? null : new Contracts.Primitives.SerializableDateTimeOffset { Value = startTime.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture) },
+            To = endTime is null ? null : new Contracts.Primitives.SerializableDateTimeOffset { Value = endTime.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture) }
         });
 
         return response.Events.ToApi();
