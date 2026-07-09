@@ -157,9 +157,9 @@ public static class DiagnosticIds
     public const string RedundantSetToWithMatchingNames = "CHR0029";
 
     /// <summary>
-    /// A reactor handler invokes ICommandPipeline.Execute without being marked [OnceOnly].
+    /// A [ChildrenFrom] child collection property has no matching event property and no explicit mapping, so it auto-maps to nothing.
     /// </summary>
-    public const string ReactorCommandPipelineExecuteMustBeOnceOnly = "CHR0030";
+    public const string ChildrenCollectionPropertyAutoMapsToNothing = "CHR0030";
 
     /// <summary>
     /// A reactor declares mutable instance state (a non-readonly field or a settable property).
@@ -170,9 +170,4 @@ public static class DiagnosticIds
     /// A reactor injects a storage primitive (e.g. IMongoCollection&lt;T&gt;) directly.
     /// </summary>
     public const string ReactorMustNotAccessStorageDirectly = "CHR0032";
-
-    /// <summary>
-    /// A [ChildrenFrom] child collection property has no matching event property and no explicit mapping, so it auto-maps to nothing.
-    /// </summary>
-    public const string ChildrenCollectionPropertyAutoMapsToNothing = "CHR0033";
 }

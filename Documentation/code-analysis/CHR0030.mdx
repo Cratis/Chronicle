@@ -1,10 +1,8 @@
-# CHR0030: Reactor handlers invoking ICommandPipeline.Execute must be marked with [OnceOnly]
+# CHR0030: [ChildrenFrom] child collection property auto-maps to nothing
 
 ## Rule Description
 
-A reactor handler that invokes `ICommandPipeline.Execute` produces a side effect. Chronicle re-runs reactor handlers during replay operations (redaction, revision, observer rewind), so an unguarded handler re-executes the command and duplicates the side effect.
-
-Mark the handler method with `[OnceOnly]` so Chronicle skips it during replays.
+A collection property on a `[ChildrenFrom]` child is filled by AutoMap, which matches the event's property of the same name. When no source event carries a matching property and nothing maps it explicitly, the property silently projects as an empty collection. Rename the property to match the event, or bridge the names with `[SetFrom<TEvent>(nameof(...))]`.
 
 ## Severity
 
@@ -16,12 +14,17 @@ Warning
 
 ## Why This Rule Exists
 
-Reactors are the "if this then that" of event sourcing — they observe events and produce side effects. A reactor is not invoked only once: during a redaction, a revision, or an observer rewind, Chronicle replays the event stream and runs the handler again. A handler that calls `ICommandPipeline.Execute` runs the full command pipeline every time it fires, so on replay the command executes a second time and the side effect happens twice.
+A `[ChildrenFrom]` child is projected from its own event, and each of its properties is filled by AutoMap — Chronicle copies the event property of the same name onto it. When the child declares a collection property whose name matches **no** property on that event, and no `[SetFrom]` (or other mapping attribute) bridges the gap, there is nothing for AutoMap to copy. The child still projects, but that collection is always empty — a silent data loss rather than a compile or runtime error.
 
-`[OnceOnly]` tells Chronicle to fire the handler a single time per event source and skip it on replays. Applying it to a handler that executes a command keeps replay safe — the command runs when the event first arrives, and never again when the stream is reprocessed.
+There are two fixes, depending on which name is right:
+
+- **Rename the property to match the event** — call the child property what the event calls it, and AutoMap wires it automatically.
+- **Bridge the names explicitly** — keep the property name and point it at the event property with `[SetFrom<TEvent>(nameof(TEvent.Property))]`.
+
+This is the child-collection mirror of the scalar mapping-source rules: the same empty-projection trap the runtime projection engine also reports as a warning, surfaced here at build time so it never reaches production data.
 
 ## Related Rules
 
-- [CHR0031: Reactor must not have mutable state](CHR0031) — reactors must be stateless.
-- [CHR0032: Reactor must not access storage directly](CHR0032) — reactors read state through read models.
-- **CHR0022** — the sibling rule for a reactor handler that *returns* side-effect events, which must likewise be marked `[OnceOnly]`.
+- **CHR0024** — the scalar version: a read model property with no mapping source that AutoMap cannot populate.
+- **CHR0025** — the inverse collision: an explicitly sourced property that AutoMap *overwrites* from another event.
+- [Model-bound projections](/chronicle/projections/model-bound/) — the full reference.

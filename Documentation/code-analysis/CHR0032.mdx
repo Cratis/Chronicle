@@ -22,6 +22,5 @@ When a reactor needs current state, it reads it through the read-model abstracti
 
 ## Related Rules
 
-- [CHR0030: Reactor handlers invoking ICommandPipeline.Execute must be marked with [OnceOnly]](CHR0030) — guard command side effects against replay.
 - [CHR0031: Reactor must not have mutable state](CHR0031) — reactors must be stateless.
 - **CHR0022** — a reactor handler returning side-effect events must be marked `[OnceOnly]`.

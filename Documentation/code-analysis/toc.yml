@@ -50,11 +50,9 @@
   href: CHR0028.mdx
 - name: CHR0029 - Redundant .Set().To() with matching property names
   href: CHR0029.mdx
-- name: CHR0030 - Reactor invoking ICommandPipeline.Execute must be [OnceOnly]
+- name: CHR0030 - [ChildrenFrom] child collection property auto-maps to nothing
   href: CHR0030.mdx
 - name: CHR0031 - Reactor must not have mutable state
   href: CHR0031.mdx
 - name: CHR0032 - Reactor must not access storage directly
   href: CHR0032.mdx
-- name: CHR0033 - [ChildrenFrom] child collection property auto-maps to nothing
-  href: CHR0033.mdx

@@ -22,6 +22,5 @@ Everything a reactor needs is already available: the collaborators it calls (inj
 
 ## Related Rules
 
-- [CHR0030: Reactor handlers invoking ICommandPipeline.Execute must be marked with [OnceOnly]](CHR0030) — guard command side effects against replay.
 - [CHR0032: Reactor must not access storage directly](CHR0032) — reactors read state through read models.
 - **CHR0022** — a reactor handler returning side-effect events must be marked `[OnceOnly]`.

@@ -33,10 +33,9 @@ All rules follow the identifier format `CHR####` where the numbers are sequentia
 | [CHR0027](CHR0027) | Ambiguous event stream id | Error | A type both implements ICanProvideEventStreamId and declares a non-null [EventStreamId]; this throws at startup |
 | [CHR0028](CHR0028) | Redundant .AutoMap() call | Warning | .AutoMap() has no effect because AutoMap is enabled by default on projection builders; remove the call |
 | [CHR0029](CHR0029) | Redundant .Set().To() with matching property names | Warning | A `.Set(x => x.P).To(e => e.P)` mapping with identical names duplicates what AutoMap already does; remove it |
-| [CHR0030](CHR0030) | Reactor invoking ICommandPipeline.Execute must be [OnceOnly] | Warning | A reactor handler that calls ICommandPipeline.Execute re-executes the command on replay unless the handler is marked [OnceOnly] |
+| [CHR0030](CHR0030) | [ChildrenFrom] child collection property auto-maps to nothing | Warning | A [ChildrenFrom] child collection property matching no event property and with no explicit mapping always projects empty; rename it or bridge with `[SetFrom<T>]` |
 | [CHR0031](CHR0031) | Reactor must not have mutable state | Warning | Reactors are re-created and replayed, so mutable instance state is unreliable; use readonly, primary-constructor-injected dependencies |
 | [CHR0032](CHR0032) | Reactor must not access storage directly | Warning | Injecting a storage primitive like `IMongoCollection<T>` couples the reactor to a sink; read state via a read model or IReadModels.GetInstanceById |
-| [CHR0033](CHR0033) | [ChildrenFrom] child collection property auto-maps to nothing | Warning | A [ChildrenFrom] child collection property matching no event property and with no explicit mapping always projects empty; rename it or bridge with `[SetFrom<T>]` |
 
 ## Quick Fixes
 

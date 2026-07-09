@@ -1,23 +1,23 @@
 ```csharp
-using Cratis.Chronicle.Commands;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Projections.ModelBound;
 
-public class Chr0030OrderProcessor(ICommandPipeline commandPipeline) : IReactor
-{
-    // Warning CHR0030: OrderPlaced invokes ICommandPipeline.Execute but is not marked
-    // [OnceOnly]; a replay (redaction, revision, observer rewind) runs the handler again
-    // and re-executes the command, duplicating the side effect. Mark the method [OnceOnly].
-    public Task OrderPlaced(Chr0030OrderPlaced @event, EventContext context) =>
-        commandPipeline.Execute(new Chr0030ShipOrder(@event.OrderNumber));
-}
+public record Chr0033Note(string Text);
 
 [EventType]
-public record Chr0030OrderPlaced(string OrderNumber);
+public record Chr0033LineAdded(string LineNumber, string Description, IReadOnlyList<Chr0033Note> Annotations);
 
-[Command]
-public record Chr0030ShipOrder(string OrderNumber)
-{
-    public void Handle() { }
-}
+public record Chr0033Line(
+    [Key] string LineNumber,
+    string Description,
+    IReadOnlyList<Chr0033Note> Notes);
+
+public record Chr0033Order(
+    [Key] Guid Id,
+
+    // Warning CHR0030: the child property 'Notes' matches no property on Chr0033LineAdded (the event
+    // carries 'Annotations'), so AutoMap fills it from nothing and it always projects as empty.
+    [ChildrenFrom<Chr0033LineAdded>(key: nameof(Chr0033LineAdded.LineNumber))]
+    IEnumerable<Chr0033Line> Lines);
 ```
