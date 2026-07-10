@@ -21,8 +21,8 @@ public class when_getting_next_four_times_with_max_of_three : Specification
         _forth = _strategy.GetNext(3);
     }
 
-    [Fact] void first_should_be_0() => _first.ShouldEqual(0);
-    [Fact] void second_should_be_1() => _second.ShouldEqual(1);
-    [Fact] void third_should_be_2() => _third.ShouldEqual(2);
-    [Fact] void forth_should_be_0() => _forth.ShouldEqual(0);
+    [Fact] void should_have_first_be_0() => _first.ShouldEqual(0);
+    [Fact] void should_have_second_be_1() => _second.ShouldEqual(1);
+    [Fact] void should_have_third_be_2() => _third.ShouldEqual(2);
+    [Fact] void should_have_forth_be_0() => _forth.ShouldEqual(0);
 }
