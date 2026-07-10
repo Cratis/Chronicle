@@ -319,8 +319,16 @@ public class EventStoreSubscriptionsManager(
         logger.AlreadyUnsubscribed(definition.Identifier, namespaceName);
     }
 
-    IObserver GetObserver(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName) =>
-        GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, definition.SourceEventStore, namespaceName, EventSequenceId.Outbox));
+    IObserver GetObserver(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
+        // The observer id must be unique per (source, target) event store. The subscription Identifier is only
+        // the source store, so without the target here two target stores subscribing to the same source's
+        // outbox would collide on one shared observer grain — the first-subscribed target wins and the second
+        // is silently starved (IsSubscribed() short-circuits its Subscribe). Include the target
+        // (_targetEventStoreName) so each subscriber gets its own outbox observer and delivery.
+        var observerId = new ObserverId($"{definition.Identifier.Value}->{_targetEventStoreName.Value}");
+        return GrainFactory.GetGrain<IObserver>(new ObserverKey(observerId, definition.SourceEventStore, namespaceName, EventSequenceId.Outbox));
+    }
 
     Task<IGrainReminder> ScheduleSubscriptionReminder(EventStoreSubscriptionId subscriptionId)
     {
