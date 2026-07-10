@@ -15,6 +15,11 @@ public record EncryptionKeyRevision(uint Value) : ConceptAs<uint>(Value)
     public static readonly EncryptionKeyRevision Latest = uint.MaxValue;
 
     /// <summary>
+    /// Gets the first revision a subject's encryption key is provisioned under.
+    /// </summary>
+    public static readonly EncryptionKeyRevision Initial = 1u;
+
+    /// <summary>
     /// Implicitly convert from <see cref="uint"/> to <see cref="EncryptionKeyRevision"/>.
     /// </summary>
     /// <param name="value"><see cref="uint"/> to convert from.</param>

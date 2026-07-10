@@ -109,13 +109,15 @@ public class EventStoreSubscriptionObserverSubscriber(
             return;
         }
 
-        var sourceHasKey = await encryptionKeyStorage.HasFor(_key.EventStore, _key.Namespace, identifier);
-        if (!sourceHasKey)
+        var sourceKey = await encryptionKeyStorage.TryGetFor(_key.EventStore, _key.Namespace, identifier);
+        if (sourceKey is null)
         {
             return;
         }
 
-        var sourceKey = await encryptionKeyStorage.GetFor(_key.EventStore, _key.Namespace, identifier);
-        await encryptionKeyStorage.SaveFor(targetEventStore, _key.Namespace, identifier, sourceKey);
+        // Idempotently place the source key in the target store. GetOrAddFor keeps any key the target already
+        // has and otherwise persists the source key as the initial revision, so concurrent forwarded events for
+        // the same subject — or a replay — converge on a single revision instead of minting duplicate revisions.
+        await encryptionKeyStorage.GetOrAddFor(targetEventStore, _key.Namespace, identifier, sourceKey);
     }
 }

@@ -16,27 +16,52 @@ namespace Cratis.Chronicle.Storage.Compliance;
 public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : IEncryptionKeyStorage
 {
     readonly Dictionary<Key, EncryptionKey> _keys = [];
+    readonly Lock _lock = new();
 
     /// <inheritdoc/>
     public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
-        if (IsLatest(revision))
+        lock (_lock)
         {
-            var keysToRemove = _keys.Keys
-                .Where(k => k.EventStore == eventStore && k.EventStoreNamespace == eventStoreNamespace && k.Identifier == identifier)
-                .ToList();
-            foreach (var key in keysToRemove)
+            if (IsLatest(revision))
             {
-                _keys.Remove(key);
+                var keysToRemove = _keys.Keys
+                    .Where(k => k.EventStore == eventStore && k.EventStoreNamespace == eventStoreNamespace && k.Identifier == identifier)
+                    .ToList();
+                foreach (var key in keysToRemove)
+                {
+                    _keys.Remove(key);
+                }
             }
-        }
-        else
-        {
-            _keys.Remove(new(eventStore, eventStoreNamespace, identifier, revision!));
-            _keys.Remove(new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest));
+            else
+            {
+                _keys.Remove(new(eventStore, eventStoreNamespace, identifier, revision!));
+                _keys.Remove(new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest));
+            }
         }
 
         await actualKeyStore.DeleteFor(eventStore, eventStoreNamespace, identifier, revision);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        var cacheKey = new Key(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest);
+        lock (_lock)
+        {
+            if (_keys.TryGetValue(cacheKey, out var cached))
+            {
+                return cached;
+            }
+        }
+
+        var provisioned = await actualKeyStore.GetOrAddFor(eventStore, eventStoreNamespace, identifier, key);
+        lock (_lock)
+        {
+            _keys[cacheKey] = provisioned;
+        }
+
+        return provisioned;
     }
 
     /// <inheritdoc/>
@@ -45,15 +70,21 @@ public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : I
         var cacheRevision = revision ?? EncryptionKeyRevision.Latest;
         var cacheKey = new Key(eventStore, eventStoreNamespace, identifier, cacheRevision);
 
-        if (_keys.TryGetValue(cacheKey, out var encryptionKey))
+        lock (_lock)
         {
-            return encryptionKey;
+            if (_keys.TryGetValue(cacheKey, out var encryptionKey))
+            {
+                return encryptionKey;
+            }
         }
 
         var key = await actualKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
         if (key is not null)
         {
-            _keys[cacheKey] = key;
+            lock (_lock)
+            {
+                _keys[cacheKey] = key;
+            }
         }
 
         return key;
@@ -68,9 +99,12 @@ public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : I
     {
         var cacheRevision = revision ?? EncryptionKeyRevision.Latest;
 
-        if (_keys.ContainsKey(new(eventStore, eventStoreNamespace, identifier, cacheRevision)))
+        lock (_lock)
         {
-            return true;
+            if (_keys.ContainsKey(new(eventStore, eventStoreNamespace, identifier, cacheRevision)))
+            {
+                return true;
+            }
         }
 
         return await actualKeyStore.HasFor(eventStore, eventStoreNamespace, identifier, revision);
@@ -79,14 +113,18 @@ public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : I
     /// <inheritdoc/>
     public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
     {
-        _keys.Remove(new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest));
-
-        if (revision is not null && revision != EncryptionKeyRevision.Latest)
+        lock (_lock)
         {
-            _keys[new(eventStore, eventStoreNamespace, identifier, revision)] = key;
+            _keys.Remove(new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest));
+
+            if (revision is not null && revision != EncryptionKeyRevision.Latest)
+            {
+                _keys[new(eventStore, eventStoreNamespace, identifier, revision)] = key;
+            }
+
+            _keys[new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest)] = key;
         }
 
-        _keys[new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest)] = key;
         await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
     }
 

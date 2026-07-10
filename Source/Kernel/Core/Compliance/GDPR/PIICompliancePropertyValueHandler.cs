@@ -64,22 +64,18 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
             return existing;
         }
 
-        // Serialize key creation per subject. Appending a batch encrypts all events concurrently
-        // (Task.WhenAll), so multiple events for the same subject can otherwise each generate and
-        // save a key, with the last write overwriting the rest — orphaning the data encrypted with
-        // the losing keys. The gate ensures only the first caller creates the key; the rest reuse it.
+        // A subject's key must be provisioned exactly once: a batch append and the sibling projections that
+        // observe it all encrypt PII under the same subject concurrently (Task.WhenAll), and the same subject
+        // may be provisioned from more than one silo. If two provisioners each generate and save a key, the
+        // store mints a second revision and the value encrypted under the first key can no longer be decrypted
+        // ("padding check failed"). The in-process gate serializes provisioning within this process to avoid
+        // generating throwaway keys; GetOrAddFor is the atomic get-or-create that makes every provisioner
+        // converge on a single persisted key pair even across processes / stale reads.
         var gate = _keyCreationGates.GetOrAdd($"{eventStore.Value}+{eventStoreNamespace.Value}+{identifier.Value}", _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync();
         try
         {
-            if (await _encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existingAfterGate)
-            {
-                return existingAfterGate;
-            }
-
-            var key = _encryption.GenerateKey();
-            await _encryptionKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
-            return key;
+            return await _encryptionKeyStore.GetOrAddFor(eventStore, eventStoreNamespace, identifier, _encryption.GenerateKey());
         }
         finally
         {

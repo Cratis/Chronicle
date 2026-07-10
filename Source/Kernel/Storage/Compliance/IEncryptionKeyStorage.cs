@@ -23,6 +23,35 @@ public interface IEncryptionKeyStorage
     Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null);
 
     /// <summary>
+    /// Atomically get the existing <see cref="EncryptionKey"/> for an <see cref="EncryptionKeyIdentifier"/>,
+    /// or persist and return the provided key when none exists yet.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the key belongs to.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the key belongs to.</param>
+    /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to provision for.</param>
+    /// <param name="key">The <see cref="EncryptionKey"/> to persist when none exists yet.</param>
+    /// <returns>The existing key, or the provided key when it was the one persisted.</returns>
+    /// <remarks>
+    /// This is the get-or-create primitive for subject key provisioning. Concurrent or repeated callers for the
+    /// same identifier — across a batch append, sibling projections, multiple silos, or a stale read that does not
+    /// yet see a just-written key — must converge on a <b>single</b> persisted key pair, so that a value encrypted
+    /// under the returned key can always be decrypted later. Unlike <see cref="SaveFor"/>, this never mints an
+    /// additional revision when a key already exists; it reuses the initial revision. The default implementation is
+    /// best-effort for stores without a native atomic insert-if-absent; stores that support one override this to be
+    /// fully race-safe.
+    /// </remarks>
+    async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (await TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        await SaveFor(eventStore, eventStoreNamespace, identifier, key, EncryptionKeyRevision.Initial);
+        return await TryGetFor(eventStore, eventStoreNamespace, identifier) ?? key;
+    }
+
+    /// <summary>
     /// Check if there is an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the key belongs to.</param>

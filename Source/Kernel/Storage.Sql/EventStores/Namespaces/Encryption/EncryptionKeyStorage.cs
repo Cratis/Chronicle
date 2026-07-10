@@ -40,6 +40,40 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public async Task<StoredEncryptionKey> GetOrAddFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        StoredEncryptionKey key)
+    {
+        if (await TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+        try
+        {
+            scope.DbContext.EncryptionKeys.Add(new EncryptionKey
+            {
+                Identifier = identifier.Value,
+                Revision = EncryptionKeyRevision.Initial.Value,
+                PublicKey = key.Public,
+                PrivateKey = key.Private
+            });
+            await scope.DbContext.SaveChangesAsync();
+            return key;
+        }
+        catch (DbUpdateException)
+        {
+            // Another provisioner inserted the initial revision first (primary key violation on
+            // Identifier + Revision). Converge on the persisted key so every writer encrypts under the same one.
+            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Initial);
+            return winner ?? key;
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
