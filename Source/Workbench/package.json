@@ -78,7 +78,7 @@
         "tailwindcss": "4.2.4",
         "ts-node": "10.9.2",
         "tsconfig-paths": "4.2.0",
-        "typescript": "6.0.3",
+        "typescript": "7.0.2",
         "typescript-eslint": "8.59.1",
         "vite": "8.0.16",
         "vite-plugin-commonjs": "0.10.4",
@@ -89,5 +89,5 @@
         "@cratis/arc.react": "^20.10.4",
         "@cratis/arc": "^20.10.4"
     },
-    "packageManager": "yarn@4.5.3"
+    "packageManager": "yarn@4.17.1"
 }
