@@ -14,12 +14,12 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.16.2" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.16.2" />
-    <PackageVersion Include="Cratis.Arc" Version="20.49.2" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="20.49.2" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.49.2" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.49.2" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.49.2" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.49.2" />
+    <PackageVersion Include="Cratis.Arc" Version="20.54.2" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="20.54.2" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.54.2" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.54.2" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.54.2" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.54.2" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
@@ -47,7 +47,7 @@
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!-- Orleans -->
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.2.0" />
@@ -68,7 +68,7 @@
     <PackageVersion Include="OpenTelemetry" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.16.0-beta.1" />
@@ -85,18 +85,18 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.1.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.121" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.122" />
     <!-- Testing & Specifications -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Cratis.Specifications" Version="3.0.5" />
-    <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.5" />
+    <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
     <PackageVersion Include="Testcontainers" Version="4.13.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <!-- Not categorized -->
-    <PackageVersion Include="MongoDB.Driver" Version="3.9.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.5.0" />
