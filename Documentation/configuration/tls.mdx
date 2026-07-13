@@ -1,6 +1,6 @@
 # TLS Configuration (Client)
 
-Chronicle .NET clients communicate with Chronicle Server over TLS. The server always serves its single port over TLS — in development it generates a self-signed certificate automatically — so the client connects over TLS by default.
+Chronicle .NET clients communicate with Chronicle Server over TLS by default. With TLS enabled, the server serves its single port over TLS — in development it generates a self-signed certificate automatically — so the client connects over TLS with no extra setup. When the server runs with TLS disabled (for example behind a load balancer that terminates TLS), the client must disable TLS too — see [Connection string option](#connection-string-option).
 
 For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/configuration/tls.md).
 
@@ -30,11 +30,11 @@ For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/c
 | --- | --- | --- | --- |
 | CertificatePath | string | null | Path to the client certificate (PFX format) if mutual TLS is used |
 | CertificatePassword | string | null | Password for the certificate file |
-| IsDisabled | boolean (read-only) | computed | `true` when no certificate path/password is set. Use `?disableTls=true` in the connection string only to reach a genuinely non-TLS endpoint (a standard Chronicle server always serves TLS) |
+| IsDisabled | boolean (read-only) | computed | `true` when no certificate path/password is set. Use `?disableTls=true` in the connection string to reach a server running in cleartext (TLS disabled, or TLS terminated upstream) |
 
 ## Connection string option
 
-For the rare case of a non-TLS endpoint, TLS can be turned off through the connection string:
+When the server runs with TLS disabled — for example when a load balancer, ingress or service mesh terminates TLS upstream — turn TLS off on the client through the connection string:
 
 <ChronicleClientTabs snippet="configuration/tls/connection-string-disable" />
 

@@ -9,8 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Tls
 {
     /// <summary>
-    /// Gets or inits whether TLS is enabled. Defaults to true.
-    /// Can be set to false when TLS is terminated upstream by an ingress/reverse proxy.
+    /// Gets or inits whether TLS is enabled. Defaults to <see langword="true"/>, serving gRPC and the Workbench, API and OAuth
+    /// flows on a single multiplexed TLS <see cref="ChronicleOptions.Port"/>.
+    /// Set to <see langword="false"/> to run in cleartext — for example when TLS is terminated upstream by an ingress or reverse
+    /// proxy, or for local development — in which case gRPC (h2c) is served on <see cref="ChronicleOptions.Port"/> and
+    /// the HTTP/1.1 surface on <see cref="ChronicleOptions.ManagementPort"/>. No certificate is required when disabled.
     /// </summary>
     public bool Enabled { get; init; } = true;
 

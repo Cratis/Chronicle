@@ -32,7 +32,7 @@ Chronicle exposes the following ports:
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
 | 35000 | Main Service      | gRPC (HTTP/2) plus REST API, Workbench, OAuth, and health checks (HTTP/1.1), multiplexed over one TLS port |
 
-> **Note**: Port 35000 serves both HTTP/2 (gRPC) and HTTP/1.1 over TLS, so it **requires** a certificate. In production you must supply one via `Tls:CertificatePath` (and `Tls:CertificatePassword` if the certificate is protected). See [TLS Configuration](configuration/tls.md).
+> **Note**: With TLS enabled (the default), port 35000 serves both HTTP/2 (gRPC) and HTTP/1.1 over TLS, so it **requires** a certificate. In production you must supply one via `Tls:CertificatePath` (and `Tls:CertificatePassword` if the certificate is protected). To run in cleartext instead — for example when TLS is terminated upstream by a load balancer or ingress — set `Tls:Enabled` to `false`; gRPC then moves to h2c on port 35000 and the HTTP/1.1 surface to the `ManagementPort` (8080 by default). See [TLS Configuration](configuration/tls.md).
 
 ## Docker Deployment
 
@@ -94,6 +94,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -fk https://localhost:35000/health || exit 1
 ```
 
+> **Warning**: A **plain-HTTP** health check against the TLS port fails at the TLS record layer with `"Wrong version number"` — the port speaks TLS, not cleartext HTTP. Probe the TLS port over HTTPS (as above, `-k` skips CA verification) or with a TCP-connect check. When TLS is terminated upstream (`Tls:Enabled=false`), probe `/health` over plain HTTP on the `ManagementPort` instead. To keep the data plane on TLS while still offering a cleartext probe, set `HealthPort` to expose `/health` on a dedicated plaintext port. See [TLS Configuration](configuration/tls.md#load-balancer-and-health-check-probes).
+>
 > **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details.
 
 ## Security Considerations

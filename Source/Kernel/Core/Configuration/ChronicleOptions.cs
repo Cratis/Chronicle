@@ -22,9 +22,27 @@ public class ChronicleOptions
     public static readonly string SectionPath = ConfigurationPath.Combine(SectionPaths);
 
     /// <summary>
-    /// Port to listen on for all Chronicle traffic — gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1).
+    /// Port to listen on for Chronicle traffic. With TLS enabled (the default) this single port multiplexes
+    /// gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1). When TLS is disabled it serves cleartext
+    /// gRPC (h2c) only, and the HTTP/1.1 surface moves to <see cref="ManagementPort"/>.
     /// </summary>
     public int Port { get; init; } = 35000;
+
+    /// <summary>
+    /// Port for the plaintext HTTP/1.1 surface (Workbench, API, OAuth and health) used only when TLS is disabled
+    /// (<see cref="Tls"/>.<see cref="Tls.Enabled"/> is <see langword="false"/>). Cleartext HTTP/1.1 and HTTP/2 cannot share a
+    /// single port — ALPN negotiation requires TLS — so the two protocols split across <see cref="Port"/> (h2c gRPC)
+    /// and this port (HTTP/1.1). With TLS enabled everything is served on <see cref="Port"/> and this is ignored.
+    /// </summary>
+    public int ManagementPort { get; init; } = 8080;
+
+    /// <summary>
+    /// Optional dedicated plaintext port that serves only the <see cref="HealthCheckEndpoint"/>, for orchestrator and
+    /// load-balancer probes that cannot speak TLS. When <c>0</c> (the default) it is disabled. It is independent of
+    /// TLS on <see cref="Port"/> — the data plane can stay on TLS while health checks answer over cleartext here.
+    /// Bind it to the internal or cluster network only.
+    /// </summary>
+    public int HealthPort { get; init; }
 
     /// <summary>
     /// Gets the health check endpoint.
