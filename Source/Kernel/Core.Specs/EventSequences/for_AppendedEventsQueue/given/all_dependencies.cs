@@ -14,8 +14,17 @@ public class all_dependencies : Specification
     {
         _taskFactory = Substitute.For<ITaskFactory>();
         _grainFactory = Substitute.For<IGrainFactory>();
+
+        // The real ITaskFactory.Run offloads the queue handler to a background thread. Running it inline
+        // on the caller here deadlocks the spec under constrained parallelism (e.g. CI's 2-core agents):
+        // the handler's continuations and the test's AwaitQueueDepletion timers contend for the same
+        // starved thread pool and never make progress. Offload to a dedicated thread to mirror production.
         _taskFactory
             .When(_ => _.Run(Arg.Any<Func<Task>>()))
-            .Do(callInfo => callInfo.Arg<Func<Task>>()());
+            .Do(callInfo => Task.Factory.StartNew(
+                callInfo.Arg<Func<Task>>(),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
+                TaskScheduler.Default));
     }
 }
