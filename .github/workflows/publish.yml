@@ -38,6 +38,11 @@ on:
       - "**"
     paths:
       - "Source/**"
+      # Image definitions ship in the published Docker images, so a Docker-only
+      # change (e.g. a Dockerfile or entrypoint fix) must be able to cut a release.
+      - "Docker/**"
+      # Changes to the publish pipeline itself should be exercised by a release.
+      - ".github/workflows/publish.yml"
 
 
 permissions:
