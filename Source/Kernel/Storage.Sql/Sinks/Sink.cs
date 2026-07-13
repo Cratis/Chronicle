@@ -832,7 +832,19 @@ public class Sink : ISink
         }
 
         var json = (JsonObject)JsonSerializer.SerializeToNode(dict, ReadModelDbContext.JsonSerializerOptions)!;
-        return _expandoObjectConverter.ToExpandoObject(json, _schema);
+        var result = _expandoObjectConverter.ToExpandoObject(json, _schema);
+
+        // The schema-aware conversion only carries schema-declared properties. The compliance subject is a
+        // sink-owned column that lives outside the read model schema, so re-attach it onto the materialized
+        // instance — both the read path (releasing PII on read) and the projection pipeline (decrypting the
+        // initial state before re-encrypting) key their release off this subject; without it PII stays
+        // encrypted on read and the next event double-encrypts the already-encrypted carry-over state.
+        if (entity.TryGetValue(WellKnownProperties.Subject, out var subject) && subject is string subjectValue)
+        {
+            ((IDictionary<string, object?>)result)[WellKnownProperties.Subject] = subjectValue;
+        }
+
+        return result;
     }
 
     void SeedDefaults(DynamicReadModelEntity entity)

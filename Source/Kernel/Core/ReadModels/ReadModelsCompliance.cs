@@ -38,7 +38,23 @@ public class ReadModelsCompliance(
         var json = expandoObjectConverter.ToJsonObject(instance, schema);
         var applied = await complianceManager.Apply(eventStore, eventStoreNamespace, schema, identifier, json);
         var result = expandoObjectConverter.ToExpandoObject(applied, schema);
-        ((IDictionary<string, object?>)result)[WellKnownProperties.Subject] = identifier;
+        var resultAsDictionary = (IDictionary<string, object?>)result;
+
+        // Encryption must only change the PII members; it must not drop the rest of the document. The
+        // schema round-trip above only carries schema-declared properties, so document identity and
+        // bookkeeping fields that live outside the read model schema — the sink's primary key column and
+        // similar — are lost. Downstream difference computation would then see them as removed and emit a
+        // spurious "property -> null" change; for the SQL sink that nulls the read model's primary key and
+        // the save fails on every attempt. Carry any such non-schema property through unchanged.
+        foreach (var (propertyName, propertyValue) in (IDictionary<string, object?>)instance)
+        {
+            if (!resultAsDictionary.ContainsKey(propertyName))
+            {
+                resultAsDictionary[propertyName] = propertyValue;
+            }
+        }
+
+        resultAsDictionary[WellKnownProperties.Subject] = identifier;
         return result;
     }
 
