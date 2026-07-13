@@ -16,9 +16,11 @@ namespace Cratis.Chronicle.Services.Clients;
 /// Represents an implementation of <see cref="IConnectionService"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
+/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo terminating the client connections.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class ConnectionService(
     IGrainFactory grainFactory,
+    ILocalSiloDetails localSiloDetails,
     ILogger<ConnectionService> logger) : IConnectionService
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
@@ -29,7 +31,7 @@ internal sealed class ConnectionService(
         CallContext context = default)
     {
         var subject = new Subject<ConnectionKeepAlive>();
-        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         _ = Task.Run(
             async () =>
@@ -77,7 +79,7 @@ internal sealed class ConnectionService(
     /// <inheritdoc/>
     public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
-        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
         await connectedClients.OnClientPing(keepAlive.ConnectionId);
     }
 

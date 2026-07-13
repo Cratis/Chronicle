@@ -40,7 +40,7 @@ public class Reactor(
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
 

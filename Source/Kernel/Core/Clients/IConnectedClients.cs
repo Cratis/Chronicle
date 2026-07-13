@@ -6,9 +6,14 @@ using Cratis.Chronicle.Concepts.Clients;
 namespace Cratis.Chronicle.Clients;
 
 /// <summary>
-/// Defines a system for tracking connected observers.
+/// Defines a system for tracking the clients connected to a specific silo.
 /// </summary>
-public interface IConnectedClients : IGrainWithIntegerKey
+/// <remarks>
+/// The grain is keyed by the parsable string of the silo's <see cref="SiloAddress"/> and placed on
+/// that silo, making the tracking local per silo. Use
+/// <see cref="ConnectedClientsGrainFactoryExtensions.GetConnectedClients"/> to get the grain for a silo.
+/// </remarks>
+public interface IConnectedClients : IGrainWithStringKey
 {
     /// <summary>
     /// Report that a client was connected.
