@@ -17,13 +17,19 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Error, "No TLS certificate is configured. The Chronicle port requires a certificate to serve gRPC and HTTP on a single port")]
     internal static partial void TlsCertificateMissingProduction(this ILogger<Kernel> logger);
 
-    [LoggerMessage(LogLevel.Debug, "Configuring server to listen on port {Port} for gRPC (HTTP/2) and Workbench, API and OAuth (HTTP/1.1)")]
+    [LoggerMessage(LogLevel.Warning, "TLS is disabled - serving cleartext gRPC (h2c) on port {GrpcPort} and Workbench, API, OAuth and health (HTTP/1.1) on port {ManagementPort}")]
+    internal static partial void TlsDisabled(this ILogger<Kernel> logger, int grpcPort, int managementPort);
+
+    [LoggerMessage(LogLevel.Information, "Serving the health check endpoint on dedicated plaintext port {HealthPort}")]
+    internal static partial void HealthPortEnabled(this ILogger<Kernel> logger, int healthPort);
+
+    [LoggerMessage(LogLevel.Debug, "Configuring server to listen on port {Port}")]
     internal static partial void ServerListening(this ILogger<Kernel> logger, int port);
 
     [LoggerMessage(LogLevel.Debug, "Cratis Chronicle Server configured successfully - starting services")]
     internal static partial void ServerConfigured(this ILogger<Kernel> logger);
 
-    [LoggerMessage(LogLevel.Information, "Cratis Chronicle Server started successfully - ready and listening on port {Port} for gRPC (HTTP/2) and Workbench, API and OAuth (HTTP/1.1)")]
+    [LoggerMessage(LogLevel.Information, "Cratis Chronicle Server started successfully - ready and listening on port {Port}")]
     internal static partial void ServerStarted(this ILogger<Kernel> logger, int port);
 
     [LoggerMessage(LogLevel.Information, "Shutdown signal received. Chronicle Server is shutting down...")]

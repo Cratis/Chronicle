@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Configuration;
@@ -52,44 +53,63 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
-// The Chronicle port multiplexes gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1)
-// on a single port. Kestrel can only serve both protocols on one port over TLS, where ALPN
-// negotiates the protocol per connection — cleartext HTTP/2 (h2c) cannot share a port with HTTP/1.1.
-// A configured certificate is therefore required; in development one is generated automatically.
-var certificate = CertificateLoader.LoadCertificate(chronicleOptions);
-if (certificate is not null)
+// With TLS enabled (the default) the Chronicle port multiplexes gRPC (HTTP/2) and the Workbench, API and
+// OAuth flows (HTTP/1.1) on a single port — Kestrel can only serve both protocols on one port over TLS, where
+// ALPN negotiates the protocol per connection. A certificate is therefore required; in development one is
+// generated automatically. When TLS is disabled the two protocols fall back to separate cleartext ports and no
+// certificate is needed. ServerEndpointResolver computes the resulting listener topology from configuration.
+X509Certificate2? certificate = null;
+if (chronicleOptions.Tls.Enabled)
 {
-    logger.TlsCertificateLoaded();
+    certificate = CertificateLoader.LoadCertificate(chronicleOptions);
+    if (certificate is not null)
+    {
+        logger.TlsCertificateLoaded();
+    }
+    else
+    {
+#if DEVELOPMENT
+        // The certificate must live for the lifetime of the process; Kestrel uses it for every TLS handshake.
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        certificate = DevelopmentCertificate.Create();
+#pragma warning restore CA2000
+        logger.DevelopmentCertificateGenerated();
+#else
+        logger.TlsCertificateMissingProduction();
+        throw new NoTlsCertificateConfigured();
+#endif
+    }
 }
 else
 {
-#if DEVELOPMENT
-    // The certificate must live for the lifetime of the process; Kestrel uses it for every TLS handshake.
-#pragma warning disable CA2000 // Dispose objects before losing scope
-    certificate = DevelopmentCertificate.Create();
-#pragma warning restore CA2000
-    logger.DevelopmentCertificateGenerated();
-#else
-    logger.TlsCertificateMissingProduction();
-    throw new InvalidOperationException(
-        "No TLS certificate is configured. The Chronicle port serves gRPC (HTTP/2) and the Workbench, " +
-        "API and OAuth flows (HTTP/1.1) on a single TLS port, which requires a certificate. " +
-        "Provide one through Tls:CertificatePath (and Tls:CertificatePassword) in configuration. " +
-        "When TLS is terminated upstream by an ingress/reverse proxy, re-encrypt the connection to Chronicle.");
-#endif
+    logger.TlsDisabled(chronicleOptions.Port, chronicleOptions.ManagementPort);
 }
 
-logger.ServerListening(chronicleOptions.Port);
+var endpoints = ServerEndpointResolver.Resolve(chronicleOptions);
+foreach (var endpoint in endpoints)
+{
+    logger.ServerListening(endpoint.Port);
+}
 
 builder.WebHost.UseKestrel(options =>
 {
-    // A single TLS port for both gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1),
-    // multiplexed per connection through ALPN.
-    options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
+    foreach (var endpoint in endpoints)
     {
-        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-        listenOptions.UseHttps(certificate);
-    });
+        options.ListenAnyIP(endpoint.Port, listenOptions =>
+        {
+            listenOptions.Protocols = endpoint.Protocols switch
+            {
+                EndpointProtocols.Http1 => HttpProtocols.Http1,
+                EndpointProtocols.Http2 => HttpProtocols.Http2,
+                _ => HttpProtocols.Http1AndHttp2
+            };
+
+            if (endpoint.UseTls)
+            {
+                listenOptions.UseHttps(certificate!);
+            }
+        });
+    }
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
@@ -179,6 +199,15 @@ var app = builder.Build();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
+
+// A dedicated plaintext health-only port for orchestrator/load-balancer probes that cannot speak TLS.
+// The port-filtered middleware short-circuits health requests on that port before any routing, authentication
+// or gRPC middleware, keeping it a tiny anonymous surface. The main health endpoint is still mapped below.
+if (chronicleOptions.HealthPort > 0)
+{
+    logger.HealthPortEnabled(chronicleOptions.HealthPort);
+    app.UseHealthChecks(chronicleOptions.HealthCheckEndpoint, chronicleOptions.HealthPort);
+}
 
 app.UseRouting();
 
