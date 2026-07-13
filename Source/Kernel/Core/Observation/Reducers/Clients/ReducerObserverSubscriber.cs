@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Observation.Placement;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -15,11 +16,16 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// Represents an implementation of <see cref="IReducerObserverSubscriber"/>.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="ReducerObserverSubscriber"/> class.
+/// We want this grain to be local to its activation. When a client connects, the service instance that
+/// receives the connection will activate this grain and we then want it to be local to that service instance
+/// and not perform a network hop. The <see cref="ObserverSubscriberKey"/> contains the silo address
+/// which ensures the grain is placed on the silo that owns the <see cref="IReducerMediator"/> subscription
+/// for this client.
 /// </remarks>
 /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating pipelines.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+[ConnectedObserverPlacement]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,

@@ -29,6 +29,6 @@ public class and_system_role_added_event_is_projected : Specification
     }
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
-    [Fact] void should_map_name_from_event() => _scenario.Instance!.Name.ShouldEqual("My System Role");
-    [Fact] void should_set_role_type_to_system_role() => _scenario.Instance!.RoleType.ShouldEqual(CollectionRoleType.SystemRole);
+    [Fact] void should_map_name_from_event() => _scenario.Instance.Name.ShouldEqual("My System Role");
+    [Fact] void should_set_role_type_to_system_role() => _scenario.Instance.RoleType.ShouldEqual(CollectionRoleType.SystemRole);
 }

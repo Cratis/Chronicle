@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_wit
 public class setting_the_inner_nested_object_from_pdl : given.a_compiled_pdl_nested_projection
 {
     [Fact] void should_have_an_inner_nested_dictionary_on_the_outer() => _outerNested.Nested.ShouldNotBeNull();
-    [Fact] void should_have_the_inner_nested_entry_keyed_by_validation() => _outerNested.Nested!.ContainsKey((PropertyPath)"validation").ShouldBeTrue();
+    [Fact] void should_have_the_inner_nested_entry_keyed_by_validation() => _outerNested.Nested.ContainsKey((PropertyPath)"validation").ShouldBeTrue();
     [Fact] void should_have_inner_nested_identified_by_not_set() => _innerNested.IdentifiedBy.IsSet.ShouldBeFalse();
     [Fact] void should_have_the_validation_configured_from_event() => _innerNested.From.ContainsKey((EventType)nameof(given.PdlDeepNestedValidationConfigured)).ShouldBeTrue();
     [Fact] void should_map_the_validation_rules_property() => _innerNested.From[(EventType)nameof(given.PdlDeepNestedValidationConfigured)].Properties[(PropertyPath)"rules"].ShouldEqual("rules");

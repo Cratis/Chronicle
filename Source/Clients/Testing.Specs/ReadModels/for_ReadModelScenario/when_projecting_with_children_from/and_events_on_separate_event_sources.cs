@@ -42,9 +42,9 @@ public class and_events_on_separate_event_sources : Specification
     }
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
-    [Fact] void should_map_module_name() => _scenario.Instance!.Name.ShouldEqual("My Module");
-    [Fact] void should_have_one_feature() => _scenario.Instance!.Features.Count().ShouldEqual(1);
-    [Fact] void should_map_feature_name() => _scenario.Instance!.Features.First().Name.ShouldEqual("My Feature");
-    [Fact] void should_have_one_slice() => _scenario.Instance!.Features.First().Slices.Count().ShouldEqual(1);
-    [Fact] void should_map_slice_name() => _scenario.Instance!.Features.First().Slices.First().Name.ShouldEqual("Register Something");
+    [Fact] void should_map_module_name() => _scenario.Instance.Name.ShouldEqual("My Module");
+    [Fact] void should_have_one_feature() => _scenario.Instance.Features.Count().ShouldEqual(1);
+    [Fact] void should_map_feature_name() => _scenario.Instance.Features.First().Name.ShouldEqual("My Feature");
+    [Fact] void should_have_one_slice() => _scenario.Instance.Features.First().Slices.Count().ShouldEqual(1);
+    [Fact] void should_map_slice_name() => _scenario.Instance.Features.First().Slices.First().Name.ShouldEqual("Register Something");
 }

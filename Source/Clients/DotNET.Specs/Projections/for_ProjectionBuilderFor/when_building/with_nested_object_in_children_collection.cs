@@ -20,7 +20,7 @@ public class with_nested_object_in_children_collection : Specification
     {
         _eventTypes = new EventTypesForSpecifications([typeof(SliceAddedToFeature), typeof(CommandSetOnSlice), typeof(CommandClearedFromSlice)]);
         _builder = new ProjectionBuilderFor<FeatureReadModel>(
-            new ProjectionId(typeof(FeatureReadModel).FullName!),
+            new ProjectionId(typeof(FeatureReadModel).FullName),
             typeof(FeatureReadModel),
             new DefaultNamingPolicy(),
             _eventTypes,

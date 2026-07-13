@@ -16,7 +16,7 @@ public class and_observers_with_event_store_attribute_are_combined_into_single_f
     const string SourceEventStore = "StudioAdmin";
 
     static readonly MethodInfo _registerExternalSubscriptionsMethod =
-        typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic);
 
     EventStore _eventStore;
     IEventStoreSubscriptions _subscriptions;
@@ -51,7 +51,7 @@ public class and_observers_with_event_store_attribute_are_combined_into_single_f
         SetAutoProperty("Subscriptions", _subscriptions);
     }
 
-    async Task Because() => await (Task)_registerExternalSubscriptionsMethod.Invoke(_eventStore, [])!;
+    async Task Because() => await (Task)_registerExternalSubscriptionsMethod.Invoke(_eventStore, []);
 
     [Fact] void should_register_a_single_subscription_for_the_observer_event_store() =>
         _subscriptions.Received(1).Subscribe(
@@ -65,7 +65,7 @@ public class and_observers_with_event_store_attribute_are_combined_into_single_f
         builder.WithEventType(Arg.Any<EventTypeId>()).Returns(builder);
 
         _configure.ShouldNotBeNull();
-        _configure!(builder);
+        _configure(builder);
 
         builder.Received(1).WithEventType(_invitedEventTypeId);
         builder.Received(1).WithEventType(_acceptedEventTypeId);
@@ -73,13 +73,13 @@ public class and_observers_with_event_store_attribute_are_combined_into_single_f
 
     void SetField(string fieldName, object value)
     {
-        var field = typeof(EventStore).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var field = typeof(EventStore).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
         field.SetValue(_eventStore, value);
     }
 
     void SetAutoProperty(string propertyName, object value)
     {
-        var field = typeof(EventStore).GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var field = typeof(EventStore).GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
         field.SetValue(_eventStore, value);
     }
 

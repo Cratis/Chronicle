@@ -16,16 +16,18 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// </summary>
 public class ConceptSerializer : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
+    static readonly Type _codecType = typeof(ConceptSerializer);
+
     /// <inheritdoc/>
     public object? DeepCopy(object? input, CopyContext context) => input;
 
     /// <inheritdoc/>
-    public bool IsSupportedType(Type type) => type.IsConcept();
+    public bool IsSupportedType(Type type) => type == _codecType || type.IsConcept();
 
     /// <inheritdoc/>
     public bool? IsTypeAllowed(Type type)
     {
-        if (type.IsConcept())
+        if (type == _codecType || type.IsConcept())
         {
             return true;
         }
@@ -36,165 +38,73 @@ public class ConceptSerializer : IGeneralizedCodec, IGeneralizedCopier, ITypeFil
     /// <inheritdoc/>
     public object ReadValue<TInput>(ref Reader<TInput> reader, Field field)
     {
-        var targetType = typeof(TInput).GetConceptValueType();
-        object value = null!;
-
-        if (targetType.IsEnum)
+        if (field.WireType == WireType.Reference)
         {
-            value = Int32Codec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(string))
-        {
-            value = StringCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(byte))
-        {
-            value = ByteCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(char))
-        {
-            value = CharCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(short))
-        {
-            value = Int16Codec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(int))
-        {
-            value = Int32Codec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(long))
-        {
-            value = Int64Codec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(ushort))
-        {
-            value = UInt16Codec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(uint))
-        {
-            value = UInt32Codec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(ulong))
-        {
-            value = UInt64Codec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(float))
-        {
-            value = FloatCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(double))
-        {
-            value = DoubleCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(decimal))
-        {
-            value = DecimalCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(TimeOnly))
-        {
-            value = TimeOnlyCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(DateOnly))
-        {
-            value = DateOnlyCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(DateTime))
-        {
-            value = DateTimeCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(DateTimeOffset))
-        {
-            value = DateTimeOffsetCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(Guid))
-        {
-            value = GuidCodec.ReadValue(ref reader, field);
-        }
-        else if (field.FieldType == typeof(bool))
-        {
-            value = BoolCodec.ReadValue(ref reader, field);
+            return ReferenceCodec.ReadReference<object, TInput>(ref reader, field);
         }
 
-        if (value is null)
+        field.EnsureWireTypeTagDelimited();
+        var placeholderReferenceId = ReferenceCodec.CreateRecordPlaceholder(reader.Session);
+
+        Type? conceptType = null;
+        object? value = null;
+        var fieldId = 0u;
+
+        while (true)
+        {
+            var header = reader.ReadFieldHeader();
+
+            if (header.IsEndBaseOrEndObject)
+            {
+                break;
+            }
+
+            fieldId += header.FieldIdDelta;
+            switch (fieldId)
+            {
+                case 0:
+                    conceptType = TypeSerializerCodec.ReadValue(ref reader, header);
+                    break;
+                case 1:
+                    value = ObjectCodec.ReadValue(ref reader, header);
+                    break;
+                default:
+                    reader.ConsumeUnknownField(header);
+                    break;
+            }
+        }
+
+        if (conceptType is null || value is null)
         {
             return null!;
         }
 
-        return ConceptFactory.CreateConceptInstance(targetType, value);
+        var concept = ConceptFactory.CreateConceptInstance(conceptType, value);
+        ReferenceCodec.RecordObject(reader.Session, concept, placeholderReferenceId);
+        return concept;
     }
 
     /// <inheritdoc/>
     public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, Type expectedType, object value)
         where TBufferWriter : IBufferWriter<byte>
     {
-        var type = value.GetType().GetConceptValueType();
-        value = value.GetConceptValue();
-
-        if (type.IsEnum)
+        // Handles null and back-references (and registers this value in the reference table so the
+        // read side, which calls CreateRecordPlaceholder, stays in sync).
+        if (ReferenceCodec.TryWriteReferenceField(ref writer, fieldIdDelta, expectedType, value))
         {
-            Int32Codec.WriteField(ref writer, fieldIdDelta, (int)value);
             return;
         }
 
-        switch (value)
-        {
-            case string stringValue:
-                StringCodec.WriteField(ref writer, fieldIdDelta, stringValue);
-                break;
-            case byte byteValue:
-                ByteCodec.WriteField(ref writer, fieldIdDelta, byteValue);
-                break;
-            case char charValue:
-                CharCodec.WriteField(ref writer, fieldIdDelta, charValue);
-                break;
-            case short shortValue:
-                Int16Codec.WriteField(ref writer, fieldIdDelta, shortValue);
-                break;
-            case int intValue:
-                Int32Codec.WriteField(ref writer, fieldIdDelta, intValue);
-                break;
-            case long longValue:
-                Int64Codec.WriteField(ref writer, fieldIdDelta, longValue);
-                break;
-            case ushort shortValue:
-                UInt16Codec.WriteField(ref writer, fieldIdDelta, shortValue);
-                break;
-            case uint intValue:
-                UInt32Codec.WriteField(ref writer, fieldIdDelta, intValue);
-                break;
-            case ulong longValue:
-                UInt64Codec.WriteField(ref writer, fieldIdDelta, longValue);
-                break;
-            case float floatValue:
-                FloatCodec.WriteField(ref writer, fieldIdDelta, floatValue);
-                break;
-            case double doubleValue:
-                DoubleCodec.WriteField(ref writer, fieldIdDelta, doubleValue);
-                break;
-            case decimal decimalValue:
-                DecimalCodec.WriteField(ref writer, fieldIdDelta, decimalValue);
-                break;
-            case TimeOnly timeOnlyValue:
-                TimeOnlyCodec.WriteField(ref writer, fieldIdDelta, timeOnlyValue);
-                break;
-            case DateOnly dateOnlyValue:
-                DateOnlyCodec.WriteField(ref writer, fieldIdDelta, dateOnlyValue);
-                break;
-            case DateTime dateTimeValue:
-                DateTimeCodec.WriteField(ref writer, fieldIdDelta, dateTimeValue);
-                break;
-            case DateTimeOffset dateTimeOffsetValue:
-                DateTimeOffsetCodec.WriteField(ref writer, fieldIdDelta, dateTimeOffsetValue);
-                break;
-            case Guid guidValue:
-                GuidCodec.WriteField(ref writer, fieldIdDelta, guidValue);
-                break;
-            case bool boolValue:
-                BoolCodec.WriteField(ref writer, fieldIdDelta, boolValue);
-                break;
-            default:
-                throw new NotImplementedException();
-        }
+        // Concepts are serialized self-describingly: the concept type is written as field 0 and
+        // the underlying primitive value as field 1. The concept type MUST be on the wire because
+        // a single generalized codec serves every concept type, and the read path receives no
+        // expected-type context to recover it from. Without this, cross-silo grain calls (the only
+        // path that actually serializes — local calls deep-copy) desync the stream.
+        writer.WriteFieldHeader(fieldIdDelta, expectedType, _codecType, WireType.TagDelimited);
+
+        TypeSerializerCodec.WriteField(ref writer, 0, value.GetType());
+        ObjectCodec.WriteField(ref writer, 1, value.GetConceptValue());
+
+        writer.WriteEndObject();
     }
 }

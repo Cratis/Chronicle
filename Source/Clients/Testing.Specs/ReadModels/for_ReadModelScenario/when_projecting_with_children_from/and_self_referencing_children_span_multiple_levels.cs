@@ -39,8 +39,8 @@ public class and_self_referencing_children_span_multiple_levels : Specification
             .Events(new SubFeatureAddedSelfRef(_level1FeatureId, "L2"));
     }
 
-    [Fact] void should_have_root_feature_at_root() => _scenario.Instance!.Features.Count().ShouldEqual(1);
-    [Fact] void should_have_level1_nested_under_root() => _scenario.Instance!.Features.Single().SubFeatures.Count().ShouldEqual(1);
-    [Fact] void should_have_level2_nested_under_level1() => _scenario.Instance!.Features.Single().SubFeatures.Single().SubFeatures.Count().ShouldEqual(1);
-    [Fact] void should_set_level2_name() => _scenario.Instance!.Features.Single().SubFeatures.Single().SubFeatures.Single().Name.ShouldEqual("L2");
+    [Fact] void should_have_root_feature_at_root() => _scenario.Instance.Features.Count().ShouldEqual(1);
+    [Fact] void should_have_level1_nested_under_root() => _scenario.Instance.Features.Single().SubFeatures.Count().ShouldEqual(1);
+    [Fact] void should_have_level2_nested_under_level1() => _scenario.Instance.Features.Single().SubFeatures.Single().SubFeatures.Count().ShouldEqual(1);
+    [Fact] void should_set_level2_name() => _scenario.Instance.Features.Single().SubFeatures.Single().SubFeatures.Single().Name.ShouldEqual("L2");
 }

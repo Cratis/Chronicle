@@ -51,6 +51,6 @@ public class updating_the_nested_object(context context) : Given<context>(contex
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_one_slice() => Context.Result.Slices.Count().ShouldEqual(1);
     [Fact] void should_have_a_nested_command_on_the_slice() => Context.Result.Slices.First().Command.ShouldNotBeNull();
-    [Fact] void should_update_the_command_name() => Context.Result.Slices.First().Command!.Name.ShouldEqual("Create");
-    [Fact] void should_preserve_the_command_schema() => Context.Result.Slices.First().Command!.Schema.ShouldEqual("{}");
+    [Fact] void should_update_the_command_name() => Context.Result.Slices.First().Command.Name.ShouldEqual("Create");
+    [Fact] void should_preserve_the_command_schema() => Context.Result.Slices.First().Command.Schema.ShouldEqual("{}");
 }

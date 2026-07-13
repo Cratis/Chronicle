@@ -201,7 +201,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     async Task DropInProcessMongoDatabase()
     {
-        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{_outOfProcessMongoContainer!.GetMappedPublicPort(27017)}")
+        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{_outOfProcessMongoContainer.GetMappedPublicPort(27017)}")
         {
             DirectConnection = true
         };

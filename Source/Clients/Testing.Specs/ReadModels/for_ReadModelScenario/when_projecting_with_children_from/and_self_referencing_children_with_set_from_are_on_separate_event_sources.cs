@@ -33,7 +33,7 @@ public class and_self_referencing_children_with_set_from_are_on_separate_event_s
             .Events(new SubFeatureAddedSelfRef(_featureId, "Inventory"));
     }
 
-    [Fact] void should_only_have_parent_feature_at_root() => _scenario.Instance!.Features.Count().ShouldEqual(1);
-    [Fact] void should_nest_sub_feature_under_parent() => _scenario.Instance!.Features.Single().SubFeatures.Count().ShouldEqual(1);
-    [Fact] void should_set_sub_feature_name() => _scenario.Instance!.Features.Single().SubFeatures.Single().Name.ShouldEqual("Inventory");
+    [Fact] void should_only_have_parent_feature_at_root() => _scenario.Instance.Features.Count().ShouldEqual(1);
+    [Fact] void should_nest_sub_feature_under_parent() => _scenario.Instance.Features.Single().SubFeatures.Count().ShouldEqual(1);
+    [Fact] void should_set_sub_feature_name() => _scenario.Instance.Features.Single().SubFeatures.Single().Name.ShouldEqual("Inventory");
 }

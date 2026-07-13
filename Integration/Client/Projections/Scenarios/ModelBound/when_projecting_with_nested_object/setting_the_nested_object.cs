@@ -40,6 +40,6 @@ public class setting_the_nested_object(context context) : Given<context>(context
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_set_the_slice_name() => Context.Result.Name.ShouldEqual("Model-Bound Slice");
     [Fact] void should_have_a_nested_command() => Context.Result.Command.ShouldNotBeNull();
-    [Fact] void should_set_the_command_name() => Context.Result.Command!.Name.ShouldEqual("Register");
-    [Fact] void should_set_the_command_schema() => Context.Result.Command!.Schema.ShouldEqual("{}");
+    [Fact] void should_set_the_command_name() => Context.Result.Command.Name.ShouldEqual("Register");
+    [Fact] void should_set_the_command_schema() => Context.Result.Command.Schema.ShouldEqual("{}");
 }
