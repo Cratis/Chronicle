@@ -8,4 +8,8 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 /// <param name="Host">Host name where Chronicle is running.</param>
 /// <param name="Port">The port in which Chronicle is exposed on, defaults to 35000.</param>
-public record ChronicleServerAddress(string Host, int Port = 35000);
+public record ChronicleServerAddress(string Host, int Port = 35000)
+{
+    /// <inheritdoc/>
+    public override string ToString() => $"{Host}:{Port}";
+}

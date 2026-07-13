@@ -97,6 +97,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <!-- Not categorized -->
+    <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />

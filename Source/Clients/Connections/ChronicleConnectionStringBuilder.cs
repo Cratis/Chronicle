@@ -11,7 +11,8 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 /// <remarks>
 /// Supports parsing and building Chronicle connection strings in the format:
-/// chronicle://[username:password@]host[:port][/?options].
+/// chronicle://[username:password@]host[:port][,host[:port],...][/?options] and
+/// chronicle+srv://host[/?options] for DNS SRV record lookup.
 /// </remarks>
 #pragma warning disable CA1010 // Generic interface should also be implemented
 public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
@@ -19,13 +20,16 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 {
     const string HostKey = "Host";
     const string PortKey = "Port";
+    const string ServersKey = "Servers";
     const string UsernameKey = "Username";
     const string PasswordKey = "Password";
     const string SchemeKey = "Scheme";
     const string ApiKeyKey = "apiKey";
     const string DisableTlsKey = "disableTls";
+    const string LoadBalancerKey = "loadBalancer";
     const string CertificatePathKey = "certificatePath";
     const string CertificatePasswordKey = "certificatePassword";
+    const string SrvScheme = "chronicle+srv";
     const int DefaultPort = 35000;
 
     /// <summary>
@@ -45,22 +49,62 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
-    /// Gets or sets the host.
+    /// Gets or sets the host. When multiple servers are configured, this is the first server's host.
+    /// Setting it resets the configuration to a single server.
     /// </summary>
     public string Host
     {
         get => ContainsKey(HostKey) ? (string)this[HostKey] : "localhost";
-        set => this[HostKey] = value;
+        set
+        {
+            Remove(ServersKey);
+            this[HostKey] = value;
+        }
     }
 
     /// <summary>
-    /// Gets or sets the port.
+    /// Gets or sets the port. When multiple servers are configured, this is the first server's port.
+    /// Setting it resets the configuration to a single server.
     /// </summary>
     public int Port
     {
         get => ContainsKey(PortKey) ? Convert.ToInt32(this[PortKey]) : DefaultPort;
-        set => this[PortKey] = value;
+        set
+        {
+            Remove(ServersKey);
+            this[PortKey] = value;
+        }
     }
+
+    /// <summary>
+    /// Gets or sets the server addresses. Supports multiple servers for load balancing.
+    /// </summary>
+    /// <exception cref="MissingServerAddress">Thrown when setting an empty collection of addresses.</exception>
+    public IReadOnlyList<ChronicleServerAddress> ServerAddresses
+    {
+        get => ContainsKey(ServersKey)
+            ? ParseServerAddresses((string)this[ServersKey])
+            : [new ChronicleServerAddress(Host, Port)];
+        set
+        {
+            if (value.Count == 0)
+            {
+                throw new MissingServerAddress();
+            }
+
+            Host = value[0].Host;
+            Port = value[0].Port;
+            if (value.Count > 1)
+            {
+                this[ServersKey] = string.Join(',', value.Select(address => address.ToString()));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the connection string uses the DNS SRV lookup scheme (chronicle+srv).
+    /// </summary>
+    public bool IsSrv => Scheme.Equals(SrvScheme, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets or sets the username for authentication.
@@ -172,6 +216,25 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets the name of the load balancer strategy to use when multiple servers are available.
+    /// </summary>
+    public string? LoadBalancer
+    {
+        get => ContainsKey(LoadBalancerKey) ? (string)this[LoadBalancerKey] : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Remove(LoadBalancerKey);
+            }
+            else
+            {
+                this[LoadBalancerKey] = value;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets or sets the path to the certificate file for TLS.
     /// </summary>
     public string? CertificatePath
@@ -228,8 +291,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             url += "@";
         }
 
-        url += Host;
-        url += $":{Port}";
+        url += ContainsKey(ServersKey)
+            ? string.Join(',', ServerAddresses.Select(address => address.ToString()))
+            : $"{Host}:{Port}";
 
         // Add query parameters if needed
         var queryParams = new List<string>();
@@ -242,6 +306,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         if (DisableTls)
         {
             queryParams.Add("disableTls=true");
+        }
+
+        if (ContainsKey(LoadBalancerKey))
+        {
+            queryParams.Add($"loadBalancer={Uri.EscapeDataString((string)this[LoadBalancerKey])}");
         }
 
         if (ContainsKey(CertificatePathKey))
@@ -261,11 +330,13 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             if (keyStr != null &&
                 keyStr != HostKey &&
                 keyStr != PortKey &&
+                keyStr != ServersKey &&
                 keyStr != UsernameKey &&
                 keyStr != PasswordKey &&
                 keyStr != SchemeKey &&
                 keyStr != ApiKeyKey &&
                 keyStr != DisableTlsKey &&
+                keyStr != LoadBalancerKey &&
                 keyStr != CertificatePathKey &&
                 keyStr != CertificatePasswordKey)
             {
@@ -279,6 +350,55 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         }
 
         return url;
+    }
+
+    static ChronicleServerAddress[] ParseServerAddresses(string authority)
+    {
+        var addresses = authority
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(ParseServerAddress)
+            .ToArray();
+
+        return addresses.Length == 0 ? throw new MissingServerAddress() : addresses;
+    }
+
+    static ChronicleServerAddress ParseServerAddress(string entry)
+    {
+        string host;
+        string portPart;
+
+        if (entry.StartsWith('['))
+        {
+            // IPv6 literal, e.g. [::1]:35000
+            var closingBracketIndex = entry.IndexOf(']');
+            if (closingBracketIndex == -1)
+            {
+                throw new InvalidServerAddress(entry);
+            }
+
+            host = entry[1..closingBracketIndex];
+            portPart = entry[(closingBracketIndex + 1)..].TrimStart(':');
+        }
+        else
+        {
+            var colonIndex = entry.LastIndexOf(':');
+            host = colonIndex == -1 ? entry : entry[..colonIndex];
+            portPart = colonIndex == -1 ? string.Empty : entry[(colonIndex + 1)..];
+        }
+
+        if (host.Length == 0)
+        {
+            throw new InvalidServerAddress(entry);
+        }
+
+        if (portPart.Length == 0)
+        {
+            return new ChronicleServerAddress(host, DefaultPort);
+        }
+
+        return int.TryParse(portPart, out var port)
+            ? new ChronicleServerAddress(host, port)
+            : throw new InvalidServerAddress(entry);
     }
 
     void ParseConnectionString(string connectionString)
@@ -303,21 +423,27 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 
     void Parse(string url)
     {
-        var uri = new Uri(url);
+        var schemeSeparatorIndex = url.IndexOf("://", StringComparison.Ordinal);
+        Scheme = url[..schemeSeparatorIndex];
+        var rest = url[(schemeSeparatorIndex + 3)..];
 
-        // Extract scheme
-        Scheme = uri.Scheme;
-
-        // Extract host
-        Host = uri.Host;
-
-        // Extract port
-        Port = uri.Port == -1 ? DefaultPort : uri.Port;
-
-        // Extract username and password from UserInfo
-        if (!string.IsNullOrEmpty(uri.UserInfo))
+        // Separate the authority (userinfo + hosts) from path and query
+        var pathIndex = rest.IndexOfAny(['/', '?']);
+        var authority = pathIndex == -1 ? rest : rest[..pathIndex];
+        var query = string.Empty;
+        if (pathIndex != -1)
         {
-            var parts = uri.UserInfo.Split(':');
+            var queryIndex = rest.IndexOf('?', pathIndex);
+            query = queryIndex == -1 ? string.Empty : rest[(queryIndex + 1)..];
+        }
+
+        // Extract username and password from the userinfo part
+        var userInfoIndex = authority.LastIndexOf('@');
+        if (userInfoIndex != -1)
+        {
+            var userInfo = authority[..userInfoIndex];
+            authority = authority[(userInfoIndex + 1)..];
+            var parts = userInfo.Split(':');
             Username = Uri.UnescapeDataString(parts[0]);
             if (parts.Length > 1)
             {
@@ -325,10 +451,12 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             }
         }
 
+        ServerAddresses = ParseServerAddresses(authority);
+
         // Parse query string parameters if any
-        if (!string.IsNullOrEmpty(uri.Query))
+        if (!string.IsNullOrEmpty(query))
         {
-            foreach (var pair in uri.Query.TrimStart('?').Split('&'))
+            foreach (var pair in query.Split('&'))
             {
                 var keyValue = pair.Split('=');
                 if (keyValue.Length == 2)

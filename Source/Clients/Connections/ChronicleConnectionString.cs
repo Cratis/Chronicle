@@ -75,9 +75,25 @@ public class ChronicleConnectionString
     }
 
     /// <summary>
-    /// Gets the <see cref="ChronicleServerAddress"/> for the server.
+    /// Gets the <see cref="ChronicleServerAddress"/> for the server. When multiple servers are
+    /// configured, this is the first server in the list.
     /// </summary>
     public ChronicleServerAddress ServerAddress { get; } = new("localhost", 35000);
+
+    /// <summary>
+    /// Gets all the <see cref="ChronicleServerAddress"/> entries configured for the connection.
+    /// </summary>
+    public IReadOnlyList<ChronicleServerAddress> ServerAddresses => _builder.ServerAddresses;
+
+    /// <summary>
+    /// Gets a value indicating whether the connection string uses the DNS SRV lookup scheme (chronicle+srv).
+    /// </summary>
+    public bool IsSrv => _builder.IsSrv;
+
+    /// <summary>
+    /// Gets the name of the load balancer strategy to use when multiple servers are available, if specified.
+    /// </summary>
+    public string? LoadBalancer => _builder.LoadBalancer;
 
     /// <summary>
     /// Gets the username for authentication, if specified. This maps to client id using `client_credentials` flow.
