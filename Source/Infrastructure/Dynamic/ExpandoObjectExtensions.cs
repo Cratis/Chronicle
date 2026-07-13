@@ -60,6 +60,7 @@ public static class ExpandoObjectExtensions
                 valueType != typeof(ExpandoObject) &&
                 valueType != typeof(string) &&
                 valueType != typeof(Guid) &&
+                valueType != typeof(byte[]) &&
                 !valueType.IsConcept() &&
                 value is IEnumerable enumerableValue)
             {
@@ -335,6 +336,7 @@ public static class ExpandoObjectExtensions
             valueType != typeof(DateTimeOffset) &&
             valueType != typeof(TimeOnly) &&
             valueType != typeof(TimeSpan) &&
+            valueType != typeof(byte[]) &&
             !valueType.IsConcept())
         {
             if (value is IEnumerable enumerableValue)
