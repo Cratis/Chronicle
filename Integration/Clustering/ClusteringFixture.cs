@@ -4,8 +4,6 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 
-using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using Cratis.Arc;
 using Cratis.Chronicle.Integration.Clustering.for_Clustering;
@@ -13,7 +11,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using EphemeralMongo;
-using MongoDB.Driver;
+using Orleans.TestingHost;
 using Configuration = KernelCore::Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Integration.Clustering;
@@ -22,51 +20,59 @@ namespace Cratis.Chronicle.Integration.Clustering;
 /// Represents a fixture for clustered integration tests with two silos forming a single Orleans cluster.
 /// </summary>
 /// <remarks>
-/// Silo1 is the primary silo and additionally co-hosts the Chronicle client (the <see cref="IEventStore"/>
-/// the specs talk to). Silo2 is a secondary silo joined to the same cluster. Because grains (event sequences,
-/// observers, reducers and projections) are placed across both silos, every event and read model crosses
-/// the silo boundary — exercising Orleans serialization end-to-end, which is the primary concern for clustering.
+/// The cluster is an Orleans <see cref="InProcessTestCluster"/> — silos share in-memory cluster membership
+/// and grain directory, while grain calls between silos still run through the full Orleans message
+/// serialization pipeline (the in-memory transport sits below the regular connection/serializer stack).
+/// Silo_0 hosts EventSequences (the event log grain) and additionally co-hosts the Chronicle client
+/// (the <see cref="IEventStore"/> the specs talk to). Silo_1 hosts Observers (reactors, reducers and
+/// projections). Because of that role split, every event and read model crosses the silo boundary —
+/// exercising Orleans serialization end-to-end, which is the primary concern for clustering.
 /// </remarks>
 public class ClusteringFixture : IAsyncLifetime
 {
+    const string EventSequencesSiloName = "Silo_0";
+    const string ObserversSiloName = "Silo_1";
+
     IMongoRunner? _mongoRunner;
-    IHost? _silo1;
-    IHost? _silo2;
-    ClusteredReactorSignal _reactorSignal = new();
+    InProcessTestCluster? _cluster;
 
     /// <summary>
-    /// Gets the <see cref="IEventStore"/> from the client co-hosted on the primary silo.
+    /// Gets the <see cref="IEventStore"/> from the client co-hosted on the event-sequences silo.
     /// </summary>
-    public IEventStore ClientEventStore => _silo1.Services.GetRequiredService<IEventStore>();
+    public IEventStore ClientEventStore => EventSequencesSilo.ServiceProvider.GetRequiredService<IEventStore>();
 
     /// <summary>
-    /// Gets the <see cref="IChronicleClient"/> from the primary silo.
+    /// Gets the <see cref="IChronicleClient"/> from the event-sequences silo.
     /// </summary>
-    public IChronicleClient ChronicleClient => _silo1.Services.GetRequiredService<IChronicleClient>();
+    public IChronicleClient ChronicleClient => EventSequencesSilo.ServiceProvider.GetRequiredService<IChronicleClient>();
 
     /// <summary>
-    /// Gets the service provider of the primary silo, allowing specs to resolve silo-registered services.
+    /// Gets the service provider of the event-sequences silo, allowing specs to resolve silo-registered services.
     /// </summary>
-    public IServiceProvider SiloServices => _silo1.Services;
+    public IServiceProvider SiloServices => EventSequencesSilo.ServiceProvider;
 
     /// <summary>
-    /// Gets the <see cref="SiloAddress"/> of the primary silo, which is configured to host EventSequences grains.
+    /// Gets the <see cref="SiloAddress"/> of the silo configured to host EventSequences grains.
     /// </summary>
-    public SiloAddress EventSequencesSiloAddress => _silo1.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
+    public SiloAddress EventSequencesSiloAddress => EventSequencesSilo.SiloAddress;
 
     /// <summary>
-    /// Gets the <see cref="SiloAddress"/> of the secondary silo, which is configured to host observer grains.
+    /// Gets the <see cref="SiloAddress"/> of the silo configured to host observer grains.
     /// </summary>
-    public SiloAddress ObserversSiloAddress => _silo2.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
+    public SiloAddress ObserversSiloAddress => ObserversSilo.SiloAddress;
 
     /// <summary>
     /// Gets the shared <see cref="ClusteredReactorSignal"/> instance used by the reactor on whichever silo it runs.
     /// </summary>
     /// <remarks>
-    /// Both silos share the same object reference so that a reactor placed on silo2 and the test code
+    /// Both silos share the same object reference so that a reactor handler and the test code
     /// reading from this fixture both see the same in-memory state.
     /// </remarks>
-    public ClusteredReactorSignal ReactorSignal => _reactorSignal;
+    public ClusteredReactorSignal ReactorSignal { get; } = new();
+
+    InProcessSiloHandle EventSequencesSilo => _cluster!.Silos.Single(silo => silo.Name == EventSequencesSiloName);
+
+    InProcessSiloHandle ObserversSilo => _cluster!.Silos.Single(silo => silo.Name == ObserversSiloName);
 
     /// <inheritdoc/>
     public async Task InitializeAsync()
@@ -76,19 +82,18 @@ public class ClusteringFixture : IAsyncLifetime
             UseSingleNodeReplicaSet = true
         });
 
-        var mongoUrl = _mongoRunner.ConnectionString;
-
-        // Localhost multi-silo clustering is inherently racy: occasionally a freshly-formed cluster lands
-        // grains in a state where cross-silo observer activation never completes. Rather than fight every
-        // race individually, bring up the whole cluster and verify it end-to-end with a warmup; if that
-        // fails, tear the silos down and bring up a completely fresh cluster on new ports. A bad cluster
-        // instance is cheap to discard and this makes the fixture reliable for CI.
+        // The in-process test cluster removes the classic localhost-clustering races (membership gossip,
+        // port contention, divergent startup ordering), but the Chronicle pipeline itself still has
+        // cross-silo coordination that can occasionally land a fresh cluster in a bad state. The warmup
+        // verifies the full append → cross-silo observe → reduce path end-to-end; if it fails, the cluster
+        // instance is discarded and a fresh one is brought up. A bad cluster instance is cheap to discard
+        // and this keeps the fixture reliable for CI.
         Exception? lastFailure = null;
         for (var attempt = 0; attempt < 2; attempt++)
         {
             try
             {
-                await BringUpClusterAsync(mongoUrl);
+                await BringUpClusterAsync(_mongoRunner.ConnectionString);
                 await WarmUpAsync();
                 return;
             }
@@ -96,68 +101,107 @@ public class ClusteringFixture : IAsyncLifetime
             {
                 lastFailure = ex;
                 Console.WriteLine($"Cluster bring-up attempt {attempt + 1} failed: {ex.Message}. Recreating cluster...");
-                await TearDownSilosAsync();
+                await TearDownClusterAsync();
             }
         }
 
         throw new InvalidOperationException("Failed to bring up an operational cluster after multiple attempts.", lastFailure);
     }
 
+    /// <inheritdoc/>
+    public async Task DisposeAsync()
+    {
+        await TearDownClusterAsync();
+        _mongoRunner?.Dispose();
+    }
+
     /// <summary>
-    /// Builds and starts a fresh two-silo cluster and waits for membership to converge.
+    /// Builds and deploys a fresh two-silo test cluster and bootstraps the Chronicle kernel.
     /// </summary>
     /// <param name="mongoUrl">The MongoDB connection string shared by both silos.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task BringUpClusterAsync(string mongoUrl)
     {
-        var silo1Port = GetFreePort();
-        var silo1Gateway = GetFreePort();
-        var silo2Port = GetFreePort();
-        var silo2Gateway = GetFreePort();
-        var primaryEndpoint = new IPEndPoint(IPAddress.Loopback, silo1Port);
+        var builder = new InProcessTestClusterBuilder(2);
+        builder.Options.ConfigureFileLogging = false;
 
-        // Build BOTH hosts before starting either. Orleans builds its serializer type manifest
-        // (and the well-known type id assignments) from the set of assemblies loaded at host-build
-        // time. Starting silo1 first would JIT-load additional assemblies, so building silo2
-        // afterwards would produce a divergent manifest and cross-silo deserialization would fail
-        // with "well-known type id not present". Building both back-to-back keeps the manifests
-        // identical across the cluster.
-        //
-        // Role split: silo1 owns EventSequences (the event log grain), silo2 owns Observers
-        // (reactors, reducers, projections). This forces every event and read model to cross
-        // the silo boundary — exercising Orleans serialization end-to-end.
-        _silo1 = CreateSilo(
-            silo1Port,
-            silo1Gateway,
-            primaryEndpoint,
-            mongoUrl,
-            hostClient: true,
-            eventSequences: true,
-            observers: false);
-        _silo2 = CreateSilo(
-            silo2Port,
-            silo2Gateway,
-            primaryEndpoint,
-            mongoUrl,
-            hostClient: false,
-            eventSequences: false,
-            observers: true);
+        // The specs never use the Orleans cluster client — they talk to the co-hosted Chronicle client
+        // and the silos' own service providers. The client host must not even start: ClusterClient
+        // validates at startup that every type in the grain-interface manifest has a codec, and the
+        // Cratis types are only serializable on hosts that run Chronicle's serialization configuration
+        // (part of AddChronicleToSilo), which a plain client host does not.
+        builder.Options.InitializeClientOnDeploy = false;
 
-        // Silo1 is the primary and must be up and visible in membership before the secondary joins,
-        // otherwise the secondary can fail to gossip and the cluster never converges.
-        await StartSilo(_silo1, "silo1");
-        await WaitForActiveSilos(_silo1, expectedSilos: 1);
+        builder
+            .ConfigureSiloHost((siloOptions, hostBuilder) =>
+            {
+                // The testing host builds each silo host with the Development environment name, which turns
+                // on ValidateScopes/ValidateOnBuild. The Chronicle server never runs as Development, so its
+                // registrations are not shaped for eager build-time container validation — swap in a
+                // non-validating container factory to match how the server actually runs.
+                hostBuilder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions()));
 
-        await StartSilo(_silo2, "silo2");
+                hostBuilder.Logging.AddConsole();
+                hostBuilder.Logging.SetMinimumLevel(LogLevel.Warning);
 
-        // Wait for membership to actually converge to two active silos rather than relying on a fixed
-        // delay — localhost multi-silo clustering is otherwise racy and grain placement can hang.
-        await WaitForActiveSilos(_silo1, expectedSilos: 2);
+                var services = hostBuilder.Services;
+                services.AddCratisMongoDB(
+                    mongo =>
+                    {
+                        mongo.Server = mongoUrl;
+                        mongo.Database = "orleans";
+                    },
+                    _ => { });
+
+                services.AddTypeDiscovery();
+                services.AddBindingsByConvention();
+                services.AddSelfBindings();
+                services.AddCratisArcMeter();
+                services.AddSingleton(ReactorSignal);
+
+                ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
+                ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
+
+                // Role split: Silo_0 owns EventSequences (the event log grain), Silo_1 owns Observers
+                // (reactors, reducers, projections). This forces every event and read model to cross
+                // the silo boundary — exercising Orleans serialization end-to-end.
+                var isEventSequencesSilo = siloOptions.SiloName == EventSequencesSiloName;
+                services.Configure<Configuration.ChronicleOptions>(options =>
+                {
+                    options.Clustering.Roles.EventSequences = isEventSequencesSilo;
+                    options.Clustering.Roles.Observers = !isEventSequencesSilo;
+                });
+            })
+            .ConfigureSilo((siloOptions, siloBuilder) =>
+            {
+                KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
+                    siloBuilder,
+                    chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, Constants.EventStore));
+
+                siloBuilder.ConfigureServices(services =>
+                {
+                    RemoveChronicleServerStartupTask(services);
+                    if (siloOptions.SiloName == EventSequencesSiloName)
+                    {
+                        services.AddInProcessChronicleClient(
+                            new DefaultClientArtifactsProvider(new SingleAssemblyDiscovery(typeof(ClusteringFixture).Assembly)),
+                            Constants.EventStore);
+                    }
+                });
+            });
+
+        _cluster = builder.Build();
+        await _cluster.DeployAsync();
+
+        // With InitializeClientOnDeploy off, DeployAsync skips its own stabilization wait (it polls
+        // through the cluster client), so wait for membership to reach two active silos here before
+        // any grain placement happens.
+        await WaitForActiveSilos(expectedSilos: 2);
 
         // Manually perform the kernel bootstrap that ChronicleServerStartupTask normally handles.
-        // That task is removed because it deadlocks during in-process silo startup (it tries to
-        // activate grains before the cluster is fully formed). Now that both silos are up and the
-        // cluster has converged, all grain activations succeed.
+        // That task is removed because it activates grains during silo startup, before the cluster is
+        // fully formed — with role-based placement that either deadlocks or fails placement. Now that
+        // both silos are deployed and membership has stabilized, all grain activations succeed.
         await BootstrapKernelAsync();
     }
 
@@ -172,8 +216,9 @@ public class ClusteringFixture : IAsyncLifetime
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task BootstrapKernelAsync()
     {
-        var grainFactory = _silo1.Services.GetRequiredService<IGrainFactory>();
-        var kernelReactors = _silo1.Services.GetRequiredService<KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel.IReactors>();
+        var services = EventSequencesSilo.ServiceProvider;
+        var grainFactory = services.GetRequiredService<IGrainFactory>();
+        var kernelReactors = services.GetRequiredService<KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel.IReactors>();
 
         var systemEventStore = (string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System;
         var userEventStore = (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore;
@@ -187,36 +232,6 @@ public class ClusteringFixture : IAsyncLifetime
         await kernelReactors.DiscoverAndRegister(
             (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
-    }
-
-    /// <summary>
-    /// Stops and disposes both silos so a fresh cluster can be brought up. The shared MongoDB instance is left running.
-    /// </summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    async Task TearDownSilosAsync()
-    {
-        _reactorSignal = new();
-        foreach (var silo in new[] { _silo2, _silo1 })
-        {
-            if (silo is null)
-            {
-                continue;
-            }
-
-            try
-            {
-                await silo.StopAsync();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ignoring error while stopping silo during teardown: {ex.Message}");
-            }
-
-            silo.Dispose();
-        }
-
-        _silo1 = null;
-        _silo2 = null;
     }
 
     /// <summary>
@@ -247,13 +262,12 @@ public class ClusteringFixture : IAsyncLifetime
     /// Polls cluster membership until the expected number of silos are active, so that grains can be
     /// placed across the cluster before any test runs.
     /// </summary>
-    /// <param name="silo">A silo whose grain factory is used to query membership.</param>
     /// <param name="expectedSilos">The number of active silos to wait for.</param>
     /// <returns>A <see cref="Task"/> that completes when the cluster has converged.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the cluster does not converge within the timeout.</exception>
-    static async Task WaitForActiveSilos(IHost silo, int expectedSilos)
+    async Task WaitForActiveSilos(int expectedSilos)
     {
-        var management = silo.Services.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0);
+        var management = EventSequencesSilo.ServiceProvider.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0);
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
         while (!cancellationTokenSource.IsCancellationRequested)
@@ -277,127 +291,33 @@ public class ClusteringFixture : IAsyncLifetime
         throw new InvalidOperationException($"Cluster did not reach {expectedSilos} active silos within the timeout.");
     }
 
-    /// <inheritdoc/>
-    public async Task DisposeAsync()
+    /// <summary>
+    /// Stops and disposes the test cluster so a fresh one can be brought up. The shared MongoDB instance is left running.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    async Task TearDownClusterAsync()
     {
-        if (_silo2 is not null)
+        if (_cluster is null)
         {
-            await _silo2.StopAsync();
-            _silo2.Dispose();
+            return;
         }
 
-        if (_silo1 is not null)
-        {
-            await _silo1.StopAsync();
-            _silo1.Dispose();
-        }
-
-        _mongoRunner?.Dispose();
-    }
-
-    static async Task StartSilo(IHost silo, string name)
-    {
         try
         {
-            await silo.StartAsync();
+            await _cluster.StopAllSilosAsync();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to start {name}: {ex}");
-            throw;
+            Console.WriteLine($"Ignoring error while stopping silos during teardown: {ex.Message}");
         }
-    }
 
-    static int GetFreePort()
-    {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        return ((IPEndPoint)listener.LocalEndpoint).Port;
-    }
-
-    IHost CreateSilo(
-        int siloPort,
-        int gatewayPort,
-        IPEndPoint primaryEndpoint,
-        string mongoUrl,
-        bool hostClient,
-        bool eventSequences,
-        bool observers)
-    {
-        var builder = Host.CreateDefaultBuilder();
-
-        builder.AddCratisMongoDB(
-            mongo =>
-            {
-                mongo.Server = mongoUrl;
-                mongo.Database = "orleans";
-            },
-            _ => { });
-
-        builder.ConfigureLogging(logging =>
-        {
-            logging.ClearProviders();
-            logging.AddConsole();
-            logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Warning);
-        });
-
-        builder
-            .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
-            .ConfigureServices((ctx, services) =>
-            {
-                services.AddTypeDiscovery();
-                services.AddBindingsByConvention();
-                services.AddSelfBindings();
-                services.AddCratisArcMeter();
-
-                ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
-                ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
-
-                services.Configure<Configuration.ChronicleOptions>(options =>
-                {
-                    options.Clustering.Roles.EventSequences = eventSequences;
-                    options.Clustering.Roles.Observers = observers;
-                });
-            });
-
-        builder.UseOrleans((ctx, siloBuilder) =>
-        {
-            siloBuilder.UseLocalhostClustering(
-                siloPort,
-                gatewayPort,
-                primaryEndpoint,
-                serviceId: "clustering-test",
-                clusterId: "clustering-test");
-
-            siloBuilder.Services.AddTypeDiscovery();
-            siloBuilder.Services.AddBindingsByConvention();
-            siloBuilder.Services.AddSelfBindings();
-
-            KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
-                siloBuilder,
-                chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, Constants.EventStore));
-
-            siloBuilder.AddActivityPropagation();
-
-            siloBuilder.ConfigureServices(services =>
-            {
-                services.AddSingleton(_reactorSignal);
-                RemoveChronicleServerStartupTask(services);
-                if (hostClient)
-                {
-                    services.AddInProcessChronicleClient(
-                        new DefaultClientArtifactsProvider(new SingleAssemblyDiscovery(typeof(ClusteringFixture).Assembly)),
-                        Constants.EventStore);
-                }
-            });
-        });
-
-        return builder.Build();
+        await _cluster.DisposeAsync();
+        _cluster = null;
     }
 
     /// <summary>
-    /// Removes the <c>ChronicleServerStartupTask</c> which deadlocks during in-process test silo startup.
-    /// Tests drive their own bootstrapping through the co-hosted client.
+    /// Removes the <c>ChronicleServerStartupTask</c> which activates grains during silo startup, before
+    /// the cluster is formed. The fixture drives the equivalent bootstrap itself once the cluster is up.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to adjust.</param>
     static void RemoveChronicleServerStartupTask(IServiceCollection services)

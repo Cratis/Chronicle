@@ -15,7 +15,7 @@ event sequences and the connected client all live in the same process. The momen
 
 Both of these were effectively untested before. The work on the `copilot/add-integration-specs-clustering`
 branch added a real two-silo integration fixture (`Integration/Clustering`) that co-hosts a Chronicle client
-on the primary silo, and used it to find and fix the problems below.
+on the event-sequences silo, and used it to find and fix the problems below.
 
 ## Done — cross-silo serialization
 
@@ -31,10 +31,11 @@ cluster and pass every time):
 | `Cratis.Json.Globals` JSON options | Lazy initializer publishes the options before adding the derived-type converter, so a concurrent serialize freezes it mid-config → "JsonSerializerOptions is read-only". | Pre-warm it single-threaded in `SerializationConfigurationExtensions.Configure`. |
 | `OneOf.Types.None` | No Orleans codec; failed-partition recovery jobs return `None` as an ack and could not serialize across silos. | Added `OneOf.Types` to the JSON-serializer predicate. |
 
-## Done — connection / keep-alive resilience (partial)
+## Done — connection / keep-alive resilience
 
-The clustering integration test is still **not consistently green**, but its dominant failure mode was
-diagnosed and substantially reduced. The chain:
+The dominant failure mode of the clustering integration test was diagnosed and fixed (after these fixes
+plus the `InProcessTestCluster` migration below, the test has been consistently green — 8/8 consecutive
+local runs with zero bring-up retries). The chain:
 
 1. The kernel keep-alive (`Services/Clients/ConnectionService.Connect`) emits a ping every second and
    **disconnects the client if delivering one throws**. The in-process test connection delivered the ping
@@ -50,9 +51,28 @@ diagnosed and substantially reduced. The chain:
    so it could idle-deactivate (or migrate) and lose every client.
    - Fixed in `Source/Kernel/Core/Clients/ConnectedClients.cs`: added `[KeepAlive]`.
 
+## Done — Orleans `InProcessTestCluster` fixture
+
+The fixture (`Integration/Clustering/ClusteringFixture.cs`) now builds the two-silo cluster with Orleans'
+own `InProcessTestClusterBuilder` instead of hand-rolling two `Host`-based silos with localhost clustering.
+That removes the classic bring-up races wholesale: membership and the grain directory are shared in-memory
+(no gossip convergence to wait for), ports are managed by the testing host, and cross-silo grain calls
+still run through the full Orleans message-serialization pipeline (the in-memory transport sits *below*
+the regular connection/serializer stack, so serialization is exercised exactly as over TCP).
+
+Two things made the earlier `TestCluster` attempt fail and are handled explicitly now:
+
+- **DI validation:** the testing host builds each silo host with the *Development* environment name, which
+  turns on `ValidateScopes`/`ValidateOnBuild`. The Chronicle server never runs as Development, so the
+  fixture swaps in a non-validating container factory per silo host.
+- **The Orleans cluster client cannot start against Chronicle silos:** `ClusterClient` validates at startup
+  that every type in the grain-interface manifest has a codec, and Cratis types are only serializable on
+  hosts running Chronicle's serialization configuration. The specs only use the co-hosted Chronicle client,
+  so the fixture sets `InitializeClientOnDeploy = false` and waits for membership convergence itself.
+
 ## Remaining work
 
-The integration test still fails intermittently. Known remaining issues, roughly in priority order:
+Known remaining issues, roughly in priority order:
 
 1. **Connection registry is not migration-resilient.** `ConnectedClients` keeps its registry in process
    memory. `[KeepAlive]` stops idle collection but not silo migration / reactivation, which still drops the
@@ -65,23 +85,17 @@ The integration test still fails intermittently. Known remaining issues, roughly
    direct grain calls and, on failure, "logs and moves on" relying on observer catch-up — but
    `Observer.CheckNextSequenceNumber` only *detects* a gap (updates the tail), it does not reprocess a
    missed live event. A dropped cross-silo dispatch can therefore be lost silently.
-4. **Fixture should likely use Orleans `TestCluster`.** The current fixture hand-builds two `Host`-based
-   silos with localhost clustering and a co-hosted client, plus retry/warmup scaffolding to paper over
-   races. `Microsoft.Orleans.TestingHost.TestCluster` is purpose-built for reliable multi-silo test
-   clusters; moving to it (resolving the earlier DI-validation issues) would remove most of the fixture's
-   fragility.
-5. **Role-based placement is incomplete.** `EventSequencePlacementDirector` / `ObserverPlacementDirector`
+4. **Role-based placement is incomplete.** `EventSequencePlacementDirector` / `ObserverPlacementDirector`
    throw when a role is disabled on the *calling* silo, but `GetCompatibleSilos` is not filtered by the
    *target* silo's role, so `Clustering.Roles` does not actually constrain placement. Proper role-based
    placement needs per-silo metadata exposed to the placement directors.
 
 ## Notes for whoever picks this up
 
-- **Measure on a fresh machine / CI, not a thrashed dev box.** Reliability of the localhost two-silo
-  fixture swings wildly with machine load — the same code was observed passing 11/11 early in a session and
-  0/8 after hours of continuous container/silo churn. Prune Docker and restart between long runs.
-- **Iterate on serializers with the unit round-trip specs**, never the container-based integration test —
-  they isolate serializer behaviour and run in well under a second.
+- **Iterate on serializers with the unit round-trip specs**, never the clustering integration test —
+  they isolate serializer behavior and run in well under a second.
 - The integration spec (`Integration/Clustering/for_Clustering/when_appending_an_event_with_reactor_reducer_and_projection.cs`)
-  drives a rich payload (concept, enum, collection, nested record) through a reactor + reducer + projection
-  so that, when it does pass, it exercises rich-type serialization end-to-end across the silo boundary.
+  drives a rich payload (concept, enum, collection, nested record) through a reactor + reducer + projection,
+  exercising rich-type serialization end-to-end across the silo boundary.
+- The fixture needs no containers — MongoDB comes from EphemeralMongo and the cluster is in-process — so it
+  runs anywhere `dotnet test` runs.
