@@ -32,6 +32,22 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public Task<EncryptionKey> GetOrAddFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKey key)
+    {
+        if (TryGetLatest(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return Task.FromResult(existing);
+        }
+
+        var added = _keys.GetOrAdd(new Key(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Initial), key);
+        return Task.FromResult(added);
+    }
+
+    /// <inheritdoc/>
     public Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
@@ -47,32 +63,27 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public Task<EncryptionKey> GetFor(
+    public Task<EncryptionKey?> TryGetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        EncryptionKey? key;
         if (IsLatest(revision))
         {
-            key = KeysFor(eventStore, eventStoreNamespace, identifier)
-                .OrderByDescending(_ => _.Key.Revision.Value)
-                .Select(_ => _.Value)
-                .FirstOrDefault();
-        }
-        else
-        {
-            key = _keys.TryGetValue(new Key(eventStore, eventStoreNamespace, identifier, revision!), out var found) ? found : null;
+            return Task.FromResult(TryGetLatest(eventStore, eventStoreNamespace, identifier));
         }
 
-        if (key is null)
-        {
-            throw new MissingEncryptionKey(identifier);
-        }
-
-        return Task.FromResult(key);
+        return Task.FromResult(_keys.TryGetValue(new Key(eventStore, eventStoreNamespace, identifier, revision!), out var found) ? found : null);
     }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
     public Task DeleteFor(
@@ -106,6 +117,15 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
             _.Key.EventStore == eventStore &&
             _.Key.EventStoreNamespace == eventStoreNamespace &&
             _.Key.Identifier == identifier);
+
+    EncryptionKey? TryGetLatest(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        KeysFor(eventStore, eventStoreNamespace, identifier)
+            .OrderByDescending(_ => _.Key.Revision.Value)
+            .Select(_ => (EncryptionKey?)_.Value)
+            .FirstOrDefault();
 
     EncryptionKeyRevision GetNextRevision(
         EventStoreName eventStore,
