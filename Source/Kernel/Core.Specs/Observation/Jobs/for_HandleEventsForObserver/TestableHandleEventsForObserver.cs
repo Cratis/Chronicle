@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="throttle">The throttle for limiting parallel execution.</param>
 /// <param name="storage">The storage for the cluster.</param>
 /// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains.</param>
 /// <param name="logger">The logger.</param>
 public class TestableHandleEventsForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -26,8 +27,9 @@ public class TestableHandleEventsForObserver(
     IJobStepThrottle throttle,
     IStorage storage,
     IEventCompliance eventCompliance,
+    IGrainFactory grainFactory,
     ILogger<HandleEventsForObserver> logger)
-    : HandleEventsForObserver(state, throttle, storage, eventCompliance, logger), IGrainType
+    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, logger), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;
