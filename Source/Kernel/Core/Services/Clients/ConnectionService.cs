@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Contracts.Clients;
@@ -24,6 +25,7 @@ internal sealed class ConnectionService(
     ILogger<ConnectionService> logger) : IConnectionService
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
+    static readonly TimeSpan _observeConnectedClientsInterval = TimeSpan.FromSeconds(2);
 
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -93,6 +95,47 @@ internal sealed class ConnectionService(
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default)
+    {
+        var management = grainFactory.GetGrain<IManagementGrain>(0);
+        var hosts = await management.GetHosts(onlyActive: true);
+        var clients = new List<ConnectedClient>();
+        foreach (var silo in hosts.Keys)
+        {
+            var connectedClients = await grainFactory.GetConnectedClients(silo).GetAllConnectedClients();
+            clients.AddRange(connectedClients.Select(client => new ConnectedClient
+            {
+                ConnectionId = client.ConnectionId,
+                Version = client.Version,
+                LastSeen = client.LastSeen,
+                IsRunningWithDebugger = client.IsRunningWithDebugger,
+                SiloAddress = silo.ToParsableString()
+            }));
+        }
+
+        return clients;
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default)
+    {
+        var subject = new Subject<IEnumerable<ConnectedClient>>();
+        var subscription = Observable
+            .Timer(TimeSpan.Zero, _observeConnectedClientsInterval)
+            .SelectMany(_ => Observable.FromAsync(() => GetConnectedClients(context)))
+            .DistinctUntilChanged(ConnectedClientsComparer.Instance)
+            .Subscribe(subject);
+
+        context.CancellationToken.Register(() =>
+        {
+            subscription.Dispose();
+            subject.OnCompleted();
+        });
+
+        return subject;
+    }
+
     static string GenerateSchema()
     {
         var generator = new SchemaGenerator
@@ -107,5 +150,30 @@ internal sealed class ConnectionService(
             .Select(group => generator.GetSchema(group.ToArray()));
 
         return string.Join('\n', schemas);
+    }
+
+    sealed class ConnectedClientsComparer : IEqualityComparer<IEnumerable<ConnectedClient>>
+    {
+        public static readonly ConnectedClientsComparer Instance = new();
+
+        public bool Equals(IEnumerable<ConnectedClient>? x, IEnumerable<ConnectedClient>? y)
+        {
+            if (x is null || y is null)
+            {
+                return ReferenceEquals(x, y);
+            }
+
+            return x.Select(Identity).Order().SequenceEqual(y.Select(Identity).Order());
+        }
+
+        public int GetHashCode(IEnumerable<ConnectedClient> obj) => 0;
+
+        /// <summary>
+        /// Gets the identity of a client. LastSeen is deliberately not part of it - it changes on
+        /// every ping and would make every poll look like a change to observers.
+        /// </summary>
+        /// <param name="client">The <see cref="ConnectedClient"/> to get the identity for.</param>
+        /// <returns>A string identifying the client.</returns>
+        static string Identity(ConnectedClient client) => $"{client.SiloAddress}|{client.ConnectionId}|{client.Version}|{client.IsRunningWithDebugger}";
     }
 }

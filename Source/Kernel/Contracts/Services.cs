@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -46,6 +47,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Users"><see cref="IUsers"/> instance.</param>
 /// <param name="Applications"><see cref="IApplications"/> instance.</param>
 /// <param name="Server"><see cref="IServer"/> instance.</param>
+/// <param name="Connections"><see cref="IConnectionService"/> instance.</param>
 public sealed record Services(
     ICompliance Compliance,
     IEventStores EventStores,
@@ -68,4 +70,5 @@ public sealed record Services(
     IEventSeeding Seeding,
     IUsers Users,
     IApplications Applications,
-    IServer Server) : IServices;
+    IServer Server,
+    IConnectionService Connections) : IServices;

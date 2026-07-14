@@ -100,6 +100,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IServices>().Projections);
         services.AddSingleton(sp => sp.GetRequiredService<IServices>().ReadModels);
         services.AddSingleton(sp => sp.GetRequiredService<IServices>().Jobs);
+        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Connections);
 
         return services;
     }

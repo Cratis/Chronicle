@@ -250,6 +250,9 @@ internal sealed class TestingServices(
     /// <inheritdoc/>
     public IServer Server => _server.Value;
 
+    /// <inheritdoc/>
+    public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
     sealed class EmptyInstancesOf<T> : IInstancesOf<T>
         where T : class
     {

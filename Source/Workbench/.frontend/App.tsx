@@ -4,6 +4,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { BlankLayout } from "../Layout/Blank/BlankLayout";
 import { Home } from "../Features/Home";
+import { ConnectedClients } from "../Features/ConnectedClients/ConnectedClients";
 import { EventStore } from "../Features/EventStore/EventStore";
 import { Login, AuthProvider, ProtectedRoute } from "../Features/Security";
 import { LayoutProvider } from '../Layout/Default/context/LayoutContext';
@@ -38,6 +39,11 @@ function App() {
                                             <Route path='' element={
                                                 <ProtectedRoute>
                                                     <Home />
+                                                </ProtectedRoute>
+                                            } />
+                                            <Route path='connected-clients' element={
+                                                <ProtectedRoute>
+                                                    <ConnectedClients />
                                                 </ProtectedRoute>
                                             } />
                                         </Route>

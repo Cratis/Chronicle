@@ -32,4 +32,10 @@ public class ConnectedClient
     /// </summary>
     [ProtoMember(4)]
     public bool IsRunningWithDebugger { get; init; }
+
+    /// <summary>
+    /// Gets the address of the server (silo) the client is connected to.
+    /// </summary>
+    [ProtoMember(5)]
+    public string SiloAddress { get; init; } = string.Empty;
 }

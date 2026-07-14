@@ -25,6 +25,18 @@
                 "title": "Add Event Store",
                 "name": "Name"
             }
+        },
+        "connectedClients": "Connected Clients"
+    },
+    "connectedClients": {
+        "title": "Connected Clients",
+        "empty": "No clients are connected",
+        "columns": {
+            "server": "Server",
+            "connectionId": "Connection",
+            "version": "Version",
+            "lastSeen": "Last Seen",
+            "debugger": "Debugger"
         }
     },
     "mainMenu": {

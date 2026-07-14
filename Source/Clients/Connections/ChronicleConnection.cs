@@ -265,7 +265,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
             callInvoker.CreateGrpcService<IUsers>(clientFactory),
             callInvoker.CreateGrpcService<IApplications>(clientFactory),
-            callInvoker.CreateGrpcService<IServer>(clientFactory));
+            callInvoker.CreateGrpcService<IServer>(clientFactory),
+            callInvoker.CreateGrpcService<IConnectionService>(clientFactory));
 
         if (_skipKeepAlive)
         {

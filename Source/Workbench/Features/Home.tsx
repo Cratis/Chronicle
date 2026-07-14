@@ -8,13 +8,16 @@ import { withViewModel } from '@cratis/arc.react.mvvm';
 import { useRelativePath } from '../Utils/useRelativePath';
 import css from './Home.module.css';
 import { Button } from 'primereact/button';
-import { ImPlus } from "react-icons/im";
+import { ImPlus, ImUsers } from "react-icons/im";
 import strings from 'Strings';
 import { useDialog } from '@cratis/arc.react/dialogs';
+import { useNavigate } from 'react-router-dom';
 import { AddEventStoreDialog } from './AddEventStoreDialog';
 
 export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
     const basePath = useRelativePath('event-store');
+    const connectedClientsPath = useRelativePath('connected-clients');
+    const navigate = useNavigate();
     const [AddEventStoreDialogWrapper, showAddEventStoreDialog] = useDialog(AddEventStoreDialog);
 
     const handleAddEventStore = async () => {
@@ -43,6 +46,9 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                     </Button>
                 </div>
             </div>
+            <Button text className='m-3' onClick={() => navigate(connectedClientsPath)}>
+                <ImUsers className='mr-2' /> {strings.home.connectedClients}
+            </Button>
             <AddEventStoreDialogWrapper />
         </div>
     );
