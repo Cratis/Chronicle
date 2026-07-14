@@ -10,7 +10,7 @@ using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching;
 
-public class and_read_model_has_pii_property : given.all_dependencies
+public class and_read_model_has_pii_property_without_a_subject : given.all_dependencies
 {
     IProjectionChangesetNotifier _notifier;
     TaskCompletionSource<IProjectionChangesetObserver> _observerCaptured;
@@ -18,9 +18,7 @@ public class and_read_model_has_pii_property : given.all_dependencies
 
     void Establish()
     {
-        // Snapshot the subject the observable path stamps before it hands the document to ReleaseJson —
-        // the document is stamped, decrypted, then the marker is stripped from the same instance, so a
-        // post-hoc matcher on the captured argument would no longer see it.
+        // Snapshot the subject the observable path resolves before it hands the document to ReleaseJson.
         _complianceHelper
             .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
             .Returns(callInfo =>
@@ -71,9 +69,12 @@ public class and_read_model_has_pii_property : given.all_dependencies
 
         var observer = await _observerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
+        // The forwarded changeset carries no __subject — only the read model's own identifier. The observable
+        // path must infer the compliance subject from it (matching the one-shot query paths) rather than
+        // streaming the document back undecrypted.
         var model = new JsonObject
         {
-            [WellKnownProperties.Subject] = "some-subject",
+            ["id"] = "key-1",
             ["name"] = "encrypted-name"
         };
 
@@ -81,5 +82,5 @@ public class and_read_model_has_pii_property : given.all_dependencies
     }
 
     [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
-    [Fact] void should_release_using_the_document_subject() => _releasedSubject.ShouldEqual("some-subject");
+    [Fact] void should_infer_the_subject_from_the_identifier() => _releasedSubject.ShouldEqual("key-1");
 }
