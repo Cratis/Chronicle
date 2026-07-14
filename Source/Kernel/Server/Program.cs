@@ -124,9 +124,34 @@ var hostBuilder = builder.Host
    builder => builder.WithCamelCaseNamingPolicy());
 
 hostBuilder
-   .UseOrleans(_ => _
-        .UseLocalhostClustering()
-        .AddChronicleToSilo(chronicleBuilder =>
+   .UseOrleans(_ =>
+   {
+        var clustering = chronicleOptions.Clustering;
+        if (clustering.Type == Cratis.Chronicle.Configuration.ClusteringType.MongoDB)
+        {
+            // Membership is kept in MongoDB (wired by WithMongoDB below) - nodes sharing the
+            // same storage and cluster id form one cluster.
+            _.Configure<Orleans.Configuration.ClusterOptions>(options =>
+            {
+                options.ClusterId = clustering.ClusterId;
+                options.ServiceId = clustering.ServiceId;
+            });
+
+            if (clustering.AdvertisedIP is { } advertisedIP)
+            {
+                _.ConfigureEndpoints(System.Net.IPAddress.Parse(advertisedIP), clustering.SiloPort, clustering.GatewayPort);
+            }
+            else
+            {
+                _.ConfigureEndpoints(clustering.SiloPort, clustering.GatewayPort);
+            }
+        }
+        else
+        {
+            _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
+        }
+
+        _.AddChronicleToSilo(chronicleBuilder =>
         {
             if (isSqlStorage)
                 chronicleBuilder.WithSql(chronicleOptions);
@@ -135,7 +160,8 @@ hostBuilder
 
             chronicleBuilder.WithVaultComplianceStorage(chronicleOptions);
             chronicleBuilder.WithAzureKeyVaultComplianceStorage(chronicleOptions);
-        }))
+        });
+   })
    .ConfigureServices((context, services) =>
    {
        services.AddCodeFirstGrpcReflection();
