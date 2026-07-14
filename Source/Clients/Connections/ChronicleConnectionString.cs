@@ -96,6 +96,11 @@ public class ChronicleConnectionString
     public string? LoadBalancer => _builder.LoadBalancer;
 
     /// <summary>
+    /// Gets the DNS name server (host[:port]) used for chronicle+srv lookups, if specified.
+    /// </summary>
+    public string? SrvNameServer => _builder.SrvNameServer;
+
+    /// <summary>
     /// Gets the username for authentication, if specified. This maps to client id using `client_credentials` flow.
     /// </summary>
     public string? Username => _builder.Username;

@@ -65,6 +65,7 @@ You cannot combine client credentials and API key authentication in the same con
 | `apiKey` | string | API key for API key authentication | `?apiKey=your-api-key` |
 | `disableTls` | boolean | Disables TLS (development only) | `?disableTls=true` |
 | `loadBalancer` | string | Load balancer strategy when multiple servers are configured | `?loadBalancer=round-robin` |
+| `srvNameServer` | string | DNS name server (host[:port], port defaults to 53) for `chronicle+srv` lookups; defaults to the system's name servers | `?srvNameServer=10.0.0.53` |
 
 ## TLS
 

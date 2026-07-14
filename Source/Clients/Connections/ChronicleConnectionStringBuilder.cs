@@ -27,6 +27,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string ApiKeyKey = "apiKey";
     const string DisableTlsKey = "disableTls";
     const string LoadBalancerKey = "loadBalancer";
+    const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
     const string CertificatePasswordKey = "certificatePassword";
     const string SrvScheme = "chronicle+srv";
@@ -235,6 +236,26 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets the DNS name server (host[:port], port defaults to 53) used for chronicle+srv
+    /// lookups. When not set, the system's configured name servers are used.
+    /// </summary>
+    public string? SrvNameServer
+    {
+        get => ContainsKey(SrvNameServerKey) ? (string)this[SrvNameServerKey] : null;
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Remove(SrvNameServerKey);
+            }
+            else
+            {
+                this[SrvNameServerKey] = value;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets or sets the path to the certificate file for TLS.
     /// </summary>
     public string? CertificatePath
@@ -313,6 +334,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add($"loadBalancer={Uri.EscapeDataString((string)this[LoadBalancerKey])}");
         }
 
+        if (ContainsKey(SrvNameServerKey))
+        {
+            queryParams.Add($"srvNameServer={Uri.EscapeDataString((string)this[SrvNameServerKey])}");
+        }
+
         if (ContainsKey(CertificatePathKey))
         {
             queryParams.Add($"certificatePath={Uri.EscapeDataString((string)this[CertificatePathKey])}");
@@ -337,6 +363,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 keyStr != ApiKeyKey &&
                 keyStr != DisableTlsKey &&
                 keyStr != LoadBalancerKey &&
+                keyStr != SrvNameServerKey &&
                 keyStr != CertificatePathKey &&
                 keyStr != CertificatePasswordKey)
             {
