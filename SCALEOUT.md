@@ -182,3 +182,66 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
   CI builds with a newer SDK. Proxy generation itself runs before compilation and succeeded.
 - OAuth tokens across nodes assume the cluster shares signing keys for `/connect/token` — worth
   verifying server-side when scale-out auth is exercised.
+
+- **Phase 6 — done.** `TestApps/Composition`: an Aspire AppHost running 2 Kernel instances (real
+  Orleans/MongoDB cluster, distinct silo/gateway ports), 2 instances of an AspNetCore test app
+  (SimpleConsole's capabilities ported to a web UI, plus a per-instance reactor invocation log to
+  make fan-out visible), a CoreDNS container serving the `_chronicle._tcp` SRV records the web
+  apps resolve through `chronicle+srv://`, and a MongoDB replica-set container. Verified fully
+  green end to end: SRV discovery, cross-cluster unique-email constraint rejection, and
+  partition-sticky client fan-out across two real processes connected to a two-silo cluster.
+  - **`srvNameServer` connection-string option** added (`ChronicleServerAddressResolver` now
+    resolves against an explicit name server, not just the system default) — needed because the
+    composition's own CoreDNS instance isn't the host's system resolver.
+  - **The load-balanced Workbench went through a real design correction.** The first attempt
+    stood up a separate `WorkbenchHost` app whose *own connection* round-robinned across both
+    kernels — but every Chronicle Server already serves its own Workbench (UI + API) on its main
+    port by default (`Features.Workbench`/`Features.Api`), so a third host duplicating that was
+    the wrong shape entirely. Corrected to a YARP reverse proxy (`Aspire.Hosting.Yarp`) fronting
+    `kernel-1`/`kernel-2` directly with `RoundRobin` load balancing — "one frontend, load balanced
+    on top" now means exactly that. Getting there surfaced three more real, previously-invisible
+    bugs:
+    - Declaring the kernel's port as an Aspire endpoint defaults to a **DCP-proxied** endpoint;
+      since the kernel binds that exact port itself (custom Kestrel, not the ASPNETCORE_URLS
+      convention), the proxy and the kernel's own listener silently fought over the same port and
+      every connection black-holed. Fixed with `IsProxied = false` on the kernel's endpoint —
+      the same fix already used for the `mongodb`/`dns` containers in this same file.
+    - YARP's multi-destination `AddCluster(name, destinations)` overload does **not** call
+      `WithReference` the way the single-destination overloads do, so the proxy container never
+      received the `services__kernel-N__https__0` env vars it needed — it tried a literal DNS
+      lookup for the hostname `kernel-1` and failed. Fixed with explicit `.WithReference(kernel1)`
+      / `.WithReference(kernel2)` on the YARP resource.
+    - **The Kernel Server's embedded Workbench was non-functional in this codebase** — it called
+      `UseDefaultFiles()`/`UseStaticFiles()` with no `FileProvider`, which looks for a *physical*
+      `wwwroot` next to the built DLL that is never populated (the Workbench frontend's build
+      output — and the only place it gets embedded — is `Cratis.Chronicle.Workbench`, consumed
+      previously only by the standalone `WorkbenchHost`). Fixed by having `Server.csproj`
+      reference `Clients/Workbench/Workbench.csproj` and serving its embedded
+      `Cratis.Chronicle.Workbench.Files` resources via `ManifestEmbeddedFileProvider` — the same
+      pattern `WebServer.cs` already used for standalone hosting. This is a genuine product fix,
+      not composition-only plumbing: any Kernel Server deployment relying on `Features.Workbench`
+      to serve its own UI was previously getting a 404.
+  - `TestApps/WorkbenchHost` is kept (not deleted) — it demonstrates the still-legitimate
+    standalone-hosting case (Workbench pointed at an already-running/remote cluster without
+    embedding a Kernel), and is what originally exercised the `Connections`/`Workbench` library
+    fixes below. Composition just no longer uses it as the "load-balanced Workbench," since the
+    kernels already provide that surface directly.
+  - Cross-process verification (real multi-process Orleans cluster, real TCP, real reconnects)
+    surfaced bugs invisible to every previously-passing in-process spec:
+    - `JobsManagerExtensions.StartOrResumeObserverJobFor` called `.AsT0` unconditionally on a
+      `Result<JobId, StartJobError>`, crashing the second node to join a cluster whenever a job
+      start legitimately lost a race to the first node.
+    - `ConcurrencyScopesSerializer.ReadValue` read an extra field header the engine had already
+      consumed, misaligning the stream only when a `Seed` call crossed a real silo boundary.
+    - Standalone Workbench hosting (`WebServer.cs`) had three bugs only visible outside a single
+      shared-connection process: `AddCratisChronicleApi()`'s default `useGrpc: true` created its
+      own connection to `localhost:35000`, shadowing the host's actual connection; eager DI
+      container validation rejected convention-based registrations; and the generated API route
+      prefix didn't match the frontend proxies' expected shape.
+    - `AddCratisChronicleConnection` never constructed an `OAuthTokenProvider`, so any raw/
+      standalone host (Workbench, `WorkbenchHost`) got 401s. Fixed by building one from the
+      connection string's client-credentials the same way `ChronicleClient` does.
+    - `IServices` (and its 15 sub-services) were registered `AddSingleton`, caching gRPC proxies
+      bound to the *first* channel — a reconnect/failover disposed that channel and every
+      subsequent call threw `ObjectDisposedException`. Fixed by making them `AddTransient`
+      (resolved live from the current connection on every use).
