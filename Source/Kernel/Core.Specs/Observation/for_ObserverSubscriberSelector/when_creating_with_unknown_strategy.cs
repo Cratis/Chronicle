@@ -10,7 +10,7 @@ public class when_creating_with_unknown_strategy : Specification
 {
     Exception _exception;
 
-    void Because() => _exception = Catch.Exception(() => new ObserverSubscriberSelector(
+    void Because() => _exception = Catch.Exception(() => _ = new ObserverSubscriberSelector(
         Options.Create(new ChronicleOptions { Observers = new() { FanOutStrategy = "unknown" } })));
 
     [Fact] void should_throw_unknown_fan_out_strategy() => _exception.ShouldBeOfExactType<UnknownFanOutStrategy>();
