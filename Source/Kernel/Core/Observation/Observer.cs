@@ -464,13 +464,28 @@ public partial class Observer(
         await base.WriteStateAsync();
     }
 
+    static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
+    {
+        if (left is null || right is null)
+        {
+            return ReferenceEquals(left, right);
+        }
+
+        // ObserverFilters is a record, but its Tags collection makes the generated equality a
+        // reference comparison - two identical registrations from different client instances
+        // would never be considered equal. Compare structurally instead.
+        return left.Tags.ToHashSet().SetEquals(right.Tags) &&
+               Equals(left.EventSourceType, right.EventSourceType) &&
+               Equals(left.EventStreamType, right.EventStreamType);
+    }
+
     bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters)
         where TObserverSubscriber : IObserverSubscriber =>
         _subscription.IsSubscribed &&
         _subscription.Targets.Count > 0 &&
         _subscription.SubscriberType == typeof(TObserverSubscriber) &&
         _subscription.EventTypes.ToHashSet().SetEquals(eventTypes) &&
-        Equals(_subscription.Filters, filters);
+        FiltersAreEqual(_subscription.Filters, filters);
 
     void RemoveSubscriberTarget(ObserverSubscriberTarget target)
     {
