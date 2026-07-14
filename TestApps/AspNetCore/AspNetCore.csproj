@@ -2,11 +2,27 @@
 
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- The linked domain files implement framework contracts (IReducerFor methods take
+         event/current/context regardless of use); the Web SDK's analysis level flags the unused
+         parameters where the console SDK does not, and the signatures cannot change. -->
+    <NoWarn>$(NoWarn);IDE0060</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
     <ProjectReference Include="..\..\Source\Clients\Connections\Connections.csproj" />
     <ProjectReference Include="..\..\Source\Clients\DotNET\DotNET.csproj" />
+    <ProjectReference Include="..\..\Source\Infrastructure\Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- The employee/customer domain is shared with the SimpleConsole test app - same events,
+       read models, projections, reducers, constraints, PII types and seeding. -->
+  <ItemGroup>
+    <Compile Include="..\SimpleConsole\Employee.cs" Link="Domain\Employee.cs" />
+    <Compile Include="..\SimpleConsole\EmployeeData.cs" Link="Domain\EmployeeData.cs" />
+    <Compile Include="..\SimpleConsole\Constraints.cs" Link="Domain\Constraints.cs" />
+    <Compile Include="..\SimpleConsole\EmployeeSeeding.cs" Link="Domain\EmployeeSeeding.cs" />
+    <Compile Include="..\SimpleConsole\Projections.cs" Link="Domain\Projections.cs" />
+    <Compile Include="..\SimpleConsole\Compliance.cs" Link="Domain\Compliance.cs" />
   </ItemGroup>
 </Project>
