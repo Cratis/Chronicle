@@ -20,7 +20,12 @@ public class FromAllBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromAllBu
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var setBuilder = new AllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>>(this, namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath()), namingPolicy);
+        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
+        {
+            throw new InvalidPropertyExpression($"the property to set on read model '{typeof(TReadModel).FullName}'", readModelPropertyAccessor);
+        }
+
+        var setBuilder = new AllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>>(this, namingPolicy.GetPropertyName(accessorPropertyPath), namingPolicy);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }

@@ -185,18 +185,28 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     /// <inheritdoc/>
     public TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback)
     {
+        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
+        {
+            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
+        }
+
         var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
         builderCallback(builder);
-        _childrenDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
+        _childrenDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder Nested<TNestedModel>(Expression<Func<TReadModel, TNestedModel?>> targetProperty, Action<INestedBuilder<TReadModel, TNestedModel>> builderCallback)
     {
+        if (!targetProperty.TryGetPropertyPath(out var targetPropertyPath))
+        {
+            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", targetProperty);
+        }
+
         var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
         builderCallback(builder);
-        _nestedDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
+        _nestedDefinitions[namingPolicy.GetPropertyName(targetPropertyPath)] = builder.Build();
         return (this as TBuilder)!;
     }
 

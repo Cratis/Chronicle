@@ -14,9 +14,22 @@ public class and_read_model_has_pii_property : given.all_dependencies
 {
     IProjectionChangesetNotifier _notifier;
     TaskCompletionSource<IProjectionChangesetObserver> _observerCaptured;
+    string? _releasedSubject;
 
     void Establish()
     {
+        // Snapshot the subject the observable path stamps before it hands the document to ReleaseJson —
+        // the document is stamped, decrypted, then the marker is stripped from the same instance, so a
+        // post-hoc matcher on the captured argument would no longer see it.
+        _complianceHelper
+            .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
+            .Returns(callInfo =>
+            {
+                var released = callInfo.ArgAt<JsonObject>(3);
+                _releasedSubject = released[WellKnownProperties.Subject]?.GetValue<string>();
+                return Task.FromResult(released);
+            });
+
         var property = new JsonSchemaProperty
         {
             ExtensionData = new Dictionary<string, object?>
@@ -67,5 +80,6 @@ public class and_read_model_has_pii_property : given.all_dependencies
         await observer.OnChangeset("test-namespace", "key-1", model);
     }
 
-    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Is<JsonObject>(o => o[WellKnownProperties.Subject].GetValue<string>() == "some-subject"));
+    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
+    [Fact] void should_release_using_the_document_subject() => _releasedSubject.ShouldEqual("some-subject");
 }

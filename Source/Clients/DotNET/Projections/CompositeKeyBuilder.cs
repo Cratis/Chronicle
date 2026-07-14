@@ -22,10 +22,15 @@ public class CompositeKeyBuilder<TKeyType, TEvent>(INamingPolicy namingPolicy) :
     /// <inheritdoc/>
     public ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> readModelPropertyAccessor)
     {
+        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
+        {
+            throw new InvalidPropertyExpression($"the composite key part on key type '{typeof(TKeyType).FullName}'", readModelPropertyAccessor);
+        }
+
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var propertyPath = namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
+        var propertyPath = namingPolicy.GetPropertyName(accessorPropertyPath);
         if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
         {
             throw new DuplicatePropertyInProjection(propertyPath);
