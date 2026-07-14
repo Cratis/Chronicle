@@ -98,6 +98,7 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
+        _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
         var eventCompliance = Substitute.For<IEventCompliance>();
         eventCompliance

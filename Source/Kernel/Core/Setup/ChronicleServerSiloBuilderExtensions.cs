@@ -14,6 +14,7 @@ using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -64,6 +65,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
         builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
+        builder.Services.TryAddSingleton<IObserverSubscriberSelector, ObserverSubscriberSelector>();
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedClientsPlacementStrategy, ConnectedClientsPlacementDirector>()

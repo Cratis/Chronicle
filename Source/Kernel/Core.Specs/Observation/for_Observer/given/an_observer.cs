@@ -89,6 +89,7 @@ public class an_observer : Specification
 
         _silo.AddService(_storage);
         _silo.AddService(_eventCompliance);
+        _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);

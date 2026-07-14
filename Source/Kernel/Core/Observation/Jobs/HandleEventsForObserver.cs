@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains off the activation thread.</param>
+/// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -34,6 +35,7 @@ public class HandleEventsForObserver(
     IStorage storage,
     IEventCompliance eventCompliance,
     IGrainFactory grainFactory,
+    IObserverSubscriberSelector subscriberSelector,
     ILogger<HandleEventsForObserver> logger) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -158,7 +160,6 @@ public class HandleEventsForObserver(
                 eventTypes: eventTypesToRead,
                 cancellationToken: cancellationToken);
 
-            var subscriberContext = new ObserverSubscriberContext(_subscription.Arguments);
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
             {
@@ -183,7 +184,7 @@ public class HandleEventsForObserver(
                     }
 
                     var partition = partitionEvents[0].Context.EventSourceId;
-                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents, subscriberContext);
+                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents);
                     if (handleEventsResult.TryGetException(out var handleEventsException))
                     {
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
@@ -388,19 +389,20 @@ public class HandleEventsForObserver(
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         Key partition,
-        AppendedEvent[] events,
-        ObserverSubscriberContext subscriberContext)
+        AppendedEvent[] events)
     {
         try
         {
             var decryptedEvents = await DecryptEvents(events);
+            var target = subscriberSelector.Select(_subscription, partition);
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments);
 
             // PerformStep (and everything it calls, including this method) runs off the grain's activation
             // thread - see the <remarks> on JobStep.PerformStep. The ambient Grain.GrainFactory property
             // validates the Orleans activation context on the calling thread and throws "Activation access
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
-            var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, GetObserverSubscriberKey(partition)) as IObserverSubscriber;
+            var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, GetObserverSubscriberKey(partition, target.SiloAddress)) as IObserverSubscriber;
             var result = await subscriber!.OnNext(partition, decryptedEvents, subscriberContext);
             return (result, decryptedEvents);
         }
@@ -423,7 +425,7 @@ public class HandleEventsForObserver(
         }
     }
 
-    ObserverSubscriberKey GetObserverSubscriberKey(Key partition)
+    ObserverSubscriberKey GetObserverSubscriberKey(Key partition, SiloAddress siloAddress)
     {
         return new(
             State.ObserverKey.ObserverId,
@@ -431,7 +433,7 @@ public class HandleEventsForObserver(
             State.ObserverKey.Namespace,
             State.ObserverKey.EventSequenceId,
             partition,
-            _subscription.SiloAddress.ToParsableString());
+            siloAddress.ToParsableString());
     }
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>

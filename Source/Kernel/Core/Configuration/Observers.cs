@@ -66,4 +66,11 @@ public class Observers
     /// are progressing, and that the <c>NextEventSequenceNumber</c> is up-to-date.
     /// </summary>
     public int WatchdogInterval { get; init; } = 60;
+
+    /// <summary>
+    /// Gets the strategy used to fan events out when multiple instances of the same client are
+    /// connected. Supported values are "round-robin" (default - a deterministic distribution based
+    /// on the partition key, keeping every partition sticky to one instance) and "random".
+    /// </summary>
+    public string FanOutStrategy { get; init; } = "round-robin";
 }

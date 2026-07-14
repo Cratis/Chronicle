@@ -28,6 +28,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
+/// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -35,6 +36,7 @@ public class HandleEventsForPartition(
     IJobStepThrottle throttle,
     IStorage storage,
     IEventCompliance eventCompliance,
+    IObserverSubscriberSelector subscriberSelector,
     ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -109,7 +111,8 @@ public class HandleEventsForPartition(
 
             if (subscription.IsSubscribed)
             {
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, request.ToObserverSubscriberKey(subscription.SiloAddress)) as IObserverSubscriber;
+                var target = subscriberSelector.Select(subscription, request.Partition);
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, request.ToObserverSubscriberKey(target.SiloAddress)) as IObserverSubscriber;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
             }
@@ -166,7 +169,8 @@ public class HandleEventsForPartition(
                 eventTypesToRead,
                 cancellationToken);
 
-            var subscriberContext = new ObserverSubscriberContext(subscription.Arguments);
+            var subscriberContext = new ObserverSubscriberContext(
+                subscriberSelector.Select(subscription, currentState.Partition).ConnectedClient ?? subscription.Arguments);
 
             var failed = false;
             var exceptionMessages = Enumerable.Empty<string>().ToArray();
@@ -367,13 +371,14 @@ public class HandleEventsForPartition(
 
     ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription)
     {
+        var target = subscriberSelector.Select(subscription, State.Partition);
         return new(
             State.ObserverKey.ObserverId,
             State.ObserverKey.EventStore,
             State.ObserverKey.Namespace,
             State.ObserverKey.EventSequenceId,
             State.Partition,
-            subscription.SiloAddress.ToParsableString());
+            target.SiloAddress.ToParsableString());
     }
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
