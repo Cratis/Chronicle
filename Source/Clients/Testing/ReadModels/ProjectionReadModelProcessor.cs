@@ -441,25 +441,38 @@ internal static class ProjectionReadModelProcessor
         var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
 
         KernelProjectionEngine::KeyResolverResult keyResult;
-        try
+
+        // A root-level [Join] source event enriches an EXISTING root document — the one whose join `On`
+        // property equals this join event's own event source id. Resolve that root ourselves, mirroring the
+        // production engine / MongoDB (and the sink's TryFindRootKeyByChildValue) for ANY key type. Deferring to
+        // the engine's in-memory ForJoin key resolver here instead would write a PHANTOM document keyed by the
+        // join source's own id whenever the root row is not matched — which happens for a Guid-keyed root join
+        // (the identifier-typed lookup never matches the join column) and, before it could even run, for a
+        // string-concept-keyed one (the force-conversion to the identifier type throws). When no root row exists
+        // yet (the join source was seeded before its entity), skip without materializing anything: the
+        // row-creation-time backfill (ResolveJoin) enriches the value when the FROM event arrives.
+        var (isRootJoinSource, resolvedRootKey) = await TryResolveRootJoinKey(projection, kernelProjectionDefinition, sink, @event);
+        if (isRootJoinSource)
         {
-            keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
-        }
-        catch (FormatException) when (projection.GetOperationTypeFor(@event.Context.EventType).HasFlag(KernelProjectionEngine::ProjectionOperationType.Join))
-        {
-            // A root-level [Join] whose join-source event is keyed by a string concept (e.g. an organization
-            // number) throws here because the engine key resolver force-converts the join key to the read
-            // model's own identifier type (e.g. a Guid) and fails on the string value. Resolve the root
-            // document ourselves — mirroring the engine's root ForJoin branch — so the enrichment still runs,
-            // matching the parity a Guid-keyed join already has. A nested join, or a root with no matching
-            // document, falls back to the previous skip behavior so the scenario never crashes.
-            var resolvedRootKey = await TryResolveStringKeyedRootJoin(projection, kernelProjectionDefinition, sink, @event);
             if (resolvedRootKey is null)
             {
                 return (state, null, false);
             }
 
-            keyResult = resolvedRootKey;
+            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey);
+        }
+        else
+        {
+            try
+            {
+                keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
+            }
+            catch (FormatException) when (projection.GetOperationTypeFor(@event.Context.EventType).HasFlag(KernelProjectionEngine::ProjectionOperationType.Join))
+            {
+                // Defensive fallback for a nested/child [Join] whose join key can't be force-converted to the
+                // identifier type: skip rather than crash the scenario (root joins are handled above).
+                return (state, null, false);
+            }
         }
 
         if (keyResult is KernelProjectionEngine::DeferredKey)
@@ -487,21 +500,28 @@ internal static class ProjectionReadModelProcessor
     }
 
     /// <summary>
-    /// Resolve the root read-model key for a root-level <c>[Join]</c> whose join-source event is keyed by a
-    /// string concept, by matching the join-on property against the join event's event source id.
+    /// Resolves the root read-model key for a root-level <c>[Join]</c> source event by matching the join's
+    /// <c>On</c> property against the join event's own event source id — the same lookup the production engine
+    /// performs against its sink, applied here uniformly for any key type (Guid, string concept, and so on).
     /// </summary>
     /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> being processed.</param>
     /// <param name="kernelProjectionDefinition">The kernel projection definition carrying the join metadata.</param>
     /// <param name="sink">The in-memory sink holding the materialized root documents.</param>
-    /// <param name="event">The join-source event being processed.</param>
-    /// <returns>A resolved <see cref="KernelProjectionEngine::KeyResolverResult"/> for the root document, or <see langword="null"/> when there is no root join or no matching document.</returns>
+    /// <param name="event">The event being processed.</param>
+    /// <returns>
+    /// A tuple whose <c>IsRootJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
+    /// root-level join source (so the caller must resolve here rather than defer to the engine's key resolver).
+    /// <c>RootKey</c> is the matched root document key to enrich, or <see langword="null"/> when no root row
+    /// exists yet (skip without writing a phantom).
+    /// </returns>
     /// <remarks>
-    /// The engine's own <c>ForJoin</c> key resolver would do this lookup, but it throws before reaching it
-    /// because it force-converts the join key to the read model's identifier type. This replicates only the
-    /// root branch of that resolver (<c>sink.TryFindRootKeyByChildValue</c>) using the raw string value, so
-    /// no engine behavior changes — a nested join returns <see langword="null"/> and falls back to skipping.
+    /// The engine's own <c>ForJoin</c> key resolver targets its real sink; run against the in-memory sink it
+    /// yields a phantom document keyed by the join source's id rather than enriching the existing root. This
+    /// replicates only the intended root lookup (<c>sink.TryFindRootKeyByChildValue</c> on the join <c>On</c>
+    /// column), so no engine behavior changes — a nested join or a non-join event returns
+    /// <c>IsRootJoinSource = false</c> and falls through to the engine's normal resolution.
     /// </remarks>
-    static async Task<KernelProjectionEngine::KeyResolverResult?> TryResolveStringKeyedRootJoin(
+    static async Task<(bool IsRootJoinSource, KernelKey? RootKey)> TryResolveRootJoinKey(
         KernelProjectionEngine::IProjection projection,
         KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
         InMemorySink sink,
@@ -509,20 +529,28 @@ internal static class ProjectionReadModelProcessor
     {
         if (projection.HasParent)
         {
-            return null;
+            return (false, null);
+        }
+
+        // Only a pure join source routes through the engine's ForJoin resolver. An event that also carries a
+        // From mapping creates/updates the row itself (the engine keeps its From key resolver for it), so leave
+        // it to normal resolution — never skip it, which would drop the row it is responsible for creating.
+        var operationType = projection.GetOperationTypeFor(@event.Context.EventType);
+        if (!operationType.HasFlag(KernelProjectionEngine::ProjectionOperationType.Join) ||
+            operationType.HasFlag(KernelProjectionEngine::ProjectionOperationType.From))
+        {
+            return (false, null);
         }
 
         var joinDefinition = kernelProjectionDefinition.Join
             .FirstOrDefault(join => join.Key.Id == @event.Context.EventType.Id).Value;
         if (joinDefinition is null)
         {
-            return null;
+            return (false, null);
         }
 
         var rootKeyResult = await sink.TryFindRootKeyByChildValue(joinDefinition.On, @event.Context.EventSourceId.Value);
-        return rootKeyResult.TryGetValue(out var rootKey)
-            ? KernelProjectionEngine::KeyResolverResult.Resolved(rootKey)
-            : null;
+        return rootKeyResult.TryGetValue(out var rootKey) ? (true, rootKey) : (true, null);
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)
