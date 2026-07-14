@@ -12,8 +12,10 @@ using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.FileProviders;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -210,11 +212,18 @@ app.UseRouting();
 
 app.UseCratisArc();
 
+// The Workbench UI is built once and embedded into Cratis.Chronicle.Workbench - the kernel serves
+// that same embedded asset set directly rather than expecting its own physical wwwroot.
+var workbenchFileProvider = new ManifestEmbeddedFileProvider(
+    typeof(WorkbenchWebApplicationBuilderExtensions).Assembly,
+    $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files");
+var workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
+
 // Map workbench static files BEFORE authentication so they are publicly accessible
 if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 {
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = workbenchFileProvider });
+    app.UseStaticFiles(workbenchStaticFileOptions);
 }
 
 // Add authentication and authorization middleware AFTER routing but BEFORE endpoints
@@ -262,7 +271,7 @@ app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
 // Map workbench fallback route AFTER API endpoints to avoid conflicts
 if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
 {
-    app.MapFallbackToFile("index.html").AllowAnonymous();
+    app.MapFallbackToFile("index.html", workbenchStaticFileOptions).AllowAnonymous();
 }
 
 using var cancellationToken = new CancellationTokenSource();
