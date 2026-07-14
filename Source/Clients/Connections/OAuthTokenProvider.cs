@@ -99,7 +99,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         };
         _httpMessageHandler = handler;
         _httpClient = new HttpClient(handler);
-        _logger.InitializingTokenProvider(_tokenEndpoint());
+
+        // Deliberately no eager _tokenEndpoint() evaluation here - the provider can be constructed
+        // inside the DI factory that also produces the connection the endpoint follows, and
+        // resolving it during construction would re-enter that factory.
     }
 
     /// <inheritdoc/>

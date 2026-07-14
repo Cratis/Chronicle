@@ -7,9 +7,6 @@ namespace Cratis.Chronicle.Connections;
 
 internal static partial class OAuthTokenProviderLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Initializing OAuth token provider for endpoint: {Endpoint}")]
-    internal static partial void InitializingTokenProvider(this ILogger<OAuthTokenProvider> logger, string endpoint);
-
     [LoggerMessage(LogLevel.Debug, "Using cached access token (expires at {ExpiryTime})")]
     internal static partial void UsingCachedToken(this ILogger<OAuthTokenProvider> logger, DateTimeOffset expiryTime);
 
