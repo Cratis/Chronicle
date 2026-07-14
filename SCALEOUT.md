@@ -124,6 +124,33 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
 - `Documentation/hosting/configuration/clustering.md` / hosting docs: scaled-out clients,
   fan-out strategies, Workbench connected-clients page.
 
+## Status
+
+- **Phase 1 — done, committed.** Multi-host parsing, `chronicle+srv://` DNS SRV resolution
+  (`ChronicleServerAddressResolver`, re-resolved per connect), `ILoadBalancerStrategy` with
+  round-robin (random start offset) + random, `loadBalancer` connection-string option,
+  `ChronicleOptions.LoadBalancerStrategy`, OAuth token endpoint follows the selected server.
+- **Phase 2 — done, committed.** `IConnectedClients` re-keyed per silo (string key = parsable
+  silo address, pinned by `ConnectedClientsPlacementDirector`; dead-silo fallback gives an empty
+  activation that reports clients as disconnected). Callers updated (ConnectionService,
+  Reactor/Reducer via local silo, watchdog via subscription silo, XUnit.Integration).
+- **Phase 3 — done.** `ObserverSubscription.Targets` (one `ObserverSubscriberTarget` per client
+  instance), `Subscribe` merges compatible client subscriptions instead of overwriting,
+  `UnsubscribeIfMatchesClient` removes a single target, watchdog prunes dead targets, live
+  handling + `HandleEventsForObserver` + `HandleEventsForPartition` select the target per
+  partition via `IObserverSubscriberSelector` (`Observers.FanOutStrategy` config; round-robin =
+  deterministic FNV-1a of partition key, sticky per partition and consistent across silos;
+  random as alternative). A `Disconnected` result from one instance removes only that instance
+  and retries the batch on the remaining ones.
+- **Phase 4 — done.** Contract `ConnectedClient` gains `SiloAddress`; `IConnectionService` gains
+  `GetConnectedClients`/`ObserveConnectedClients` (cluster-wide aggregation over the per-silo
+  grains via `IManagementGrain`, observable polls every 2s and only emits on membership change —
+  LastSeen excluded from the change identity). `IServices`/`Services` expose `Connections`.
+  Api: `Cratis.Chronicle.Api.Clients.ConnectedClient` `[ReadModel]` with `GetConnectedClients` +
+  observable `AllConnectedClients`. Workbench: server-level `/connected-clients` page
+  (DataPage; Server/Connection/Version/Last Seen/Debugger columns), route beside Home, entry
+  button on the Home page.
+
 ## Open items / decisions made (flag for review)
 
 - **New dependency**: `DnsClient` NuGet package in `Cratis.Chronicle.Connections` for SRV lookups
@@ -132,5 +159,12 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
 - Round-robin **by partition key** is implemented as deterministic hash-modulo over the ordered
   live connection set (sticky partitions), not a rotating counter — matches "based on the
   partition key" and preserves per-partition ordering.
-- `ConnectedClient` gains the silo address (or the per-silo grain key provides it) so the
-  Workbench can show clients per server node.
+- Client-side round-robin starts at a **random offset** so a fleet of instances that each connect
+  once spreads across servers instead of all picking the first host.
+- A definition change from a new client instance (different event types/filters) **replaces** the
+  whole subscription (last-writer-wins) — matches the pre-existing rolling-deploy semantics.
+- **Pre-existing local toolchain issue**: Release builds fail locally with CS9057 (Cratis.Arc
+  20.54.2 generators need a newer Roslyn than SDK 10.0.203) — verified present on a clean tree;
+  CI builds with a newer SDK. Proxy generation itself runs before compilation and succeeded.
+- OAuth tokens across nodes assume the cluster shares signing keys for `/connect/token` — worth
+  verifying server-side when scale-out auth is exercised.
