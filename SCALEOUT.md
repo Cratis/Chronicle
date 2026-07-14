@@ -142,6 +142,20 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
   deterministic FNV-1a of partition key, sticky per partition and consistent across silos;
   random as alternative). A `Disconnected` result from one instance removes only that instance
   and retries the batch on the remaining ones.
+- **Phase 5 — done.** The clustering fixture co-hosts an instance of the same logical client on
+  BOTH silos (two instances of every reactor/reducer). New `for_ScaledOutClients` specs verify:
+  two connected clients reported on two different silos through `GetConnectedClients`; the
+  observer holds two fan-out targets; 20 partitions handled exactly once, spread across both
+  instances, and sticky per partition across rounds; and after an instance is removed
+  (`UnsubscribeIfMatchesClient`, the same call the kernel makes when a client stream ends), all
+  partitions re-route to the remaining instance. The specs flushed out two real bugs, both fixed:
+  - **Cross-silo polymorphic payloads were rejected** by the Orleans type manifest
+    (`IConstraintDefinition[]` "not allowed") — any remote client registering constraints against
+    a grain on another silo would hit this. Fixed with `CratisTypesFilter` (`ITypeFilter`
+    allowing Cratis types, matching the JSON codec routing).
+  - **Fan-out merge never happened** because `ObserverFilters` record equality compares its
+    `Tags` collection by reference — two identical registrations from two instances never tested
+    equal. Fixed with structural filter comparison in `Observer.CanFanOutInto`.
 - **Phase 4 — done.** Contract `ConnectedClient` gains `SiloAddress`; `IConnectionService` gains
   `GetConnectedClients`/`ObserveConnectedClients` (cluster-wide aggregation over the per-silo
   grains via `IManagementGrain`, observable polls every 2s and only emits on membership change —
