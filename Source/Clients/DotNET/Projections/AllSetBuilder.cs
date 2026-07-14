@@ -34,7 +34,12 @@ public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, Pr
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
-        _expression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(eventContextPropertyAccessor.GetPropertyPath()));
+        if (!eventContextPropertyAccessor.TryGetPropertyPath(out var propertyPath))
+        {
+            throw new InvalidPropertyExpression($"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventContextPropertyAccessor);
+        }
+
+        _expression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(propertyPath));
         return parent;
     }
 

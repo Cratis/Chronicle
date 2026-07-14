@@ -28,7 +28,12 @@ public class AddBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        _expression = $"{WellKnownExpressions.Add}({namingPolicy.GetPropertyName(eventPropertyAccessor.GetPropertyPath())})";
+        if (!eventPropertyAccessor.TryGetPropertyPath(out var propertyPath))
+        {
+            throw new InvalidPropertyExpression($"the value added to property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventPropertyAccessor);
+        }
+
+        _expression = $"{WellKnownExpressions.Add}({namingPolicy.GetPropertyName(propertyPath)})";
         return parent;
     }
 
