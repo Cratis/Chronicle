@@ -19,6 +19,13 @@ MongoDB storage, so either one's Workbench shows the same data - YARP just picks
 each request. Each kernel's dev TLS certificate is self-signed per-process, so the YARP cluster is
 configured with `DangerousAcceptAnyServerCertificate` rather than validating against a CA.
 
+Plain round-robin isn't enough on its own, though: the Workbench's observable queries open an SSE
+stream to get a connectionId, then POST to `/subscribe` with that id as a *separate* request. If
+that POST round-robins to the other kernel, it doesn't recognize the connectionId and the query
+fails and reconnects forever. The YARP cluster is configured with cookie-based session affinity so
+a browser session sticks to the kernel that issued its connectionId for its whole lifetime - a
+fresh session (or a failover) still picks a kernel via round-robin.
+
 ## Run it
 
 ```shell
@@ -35,8 +42,8 @@ dotnet run --project TestApps/Composition
   is sticky to one of the two instances, spread round-robin by partition key.
 - **Constraints across the cluster**: "Steal email" is rejected by the unique email constraint
   regardless of which app or kernel handles it.
-- **Connected clients**: the Workbench front page links to the server-level Connected Clients page
-  showing every client and which kernel (silo) terminates its connection.
+- **Connected clients**: open an event store, then System > Connected Clients, to see every
+  connected client and which kernel (silo) terminates its connection - flat or grouped by silo.
 - **Load-balanced Workbench**: hit <http://localhost:9876> repeatedly (or refresh) - YARP
   round-robins each request across `kernel-1` and `kernel-2`'s own embedded Workbench, and both
   show the same cluster-wide data since they share one Orleans cluster and one MongoDB storage.
