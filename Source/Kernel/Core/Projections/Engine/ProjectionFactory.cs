@@ -575,6 +575,7 @@ public class ProjectionFactory(
                 projection,
                 currentReadModelSchema,
                 fromDefinition,
+                eventType,
                 isChild,
                 eventTypeSchemas);
         }
@@ -619,6 +620,7 @@ public class ProjectionFactory(
                         projection,
                         currentReadModelSchema,
                         fromDerivativesDefinition.From,
+                        eventType,
                         isChild,
                         eventTypeSchemas);
                 }
@@ -690,15 +692,22 @@ public class ProjectionFactory(
         Projection projection,
         JsonSchema currentReadModelSchema,
         FromDefinition fromDefinition,
+        EventType eventType,
         bool hasParent,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         // Notes: The purpose of this method is to hook up on every From definition that matches the eventType of the Join definition
         // and the join definition matching the property its joining on to then add actions for resolving a join post a projection of
         // the "from".
+        // A join's `on` column can be populated by AutoMap (a name-matched foreign key) rather than an explicit From
+        // mapping, so match against the AutoMap-merged From properties — the same set SetupFromDefinition projects with —
+        // not the raw fromDefinition.Properties. Otherwise a join on an AutoMapped column never gets its row-creation-time
+        // backfill (ResolveJoin) wired, and only backfills when the join-source event arrives later — leaving the joined
+        // values empty whenever the join source already exists at the time the row is created (the common production order).
+        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
         var joinExpressions = hasParent
             ? projectionDefinition.Join.Where(join => join.Value.On == actualIdentifiedByProperty).ToArray()
-            : projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key)).ToArray();
+            : projectionDefinition.Join.Where(join => mergedFromProperties.Exists(from => join.Value.On == from.Key)).ToArray();
 
         // Include join expressions that join on the id property
         var keyPropertyName = currentReadModelSchema.HasKeyProperty() ? currentReadModelSchema.GetKeyProperty().Name : currentReadModelSchema.GetLikelyKeyPropertyName();
