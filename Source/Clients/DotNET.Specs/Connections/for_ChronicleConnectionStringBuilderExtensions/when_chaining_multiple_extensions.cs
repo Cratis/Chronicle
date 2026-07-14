@@ -14,7 +14,7 @@ public class when_chaining_multiple_extensions : Specification
         .WithHost("example.com")
         .WithPort(8080)
         .WithCredentials("user", "pass")
-        .WithTlsDisabled());
+        .WithTlsValidationSkipped());
 
-    [Fact] void should_build_complete_url() => _result.ShouldEqual("chronicle://user:pass@example.com:8080?disableTls=true");
+    [Fact] void should_build_complete_url() => _result.ShouldEqual("chronicle://user:pass@example.com:8080?skipTlsValidation=true");
 }

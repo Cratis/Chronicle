@@ -91,6 +91,24 @@ builder.WebHost.UseKestrel(options =>
         listenOptions.UseHttps(certificate);
     });
 
+    // Optionally expose the health endpoint on a dedicated port. The health endpoint is HTTP/1.1
+    // only, so it can live on its own single-protocol port where TLS is optional — unlike the
+    // main port, which must stay TLS to multiplex HTTP/1.1 and HTTP/2 through ALPN. Disabling TLS
+    // here lets orchestrator and load-balancer probes that cannot validate a (self-signed)
+    // certificate reach the endpoint in cleartext.
+    if (chronicleOptions.DedicatedHealthPort is { } healthPort)
+    {
+        logger.HealthEndpointListening(healthPort, chronicleOptions.Health.Tls);
+        options.ListenAnyIP(healthPort, listenOptions =>
+        {
+            listenOptions.Protocols = HttpProtocols.Http1;
+            if (chronicleOptions.Health.Tls)
+            {
+                listenOptions.UseHttps(certificate);
+            }
+        });
+    }
+
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 

@@ -31,30 +31,37 @@ public static class CertificateLoader
     }
 
     /// <summary>
-    /// Creates a custom certificate validation callback that accepts dev certificates.
+    /// Creates the server certificate validation callback used for the client's TLS connections.
     /// </summary>
-    /// <param name="clientCertificate">The client certificate if available.</param>
-    /// <returns>A validation callback function.</returns>
-    public static Func<HttpRequestMessage, X509Certificate2?, X509Chain?, SslPolicyErrors, bool> CreateHttpCertificateValidationCallback(X509Certificate2? clientCertificate)
-    {
-        return (request, certificate, chain, sslPolicyErrors) =>
+    /// <param name="skipTlsValidation">Whether to skip validation and accept any server certificate.</param>
+    /// <param name="pinnedCertificateHash">Optional certificate hash to pin the server certificate to (from a configured client certificate).</param>
+    /// <returns>A <see cref="RemoteCertificateValidationCallback"/> that validates the server certificate.</returns>
+    /// <remarks>
+    /// The default is secure: a certificate that fails validation is rejected. It is accepted only when the
+    /// certificate is valid, when <paramref name="skipTlsValidation"/> is set, or when it matches
+    /// <paramref name="pinnedCertificateHash"/>. Skipping validation accepts any certificate — including
+    /// self-signed ones — so only use it for a trusted server on a trusted network.
+    /// </remarks>
+    public static RemoteCertificateValidationCallback CreateServerCertificateValidationCallback(bool skipTlsValidation, string? pinnedCertificateHash) =>
+        (sender, certificate, chain, sslPolicyErrors) =>
         {
-            // If there are no errors, the certificate is valid
             if (sslPolicyErrors == SslPolicyErrors.None)
             {
                 return true;
             }
 
-            // Accept self-signed certificates (for development)
-            if (certificate is not null && clientCertificate is not null)
+            if (skipTlsValidation)
             {
-                return certificate.GetCertHashString() == clientCertificate.GetCertHashString();
+                return true;
             }
 
-            // Accept localhost certificates with name mismatch (for development)
-            return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
+            if (pinnedCertificateHash is not null && certificate is not null)
+            {
+                return certificate.GetCertHashString() == pinnedCertificateHash;
+            }
+
+            return false;
         };
-    }
 
     static X509Certificate2 LoadCertificateFromPath(string path, string? password)
     {

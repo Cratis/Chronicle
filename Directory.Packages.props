@@ -7,13 +7,13 @@
     <!-- System -->
     <PackageVersion Include="System.Reactive" Version="6.1.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.10" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.4.6" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.16.5" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.16.5" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.16.6" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.16.6" />
     <PackageVersion Include="Cratis.Arc" Version="20.54.3" />
     <PackageVersion Include="Cratis.Arc.Core" Version="20.54.3" />
     <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.54.3" />
@@ -21,41 +21,41 @@
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.54.3" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="20.54.3" />
     <!-- Microsoft -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.7.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.7.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
     <!-- Pin the native SQLite library to a patched build (GHSA-2m69-gcr7-jv3q affects <= 2.1.11 pulled in transitively by EF Core Sqlite). -->
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!-- Orleans -->
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.2.0" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.2.0" />
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="10.2.0" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="10.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Server" Version="10.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Serialization" Version="10.2.1" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.2.0" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="10.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.2.1" />
     <PackageVersion Include="Microsoft.Orleans.Reminders" Version="10.2.1" />
@@ -77,7 +77,7 @@
     <!-- Roslyn-->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.6.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.6.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
@@ -87,9 +87,9 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.123" />
     <!-- Testing & Specifications -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
-    <PackageVersion Include="Cratis.Specifications" Version="3.0.5" />
+    <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
     <PackageVersion Include="Testcontainers" Version="4.13.0" />
@@ -112,7 +112,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
     <PackageVersion Include="protobuf-net.Reflection" Version="3.2.52" />
-    <PackageVersion Include="protobuf-net.Grpc" Version="1.2.2" />
+    <PackageVersion Include="protobuf-net.Grpc" Version="1.2.5" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.80.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
@@ -129,7 +129,7 @@
     <PackageVersion Include="OneOf" Version="3.0.271" />
     <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageVersion Include="Snappier" Version="1.3.1" />
-    <PackageVersion Include="SharpCompress" Version="0.50.0" />
+    <PackageVersion Include="SharpCompress" Version="1.0.0" />
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET9.props" Condition=" '$(TargetFramework)' == 'net9.0' " />
