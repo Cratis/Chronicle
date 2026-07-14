@@ -52,9 +52,10 @@ public class ConcurrencyScopesSerializer(ICodecProvider codecProvider) : IGenera
     /// <inheritdoc/>
     public object ReadValue<TInput>(ref Reader<TInput> reader, Field field)
     {
-        // Read the count first
-        var countField = reader.ReadFieldHeader();
-        var count = codecProvider.GetCodec<int>().ReadValue(ref reader, countField);
+        // The engine has already consumed the first field header (the count written by WriteField)
+        // and passes it in - reading another header here would misalign the stream, which only
+        // shows up when the message actually crosses a silo boundary.
+        var count = codecProvider.GetCodec<int>().ReadValue(ref reader, field);
 
         var scopes = new Dictionary<EventSourceId, ConcurrencyScope>();
 

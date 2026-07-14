@@ -65,7 +65,17 @@ public static partial class JobsManagerExtensions
         logger.NeedToStartJob();
         await onStartNew.Invoke();
         var startResult = await jobsManager.Start<TJob, TRequest>(request);
-        return startResult is not null ? startResult.AsT0 : JobId.NotSet;
+        if (startResult is not null && startResult.TryGetResult(out var jobId))
+        {
+            return jobId;
+        }
+
+        // Starting can legitimately fail - e.g. a node joining a cluster where another node is
+        // already handling the same observer job. The observer's watchdog retries later, so
+        // failing to start must not take the caller (potentially silo startup) down.
+        var error = startResult is not null && startResult.TryGetError(out var startError) ? startError : default;
+        logger.CouldNotStartJob(error);
+        return JobId.NotSet;
     }
     [LoggerMessage(LogLevel.Debug, "Found already running job {JobId}")]
     static partial void FoundRunningJob(this ILogger logger, JobId jobId);
@@ -75,4 +85,7 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Debug, "Need to start new job")]
     static partial void NeedToStartJob(this ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "Could not start job: {Error}")]
+    static partial void CouldNotStartJob(this ILogger logger, StartJobError error);
 }
