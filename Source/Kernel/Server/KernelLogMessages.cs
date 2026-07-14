@@ -20,6 +20,9 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Debug, "Configuring server to listen on port {Port} for gRPC (HTTP/2) and Workbench, API and OAuth (HTTP/1.1)")]
     internal static partial void ServerListening(this ILogger<Kernel> logger, int port);
 
+    [LoggerMessage(LogLevel.Information, "Exposing the health endpoint on dedicated port {Port} (TLS: {TlsEnabled})")]
+    internal static partial void HealthEndpointListening(this ILogger<Kernel> logger, int port, bool tlsEnabled);
+
     [LoggerMessage(LogLevel.Debug, "Cratis Chronicle Server configured successfully - starting services")]
     internal static partial void ServerConfigured(this ILogger<Kernel> logger);
 

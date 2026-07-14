@@ -22,6 +22,8 @@
   href: authentication.md
 - name: TLS
   href: tls.md
+- name: Health Endpoint
+  href: health-endpoint.md
 - name: Identity Provider Certificate
   href: identity-provider-certificate.md
 - name: Client Bootstrap

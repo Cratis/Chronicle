@@ -32,6 +32,21 @@ public class ChronicleOptions
     public string HealthCheckEndpoint { get; init; } = "/health";
 
     /// <summary>
+    /// Gets the <see cref="Configuration.Health"/> configuration for exposing the health endpoint on a dedicated port.
+    /// </summary>
+    public Health Health { get; init; } = new Health();
+
+    /// <summary>
+    /// Gets the dedicated port to expose the health endpoint on, or <see langword="null"/> when it is served on the main <see cref="Port"/>.
+    /// </summary>
+    /// <remarks>
+    /// Resolves to <see cref="Configuration.Health.Port"/> only when it is set and differs from the main
+    /// <see cref="Port"/>. A value equal to the main port would collide with the main listener, so it falls
+    /// back to serving the health endpoint on the main port.
+    /// </remarks>
+    public int? DedicatedHealthPort => Health.Port is { } port && port != Port ? port : null;
+
+    /// <summary>
     /// Gets the <see cref="Events"/> configuration.
     /// </summary>
     public Events Events { get; init; } = new Events();
