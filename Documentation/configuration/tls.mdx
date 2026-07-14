@@ -30,28 +30,30 @@ For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/c
 | --- | --- | --- | --- |
 | CertificatePath | string | null | Path to the client certificate (PFX format) if mutual TLS is used |
 | CertificatePassword | string | null | Password for the certificate file |
-| IsDisabled | boolean (read-only) | computed | `true` when no certificate path/password is set. Use `?disableTls=true` in the connection string only to reach a genuinely non-TLS endpoint (a standard Chronicle server always serves TLS) |
+| SkipCertificateValidation | boolean | false | When `true`, the client connects over TLS but does not validate the server's certificate |
 
-## Connection string option
+## Skipping certificate validation
 
-For the rare case of a non-TLS endpoint, TLS can be turned off through the connection string:
+The client always connects over TLS. By default it validates the server's certificate using the standard TLS rules, so a self-signed certificate is rejected. To accept a self-signed (or otherwise untrusted) certificate — for example a Chronicle server on a trusted internal network — skip validation through the connection string:
 
-<ChronicleClientTabs snippet="configuration/tls/connection-string-disable" />
+<ChronicleClientTabs snippet="configuration/tls/connection-string-skip-validation" />
+
+You can also set it on the client's TLS options as `SkipCertificateValidation = true`.
+
+> [!WARNING]
+> Skipping validation accepts **any** server certificate, which removes protection against man-in-the-middle attacks. Only use it for a trusted server on a trusted network — never over the public internet. Prefer configuring a proper certificate the client can validate.
 
 ## Development vs production
 
-When we talk about **Development** vs **Production**, we're talking about the development Docker image
-vs the Production Docker image.
-
-- **Development**: the server serves TLS with an auto-generated self-signed certificate, and the client accepts it automatically — no certificate setup is needed on either side.
-- **Production**: the server uses a real certificate you supply; the client validates it with standard TLS rules.
+- **Development**: the server serves TLS with an auto-generated self-signed certificate. The built-in [`Development` connection string](../connection-strings/) sets `skipTlsValidation=true`, so a development client accepts that certificate out of the box — no certificate setup is needed on either side.
+- **Production**: the server uses a real certificate you supply, and the client validates it with the standard TLS rules. Skipping validation is opt-in and off by default.
 
 ## Certificate validation
 
-The client validates server certificates using standard TLS rules:
+The client validates server certificates using the standard TLS rules:
 
 - Valid certificates are accepted without extra configuration.
-- The self-signed certificate a Chronicle server generates in development is accepted automatically (untrusted root / name mismatch) — no manual trust-store setup is required.
+- A certificate that fails validation — including a self-signed one — is rejected, unless you configure a matching client certificate or set `skipTlsValidation`.
 
 ## Troubleshooting
 
@@ -60,8 +62,8 @@ The client validates server certificates using standard TLS rules:
 **Error**: "The remote certificate is invalid"
 
 **Solutions**:
-1. Ensure the server certificate is valid and not expired.
-2. Verify the client trusts the certificate authority.
-3. In development, the client already accepts the server's auto-generated self-signed certificate — no action is needed.
+1. Ensure the server certificate is valid, not expired, and trusted by the client.
+2. If the server uses a self-signed certificate on a trusted network, set `skipTlsValidation=true` in the connection string (or `SkipCertificateValidation` on the client's TLS options).
+3. In development, use the built-in `Development` connection string, which already skips validation for the server's auto-generated certificate.
 
 
