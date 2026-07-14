@@ -444,16 +444,10 @@ internal static class ProjectionReadModelProcessor
 
         KernelProjectionEngine::KeyResolverResult keyResult;
 
-        // A root-level [Join] source event enriches an EXISTING root document — the one whose join `On`
-        // property equals this join event's own event source id. Resolve that root ourselves, mirroring the
-        // production engine / MongoDB (and the sink's TryFindRootKeyByChildValue) for ANY key type. Deferring to
-        // the engine's in-memory ForJoin key resolver here instead would write a PHANTOM document keyed by the
-        // join source's own id whenever the root row is not matched — which happens for a Guid-keyed root join
-        // (the identifier-typed lookup never matches the join column) and, before it could even run, for a
-        // string-concept-keyed one (the force-conversion to the identifier type throws). When no root row exists
-        // yet (the join source was seeded before its entity), skip without materializing anything: the
-        // row-creation-time backfill (ResolveJoin) enriches the value when the FROM event arrives.
-        var (isRootJoinSource, resolvedRootKey) = await TryResolveRootJoinKey(projection, kernelProjectionDefinition, sink, @event);
+        // A root-level [Join] source enriches an existing root document; resolve it ourselves so the in-memory
+        // sink doesn't materialize a phantom keyed by the join source's own id (see JoinKeyResolver). A null
+        // root means the row doesn't exist yet — skip; ResolveJoin backfills when the FROM event arrives.
+        var (isRootJoinSource, resolvedRootKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, sink, @event);
         if (isRootJoinSource)
         {
             if (resolvedRootKey is null)
@@ -485,15 +479,10 @@ internal static class ProjectionReadModelProcessor
 
         var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
 
-        // A child-level [Join] source event resolves — via the engine's ForJoin child branch — to a key whose
-        // value is the join source's OWN event source id, carrying array indexers into the child collection.
-        // Re-anchor it to the ROOT document that actually contains the matching child (found by the child value
-        // in the sink), keeping the array indexers so the change updates the existing child in place. Without
-        // this, the in-memory sink writes a PHANTOM document keyed by the join source's id and the change is
-        // applied against the wrong root — duplicating the child instead of enriching it. When no root contains
-        // the child yet (the join source was seeded first), skip: the row-creation-time backfill (ResolveJoin)
-        // enriches the child when its creating event arrives.
-        var (isChildJoinSource, childJoinRootKey) = await TryResolveChildJoinRootKey(projection, sink, @event, key);
+        // A child-level [Join] source resolves onto a child of an existing root; re-anchor onto that root
+        // (keeping the array indexers) so the child is updated in place rather than duplicated into a phantom
+        // (see JoinKeyResolver). A null root means the child doesn't exist yet — skip; ResolveJoin backfills it.
+        var (isChildJoinSource, childJoinRootKey) = await JoinKeyResolver.TryResolveChildJoinRootKey(projection, sink, @event, key);
         if (isChildJoinSource)
         {
             if (childJoinRootKey is null)
@@ -523,107 +512,6 @@ internal static class ProjectionReadModelProcessor
         await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         var updatedState = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
         return (updatedState, key, removed);
-    }
-
-    /// <summary>
-    /// Resolves the root read-model key for a root-level <c>[Join]</c> source event by matching the join's
-    /// <c>On</c> property against the join event's own event source id — the same lookup the production engine
-    /// performs against its sink, applied here uniformly for any key type (Guid, string concept, and so on).
-    /// </summary>
-    /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> being processed.</param>
-    /// <param name="kernelProjectionDefinition">The kernel projection definition carrying the join metadata.</param>
-    /// <param name="sink">The in-memory sink holding the materialized root documents.</param>
-    /// <param name="event">The event being processed.</param>
-    /// <returns>
-    /// A tuple whose <c>IsRootJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
-    /// root-level join source (so the caller must resolve here rather than defer to the engine's key resolver).
-    /// <c>RootKey</c> is the matched root document key to enrich, or <see langword="null"/> when no root row
-    /// exists yet (skip without writing a phantom).
-    /// </returns>
-    /// <remarks>
-    /// The engine's own <c>ForJoin</c> key resolver targets its real sink; run against the in-memory sink it
-    /// yields a phantom document keyed by the join source's id rather than enriching the existing root. This
-    /// replicates only the intended root lookup (<c>sink.TryFindRootKeyByChildValue</c> on the join <c>On</c>
-    /// column), so no engine behavior changes — a nested join or a non-join event returns
-    /// <c>IsRootJoinSource = false</c> and falls through to the engine's normal resolution.
-    /// </remarks>
-    static async Task<(bool IsRootJoinSource, KernelKey? RootKey)> TryResolveRootJoinKey(
-        KernelProjectionEngine::IProjection projection,
-        KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
-        InMemorySink sink,
-        KernelAppendedEvent @event)
-    {
-        if (projection.HasParent)
-        {
-            return (false, null);
-        }
-
-        // Only a pure, root-level join source routes here. An event that also carries a From mapping
-        // creates/updates the row itself (the engine keeps its From key resolver for it), and a join that
-        // affects a child collection is handled by the child-join re-anchoring — so leave both to normal
-        // resolution; skipping a From event would drop the row it is responsible for creating.
-        var operationType = projection.GetOperationTypeFor(@event.Context.EventType);
-        if (!operationType.HasFlag(KernelProjectionEngine::ProjectionOperationType.Join) ||
-            operationType.HasFlag(KernelProjectionEngine::ProjectionOperationType.From) ||
-            operationType.HasFlag(KernelProjectionEngine::ProjectionOperationType.ChildrenAffected))
-        {
-            return (false, null);
-        }
-
-        var joinDefinition = kernelProjectionDefinition.Join
-            .FirstOrDefault(join => join.Key.Id == @event.Context.EventType.Id).Value;
-        if (joinDefinition is null)
-        {
-            return (false, null);
-        }
-
-        var rootKeyResult = await sink.TryFindRootKeyByChildValue(joinDefinition.On, @event.Context.EventSourceId.Value);
-        return rootKeyResult.TryGetValue(out var rootKey) ? (true, rootKey) : (true, null);
-    }
-
-    /// <summary>
-    /// Resolves the root read-model key for a child-level <c>[Join]</c> source event whose engine-resolved key
-    /// carries array indexers into a child collection — by locating the root document that contains the matching
-    /// child (via the child value in the sink), mirroring the production engine's behavior against its real sink.
-    /// </summary>
-    /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> being processed.</param>
-    /// <param name="sink">The in-memory sink holding the materialized root documents.</param>
-    /// <param name="event">The event being processed.</param>
-    /// <param name="key">The key the engine resolved for <paramref name="event"/>, carrying the child array indexers.</param>
-    /// <returns>
-    /// A tuple whose <c>IsChildJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
-    /// child-level join source (the caller must re-anchor onto the returned root, keeping the array indexers).
-    /// <c>RootKey</c> is the matched root document key whose child to enrich, or <see langword="null"/> when no
-    /// root contains the child yet (skip without writing a phantom).
-    /// </returns>
-    /// <remarks>
-    /// The engine's <c>ForJoin</c> child branch resolves the key value to the join source's OWN event source id
-    /// with an array indexer into the child collection; against the in-memory sink that would write a phantom
-    /// document keyed by that id and duplicate the child. The array indexer names the child collection and the
-    /// child key, so <c>sink.TryFindRootKeyByChildValue</c> on that path recovers the true root — no engine
-    /// behavior changes, and a non-child-join event (no array indexers or no Join flag) returns
-    /// <c>IsChildJoinSource = false</c> and falls through to normal handling.
-    /// </remarks>
-    static async Task<(bool IsChildJoinSource, KernelKey? RootKey)> TryResolveChildJoinRootKey(
-        KernelProjectionEngine::IProjection projection,
-        InMemorySink sink,
-        KernelAppendedEvent @event,
-        KernelKey key)
-    {
-        if (key.ArrayIndexers.IsEmpty ||
-            !projection.GetOperationTypeFor(@event.Context.EventType).HasFlag(KernelProjectionEngine::ProjectionOperationType.Join))
-        {
-            return (false, null);
-        }
-
-        // The leaf array indexer names the child collection and identifies the child within it; the full dotted
-        // path from the root to the child key (e.g. "members.memberId") is what the sink matches against.
-        var indexers = key.ArrayIndexers.All.ToList();
-        var leaf = indexers[^1];
-        var childPath = new PropertyPath(string.Join('.', indexers.Select(indexer => indexer.ArrayProperty.Path).Append(leaf.IdentifierProperty.Path)));
-
-        var rootKeyResult = await sink.TryFindRootKeyByChildValue(childPath, leaf.Identifier);
-        return rootKeyResult.TryGetValue(out var rootKey) ? (true, rootKey) : (true, null);
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)
