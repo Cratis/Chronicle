@@ -4,6 +4,7 @@
 using System.Net.Sockets;
 using Aspire.Hosting.Yarp;
 using Yarp.ReverseProxy.Configuration;
+using Yarp.ReverseProxy.SessionAffinity;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -63,7 +64,21 @@ builder.AddYarp("workbench")
     {
         var kernels = yarp.AddCluster("kernels", [kernel1.GetEndpoint("https"), kernel2.GetEndpoint("https")])
             .WithLoadBalancingPolicy("RoundRobin")
-            .WithHttpClientConfig(new HttpClientConfig { DangerousAcceptAnyServerCertificate = true });
+            .WithHttpClientConfig(new HttpClientConfig { DangerousAcceptAnyServerCertificate = true })
+
+            // The Workbench's observable queries open an SSE stream to get a connectionId, then
+            // POST to /subscribe with that id as a *separate* request - without affinity,
+            // round-robin can send that POST to the other kernel, which has never heard of the
+            // connection, so it fails and the client reconnects forever. A cookie pins a browser
+            // session to the kernel that issued its connectionId; only a fresh session (or a
+            // failover) picks a new one via round-robin.
+            .WithSessionAffinityConfig(new SessionAffinityConfig
+            {
+                Enabled = true,
+                Policy = SessionAffinityConstants.Policies.Cookie,
+                FailurePolicy = SessionAffinityConstants.FailurePolicies.Redistribute,
+                AffinityKeyName = "Chronicle.Workbench.Affinity"
+            });
         yarp.AddRoute("/{**catch-all}", kernels);
     })
     .WaitFor(kernel1)
