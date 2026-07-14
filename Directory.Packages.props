@@ -11,6 +11,8 @@
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.16.2" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.16.2" />
