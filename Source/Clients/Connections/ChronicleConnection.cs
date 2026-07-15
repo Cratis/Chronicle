@@ -287,7 +287,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             new()
             {
                 ConnectionId = Lifecycle.ConnectionId,
+                ClientVersion = ClientProcess.Version,
                 IsRunningWithDebugger = Debugger.IsAttached,
+                ProcessId = ClientProcess.Id,
+                ProcessPath = ClientProcess.Path,
+                MachineName = ClientProcess.MachineName,
             }).Subscribe(HandleConnection);
 
         try

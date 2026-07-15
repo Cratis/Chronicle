@@ -21,8 +21,11 @@ public interface IConnectedClients : IGrainWithStringKey
     /// <param name="connectionId">The connection identifier.</param>
     /// <param name="version">The version of the client.</param>
     /// <param name="isRunningWithDebugger">Whether or not the client is running with debugger.</param>
+    /// <param name="processId">The identifier of the client process.</param>
+    /// <param name="processPath">The full path of the client process executable.</param>
+    /// <param name="machineName">The name of the machine the client process is running on.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnClientConnected(ConnectionId connectionId, string version, bool isRunningWithDebugger);
+    Task OnClientConnected(ConnectionId connectionId, string version, bool isRunningWithDebugger, int processId, string processPath, string machineName);
 
     /// <summary>
     /// Report that a client was disconnected.

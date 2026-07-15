@@ -38,4 +38,22 @@ public class ConnectedClient
     /// </summary>
     [ProtoMember(5)]
     public string SiloAddress { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the identifier of the client process.
+    /// </summary>
+    [ProtoMember(6)]
+    public int ProcessId { get; init; }
+
+    /// <summary>
+    /// Gets the full path of the client process executable.
+    /// </summary>
+    [ProtoMember(7)]
+    public string ProcessPath { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the name of the machine the client process is running on.
+    /// </summary>
+    [ProtoMember(8)]
+    public string MachineName { get; init; } = string.Empty;
 }

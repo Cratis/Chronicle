@@ -41,7 +41,10 @@ internal sealed class ConnectionService(
                 await connectedClients.OnClientConnected(
                     request.ConnectionId,
                     request.ClientVersion,
-                    request.IsRunningWithDebugger);
+                    request.IsRunningWithDebugger,
+                    request.ProcessId,
+                    request.ProcessPath,
+                    request.MachineName);
 
                 try
                 {
@@ -110,7 +113,10 @@ internal sealed class ConnectionService(
                 Version = client.Version,
                 LastSeen = client.LastSeen,
                 IsRunningWithDebugger = client.IsRunningWithDebugger,
-                SiloAddress = silo.ToParsableString()
+                SiloAddress = silo.ToParsableString(),
+                ProcessId = client.ProcessId,
+                ProcessPath = client.ProcessPath,
+                MachineName = client.MachineName
             }));
         }
 
@@ -174,6 +180,6 @@ internal sealed class ConnectionService(
         /// </summary>
         /// <param name="client">The <see cref="ConnectedClient"/> to get the identity for.</param>
         /// <returns>A string identifying the client.</returns>
-        static string Identity(ConnectedClient client) => $"{client.SiloAddress}|{client.ConnectionId}|{client.Version}|{client.IsRunningWithDebugger}";
+        static string Identity(ConnectedClient client) => $"{client.SiloAddress}|{client.ConnectionId}|{client.Version}|{client.IsRunningWithDebugger}|{client.ProcessId}|{client.ProcessPath}|{client.MachineName}";
     }
 }

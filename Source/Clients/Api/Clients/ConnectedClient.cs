@@ -15,13 +15,19 @@ namespace Cratis.Chronicle.Api.Clients;
 /// <param name="Version">The version of the client.</param>
 /// <param name="LastSeen">The date and time the client was last seen.</param>
 /// <param name="IsRunningWithDebugger">Whether or not the client is running with a debugger attached.</param>
+/// <param name="ProcessId">The identifier of the client process.</param>
+/// <param name="ProcessPath">The full path of the client process executable.</param>
+/// <param name="MachineName">The name of the machine the client process is running on.</param>
 [ReadModel]
 public record ConnectedClient(
     string SiloAddress,
     string ConnectionId,
     string Version,
     DateTimeOffset LastSeen,
-    bool IsRunningWithDebugger)
+    bool IsRunningWithDebugger,
+    int ProcessId,
+    string ProcessPath,
+    string MachineName)
 {
     /// <summary>
     /// Get all clients connected to the server, across all silos in the cluster.

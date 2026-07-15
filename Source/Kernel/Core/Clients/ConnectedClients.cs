@@ -46,7 +46,10 @@ public class ConnectedClients(
     public Task OnClientConnected(
         ConnectionId connectionId,
         string version,
-        bool isRunningWithDebugger)
+        bool isRunningWithDebugger,
+        int processId,
+        string processPath,
+        string machineName)
     {
         logger.ClientConnected(connectionId);
 
@@ -56,7 +59,10 @@ public class ConnectedClients(
             ConnectionId = connectionId,
             Version = version,
             LastSeen = DateTimeOffset.UtcNow,
-            IsRunningWithDebugger = isRunningWithDebugger
+            IsRunningWithDebugger = isRunningWithDebugger,
+            ProcessId = processId,
+            ProcessPath = processPath,
+            MachineName = machineName
         });
 
         // The real connection just registered - if it was preceded by a reservation, that

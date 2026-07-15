@@ -97,7 +97,10 @@ internal class ChronicleConnection(
         await connectedClients.OnClientConnected(
             (KernelConnectionId)lifecycle.ConnectionId.Value,
             string.Empty,
-            KeepAliveExempt);
+            KeepAliveExempt,
+            Environment.ProcessId,
+            Environment.ProcessPath ?? string.Empty,
+            Environment.MachineName);
 
         _connectionService = new ConnectionService(grainFactory, localSiloDetails, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
@@ -132,7 +135,7 @@ internal class ChronicleConnection(
             // resurrect the connection and break reconnect specs.
             if (!stillConnected && lifecycle.IsConnected)
             {
-                await connectedClients.OnClientConnected(connectionId, string.Empty, KeepAliveExempt);
+                await connectedClients.OnClientConnected(connectionId, string.Empty, KeepAliveExempt, Environment.ProcessId, Environment.ProcessPath ?? string.Empty, Environment.MachineName);
             }
         }
         catch
