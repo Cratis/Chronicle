@@ -152,7 +152,12 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
-        _expression = new EventContextPropertyExpression(eventContextPropertyAccessor.GetPropertyPath());
+        if (!eventContextPropertyAccessor.TryGetPropertyPath(out var propertyPath))
+        {
+            throw new InvalidPropertyExpression($"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventContextPropertyAccessor);
+        }
+
+        _expression = new EventContextPropertyExpression(propertyPath);
         return _parent;
     }
 }

@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="connectionString">The Chronicle URL to connect to. If not provided, defaults to <see cref="ChronicleConnectionString.Default"/>.</param>
     /// <param name="connectionStringFactory">A factory function to create the Chronicle URL. If provided, it will be used to determine the URL instead of the default.</param>
-    /// <param name="disableTls">Whether to disable TLS for the connection.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the connection.</param>
     /// <param name="certificatePath">Path to the TLS certificate file.</param>
     /// <param name="certificatePassword">Password for the TLS certificate file.</param>
     /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect. Useful for short-lived clients such as CLIs.</param>
@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         ChronicleConnectionString? connectionString = default,
         Func<IServiceProvider, ChronicleConnectionString>? connectionStringFactory = default,
-        bool? disableTls = null,
+        bool? skipTlsValidation = null,
         string? certificatePath = null,
         string? certificatePassword = null,
         bool skipCompatibilityCheck = false,
@@ -44,7 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChronicleConnection>(sp =>
         {
             connectionString ??= connectionStringFactory?.Invoke(sp) ?? ChronicleConnectionString.Default;
-            disableTls ??= connectionString.DisableTls;
+            skipTlsValidation ??= connectionString.SkipTlsValidation;
             var logger = sp.GetService<ILogger<ChronicleConnection>>();
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
             logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", connectionString);
@@ -72,7 +72,7 @@ public static class ServiceCollectionExtensions
                         : connectionString.ServerAddress,
                     username!,
                     password!,
-                    disableTls.Value,
+                    skipTlsValidation.Value,
                     sp.GetRequiredService<ILogger<OAuthTokenProvider>>());
             }
 
@@ -87,7 +87,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<ILoggerFactory>(),
                 lifetime.ApplicationStopping,
                 sp.GetRequiredService<ILogger<ChronicleConnection>>(),
-                disableTls.Value,
+                skipTlsValidation.Value,
                 certificatePath,
                 certificatePassword,
                 tokenProvider,

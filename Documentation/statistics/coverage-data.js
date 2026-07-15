@@ -1,8 +1,15 @@
 window.COVERAGE_DATA = {
-  "lastUpdate": 1783939141780,
+  "lastUpdate": 1784058779800,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis.Chronicle": [
+      {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 72.2,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
       {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
@@ -125,6 +132,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Api": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 42.7,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 0,
@@ -245,6 +259,13 @@ window.COVERAGE_DATA = {
       }
     ],
     "Cratis.Chronicle.AspNetCore": [
+      {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 82.2,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
       {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
@@ -511,6 +532,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Concepts": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 50.8,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 74,
@@ -655,6 +683,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Connections": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 68.2,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 71.8,
@@ -775,6 +810,13 @@ window.COVERAGE_DATA = {
       }
     ],
     "Cratis.Chronicle.Contracts": [
+      {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 75.9,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
       {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
@@ -966,6 +1008,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Infrastructure": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 73.09,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 82.1,
@@ -1147,6 +1196,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Server": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 41.6,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 0,
@@ -1314,6 +1370,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 57.9,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 72.3,
@@ -1434,6 +1497,13 @@ window.COVERAGE_DATA = {
       }
     ],
     "Cratis.Chronicle.Storage.MongoDB": [
+      {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 71.09,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
       {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
@@ -1556,6 +1626,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Testing": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 31.9,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 69.8,
@@ -1676,6 +1753,13 @@ window.COVERAGE_DATA = {
       }
     ],
     "Cratis.Chronicle.XUnit.Integration": [
+      {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 91.2,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
       {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
@@ -1798,6 +1882,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Core": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 46.6,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 54.5,
@@ -1897,6 +1988,13 @@ window.COVERAGE_DATA = {
       }
     ],
     "Cratis.Chronicle.Storage.Sql": [
+      {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 70.2,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
       {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
@@ -2070,6 +2168,13 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage.Vault": [
       {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 85.2,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
+      {
         "date": "2026-06-02",
         "week": "2026-M06-W1",
         "lineCoverage": 10.9,
@@ -2092,6 +2197,13 @@ window.COVERAGE_DATA = {
       }
     ],
     "Cratis.Chronicle.Storage.AzureKeyVault": [
+      {
+        "date": "2026-07-14",
+        "week": "2026-M07-W2",
+        "lineCoverage": 77.8,
+        "version": "fix/projection-and-compliance-hardening",
+        "commit": "3f7372d"
+      },
       {
         "date": "2026-06-02",
         "week": "2026-M06-W1",

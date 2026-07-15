@@ -494,9 +494,7 @@ internal sealed class ReadModels(
                 // first appended event.
                 var forwardingObserver = new ChangesetForwardingObserver(
                     observer,
-                    request.EventStore,
-                    schema,
-                    complianceHelper,
+                    (namespaceName, readModel) => ReleaseJsonForProjectedReadModel(request.EventStore, namespaceName, schema, readModel),
                     jsonSerializerOptions);
                 var observerReference = grainFactory.CreateObjectReference<IProjectionChangesetObserver>(forwardingObserver);
                 var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
@@ -744,29 +742,46 @@ internal sealed class ReadModels(
         return null;
     }
 
-    async Task<JsonObject> ReleaseProjectedReadModel(JsonObject readModel, JsonSchema schema, string eventStore, string @namespace, string? subject)
+    Task<JsonObject> ReleaseProjectedReadModel(JsonObject readModel, JsonSchema schema, string eventStore, string @namespace, string? subject) =>
+        ReleaseJsonForProjectedReadModel(eventStore, @namespace, schema, readModel, subject);
+
+    async Task<JsonObject> ReleaseJsonForProjectedReadModel(
+        string eventStore,
+        string @namespace,
+        JsonSchema schema,
+        JsonObject readModel,
+        string? preferredSubject = null)
     {
+        // A read model projected directly from stored (encrypted) events still holds its PII fields encrypted under
+        // the compliance subject. The subject is resolved identically for one-shot and observable queries — an
+        // explicit subject when the caller supplies one, otherwise inferred from the document (__subject -> _id ->
+        // id) — stamped so the compliance manager can decrypt, then stripped again so the internal marker never
+        // leaves the kernel. Sharing this between the one-shot query path and the observable (Watch) path keeps them
+        // from diverging: observable queries used to skip the inference entirely and streamed a __subject-less
+        // document back as ciphertext.
         if (!schema.HasComplianceMetadata())
         {
             return readModel;
         }
 
-        // The read model is projected directly from stored (encrypted) events, so its PII fields still
-        // hold the encrypted value keyed by the event source id. Stamp the subject so the compliance
-        // manager can decrypt them, then strip it again so the internal marker never leaves the kernel.
-        var resolvedSubject = !string.IsNullOrWhiteSpace(subject) && subject != ReadModelKey.Unspecified.Value
-            ? subject
-            : InferSubjectFromJson();
+        var resolvedSubject = !string.IsNullOrWhiteSpace(preferredSubject) && preferredSubject != ReadModelKey.Unspecified.Value
+            ? preferredSubject
+            : InferSubjectFromJson(readModel);
         if (string.IsNullOrWhiteSpace(resolvedSubject))
         {
             return readModel;
         }
 
-        string? InferSubjectFromJson()
+        readModel[WellKnownProperties.Subject] = resolvedSubject;
+        var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, readModel);
+        released.Remove(WellKnownProperties.Subject);
+        return released;
+
+        static string? InferSubjectFromJson(JsonObject json)
         {
             foreach (var property in new[] { WellKnownProperties.Subject, "_id", "id" })
             {
-                if (readModel.TryGetPropertyValue(property, out var value) && value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var identifier))
+                if (json.TryGetPropertyValue(property, out var value) && value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var identifier))
                 {
                     return identifier;
                 }
@@ -774,27 +789,20 @@ internal sealed class ReadModels(
 
             return null;
         }
-
-        readModel[WellKnownProperties.Subject] = resolvedSubject;
-        var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, readModel);
-        released.Remove(WellKnownProperties.Subject);
-        return released;
     }
 
     sealed class ChangesetForwardingObserver(
         IObserver<ReadModelChangeset> observer,
-        string eventStore,
-        JsonSchema schema,
-        IReadModelsCompliance complianceHelper,
+        Func<Concepts.EventStoreNamespaceName, JsonObject, Task<JsonObject>> releaseCompliance,
         JsonSerializerOptions jsonSerializerOptions) : IProjectionChangesetObserver
     {
         public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel)
         {
-            var decrypted = await complianceHelper.ReleaseJson(
-                eventStore,
-                namespaceName,
-                schema,
-                readModel);
+            // Decrypt through the shared release path so observable queries resolve the compliance subject exactly
+            // like one-shot queries (explicit __subject, else inferred from _id/id). Streaming the raw changeset —
+            // as this path used to — leaves a document that carries no __subject undecrypted, so an observable PII
+            // query would stream ciphertext while the equivalent one-shot query decrypts.
+            var decrypted = await releaseCompliance(namespaceName, readModel);
 
             observer.OnNext(new ReadModelChangeset
             {

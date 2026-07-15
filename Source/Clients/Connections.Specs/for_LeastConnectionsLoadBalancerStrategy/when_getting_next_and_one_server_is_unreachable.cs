@@ -19,7 +19,7 @@ public class when_getting_next_and_one_server_is_unreachable : Specification
         var handler = new FakeConnectionCountHttpMessageHandler(
             new Dictionary<string, int> { ["host2"] = 3 },
             new HashSet<string> { "host1" });
-        _strategy = new LeastConnectionsLoadBalancerStrategy(disableTls: true, new HttpClient(handler), maxSelectionJitter: TimeSpan.Zero);
+        _strategy = new LeastConnectionsLoadBalancerStrategy(skipTlsValidation: true, new HttpClient(handler), maxSelectionJitter: TimeSpan.Zero);
     }
 
     void Destroy() => _strategy.Dispose();

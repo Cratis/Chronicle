@@ -110,12 +110,12 @@ You cannot combine client credentials and API key authentication in the same con
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
 | `apiKey` | string | API key for API key authentication | `?apiKey=your-api-key` |
-| `disableTls` | boolean | Disables TLS (development only) | `?disableTls=true` |
+| `skipTlsValidation` | boolean | Connects over TLS without validating the server certificate | `?skipTlsValidation=true` |
 | `loadBalancer` | string | Load balancer strategy when multiple servers are configured | `?loadBalancer=round-robin` |
 | `srvNameServer` | string | DNS name server (host[:port], port defaults to 53) for `chronicle+srv` lookups; defaults to the system's name servers | `?srvNameServer=10.0.0.53` |
 
 ## TLS
 
-TLS is enabled by default. You can disable it using `disableTls=true` when TLS is terminated upstream (for example by an ingress or reverse proxy).
+The client always connects over TLS, and by default it validates the server certificate. Set `skipTlsValidation=true` to accept a self-signed or otherwise untrusted certificate — only do this for a trusted server on a trusted network, as it removes protection against man-in-the-middle attacks. The built-in development connection string sets it so development works against the server's self-signed certificate.
 
-See [TLS configuration](../hosting/configuration/tls.md) for certificate setup.
+See [TLS configuration (client)](../configuration/tls) for certificate setup.

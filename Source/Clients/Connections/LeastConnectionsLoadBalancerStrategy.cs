@@ -37,18 +37,16 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
     readonly bool _ownsHttpClient;
     readonly HttpMessageHandler? _httpMessageHandler;
     readonly HttpClient _httpClient;
-    readonly string _scheme;
     readonly int _maxSelectionJitterMilliseconds;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeastConnectionsLoadBalancerStrategy"/> class.
     /// </summary>
-    /// <param name="disableTls">Whether TLS is disabled for the connection.</param>
-    /// <param name="httpClient">Optional <see cref="HttpClient"/> to probe candidate servers with. Defaults to one that accepts development self-signed certificates.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation when probing candidate servers.</param>
+    /// <param name="httpClient">Optional <see cref="HttpClient"/> to probe candidate servers with. Defaults to one honoring <paramref name="skipTlsValidation"/>.</param>
     /// <param name="maxSelectionJitter">Optional upper bound for the random delay before every probe. Defaults to 250ms; pass <see cref="TimeSpan.Zero"/> to disable it.</param>
-    public LeastConnectionsLoadBalancerStrategy(bool disableTls, HttpClient? httpClient = null, TimeSpan? maxSelectionJitter = null)
+    public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient = null, TimeSpan? maxSelectionJitter = null)
     {
-        _scheme = disableTls ? "http" : "https";
         _maxSelectionJitterMilliseconds = (int)(maxSelectionJitter ?? _defaultMaxSelectionJitter).TotalMilliseconds;
         _ownsHttpClient = httpClient is null;
 
@@ -62,8 +60,8 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
             {
                 SslOptions = new SslClientAuthenticationOptions
                 {
-                    RemoteCertificateValidationCallback = (_, _, chain, sslPolicyErrors) =>
-                        DevelopmentCertificateValidation.AcceptSelfSigned(chain, sslPolicyErrors)
+                    RemoteCertificateValidationCallback =
+                        CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null)
                 }
             };
             _httpClient = new HttpClient(_httpMessageHandler);
@@ -119,7 +117,7 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
         try
         {
             using var timeout = new CancellationTokenSource(_probeTimeout);
-            var address = new Uri($"{_scheme}://{serverAddress.Host}:{serverAddress.Port}/{ConnectionCountRoute}");
+            var address = new Uri($"https://{serverAddress.Host}:{serverAddress.Port}/{ConnectionCountRoute}");
             var response = await _httpClient.GetAsync(address, timeout.Token);
             if (!response.IsSuccessStatusCode)
             {
@@ -142,7 +140,7 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
         try
         {
             using var timeout = new CancellationTokenSource(_probeTimeout);
-            var address = new Uri($"{_scheme}://{serverAddress.Host}:{serverAddress.Port}/{ReserveConnectionRoute}");
+            var address = new Uri($"https://{serverAddress.Host}:{serverAddress.Port}/{ReserveConnectionRoute}");
             await _httpClient.PostAsync(address, content: null, timeout.Token);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)

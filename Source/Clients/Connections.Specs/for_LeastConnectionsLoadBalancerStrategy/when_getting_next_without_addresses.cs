@@ -8,7 +8,7 @@ public class when_getting_next_without_addresses : Specification
     LeastConnectionsLoadBalancerStrategy _strategy;
     Exception _exception;
 
-    void Establish() => _strategy = new LeastConnectionsLoadBalancerStrategy(disableTls: true);
+    void Establish() => _strategy = new LeastConnectionsLoadBalancerStrategy(skipTlsValidation: true);
 
     void Destroy() => _strategy.Dispose();
 

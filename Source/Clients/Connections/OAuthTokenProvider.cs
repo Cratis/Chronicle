@@ -28,15 +28,15 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="serverAddress">The Chronicle server address.</param>
     /// <param name="clientId">The OAuth client ID.</param>
     /// <param name="clientSecret">The OAuth client secret.</param>
-    /// <param name="disableTls">Whether to disable TLS for the token request.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
     public OAuthTokenProvider(
         ChronicleServerAddress serverAddress,
         string clientId,
         string clientSecret,
-        bool disableTls,
+        bool skipTlsValidation,
         ILogger<OAuthTokenProvider> logger)
-        : this(() => serverAddress, clientId, clientSecret, disableTls, logger)
+        : this(() => serverAddress, clientId, clientSecret, skipTlsValidation, logger)
     {
     }
 
@@ -46,20 +46,19 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="serverAddressProvider">Provides the Chronicle server address to request tokens from - evaluated per request so it follows the currently connected server.</param>
     /// <param name="clientId">The OAuth client ID.</param>
     /// <param name="clientSecret">The OAuth client secret.</param>
-    /// <param name="disableTls">Whether to disable TLS for the token request.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
     public OAuthTokenProvider(
         Func<ChronicleServerAddress> serverAddressProvider,
         string clientId,
         string clientSecret,
-        bool disableTls,
+        bool skipTlsValidation,
         ILogger<OAuthTokenProvider> logger)
     {
-        var scheme = disableTls ? "http" : "https";
         _tokenEndpoint = () =>
         {
             var serverAddress = serverAddressProvider();
-            return $"{scheme}://{serverAddress.Host}:{serverAddress.Port}/connect/token";
+            return $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
         };
         _clientId = clientId;
         _clientSecret = clientSecret;
@@ -69,21 +68,8 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         {
             SslOptions = new SslClientAuthenticationOptions
             {
-                RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) =>
-                {
-                    if (!DevelopmentCertificateValidation.AcceptSelfSigned(chain, sslPolicyErrors))
-                    {
-                        _logger.CertificateValidationFailed(sslPolicyErrors.ToString());
-                        return false;
-                    }
-
-                    if (sslPolicyErrors != SslPolicyErrors.None)
-                    {
-                        _logger.AcceptingSelfSignedCertificate(certificate?.Subject ?? "unknown");
-                    }
-
-                    return true;
-                }
+                RemoteCertificateValidationCallback =
+                    CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null)
             }
         };
         _httpMessageHandler = handler;

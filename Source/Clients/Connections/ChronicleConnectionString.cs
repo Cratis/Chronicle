@@ -50,7 +50,11 @@ public class ChronicleConnectionString
     /// <summary>
     /// The development <see cref="ChronicleConnectionString"/> pointing to localhost configured with the default dev credentials.
     /// </summary>
-    public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000");
+    /// <remarks>
+    /// TLS certificate validation is skipped so a development client connects to the self-signed certificate
+    /// the Chronicle server generates when none is configured. Production connections validate the certificate.
+    /// </remarks>
+    public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000?skipTlsValidation=true");
 
     readonly ChronicleConnectionStringBuilder _builder;
 
@@ -121,9 +125,9 @@ public class ChronicleConnectionString
     public string? ApiKey => _builder.ApiKey;
 
     /// <summary>
-    /// Gets whether TLS is disabled.
+    /// Gets whether TLS certificate validation is skipped when connecting.
     /// </summary>
-    public bool DisableTls => _builder.DisableTls;
+    public bool SkipTlsValidation => _builder.SkipTlsValidation;
 
     /// <summary>
     /// Gets the path to the certificate file for TLS.

@@ -12,7 +12,7 @@ public class when_getting_next_with_a_single_address : Specification
     void Establish()
     {
         _address = new ChronicleServerAddress("host1");
-        _strategy = new LeastConnectionsLoadBalancerStrategy(disableTls: true);
+        _strategy = new LeastConnectionsLoadBalancerStrategy(skipTlsValidation: true);
     }
 
     void Destroy() => _strategy.Dispose();

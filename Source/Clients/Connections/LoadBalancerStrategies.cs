@@ -12,13 +12,13 @@ public static class LoadBalancerStrategies
     /// Creates an <see cref="ILoadBalancerStrategy"/> from its well-known name.
     /// </summary>
     /// <param name="name">The name of the strategy. When not specified, defaults to least-connections.</param>
-    /// <param name="disableTls">Whether TLS is disabled for the connection - used by strategies (e.g. least-connections) that probe the candidate servers themselves.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation - used by strategies (e.g. least-connections) that probe the candidate servers themselves.</param>
     /// <returns>The <see cref="ILoadBalancerStrategy"/> for the name.</returns>
     /// <exception cref="UnknownLoadBalancerStrategy">Thrown when the name does not match a known strategy.</exception>
-    public static ILoadBalancerStrategy Create(string? name = null, bool disableTls = false) =>
+    public static ILoadBalancerStrategy Create(string? name = null, bool skipTlsValidation = false) =>
         name switch
         {
-            null or "" or LeastConnectionsLoadBalancerStrategy.StrategyName => new LeastConnectionsLoadBalancerStrategy(disableTls),
+            null or "" or LeastConnectionsLoadBalancerStrategy.StrategyName => new LeastConnectionsLoadBalancerStrategy(skipTlsValidation),
             RoundRobinLoadBalancerStrategy.StrategyName => new RoundRobinLoadBalancerStrategy(),
             RandomLoadBalancerStrategy.StrategyName => new RandomLoadBalancerStrategy(),
             _ => throw new UnknownLoadBalancerStrategy(name)

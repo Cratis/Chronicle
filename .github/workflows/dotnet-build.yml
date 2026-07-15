@@ -9,10 +9,8 @@ env:
   DOTNET9_VERSION: "9.0.x"
   DOTNET_VERSION: "10.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
-  DOTNET_OBJ_CACHE: "dotnet-obj-cache-${{ github.sha }}"
   # Separate cache for the DEVELOPMENT-symbol build the integration tests consume.
   DOTNET_DEV_CACHE: "dotnet-dev-cache-${{ github.sha }}"
-  DOTNET_DEV_OBJ_CACHE: "dotnet-dev-obj-cache-${{ github.sha }}"
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
@@ -58,9 +56,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ./**/obj
-          key: ${{ env.DOTNET_OBJ_CACHE }}
+          # Key on the package manifests so a dependency version change never restores a stale obj
+          # cache from a different package set. A loose restore-key previously reused a pre-bump obj
+          # cache across a package bump, producing a skewed publish where an older Cratis.Arc.Core.dll
+          # shipped alongside newer Arc assemblies that referenced types it no longer contained.
+          key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
           restore-keys: |
-            dotnet-obj-cache-
+            dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
       - uses: actions/cache@v4
         id: dotnet-x64-output
@@ -138,9 +140,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ./**/obj
-          key: ${{ env.DOTNET_DEV_OBJ_CACHE }}
+          # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
+          key: dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
           restore-keys: |
-            dotnet-dev-obj-cache-
+            dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
       - uses: actions/cache@v4
         id: dotnet-dev-output

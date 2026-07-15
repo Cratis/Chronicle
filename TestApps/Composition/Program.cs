@@ -47,8 +47,9 @@ var kernel2 = AddKernel("kernel-2", port: 35002, siloPort: 11112, gatewayPort: 3
 // The web apps resolve the kernels through DNS SRV - the srvNameServer option points the lookup
 // at the CoreDNS container above. loadBalancer is spelled out explicitly even though
 // least-connections is the default, so the composition demonstrates the option by example.
+// skipTlsValidation is needed because the kernels serve self-signed development certificates.
 const string SrvConnectionString =
-    "chronicle+srv://chronicle-dev-client:chronicle-dev-secret@chronicle.local/?srvNameServer=127.0.0.1:8053&loadBalancer=least-connections";
+    "chronicle+srv://chronicle-dev-client:chronicle-dev-secret@chronicle.local/?srvNameServer=127.0.0.1:8053&loadBalancer=least-connections&skipTlsValidation=true";
 
 AddWebApp("app-1", port: 5101);
 AddWebApp("app-2", port: 5102);

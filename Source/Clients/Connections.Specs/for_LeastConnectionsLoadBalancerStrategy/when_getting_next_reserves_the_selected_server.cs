@@ -18,7 +18,7 @@ public class when_getting_next_reserves_the_selected_server : Specification
             new ChronicleServerAddress("host2")
         ];
         _handler = new FakeConnectionCountHttpMessageHandler(new Dictionary<string, int> { ["host1"] = 5, ["host2"] = 2 });
-        _strategy = new LeastConnectionsLoadBalancerStrategy(disableTls: true, new HttpClient(_handler), maxSelectionJitter: TimeSpan.Zero);
+        _strategy = new LeastConnectionsLoadBalancerStrategy(skipTlsValidation: true, new HttpClient(_handler), maxSelectionJitter: TimeSpan.Zero);
     }
 
     void Destroy() => _strategy.Dispose();

@@ -25,7 +25,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string PasswordKey = "Password";
     const string SchemeKey = "Scheme";
     const string ApiKeyKey = "apiKey";
-    const string DisableTlsKey = "disableTls";
+    const string SkipTlsValidationKey = "skipTlsValidation";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
@@ -208,12 +208,18 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
-    /// Gets or sets whether TLS is disabled.
+    /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
-    public bool DisableTls
+    /// <remarks>
+    /// When set, the client still connects over TLS but does not validate the server's certificate.
+    /// This accepts any certificate, including self-signed ones — only use it for a trusted server
+    /// on a trusted network. See also the built-in <see cref="ChronicleConnectionString.Development"/>
+    /// connection string, which enables this so development works against the server's self-signed certificate.
+    /// </remarks>
+    public bool SkipTlsValidation
     {
-        get => ContainsKey(DisableTlsKey) && Convert.ToBoolean(this[DisableTlsKey]);
-        set => this[DisableTlsKey] = value;
+        get => ContainsKey(SkipTlsValidationKey) && Convert.ToBoolean(this[SkipTlsValidationKey]);
+        set => this[SkipTlsValidationKey] = value;
     }
 
     /// <summary>
@@ -324,9 +330,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add($"apiKey={Uri.EscapeDataString((string)this[ApiKeyKey])}");
         }
 
-        if (DisableTls)
+        if (SkipTlsValidation)
         {
-            queryParams.Add("disableTls=true");
+            queryParams.Add("skipTlsValidation=true");
         }
 
         if (ContainsKey(LoadBalancerKey))
@@ -361,7 +367,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 keyStr != PasswordKey &&
                 keyStr != SchemeKey &&
                 keyStr != ApiKeyKey &&
-                keyStr != DisableTlsKey &&
+                keyStr != SkipTlsValidationKey &&
                 keyStr != LoadBalancerKey &&
                 keyStr != SrvNameServerKey &&
                 keyStr != CertificatePathKey &&

@@ -17,7 +17,7 @@ public class when_getting_next_and_one_server_has_fewer_connections : Specificat
             new ChronicleServerAddress("host2")
         ];
         var handler = new FakeConnectionCountHttpMessageHandler(new Dictionary<string, int> { ["host1"] = 5, ["host2"] = 2 });
-        _strategy = new LeastConnectionsLoadBalancerStrategy(disableTls: true, new HttpClient(handler), maxSelectionJitter: TimeSpan.Zero);
+        _strategy = new LeastConnectionsLoadBalancerStrategy(skipTlsValidation: true, new HttpClient(handler), maxSelectionJitter: TimeSpan.Zero);
     }
 
     void Destroy() => _strategy.Dispose();

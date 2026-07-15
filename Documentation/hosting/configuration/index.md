@@ -37,6 +37,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Events](events.md) - Configure event queues.
 - [Authentication](authentication.md) - External authority and default admin settings.
 - [TLS](tls.md) - Configure the TLS certificate for the Chronicle port.
+- [Health Endpoint](health-endpoint.md) - Expose the health endpoint on a dedicated port with optional TLS.
 - [Identity Provider Certificate](identity-provider-certificate.md) - Configure internal OAuth authority certificates.
 - [Environment Variables](environment-variables.md) - Configure with `Cratis__Chronicle__` settings.
 - [Open Telemetry](open-telemetry.md) - Export metrics, traces, and logs via OTLP.

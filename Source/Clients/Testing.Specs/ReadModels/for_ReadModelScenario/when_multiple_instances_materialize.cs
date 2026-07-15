@@ -6,31 +6,33 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// Verifies that when events materialize more than one instance — here a join whose join-source event is
-/// seeded first — <see cref="ReadModelScenario{TReadModel}.Instance"/> fails loud rather than returning a
+/// Verifies that when events materialize more than one instance — here two distinct orders projected into the
+/// same read model — <see cref="ReadModelScenario{TReadModel}.Instance"/> fails loud rather than returning a
 /// blended result, and the individual instances remain available.
 /// </summary>
 public class when_multiple_instances_materialize : Specification
 {
     ReadModelScenario<JoinOrderSummary> _scenario;
-    Guid _customerGuid;
+    EventSourceId _firstOrderId;
+    EventSourceId _secondOrderId;
     Exception _instanceError;
 
     void Establish()
     {
         _scenario = new ReadModelScenario<JoinOrderSummary>();
-        _customerGuid = Guid.NewGuid();
+        _firstOrderId = new EventSourceId(Guid.NewGuid());
+        _secondOrderId = new EventSourceId(Guid.NewGuid());
     }
 
     async Task Because()
     {
         await _scenario.Given
-            .ForEventSource(new EventSourceId(_customerGuid))
-            .Events(new JoinCustomerRegistered("Ada"));
+            .ForEventSource(_firstOrderId)
+            .Events(new JoinOrderPlaced(new JoinCustomerId(Guid.NewGuid()), 100m));
 
         await _scenario.Given
-            .ForEventSource(new EventSourceId(Guid.NewGuid()))
-            .Events(new JoinOrderPlaced(new JoinCustomerId(_customerGuid), 100m));
+            .ForEventSource(_secondOrderId)
+            .Events(new JoinOrderPlaced(new JoinCustomerId(Guid.NewGuid()), 200m));
 
         _instanceError = Catch.Exception(() => _ = _scenario.Instance);
     }

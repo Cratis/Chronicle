@@ -17,7 +17,7 @@ public class when_getting_next_multiple_times_with_a_tie : Specification
             new ChronicleServerAddress("host2")
         ];
         var handler = new FakeConnectionCountHttpMessageHandler(new Dictionary<string, int> { ["host1"] = 0, ["host2"] = 0 });
-        _strategy = new LeastConnectionsLoadBalancerStrategy(disableTls: true, new HttpClient(handler), maxSelectionJitter: TimeSpan.Zero);
+        _strategy = new LeastConnectionsLoadBalancerStrategy(skipTlsValidation: true, new HttpClient(handler), maxSelectionJitter: TimeSpan.Zero);
     }
 
     void Destroy() => _strategy.Dispose();

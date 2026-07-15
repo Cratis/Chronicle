@@ -3,21 +3,15 @@
 
 namespace Cratis.Chronicle.Connections.for_ChronicleConnectionStringBuilderExtensions;
 
-public class when_using_with_tls_enabled : Specification
+public class when_using_with_tls_validation_skipped : Specification
 {
     ChronicleConnectionStringBuilder _builder;
     ChronicleConnectionStringBuilder _result;
 
-    void Establish()
-    {
-        _builder = new ChronicleConnectionStringBuilder
-        {
-            DisableTls = true
-        };
-    }
+    void Establish() => _builder = new ChronicleConnectionStringBuilder();
 
-    void Because() => _result = _builder.WithTlsEnabled();
+    void Because() => _result = _builder.WithTlsValidationSkipped();
 
-    [Fact] void should_set_disable_tls_to_false() => _builder.DisableTls.ShouldBeFalse();
+    [Fact] void should_set_skip_tls_validation_to_true() => _builder.SkipTlsValidation.ShouldBeTrue();
     [Fact] void should_return_builder_for_fluent_chaining() => _result.ShouldEqual(_builder);
 }

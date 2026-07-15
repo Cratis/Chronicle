@@ -126,14 +126,13 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
         var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
 
-        // TLS is only turned off when it is explicitly requested through the connection string
-        // (disableTls=true). The absence of a client certificate does NOT disable TLS — the client
-        // still connects over TLS (server-authenticated), it just does not present a client certificate.
-        // The Chronicle server always serves its port over TLS, so defaulting to cleartext here would
-        // make certificate-less clients fail to connect.
-        var disableTls = string.IsNullOrEmpty(certificatePath) && options.ConnectionString.DisableTls;
+        // The Chronicle server always serves its port over TLS. By default the client validates the
+        // server certificate; validation is skipped only when explicitly requested through the TLS
+        // options or the connection string (skipTlsValidation=true) — for example to accept the
+        // server's self-signed development certificate.
+        var skipTlsValidation = options.Tls.SkipCertificateValidation || options.ConnectionString.SkipTlsValidation;
 
-        var tokenProvider = CreateTokenProvider(options, disableTls);
+        var tokenProvider = CreateTokenProvider(options, skipTlsValidation);
         _ownedConnectionCancellation = new();
 
         _connection = new ChronicleConnection(
@@ -147,7 +146,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _loggerFactory,
             _ownedConnectionCancellation.Token,
             _loggerFactory.CreateLogger<ChronicleConnection>(),
-            disableTls,
+            skipTlsValidation,
             certificatePath,
             certificatePassword,
             tokenProvider,
@@ -333,7 +332,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies, artifactActivator);
     }
 
-    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool disableTls)
+    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool skipTlsValidation)
     {
         if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
@@ -352,7 +351,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                     : options.ConnectionString.ServerAddress,
                 username!,
                 password!,
-                disableTls,
+                skipTlsValidation,
                 _loggerFactory.CreateLogger<OAuthTokenProvider>());
         }
 
