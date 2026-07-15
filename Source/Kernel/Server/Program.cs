@@ -15,6 +15,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.FileProviders;
 using ProtoBuf.Grpc.Configuration;
@@ -208,6 +209,21 @@ var app = builder.Build();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
+
+// The kernel is never directly internet-facing - it always sits behind some reverse proxy (YARP in
+// this repo's Composition, an ingress/load balancer in production). Without this, a proxied request
+// that arrives over HTTPS at the proxy but HTTP between the proxy and the kernel (or vice versa)
+// makes the kernel see the wrong scheme, so CookieSecurePolicy.SameAsRequest marks auth cookies
+// Secure when the browser's own connection to the proxy was plain HTTP - a mismatch Chrome quietly
+// tolerates for localhost but Safari correctly rejects, silently breaking sign-in. Clearing the known
+// proxies/networks trusts the immediate proxy unconditionally, matching this always-proxied model.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseRouting();
 
