@@ -13,6 +13,6 @@
 - name: Watching Read Models
   href: watching-read-models.mdx
 - name: Reacting to Changes
-  href: reacting-to-changes.md
+  href: reacting-to-changes.mdx
 - name: Pagination and Observation
   href: materialized-pagination.mdx
