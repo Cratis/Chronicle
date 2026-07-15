@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Services.Events;
@@ -108,6 +109,39 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Contracts.Clients.ConnectedClient>> GetConnectedClientsForObserver(GetConnectedClientsForObserverRequest request, CallContext context = default)
+    {
+        var subscription = await grainFactory.GetObserver(request).GetSubscription();
+        var clients = new List<Contracts.Clients.ConnectedClient>();
+        foreach (var target in subscription.Targets.Where(_ => _.ConnectedClient is not null))
+        {
+            // The target holds the client as it looked when it subscribed - resolve it from the
+            // silo's connected-clients registry for a fresh LastSeen, falling back to the snapshot
+            // if it disconnected between the subscription being read and the lookup.
+            var client = target.ConnectedClient!;
+            var connectedClients = grainFactory.GetConnectedClients(target.SiloAddress);
+            if (await connectedClients.IsConnected(client.ConnectionId))
+            {
+                client = await connectedClients.GetConnectedClient(client.ConnectionId);
+            }
+
+            clients.Add(new()
+            {
+                ConnectionId = client.ConnectionId,
+                Version = client.Version,
+                LastSeen = client.LastSeen,
+                IsRunningWithDebugger = client.IsRunningWithDebugger,
+                SiloAddress = target.SiloAddress.ToParsableString(),
+                ProcessId = client.ProcessId,
+                ProcessPath = client.ProcessPath,
+                MachineName = client.MachineName
+            });
+        }
+
+        return clients;
     }
 
     /// <inheritdoc/>

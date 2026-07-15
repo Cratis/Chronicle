@@ -400,6 +400,27 @@
                     "replaying": "Replaying",
                     "disconnected": "Disconnected",
                     "quarantined": "Quarantined"
+                },
+                "details": {
+                    "sequence": "Sequence",
+                    "observerType": "Type",
+                    "owner": "Owner",
+                    "state": "State",
+                    "nextEventSequenceNumber": "Next event sequence number",
+                    "lastHandledEventSequenceNumber": "Last handled event sequence number",
+                    "handledEventCount": "Handled events",
+                    "connectedClients": {
+                        "title": "Connected Clients",
+                        "empty": "No clients are connected to this observer",
+                        "columns": {
+                            "connectionId": "Connection",
+                            "version": "Version",
+                            "machineName": "Machine",
+                            "processId": "PID",
+                            "processPath": "Process",
+                            "lastSeen": "Last Seen"
+                        }
+                    }
                 }
             },
             "failedPartitions": {

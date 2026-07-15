@@ -46,4 +46,28 @@ public record ConnectedClient(
         connectionService.InvokeAndWrapWithTransformSubject(
             token => connectionService.ObserveConnectedClients(token),
             clients => clients.ToApi());
+
+    /// <summary>
+    /// Get the connected clients a specific observer's subscription delivers events to. Only
+    /// client-owned observers have connected clients - for kernel-owned observers this is empty.
+    /// </summary>
+    /// <param name="eventStore">The event store the observer belongs to.</param>
+    /// <param name="namespace">The namespace within the event store the observer belongs to.</param>
+    /// <param name="observerId">The identifier of the observer.</param>
+    /// <param name="eventSequenceId">The event sequence the observer observes.</param>
+    /// <param name="observers">The observers service to query for connected clients.</param>
+    /// <returns>Collection of <see cref="ConnectedClient"/>.</returns>
+    public static async Task<IEnumerable<ConnectedClient>> ConnectedClientsForObserver(
+        string eventStore,
+        string @namespace,
+        string observerId,
+        string eventSequenceId,
+        Contracts.Observation.IObservers observers) =>
+        (await observers.GetConnectedClientsForObserver(new()
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            ObserverId = observerId,
+            EventSequenceId = eventSequenceId
+        })).ToApi();
 }
