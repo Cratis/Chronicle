@@ -12,7 +12,11 @@ public interface ILoadBalancerStrategy
     /// Selects the next <see cref="ChronicleServerAddress"/> to connect to.
     /// </summary>
     /// <param name="serverAddresses">The available <see cref="ChronicleServerAddress"/> entries to select from.</param>
-    /// <returns>The selected <see cref="ChronicleServerAddress"/>.</returns>
+    /// <returns>A <see cref="Task{TResult}"/> that resolves to the selected <see cref="ChronicleServerAddress"/>.</returns>
     /// <exception cref="MissingServerAddress">Thrown when there are no server addresses to select from.</exception>
-    ChronicleServerAddress Next(IReadOnlyList<ChronicleServerAddress> serverAddresses);
+    /// <remarks>
+    /// Async because a strategy may need to reach out to the candidate servers themselves (e.g. to
+    /// ask each one how many connections it currently holds) before it can decide.
+    /// </remarks>
+    Task<ChronicleServerAddress> Next(IReadOnlyList<ChronicleServerAddress> serverAddresses);
 }

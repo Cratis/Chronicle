@@ -14,13 +14,13 @@ public class RandomLoadBalancerStrategy : ILoadBalancerStrategy
     public const string StrategyName = "random";
 
     /// <inheritdoc/>
-    public ChronicleServerAddress Next(IReadOnlyList<ChronicleServerAddress> serverAddresses)
+    public Task<ChronicleServerAddress> Next(IReadOnlyList<ChronicleServerAddress> serverAddresses)
     {
         if (serverAddresses.Count == 0)
         {
             throw new MissingServerAddress();
         }
 
-        return serverAddresses[Random.Shared.Next(serverAddresses.Count)];
+        return Task.FromResult(serverAddresses[Random.Shared.Next(serverAddresses.Count)]);
     }
 }

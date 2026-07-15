@@ -29,7 +29,7 @@ public class RoundRobinLoadBalancerStrategy(int startOffset) : ILoadBalancerStra
     }
 
     /// <inheritdoc/>
-    public ChronicleServerAddress Next(IReadOnlyList<ChronicleServerAddress> serverAddresses)
+    public Task<ChronicleServerAddress> Next(IReadOnlyList<ChronicleServerAddress> serverAddresses)
     {
         if (serverAddresses.Count == 0)
         {
@@ -37,6 +37,6 @@ public class RoundRobinLoadBalancerStrategy(int startOffset) : ILoadBalancerStra
         }
 
         var index = (uint)Interlocked.Increment(ref _next) % (uint)serverAddresses.Count;
-        return serverAddresses[(int)index];
+        return Task.FromResult(serverAddresses[(int)index]);
     }
 }

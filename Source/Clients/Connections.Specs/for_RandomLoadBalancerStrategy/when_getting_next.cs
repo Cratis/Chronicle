@@ -20,7 +20,7 @@ public class when_getting_next : Specification
         ];
     }
 
-    void Because() => _selected = _strategy.Next(_addresses);
+    async Task Because() => _selected = await _strategy.Next(_addresses);
 
     [Fact] void should_select_one_of_the_addresses() => _addresses.ShouldContain(_selected);
 }

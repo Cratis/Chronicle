@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Reflection;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
@@ -264,6 +265,23 @@ app.UseMiddleware<UserIdentityMiddleware>();
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
+
+// Lets a client-side load balancer (e.g. LeastConnectionsLoadBalancerStrategy) ask this silo how
+// busy it is before deciding whether to connect to it - anonymous so it can be probed before the
+// client has authenticated, matching the health check endpoint above.
+app.MapGet(
+    "/connections/count",
+    async (IGrainFactory grainFactory, ILocalSiloDetails localSiloDetails) =>
+        await grainFactory.GetConnectedClients(localSiloDetails.SiloAddress).GetConnectionCount())
+    .AllowAnonymous();
+
+// Reserves a connection slot ahead of the client actually connecting - see
+// IConnectedClients.ReserveConnection for why. Anonymous for the same reason as the count above.
+app.MapPost(
+    "/connections/reserve",
+    async (IGrainFactory grainFactory, ILocalSiloDetails localSiloDetails) =>
+        await grainFactory.GetConnectedClients(localSiloDetails.SiloAddress).ReserveConnection())
+    .AllowAnonymous();
 
 // Kernel state reset is exposed via the gRPC IServer.ResetKernelState operation, which
 // only honours the call in DEVELOPMENT builds. See Cratis.Chronicle.Services.Host.Server.

@@ -20,7 +20,15 @@ public class when_getting_next_multiple_times : Specification
         ];
     }
 
-    void Because() => _selected = [.. Enumerable.Range(0, 4).Select(_ => _strategy.Next(_addresses))];
+    async Task Because()
+    {
+        var selected = new List<ChronicleServerAddress>();
+        for (var index = 0; index < 4; index++)
+        {
+            selected.Add(await _strategy.Next(_addresses));
+        }
+        _selected = [.. selected];
+    }
 
     [Fact] void should_cycle_through_all_addresses_and_wrap_around() => _selected.ShouldEqual(_addresses[0], _addresses[1], _addresses[2], _addresses[0]);
 }

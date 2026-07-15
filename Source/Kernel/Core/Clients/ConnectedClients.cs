@@ -22,7 +22,9 @@ public class ConnectedClients(
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter) : Grain, IConnectedClients
 {
     static readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(2);
+    static readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(30);
     readonly List<ConnectedClient> _clients = [];
+    readonly List<DateTimeOffset> _reservations = [];
     IGrainTimer? _reviseConnectedClientsTimer;
 
     /// <inheritdoc/>
@@ -56,6 +58,15 @@ public class ConnectedClients(
             LastSeen = DateTimeOffset.UtcNow,
             IsRunningWithDebugger = isRunningWithDebugger
         });
+
+        // The real connection just registered - if it was preceded by a reservation, that
+        // reservation has now been fulfilled. Clear the oldest one rather than leave it to expire
+        // on its own, so GetConnectionCount() doesn't double-count this client for up to
+        // _reservationTtl after it already connected.
+        if (_reservations.Count > 0)
+        {
+            _reservations.RemoveAt(0);
+        }
 
         meter.ConnectedClients(_clients.Count);
 
@@ -95,6 +106,21 @@ public class ConnectedClients(
     public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(_clients.AsEnumerable());
 
     /// <inheritdoc/>
+    public Task<int> GetConnectionCount()
+    {
+        RemoveExpiredReservations();
+        return Task.FromResult(_clients.Count + _reservations.Count);
+    }
+
+    /// <inheritdoc/>
+    public Task ReserveConnection()
+    {
+        RemoveExpiredReservations();
+        _reservations.Add(DateTimeOffset.UtcNow);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Exists(_ => _.ConnectionId == connectionId));
 
     /// <inheritdoc/>
@@ -106,6 +132,8 @@ public class ConnectedClients(
 
     async Task ReviseConnectedClients(CancellationToken cancellationToken)
     {
+        RemoveExpiredReservations();
+
         if (Debugger.IsAttached) return;
 
         foreach (var connectedClient in _clients.ToArray())
@@ -117,5 +145,11 @@ public class ConnectedClients(
                 await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 5 seconds ago");
             }
         }
+    }
+
+    void RemoveExpiredReservations()
+    {
+        var cutoff = DateTimeOffset.UtcNow - _reservationTtl;
+        _reservations.RemoveAll(reservedAt => reservedAt < cutoff);
     }
 }

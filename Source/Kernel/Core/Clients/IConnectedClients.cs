@@ -58,4 +58,27 @@ public interface IConnectedClients : IGrainWithStringKey
     /// </summary>
     /// <returns>A collection of <see cref="ConnectedClient"/>.</returns>
     Task<IEnumerable<ConnectedClient>> GetAllConnectedClients();
+
+    /// <summary>
+    /// Gets the number of clients connected to this silo, including short-lived reservations from
+    /// <see cref="ReserveConnection"/>.
+    /// </summary>
+    /// <returns>The number of connected clients.</returns>
+    Task<int> GetConnectionCount();
+
+    /// <summary>
+    /// Reserve a connection slot ahead of a client actually connecting.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A least-connections client asks every candidate silo for its count, picks the lowest, and
+    /// reserves a slot there before starting the real (comparatively slow) connect handshake - so a
+    /// second client probing concurrently sees this pick reflected immediately instead of racing on
+    /// a stale count and colliding on the same silo. <see cref="OnClientConnected"/> clears the
+    /// oldest outstanding reservation when the real connection registers, so a successful connect
+    /// does not double-count. If the connection attempt never completes (the client crashes, or
+    /// picks a different silo after all), the reservation is never explicitly released - it simply
+    /// expires on its own shortly after.
+    /// </remarks>
+    Task ReserveConnection();
 }

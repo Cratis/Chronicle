@@ -84,7 +84,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect. Useful for short-lived clients like CLIs.</param>
     /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect. Useful for short-lived clients like CLIs.</param>
     /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses. Defaults to <see cref="ChronicleServerAddressResolver"/>.</param>
-    /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or round-robin.</param>
+    /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or least-connections.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
@@ -125,7 +125,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
-        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer);
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, disableTls);
 
         _cancellationToken.Register(() =>
         {
@@ -167,6 +167,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             disposableTokenProvider.Dispose();
         }
+        if (_loadBalancerStrategy is IDisposable disposableLoadBalancerStrategy)
+        {
+            disposableLoadBalancerStrategy.Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -200,7 +204,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _keepAliveSubscription?.Dispose();
 
         var serverAddresses = await _serverAddressResolver.Resolve(_connectionString);
-        _currentServerAddress = _loadBalancerStrategy.Next(serverAddresses);
+        _currentServerAddress = await _loadBalancerStrategy.Next(serverAddresses);
         _channel = CreateGrpcChannel(_currentServerAddress);
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
         var callInvoker = _channel
@@ -352,17 +356,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                         return cert.GetCertHashString() == certHashString;
                     }
 
-                    // For development: accept the self-signed certificate the Chronicle server
-                    // generates when no certificate is configured (untrusted root / partial chain).
-                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
-                        chain?.ChainStatus.All(status =>
-                            status.Status is X509ChainStatusFlags.PartialChain or X509ChainStatusFlags.UntrustedRoot) == true)
-                    {
-                        return true;
-                    }
-
-                    // For development: accept localhost certificates with name mismatches
-                    return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
+                    return DevelopmentCertificateValidation.AcceptSelfSigned(chain, sslPolicyErrors);
                 };
             }
 

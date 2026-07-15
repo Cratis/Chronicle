@@ -3,13 +3,13 @@
 
 namespace Cratis.Chronicle.Connections.for_LoadBalancerStrategies;
 
-public class when_creating_without_name : Specification
+public class when_creating_with_least_connections_name : Specification
 {
     ILoadBalancerStrategy _strategy;
 
-    void Because() => _strategy = LoadBalancerStrategies.Create();
+    void Because() => _strategy = LoadBalancerStrategies.Create(LeastConnectionsLoadBalancerStrategy.StrategyName);
 
     void Destroy() => (_strategy as IDisposable)?.Dispose();
 
-    [Fact] void should_default_to_least_connections() => _strategy.ShouldBeOfExactType<LeastConnectionsLoadBalancerStrategy>();
+    [Fact] void should_create_least_connections_strategy() => _strategy.ShouldBeOfExactType<LeastConnectionsLoadBalancerStrategy>();
 }
