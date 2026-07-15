@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -72,28 +71,18 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             {
                 RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) =>
                 {
-                    if (sslPolicyErrors == SslPolicyErrors.None)
+                    if (!DevelopmentCertificateValidation.AcceptSelfSigned(chain, sslPolicyErrors))
                     {
-                        return true;
+                        _logger.CertificateValidationFailed(sslPolicyErrors.ToString());
+                        return false;
                     }
 
-                    // Accept self-signed certificates in development
-                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
-                        chain?.ChainStatus.All(status =>
-                            status.Status is X509ChainStatusFlags.PartialChain or X509ChainStatusFlags.UntrustedRoot) == true)
+                    if (sslPolicyErrors != SslPolicyErrors.None)
                     {
                         _logger.AcceptingSelfSignedCertificate(certificate?.Subject ?? "unknown");
-                        return true;
                     }
 
-                    // Accept localhost certificates with name mismatch (for development)
-                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch)
-                    {
-                        return true;
-                    }
-
-                    _logger.CertificateValidationFailed(sslPolicyErrors.ToString());
-                    return false;
+                    return true;
                 }
             }
         };
