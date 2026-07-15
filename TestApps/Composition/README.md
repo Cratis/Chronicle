@@ -37,6 +37,10 @@ dotnet run --project TestApps/Composition
 - **DNS SRV discovery**: the web apps' connection string is
   `chronicle+srv://...@chronicle.local/?srvNameServer=127.0.0.1:8053` - they find the kernels
   purely through the SRV records (`dig -p 8053 @127.0.0.1 _chronicle._tcp.chronicle.local SRV`).
+- **Least-connections spread**: app-1 and app-2 each ask both kernels how many clients they
+  already have (`GET /connections/count`) before connecting, so they reliably land on different
+  silos instead of leaving it to a coin flip - check via Workbench's Connected Clients page or
+  `curl -k https://localhost:35001/connections/count`.
 - **Client fan out**: open both web apps (5101 and 5102), act on different employees from either
   page, and watch the "Reactor invocations on this instance" section - each employee (partition)
   is sticky to one of the two instances, spread round-robin by partition key.

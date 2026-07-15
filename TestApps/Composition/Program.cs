@@ -6,6 +6,13 @@ using Aspire.Hosting.Yarp;
 using Yarp.ReverseProxy.Configuration;
 using Yarp.ReverseProxy.SessionAffinity;
 
+// Fixed port and no login token, purely for local dev convenience - without ASPNETCORE_URLS the
+// dashboard binds a random port every run, and without this flag every visit needs the ?t=<token>
+// query string from the startup log.
+Environment.SetEnvironmentVariable("ASPNETCORE_URLS", "http://localhost:18888");
+Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
+Environment.SetEnvironmentVariable("ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS", "true");
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Chronicle needs MongoDB transactions (AppendMany, unit of work, Orleans membership), which
@@ -38,9 +45,10 @@ var kernel1 = AddKernel("kernel-1", port: 35001, siloPort: 11111, gatewayPort: 3
 var kernel2 = AddKernel("kernel-2", port: 35002, siloPort: 11112, gatewayPort: 30002);
 
 // The web apps resolve the kernels through DNS SRV - the srvNameServer option points the lookup
-// at the CoreDNS container above.
+// at the CoreDNS container above. loadBalancer is spelled out explicitly even though
+// least-connections is the default, so the composition demonstrates the option by example.
 const string SrvConnectionString =
-    "chronicle+srv://chronicle-dev-client:chronicle-dev-secret@chronicle.local/?srvNameServer=127.0.0.1:8053";
+    "chronicle+srv://chronicle-dev-client:chronicle-dev-secret@chronicle.local/?srvNameServer=127.0.0.1:8053&loadBalancer=least-connections";
 
 AddWebApp("app-1", port: 5101);
 AddWebApp("app-2", port: 5102);
