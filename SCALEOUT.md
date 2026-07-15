@@ -245,3 +245,58 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
       bound to the *first* channel — a reconnect/failover disposed that channel and every
       subsequent call threw `ObjectDisposedException`. Fixed by making them `AddTransient`
       (resolved live from the current connection on every use).
+
+## Phase 7 — Least-connections load balancing (default) — done
+
+Prompted by `TestApps/Composition` reliably showing both web apps' connections landing on the
+*same* silo — round-robin's random starting offset collides about half the time with only two
+servers, which is exactly the small-fleet case this composition demonstrates.
+
+- **Aspire dashboard**: fixed port (`ASPNETCORE_URLS=http://localhost:18888`) and anonymous
+  access (`ASPIRE_ALLOW_UNSECURED_TRANSPORT` + `ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS`), set
+  before `DistributedApplication.CreateBuilder` in `TestApps/Composition/Program.cs` — local-dev
+  convenience only, so every run uses the same URL with no login-token query string to copy.
+- **Connected-clients query is now observable**: `ConnectionService.ObserveConnectedClients`
+  polls `GetConnectedClients` (aggregating across all silos via `IManagementGrain.GetHosts`) on a
+  1-second cadence (was already `ISubject`-shaped; the interval is what changed, from 2s).
+- **`least-connections` strategy** (`Source/Clients/Connections/LeastConnectionsLoadBalancerStrategy.cs`,
+  new, now the **default** — `LoadBalancerStrategies.Create(null/"")`): asks every candidate
+  server `GET /connections/count` in parallel and picks the lowest, breaking ties randomly (not
+  always the first candidate — a fleet starting together would otherwise all tie and all pick the
+  same one deterministically). Before the real connect handshake it calls
+  `POST /connections/reserve` on the server it picked, and waits a small random delay (up to
+  250ms, every attempt — not just the first) before every probe. Both endpoints are anonymous
+  (`AllowAnonymous()` on `Kernel/Server/Program.cs`) since a client asks before authenticating.
+  `ILoadBalancerStrategy.Next` became `async` for this (round-robin/random adapted trivially).
+  `IConnectedClients` (per-silo grain, `Source/Kernel/Core/Clients`) gained `GetConnectionCount()`
+  and `ReserveConnection()`; a reservation lives 30s unless cleared earlier.
+- **Bug found via empirical composition testing, not specs**: `GetConnectionCount()` summed
+  `_clients.Count + _reservations.Count`, but nothing ever cleared a reservation once the real
+  connection it stood in for actually registered — so every successful connect inflated its own
+  silo's reported count by one for up to 30 seconds afterward. This didn't cause bad *decisions*
+  (a client that made a reservation minutes ago has long since expired it), but it made the raw
+  `/connections/count` numbers misleading to read during/right after a burst of connects — which
+  is exactly when a human (or a diagnostic script) is most likely to be watching them. Fixed by
+  clearing the oldest outstanding reservation in `OnClientConnected`.
+- **The real lesson of this phase was measurement, not the algorithm.** Five consecutive
+  composition runs looked like collisions before this was root-caused; the actual decision logic
+  (verified by instrumenting `Next()` directly) was correct every time it was checked this way.
+  Two separate verification bugs produced false failure signals:
+  - The kernel's HTTP endpoints are multiplexed on the *same* Kestrel port as gRPC
+    (`ASPNETCORE_URLS=https://*:35001`, not the Orleans gateway port `30001`) and require HTTPS —
+    probing `http://localhost:30001/connections/count` (the gateway port, over plain HTTP) never
+    reaches the mapped endpoint at all.
+  - `lsof -p <pid> | grep -oE '35001|35002' | head -1` is not a reliable way to identify which
+    server a client ended up connected to — the HTTP probe/reserve calls open their own short-lived
+    connections to *both* candidates, so `head -1` can report a stale or incidental file descriptor
+    instead of the actual long-lived gRPC channel. Cross-checking against the kernel-reported
+    `/connections/count` (the authoritative source) resolved the ambiguity.
+  - Once probing the right scheme/port and reading the authoritative per-silo count, three
+    consecutive cold-start `TestApps/Composition` runs (kernels and both web apps launched
+    together by Aspire, the original failure scenario) each split 1-1 across the two silos.
+- `LoadBalancerStrategies.Create` defaults to `least-connections` when no `loadBalancer` query
+  parameter is given (was `round-robin`); `TestApps/Composition`'s connection string spells the
+  option out explicitly anyway, to demonstrate it by example rather than rely on the default.
+- Documented in `Documentation/connection-strings/server.md` — strategy comparison table,
+  the probe/reserve/jitter mechanics, and why a server that doesn't answer is treated as maximally
+  loaded rather than failing selection.
