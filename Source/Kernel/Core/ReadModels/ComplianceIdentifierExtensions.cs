@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 
@@ -25,10 +26,23 @@ public static class ComplianceIdentifierExtensions
     /// streams — so the per-event event source id is not a stable document identity. The resolved document
     /// key is, so it is used whenever the event's subject is simply its event source id. An explicit
     /// compliance subject (one that differs from the event source id) is honored as-is, preserving a
-    /// caller-provided subject.
+    /// caller-provided subject. A composite key (an <see cref="ExpandoObject"/> of key properties) is
+    /// canonicalized as its property/value pairs sorted by property name — never its type name.
     /// </remarks>
     public static string ResolveComplianceIdentifier(this EventContext context, Key key) =>
         context.Subject?.IsSet == true && context.Subject.Value != context.EventSourceId.Value
             ? context.Subject.Value
-            : key.Value?.ToString() ?? context.EventSourceId.Value;
+            : AsCanonicalString(key.Value) ?? context.EventSourceId.Value;
+
+    static string? AsCanonicalString(object? value) =>
+        value switch
+        {
+            null => null,
+            IDictionary<string, object?> composite => string.Join(
+                '+',
+                composite
+                    .OrderBy(_ => _.Key, StringComparer.Ordinal)
+                    .Select(_ => $"{_.Key}={AsCanonicalString(_.Value)}")),
+            _ => value.ToString()
+        };
 }
