@@ -481,7 +481,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task ResetOutOfProcessKernelState()
     {
-        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/");
+        // skipTlsValidation because the container serves a self-signed development certificate.
+        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?skipTlsValidation=true");
         var options = new ChronicleClientOptions
         {
             ConnectionString = connectionString,
