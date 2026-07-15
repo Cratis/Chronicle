@@ -300,3 +300,27 @@ servers, which is exactly the small-fleet case this composition demonstrates.
 - Documented in `Documentation/connection-strings/server.md` — strategy comparison table,
   the probe/reserve/jitter mechanics, and why a server that doesn't answer is treated as maximally
   loaded rather than failing selection.
+
+## Phase 8 — Client identity & Workbench observability — done
+
+Follow-ups from exercising the composition through the Workbench:
+
+- **Clients now identify themselves on connect.** The client never populated `ClientVersion` in
+  its connect request, so the Connected Clients view showed an empty Version for every client.
+  The connect request now carries the entry assembly's informational version (the *application's*
+  version, not the Chronicle client library's) plus the process id, the full path of the process
+  executable, and the machine name (`ClientProcess` in `Source/Clients/Connections`) — enough to
+  tell instances of a scaled-out fleet apart. Stored per silo in the `ConnectedClients` grain and
+  surfaced as Machine / PID / Process columns in the Workbench.
+- **Last Seen now ticks live.** `ObserveConnectedClients` polled every second but its
+  `DistinctUntilChanged` comparer deliberately excluded `LastSeen`, so the observable only pushed
+  on connect/disconnect - a watching Workbench showed a stale Last Seen until navigating away and
+  back. `LastSeen` is now part of the change-detection identity; suppression only kicks in when
+  nothing at all changed (in practice: no clients connected).
+- **Observer details pane.** Selecting an observer opens a right-hand split pane (same shape as
+  the event sequences page's event details) with the observer's key facts. For client-owned
+  observers it lists the connected client instances the subscription fans out to - version,
+  machine, PID, process path, fresh last-seen - backed by a new `GetConnectedClientsForObserver`
+  operation reading the observer grain's live subscription targets and resolving each against its
+  silo's connected-clients registry. Verified in the composition: both web app instances appear
+  on the client-owned reactor/reducer observers.
