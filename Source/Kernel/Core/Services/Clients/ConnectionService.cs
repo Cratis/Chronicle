@@ -175,11 +175,13 @@ internal sealed class ConnectionService(
         public int GetHashCode(IEnumerable<ConnectedClient> obj) => 0;
 
         /// <summary>
-        /// Gets the identity of a client. LastSeen is deliberately not part of it - it changes on
-        /// every ping and would make every poll look like a change to observers.
+        /// Gets the identity of a client, covering every value observers display - including
+        /// LastSeen, so a watching Workbench sees the last-seen time tick while a client is
+        /// connected. The comparer's suppression then only kicks in when nothing at all changed,
+        /// which in practice means no clients are connected.
         /// </summary>
         /// <param name="client">The <see cref="ConnectedClient"/> to get the identity for.</param>
         /// <returns>A string identifying the client.</returns>
-        static string Identity(ConnectedClient client) => $"{client.SiloAddress}|{client.ConnectionId}|{client.Version}|{client.IsRunningWithDebugger}|{client.ProcessId}|{client.ProcessPath}|{client.MachineName}";
+        static string Identity(ConnectedClient client) => $"{client.SiloAddress}|{client.ConnectionId}|{client.Version}|{client.IsRunningWithDebugger}|{client.LastSeen}|{client.ProcessId}|{client.ProcessPath}|{client.MachineName}";
     }
 }
