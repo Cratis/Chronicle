@@ -25,7 +25,7 @@ internal sealed class ConnectionService(
     ILogger<ConnectionService> logger) : IConnectionService
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
-    static readonly TimeSpan _observeConnectedClientsInterval = TimeSpan.FromSeconds(2);
+    static readonly TimeSpan _observeConnectedClientsInterval = TimeSpan.FromSeconds(1);
 
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
