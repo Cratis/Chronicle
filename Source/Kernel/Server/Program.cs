@@ -248,15 +248,27 @@ app.UseRouting();
 app.UseCratisArc();
 
 // The Workbench UI is built once and embedded into Cratis.Chronicle.Workbench - the kernel serves
-// that same embedded asset set directly rather than expecting its own physical wwwroot.
-var workbenchFileProvider = new ManifestEmbeddedFileProvider(
-    typeof(WorkbenchWebApplicationBuilderExtensions).Assembly,
-    $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files");
-var workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
+// that same embedded asset set directly rather than expecting its own physical wwwroot. The
+// embedded manifest only exists when the frontend was built before the Workbench assembly - a
+// source build without the frontend output skips embedding entirely, and the kernel must keep
+// running without the UI rather than fail at startup.
+var workbenchAssembly = typeof(WorkbenchWebApplicationBuilderExtensions).Assembly;
+var hasWorkbenchUI = workbenchAssembly.GetManifestResourceNames().Contains("Microsoft.Extensions.FileProviders.Embedded.Manifest.xml");
+var serveWorkbench = chronicleOptions.Features.Workbench && chronicleOptions.Features.Api && hasWorkbenchUI;
+if (chronicleOptions.Features.Workbench && !hasWorkbenchUI)
+{
+    logger.WorkbenchUINotEmbedded();
+}
+
+var workbenchStaticFileOptions = new StaticFileOptions();
 
 // Map workbench static files BEFORE authentication so they are publicly accessible
-if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+if (serveWorkbench)
 {
+    var workbenchFileProvider = new ManifestEmbeddedFileProvider(
+        workbenchAssembly,
+        $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files");
+    workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = workbenchFileProvider });
     app.UseStaticFiles(workbenchStaticFileOptions);
 }
@@ -321,7 +333,7 @@ app.MapPost(
 // only honours the call in DEVELOPMENT builds. See Cratis.Chronicle.Services.Host.Server.
 
 // Map workbench fallback route AFTER API endpoints to avoid conflicts
-if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+if (serveWorkbench)
 {
     app.MapFallbackToFile("index.html", workbenchStaticFileOptions).AllowAnonymous();
 }
