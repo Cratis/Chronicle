@@ -27,11 +27,58 @@ chronicle://node1:35000,node2:35000,node3:35000
 
 | Strategy | Description |
 |----------|-------------|
-| `round-robin` | Default. Cycles through the servers in order, starting at a random offset so a fleet of client instances spreads across the servers |
+| `least-connections` | Default. Asks every candidate server how many clients it currently has connected and picks the one with the fewest. See below for how the probe works |
+| `round-robin` | Cycles through the servers in order, starting at a random offset so a fleet of client instances spreads across the servers. For a small fleet (two clients, two servers) the random offset can still coincide by chance - `least-connections` doesn't have this limitation |
 | `random` | Picks a random server on every connect |
 
 Select the strategy with the `loadBalancer` query parameter, or programmatically through
-`ChronicleOptions.LoadBalancerStrategy` for custom implementations of `ILoadBalancerStrategy`.
+`ChronicleOptions.LoadBalancerStrategy` for custom implementations of `ILoadBalancerStrategy`:
+
+```text
+chronicle://node1:35000,node2:35000?loadBalancer=round-robin
+```
+
+### How least-connections picks a server
+
+Every Chronicle Server exposes two anonymous endpoints for this - anonymous because a client needs
+to ask before it has authenticated:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /connections/count` | Returns how many clients are currently connected to *that specific server* - not the cluster-wide total |
+| `POST /connections/reserve` | Reserves a connection slot on that server ahead of the client actually connecting |
+
+Before connecting (and on every reconnect), the client asks every candidate server for its count in
+parallel and picks whichever answered with the lowest number - ties are broken randomly rather than
+always preferring the first candidate. It then calls `POST /connections/reserve` on the server it
+picked, before starting the real connect handshake (TLS plus a compatibility check), and only then
+proceeds to connect.
+
+The reservation exists because the gap between "decided to connect here" and "actually registered
+as connected" is wide enough for another client to probe in the middle of it. Without a
+reservation, two clients starting at the same time (a rollout, a composition bringing up several
+instances together) can both probe before either has registered, both see the same low count, and
+both pick the same server - random tie-breaking alone only turns a guaranteed collision into a coin
+flip, it doesn't prevent it. The reservation is reflected in `/connections/count` immediately, so a
+second client probing a moment later sees the first client's pick and routes around it. Once the
+real connection registers, the server clears the reservation that stood in for it, so a successful
+connect is only ever counted once. A reservation that never converts - the client crashes, or
+picks a different server after all - is not explicitly released; it simply expires on its own
+(30 seconds), so an abandoned connection attempt doesn't permanently inflate a server's reported
+count.
+
+Before every probe (not just the first) the client also waits a small random delay, up to 250ms.
+This covers the case reservation alone doesn't: two clients whose *probes themselves* land within
+microseconds of each other, before either has had a chance to reserve anything - the common case
+for a fleet starting together, and just as common when a fleet reconnects together (every instance
+was waiting on the same unavailable server and now retries at the same moment it comes back). The
+jitter is deliberately applied on every attempt, not only the first, because a synchronized retry
+needs the same protection a cold start does.
+
+A server that doesn't answer within 2 seconds, or that can't be reached at all, is treated as
+maximally loaded rather than failing the selection - it simply won't be picked over a server that
+did respond. This makes `least-connections` a safe default even while a server is restarting or
+briefly unreachable: the client routes around it instead of erroring out.
 
 ## DNS SRV lookup
 
