@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
@@ -50,7 +49,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePath;
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
-    readonly bool _disableTls;
+    readonly bool _skipTlsValidation;
     readonly bool _skipCompatibilityCheck;
     readonly bool _skipKeepAlive;
     readonly SemaphoreSlim _connectLock = new(1, 1);
@@ -74,7 +73,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="loggerFactory">Logger factory for creating loggers.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
     /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
-    /// <param name="disableTls">Whether to disable TLS for the connection.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the connection.</param>
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
@@ -93,17 +92,16 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken,
         ILogger<ChronicleConnection> logger,
-        bool disableTls,
+        bool skipTlsValidation,
         string? certificatePath = null,
         string? certificatePassword = null,
         ITokenProvider? tokenProvider = null,
         bool skipCompatibilityCheck = false,
         bool skipKeepAlive = false)
     {
-        _disableTls = disableTls;
+        _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
         _skipKeepAlive = skipKeepAlive;
-        GrpcClientFactory.AllowUnencryptedHttp2 = _disableTls;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
@@ -301,7 +299,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // Only load a client certificate when one is configured. Without a certificate the client
             // still connects over TLS (server-authenticated) — it simply does not present a client
             // certificate for mutual TLS. This is the common case against a TLS server with no mutual-TLS.
-            certificate = !_disableTls && !string.IsNullOrEmpty(_certificatePath)
+            certificate = !string.IsNullOrEmpty(_certificatePath)
                 ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!)
                 : null;
             var httpHandler = new SocketsHttpHandler
@@ -312,44 +310,17 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 EnableMultipleHttp2Connections = true
             };
 
-            if (!_disableTls && certificate is not null)
+            if (certificate is not null)
             {
                 httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
                 _logger.UsingClientCertificate(_certificatePath!);
             }
 #pragma warning restore CA2000
 
-            if (!_disableTls)
-            {
-                var certHashString = certificate?.GetCertHashString();
-                httpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
-                {
-                    if (sslPolicyErrors == SslPolicyErrors.None)
-                    {
-                        return true;
-                    }
+            httpHandler.SslOptions.RemoteCertificateValidationCallback =
+                CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
 
-                    if (cert is not null && certHashString is not null)
-                    {
-                        return cert.GetCertHashString() == certHashString;
-                    }
-
-                    // For development: accept the self-signed certificate the Chronicle server
-                    // generates when no certificate is configured (untrusted root / partial chain).
-                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
-                        chain?.ChainStatus.All(status =>
-                            status.Status is X509ChainStatusFlags.PartialChain or X509ChainStatusFlags.UntrustedRoot) == true)
-                    {
-                        return true;
-                    }
-
-                    // For development: accept localhost certificates with name mismatches
-                    return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
-                };
-            }
-
-            var scheme = _disableTls ? "http" : "https";
-            var address = $"{scheme}://{_connectionString.ServerAddress.Host}:{_connectionString.ServerAddress.Port}";
+            var address = $"https://{_connectionString.ServerAddress.Host}:{_connectionString.ServerAddress.Port}";
 
             var channel = GrpcChannel.ForAddress(
                 address,

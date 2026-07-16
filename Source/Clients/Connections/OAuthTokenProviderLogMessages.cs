@@ -27,10 +27,4 @@ internal static partial class OAuthTokenProviderLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Refreshing access token by clearing cache and requesting new token")]
     internal static partial void RefreshingAccessToken(this ILogger<OAuthTokenProvider> logger);
-
-    [LoggerMessage(LogLevel.Warning, "Accepting self-signed certificate for {CertificateSubject} (development mode)")]
-    internal static partial void AcceptingSelfSignedCertificate(this ILogger<OAuthTokenProvider> logger, string certificateSubject);
-
-    [LoggerMessage(LogLevel.Error, "Certificate validation failed: {SslPolicyErrors}")]
-    internal static partial void CertificateValidationFailed(this ILogger<OAuthTokenProvider> logger, string sslPolicyErrors);
 }

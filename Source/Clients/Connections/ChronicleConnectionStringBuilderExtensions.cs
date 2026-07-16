@@ -71,13 +71,17 @@ public static class ChronicleConnectionStringBuilderExtensions
     }
 
     /// <summary>
-    /// Disables TLS for the connection.
+    /// Skips TLS certificate validation for the connection.
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
     /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
-    public static ChronicleConnectionStringBuilder WithTlsDisabled(this ChronicleConnectionStringBuilder builder)
+    /// <remarks>
+    /// The client still connects over TLS but accepts any server certificate, including self-signed ones.
+    /// Only use this for a trusted server on a trusted network.
+    /// </remarks>
+    public static ChronicleConnectionStringBuilder WithTlsValidationSkipped(this ChronicleConnectionStringBuilder builder)
     {
-        builder.DisableTls = true;
+        builder.SkipTlsValidation = true;
         return builder;
     }
 
@@ -92,17 +96,6 @@ public static class ChronicleConnectionStringBuilderExtensions
     {
         builder.CertificatePath = certificatePath;
         builder.CertificatePassword = certificatePassword;
-        return builder;
-    }
-
-    /// <summary>
-    /// Enables TLS for the connection (default behavior).
-    /// </summary>
-    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
-    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
-    public static ChronicleConnectionStringBuilder WithTlsEnabled(this ChronicleConnectionStringBuilder builder)
-    {
-        builder.DisableTls = false;
         return builder;
     }
 

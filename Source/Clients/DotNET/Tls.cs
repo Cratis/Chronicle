@@ -19,7 +19,12 @@ public class Tls
     public string? CertificatePassword { get; set; }
 
     /// <summary>
-    /// Gets whether TLS is enabled.
+    /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
-    public bool IsDisabled => string.IsNullOrEmpty(CertificatePath) || string.IsNullOrEmpty(CertificatePassword);
+    /// <remarks>
+    /// The client always connects over TLS. When this is set, it does not validate the server's
+    /// certificate and accepts any certificate, including self-signed ones. Only use it for a trusted
+    /// server on a trusted network.
+    /// </remarks>
+    public bool SkipCertificateValidation { get; set; }
 }

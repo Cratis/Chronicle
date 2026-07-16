@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -29,17 +28,16 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="serverAddress">The Chronicle server address.</param>
     /// <param name="clientId">The OAuth client ID.</param>
     /// <param name="clientSecret">The OAuth client secret.</param>
-    /// <param name="disableTls">Whether to disable TLS for the token request.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
     public OAuthTokenProvider(
         ChronicleServerAddress serverAddress,
         string clientId,
         string clientSecret,
-        bool disableTls,
+        bool skipTlsValidation,
         ILogger<OAuthTokenProvider> logger)
     {
-        var scheme = disableTls ? "http" : "https";
-        _tokenEndpoint = $"{scheme}://{serverAddress.Host}:{serverAddress.Port}/connect/token";
+        _tokenEndpoint = $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
         _clientId = clientId;
         _clientSecret = clientSecret;
         _logger = logger;
@@ -48,31 +46,8 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         {
             SslOptions = new SslClientAuthenticationOptions
             {
-                RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) =>
-                {
-                    if (sslPolicyErrors == SslPolicyErrors.None)
-                    {
-                        return true;
-                    }
-
-                    // Accept self-signed certificates in development
-                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
-                        chain?.ChainStatus.All(status =>
-                            status.Status is X509ChainStatusFlags.PartialChain or X509ChainStatusFlags.UntrustedRoot) == true)
-                    {
-                        _logger.AcceptingSelfSignedCertificate(certificate?.Subject ?? "unknown");
-                        return true;
-                    }
-
-                    // Accept localhost certificates with name mismatch (for development)
-                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch)
-                    {
-                        return true;
-                    }
-
-                    _logger.CertificateValidationFailed(sslPolicyErrors.ToString());
-                    return false;
-                }
+                RemoteCertificateValidationCallback =
+                    CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null)
             }
         };
         _httpMessageHandler = handler;

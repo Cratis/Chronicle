@@ -14,7 +14,7 @@ public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoo
         {
             options.EventStore = Constants.EventStore;
             options.ConnectionString = new ChronicleConnectionStringBuilder()
-                .WithTlsDisabled()
+                .WithTlsValidationSkipped()
                 .WithCredentials("chronicle-dev-client", "chronicle-dev-secret")
                 .Build();
         }));

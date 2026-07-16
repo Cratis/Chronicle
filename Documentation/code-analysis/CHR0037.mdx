@@ -20,15 +20,7 @@ When an event's schema changes after events of the old shape are already stored,
 
 If the ids differ, or one generation has no explicit id (so it defaults to the type name), Chronicle sees two unrelated event types. The migration then never applies: stored events of the previous generation are never upcast, and consumers read the old shape. Because both records compile and the migration is discovered by convention, nothing surfaces the mistake without this rule.
 
-The correct shape is one id, two generations:
-
-```csharp
-[EventType("Customer.Registered", generation: 1)]
-public record CustomerRegisteredV1(string Name);
-
-[EventType("Customer.Registered", generation: 2)]
-public record CustomerRegisteredV2(string FirstName, string LastName);
-```
+The correct shape is one explicit id shared by both generations, with only the `generation:` argument distinguishing them.
 
 ## Related Rules
 
