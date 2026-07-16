@@ -26,8 +26,11 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
             .UseContentRoot(contentRoot)
             .ConfigureServices(services =>
             {
+                // The out-of-process server serves TLS with a self-signed test certificate,
+                // so the client must skip certificate validation to connect (mirrors the
+                // built-in Development connection string).
                 services.Configure<ChronicleOptions>(options =>
-                    options.ConnectionString = "chronicle://localhost:35001");
+                    options.ConnectionString = "chronicle://localhost:35001?skipTlsValidation=true");
 
                 // Use delegating provider so the shared factory can serve artifacts
                 // from whichever test fixture is currently active.
