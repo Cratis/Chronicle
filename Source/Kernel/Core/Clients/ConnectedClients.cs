@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Clients;
 /// </summary>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
+[KeepAlive]
 public class ConnectedClients(
     ILogger<ConnectedClients> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter) : Grain, IConnectedClients

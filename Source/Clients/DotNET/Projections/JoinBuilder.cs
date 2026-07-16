@@ -27,7 +27,12 @@ public class JoinBuilder<TReadModel, TEvent, TParentBuilder>(IProjectionBuilder<
     /// <inheritdoc/>
     public IJoinBuilder<TReadModel, TEvent> On<TProperty>(Expression<Func<TReadModel, TProperty>> keyAccessor)
     {
-        _on = _namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath());
+        if (!keyAccessor.TryGetPropertyPath(out var propertyPath))
+        {
+            throw new InvalidPropertyExpression($"the join 'on' property on read model '{typeof(TReadModel).FullName}'", keyAccessor);
+        }
+
+        _on = _namingPolicy.GetPropertyName(propertyPath);
         return this;
     }
 

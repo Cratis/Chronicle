@@ -28,11 +28,11 @@ public class with_single_from_event : given.a_language_service_compiling_nested<
     void Because()
     {
         _result = Compile(Declaration);
-        _nested = _result.Nested![(PropertyPath)"command"];
+        _nested = _result.Nested[(PropertyPath)"command"];
     }
 
     [Fact] void should_have_a_nested_entry() => _result.Nested.ShouldNotBeNull();
-    [Fact] void should_have_a_nested_entry_keyed_by_property_name() => _result.Nested!.ContainsKey((PropertyPath)"command").ShouldBeTrue();
+    [Fact] void should_have_a_nested_entry_keyed_by_property_name() => _result.Nested.ContainsKey((PropertyPath)"command").ShouldBeTrue();
     [Fact] void should_have_identified_by_not_set() => _nested.IdentifiedBy.IsSet.ShouldBeFalse();
     [Fact] void should_have_the_from_event() => _nested.From.ContainsKey((EventType)"CommandSetForSlice").ShouldBeTrue();
     [Fact] void should_map_name_property() => _nested.From[(EventType)"CommandSetForSlice"].Properties[(PropertyPath)"name"].ShouldEqual("name");

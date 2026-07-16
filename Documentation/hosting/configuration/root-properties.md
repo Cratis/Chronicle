@@ -20,3 +20,5 @@ These properties live at the root of `chronicle.json`.
 
 Chronicle exposes the health check endpoint on the main port (35000). You can customize the path if your environment requires a different route.
 
+To expose the health endpoint on a dedicated port — with TLS optionally disabled for orchestrator and load-balancer probes — see [Health Endpoint](health-endpoint.md).
+

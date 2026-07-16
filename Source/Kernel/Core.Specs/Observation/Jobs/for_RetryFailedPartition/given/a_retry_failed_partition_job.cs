@@ -84,7 +84,7 @@ public class a_retry_failed_partition_job : Specification
         _silo.AddProbe(_ => _observer);
 
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
-            typeof(TestableRetryFailedPartition).FullName!);
+            typeof(TestableRetryFailedPartition).FullName);
 
         _job = await _silo.CreateGrainAsync<TestableRetryFailedPartition>(_jobId, _jobKey);
     }

@@ -19,12 +19,12 @@ public class and_type_has_no_class_level_attribute_but_assembly_has_event_store_
             new AssemblyName("TestAssemblyWithEventStoreAttribute"),
             AssemblyBuilderAccess.Run);
 
-        var eventStoreAttributeConstructor = typeof(EventStoreAttribute).GetConstructor([typeof(string)])!;
+        var eventStoreAttributeConstructor = typeof(EventStoreAttribute).GetConstructor([typeof(string)]);
         assembly.SetCustomAttribute(
             new CustomAttributeBuilder(eventStoreAttributeConstructor, [SourceEventStore]));
 
         var module = assembly.DefineDynamicModule("TestModule");
-        _typeFromAssemblyWithAttribute = module.DefineType("EventFromAssemblyWithAttribute").CreateType()!;
+        _typeFromAssemblyWithAttribute = module.DefineType("EventFromAssemblyWithAttribute").CreateType();
     }
 
     void Because() => _result = _typeFromAssemblyWithAttribute.GetEventStoreName();

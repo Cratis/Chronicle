@@ -37,6 +37,10 @@ Cratis__Chronicle__Tls__CertificatePassword=your-password
 
 When TLS is terminated upstream by an ingress or reverse proxy, re-encrypt the connection to Chronicle (the backend port is always TLS) and provide a certificate for it.
 
+## Health probes and self-signed certificates
+
+Because the main port always uses TLS — and in development that certificate is self-signed — health probes can struggle to reach it. The kubelet's own HTTPS probes skip certificate verification, but load balancers, ingress controllers and managed health checks that front the pod commonly validate the certificate and reject a self-signed one. To keep probes off the certificate entirely, publish the health endpoint on a dedicated plaintext port — see [Health Endpoint](health-endpoint.md).
+
 ## Related TLS and certificate pages
 
 - [Identity Provider Certificate Configuration](identity-provider-certificate.md) for internal OAuth authority certificates.

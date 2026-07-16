@@ -201,7 +201,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     async Task DropInProcessMongoDatabase()
     {
-        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{_outOfProcessMongoContainer!.GetMappedPublicPort(27017)}")
+        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{_outOfProcessMongoContainer.GetMappedPublicPort(27017)}")
         {
             DirectConnection = true
         };
@@ -338,6 +338,31 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         ? _outOfProcessKernelContainer.GetMappedPublicPort(35000)
         : throw new InvalidOperationException("KernelGrpcHostPort is only valid in OutOfProcess mode after the kernel container has been built.");
 
+    /// <summary>
+    /// Gets the captured stdout/stderr of the out-of-process kernel container, or a short
+    /// placeholder when running in-process. Used by specs to surface kernel-side diagnostics
+    /// (observer subscription, routing, projection traces) into the test output when an
+    /// eventual-consistency poll times out in CI, where the container logs are otherwise lost.
+    /// </summary>
+    /// <returns>The container logs, or a placeholder when no OOP kernel container exists.</returns>
+    public async Task<string> GetOutOfProcessKernelLogs()
+    {
+        if (_outOfProcessKernelContainer is null)
+        {
+            return "(no out-of-process kernel container; running in-process)";
+        }
+
+        try
+        {
+            var logs = await _outOfProcessKernelContainer.GetLogsAsync();
+            return $"===== OOP kernel STDOUT =====\n{logs.Stdout}\n===== OOP kernel STDERR =====\n{logs.Stderr}";
+        }
+        catch (Exception ex)
+        {
+            return $"(could not retrieve out-of-process kernel logs: {ex.Message})";
+        }
+    }
+
     string BuildAndStartMongoDB(INetwork network)
     {
         // Initiate the replica set using the docker-network hostname as the member name so
@@ -456,7 +481,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task ResetOutOfProcessKernelState()
     {
-        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/");
+        // skipTlsValidation because the container serves a self-signed development certificate.
+        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?skipTlsValidation=true");
         var options = new ChronicleClientOptions
         {
             ConnectionString = connectionString,

@@ -18,6 +18,7 @@ jobs:
     outputs:
       client-matrix: ${{ steps.client.outputs.matrix }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
+      clustering-matrix: ${{ steps.clustering.outputs.matrix }}
 
     steps:
       - name: Checkout code
@@ -43,6 +44,21 @@ jobs:
           for ns in $namespaces; do
             [ -z "$ns" ] && continue
             matrix+="{\"namespace\":\"Cratis.Chronicle.Kernel.Integration.${ns}\"},"
+          done
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Discover Clustering integration namespaces
+        id: clustering
+        run: |
+          namespaces=$(find Integration/Clustering -mindepth 1 -maxdepth 1 -type d \
+            ! -name 'bin' ! -name 'obj' \
+            -exec basename {} \; | sort)
+
+          matrix='{"include":['
+          for ns in $namespaces; do
+            [ -z "$ns" ] && continue
+            matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.Clustering.${ns}\"},"
           done
           matrix="${matrix%,}]}"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
@@ -207,5 +223,54 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-results-kernel-${{ matrix.namespace }}
+          path: ./coverage-results/
+          retention-days: 1
+
+  clustering-integration-specs:
+    needs: [discover]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.clustering-matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # See client-integration-specs for the single-SDK rationale.
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore build output
+        uses: actions/cache@v4
+        with:
+          path: ./**/bin
+          key: ${{ inputs.dotnet-cache-key }}
+
+      - name: Restore Clustering project
+        run: dotnet restore Integration/Clustering/Clustering.csproj
+
+      - name: Run Clustering integration tests (${{ matrix.namespace }})
+        env:
+          # The retry script owns --results-directory; point it at ./coverage-results so the
+          # collected coverage and TRX files land where the upload step reads them.
+          TEST_RESULTS_DIR: ./coverage-results
+        # See client-integration-specs for the retry and --no-build rationale. The clustering
+        # fixture needs no containers — MongoDB comes from EphemeralMongo and the Orleans
+        # cluster is in-process.
+        run: |
+          .github/scripts/run-tests-with-retry.sh \
+            Integration/Clustering/Clustering.csproj \
+            "FullyQualifiedName~${{ matrix.namespace }}" \
+            --no-build \
+            --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-clustering-${{ matrix.namespace }}
           path: ./coverage-results/
           retention-days: 1

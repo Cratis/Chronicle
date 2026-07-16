@@ -17,7 +17,7 @@ public class and_there_is_metadata_and_details : given.a_provider
     {
         public MyConceptValue Something { get; set; }
 
-        public static readonly PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance)!;
+        public static readonly PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
 
     ComplianceMetadata _result;

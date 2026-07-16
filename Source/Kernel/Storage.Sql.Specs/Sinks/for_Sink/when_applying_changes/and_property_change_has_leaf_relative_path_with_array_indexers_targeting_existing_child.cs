@@ -147,7 +147,7 @@ public class and_property_change_has_leaf_relative_path_with_array_indexers_targ
         await _sink.ApplyChanges(_key, changeset, 99UL);
     }
 
-    T GetValue<T>(string property) => GetValue<T>(_result!, property);
+    T GetValue<T>(string property) => GetValue<T>(_result, property);
 
     static T GetValue<T>(IDictionary<string, object?> target, string property) => (T)target[property]!;
 
@@ -155,8 +155,8 @@ public class and_property_change_has_leaf_relative_path_with_array_indexers_targ
 
     ExpandoObject[] GetChildren()
     {
-        var dictionary = (IDictionary<string, object?>)_result!;
-        return ((IEnumerable<object>)dictionary["children"]!).Cast<ExpandoObject>().ToArray();
+        var dictionary = (IDictionary<string, object?>)_result;
+        return ((IEnumerable<object>)dictionary["children"]).Cast<ExpandoObject>().ToArray();
     }
 
     ExpandoObject GetChild(string stringValue) =>

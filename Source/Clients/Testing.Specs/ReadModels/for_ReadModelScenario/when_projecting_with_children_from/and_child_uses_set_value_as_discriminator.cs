@@ -38,9 +38,9 @@ public class and_child_uses_set_value_as_discriminator : Specification
     }
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
-    [Fact] void should_have_two_roles() => _scenario.Instance!.Roles.Count.ShouldEqual(2);
-    [Fact] void should_have_a_ui_role() => _scenario.Instance!.HasUiRole.ShouldBeTrue();
-    [Fact] void should_have_a_system_role() => _scenario.Instance!.HasSystemRole.ShouldBeTrue();
-    [Fact] void should_set_ui_role_type_to_ui_role() => _scenario.Instance!.Roles.Any(r => r.RoleType == CollectionRoleType.UIRole).ShouldBeTrue();
-    [Fact] void should_set_system_role_type_to_system_role() => _scenario.Instance!.Roles.Any(r => r.RoleType == CollectionRoleType.SystemRole).ShouldBeTrue();
+    [Fact] void should_have_two_roles() => _scenario.Instance.Roles.Count.ShouldEqual(2);
+    [Fact] void should_have_a_ui_role() => _scenario.Instance.HasUiRole.ShouldBeTrue();
+    [Fact] void should_have_a_system_role() => _scenario.Instance.HasSystemRole.ShouldBeTrue();
+    [Fact] void should_set_ui_role_type_to_ui_role() => _scenario.Instance.Roles.Any(r => r.RoleType == CollectionRoleType.UIRole).ShouldBeTrue();
+    [Fact] void should_set_system_role_type_to_system_role() => _scenario.Instance.Roles.Any(r => r.RoleType == CollectionRoleType.SystemRole).ShouldBeTrue();
 }

@@ -61,7 +61,7 @@ public class all_dependencies_with_configured_sink : Specification
             _projections,
             _reducers,
             _schemaGenerator,
-            _servicesAccessor!,
+            _servicesAccessor,
             _jsonSerializerOptions,
             Substitute.For<ILogger<MaterializedReadModels>>());
 

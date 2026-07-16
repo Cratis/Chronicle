@@ -12,7 +12,7 @@ public class an_oauth_token_provider : Specification
     protected ChronicleServerAddress _serverAddress;
     protected string _clientId;
     protected string _clientSecret;
-    protected bool _disableTls;
+    protected bool _skipTlsValidation;
 
     void Establish()
     {
@@ -20,13 +20,13 @@ public class an_oauth_token_provider : Specification
         _serverAddress = new ChronicleServerAddress("localhost");
         _clientId = "test-client";
         _clientSecret = "test-secret";
-        _disableTls = true;
+        _skipTlsValidation = true;
 
         _provider = new OAuthTokenProvider(
             _serverAddress,
             _clientId,
             _clientSecret,
-            _disableTls,
+            _skipTlsValidation,
             _logger);
     }
 }

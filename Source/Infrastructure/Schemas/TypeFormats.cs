@@ -39,7 +39,8 @@ public class TypeFormats : ITypeFormats
         { typeof(Guid), "guid" },
         { typeof(Point), "point" },
         { typeof(LineString), "linestring" },
-        { typeof(Polygon), "polygon" }
+        { typeof(Polygon), "polygon" },
+        { typeof(byte[]), "byte-array" }
     };
 
     /// <inheritdoc/>
@@ -97,7 +98,7 @@ public class TypeFormats : ITypeFormats
     {
         if (type == typeof(string) || type == typeof(Guid) || type == typeof(DateTime) ||
             type == typeof(DateTimeOffset) || type == typeof(DateOnly) || type == typeof(TimeOnly) ||
-            type == typeof(TimeSpan))
+            type == typeof(TimeSpan) || type == typeof(byte[]))
         {
             return "string";
         }

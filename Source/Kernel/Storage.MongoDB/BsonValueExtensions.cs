@@ -31,6 +31,11 @@ public static class BsonValueExtensions
         }
         var inputType = input.GetType();
 
+        if (input is byte[] byteArrayValue)
+        {
+            return new BsonBinaryData(byteArrayValue);
+        }
+
         if (inputType.IsDictionary())
         {
             var dictionaryType = input.GetType();
@@ -213,6 +218,19 @@ public static class BsonValueExtensions
             if (value is BsonBinaryData bsonBinaryData)
             {
                 return bsonBinaryData.ToGuid(GuidRepresentation.Standard);
+            }
+        }
+
+        if (targetType == typeof(byte[]))
+        {
+            if (value is BsonNull)
+            {
+                return Array.Empty<byte>();
+            }
+
+            if (value is BsonBinaryData bsonBinaryDataValue)
+            {
+                return bsonBinaryDataValue.Bytes;
             }
         }
 

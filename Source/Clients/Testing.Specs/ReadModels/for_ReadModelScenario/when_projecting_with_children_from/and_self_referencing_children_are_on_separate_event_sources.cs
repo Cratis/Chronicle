@@ -34,8 +34,8 @@ public class and_self_referencing_children_are_on_separate_event_sources : Speci
     }
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
-    [Fact] void should_only_have_parent_feature_at_root() => _scenario.Instance!.Features.Count().ShouldEqual(1);
-    [Fact] void should_nest_sub_feature_under_parent() => _scenario.Instance!.Features.Single().SubFeatures.Count().ShouldEqual(1);
-    [Fact] void should_set_sub_feature_identifier() => _scenario.Instance!.Features.Single().SubFeatures.Single().Id.ShouldEqual(_subFeatureId);
-    [Fact] void should_set_sub_feature_name() => _scenario.Instance!.Features.Single().SubFeatures.Single().Name.ShouldEqual("Inventory");
+    [Fact] void should_only_have_parent_feature_at_root() => _scenario.Instance.Features.Count().ShouldEqual(1);
+    [Fact] void should_nest_sub_feature_under_parent() => _scenario.Instance.Features.Single().SubFeatures.Count().ShouldEqual(1);
+    [Fact] void should_set_sub_feature_identifier() => _scenario.Instance.Features.Single().SubFeatures.Single().Id.ShouldEqual(_subFeatureId);
+    [Fact] void should_set_sub_feature_name() => _scenario.Instance.Features.Single().SubFeatures.Single().Name.ShouldEqual("Inventory");
 }

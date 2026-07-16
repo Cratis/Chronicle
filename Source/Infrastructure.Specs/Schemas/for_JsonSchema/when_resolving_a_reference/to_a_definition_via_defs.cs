@@ -20,7 +20,7 @@ public class to_a_definition_via_defs : Specification
 
     void Establish() => _schema = JsonSchema.FromJson(Json);
 
-    void Because() => _resolved = _schema.ActualProperties["thing"].Reference!;
+    void Because() => _resolved = _schema.ActualProperties["thing"].Reference;
 
     [Fact] void should_resolve_the_reference() => _resolved.ShouldNotBeNull();
     [Fact] void should_expose_the_referenced_properties() => _resolved.ActualProperties.Keys.ShouldContain("id");

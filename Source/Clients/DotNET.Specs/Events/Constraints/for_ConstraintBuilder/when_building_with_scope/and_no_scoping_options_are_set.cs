@@ -23,5 +23,5 @@ public class and_no_scoping_options_are_set : given.a_constraint_builder_with_ow
     void Because() => _result = _constraintBuilder.Build();
 
     [Fact] void should_have_one_constraint() => _result.Count.ShouldEqual(1);
-    [Fact] void should_have_no_scope_on_constraint() => (_result[0] as UniqueConstraintDefinition)!.Scope.ShouldBeNull();
+    [Fact] void should_have_no_scope_on_constraint() => (_result[0] as UniqueConstraintDefinition).Scope.ShouldBeNull();
 }
