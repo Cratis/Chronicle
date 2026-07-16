@@ -90,7 +90,6 @@ public class Sink(
     {
         var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
             change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
-        var keyFilterValue = converter.ToBsonValue(key);
         var hasConstructiveChanges = changeset.Changes.Any(change =>
             change is ChildAdded or ChildRemoved);
 
@@ -105,10 +104,25 @@ public class Sink(
         var hasJoined = changeset.HasJoined();
         var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
 
-        var filter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin ?
+        // Compute the _id filter value only when the document is actually keyed by _id. For a join whose
+        // target documents are matched by the join column (the Empty filter below), the resolved key carries
+        // the JOIN VALUE — which for a differently-typed read model key (e.g. a string organization number
+        // against a Guid-keyed model) cannot be converted to the _id type and throws "Unrecognized Guid
+        // format", freezing the partition — even though that value is never used to key a document here.
+        var usesJoinTargetsOnlyFilter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin;
+        var filter = usesJoinTargetsOnlyFilter ?
             FilterDefinition<BsonDocument>.Empty :
-            Builders<BsonDocument>.Filter.Eq("_id", keyFilterValue);
-        var isUpsert = !onlyPropertyUpdatesAlongsideJoin;
+            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+
+        // A ROOT-level join (no array indexers) never CONSTRUCTS a root document — it only enriches an
+        // existing root matched by the join column; the root's own key is set by its From/[FromEvent] source.
+        // Upserting on the resolved key for a root join would materialize a phantom root keyed by the JOIN
+        // VALUE, which for a differently-typed read model key (e.g. a string organization number against a
+        // Guid-keyed model) is stored with a string _id and freezes the partition the moment a later read
+        // coerces it back to the key type ("Unrecognized Guid format"). A CHILD join (has array indexers)
+        // still upserts so it can construct the child structure regardless of seed order.
+        var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
+        var isUpsert = !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
 
         if (changeset.HasBeenRemoved())
         {
