@@ -47,11 +47,16 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     /// <summary>
     /// Gets the Chronicle connection string for connecting.
     /// </summary>
+    /// <remarks>
+    /// TLS validation is skipped because the container serves a self-signed test certificate;
+    /// this matches the integration fixtures and the built-in Development connection string.
+    /// </remarks>
     public string ChronicleUrl => new ChronicleConnectionStringBuilder()
         .WithHost("localhost")
         .WithPort(ChroniclePort)
         .WithDevelopmentCredentials()
         .WithCertificate(_certificatePath, CertificatePassword)
+        .WithTlsValidationSkipped()
         .Build();
 
     /// <inheritdoc/>
