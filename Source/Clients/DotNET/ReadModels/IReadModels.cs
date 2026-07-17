@@ -34,7 +34,7 @@ public interface IReadModels
     /// <typeparam name="TReadModel">The read model type.</typeparam>
     /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
     /// <param name="sessionId">Optional <see cref="ReadModelSessionId"/> to get for a specific session.</param>
-    /// <returns>The read model instance.</returns>
+    /// <returns>The read model instance, or null when no instance exists for the key (never created or removed) — consistently for both projection- and reducer-backed read models.</returns>
     Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null);
 
     /// <summary>
@@ -43,7 +43,7 @@ public interface IReadModels
     /// <param name="readModelType">The read model type.</param>
     /// <param name="key">The <see cref="ReadModelKey"/> to get instance for.</param>
     /// <param name="sessionId">Optional <see cref="ReadModelSessionId"/> to get for a specific session.</param>
-    /// <returns>The read model instance.</returns>
+    /// <returns>The read model instance, or null when no instance exists for the key (never created or removed) — consistently for both projection- and reducer-backed read models.</returns>
     Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null);
 
     /// <summary>

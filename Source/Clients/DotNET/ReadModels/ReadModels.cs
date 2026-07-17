@@ -192,8 +192,13 @@ public class ReadModels(
 
         if (reducers.HasFor(readModelType))
         {
+            // An unseeded (never-created) reducer-backed read model has no state yet. Return null — matching
+            // the projection/sink path below that returns default! for a "null" document — rather than
+            // throwing, so a nullable caller guard (state?.…) holds uniformly across both backings. A
+            // throwing pre-check from a reactor on a passive reducer read model would otherwise freeze the
+            // event-source partition permanently.
             var reducedInstance = await reducers.GetInstanceById(readModelType, key);
-            return reducedInstance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+            return reducedInstance ?? default!;
         }
 
         var readModelIdentifier = readModelType.GetReadModelIdentifier();

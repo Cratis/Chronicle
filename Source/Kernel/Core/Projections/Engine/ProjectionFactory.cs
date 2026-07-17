@@ -865,7 +865,16 @@ public class ProjectionFactory(
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, PropertyPath joinOnProperty)
     {
-        var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
+        // For a ROOT-level join, resolve the join source's key as its raw event source id — never coerced to
+        // the read model's key type. The join value is the join-ON value (e.g. a string organization number),
+        // not the root's key (e.g. a Guid); routing it through the read-model-key-typed resolver would
+        // Guid.Parse a non-Guid string and permanently freeze the partition. ForJoin matches it against
+        // existing roots (and defers to the row-creation-time ResolveJoin backfill when none exists yet).
+        // A CHILD join keeps the key-expression resolver: its resolved value becomes the child's array-indexer
+        // identifier, which must be typed to the child's identified-by property to locate the child.
+        var keyResolver = projection.HasParent
+            ? GetKeyResolverFor(projection, key, actualIdentifiedByProperty)
+            : keyResolvers.FromEventSourceId;
         keyResolver = keyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty, joinOnProperty);
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
