@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Schemas;
@@ -215,6 +216,55 @@ public static class JsonSchemaExtensions
     /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to check.</param>
     /// <returns>True if it is, false if not.</returns>
     public static bool IsNullable(this JsonSchemaProperty schemaProperty) => schemaProperty.Format?.EndsWith('?') ?? false;
+
+    /// <summary>
+    /// Determines whether two schemas are equal once nullability markers are ignored — a trailing <c>?</c>
+    /// appended to a <c>format</c> value to signal a nullable type. The marker only refines how an unset value
+    /// materializes (null rather than a type-default sentinel) and does not change the data shape, so a
+    /// marker-only difference must not be treated as a breaking schema change — for example when comparing a
+    /// stored event schema against a newly generated one after a Chronicle upgrade.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> to compare.</param>
+    /// <param name="other">The <see cref="JsonSchema"/> to compare against.</param>
+    /// <returns><see langword="true"/> when the schemas are equal ignoring nullability markers; otherwise <see langword="false"/>.</returns>
+    public static bool EqualsIgnoringNullableFormatMarkers(this JsonSchema schema, JsonSchema other) =>
+        WithoutNullableFormatMarkers(schema.ToJson()) == WithoutNullableFormatMarkers(other.ToJson());
+
+    static string WithoutNullableFormatMarkers(string schemaJson)
+    {
+        var node = JsonNode.Parse(schemaJson);
+        StripNullableFormatMarkers(node);
+        return node?.ToJsonString() ?? schemaJson;
+    }
+
+    static void StripNullableFormatMarkers(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject jsonObject:
+                if (jsonObject["format"] is JsonValue formatValue &&
+                    formatValue.TryGetValue<string>(out var format) &&
+                    format.EndsWith('?'))
+                {
+                    jsonObject["format"] = format[..^1];
+                }
+
+                foreach (var property in jsonObject.ToArray().Where(_ => _.Key != "format"))
+                {
+                    StripNullableFormatMarkers(property.Value);
+                }
+
+                break;
+
+            case JsonArray jsonArray:
+                foreach (var item in jsonArray.ToArray())
+                {
+                    StripNullableFormatMarkers(item);
+                }
+
+                break;
+        }
+    }
 
     static void CollectPropertiesFrom(JsonSchema schema, List<JsonSchemaProperty> properties)
     {

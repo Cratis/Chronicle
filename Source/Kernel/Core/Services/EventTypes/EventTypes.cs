@@ -369,7 +369,12 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
             // (in EventTypeConverters.ToKernel). Apply the same transformation to the incoming
             // schema so both sides go through identical normalization before comparison.
             newSchema.EnsureComplianceMetadata();
-            if (existingSchema.Schema.ToJson() != newSchema.ToJson())
+
+            // Ignore nullability markers ('?' on a format value): a Chronicle upgrade can add them to an
+            // existing event schema (a nullable known value type that stored 'date-time-offset' now generates
+            // 'date-time-offset?'). That marker only refines how an unset value materializes, not the data
+            // shape, so a marker-only difference is not a breaking schema change.
+            if (!existingSchema.Schema.EqualsIgnoringNullableFormatMarkers(newSchema))
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
             }

@@ -125,7 +125,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    static bool IsNullableConceptProperty(JsonSchemaExporterContext context)
+    static bool IsAnnotatedNullable(JsonSchemaExporterContext context)
     {
         var nullabilityCtx = new NullabilityInfoContext();
         switch (context.PropertyInfo?.AttributeProvider)
@@ -142,6 +142,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                 return false;
         }
     }
+
+    static bool PropertyIsNullable(Type type, JsonSchemaExporterContext context) =>
+        Nullable.GetUnderlyingType(type) is not null || IsAnnotatedNullable(context);
 
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {
@@ -166,7 +169,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                     AddComplianceMetadata(conceptSchemaObj, _metadataResolver.GetMetadataFor(type));
                 }
 
-                if (IsNullableConceptProperty(context) &&
+                if (PropertyIsNullable(type, context) &&
                     conceptSchemaObj.TryGetPropertyValue("format", out var format))
                 {
                     var formatStr = format!.GetValue<string>();
@@ -247,7 +250,20 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         // Add format for known types
         if (_typeFormats.IsKnown(formatType))
         {
-            schemaObj["format"] = _typeFormats.GetFormatForType(formatType);
+            var format = _typeFormats.GetFormatForType(formatType);
+
+            // Preserve the nullable marker for known value types (e.g. DateTimeOffset?, int?). STJ's
+            // JsonSchemaExporter does not carry the Nullable<T>/NRT marker into the format, so a nullable
+            // scalar would otherwise share its non-nullable form's format — making IsNullable() false and
+            // GetDefaultValue() synthesize a type-default sentinel (e.g. 0001-01-01 for DateTimeOffset) for an
+            // unset optional at read time. Appending '?' makes IsNullable() return true so the value
+            // materializes as null/absent instead. Symmetric with the nullable-concept handling above.
+            if (PropertyIsNullable(type, context) && !format.EndsWith('?'))
+            {
+                format += "?";
+            }
+
+            schemaObj["format"] = format;
         }
 
         // Add compliance metadata for the type
