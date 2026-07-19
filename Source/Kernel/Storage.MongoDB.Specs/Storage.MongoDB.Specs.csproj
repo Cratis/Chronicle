@@ -10,6 +10,7 @@
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Testcontainers" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>

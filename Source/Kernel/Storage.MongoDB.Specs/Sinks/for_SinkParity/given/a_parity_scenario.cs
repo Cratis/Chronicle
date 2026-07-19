@@ -15,7 +15,7 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.Sinks.InMemory;
+using Cratis.Chronicle.Storage.InMemory.Sinks;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity.given;
