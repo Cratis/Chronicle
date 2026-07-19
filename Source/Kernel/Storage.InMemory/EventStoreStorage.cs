@@ -6,8 +6,10 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
+using Cratis.Chronicle.Storage.InMemory.ExternalServices;
 using Cratis.Chronicle.Storage.InMemory.Namespaces;
 using Cratis.Chronicle.Storage.InMemory.Observation;
 using Cratis.Chronicle.Storage.InMemory.Observation.EventStoreSubscriptions;
@@ -72,6 +74,9 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions { get; } = new EventStoreSubscriptionDefinitionsStorage();
+
+    /// <inheritdoc/>
+    public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage();
 
     /// <inheritdoc/>
     public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModelDefinitionsStorage();

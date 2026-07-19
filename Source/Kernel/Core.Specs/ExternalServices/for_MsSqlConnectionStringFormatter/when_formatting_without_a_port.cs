@@ -26,5 +26,5 @@ public class when_formatting_without_a_port : Specification
     void Because() => _result = _formatter.Format(_configuration);
 
     [Fact] void should_include_server_with_only_host() => _result.ShouldContain("Server=db.example.com;");
-    [Fact] void should_not_include_a_port() => _result.Contains(",").ShouldBeFalse();
+    [Fact] void should_not_include_a_port() => _result.Contains(',').ShouldBeFalse();
 }

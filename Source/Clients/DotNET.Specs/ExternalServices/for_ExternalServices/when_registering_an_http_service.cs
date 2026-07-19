@@ -4,8 +4,6 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.ExternalServices;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.ExternalServices;
 using Microsoft.Extensions.Logging;
 using IExternalServices = Cratis.Chronicle.Contracts.ExternalServices.IExternalServices;
 
