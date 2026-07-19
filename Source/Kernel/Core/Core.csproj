@@ -38,6 +38,7 @@
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Metrics.Roslyn" />
+        <PackageReference Include="Cratis.Screenplay" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
