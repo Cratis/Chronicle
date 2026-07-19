@@ -9,7 +9,7 @@ public class projection_level_remove_via_join : given.a_language_service_with_sc
 {
     const string Declaration = """
         projection User => UserReadModel
-          from UserRegistered automap
+          from UserRegistered
 
           join Group on GroupId
             with GroupCreated
