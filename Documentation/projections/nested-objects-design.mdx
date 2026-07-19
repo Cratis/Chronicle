@@ -1,6 +1,6 @@
 # Nested Projection Objects — Design
 
-This page is the cross-cutting design reference for **nested projection objects** — the ability to populate, update, and clear a single nullable child object on a read model from events. It is an explanation-style page that ties together every layer affected by the feature: the [Projection Declaration Language (PDL)](projection-declaration-language/nested) syntax, the [declarative .NET client](declarative/nested), the [model-bound .NET client](model-bound/nested), the projection definition object model, the projection engine, the PDL compiler and code generator, and the Monaco language definition for the Workbench projection editor.
+This page is the cross-cutting design reference for **nested projection objects** — the ability to populate, update, and clear a single nullable child object on a read model from events. It is an explanation-style page that ties together every layer affected by the feature: the [Projection Declaration Language (PDL)](/screenplay/projections/nested) syntax, the [declarative .NET client](declarative/nested), the [model-bound .NET client](model-bound/nested), the projection definition object model, the projection engine, the PDL compiler and code generator, and the Monaco language definition for the Workbench projection editor.
 
 The user-facing references for each surface live in their respective folders. This page exists to explain *what `nested` means as a concept*, *why it is a first-class projection primitive*, *how the moving parts fit together*, and *what work was required to fully close the feature*.
 
@@ -91,7 +91,7 @@ projection Slice => SliceReadModel
     clear with CommandClearedForSlice
 ```
 
-Two new keywords are introduced: `nested` (block opener) and `clear with` (lifecycle directive). Both can appear inside `children` and inside other `nested` blocks. See [PDL Nested Objects](projection-declaration-language/nested) for the full surface.
+Two new keywords are introduced: `nested` (block opener) and `clear with` (lifecycle directive). Both can appear inside `children` and inside other `nested` blocks. See [PDL Nested Objects](/screenplay/projections/nested) for the full surface.
 
 ### Declarative .NET client
 
@@ -237,7 +237,7 @@ The core nested-object feature is now implemented across engine, .NET surfaces, 
 
 ## See also
 
-- [PDL — Nested Objects](projection-declaration-language/nested)
+- [PDL — Nested Objects](/screenplay/projections/nested)
 - [Declarative — Nested Objects](declarative/nested)
 - [Model-Bound — Nested Objects](model-bound/nested)
 - [Children](declarative/children)
