@@ -20,6 +20,6 @@ public class qualified_projection_name : given.a_language_service_with_schemas<g
 
     void Because() => _result = CompileGenerateAndRecompile(Declaration);
 
-    [Fact(Skip = "The Screenplay parser does not yet support qualified (dotted) projection names")] void should_have_simulation_added_event() => _result.From.ContainsKey((EventType)"SimulationAdded").ShouldBeTrue();
-    [Fact(Skip = "The Screenplay parser does not yet support qualified (dotted) projection names")] void should_not_have_key() => _result.From[(EventType)"SimulationAdded"].Key.IsSet().ShouldBeFalse();
+    [Fact] void should_have_simulation_added_event() => _result.From.ContainsKey((EventType)"SimulationAdded").ShouldBeTrue();
+    [Fact] void should_not_have_key() => _result.From[(EventType)"SimulationAdded"].Key.IsSet().ShouldBeFalse();
 }
