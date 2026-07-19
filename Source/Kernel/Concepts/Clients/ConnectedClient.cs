@@ -42,4 +42,9 @@ public class ConnectedClient
     /// Gets the name of the machine the client process is running on.
     /// </summary>
     public string MachineName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the type of the client (for example, <c>.NET</c>).
+    /// </summary>
+    public string ClientType { get; init; } = string.Empty;
 }

@@ -22,7 +22,7 @@ public class when_getting_connection_count_with_a_reservation_and_a_connected_cl
     async Task Because()
     {
         await _connectedClients.ReserveConnection();
-        await _connectedClients.OnClientConnected(ConnectionId.New(), "1.0.0", false, 1234, "/path/to/client", "machine");
+        await _connectedClients.OnClientConnected(ConnectionId.New(), "1.0.0", false, 1234, "/path/to/client", "machine", ".NET");
         _count = await _connectedClients.GetConnectionCount();
     }
 

@@ -33,6 +33,7 @@
         "columns": {
             "server": "Server",
             "connectionId": "Connection",
+            "clientType": "Type",
             "version": "Version",
             "lastSeen": "Last Seen",
             "debugger": "Debugger",
@@ -414,6 +415,7 @@
                         "empty": "No clients are connected to this observer",
                         "columns": {
                             "connectionId": "Connection",
+                            "clientType": "Type",
                             "version": "Version",
                             "machineName": "Machine",
                             "processId": "PID",

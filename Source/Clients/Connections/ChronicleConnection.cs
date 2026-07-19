@@ -290,6 +290,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ProcessId = ClientProcess.Id,
                 ProcessPath = ClientProcess.Path,
                 MachineName = ClientProcess.MachineName,
+                ClientType = ClientProcess.ClientType,
             }).Subscribe(HandleConnection);
 
         try

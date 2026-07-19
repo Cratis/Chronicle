@@ -77,6 +77,7 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
                         emptyMessage={clientStrings.empty}
                         size='small'>
                         <Column field='connectionId' header={clientStrings.columns.connectionId} />
+                        <Column field='clientType' header={clientStrings.columns.clientType} />
                         <Column field='version' header={clientStrings.columns.version} />
                         <Column field='machineName' header={clientStrings.columns.machineName} />
                         <Column field='processId' header={clientStrings.columns.processId} />

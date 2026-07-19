@@ -64,6 +64,7 @@ export const ConnectedClients = () => {
                     scrollable
                     scrollHeight='flex'>
                     <Column field='connectionId' header={strings.connectedClients.columns.connectionId} sortable />
+                    <Column field='clientType' header={strings.connectedClients.columns.clientType} sortable />
                     <Column field='version' header={strings.connectedClients.columns.version} sortable />
                     <Column field='machineName' header={strings.connectedClients.columns.machineName} sortable />
                     <Column field='processId' header={strings.connectedClients.columns.processId} sortable />
@@ -82,6 +83,7 @@ export const ConnectedClients = () => {
                     scrollHeight='flex'>
                     <Column field='siloAddress' header={strings.connectedClients.columns.server} sortable />
                     <Column field='connectionId' header={strings.connectedClients.columns.connectionId} sortable />
+                    <Column field='clientType' header={strings.connectedClients.columns.clientType} sortable />
                     <Column field='version' header={strings.connectedClients.columns.version} sortable />
                     <Column field='machineName' header={strings.connectedClients.columns.machineName} sortable />
                     <Column field='processId' header={strings.connectedClients.columns.processId} sortable />

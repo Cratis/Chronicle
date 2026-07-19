@@ -137,7 +137,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
                 SiloAddress = target.SiloAddress.ToParsableString(),
                 ProcessId = client.ProcessId,
                 ProcessPath = client.ProcessPath,
-                MachineName = client.MachineName
+                MachineName = client.MachineName,
+                ClientType = client.ClientType
             });
         }
 

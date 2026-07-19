@@ -49,7 +49,8 @@ public class ConnectedClients(
         bool isRunningWithDebugger,
         int processId,
         string processPath,
-        string machineName)
+        string machineName,
+        string clientType)
     {
         logger.ClientConnected(connectionId);
 
@@ -62,7 +63,8 @@ public class ConnectedClients(
             IsRunningWithDebugger = isRunningWithDebugger,
             ProcessId = processId,
             ProcessPath = processPath,
-            MachineName = machineName
+            MachineName = machineName,
+            ClientType = clientType
         });
 
         // The real connection just registered - if it was preceded by a reservation, that

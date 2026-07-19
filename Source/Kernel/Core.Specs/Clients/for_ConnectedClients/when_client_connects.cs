@@ -23,7 +23,7 @@ public class when_client_connects : Specification
 
     async Task Because()
     {
-        await _connectedClients.OnClientConnected(_connectionId, "2.3.4", false, 4242, "/apps/my-app/MyApp", "worker-1");
+        await _connectedClients.OnClientConnected(_connectionId, "2.3.4", false, 4242, "/apps/my-app/MyApp", "worker-1", ".NET");
         _client = await _connectedClients.GetConnectedClient(_connectionId);
     }
 
@@ -31,4 +31,5 @@ public class when_client_connects : Specification
     [Fact] void should_store_the_process_id() => _client.ProcessId.ShouldEqual(4242);
     [Fact] void should_store_the_process_path() => _client.ProcessPath.ShouldEqual("/apps/my-app/MyApp");
     [Fact] void should_store_the_machine_name() => _client.MachineName.ShouldEqual("worker-1");
+    [Fact] void should_store_the_client_type() => _client.ClientType.ShouldEqual(".NET");
 }

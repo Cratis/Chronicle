@@ -44,4 +44,10 @@ public class ConnectRequest
     /// </summary>
     [ProtoMember(6)]
     public string MachineName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the type of the client (for example, <c>.NET</c>).
+    /// </summary>
+    [ProtoMember(7)]
+    public string ClientType { get; set; } = string.Empty;
 }

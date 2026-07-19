@@ -56,4 +56,10 @@ public class ConnectedClient
     /// </summary>
     [ProtoMember(8)]
     public string MachineName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the type of the client (for example, <c>.NET</c>).
+    /// </summary>
+    [ProtoMember(9)]
+    public string ClientType { get; init; } = string.Empty;
 }

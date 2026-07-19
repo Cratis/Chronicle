@@ -100,13 +100,15 @@ internal class ChronicleConnection(
             KeepAliveExempt,
             Environment.ProcessId,
             Environment.ProcessPath ?? string.Empty,
-            Environment.MachineName);
+            Environment.MachineName,
+            ".NET");
 
         _connectionService = new ConnectionService(grainFactory, localSiloDetails, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = KeepAliveExempt,
+            ClientType = ".NET",
         }).Subscribe(HandleConnection);
 
         await lifecycle.Connected();
@@ -135,7 +137,7 @@ internal class ChronicleConnection(
             // resurrect the connection and break reconnect specs.
             if (!stillConnected && lifecycle.IsConnected)
             {
-                await connectedClients.OnClientConnected(connectionId, string.Empty, KeepAliveExempt, Environment.ProcessId, Environment.ProcessPath ?? string.Empty, Environment.MachineName);
+                await connectedClients.OnClientConnected(connectionId, string.Empty, KeepAliveExempt, Environment.ProcessId, Environment.ProcessPath ?? string.Empty, Environment.MachineName, ".NET");
             }
         }
         catch
