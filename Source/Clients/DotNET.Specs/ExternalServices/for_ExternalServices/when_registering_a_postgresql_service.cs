@@ -19,7 +19,7 @@ public class when_registering_a_postgresql_service : Specification
     void Establish()
     {
         _chronicleConnection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
-        _serviceAccessor = _chronicleConnection as IChronicleServicesAccessor;
+        _serviceAccessor = (IChronicleServicesAccessor)_chronicleConnection;
         _serviceAccessor.Services.Returns(Substitute.For<IServices>());
         _serviceAccessor.Services.ExternalServices.Returns(Substitute.For<IExternalServices>());
         _eventStore = Substitute.For<IEventStore>();
