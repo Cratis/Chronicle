@@ -34,16 +34,15 @@ public class FakeConnectionCountHttpMessageHandler(
             throw new HttpRequestException($"Simulated unreachable host '{host}'");
         }
 
+        var response = new HttpResponseMessage(HttpStatusCode.OK);
         if (request.Method == HttpMethod.Post)
         {
             _reservationsByHost[host] = _reservationsByHost.GetValueOrDefault(host) + 1;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            return Task.FromResult(response);
         }
 
         var count = connectionCountsByHost[host] + _reservationsByHost.GetValueOrDefault(host);
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(count.ToString())
-        });
+        response.Content = new StringContent(count.ToString());
+        return Task.FromResult(response);
     }
 }
