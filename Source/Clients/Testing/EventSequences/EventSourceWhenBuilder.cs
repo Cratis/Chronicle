@@ -22,13 +22,20 @@ public class EventSourceWhenBuilder(IEventLog eventLog, EventSourceId eventSourc
     /// <param name="additionalEvents">Any further events that make up the same action, appended in order.</param>
     /// <returns>
     /// A <see cref="Task{TResult}"/> resolving to the <see cref="AppendResult"/> of the append. When more than one event
-    /// is supplied, each is appended in order and the result of the final append is returned.
+    /// is supplied, each is appended in order; if an append is rejected (a constraint or concurrency violation, or an
+    /// error), the remaining events are not appended and that failed result is returned — mirroring how a command's
+    /// multi-event append short-circuits on the first rejection rather than continuing and masking it with a later success.
     /// </returns>
     public async Task<AppendResult> Events(object @event, params object[] additionalEvents)
     {
         var result = await eventLog.Append(eventSourceId, @event);
         foreach (var additionalEvent in additionalEvents)
         {
+            if (!result.IsSuccess)
+            {
+                break;
+            }
+
             result = await eventLog.Append(eventSourceId, additionalEvent);
         }
 
