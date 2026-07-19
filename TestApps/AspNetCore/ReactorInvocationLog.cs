@@ -40,6 +40,7 @@ public class ReactorInvocationLog
         _invocations.Enqueue(new ReactorInvocation(DateTimeOffset.UtcNow, eventSourceId, @event, details));
         while (_invocations.Count > MaxEntries && _invocations.TryDequeue(out _))
         {
+            // Intentionally empty: trimming is performed by TryDequeue in the loop condition.
         }
     }
 }
