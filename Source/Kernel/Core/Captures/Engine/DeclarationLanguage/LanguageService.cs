@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Monads;
+using Cratis.Screenplay;
+using Cratis.Screenplay.Diagnostics;
 
 namespace Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
 
@@ -11,26 +13,30 @@ namespace Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
 /// </summary>
 public class LanguageService : ILanguageService
 {
+    readonly ScreenplayCompiler _compiler = new();
+
     /// <inheritdoc/>
     public Result<CaptureDefinition, CompilerErrors> Compile(string definition)
     {
-        var tokenizer = new Tokenizer(definition);
-        var tokenizeResult = tokenizer.Tokenize();
+        var result = _compiler.CompileCapture(definition);
+        var syntax = result.Value;
+        var errors = GetErrors(result.Diagnostics);
 
-        return tokenizeResult.Match(
-            tokens =>
-            {
-                var parser = new Parser(tokens);
-                var parseResult = parser.Parse();
+        if (syntax is null || errors.HasErrors)
+        {
+            return errors;
+        }
 
-                return parseResult.Match(
-                    document =>
-                    {
-                        var compiler = new Compiler();
-                        return compiler.Compile(document);
-                    },
-                    parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
-            },
-            parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
+        var visitor = new CaptureDefinitionSyntaxVisitor();
+        return visitor.Visit(syntax);
+    }
+
+    static CompilerErrors GetErrors(IEnumerable<Diagnostic> diagnostics)
+    {
+        var errors = diagnostics
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .Select(diagnostic => new CompilerError(diagnostic.Message, diagnostic.Location.Line, diagnostic.Location.Column));
+
+        return new CompilerErrors(errors);
     }
 }

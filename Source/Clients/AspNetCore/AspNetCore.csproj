@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess"/>
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
     </ItemGroup>
 
     <ItemGroup>
@@ -13,7 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
     </ItemGroup>
 
