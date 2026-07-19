@@ -12,4 +12,40 @@ public class Clustering
     /// Gets the cluster roles configuration.
     /// </summary>
     public ClusterRoles Roles { get; set; } = new();
+
+    /// <summary>
+    /// Gets the type of cluster membership to use. Defaults to single node localhost clustering;
+    /// use <see cref="ClusteringType.MongoDB"/> to let multiple nodes sharing the same MongoDB
+    /// storage and cluster id form one cluster.
+    /// </summary>
+    public ClusteringType Type { get; set; } = ClusteringType.Localhost;
+
+    /// <summary>
+    /// Gets the port silo to silo communication happens on. Must differ per node when multiple
+    /// nodes run on the same machine.
+    /// </summary>
+    public int SiloPort { get; set; } = 11111;
+
+    /// <summary>
+    /// Gets the port the silo's client gateway listens on. Must differ per node when multiple
+    /// nodes run on the same machine.
+    /// </summary>
+    public int GatewayPort { get; set; } = 30000;
+
+    /// <summary>
+    /// Gets the cluster id - all nodes that should form one cluster must share it.
+    /// </summary>
+    public string ClusterId { get; set; } = "chronicle";
+
+    /// <summary>
+    /// Gets the service id - all nodes that should form one cluster must share it.
+    /// </summary>
+    public string ServiceId { get; set; } = "chronicle";
+
+    /// <summary>
+    /// Gets the IP address the silo advertises to other cluster members. When not set, the
+    /// address is resolved from the machine's host name. Set it explicitly (e.g. 127.0.0.1) when
+    /// running multiple nodes on one machine.
+    /// </summary>
+    public string? AdvertisedIP { get; set; }
 }

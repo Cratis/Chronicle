@@ -43,12 +43,35 @@ public partial class Observer
             return;
         }
 
+        // Clients are tracked on the silo terminating their connection - the silo their target
+        // names. If that silo is gone, the placement director gives a fresh, empty activation that
+        // correctly reports the client as disconnected.
+        if (_subscription.Targets.Count > 0)
+        {
+            foreach (var target in _subscription.Targets.ToArray())
+            {
+                var connectedClientsForTarget = GrainFactory.GetConnectedClients(target.SiloAddress);
+                if (!await connectedClientsForTarget.IsConnected(target.ConnectedClient!.ConnectionId))
+                {
+                    logger.WatchdogClientInstanceDisconnected(target.ConnectedClient.ConnectionId);
+                    RemoveSubscriberTarget(target);
+                }
+            }
+
+            if (_subscription.Targets.Count == 0)
+            {
+                await Unsubscribe();
+            }
+
+            return;
+        }
+
         if (_subscription.Arguments is not ConnectedClient connectedClient)
         {
             return;
         }
 
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = GrainFactory.GetConnectedClients(_subscription.SiloAddress);
         if (!await connectedClients.IsConnected(connectedClient.ConnectionId))
         {
             logger.WatchdogClientDisconnected(connectedClient.ConnectionId);

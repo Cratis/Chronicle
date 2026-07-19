@@ -3,17 +3,18 @@
 
 using AspNetCore;
 using Cratis.Chronicle;
-using Cratis.Chronicle.EventSequences;
 
 var builder = WebApplication.CreateBuilder(args)
-    .AddCratisChronicle(options =>
-    {
-        options.EventStore = "AspNetCoreTestApp";
-        options.WithCamelCaseNamingPolicy();
-    });
+    .AddCratisChronicle(
+        options => options.EventStore = "AspNetCoreTestApp",
+        configure: chronicle => chronicle.WithCamelCaseNamingPolicy());
+
+builder.Services.AddSingleton<ReactorInvocationLog>();
+
 var app = builder.Build();
 app.UseCratisChronicle();
-
-app.MapGet("/", async (IEventLog eventLog) => await eventLog.Append(Guid.NewGuid(), new MyEvent()));
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.MapTestAppApi();
 
 await app.RunAsync();

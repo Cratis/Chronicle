@@ -52,6 +52,30 @@ public static class ServiceCollectionExtensions
             var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
             var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());
             var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
+
+            // Authenticate with the server using the connection string's client credentials - the
+            // keep-alive and service calls are rejected without a bearer token.
+            ITokenProvider tokenProvider = new NoOpTokenProvider();
+            if (connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+            {
+                var username = connectionString.Username;
+                var password = connectionString.Password;
+                if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
+                {
+                    username = ChronicleConnectionString.DevelopmentClient;
+                    password = ChronicleConnectionString.DevelopmentClientSecret;
+                }
+
+                tokenProvider = new OAuthTokenProvider(
+                    () => sp.GetService<IChronicleConnection>() is ChronicleConnection currentConnection
+                        ? currentConnection.CurrentServerAddress
+                        : connectionString.ServerAddress,
+                    username!,
+                    password!,
+                    skipTlsValidation.Value,
+                    sp.GetRequiredService<ILogger<OAuthTokenProvider>>());
+            }
+
             return new ChronicleConnection(
                 connectionString,
                 5,
@@ -66,11 +90,15 @@ public static class ServiceCollectionExtensions
                 skipTlsValidation.Value,
                 certificatePath,
                 certificatePassword,
+                tokenProvider,
                 skipCompatibilityCheck: skipCompatibilityCheck,
                 skipKeepAlive: skipKeepAlive);
         });
 
-        services.AddSingleton(sp =>
+        // Deliberately transient: the connection recreates its service proxies on every
+        // (re)connect - a failover to another server disposes the old gRPC channel. Caching the
+        // proxies as singletons would leave every consumer on a dead channel after a reconnect.
+        services.AddTransient(sp =>
         {
             var connection = (sp.GetRequiredService<IChronicleConnection>() as IChronicleServicesAccessor)!;
             return connection.Services;
@@ -86,20 +114,21 @@ public static class ServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCratisChronicleServices(this IServiceCollection services)
     {
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventStores);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Namespaces);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Recommendations);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Identities);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventSequences);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().EventTypes);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Constraints);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Observers);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().FailedPartitions);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reactors);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Reducers);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Projections);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().ReadModels);
-        services.AddSingleton(sp => sp.GetRequiredService<IServices>().Jobs);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().EventStores);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Namespaces);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Recommendations);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Identities);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().EventSequences);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().EventTypes);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Constraints);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Observers);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().FailedPartitions);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Reactors);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Reducers);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Projections);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().ReadModels);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Jobs);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Connections);
 
         return services;
     }

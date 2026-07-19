@@ -33,6 +33,14 @@ public record ObserverSubscription(
     public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, [], typeof(NullObserverSubscriber), SiloAddress.Zero, null, true);
 
     /// <summary>
+    /// Gets the connected client instances events fan out to. Client-owned observers hold one
+    /// <see cref="ObserverSubscriberTarget"/> per connected client instance, with
+    /// <see cref="SiloAddress"/> and <see cref="Arguments"/> mirroring the first target.
+    /// Kernel-owned subscriptions have no targets and deliver to <see cref="SiloAddress"/> directly.
+    /// </summary>
+    public IReadOnlyList<ObserverSubscriberTarget> Targets { get; init; } = [];
+
+    /// <summary>
     /// Check whether the subscription is subscribed.
     /// </summary>
     public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);

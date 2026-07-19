@@ -22,10 +22,12 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </remarks>
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
+/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo the client is co-hosted with.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
     IGrainFactory grainFactory,
+    ILocalSiloDetails localSiloDetails,
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
     /// <summary>
@@ -91,17 +93,22 @@ internal class ChronicleConnection(
         // silently fails to subscribe — causing flaky WaitForState timeouts.
         // The production ChronicleConnection avoids this by waiting for the first
         // keep-alive (which only arrives after OnClientConnected completes).
-        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(localSiloDetails.SiloAddress.ToParsableString());
         await connectedClients.OnClientConnected(
             (KernelConnectionId)lifecycle.ConnectionId.Value,
             string.Empty,
-            KeepAliveExempt);
+            KeepAliveExempt,
+            Environment.ProcessId,
+            Environment.ProcessPath ?? string.Empty,
+            Environment.MachineName,
+            ".NET");
 
-        _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
+        _connectionService = new ConnectionService(grainFactory, localSiloDetails, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = KeepAliveExempt,
+            ClientType = ".NET",
         }).Subscribe(HandleConnection);
 
         await lifecycle.Connected();
@@ -118,7 +125,7 @@ internal class ChronicleConnection(
         try
         {
             var connectionId = (KernelConnectionId)lifecycle.ConnectionId.Value;
-            var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+            var connectedClients = grainFactory.GetGrain<IConnectedClients>(localSiloDetails.SiloAddress.ToParsableString());
             var stillConnected = await connectedClients.OnClientPing(connectionId);
 
             // The ConnectedClients grain keeps its registry in memory only. In a cluster it can reactivate
@@ -130,7 +137,7 @@ internal class ChronicleConnection(
             // resurrect the connection and break reconnect specs.
             if (!stillConnected && lifecycle.IsConnected)
             {
-                await connectedClients.OnClientConnected(connectionId, string.Empty, KeepAliveExempt);
+                await connectedClients.OnClientConnected(connectionId, string.Empty, KeepAliveExempt, Environment.ProcessId, Environment.ProcessPath ?? string.Empty, Environment.MachineName, ".NET");
             }
         }
         catch

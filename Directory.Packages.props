@@ -11,6 +11,8 @@
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.16.6" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.16.6" />
@@ -97,6 +99,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <!-- Not categorized -->
+    <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />

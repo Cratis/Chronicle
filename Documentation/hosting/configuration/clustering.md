@@ -1,10 +1,10 @@
 # Clustering
 
-Clustering configuration controls how Chronicle Server distributes grain workloads across multiple nodes in an Orleans cluster. This enables you to assign specific roles to different nodes—for example, dedicating some nodes to event sequences and others to observers (reactors, reducers, projections).
+Clustering configuration controls how multiple Chronicle Server nodes form one Orleans cluster and how grain workloads are distributed across them. This enables horizontal scale out and assigning specific roles to different nodes—for example, dedicating some nodes to event sequences and others to observers (reactors, reducers, projections).
 
 ## Use cases
 
-- **Horizontal scaling**: Separate event ingestion (event sequences) from event processing (observers) to scale independently based on load
+- **Horizontal scaling**: Run multiple nodes as one cluster; separate event ingestion (event sequences) from event processing (observers) to scale independently based on load
 - **Resource isolation**: Run observers on nodes with different resource profiles (e.g., more memory for complex projections)
 - **Testing**: Validate multi-node behavior in integration tests by enforcing deterministic grain placement
 
@@ -13,6 +13,11 @@ Clustering configuration controls how Chronicle Server distributes grain workloa
 ```json
 {
   "clustering": {
+    "type": "MongoDB",
+    "siloPort": 11111,
+    "gatewayPort": 30000,
+    "clusterId": "chronicle",
+    "serviceId": "chronicle",
     "roles": {
       "eventSequences": true,
       "observers": true
@@ -25,6 +30,12 @@ Clustering configuration controls how Chronicle Server distributes grain workloa
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
+| type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in the configured MongoDB storage - all nodes sharing the same storage and cluster id form one cluster. |
+| siloPort | number | 11111 | Port for silo to silo communication. Must differ per node when multiple nodes run on one machine. |
+| gatewayPort | number | 30000 | Port for the silo's client gateway. Must differ per node when multiple nodes run on one machine. |
+| clusterId | string | chronicle | The cluster id - all nodes that should form one cluster must share it. |
+| serviceId | string | chronicle | The service id - all nodes that should form one cluster must share it. |
+| advertisedIP | string | | The IP address the silo advertises to other cluster members. Resolved from the machine's host name when not set; set it explicitly (e.g. `127.0.0.1`) when running multiple nodes on one machine. |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
 

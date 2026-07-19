@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Reflection;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Api;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
@@ -12,8 +13,11 @@ using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.FileProviders;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -142,9 +146,34 @@ var hostBuilder = builder.Host
    builder => builder.WithCamelCaseNamingPolicy());
 
 hostBuilder
-   .UseOrleans(_ => _
-        .UseLocalhostClustering()
-        .AddChronicleToSilo(chronicleBuilder =>
+   .UseOrleans(_ =>
+   {
+        var clustering = chronicleOptions.Clustering;
+        if (clustering.Type == Cratis.Chronicle.Configuration.ClusteringType.MongoDB)
+        {
+            // Membership is kept in MongoDB (wired by WithMongoDB below) - nodes sharing the
+            // same storage and cluster id form one cluster.
+            _.Configure<Orleans.Configuration.ClusterOptions>(options =>
+            {
+                options.ClusterId = clustering.ClusterId;
+                options.ServiceId = clustering.ServiceId;
+            });
+
+            if (clustering.AdvertisedIP is { } advertisedIP)
+            {
+                _.ConfigureEndpoints(System.Net.IPAddress.Parse(advertisedIP), clustering.SiloPort, clustering.GatewayPort);
+            }
+            else
+            {
+                _.ConfigureEndpoints(clustering.SiloPort, clustering.GatewayPort);
+            }
+        }
+        else
+        {
+            _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
+        }
+
+        _.AddChronicleToSilo(chronicleBuilder =>
         {
             if (isSqlStorage)
                 chronicleBuilder.WithSql(chronicleOptions);
@@ -153,7 +182,8 @@ hostBuilder
 
             chronicleBuilder.WithVaultComplianceStorage(chronicleOptions);
             chronicleBuilder.WithAzureKeyVaultComplianceStorage(chronicleOptions);
-        }))
+        });
+   })
    .ConfigureServices((context, services) =>
    {
        services.AddCodeFirstGrpcReflection();
@@ -198,15 +228,49 @@ var app = builder.Build();
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
 
+// The kernel is never directly internet-facing - it always sits behind some reverse proxy (YARP in
+// this repo's Composition, an ingress/load balancer in production). Without this, a proxied request
+// that arrives over HTTPS at the proxy but HTTP between the proxy and the kernel (or vice versa)
+// makes the kernel see the wrong scheme, so CookieSecurePolicy.SameAsRequest marks auth cookies
+// Secure when the browser's own connection to the proxy was plain HTTP - a mismatch Chrome quietly
+// tolerates for localhost but Safari correctly rejects, silently breaking sign-in. Clearing the known
+// proxies/networks trusts the immediate proxy unconditionally, matching this always-proxied model.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 app.UseRouting();
 
 app.UseCratisArc();
 
-// Map workbench static files BEFORE authentication so they are publicly accessible
-if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+// The Workbench UI is built once and embedded into Cratis.Chronicle.Workbench - the kernel serves
+// that same embedded asset set directly rather than expecting its own physical wwwroot. The
+// embedded manifest only exists when the frontend was built before the Workbench assembly - a
+// source build without the frontend output skips embedding entirely, and the kernel must keep
+// running without the UI rather than fail at startup.
+var workbenchAssembly = typeof(WorkbenchWebApplicationBuilderExtensions).Assembly;
+var hasWorkbenchUI = workbenchAssembly.GetManifestResourceNames().Contains("Microsoft.Extensions.FileProviders.Embedded.Manifest.xml");
+var serveWorkbench = chronicleOptions.Features.Workbench && chronicleOptions.Features.Api && hasWorkbenchUI;
+if (chronicleOptions.Features.Workbench && !hasWorkbenchUI)
 {
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
+    logger.WorkbenchUINotEmbedded();
+}
+
+var workbenchStaticFileOptions = new StaticFileOptions();
+
+// Map workbench static files BEFORE authentication so they are publicly accessible
+if (serveWorkbench)
+{
+    var workbenchFileProvider = new ManifestEmbeddedFileProvider(
+        workbenchAssembly,
+        $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files");
+    workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = workbenchFileProvider });
+    app.UseStaticFiles(workbenchStaticFileOptions);
 }
 
 // Add authentication and authorization middleware AFTER routing but BEFORE endpoints
@@ -248,13 +312,30 @@ app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
 
+// Lets a client-side load balancer (e.g. LeastConnectionsLoadBalancerStrategy) ask this silo how
+// busy it is before deciding whether to connect to it - anonymous so it can be probed before the
+// client has authenticated, matching the health check endpoint above.
+app.MapGet(
+    "/connections/count",
+    async (IGrainFactory grainFactory, ILocalSiloDetails localSiloDetails) =>
+        await grainFactory.GetConnectedClients(localSiloDetails.SiloAddress).GetConnectionCount())
+    .AllowAnonymous();
+
+// Reserves a connection slot ahead of the client actually connecting - see
+// IConnectedClients.ReserveConnection for why. Anonymous for the same reason as the count above.
+app.MapPost(
+    "/connections/reserve",
+    async (IGrainFactory grainFactory, ILocalSiloDetails localSiloDetails) =>
+        await grainFactory.GetConnectedClients(localSiloDetails.SiloAddress).ReserveConnection())
+    .AllowAnonymous();
+
 // Kernel state reset is exposed via the gRPC IServer.ResetKernelState operation, which
 // only honours the call in DEVELOPMENT builds. See Cratis.Chronicle.Services.Host.Server.
 
 // Map workbench fallback route AFTER API endpoints to avoid conflicts
-if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)
+if (serveWorkbench)
 {
-    app.MapFallbackToFile("index.html").AllowAnonymous();
+    app.MapFallbackToFile("index.html", workbenchStaticFileOptions).AllowAnonymous();
 }
 
 using var cancellationToken = new CancellationTokenSource();

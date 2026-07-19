@@ -101,4 +101,7 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public IServer Server => throw new NotSupportedException("Server is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
 }

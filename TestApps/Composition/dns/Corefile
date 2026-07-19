@@ -1,0 +1,5 @@
+chronicle.local {
+    file /config/chronicle.local.zone
+    log
+    errors
+}

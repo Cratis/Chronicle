@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
@@ -13,6 +14,7 @@ using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -63,8 +65,10 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
         builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
+        builder.Services.TryAddSingleton<IObserverSubscriberSelector, ObserverSubscriberSelector>();
         builder
             .AddChronicleServicesAsInMemory()
+            .AddPlacementDirector<ConnectedClientsPlacementStrategy, ConnectedClientsPlacementDirector>()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
             .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
@@ -148,7 +152,11 @@ public static class ChronicleServerSiloBuilderExtensions
                     grainFactory,
                     sp.GetRequiredService<Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>(),
                     sp.GetRequiredService<IInstancesOf<ICanPerformKernelStateReset>>(),
-                    sp.GetRequiredService<KernelBootstrapResetHandler>()));
+                    sp.GetRequiredService<KernelBootstrapResetHandler>()),
+                new Cratis.Chronicle.Services.Clients.ConnectionService(
+                    grainFactory,
+                    sp.GetRequiredService<ILocalSiloDetails>(),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>()));
         });
 
         return builder;

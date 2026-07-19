@@ -40,6 +40,7 @@
       <PackageReference Include="Cratis.Arc.Swagger" />
         <ProjectReference Include="../../Clients/Api/Api.csproj" />
         <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
+        <ProjectReference Include="../../Clients/Workbench/Workbench.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />

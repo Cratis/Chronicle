@@ -44,7 +44,7 @@ public class Reducer(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
-        _connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         return Task.CompletedTask;
     }

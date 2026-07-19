@@ -33,6 +33,30 @@ public static class ChronicleConnectionStringBuilderExtensions
     }
 
     /// <summary>
+    /// Sets the server addresses for the connection, supporting multiple servers for load balancing.
+    /// </summary>
+    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
+    /// <param name="serverAddresses">The <see cref="ChronicleServerAddress"/> entries to connect to.</param>
+    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
+    public static ChronicleConnectionStringBuilder WithServerAddresses(this ChronicleConnectionStringBuilder builder, params ChronicleServerAddress[] serverAddresses)
+    {
+        builder.ServerAddresses = serverAddresses;
+        return builder;
+    }
+
+    /// <summary>
+    /// Sets the load balancer strategy to use when multiple servers are available.
+    /// </summary>
+    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
+    /// <param name="loadBalancer">The name of the load balancer strategy.</param>
+    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
+    public static ChronicleConnectionStringBuilder WithLoadBalancer(this ChronicleConnectionStringBuilder builder, string loadBalancer)
+    {
+        builder.LoadBalancer = loadBalancer;
+        return builder;
+    }
+
+    /// <summary>
     /// Sets the username and password for client credentials authentication.
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>

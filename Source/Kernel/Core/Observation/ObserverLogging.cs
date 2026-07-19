@@ -135,6 +135,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that client {ConnectionId} is no longer connected. Unsubscribing observer.")]
     internal static partial void WatchdogClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that client instance {ConnectionId} is no longer connected. Removing it from the fan out targets.")]
+    internal static partial void WatchdogClientInstanceDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Client instance {ConnectionId} reported disconnected while handling partition {Partition}. Retrying with the remaining instances.")]
+    internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, Key partition);
+
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
     internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
 

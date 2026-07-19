@@ -1,0 +1,7 @@
+$ORIGIN chronicle.local.
+$TTL 60
+@                IN SOA  ns.chronicle.local. admin.chronicle.local. (1 3600 600 604800 60)
+                 IN NS   ns
+ns               IN A    127.0.0.1
+_chronicle._tcp  IN SRV  0 50 35001 localhost.
+_chronicle._tcp  IN SRV  0 50 35002 localhost.

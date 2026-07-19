@@ -6,7 +6,9 @@ extern alias KernelConcepts;
 
 using System.Reflection;
 using Cratis.Arc;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Integration.Clustering.for_Clustering;
+using Cratis.Chronicle.Integration.Clustering.for_ScaledOutClients;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
@@ -69,6 +71,26 @@ public class ClusteringFixture : IAsyncLifetime
     /// reading from this fixture both see the same in-memory state.
     /// </remarks>
     public ClusteredReactorSignal ReactorSignal { get; } = new();
+
+    /// <summary>
+    /// Gets the shared <see cref="ScaledOutReactorSignal"/> recording which client instance handled which partition.
+    /// </summary>
+    public ScaledOutReactorSignal ScaledOutSignal { get; } = new();
+
+    /// <summary>
+    /// Gets the shared <see cref="FanOutReactorSignal"/> for the fan out rerouting specs.
+    /// </summary>
+    public FanOutReactorSignal FanOutSignal { get; } = new();
+
+    /// <summary>
+    /// Gets the <see cref="IEventStore"/> from the second client instance, co-hosted on the observers silo.
+    /// </summary>
+    public IEventStore SecondClientEventStore => ObserversSilo.ServiceProvider.GetRequiredService<IEventStore>();
+
+    /// <summary>
+    /// Gets the connection id of the second client instance.
+    /// </summary>
+    public string SecondClientConnectionId => ObserversSilo.ServiceProvider.GetRequiredService<IChronicleConnection>().Lifecycle.ConnectionId.Value;
 
     InProcessSiloHandle EventSequencesSilo => _cluster!.Silos.Single(silo => silo.Name == EventSequencesSiloName);
 
@@ -158,6 +180,8 @@ public class ClusteringFixture : IAsyncLifetime
                 services.AddSelfBindings();
                 services.AddCratisArcMeter();
                 services.AddSingleton(ReactorSignal);
+                services.AddSingleton(ScaledOutSignal);
+                services.AddSingleton(FanOutSignal);
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -181,12 +205,13 @@ public class ClusteringFixture : IAsyncLifetime
                 siloBuilder.ConfigureServices(services =>
                 {
                     RemoveChronicleServerStartupTask(services);
-                    if (siloOptions.SiloName == EventSequencesSiloName)
-                    {
-                        services.AddInProcessChronicleClient(
-                            new DefaultClientArtifactsProvider(new SingleAssemblyDiscovery(typeof(ClusteringFixture).Assembly)),
-                            Constants.EventStore);
-                    }
+
+                    // Both silos co-host an instance of the same logical client application - two
+                    // instances of every reactor and reducer - so the specs exercise the fan out
+                    // across multiple connected client instances.
+                    services.AddInProcessChronicleClient(
+                        new DefaultClientArtifactsProvider(new SingleAssemblyDiscovery(typeof(ClusteringFixture).Assembly)),
+                        Constants.EventStore);
                 });
             });
 
@@ -251,8 +276,11 @@ public class ClusteringFixture : IAsyncLifetime
         // the full append → cross-silo observe → reduce path is operational before any test runs; if it is
         // not, the caller discards this cluster and brings up a fresh one.
         var eventStore = ClientEventStore;
+        var secondEventStore = SecondClientEventStore;
         var reducerHandler = eventStore.Reducers.GetHandlerFor<ClusterWarmupReducer>();
+        var secondReducerHandler = secondEventStore.Reducers.GetHandlerFor<ClusterWarmupReducer>();
         await reducerHandler.WaitTillActive(warmupTimeout);
+        await secondReducerHandler.WaitTillActive(warmupTimeout);
 
         var appendResult = await eventStore.EventLog.Append("cluster-warmup", new ClusterWarmedUp(1));
         await reducerHandler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber, warmupTimeout);
@@ -289,6 +317,45 @@ public class ClusteringFixture : IAsyncLifetime
         }
 
         throw new InvalidOperationException($"Cluster did not reach {expectedSilos} active silos within the timeout.");
+    }
+
+    /// <summary>
+    /// Gets the kernel observer grain for a client reactor type.
+    /// </summary>
+    /// <typeparam name="TReactor">The reactor type the observer represents.</typeparam>
+    /// <returns>The kernel <see cref="KernelCore::Cratis.Chronicle.Observation.IObserver"/> grain.</returns>
+    public KernelCore::Cratis.Chronicle.Observation.IObserver GetObserverFor<TReactor>() =>
+        SiloServices.GetRequiredService<IGrainFactory>()
+            .GetGrain<KernelCore::Cratis.Chronicle.Observation.IObserver>(
+                new KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverKey(
+                    typeof(TReactor).FullName!,
+                    (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
+                    KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default,
+                    KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log));
+
+    /// <summary>
+    /// Waits until an observer's subscription has the expected number of fan out targets.
+    /// </summary>
+    /// <param name="observer">The kernel observer grain to inspect.</param>
+    /// <param name="expected">The number of targets to wait for.</param>
+    /// <param name="timeout">The maximum time to wait.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the target count is not reached within the timeout.</exception>
+    public async Task WaitForFanOutTargets(KernelCore::Cratis.Chronicle.Observation.IObserver observer, int expected, TimeSpan timeout)
+    {
+        using var cancellationTokenSource = new CancellationTokenSource(timeout);
+        while (!cancellationTokenSource.IsCancellationRequested)
+        {
+            var subscription = await observer.GetSubscription();
+            if (subscription.Targets.Count >= expected)
+            {
+                return;
+            }
+
+            await Task.Delay(200, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+
+        throw new InvalidOperationException($"Observer did not reach {expected} fan out targets within the timeout.");
     }
 
     /// <summary>

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 public class OAuthTokenProvider : ITokenProvider, IDisposable
 {
-    readonly string _tokenEndpoint;
+    readonly Func<string> _tokenEndpoint;
     readonly string _clientId;
     readonly string _clientSecret;
     readonly ILogger<OAuthTokenProvider> _logger;
@@ -36,8 +36,30 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         string clientSecret,
         bool skipTlsValidation,
         ILogger<OAuthTokenProvider> logger)
+        : this(() => serverAddress, clientId, clientSecret, skipTlsValidation, logger)
     {
-        _tokenEndpoint = $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class.
+    /// </summary>
+    /// <param name="serverAddressProvider">Provides the Chronicle server address to request tokens from - evaluated per request so it follows the currently connected server.</param>
+    /// <param name="clientId">The OAuth client ID.</param>
+    /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
+    /// <param name="logger">Logger for logging.</param>
+    public OAuthTokenProvider(
+        Func<ChronicleServerAddress> serverAddressProvider,
+        string clientId,
+        string clientSecret,
+        bool skipTlsValidation,
+        ILogger<OAuthTokenProvider> logger)
+    {
+        _tokenEndpoint = () =>
+        {
+            var serverAddress = serverAddressProvider();
+            return $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
+        };
         _clientId = clientId;
         _clientSecret = clientSecret;
         _logger = logger;
@@ -52,7 +74,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         };
         _httpMessageHandler = handler;
         _httpClient = new HttpClient(handler);
-        _logger.InitializingTokenProvider(_tokenEndpoint);
+
+        // Deliberately no eager _tokenEndpoint() evaluation here - the provider can be constructed
+        // inside the DI factory that also produces the connection the endpoint follows, and
+        // resolving it during construction would re-enter that factory.
     }
 
     /// <inheritdoc/>
@@ -65,6 +90,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
 
         await _refreshLock.WaitAsync(cancellationToken);
+        var tokenEndpoint = _tokenEndpoint();
         try
         {
             if (!string.IsNullOrEmpty(_accessToken) && DateTimeOffset.UtcNow < _tokenExpiry)
@@ -73,7 +99,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
                 return _accessToken;
             }
 
-            _logger.RequestingAccessToken(_tokenEndpoint);
+            _logger.RequestingAccessToken(tokenEndpoint);
 
             using var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
@@ -82,7 +108,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
                 ["client_secret"] = _clientSecret
             });
 
-            var response = await _httpClient.PostAsync(_tokenEndpoint, content, cancellationToken);
+            var response = await _httpClient.PostAsync(new Uri(tokenEndpoint), content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -107,7 +133,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.FailedToObtainAccessToken(_tokenEndpoint, ex);
+            _logger.FailedToObtainAccessToken(tokenEndpoint, ex);
             throw;
         }
         finally

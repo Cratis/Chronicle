@@ -36,6 +36,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII fields in event content.</param>
+/// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
@@ -51,6 +52,7 @@ public partial class Observer(
     IConfigurationForObserverProvider configurationProvider,
     IStorage storage,
     IEventCompliance eventCompliance,
+    IObserverSubscriberSelector subscriberSelector,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
@@ -186,15 +188,54 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        _subscription = new(
-            _observerId,
-            _observerKey,
-            eventTypes,
-            typeof(TObserverSubscriber),
-            siloAddress,
-            subscriberArgs,
-            isReplayable,
-            filters);
+        if (subscriberArgs is ConnectedClient connectedClient)
+        {
+            var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
+            if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters))
+            {
+                // Another instance of the same client is already subscribed with an identical
+                // definition - add this instance as a fan-out target instead of replacing the
+                // subscription. The stable ordering keeps partition selection deterministic.
+                var targets = _subscription.Targets
+                    .Where(existing => existing.ConnectedClient!.ConnectionId != connectedClient.ConnectionId)
+                    .Append(target)
+                    .OrderBy(existing => existing.ConnectedClient!.ConnectionId.Value)
+                    .ToArray();
+                _subscription = _subscription with
+                {
+                    SiloAddress = targets[0].SiloAddress,
+                    Arguments = targets[0].ConnectedClient,
+                    Targets = targets
+                };
+            }
+            else
+            {
+                _subscription = new(
+                    _observerId,
+                    _observerKey,
+                    eventTypes,
+                    typeof(TObserverSubscriber),
+                    siloAddress,
+                    subscriberArgs,
+                    isReplayable,
+                    filters)
+                {
+                    Targets = [target]
+                };
+            }
+        }
+        else
+        {
+            _subscription = new(
+                _observerId,
+                _observerKey,
+                eventTypes,
+                typeof(TObserverSubscriber),
+                siloAddress,
+                subscriberArgs,
+                isReplayable,
+                filters);
+        }
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
@@ -313,9 +354,33 @@ public partial class Observer(
     /// <inheritdoc/>
     public Task UnsubscribeIfMatchesClient(ConnectionId connectionId)
     {
-        // Single-threaded grain — the check and Unsubscribe form an atomic action.
+        // Single-threaded grain — the check and the subscription change form an atomic action.
         // If a new client has already replaced the subscription, the old client's
         // disconnect cleanup must not tear down the new client's subscription.
+        if (_subscription.IsSubscribed && _subscription.Targets.Count > 0)
+        {
+            var remaining = _subscription.Targets
+                .Where(target => target.ConnectedClient!.ConnectionId != connectionId)
+                .ToArray();
+            if (remaining.Length == _subscription.Targets.Count)
+            {
+                return Task.CompletedTask;
+            }
+
+            if (remaining.Length > 0)
+            {
+                _subscription = _subscription with
+                {
+                    SiloAddress = remaining[0].SiloAddress,
+                    Arguments = remaining[0].ConnectedClient,
+                    Targets = remaining
+                };
+                return Task.CompletedTask;
+            }
+
+            return Unsubscribe();
+        }
+
         if (_subscription.IsSubscribed &&
             _subscription.Arguments is ConnectedClient connectedClient &&
             connectedClient.ConnectionId != connectionId)
@@ -397,6 +462,44 @@ public partial class Observer(
     {
         if (_stateWritingSuspended) return;
         await base.WriteStateAsync();
+    }
+
+    static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)
+    {
+        if (left is null || right is null)
+        {
+            return ReferenceEquals(left, right);
+        }
+
+        // ObserverFilters is a record, but its Tags collection makes the generated equality a
+        // reference comparison - two identical registrations from different client instances
+        // would never be considered equal. Compare structurally instead.
+        return left.Tags.ToHashSet().SetEquals(right.Tags) &&
+               Equals(left.EventSourceType, right.EventSourceType) &&
+               Equals(left.EventStreamType, right.EventStreamType);
+    }
+
+    bool CanFanOutInto<TObserverSubscriber>(IEnumerable<EventType> eventTypes, ObserverFilters? filters)
+        where TObserverSubscriber : IObserverSubscriber =>
+        _subscription.IsSubscribed &&
+        _subscription.Targets.Count > 0 &&
+        _subscription.SubscriberType == typeof(TObserverSubscriber) &&
+        _subscription.EventTypes.ToHashSet().SetEquals(eventTypes) &&
+        FiltersAreEqual(_subscription.Filters, filters);
+
+    void RemoveSubscriberTarget(ObserverSubscriberTarget target)
+    {
+        var remaining = _subscription.Targets
+            .Where(existing => existing.ConnectedClient?.ConnectionId != target.ConnectedClient?.ConnectionId)
+            .ToArray();
+        _subscription = remaining.Length > 0
+            ? _subscription with
+            {
+                SiloAddress = remaining[0].SiloAddress,
+                Arguments = remaining[0].ConnectedClient,
+                Targets = remaining
+            }
+            : _subscription with { Targets = [] };
     }
 
     ObserverOwner GetOwner<TObserverSubscriber>()

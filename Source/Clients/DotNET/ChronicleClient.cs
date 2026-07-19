@@ -150,7 +150,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             certificatePath,
             certificatePassword,
             tokenProvider,
-            skipKeepAlive: options.SkipKeepAlive);
+            skipKeepAlive: options.SkipKeepAlive,
+            loadBalancerStrategy: options.LoadBalancerStrategy);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 
@@ -345,7 +346,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             }
 
             return new OAuthTokenProvider(
-                options.ConnectionString.ServerAddress,
+                () => _connection is ChronicleConnection connection
+                    ? connection.CurrentServerAddress
+                    : options.ConnectionString.ServerAddress,
                 username!,
                 password!,
                 skipTlsValidation,

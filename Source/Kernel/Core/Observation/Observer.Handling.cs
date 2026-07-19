@@ -122,20 +122,40 @@ public partial class Observer
             {
                 try
                 {
-                    var key = new ObserverSubscriberKey(
-                        _observerKey.ObserverId,
-                        _observerKey.EventStore,
-                        _observerKey.Namespace,
-                        _observerKey.EventSequenceId,
-                        partition,
-                        _subscription.SiloAddress.ToParsableString());
-
                     var firstEvent = eventsToHandle[0];
-
-                    var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
-                    var result = await subscriber.OnNext(partition, decryptedEvents, new(_subscription.Arguments));
+
+                    ObserverSubscriberResult result;
+                    while (true)
+                    {
+                        var target = subscriberSelector.Select(_subscription, partition);
+                        var key = new ObserverSubscriberKey(
+                            _observerKey.ObserverId,
+                            _observerKey.EventStore,
+                            _observerKey.Namespace,
+                            _observerKey.EventSequenceId,
+                            partition,
+                            target.SiloAddress.ToParsableString());
+
+                        var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
+                        result = await subscriber.OnNext(partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
+
+                        // A disconnected result from one client instance only removes that instance —
+                        // the batch is retried against the remaining instances. Only when the last
+                        // instance is gone does the observer unsubscribe (below).
+                        if (result.State == ObserverSubscriberState.Disconnected &&
+                            target.ConnectedClient is not null &&
+                            _subscription.Targets.Count > 1)
+                        {
+                            logger.ClientInstanceDisconnectedRetryingWithRemaining(target.ConnectedClient.ConnectionId, partition);
+                            RemoveSubscriberTarget(target);
+                            continue;
+                        }
+
+                        break;
+                    }
+
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
                         ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
