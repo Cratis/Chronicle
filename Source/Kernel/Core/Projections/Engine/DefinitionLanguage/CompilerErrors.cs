@@ -45,17 +45,6 @@ public class CompilerErrors
     public static CompilerErrors From(params CompilerError[] errors) => new(errors);
 
     /// <summary>
-    /// Creates a CompilerErrors instance from ParsingErrors.
-    /// </summary>
-    /// <param name="parsingErrors">The parsing errors to convert.</param>
-    /// <returns>A new CompilerErrors instance.</returns>
-    public static CompilerErrors FromParsingErrors(ParsingErrors parsingErrors)
-    {
-        var errors = parsingErrors.Errors.Select(e => new CompilerError(e.Message, e.Line, e.Column));
-        return new CompilerErrors(errors);
-    }
-
-    /// <summary>
     /// Adds an error to the collection.
     /// </summary>
     /// <param name="message">The error message.</param>

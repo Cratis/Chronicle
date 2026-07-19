@@ -9,52 +9,40 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 public static class Keywords
 {
     /// <summary>
-    /// Gets the set of all reserved keywords (case-insensitive).
+    /// Gets the set of all reserved keywords.
     /// </summary>
-    public static readonly IReadOnlySet<string> All;
-
-    /// <summary>
-    /// Gets the mapping of keyword strings to their corresponding token types.
-    /// </summary>
-    public static readonly IDictionary<string, TokenType> TokenMapping;
-
-    static Keywords()
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
     {
-        TokenMapping = new Dictionary<string, TokenType>(StringComparer.Ordinal)
-        {
-            { "projection", TokenType.Projection },
-            { "sequence", TokenType.Sequence },
-            { "every", TokenType.Every },
-            { "from", TokenType.From },
-            { "key", TokenType.Key },
-            { "parent", TokenType.Parent },
-            { "on", TokenType.On },
-            { "with", TokenType.With },
-            { "join", TokenType.Join },
-            { "events", TokenType.Events },
-            { "children", TokenType.Children },
-            { "id", TokenType.Id },
-            { "identified", TokenType.Identified },
-            { "remove", TokenType.Remove },
-            { "via", TokenType.Via },
-            { "automap", TokenType.AutoMap },
-            { "no", TokenType.No },
-            { "exclude", TokenType.Exclude },
-            { "increment", TokenType.Increment },
-            { "decrement", TokenType.Decrement },
-            { "count", TokenType.Count },
-            { "add", TokenType.Add },
-            { "subtract", TokenType.Subtract },
-            { "by", TokenType.By },
-            { "true", TokenType.True },
-            { "false", TokenType.False },
-            { "null", TokenType.Null },
-            { "literal", TokenType.Literal },
-            { "all", TokenType.All },
-            { "nested", TokenType.Nested },
-            { "clear", TokenType.Clear }
-        };
-
-        All = new HashSet<string>(TokenMapping.Keys, StringComparer.Ordinal);
-    }
+        "projection",
+        "sequence",
+        "every",
+        "from",
+        "key",
+        "parent",
+        "on",
+        "with",
+        "join",
+        "events",
+        "children",
+        "id",
+        "identified",
+        "remove",
+        "via",
+        "automap",
+        "no",
+        "exclude",
+        "increment",
+        "decrement",
+        "count",
+        "add",
+        "subtract",
+        "by",
+        "true",
+        "false",
+        "null",
+        "literal",
+        "all",
+        "nested",
+        "clear"
+    };
 }

@@ -122,10 +122,9 @@ graph LR
     end
 
     subgraph Compiler["Compilation Layer"]
-        Tokenizer["Tokenizer"]
-        Parser["Parser"]
-        Validator["Validator"]
-        DefBuilder["Definition Builder"]
+        Screenplay["Screenplay Compiler (Cratis.Screenplay)"]
+        Validator["Semantic Validator"]
+        Visitor["ProjectionDefinition Visitor"]
     end
 
     subgraph Core["Core Layer"]
@@ -141,11 +140,10 @@ graph LR
     end
 
     Workbench --> MonacoEditor
-    MonacoEditor --> |Declaration Text| Tokenizer
-    Tokenizer --> Parser
-    Parser --> Validator
-    Validator --> DefBuilder
-    DefBuilder --> Definition
+    MonacoEditor --> |Declaration Text| Screenplay
+    Screenplay --> Validator
+    Validator --> Visitor
+    Visitor --> Definition
     Definition --> Registry
     Registry --> Engine
     Engine --> Projector
@@ -172,25 +170,19 @@ graph LR
 
 ### Compilation Layer
 
-**Tokenizer**: Converts declaration text into tokens, handling:
-- Indentation-based structure
-- Keywords and identifiers
-- String literals and expressions
-- Line and column tracking (1-based)
+**Screenplay Compiler**: The projection language is part of the [Cratis Screenplay language](/screenplay/projections/), and parsing is owned by the `Cratis.Screenplay` package:
+- Indentation-based structure with 1-based line and column tracking
+- Keywords, identifiers, string literals and expressions
+- Nested blocks (children, nested objects, joins, composite keys)
+- Syntax errors reported as diagnostics with precise locations
 
-**Parser**: Builds an Abstract Syntax Tree (AST) from tokens:
-- Validates structure and grammar
-- Detects syntax errors with precise locations
-- Handles nested blocks (children, joins, composite keys)
-- Supports expression parsing
-
-**Validator**: Performs semantic validation:
+**Semantic Validator**: Performs semantic validation over the parsed syntax:
 - Checks event types exist
 - Validates property names against schemas
 - Ensures composite key types are objects
 - Verifies expression syntax
 
-**Definition Builder**: Constructs the final `ProjectionDefinition` object that all three approaches produce.
+**ProjectionDefinition Visitor**: Chronicle's implementation of Screenplay's `IProjectionSyntaxVisitor<T>` that turns the syntax tree into the final `ProjectionDefinition` object all three approaches produce.
 
 ### Core Layer
 

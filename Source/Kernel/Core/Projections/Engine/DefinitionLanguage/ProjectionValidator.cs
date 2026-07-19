@@ -4,18 +4,17 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Screenplay.Diagnostics;
+using Cratis.Screenplay.Syntax;
+using Cratis.Screenplay.Syntax.Projections;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
-/// Validates projection definitions against read models and event type schemas.
+/// Validates Screenplay projection syntax against read models and event type schemas.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ProjectionValidator"/> class.
-/// </remarks>
 /// <param name="readModelDefinitions">Available read model definitions.</param>
 /// <param name="eventTypeSchemas">Available event type schemas.</param>
 public class ProjectionValidator(
@@ -28,44 +27,44 @@ public class ProjectionValidator(
     /// <summary>
     /// Validates a projection against the available read models and event type schemas.
     /// </summary>
-    /// <param name="projection">The projection to validate.</param>
+    /// <param name="projection">The <see cref="ProjectionSyntax"/> to validate.</param>
     /// <param name="errors">The compiler errors collection to add errors to.</param>
     /// <returns>The read model schema if validation succeeds, null otherwise.</returns>
-    public JsonSchema? Validate(ProjectionNode projection, CompilerErrors errors)
+    public JsonSchema? Validate(ProjectionSyntax projection, CompilerErrors errors)
     {
-        if (!projection.HasExplicitReadModel)
+        if (projection.ReadModel is null)
         {
             return ValidateAndInferSchema(projection, errors);
         }
 
-        var readModelIdentifier = new ReadModelIdentifier(projection.ReadModelType!.Name);
+        var readModelIdentifier = new ReadModelIdentifier(projection.ReadModel);
 
         if (!_readModelLookup.TryGetValue(readModelIdentifier, out var readModelDefinition))
         {
-            errors.Add($"Read model '{readModelIdentifier}' not found", projection.ReadModelType.Line, projection.ReadModelType.Column);
+            errors.Add($"Read model '{readModelIdentifier}' not found", projection.Location.Line, projection.Location.Column);
             return null;
         }
 
         var readModelSchema = readModelDefinition.GetSchemaForLatestGeneration();
 
-        ValidateDuplicateEvents(projection.Directives, errors);
-        ValidateDirectives(projection.Directives, readModelSchema, errors);
+        ValidateDuplicateEvents(projection.Blocks, errors);
+        ValidateBlocks(projection, readModelSchema, errors);
         return readModelSchema;
     }
 
     /// <summary>
     /// Validates a projection without an explicit read model and infers the schema from event types.
     /// </summary>
-    /// <param name="projection">The projection to validate.</param>
+    /// <param name="projection">The <see cref="ProjectionSyntax"/> to validate.</param>
     /// <param name="errors">The compiler errors collection to add errors to.</param>
     /// <returns>The inferred read model schema if validation succeeds, null otherwise.</returns>
-    public JsonSchema? ValidateAndInferSchema(ProjectionNode projection, CompilerErrors errors)
+    public JsonSchema? ValidateAndInferSchema(ProjectionSyntax projection, CompilerErrors errors)
     {
-        ValidateDuplicateEvents(projection.Directives, errors);
+        ValidateDuplicateEvents(projection.Blocks, errors);
 
-        var aggregatedEventProperties = new Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)>(StringComparer.Ordinal);
+        var aggregatedEventProperties = new Dictionary<string, (JsonObjectType Type, string? Format)>(StringComparer.Ordinal);
 
-        CollectEventProperties(projection.Directives, aggregatedEventProperties, errors);
+        CollectEventProperties(projection.Blocks, aggregatedEventProperties, errors);
 
         if (errors.HasErrors)
         {
@@ -73,7 +72,7 @@ public class ProjectionValidator(
         }
 
         var schema = new JsonSchema { Type = JsonObjectType.Object };
-        foreach (var (name, (type, format, _, _)) in aggregatedEventProperties)
+        foreach (var (name, (type, format)) in aggregatedEventProperties)
         {
             schema.Properties[name] = new JsonSchemaProperty { Type = type, Format = format };
         }
@@ -90,331 +89,250 @@ public class ProjectionValidator(
         return char.ToLowerInvariant(value[0]) + value[1..];
     }
 
-    void ValidateDuplicateEvents(IReadOnlyList<ProjectionDirective> directives, CompilerErrors errors)
+    void ValidateDuplicateEvents(IEnumerable<ProjectionBlockSyntax> blocks, CompilerErrors errors)
     {
-        var seenEvents = new Dictionary<string, TypeRef>();
+        var seenEvents = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var directive in directives)
+        foreach (var block in blocks)
         {
-            switch (directive)
+            switch (block)
             {
-                case FromEventBlock fromEvent:
-                    CheckDuplicateEvent(fromEvent.EventType, seenEvents, errors);
-                    break;
-                case MultiFromEventBlock multiFromEvent:
-                    foreach (var block in multiFromEvent.Blocks)
+                case FromSyntax from:
+                    foreach (var eventSpec in from.Events)
                     {
-                        CheckDuplicateEvent(block.EventType, seenEvents, errors);
+                        CheckDuplicateEvent(eventSpec.Event, eventSpec.Location, seenEvents, errors);
                     }
                     break;
-                case ChildrenBlock childrenBlock:
-                    ValidateDuplicateEventsInChildBlocks(childrenBlock.ChildBlocks, errors);
+                case ChildrenSyntax children:
+                    ValidateDuplicateEvents(children.Blocks, errors);
                     break;
-                case JoinBlock joinBlock:
-                    ValidateDuplicateEventsInJoinBlock(joinBlock.WithBlocks, errors);
+                case JoinSyntax join:
+                    ValidateDuplicateEventsInJoin(join, errors);
                     break;
-                case RemoveWithDirective removeWith:
-                    CheckDuplicateEvent(removeWith.EventType, seenEvents, errors);
+                case RemoveWithSyntax removeWith:
+                    CheckDuplicateEvent(removeWith.Event, removeWith.Location, seenEvents, errors);
                     break;
-                case RemoveWithJoinDirective removeWithJoin:
-                    CheckDuplicateEvent(removeWithJoin.EventType, seenEvents, errors);
+                case RemoveViaJoinSyntax removeViaJoin:
+                    CheckDuplicateEvent(removeViaJoin.Event, removeViaJoin.Location, seenEvents, errors);
                     break;
             }
         }
     }
 
-    void ValidateDuplicateEventsInChildBlocks(IReadOnlyList<ChildBlock> childBlocks, CompilerErrors errors)
+    void ValidateDuplicateEventsInJoin(JoinSyntax join, CompilerErrors errors)
     {
-        var seenEvents = new Dictionary<string, TypeRef>();
+        var seenEvents = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var childBlock in childBlocks)
+        foreach (var joinEvent in join.Events)
         {
-            switch (childBlock)
+            CheckDuplicateEvent(joinEvent.Event, joinEvent.Location, seenEvents, errors);
+        }
+    }
+
+    void CheckDuplicateEvent(string eventName, SourceLocation location, HashSet<string> seenEvents, CompilerErrors errors)
+    {
+        if (!seenEvents.Add(eventName))
+        {
+            errors.Add($"Duplicate event type '{eventName}' - event types can only be used once at each level", location.Line, location.Column);
+        }
+    }
+
+    void ValidateBlocks(ProjectionSyntax projection, JsonSchema readModelSchema, CompilerErrors errors)
+    {
+        if (projection.Key is CompositeKeySyntax projectionCompositeKey)
+        {
+            ValidateCompositeKey(projectionCompositeKey, readModelSchema, errors);
+        }
+
+        foreach (var block in projection.Blocks)
+        {
+            switch (block)
             {
-                case ChildOnEventBlock childOnEvent:
-                    CheckDuplicateEvent(childOnEvent.EventType, seenEvents, errors);
+                case FromSyntax from:
+                    ValidateFrom(from, readModelSchema, errors);
                     break;
-                case NestedChildrenBlock nestedChildren:
-                    ValidateDuplicateEventsInChildBlocks(nestedChildren.ChildBlocks, errors);
+                case ChildrenSyntax children:
+                    ValidateChildren(children, readModelSchema, errors);
                     break;
-                case ChildJoinBlock childJoin:
-                    ValidateDuplicateEventsInJoinBlock(childJoin.WithBlocks, errors);
+                case JoinSyntax join:
+                    ValidateJoin(join, readModelSchema, errors);
                     break;
-                case ChildEveryBlock:
+                case RemoveWithSyntax removeWith:
+                    ValidateEventTypeExists(removeWith.Event, removeWith.Location, errors);
                     break;
-            }
-        }
-    }
-
-    void ValidateDuplicateEventsInJoinBlock(IReadOnlyList<WithEventBlock> withBlocks, CompilerErrors errors)
-    {
-        var seenEvents = new Dictionary<string, TypeRef>();
-
-        foreach (var withBlock in withBlocks)
-        {
-            CheckDuplicateEvent(withBlock.EventType, seenEvents, errors);
-        }
-    }
-
-    void CheckDuplicateEvent(TypeRef eventType, Dictionary<string, TypeRef> seenEvents, CompilerErrors errors)
-    {
-        if (seenEvents.ContainsKey(eventType.Name))
-        {
-            errors.Add($"Duplicate event type '{eventType.Name}' - event types can only be used once at each level", eventType.Line, eventType.Column);
-        }
-        else
-        {
-            seenEvents[eventType.Name] = eventType;
-        }
-    }
-
-    void ValidateDirectives(IReadOnlyList<ProjectionDirective> directives, JsonSchema readModelSchema, CompilerErrors errors)
-    {
-        foreach (var directive in directives)
-        {
-            switch (directive)
-            {
-                case FromEventBlock fromEvent:
-                    ValidateFromEventBlock(fromEvent, readModelSchema, errors);
-                    break;
-                case MultiFromEventBlock multiFromEvent:
-                    foreach (var block in multiFromEvent.Blocks)
-                    {
-                        ValidateFromEventBlock(block, readModelSchema, errors);
-                    }
-                    break;
-                case ChildrenBlock childrenBlock:
-                    ValidateChildrenBlock(childrenBlock, readModelSchema, errors);
-                    break;
-                case JoinBlock joinBlock:
-                    ValidateJoinBlock(joinBlock, readModelSchema, errors);
-                    break;
-                case RemoveWithDirective removeWith:
-                    ValidateEventTypeExists(removeWith.EventType, errors);
-                    break;
-                case RemoveWithJoinDirective removeWithJoin:
-                    ValidateEventTypeExists(removeWithJoin.EventType, errors);
-                    break;
-                case EveryBlock:
-                case KeyDirective:
-                case AutoMapDirective:
-                case NoAutoMapDirective:
-                    // These don't require validation at this stage
-                    break;
-                case CompositeKeyDirective compositeKey:
-                    ValidateCompositeKeyDirective(compositeKey, readModelSchema, errors);
+                case RemoveViaJoinSyntax removeViaJoin:
+                    ValidateEventTypeExists(removeViaJoin.Event, removeViaJoin.Location, errors);
                     break;
             }
         }
     }
 
-    void ValidateEventTypeExists(TypeRef eventTypeRef, CompilerErrors errors)
+    void ValidateEventTypeExists(string eventName, SourceLocation location, CompilerErrors errors)
     {
-        var eventType = EventType.Parse(eventTypeRef.Name);
+        var eventType = EventType.Parse(eventName);
 
         if (!_eventTypeLookup.ContainsKey(eventType))
         {
-            errors.Add($"Event type '{eventType.Id}' not found", eventTypeRef.Line, eventTypeRef.Column);
+            errors.Add($"Event type '{eventType.Id}' not found", location.Line, location.Column);
         }
     }
 
-    void ValidateFromEventBlock(FromEventBlock fromEvent, JsonSchema readModelSchema, CompilerErrors errors)
+    void ValidateFrom(FromSyntax from, JsonSchema readModelSchema, CompilerErrors errors)
     {
-        var eventType = EventType.Parse(fromEvent.EventType.Name);
-
-        if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+        if (from.Key is CompositeKeySyntax compositeKey)
         {
-            errors.Add($"Event type '{eventType.Id}' not found", fromEvent.EventType.Line, fromEvent.EventType.Column);
-            return;
+            ValidateCompositeKey(compositeKey, readModelSchema, errors);
         }
 
-        // Validate composite key if present
-        if (fromEvent.CompositeKey is not null)
+        foreach (var eventSpec in from.Events)
         {
-            ValidateCompositeKeyDirective(fromEvent.CompositeKey, readModelSchema, errors);
-        }
-
-        ValidateMappings(fromEvent.Mappings, readModelSchema, eventTypeSchema.Schema, errors);
-    }
-
-    void ValidateJoinBlock(JoinBlock joinBlock, JsonSchema readModelSchema, CompilerErrors errors)
-    {
-        // Validate each 'with' block's event type
-        foreach (var withBlock in joinBlock.WithBlocks)
-        {
-            var eventType = EventType.Parse(withBlock.EventType.Name);
+            var eventType = EventType.Parse(eventSpec.Event);
 
             if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
             {
-                errors.Add($"Event type '{eventType.Id}' not found", withBlock.EventType.Line, withBlock.EventType.Column);
+                errors.Add($"Event type '{eventType.Id}' not found", eventSpec.Location.Line, eventSpec.Location.Column);
                 continue;
             }
 
-            // Validate mappings within the with block
-            ValidateMappings(withBlock.Mappings, readModelSchema, eventTypeSchema.Schema, errors);
+            ValidateMappings(from.Mappings, readModelSchema, eventTypeSchema.Schema, errors);
         }
     }
 
-    void ValidateChildrenBlock(ChildrenBlock childrenBlock, JsonSchema readModelSchema, CompilerErrors errors)
+    void ValidateJoin(JoinSyntax join, JsonSchema readModelSchema, CompilerErrors errors)
     {
-        var collectionPath = new PropertyPath(childrenBlock.CollectionName);
-
-        if (!readModelSchema.Properties.TryGetValue(collectionPath.Path, out var collectionProperty))
+        foreach (var joinEvent in join.Events)
         {
-            errors.Add($"Read model property '{collectionPath.Path}' not found", childrenBlock.Line, childrenBlock.Column);
+            var eventType = EventType.Parse(joinEvent.Event);
+
+            if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            {
+                errors.Add($"Event type '{eventType.Id}' not found", joinEvent.Location.Line, joinEvent.Location.Column);
+                continue;
+            }
+
+            ValidateMappings(joinEvent.Mappings, readModelSchema, eventTypeSchema.Schema, errors);
+        }
+    }
+
+    void ValidateChildren(ChildrenSyntax children, JsonSchema parentSchema, CompilerErrors errors)
+    {
+        var collectionPath = new PropertyPath(children.Property);
+
+        if (!parentSchema.Properties.TryGetValue(collectionPath.Path, out var collectionProperty))
+        {
+            errors.Add($"Read model property '{collectionPath.Path}' not found", children.Location.Line, children.Location.Column);
             return;
         }
 
         if (!collectionProperty.Type.HasFlag(JsonObjectType.Array))
         {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", childrenBlock.Line, childrenBlock.Column);
+            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", children.Location.Line, children.Location.Column);
             return;
         }
 
         var itemSchema = collectionProperty.Item?.ActualSchema;
         if (itemSchema is null)
         {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", childrenBlock.Line, childrenBlock.Column);
+            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", children.Location.Line, children.Location.Column);
             return;
         }
 
-        foreach (var childBlock in childrenBlock.ChildBlocks)
+        foreach (var block in children.Blocks)
         {
-            ValidateChildBlock(childBlock, itemSchema, errors);
+            switch (block)
+            {
+                case FromSyntax from:
+                    ValidateChildFrom(from, itemSchema, errors);
+                    break;
+                case ChildrenSyntax nestedChildren:
+                    ValidateChildren(nestedChildren, itemSchema, errors);
+                    break;
+            }
         }
     }
 
-    void ValidateChildBlock(ChildBlock childBlock, JsonSchema itemSchema, CompilerErrors errors)
+    void ValidateChildFrom(FromSyntax from, JsonSchema itemSchema, CompilerErrors errors)
     {
-        switch (childBlock)
+        foreach (var eventSpec in from.Events)
         {
-            case ChildOnEventBlock childOnEvent:
-                ValidateChildOnEventBlock(childOnEvent, itemSchema, errors);
-                break;
-            case NestedChildrenBlock nestedChildren:
-                ValidateNestedChildrenBlock(nestedChildren, itemSchema, errors);
-                break;
+            var eventType = EventType.Parse(eventSpec.Event);
+
+            if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            {
+                errors.Add($"Event type '{eventType.Id}' not found", eventSpec.Location.Line, eventSpec.Location.Column);
+                continue;
+            }
+
+            ValidateMappings(from.Mappings, itemSchema, eventTypeSchema.Schema, errors);
         }
     }
 
-    void ValidateNestedChildrenBlock(NestedChildrenBlock nestedChildrenBlock, JsonSchema itemSchema, CompilerErrors errors)
-    {
-        var collectionPath = new PropertyPath(nestedChildrenBlock.CollectionName);
-
-        if (!itemSchema.Properties.TryGetValue(collectionPath.Path, out var collectionProperty))
-        {
-            errors.Add($"Read model property '{collectionPath.Path}' not found", nestedChildrenBlock.Line, nestedChildrenBlock.Column);
-            return;
-        }
-
-        if (!collectionProperty.Type.HasFlag(JsonObjectType.Array))
-        {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Expected array type", nestedChildrenBlock.Line, nestedChildrenBlock.Column);
-            return;
-        }
-
-        var nestedItemSchema = collectionProperty.Item?.ActualSchema;
-        if (nestedItemSchema is null)
-        {
-            errors.Add($"Read model property '{collectionPath.Path}' is invalid: Array must have item schema", nestedChildrenBlock.Line, nestedChildrenBlock.Column);
-            return;
-        }
-
-        foreach (var childBlock in nestedChildrenBlock.ChildBlocks)
-        {
-            ValidateChildBlock(childBlock, nestedItemSchema, errors);
-        }
-    }
-
-    void ValidateChildOnEventBlock(ChildOnEventBlock childOnEvent, JsonSchema itemSchema, CompilerErrors errors)
-    {
-        var eventType = EventType.Parse(childOnEvent.EventType.Name);
-
-        if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
-        {
-            errors.Add($"Event type '{eventType.Id}' not found", childOnEvent.EventType.Line, childOnEvent.EventType.Column);
-            return;
-        }
-
-        ValidateMappings(childOnEvent.Mappings, itemSchema, eventTypeSchema.Schema, errors);
-    }
-
-    void ValidateMappings(IReadOnlyList<MappingOperation> mappings, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
+    void ValidateMappings(IEnumerable<MappingSyntax> mappings, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
     {
         foreach (var mapping in mappings)
         {
             switch (mapping)
             {
-                case AssignmentOperation assignment:
-                    ValidateAssignmentOperation(assignment, targetSchema, eventSchema, errors);
+                case SetMappingSyntax set:
+                    ValidateSetMapping(set, targetSchema, eventSchema, errors);
                     break;
-                case CountOperation count:
-                    ValidatePropertyExists(count.PropertyName, targetSchema, errors, mapping);
-                    break;
-                case IncrementOperation increment:
-                    ValidatePropertyExists(increment.PropertyName, targetSchema, errors, mapping);
-                    break;
-                case DecrementOperation decrement:
-                    ValidatePropertyExists(decrement.PropertyName, targetSchema, errors, mapping);
-                    break;
-                case AddOperation add:
-                    ValidatePropertyExists(add.PropertyName, targetSchema, errors, mapping);
+                case AddMappingSyntax add:
+                    ValidatePropertyExists(add.Property, targetSchema, errors, add);
                     ValidateEventPropertyExists(add.Value, eventSchema, errors);
                     break;
-                case SubtractOperation subtract:
-                    ValidatePropertyExists(subtract.PropertyName, targetSchema, errors, mapping);
+                case SubtractMappingSyntax subtract:
+                    ValidatePropertyExists(subtract.Property, targetSchema, errors, subtract);
                     ValidateEventPropertyExists(subtract.Value, eventSchema, errors);
+                    break;
+                case CountMappingSyntax:
+                case IncrementMappingSyntax:
+                case DecrementMappingSyntax:
+                    ValidatePropertyExists(mapping.Property, targetSchema, errors, mapping);
                     break;
             }
         }
     }
 
-    void ValidatePropertyExists(string propertyName, JsonSchema targetSchema, CompilerErrors errors, MappingOperation operation)
+    void ValidatePropertyExists(string propertyName, JsonSchema targetSchema, CompilerErrors errors, MappingSyntax mapping)
     {
         if (!TryResolveProperty(targetSchema, propertyName, out _))
         {
-            errors.Add($"Read model property '{propertyName}' not found", operation.Line, operation.Column);
+            errors.Add($"Read model property '{propertyName}' not found", mapping.Location.Line, mapping.Location.Column);
         }
     }
 
-    void ValidateEventPropertyExists(Expression value, JsonSchema eventSchema, CompilerErrors errors)
+    void ValidateEventPropertyExists(ExpressionSyntax value, JsonSchema eventSchema, CompilerErrors errors)
     {
-        if (value is EventDataExpression eventDataExpression)
+        if (value is PathExpressionSyntax path && !TryResolveProperty(eventSchema, path.Path, out _))
         {
-            var sourcePath = eventDataExpression.Path;
-
-            if (!TryResolveProperty(eventSchema, sourcePath, out _))
-            {
-                errors.Add($"Event property '{sourcePath}' not found", value.Line, value.Column);
-            }
+            errors.Add($"Event property '{path.Path}' not found", value.Location.Line, value.Location.Column);
         }
     }
 
-    void ValidateAssignmentOperation(AssignmentOperation assignment, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
+    void ValidateSetMapping(SetMappingSyntax set, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
     {
-        var targetPath = assignment.PropertyName;
+        var targetPath = set.Property;
 
         if (!TryResolveProperty(targetSchema, targetPath, out var targetProperty))
         {
-            errors.Add($"Read model property '{targetPath}' not found", assignment.Line, assignment.Column);
+            errors.Add($"Read model property '{targetPath}' not found", set.Location.Line, set.Location.Column);
             return;
         }
 
         // Validate the source expression and type compatibility
-        if (assignment.Value is EventDataExpression eventDataExpression)
+        if (set.Source is PathExpressionSyntax path)
         {
-            var sourcePath = eventDataExpression.Path;
+            var sourcePath = path.Path;
 
             if (!TryResolveProperty(eventSchema, sourcePath, out var sourceProperty))
             {
-                errors.Add($"Event property '{sourcePath}' not found", assignment.Line, assignment.Column);
+                errors.Add($"Event property '{sourcePath}' not found", set.Location.Line, set.Location.Column);
                 return;
             }
 
-            // Validate that types are compatible
             if (!AreTypesCompatible(targetProperty.Type, sourceProperty.Type))
             {
-                errors.Add($"Type mismatch: Cannot assign '{sourcePath}' of type '{sourceProperty.Type}' to '{targetPath}' of type '{targetProperty.Type}'", assignment.Line, assignment.Column);
+                errors.Add($"Type mismatch: Cannot assign '{sourcePath}' of type '{sourceProperty.Type}' to '{targetPath}' of type '{targetProperty.Type}'", set.Location.Line, set.Location.Column);
             }
         }
     }
@@ -451,9 +369,9 @@ public class ProjectionValidator(
         return true;
     }
 
-    void ValidateCompositeKeyDirective(CompositeKeyDirective compositeKey, JsonSchema readModelSchema, CompilerErrors errors)
+    void ValidateCompositeKey(CompositeKeySyntax compositeKey, JsonSchema readModelSchema, CompilerErrors errors)
     {
-        var typeName = compositeKey.TypeName.Name;
+        var typeName = compositeKey.Type;
 
         // Check if the composite key type exists in the read model schema
         JsonSchema? keySchema = null;
@@ -488,7 +406,7 @@ public class ProjectionValidator(
 
         if (keySchema is null)
         {
-            errors.Add($"Composite key type '{typeName}' not found in read model schema", compositeKey.Line, compositeKey.Column);
+            errors.Add($"Composite key type '{typeName}' not found in read model schema", compositeKey.Location.Line, compositeKey.Location.Column);
             return;
         }
 
@@ -500,7 +418,7 @@ public class ProjectionValidator(
 
         if (!isObject)
         {
-            errors.Add($"Composite key type '{typeName}' must be a complex type (object) in the read model schema", compositeKey.Line, compositeKey.Column);
+            errors.Add($"Composite key type '{typeName}' must be a complex type (object) in the read model schema", compositeKey.Location.Line, compositeKey.Location.Column);
             return;
         }
 
@@ -508,9 +426,9 @@ public class ProjectionValidator(
         foreach (var part in compositeKey.Parts)
         {
             // Validate that the property exists in the composite key type schema
-            if (!keySchema.Properties.ContainsKey(part.PropertyName))
+            if (!keySchema.Properties.ContainsKey(part.Property))
             {
-                errors.Add($"Property '{part.PropertyName}' not found in composite key type '{typeName}'", part.Line, part.Column);
+                errors.Add($"Property '{part.Property}' not found in composite key type '{typeName}'", part.Location.Line, part.Location.Column);
                 continue;
             }
 
@@ -518,23 +436,20 @@ public class ProjectionValidator(
             // Validate expression type is supported
             switch (part.Expression)
             {
-                case EventDataExpression:
-                case EventContextExpression:
-                case EventSourceIdExpression:
-                case CausedByExpression:
-                case LiteralExpression:
+                case PathExpressionSyntax:
+                case EventContextExpressionSyntax:
+                case EventSourceIdExpressionSyntax:
+                case CausedByExpressionSyntax:
+                case LiteralExpressionSyntax:
                     // These are valid for composite keys
                     break;
-                case TemplateExpression:
-                    errors.Add("Template expressions are not supported in composite keys. Use simple expressions only.", part.Line, part.Column);
+                case TemplateExpressionSyntax:
+                    errors.Add("Template expressions are not supported in composite keys. Use simple expressions only.", part.Location.Line, part.Location.Column);
                     continue;
                 default:
-                    errors.Add($"Expression type '{part.Expression.GetType().Name}' is not supported in composite keys", part.Line, part.Column);
+                    errors.Add($"Expression type '{part.Expression.GetType().Name}' is not supported in composite keys", part.Location.Line, part.Location.Column);
                     continue;
             }
-
-            // Note: Type compatibility validation between expression and property type could be added here
-            // but would require knowing the event schema context, which isn't available at this level
         }
     }
 
@@ -569,44 +484,40 @@ public class ProjectionValidator(
     }
 
     void CollectEventProperties(
-        IReadOnlyList<ProjectionDirective> directives,
-        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> aggregatedEventProperties,
+        IEnumerable<ProjectionBlockSyntax> blocks,
+        Dictionary<string, (JsonObjectType Type, string? Format)> aggregatedEventProperties,
         CompilerErrors errors)
     {
-        foreach (var directive in directives)
+        foreach (var block in blocks)
         {
-            switch (directive)
+            switch (block)
             {
-                case FromEventBlock fromEvent:
-                    CollectEventTypeProperties(fromEvent.EventType, aggregatedEventProperties, errors);
-                    break;
-                case MultiFromEventBlock multiFromEvent:
-                    foreach (var block in multiFromEvent.Blocks)
+                case FromSyntax from:
+                    foreach (var eventSpec in from.Events)
                     {
-                        CollectEventTypeProperties(block.EventType, aggregatedEventProperties, errors);
+                        CollectEventTypeProperties(eventSpec, aggregatedEventProperties, errors);
                     }
-
                     break;
-                case RemoveWithDirective removeWith:
-                    ValidateEventTypeExists(removeWith.EventType, errors);
+                case RemoveWithSyntax removeWith:
+                    ValidateEventTypeExists(removeWith.Event, removeWith.Location, errors);
                     break;
-                case RemoveWithJoinDirective removeWithJoin:
-                    ValidateEventTypeExists(removeWithJoin.EventType, errors);
+                case RemoveViaJoinSyntax removeViaJoin:
+                    ValidateEventTypeExists(removeViaJoin.Event, removeViaJoin.Location, errors);
                     break;
             }
         }
     }
 
     void CollectEventTypeProperties(
-        TypeRef eventTypeRef,
-        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> aggregatedEventProperties,
+        EventSpecSyntax eventSpec,
+        Dictionary<string, (JsonObjectType Type, string? Format)> aggregatedEventProperties,
         CompilerErrors errors)
     {
-        var eventType = EventType.Parse(eventTypeRef.Name);
+        var eventType = EventType.Parse(eventSpec.Event);
 
         if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
         {
-            errors.Add($"Event type '{eventType.Id}' not found", eventTypeRef.Line, eventTypeRef.Column);
+            errors.Add($"Event type '{eventType.Id}' not found", eventSpec.Location.Line, eventSpec.Location.Column);
             return;
         }
 
@@ -625,13 +536,13 @@ public class ProjectionValidator(
                 {
                     errors.Add(
                         $"Property '{name}' has incompatible types across events: '{existing.Type}' (format: '{existing.Format}') vs '{propType}' (format: '{propFormat}')",
-                        eventTypeRef.Line,
-                        eventTypeRef.Column);
+                        eventSpec.Location.Line,
+                        eventSpec.Location.Column);
                 }
             }
             else
             {
-                aggregatedEventProperties[name] = (propType, propFormat, eventTypeRef.Line, eventTypeRef.Column);
+                aggregatedEventProperties[name] = (propType, propFormat);
             }
         }
     }
