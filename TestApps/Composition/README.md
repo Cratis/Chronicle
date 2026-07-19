@@ -4,7 +4,7 @@ An Aspire composition for verifying Chronicle's scale-out capabilities end to en
 
 | Resource | What it is | Where |
 |---|---|---|
-| `mongodb` | `cratis/mongodb` (single node replica set) - storage AND Orleans cluster membership | `localhost:27019` |
+| `mongodb` | `mongo:8` run as a single-node replica set - storage AND Orleans cluster membership | `localhost:27019` |
 | `dns` | CoreDNS serving the `chronicle.local` zone with `_chronicle._tcp` SRV records pointing at both kernels | `localhost:8053/udp` |
 | `kernel-1` / `kernel-2` | Two Chronicle server processes forming ONE Orleans cluster (MongoDB membership) - each already hosts its own Workbench (UI + API) | `localhost:35001` / `localhost:35002` |
 | `app-1` / `app-2` | Two instances of the AspNetCore test app, connecting with `chronicle+srv://chronicle.local` resolved through the CoreDNS container | <http://localhost:5101> / <http://localhost:5102> |
