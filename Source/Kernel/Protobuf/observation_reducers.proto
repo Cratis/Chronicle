@@ -79,6 +79,7 @@ message ReduceOperationMessage {
    string Partition = 1;
    string InitialState = 2;
    repeated AppendedEvent Events = 3;
+   ReplayState ReplayState = 4;
 }
 message ReducerDefinition {
    string ReducerId = 1;
@@ -86,7 +87,6 @@ message ReducerDefinition {
    repeated EventTypeWithKeyExpression EventTypes = 3;
    string ReadModel = 4;
    bool IsActive = 5;
-   SinkDefinition Sink = 6;
    repeated string Tags = 7;
    ObserverFilters Filters = 8;
 }
@@ -107,13 +107,16 @@ message RegisterReducer {
    string Namespace = 3;
    ReducerDefinition Reducer = 4;
 }
+enum ReplayState {
+   REPLAY_STATE_None = 0;
+   BeginReplay = 1;
+   EndReplay = 2;
+   BeginReplayPartition = 3;
+   EndReplayPartition = 4;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
-}
-message SinkDefinition {
-   .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   string TypeId = 2;
 }
 service Reducers {
    rpc Observe (stream ReducerMessage) returns (stream ReduceOperationMessage);
