@@ -51,7 +51,7 @@ capture InvoiceCapture
 
 ### Source block
 
-```
+```cdl
 source api|webhook|message
   ...
 ```
@@ -97,6 +97,7 @@ When no authentication is configured, the source is treated as unauthenticated.
 - template assignment: ``target = `template ${expr}```
 - translate: `target = source translate` + value entries
 - split:
+
   ```cdl
   split source by ","
     first
@@ -105,7 +106,7 @@ When no authentication is configured, the source is treated as unauthenticated.
 
 ### Append block
 
-```
+```cdl
 append <EventType>
   when ...
   <targetField> = <sourceExpression>
@@ -123,7 +124,7 @@ Supported `when` forms:
 
 ### Nested block
 
-```
+```cdl
 nested <objectPath>
   [map ...]
   append ...
@@ -131,7 +132,7 @@ nested <objectPath>
 
 ### Children block
 
-```
+```cdl
 children <collectionPath> identified by <childKey>
   [map ...]
   append ...
