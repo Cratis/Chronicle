@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Connections.for_ChronicleConnectionStringBuilder;
 
-public class when_building_connection_string_with_tls_validation_skipped : Specification
+public class when_building_connection_string_with_tls_validation_not_skipped : Specification
 {
     ChronicleConnectionStringBuilder _builder;
     string _url;
@@ -14,11 +14,11 @@ public class when_building_connection_string_with_tls_validation_skipped : Speci
         {
             Host = "localhost",
             Port = 35000,
-            SkipTlsValidation = true
+            SkipTlsValidation = false
         };
     }
 
     void Because() => _url = _builder.Build();
 
-    [Fact] void should_include_skip_tls_validation_in_query_string() => _url.ShouldEqual("chronicle://localhost:35000?skipTlsValidation=true");
+    [Fact] void should_include_skip_tls_validation_in_query_string() => _url.ShouldEqual("chronicle://localhost:35000?skipTlsValidation=false");
 }

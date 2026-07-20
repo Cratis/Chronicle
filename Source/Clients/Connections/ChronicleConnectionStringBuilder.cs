@@ -211,14 +211,14 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
     /// <remarks>
-    /// When set, the client still connects over TLS but does not validate the server's certificate.
-    /// This accepts any certificate, including self-signed ones — only use it for a trusted server
-    /// on a trusted network. See also the built-in <see cref="ChronicleConnectionString.Development"/>
-    /// connection string, which enables this so development works against the server's self-signed certificate.
+    /// The client always connects over TLS but does not validate the server's certificate by default,
+    /// accepting any certificate, including self-signed ones. Set <c>skipTlsValidation=false</c> to
+    /// require full certificate chain validation instead — only do so against a server whose
+    /// certificate is verifiable (not a self-signed development certificate).
     /// </remarks>
     public bool SkipTlsValidation
     {
-        get => ContainsKey(SkipTlsValidationKey) && Convert.ToBoolean(this[SkipTlsValidationKey]);
+        get => !ContainsKey(SkipTlsValidationKey) || Convert.ToBoolean(this[SkipTlsValidationKey]);
         set => this[SkipTlsValidationKey] = value;
     }
 
@@ -330,9 +330,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add($"apiKey={Uri.EscapeDataString((string)this[ApiKeyKey])}");
         }
 
-        if (SkipTlsValidation)
+        if (!SkipTlsValidation)
         {
-            queryParams.Add("skipTlsValidation=true");
+            queryParams.Add("skipTlsValidation=false");
         }
 
         if (ContainsKey(LoadBalancerKey))
