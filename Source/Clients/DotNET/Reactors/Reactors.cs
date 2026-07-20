@@ -351,8 +351,9 @@ public class Reactors : IReactors
                     _logger.ReconnectingReactor(handler.Id);
                     RegisterReactor(handler);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
+                    _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                 }
             });
         }
