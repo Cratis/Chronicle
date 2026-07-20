@@ -15,11 +15,11 @@ public class when_building_connection_string_with_multiple_query_parameters : Sp
             Host = "localhost",
             Port = 35000,
             ApiKey = "my-api-key",
-            SkipTlsValidation = true
+            SkipTlsValidation = false
         };
     }
 
     void Because() => _url = _builder.Build();
 
-    [Fact] void should_include_all_query_parameters() => _url.ShouldEqual("chronicle://localhost:35000?apiKey=my-api-key&skipTlsValidation=true");
+    [Fact] void should_include_all_query_parameters() => _url.ShouldEqual("chronicle://localhost:35000?apiKey=my-api-key&skipTlsValidation=false");
 }
