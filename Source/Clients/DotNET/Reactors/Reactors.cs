@@ -330,6 +330,33 @@ public class Reactors : IReactors
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, handler.CancellationToken);
 
+        // Re-establish the observation after the stream ends. A cross-store
+        // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
+        // forever, so onCompleted fires with no error — without re-subscribing
+        // there, the reactor silently goes Disconnected and never recovers until
+        // the whole client reconnects (which is why cross-service invite accepts
+        // stranded). The 2s delay avoids a hot loop if the stream keeps ending.
+        void ScheduleReconnect()
+        {
+            if (handler.CancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                    _logger.ReconnectingReactor(handler.Id);
+                    RegisterReactor(handler);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            });
+        }
+
         // https://github.com/dotnet/reactive/issues/459
         eventsToObserve
             .Select(events => Observable.FromAsync(async () =>
@@ -352,20 +379,13 @@ public class Reactors : IReactors
                     var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
                     _logger.RegisteringReactorFailed(handler.Id, streamFailed);
                     messages.Dispose();
-
-                    if (!handler.CancellationToken.IsCancellationRequested)
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
-                                _logger.ReconnectingReactor(handler.Id);
-                                RegisterReactor(handler);
-                            }
-                            catch (OperationCanceledException) { }
-                        });
-                    }
+                    ScheduleReconnect();
+                },
+                () =>
+                {
+                    _logger.RegisteringReactorStreamCompleted(handler.Id);
+                    messages.Dispose();
+                    ScheduleReconnect();
                 });
     }
 
