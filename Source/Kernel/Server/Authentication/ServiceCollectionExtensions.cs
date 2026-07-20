@@ -33,8 +33,10 @@ public static class ServiceCollectionExtensions
         var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
             || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
             || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
+        var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 
-        if (isSqlStorage)
+        // SQL and in-memory back users through the system storage; MongoDB uses its own user storage.
+        if (isSqlStorage || isInMemoryStorage)
             services.AddSingleton(sp => sp.GetRequiredService<ISystemStorage>().Users);
         else
             services.AddSingleton<IUserStorage, UserStorage>();
