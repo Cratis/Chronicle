@@ -9,4 +9,5 @@ message ServerVersionInfo {
 service Server {
    rpc GetVersionInfo (.google.protobuf.Empty) returns (ServerVersionInfo);
    rpc ReloadState (.google.protobuf.Empty) returns (.google.protobuf.Empty);
+   rpc ResetKernelState (.google.protobuf.Empty) returns (.google.protobuf.Empty);
 }

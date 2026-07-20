@@ -19,6 +19,7 @@ enum ConstraintType {
    Unique = 1;
    UniqueEventType = 2;
    Schema = 3;
+   StreamClosed = 4;
 }
 message OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition {
    UniqueConstraintDefinition Value0 = 1;
