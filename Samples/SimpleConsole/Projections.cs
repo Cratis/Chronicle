@@ -55,6 +55,9 @@ public class EmployeeListProjection : IProjectionFor<Employee>
 /// <param name="City">The employee's city.</param>
 /// <param name="ZipCode">The employee's postal/zip code.</param>
 /// <param name="Country">The employee's country.</param>
+// CHR0025: Title is intentionally AutoMapped from EmployeeHired for the initial value;
+// EmployeePromoted.NewTitle is a genuine name mismatch requiring the explicit SetFrom.
+#pragma warning disable CHR0025
 [FromEvent<EmployeeHired>]
 [FromEvent<EmployeeAddressSet>]
 [FromEvent<EmployeePromoted>]
@@ -68,3 +71,4 @@ public record EmployeeDetails(
     string City = "",
     string ZipCode = "",
     string Country = "");
+#pragma warning restore CHR0025

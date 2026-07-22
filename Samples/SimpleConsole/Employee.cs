@@ -22,6 +22,9 @@ public record EmployeeMoved(string Address, string City, string ZipCode, string 
 [EventType]
 public record EmployeeEmailSet(string Email);
 
+// CHR0025: Title is intentionally AutoMapped from EmployeeHired for the initial value;
+// EmployeePromoted.NewTitle is a genuine name mismatch requiring the explicit SetFrom.
+#pragma warning disable CHR0025
 [FromEvent<EmployeeHired>]
 [FromEvent<EmployeePromoted>]
 [FromEvent<EmployeeAddressSet>]
@@ -37,6 +40,7 @@ public record EmployeeState(
     string City = "",
     string ZipCode = "",
     string Country = "");
+#pragma warning restore CHR0025
 
 // ---------------------------------------------------------------------------
 // Reducer — used to back the EmployeeState read model via IReducerFor<T>
