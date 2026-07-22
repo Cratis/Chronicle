@@ -1,0 +1,31 @@
+/* Copyright (c) Cratis. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.eventDetails {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+/* PrimeReact renders the inline flex only on the .p-tabview root; its internal
+   .p-tabview-panels / .p-tabview-panel are not flexed or height-constrained, so
+   they auto-size to content and no scrollbar engages. Flex the tabview and make
+   the panels container the single, height-constrained vertical scroll region. */
+.eventDetails :global(.p-tabview) {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.eventDetails :global(.p-tabview-panels) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.eventDetails :global(.p-tabview-panel) {
+    height: 100%;
+}
