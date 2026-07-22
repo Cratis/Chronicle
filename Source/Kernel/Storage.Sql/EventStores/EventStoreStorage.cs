@@ -52,7 +52,7 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public IReducerDefinitionsStorage Reducers { get; } = new Reducers.ReducerDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections { get; } = new Projections.ProjectionDefinitionsStorage(eventStore, database);
+    public IProjectionDefinitionsStorage Projections { get; } = new CachingProjectionDefinitionsStorage(new Projections.ProjectionDefinitionsStorage(eventStore, database));
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
