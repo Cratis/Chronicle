@@ -25,6 +25,13 @@ public static class ChronicleDistributedApplicationBuilderExtensions
     /// Chronicle production image is used. Use <see cref="ChronicleAspireBuilderExtensions.WithMongoDB"/>
     /// inside the callback to wire up an external MongoDB connection string.
     /// </para>
+    /// <para>
+    /// When wiring up MongoDB with <see cref="ChronicleAspireBuilderExtensions.WithMongoDB"/>, the external
+    /// MongoDB must be a replica set — Chronicle uses transactions and change streams, which a standalone
+    /// <c>mongod</c> (such as the one Aspire's <c>AddMongoDB</c> starts) does not support. A single-node
+    /// replica set reached through a host-mapped port additionally requires <c>?directConnection=true</c>
+    /// in the connection string.
+    /// </para>
     /// </remarks>
     /// <param name="builder">The <see cref="IDistributedApplicationBuilder"/> to add the resource to.</param>
     /// <param name="name">The name for the Chronicle resource. Defaults to <c>"chronicle"</c>.</param>
