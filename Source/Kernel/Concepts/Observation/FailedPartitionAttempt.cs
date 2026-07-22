@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <summary>
 /// Represents the state of an attempt of a failed partition. This includes representing the initial attempt that caused it.
 /// </summary>
-public class FailedPartitionAttempt
+public record FailedPartitionAttempt
 {
     /// <summary>
     /// Gets the empty <see cref="FailedPartitionAttempt"/>.
