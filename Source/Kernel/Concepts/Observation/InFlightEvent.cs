@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// without the risk of silently skipping events whose progress was never written back to the main
 /// observer state.
 /// </remarks>
-public class InFlightEvent
+public record InFlightEvent
 {
     /// <summary>
     /// Gets or sets the unique identifier for this in-flight event entry.
