@@ -112,7 +112,7 @@ public class EventStore : IEventStore
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
-            serviceProvider.GetRequiredKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName));
+            serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName));
         _correlationIdAccessor = correlationIdAccessor;
 
         _eventSerializer = new EventSerializer(
