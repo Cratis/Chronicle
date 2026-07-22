@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Reactors;
 
-namespace TestApp;
+namespace Samples;
 
 /// <summary>
 /// Reacts to employee lifecycle events by emitting console notifications.

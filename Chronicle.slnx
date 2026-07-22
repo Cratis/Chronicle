@@ -52,8 +52,8 @@
         <Project Path="Integration/Kernel/Kernel.csproj" />
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
     </Folder>
-    <Folder Name="/TestApps/">
-        <Project Path="TestApps/SimpleConsole/SimpleConsole.csproj" />
+    <Folder Name="/Samples/">
+        <Project Path="Samples/SimpleConsole/SimpleConsole.csproj" />
     </Folder>
     <Configurations>
         <BuildType Name="Debug" />

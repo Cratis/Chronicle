@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 
-namespace TestApp;
+namespace Samples;
 
 /// <summary>
 /// Read model shape for the <see cref="EmployeeListProjection"/> declarative artifact.

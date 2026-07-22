@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Seeding;
 
-namespace TestApp;
+namespace Samples;
 
 public class EmployeeSeeding : ICanSeedEvents
 {

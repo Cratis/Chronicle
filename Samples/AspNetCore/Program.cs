@@ -6,7 +6,7 @@ using Cratis.Chronicle;
 
 var builder = WebApplication.CreateBuilder(args)
     .AddCratisChronicle(
-        options => options.EventStore = "AspNetCoreTestApp",
+        options => options.EventStore = "AspNetCoreSample",
         configure: chronicle => chronicle.WithCamelCaseNamingPolicy());
 
 builder.Services.AddSingleton<ReactorInvocationLog>();
@@ -15,6 +15,6 @@ var app = builder.Build();
 app.UseCratisChronicle();
 app.UseDefaultFiles();
 app.UseStaticFiles();
-app.MapTestAppApi();
+app.MapSampleApi();
 
 await app.RunAsync();

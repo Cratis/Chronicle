@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events.Constraints;
 
-namespace TestApp;
+namespace Samples;
 
 /// <summary>
 /// Prevents an employee from being hired more than once per event source.

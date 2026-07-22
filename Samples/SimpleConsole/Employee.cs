@@ -5,7 +5,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reducers;
 
-namespace TestApp;
+namespace Samples;
 
 [EventType]
 public record EmployeeHired(string FirstName, string LastName, string Title);
