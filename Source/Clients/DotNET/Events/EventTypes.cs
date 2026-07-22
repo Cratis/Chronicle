@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Contracts;
@@ -15,14 +16,14 @@ namespace Cratis.Chronicle.Events;
 /// </summary>
 public class EventTypes : IEventTypes
 {
-    readonly Dictionary<EventType, Type> _typesByEventType = [];
-    readonly Dictionary<EventType, JsonSchema> _schemasByEventType = [];
     readonly IEventStore _eventStore;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly bool _enableEventTypeGenerationValidation;
+    FrozenDictionary<EventType, Type> _typesByEventType = FrozenDictionary<EventType, Type>.Empty;
+    FrozenDictionary<EventType, JsonSchema> _schemasByEventType = FrozenDictionary<EventType, JsonSchema>.Empty;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventTypes"/>.
@@ -56,9 +57,6 @@ public class EventTypes : IEventTypes
     /// <inheritdoc/>
     public Task Discover()
     {
-        _typesByEventType.Clear();
-        _schemasByEventType.Clear();
-
         var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
         {
             ClrType = _,
@@ -71,11 +69,8 @@ public class EventTypes : IEventTypes
             throw new MultipleEventTypesWithSameIdFound(clrTypes);
         }
 
-        foreach (var eventType in eventTypes)
-        {
-            _typesByEventType[eventType.EventType] = eventType.ClrType;
-            _schemasByEventType[eventType.EventType] = _jsonSchemaGenerator.Generate(eventType.ClrType);
-        }
+        _typesByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _.ClrType);
+        _schemasByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _jsonSchemaGenerator.Generate(_.ClrType));
 
         return Task.CompletedTask;
     }
