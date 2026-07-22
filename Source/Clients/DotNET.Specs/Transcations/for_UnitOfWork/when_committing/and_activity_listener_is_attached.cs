@@ -18,7 +18,7 @@ public class and_activity_listener_is_attached : given.a_unit_of_work
         _listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == ClientActivity.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            Sample = (ref _) => ActivitySamplingResult.AllData,
             ActivityStarted = _startedActivities.Add
         };
         ActivitySource.AddActivityListener(_listener);

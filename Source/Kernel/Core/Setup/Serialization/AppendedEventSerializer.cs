@@ -90,7 +90,7 @@ internal sealed class AppendedEventSerializer(
         return eventType.Schema.ToJson();
     }
 
-    sealed record AppendedEventWithSchema(AppendedEvent AppendedEvent, string Schema);
-
     readonly record struct EventTypeSchemaKey(EventStoreName EventStore, EventTypeId EventTypeId, EventTypeGeneration Generation);
+
+    sealed record AppendedEventWithSchema(AppendedEvent AppendedEvent, string Schema);
 }
