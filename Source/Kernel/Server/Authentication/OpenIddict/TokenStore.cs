@@ -165,16 +165,50 @@ public class TokenStore(ITokenStorage tokenStorage) : IOpenIddictTokenStore<Toke
     public async ValueTask<long> PruneAsync(DateTimeOffset threshold, CancellationToken cancellationToken) => await tokenStorage.Prune(threshold);
 
     /// <inheritdoc/>
-    public ValueTask<long> RevokeAsync(string? subject, string? client, string? status, string? type, CancellationToken cancellationToken) => new(0L);
+    public async ValueTask<long> RevokeAsync(string? subject, string? client, string? status, string? type, CancellationToken cancellationToken)
+    {
+        IEnumerable<Token> tokens;
+
+        if (!string.IsNullOrEmpty(client) && !string.IsNullOrEmpty(subject) && !string.IsNullOrEmpty(status))
+        {
+            tokens = await tokenStorage.FindByApplicationIdSubjectAndStatus(client, subject, status);
+        }
+        else if (!string.IsNullOrEmpty(client) && !string.IsNullOrEmpty(subject))
+        {
+            tokens = await tokenStorage.FindByApplicationIdAndSubject(client, subject);
+        }
+        else if (!string.IsNullOrEmpty(client))
+        {
+            tokens = await tokenStorage.FindByApplicationId(client);
+        }
+        else if (!string.IsNullOrEmpty(subject))
+        {
+            tokens = await tokenStorage.FindBySubject(subject);
+        }
+        else
+        {
+            return 0;
+        }
+
+        if (!string.IsNullOrEmpty(type))
+        {
+            tokens = tokens.Where(t => t.Type == type);
+        }
+
+        return await Revoke(tokens);
+    }
 
     /// <inheritdoc/>
-    public ValueTask<long> RevokeByApplicationIdAsync(string identifier, CancellationToken cancellationToken = default) => new(0L);
+    public async ValueTask<long> RevokeByApplicationIdAsync(string identifier, CancellationToken cancellationToken = default) =>
+        await Revoke(await tokenStorage.FindByApplicationId(identifier));
 
     /// <inheritdoc/>
-    public ValueTask<long> RevokeByAuthorizationIdAsync(string identifier, CancellationToken cancellationToken) => new(0L);
+    public async ValueTask<long> RevokeByAuthorizationIdAsync(string identifier, CancellationToken cancellationToken) =>
+        await Revoke(await tokenStorage.FindByAuthorizationId(identifier));
 
     /// <inheritdoc/>
-    public ValueTask<long> RevokeBySubjectAsync(string subject, CancellationToken cancellationToken = default) => new(0L);
+    public async ValueTask<long> RevokeBySubjectAsync(string subject, CancellationToken cancellationToken = default) =>
+        await Revoke(await tokenStorage.FindBySubject(subject));
 
     /// <inheritdoc/>
     public ValueTask SetApplicationIdAsync(Token token, string? identifier, CancellationToken cancellationToken)
@@ -255,4 +289,16 @@ public class TokenStore(ITokenStorage tokenStorage) : IOpenIddictTokenStore<Toke
 
     /// <inheritdoc/>
     public async ValueTask UpdateAsync(Token token, CancellationToken cancellationToken) => await tokenStorage.Update(token);
+
+    async Task<long> Revoke(IEnumerable<Token> tokens)
+    {
+        var count = 0L;
+        foreach (var token in tokens)
+        {
+            await tokenStorage.Update(token with { Status = OpenIddictConstants.Statuses.Revoked });
+            count++;
+        }
+
+        return count;
+    }
 }
