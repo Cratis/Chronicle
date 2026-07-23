@@ -159,7 +159,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
                 generation);
         }
 
-        return eventType.ToKernel();
+        return eventType.ToKernel(generation);
     }
 
     /// <inheritdoc/>
