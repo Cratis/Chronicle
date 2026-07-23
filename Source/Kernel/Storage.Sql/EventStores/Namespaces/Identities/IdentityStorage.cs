@@ -105,6 +105,24 @@ public class IdentityStorage(EventStoreName eventStore, EventStoreNamespaceName 
     }
 
     /// <inheritdoc/>
+    public async Task Rename(string subject, string name)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var entity = await scope.DbContext.Identities.FirstOrDefaultAsync(_ => _.Subject == subject);
+        if (entity is not null)
+        {
+            entity.Name = name;
+            await scope.DbContext.SaveChangesAsync();
+        }
+
+        if (_identityIdsBySubject.TryGetValue(subject, out var identityId) &&
+            _identitiesByIdentityId.TryGetValue(identityId, out var existing))
+        {
+            _identitiesByIdentityId[identityId] = existing with { Name = name };
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<Concepts.Identities.Identity>> GetAll()
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
