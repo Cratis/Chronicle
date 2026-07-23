@@ -73,9 +73,7 @@ The in-memory backend keeps every event sequence, observer, read-model sink, and
 
 When you host Chronicle programmatically, select the in-memory backend with the `WithInMemory()` builder extension instead of configuration:
 
-```csharp
-siloBuilder.AddChronicleToSilo(chronicle => chronicle.WithInMemory());
-```
+<ChronicleClientTabs snippet="hosting/configuration/storage/in-memory" />
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
