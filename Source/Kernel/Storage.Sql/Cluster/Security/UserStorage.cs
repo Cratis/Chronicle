@@ -39,7 +39,19 @@ public class UserStorage(IDatabase database) : IUserStorage, IDisposable
     public async Task<User?> GetByUsername(Username username)
     {
         await using var scope = await database.Cluster();
-        var entity = await scope.DbContext.Users.FirstOrDefaultAsync(u => u.Username == username.Value);
+        var normalizedUsername = username.Value.ToLowerInvariant();
+
+        // Match usernames case-insensitively, consistent with the InMemory (OrdinalIgnoreCase) and
+        // MongoDB ("en" primary collation) backends. ToLower() (never ToLowerInvariant()) is used on
+        // the column because EF's SQLite provider only translates the parameterless string.ToLower()
+        // to the SQL LOWER() function, and Npgsql translates it too — so this is the single form that
+        // runs server-side on both providers we ship rather than client-evaluating the whole table.
+        // The comparison executes as SQL LOWER(), so no client culture is involved: CA1304/CA1311
+        // (culture-dependent in-memory ToLower) do not apply, and CA1862's suggested
+        // string.Equals(StringComparison.OrdinalIgnoreCase) is not translatable to SQL by EF.
+#pragma warning disable CA1304, CA1311, CA1862
+        var entity = await scope.DbContext.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == normalizedUsername);
+#pragma warning restore CA1304, CA1311, CA1862
         return entity is null ? null : ToUser(entity);
     }
 
@@ -51,7 +63,13 @@ public class UserStorage(IDatabase database) : IUserStorage, IDisposable
             return null;
         }
         await using var scope = await database.Cluster();
-        var entity = await scope.DbContext.Users.FirstOrDefaultAsync(u => u.Email == email.Value);
+        var normalizedEmail = email.Value.ToLowerInvariant();
+
+        // Case-insensitive email match, consistent with the InMemory and MongoDB backends. See the
+        // note in GetByUsername for why the column uses ToLower() rather than ToLowerInvariant().
+#pragma warning disable CA1304, CA1311, CA1862
+        var entity = await scope.DbContext.Users.FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == normalizedEmail);
+#pragma warning restore CA1304, CA1311, CA1862
         return entity is null ? null : ToUser(entity);
     }
 
