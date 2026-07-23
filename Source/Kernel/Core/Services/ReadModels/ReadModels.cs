@@ -413,7 +413,7 @@ internal sealed class ReadModels(
         if (request.EventCount == ulong.MaxValue)
         {
             // Get all events
-            var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: null, eventTypes: eventTypes);
+            using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: null, eventTypes: eventTypes);
             while (await cursor.MoveNext())
             {
                 if (!cursor.Current.Any())
@@ -422,7 +422,6 @@ internal sealed class ReadModels(
                 }
                 events.AddRange(cursor.Current);
             }
-            cursor.Dispose();
         }
         else
         {
