@@ -28,4 +28,13 @@ public class Events
     /// A value of 0 means unbounded (no backpressure). Defaults to 2000 batches.
     /// </remarks>
     public int QueueBoundedCapacity { get; init; } = 2000;
+
+    /// <summary>
+    /// Timeout in milliseconds for the final wait on the appended-events queue to become empty when awaiting depletion.
+    /// </summary>
+    /// <remarks>
+    /// Bounds the wait for the queue-empty signal so awaiting depletion cannot hang indefinitely
+    /// when running outside a debugger.
+    /// </remarks>
+    public int QueueDepletionWaitTimeoutMilliseconds { get; init; } = 500;
 }

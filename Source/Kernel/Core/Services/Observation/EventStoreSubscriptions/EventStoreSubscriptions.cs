@@ -4,10 +4,12 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ConceptsEventStoreSubscriptionDefinition = Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
 using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
@@ -20,9 +22,11 @@ namespace Cratis.Chronicle.Services.Observation.EventStoreSubscriptions;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing subscription definitions.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class EventStoreSubscriptions(
     IGrainFactory grainFactory,
-    IStorage storage) : ContractIEventStoreSubscriptions
+    IStorage storage,
+    IOptions<ChronicleOptions> options) : ContractIEventStoreSubscriptions
 {
     /// <inheritdoc/>
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
@@ -61,7 +65,7 @@ internal sealed class EventStoreSubscriptions(
             {
                 await subscriptionsManager.WaitUntilSubscribed(
                     new EventStoreSubscriptionId(subscription.Identifier),
-                    TimeSpan.FromSeconds(5));
+                    TimeSpan.FromSeconds(options.Value.Observers.SubscriptionReadyTimeout));
             }
             catch (TimeoutException)
             {
