@@ -28,6 +28,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Traces;
 using Cratis.Types;
+using Microsoft.Extensions.Options;
 using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
 using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
@@ -117,13 +118,14 @@ internal sealed class TestingServices(
                 NullLogger<KernelWebhookComparer>.Instance),
             null!,
             null!,
-            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions)));
+            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
+            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
 
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
-        new KernelSubscriptionsService(grainFactory, storage));
+        new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
 
     readonly Lazy<IJobs> _jobs = new(() =>
-        new KernelJobsService(grainFactory, storage));
+        new KernelJobsService(grainFactory, storage, NullLogger<KernelJobsService>.Instance));
 
     readonly Lazy<IEventSeeding> _seeding = new(() =>
         new KernelSeedingService(grainFactory));
