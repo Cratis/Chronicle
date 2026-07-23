@@ -148,25 +148,18 @@ internal sealed class EventSequences(
     {
         var eventSequence = GetEventSequenceStorage(request);
 
-        IEventCursor cursor;
-
-        if (request.ToEventSequenceNumber is not null)
-        {
-            cursor = await eventSequence.GetRange(
+        using var cursor = request.ToEventSequenceNumber is not null
+            ? await eventSequence.GetRange(
                 request.FromEventSequenceNumber,
                 request.ToEventSequenceNumber,
                 string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
-                request.EventTypes.ToChronicle());
-        }
-        else
-        {
-            cursor = await eventSequence.GetFromSequenceNumber(
+                request.EventTypes.ToChronicle())
+            : await eventSequence.GetFromSequenceNumber(
                 request.FromEventSequenceNumber,
                 string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
                 EventStreamType.All,
                 EventStreamId.Default,
                 request.EventTypes.ToChronicle());
-        }
 
         var appendedEvents = new List<AppendedEvent>();
         while (await cursor.MoveNext())
@@ -174,7 +167,6 @@ internal sealed class EventSequences(
             appendedEvents.AddRange(cursor.Current);
         }
 
-        cursor.Dispose();
         var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetFor(appendedEvents.Select(_ => _.Context.EventType).Distinct());
         var schemasByEventType = eventTypeSchemas.ToDictionary(_ => _.Type);
         var events = await ToContracts(appendedEvents, schemasByEventType);
