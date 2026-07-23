@@ -7,6 +7,7 @@ using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Jobs;
@@ -16,7 +17,8 @@ namespace Cratis.Chronicle.Services.Jobs;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
-internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
+/// <param name="logger">The <see cref="ILogger{TCategoryName}"/> for logging.</param>
+internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage, ILogger<Jobs> logger) : IJobs
 {
     /// <inheritdoc/>
     public Task Stop(StopJob command, CallContext context = default) =>
@@ -64,7 +66,9 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
             return catchOrObserve.AsT0.CompletedBy(context.CancellationToken).Select(_ => _.ToContract());
         }
 
-        return Observable.Empty<IEnumerable<Job>>();
+        catchOrObserve.TryGetException(out var exception);
+        logger.FailedToObserveJobs(exception!, request.EventStore, request.Namespace);
+        return Observable.Throw<IEnumerable<Job>>(exception!);
     }
 
     /// <inheritdoc/>
@@ -80,6 +84,8 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
             return catchOrObserve.AsT0.ToContract();
         }
 
+        catchOrObserve.TryGetException(out var exception);
+        logger.FailedToGetJobSteps(exception!, request.JobId, request.EventStore, request.Namespace);
         return [];
     }
 }

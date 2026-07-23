@@ -144,7 +144,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage, sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<IEventCompliance>(), jsonSerializerOptions),
                 new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelsCompliance>()),
-                new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
+                new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Jobs.Jobs>>()),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
                 new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
