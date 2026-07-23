@@ -319,7 +319,12 @@
                         "eventType": "Event type",
                         "eventSourceId": "Event source",
                         "occurred": "Occurred"
-                    }
+                    },
+                    "eventSourceId": {
+                        "placeholder": "Filter by event source id",
+                        "help": "Filters the entire sequence on the server."
+                    },
+                    "pageScopedNote": "Column filters below apply only to the currently loaded page."
                 },
                 "dialogs": {
                     "appendEvent": {
