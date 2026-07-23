@@ -28,7 +28,15 @@
         <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <!-- The Microsoft.IdentityModel.* family is pinned as one unit so a fresh restore cannot float part
+             of it to a newer version and trip the IDX00001 same-version check (warnings-as-errors). -->
+        <PackageReference Include="Microsoft.IdentityModel.Abstractions" />
         <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+        <PackageReference Include="Microsoft.IdentityModel.Logging" />
+        <PackageReference Include="Microsoft.IdentityModel.Protocols" />
+        <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
+        <PackageReference Include="Microsoft.IdentityModel.Tokens" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
         <PackageReference Include="OpenIddict.AspNetCore" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
