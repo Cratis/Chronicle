@@ -41,7 +41,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
     readonly int? _maxSendMessageSize;
-    readonly ITaskFactory _tasks;
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
@@ -55,10 +54,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly IChronicleServerAddressResolver _serverAddressResolver;
     readonly ILoadBalancerStrategy _loadBalancerStrategy;
     readonly SemaphoreSlim _connectLock = new(1, 1);
+    readonly ConnectionWatchdog _watchDog;
     ChronicleServerAddress? _currentServerAddress;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
-    DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
     IServices _services;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
@@ -114,7 +113,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _maxReceiveMessageSize = maxReceiveMessageSize;
         _maxSendMessageSize = maxSendMessageSize;
         Lifecycle = connectionLifecycle;
-        _tasks = tasks;
         _correlationIdAccessor = correlationIdAccessor;
         _cancellationToken = cancellationToken;
         _logger = logger;
@@ -124,6 +122,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
         _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation);
+        _watchDog = new ConnectionWatchdog(
+            tasks,
+            OnSessionDropped,
+            Connect,
+            loggerFactory.CreateLogger<ConnectionWatchdog>(),
+            cancellationToken);
 
         _cancellationToken.Register(() =>
         {
@@ -278,7 +282,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
 
         _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
-        _lastKeepAlive = DateTimeOffset.UtcNow;
+        _watchDog.NotifyKeepAlive();
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _keepAliveSubscription = _connectionService.Connect(
@@ -305,7 +309,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         finally
         {
-            StartWatchDog();
+            _watchDog.Start();
         }
     }
 
@@ -392,7 +396,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _connectTcs?.SetResult();
         }
-        _lastKeepAlive = DateTimeOffset.UtcNow;
+        _watchDog.NotifyKeepAlive();
 
         if (!Debugger.IsAttached)
         {
@@ -400,43 +404,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
-    void StartWatchDog()
+    async Task OnSessionDropped()
     {
-        _ = _tasks.Run(
-            async () =>
-            {
-                while (!_cancellationToken.IsCancellationRequested)
-                {
-                    await _tasks.Delay(1000, _cancellationToken);
-                    var delta = DateTimeOffset.UtcNow.Subtract(_lastKeepAlive);
-                    if (delta.TotalSeconds > 5)
-                    {
-                        break;
-                    }
-                }
-
-                if (_connectTcs?.Task.IsCompleted == true)
-                {
-                    _logger.Disconnected();
-                    await Lifecycle.Disconnected();
-                }
-                _logger.Reconnecting();
-                try
-                {
-                    await Connect();
-                }
-                catch (OperationCanceledException)
-                {
-                    // Expected on shutdown — let the task exit.
-                }
-                catch (Exception ex)
-                {
-                    // Registration failed (application code issue). Log prominently so the developer
-                    // can diagnose and fix the problem. The new watchdog started inside ConnectInternal's
-                    // finally block will continue monitoring the physical connection.
-                    _logger.RegistrationFailed(ex);
-                }
-            },
-            _cancellationToken);
+        if (_connectTcs?.Task.IsCompleted == true)
+        {
+            _logger.Disconnected();
+            await Lifecycle.Disconnected();
+        }
     }
 }
