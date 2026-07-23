@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Connections.for_OAuthTokenProvider;
+namespace Cratis.Chronicle.Connections.for_OAuthTokenProvider.when_refreshing;
 
-public class when_refreshing : given.an_oauth_token_provider
+public class and_endpoint_is_unreachable : given.an_oauth_token_provider
 {
     Exception _exception;
 
