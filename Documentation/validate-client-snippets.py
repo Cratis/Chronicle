@@ -78,6 +78,9 @@ BODY_SNIPPETS = {
         ISiloBuilder siloBuilder = default!;
         KernelStorageSql::Cratis.Chronicle.Configuration.ChronicleOptions options = new();
     """,
+    "hosting/configuration/storage/in-memory": """
+        ISiloBuilder siloBuilder = default!;
+    """,
 }
 
 # Declaration-style snippets that need a namespace wrapper with aliases for Kernel-only
@@ -275,6 +278,9 @@ def generate_project() -> str:
             <Aliases>KernelStorageSql</Aliases>
         </ProjectReference>
         <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj">
+            <Aliases>KernelStorageSql</Aliases>
+        </ProjectReference>
+        <ProjectReference Include="../../Source/Kernel/Storage.InMemory/Storage.InMemory.csproj">
             <Aliases>KernelStorageSql</Aliases>
         </ProjectReference>
         <PackageReference Include="MongoDB.Driver" />
