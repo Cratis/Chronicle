@@ -4,9 +4,11 @@
 using System.Diagnostics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Configuration;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Clients;
 
@@ -15,14 +17,17 @@ namespace Cratis.Chronicle.Clients;
 /// </summary>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 [KeepAlive]
 [ConnectedClientsPlacement]
 public class ConnectedClients(
     ILogger<ConnectedClients> logger,
-    [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter) : Grain, IConnectedClients
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
+    IOptions<ChronicleOptions> options) : Grain, IConnectedClients
 {
-    static readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(2);
-    static readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(30);
+    readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
+    readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
+    readonly int _staleThresholdSeconds = options.Value.ConnectedClients.StaleThresholdSeconds;
     readonly List<ConnectedClient> _clients = [];
     readonly List<DateTimeOffset> _reservations = [];
     IGrainTimer? _reviseConnectedClientsTimer;
@@ -148,9 +153,9 @@ public class ConnectedClients(
         {
             if (connectedClient.IsRunningWithDebugger) continue;
 
-            if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-5))
+            if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-_staleThresholdSeconds))
             {
-                await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 5 seconds ago");
+                await OnClientDisconnected(connectedClient.ConnectionId, $"Last seen was more than {_staleThresholdSeconds} seconds ago");
             }
         }
     }
