@@ -135,7 +135,7 @@ public class EventSequenceStorage(
 
             if (existingEvent is not null)
             {
-                return new DuplicateEventSequenceNumber(sequenceNumber);
+                return new DuplicateEventSequenceNumber(await GetNextAvailableSequenceNumber(scope));
             }
 
             var eventEntry = EventEntryConverter.ToEventEntry(
@@ -253,7 +253,7 @@ public class EventSequenceStorage(
 
                 if (existingEvent is not null)
                 {
-                    return new DuplicateEventSequenceNumber(eventToAppend.SequenceNumber);
+                    return new DuplicateEventSequenceNumber(await GetNextAvailableSequenceNumber(scope));
                 }
 
                 var eventEntry = EventEntryConverter.ToEventEntry(
@@ -751,6 +751,30 @@ public class EventSequenceStorage(
         query = query.Take(limit);
 
         return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+    }
+
+    /// <summary>
+    /// Resolves the next-available sequence number for the duplicate-append recovery path.
+    /// </summary>
+    /// <param name="scope">The <see cref="DbContextScope{EventSequenceDbContext}"/> for the event sequence table.</param>
+    /// <returns>The next FREE <see cref="EventSequenceNumber"/> the append grain should jump to.</returns>
+    /// <remarks>
+    /// The <see cref="DuplicateEventSequenceNumber"/> contract is that this value is the next FREE
+    /// slot the append grain jumps to (<c>State.SequenceNumber = nextAvailable</c>) before it
+    /// retries. Returning the occupied number that was just attempted would make the grain retry the
+    /// same number, whose pre-read finds the same existing row again, returning the same number
+    /// forever — an infinite livelock that permanently stalls the event sequence when the grain's
+    /// persisted <c>State.SequenceNumber</c> lags the real tail (silo restart, reset grain state, or
+    /// a replayed append). Mirror the MongoDB and in-memory backends: the true next-available is the
+    /// current stored tail plus one. A duplicate guarantees at least one row exists, but the empty
+    /// case is guarded anyway.
+    /// </remarks>
+    static async Task<EventSequenceNumber> GetNextAvailableSequenceNumber(DbContextScope<EventSequenceDbContext> scope)
+    {
+        var highestSequenceNumber = await scope.DbContext.Events.MaxAsync(e => (ulong?)e.SequenceNumber);
+        return highestSequenceNumber.HasValue
+            ? new EventSequenceNumber(highestSequenceNumber.Value).Next()
+            : EventSequenceNumber.First;
     }
 
     async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry)
