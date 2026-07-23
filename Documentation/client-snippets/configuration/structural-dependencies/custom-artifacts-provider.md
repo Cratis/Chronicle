@@ -22,6 +22,7 @@ public class StructuralDepsMyArtifactsProvider : IClientArtifactsProvider
     public IEnumerable<Type> Projections => [typeof(StructuralDepsBorrowedBooksProjection)];
     public IEnumerable<Type> ModelBoundProjections => [];
     public IEnumerable<Type> Reactors => [];
+    public IEnumerable<Type> ReadModelReactors => [];
     public IEnumerable<Type> Reducers => [];
     public IEnumerable<Type> ReactorMiddlewares => [];
     public IEnumerable<Type> ComplianceForTypesProviders => [];

@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events;
 using ContractReadModels = Cratis.Chronicle.Contracts.ReadModels;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -96,11 +97,25 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
                 }
 
                 var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
+                var changeContext = EventContext.From(
+                    _eventStore.Name,
+                    changeset.Namespace,
+                    EventType.Unknown,
+                    EventSourceType.Default,
+                    changeset.ModelKey,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    changeset.EventSequenceNumber,
+                    changeset.CorrelationId,
+                    changeset.Occurred);
+
                 _observable.OnNext(new ReadModelChangeset<TReadModel>(
                     changeset.Namespace,
                     changeset.ModelKey,
                     readModel,
-                    changeset.Removed));
+                    changeset.Removed,
+                    ToChangeType(changeset.ChangeType),
+                    changeContext));
             },
             _ => ResetForReconnect(),
             ResetForReconnect);
@@ -113,6 +128,13 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         _stopped = null;
         Dispose();
     }
+
+    static ReadModelChangeType ToChangeType(ContractReadModels.ReadModelChangeType changeType) => changeType switch
+    {
+        ContractReadModels.ReadModelChangeType.Added => ReadModelChangeType.Added,
+        ContractReadModels.ReadModelChangeType.Removed => ReadModelChangeType.Removed,
+        _ => ReadModelChangeType.Modified
+    };
 
     Task ClientConnected()
     {

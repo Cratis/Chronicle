@@ -37,6 +37,8 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
+/// <param name="changesetMediator">The <see cref="IProjectionChangesetMediator"/> for forwarding watched changesets to client streams.</param>
+/// <param name="localSiloDetails">The <see cref="ILocalSiloDetails"/> for pinning the watch subscriber grain to this silo.</param>
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
 /// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
@@ -45,6 +47,8 @@ internal sealed class ReadModels(
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
+    IProjectionChangesetMediator changesetMediator,
+    ILocalSiloDetails localSiloDetails,
     IReadModelsCompliance complianceHelper,
     IEventCompliance eventCompliance,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
@@ -485,33 +489,63 @@ internal sealed class ReadModels(
             if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
             {
                 var schema = definition.GetSchemaForLatestGeneration();
+                var subscriptionId = Guid.NewGuid();
 
-                // Direct grain-to-observer notification — replaces Orleans MemoryStreams pub-sub
-                // whose subscriber propagation lagged the first publish under load and silently
-                // dropped early changesets. The notifier grain dispatches synchronously the moment
-                // Subscribe returns, so no warmup or wait is needed between Subscribed and the
-                // first appended event.
-                var forwardingObserver = new ChangesetForwardingObserver(
-                    observer,
-                    (namespaceName, readModel) => ReleaseJsonForProjectedReadModel(request.EventStore, namespaceName, schema, readModel),
-                    jsonSerializerOptions);
-                var observerReference = grainFactory.CreateObjectReference<IProjectionChangesetObserver>(forwardingObserver);
+                // Register the forwarder that decrypts a changeset and pushes it onto this client's gRPC
+                // stream into this silo's changeset mediator. The per-watch subscriber grain below is
+                // pinned to this silo, so the notifier -> subscriber -> mediator -> stream path ends with
+                // a strictly in-process hop. This mirrors the reducer/reactor delivery pattern and
+                // replaces the previous CreateObjectReference grain-observer callback, whose one-way
+                // dispatch from the notifier grain was silently dropped on slower backends.
+                changesetMediator.Subscribe(subscriptionId, async (namespaceName, readModelKey, readModelInstance, change) =>
+                {
+                    // Decrypt through the shared release path so observable queries resolve the compliance
+                    // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
+                    var decrypted = await ReleaseJsonForProjectedReadModel(request.EventStore, namespaceName, schema, readModelInstance);
+                    observer.OnNext(new ReadModelChangeset
+                    {
+                        Namespace = namespaceName,
+                        ModelKey = readModelKey,
+                        ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
+                        Removed = change.ChangeType == Concepts.ReadModels.ReadModelChangeType.Removed,
+                        ChangeType = change.ChangeType switch
+                        {
+                            Concepts.ReadModels.ReadModelChangeType.Added => Contracts.ReadModels.ReadModelChangeType.Added,
+                            Concepts.ReadModels.ReadModelChangeType.Removed => Contracts.ReadModels.ReadModelChangeType.Removed,
+                            _ => Contracts.ReadModels.ReadModelChangeType.Modified
+                        },
+                        EventSequenceNumber = change.EventSequenceNumber.Value,
+                        Occurred = change.Occurred,
+                        CorrelationId = change.CorrelationId.Value
+                    });
+                });
+
+                // The subscriber grain carries this silo's address in its key so [ConnectedObserverPlacement]
+                // pins it here; the subscription id travels in the event source id slot. The notifier reaches
+                // it as an ordinary — reliably routed — grain reference rather than an object reference.
+                var subscriberKey = new ObserverSubscriberKey(
+                    new ObserverId(definition.ObserverIdentifier.Value),
+                    request.EventStore,
+                    request.Namespace,
+                    request.EventSequenceId,
+                    subscriptionId.ToString("N"),
+                    localSiloDetails.SiloAddress.ToParsableString());
+                var subscriber = grainFactory.GetGrain<IReadModelChangesetSubscriber>(subscriberKey);
                 var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
-                await notifier.Subscribe(observerReference);
+                await notifier.Subscribe(subscriber);
 
                 try
                 {
-                    // Notify the client that the changeset notifier subscription is now active.
-                    // Direct grain dispatch means any changeset produced from this point on will
-                    // reach the forwarding observer below.
+                    // Notify the client that the watch subscription is now active. Any changeset produced
+                    // from this point on reaches the forwarder registered above.
                     observer.OnNext(new ReadModelChangeset { Subscribed = true });
 
                     await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
                 }
                 finally
                 {
-                    await notifier.Unsubscribe(observerReference).ConfigureAwait(false);
-                    grainFactory.DeleteObjectReference<IProjectionChangesetObserver>(observerReference);
+                    await notifier.Unsubscribe(subscriber).ConfigureAwait(false);
+                    changesetMediator.Unsubscribe(subscriptionId);
                 }
             }
             else
@@ -787,29 +821,6 @@ internal sealed class ReadModels(
             }
 
             return null;
-        }
-    }
-
-    sealed class ChangesetForwardingObserver(
-        IObserver<ReadModelChangeset> observer,
-        Func<Concepts.EventStoreNamespaceName, JsonObject, Task<JsonObject>> releaseCompliance,
-        JsonSerializerOptions jsonSerializerOptions) : IProjectionChangesetObserver
-    {
-        public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel)
-        {
-            // Decrypt through the shared release path so observable queries resolve the compliance subject exactly
-            // like one-shot queries (explicit __subject, else inferred from _id/id). Streaming the raw changeset —
-            // as this path used to — leaves a document that carries no __subject undecrypted, so an observable PII
-            // query would stream ciphertext while the equivalent one-shot query decrypts.
-            var decrypted = await releaseCompliance(namespaceName, readModel);
-
-            observer.OnNext(new ReadModelChangeset
-            {
-                Namespace = namespaceName,
-                ModelKey = readModelKey,
-                ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
-                Removed = false
-            });
         }
     }
 
