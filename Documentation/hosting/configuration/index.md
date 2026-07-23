@@ -31,7 +31,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Configuration File](configuration-file.md) - Structure and location of `chronicle.json`.
 - [Root Properties](root-properties.md) - Ports and health check settings.
 - [Features](features.md) - Toggle API, Workbench, and OAuth authority.
-- [Storage](storage.md) - Configure the storage provider and connection details.
+- [Storage](storage) - Configure the storage provider and connection details.
 - [Observers](observers.md) - Retry and timeout settings for observer subscriptions.
 - [Read Models](read-models.md) - Configure replay retention for replay-generated read model versions.
 - [Events](events.md) - Configure event queues.
