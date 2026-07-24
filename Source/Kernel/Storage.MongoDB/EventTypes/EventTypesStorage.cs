@@ -52,7 +52,7 @@ public class EventTypesStorage(
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
 
     /// <inheritdoc/>
-    public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
@@ -68,12 +68,12 @@ public class EventTypesStorage(
             .Set(_ => _.Tombstone, type.Tombstone)
             .Set($"{nameof(EventType.Schemas).ToCamelCase()}.{generationKey}", schemaDocument);
 
-        await GetCollection().UpdateOneAsync(
+        var result = await GetCollection().UpdateOneAsync(
             _ => _.Id == type.Id,
             update,
             new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
 
-        Invalidate(type.Id);
+        return InvalidateIfMutated(type.Id, result.ModifiedCount > 0 || result.UpsertedId is not null);
     }
 
     /// <inheritdoc/>
@@ -141,18 +141,18 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Register(EventTypeDefinition definition)
+    public async Task<bool> Register(EventTypeDefinition definition)
     {
         logger.Registering(definition.Id, EventTypeGeneration.First, eventStore);
 
         var mongoEventType = definition.ToMongoDB();
 
-        await GetCollection().ReplaceOneAsync(
+        var result = await GetCollection().ReplaceOneAsync(
             _ => _.Id == definition.Id,
             mongoEventType,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
 
-        Invalidate(definition.Id);
+        return InvalidateIfMutated(definition.Id, result.ModifiedCount > 0 || result.UpsertedId is not null);
     }
 
     /// <inheritdoc/>
@@ -249,6 +249,16 @@ public class EventTypesStorage(
                 _schemasByTypeAndGeneration.TryRemove(key, out _);
             }
         }
+    }
+
+    bool InvalidateIfMutated(EventTypeId eventTypeId, bool mutated)
+    {
+        if (mutated)
+        {
+            Invalidate(eventTypeId);
+        }
+
+        return mutated;
     }
 
     IMongoCollection<EventType> GetCollection() => sharedDatabase.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);

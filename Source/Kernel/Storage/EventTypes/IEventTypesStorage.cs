@@ -20,15 +20,20 @@ public interface IEventTypesStorage
     /// <param name="schema"><see cref="JsonSchema"/> to register.</param>
     /// <param name="owner">The <see cref="EventTypeOwner">owner</see> of the event type.</param>
     /// <param name="source">The <see cref="EventTypeSource">source</see> of the event type.</param>
-    /// <returns>Async task.</returns>
-    Task Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code);
+    /// <returns>True if the stored event type was created or changed, false if the registration was a no-op.</returns>
+    /// <remarks>
+    /// The return value tells the caller whether peers must invalidate their caches: a genuine change - a new
+    /// generation, or a different owner, source, or tombstone - returns true; re-registering an already-stored
+    /// generation with identical metadata returns false, so routine reconnect re-registrations do not fan out.
+    /// </remarks>
+    Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code);
 
     /// <summary>
     /// Register a complete <see cref="EventTypeDefinition"/> with all generations and migrations.
     /// </summary>
     /// <param name="definition">The <see cref="EventTypeDefinition"/> to register.</param>
-    /// <returns>Async task.</returns>
-    Task Register(EventTypeDefinition definition);
+    /// <returns>True if the stored event type was created or changed, false if the registration was a no-op.</returns>
+    Task<bool> Register(EventTypeDefinition definition);
 
     /// <summary>
     /// Get the latest <see cref="EventTypeSchema">event schema</see> for all registered <see cref="EventType">event types</see>.

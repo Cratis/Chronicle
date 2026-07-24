@@ -22,7 +22,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
-    public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
         await using var scope = await database.EventStore(eventStore);
 
@@ -34,7 +34,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
             var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[type.Generation]);
             if (existingSchema.ToJson() == schema.ToJson())
             {
-                return;
+                return false;
             }
         }
 
@@ -48,10 +48,11 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
+        return true;
     }
 
     /// <inheritdoc/>
-    public async Task Register(EventTypeDefinition definition)
+    public async Task<bool> Register(EventTypeDefinition definition)
     {
         await using var scope = await database.EventStore(eventStore);
 
@@ -62,6 +63,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
+        return true;
     }
 
     /// <inheritdoc/>

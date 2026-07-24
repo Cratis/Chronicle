@@ -24,11 +24,11 @@ namespace Cratis.Chronicle.Services.Events;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grain references.</param>
-/// <param name="eventTypesChangedNotifier">Notifier for broadcasting event type changes to every silo so their caches evict.</param>
+/// <param name="eventTypesCacheClient">Client for evicting event type caches on every silo when a registration changes one.</param>
 internal sealed class EventTypes(
     IStorage storage,
     IGrainFactory grainFactory,
-    Cratis.Chronicle.EventTypes.IEventTypesChangedNotifier eventTypesChangedNotifier) : IEventTypes
+    Cratis.Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient) : IEventTypes
 {
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
@@ -73,6 +73,7 @@ internal sealed class EventTypes(
                 newGenerations.Add((new EventTypeGeneration(eventType.Type.Generation), eventType.Schema));
             }
 
+            bool mutated;
             if (eventType.Migrations.Count > 0 || eventType.Generations.Count > 1)
             {
                 // Register using full definition with all generations and migrations
@@ -119,24 +120,23 @@ internal sealed class EventTypes(
                     generations,
                     migrations);
 
-                await eventTypesStorage.Register(definition);
+                mutated = await eventTypesStorage.Register(definition);
             }
             else
             {
-                await eventTypesStorage.Register(
+                mutated = await eventTypesStorage.Register(
                     eventType.Type.ToChronicle(),
                     schema,
                     owner,
                     source);
             }
 
-            // Tell every silo to evict its cache when this registration may have added or changed a
-            // generation - a brand-new type, a migration, or a multi-generation definition. A plain
-            // re-registration of an already-known single generation is left untouched to avoid needless
-            // cluster-wide eviction on client reconnects.
-            if (newGenerations.Count > 0 || eventType.Migrations.Count > 0 || eventType.Generations.Count > 1)
+            // Evict the event type cache on every silo whenever the registration actually changed the stored
+            // document - a new generation, or a different owner, source, or tombstone. Idempotent
+            // re-registrations report no change, so client reconnects do not trigger cluster-wide eviction.
+            if (mutated)
             {
-                await eventTypesChangedNotifier.Notify(request.EventStore, eventTypeId);
+                await eventTypesCacheClient.Invalidate(request.EventStore, eventTypeId);
             }
 
             // Append system events for newly discovered event type generations.
@@ -169,7 +169,7 @@ internal sealed class EventTypes(
     {
         var chronicleType = request.Type.Type.ToChronicle();
         var schema = await JsonSchema.FromJsonAsync(request.Type.Schema);
-        await storage
+        var mutated = await storage
             .GetEventStore(request.EventStore).EventTypes
             .Register(
                 chronicleType,
@@ -177,7 +177,10 @@ internal sealed class EventTypes(
                 (Concepts.Events.EventTypeOwner)(int)request.Type.Owner,
                 (Concepts.Events.EventTypeSource)(int)request.Type.Source);
 
-        await eventTypesChangedNotifier.Notify(request.EventStore, chronicleType.Id);
+        if (mutated)
+        {
+            await eventTypesCacheClient.Invalidate(request.EventStore, chronicleType.Id);
+        }
     }
 
     /// <inheritdoc/>

@@ -9,13 +9,13 @@ using KernelCore::Cratis.Chronicle.EventTypes;
 namespace Cratis.Chronicle.Testing.EventSequences;
 
 /// <summary>
-/// Represents a no-op <see cref="IEventTypesChangedNotifier"/> for the single-process test harness, where
-/// there are no peer silos to notify.
+/// Represents a no-op <see cref="IEventTypesCacheClient"/> for the single-process test harness, where there
+/// are no peer silos to invalidate.
 /// </summary>
-internal sealed class NoOpEventTypesChangedNotifier : IEventTypesChangedNotifier
+internal sealed class NoOpEventTypesCacheClient : IEventTypesCacheClient
 {
     /// <inheritdoc/>
-    public Task Notify(
+    public Task Invalidate(
         KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName eventStore,
         KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId eventTypeId) => Task.CompletedTask;
 }
