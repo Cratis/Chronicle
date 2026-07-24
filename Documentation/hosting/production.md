@@ -113,3 +113,77 @@ Chronicle supports horizontal scaling through Orleans clustering:
 2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
 3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
 4. **Shared Storage**: All instances must connect to the same MongoDB cluster
+
+> [!WARNING]
+> Every multi-node deployment **must** set the clustering type to `MongoDB`. The default is `Localhost`,
+> which is single-node membership. Two containers left on the default that share one MongoDB do **not**
+> join as one cluster - each forms its own isolated single-node cluster over the same data, a split-brain
+> topology reported by no error at startup. The server logs a warning when it detects localhost clustering
+> against non-local storage, but it does not refuse to start.
+
+Set the clustering type explicitly on every node, and give every node the same cluster and service id:
+
+```bash
+Cratis__Chronicle__Clustering__Type=MongoDB
+Cratis__Chronicle__Clustering__ClusterId=chronicle
+Cratis__Chronicle__Clustering__ServiceId=chronicle
+```
+
+See [Clustering](configuration/clustering.md) for the full set of clustering properties.
+
+### Two-node Docker Compose
+
+Both nodes run the same image, connect to the same MongoDB, and set `Cratis__Chronicle__Clustering__Type=MongoDB`
+so they form a single cluster over the shared storage:
+
+```yaml
+services:
+  chronicle-1:
+    image: cratis/chronicle:latest
+    ports:
+      - "35001:35000"
+    environment:
+      Cratis__Chronicle__Storage__ConnectionDetails: "mongodb://mongodb:27017"
+      Cratis__Chronicle__Clustering__Type: "MongoDB"
+      Cratis__Chronicle__Clustering__ClusterId: "chronicle"
+      Cratis__Chronicle__Clustering__ServiceId: "chronicle"
+      # Port 35000 requires a TLS certificate - see the TLS Configuration guide.
+      Cratis__Chronicle__Tls__CertificatePath: "/certs/chronicle.pfx"
+    volumes:
+      - ./certs:/certs:ro
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  chronicle-2:
+    image: cratis/chronicle:latest
+    ports:
+      - "35002:35000"
+    environment:
+      Cratis__Chronicle__Storage__ConnectionDetails: "mongodb://mongodb:27017"
+      Cratis__Chronicle__Clustering__Type: "MongoDB"
+      Cratis__Chronicle__Clustering__ClusterId: "chronicle"
+      Cratis__Chronicle__Clustering__ServiceId: "chronicle"
+      Cratis__Chronicle__Tls__CertificatePath: "/certs/chronicle.pfx"
+    volumes:
+      - ./certs:/certs:ro
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+```
+
+Each container reaches the others over the Compose network by service name, so the default advertised
+address works. When you instead run multiple nodes directly on one host, set
+`Cratis__Chronicle__Clustering__AdvertisedIP` and distinct `SiloPort`/`GatewayPort` values per node - see
+[Clustering](configuration/clustering.md).
