@@ -23,6 +23,7 @@ public static class ObserverStateConverters
             RunningState = state.RunningState,
             ReplayingPartitions = state.ReplayingPartitions,
             CatchingUpPartitions = state.CatchingUpPartitions,
+            InFlightPartitions = state.InFlightPartitions,
             FailedPartitionCount = state.FailedPartitionCount,
             IsReplaying = state.IsReplaying,
             SubscribesToAllEvents = state.SubscribesToAllEvents,
@@ -51,6 +52,7 @@ public static class ObserverStateConverters
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            InFlightPartitions = state.InFlightPartitions.ToHashSet(),
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
                 kvp => (Concepts.Events.EventTypeId)kvp.Key,
@@ -76,6 +78,7 @@ public static class ObserverStateConverters
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            InFlightPartitions = state.InFlightPartitions.ToHashSet(),
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
                 kvp => (Concepts.Events.EventTypeId)kvp.Key,

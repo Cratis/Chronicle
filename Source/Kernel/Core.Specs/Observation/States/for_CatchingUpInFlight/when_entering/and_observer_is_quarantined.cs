@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
@@ -12,15 +11,12 @@ public class and_observer_is_quarantined : given.a_catching_up_in_flight_state
 {
     Key _partition = "some-partition";
 
-    void Establish()
-    {
-        _storedState = _storedState with { RunningState = ObserverRunningState.Quarantined };
-        _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>())
-            .Returns(
-            [
-                new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _partition, EventSequenceNumber = (EventSequenceNumber)1UL }
-            ]);
-    }
+    void Establish() =>
+        _storedState = _storedState with
+        {
+            RunningState = ObserverRunningState.Quarantined,
+            InFlightPartitions = new HashSet<Key> { _partition }
+        };
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
