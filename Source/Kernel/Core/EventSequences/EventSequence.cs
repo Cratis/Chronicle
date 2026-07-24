@@ -93,12 +93,15 @@ public class EventSequence(
     IMeterScope<EventSequence>? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
+    IReadOnlyCollection<IConstraintDefinition> _knownConstraints = [];
+    ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverDefinitionsStorage ObserverStorage => _observerDefinitionsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Observers;
     IClosedStreamsConstraintStorage ClosedStreamsStorage => _closedStreamsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetClosedStreamsConstraints(_eventSequenceId);
     ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage);
+    IConstraints ConstraintsGrain => GrainFactory.GetGrain<IConstraints>(new ConstraintsKey(_eventSequenceKey.EventStore));
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -113,6 +116,8 @@ public class EventSequence(
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        _knownConstraints = await ConstraintsGrain.GetDefinitions();
+        _constraintsVersion = await ConstraintsGrain.GetVersion();
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
@@ -239,6 +244,7 @@ public class EventSequence(
     {
         try
         {
+            await RefreshConstraintsIfChanged();
             var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, subject);
             if (getValidAndCompliantEvent.TryGetError(out var error))
             {
@@ -287,6 +293,7 @@ public class EventSequence(
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
+            await RefreshConstraintsIfChanged();
             events = events as IList<EventToAppend> ?? events.ToList();
 
             // Validate sequentially with a shared set of batch claims so that two events in the same batch
@@ -809,21 +816,51 @@ public class EventSequence(
     async Task OnConstraintsChanged(ConstraintsChanged payload)
     {
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-
-        var changedConstraintsRequiringReindex = payload.Changes
-            .Where(_ => _.RequiresReindex)
-            .ToArray();
-
-        if (changedConstraintsRequiringReindex.Length > 0)
-        {
-            var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-            await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changedConstraintsRequiringReindex));
-        }
+        await StartReindexJob(payload.Changes.Where(_ => _.RequiresReindex).ToArray());
     }
 
     Task OnConstraintsChangedError(Exception exception)
     {
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Re-reads the constraint validators when the constraints registered for the event store have changed since this
+    /// grain last observed them, starting a reindex job for any unique constraints whose index must be rebuilt.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The <see cref="WellKnownBroadcastChannelNames.ConstraintsChanged"/> broadcast never reaches sequence grains
+    /// (they are keyed differently to the constraints grain and are not implicit channel subscribers), so constraint
+    /// changes are picked up here instead by a cheap <see cref="ConstraintsVersion"/> check on each append. The version
+    /// is a content-derived stamp, so it is stable across constraints-grain deactivation and consistent across silos —
+    /// the validators are only re-read, and a reindex only started, when the constraints genuinely changed.
+    /// </remarks>
+    async Task RefreshConstraintsIfChanged()
+    {
+        var version = await ConstraintsGrain.GetVersion();
+        if (version == _constraintsVersion)
+        {
+            return;
+        }
+
+        var previous = _knownConstraints;
+        var current = await ConstraintsGrain.GetDefinitions();
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        _knownConstraints = current;
+        _constraintsVersion = version;
+        await StartReindexJob(ConstraintDefinitionComparison.GetReindexChanges(previous, current));
+    }
+
+    async Task StartReindexJob(IReadOnlyCollection<ConstraintDefinitionChange> changesRequiringReindex)
+    {
+        if (changesRequiringReindex.Count == 0)
+        {
+            return;
+        }
+
+        var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changesRequiringReindex));
     }
 
     async Task RewindPartitionForAffectedObservers(
