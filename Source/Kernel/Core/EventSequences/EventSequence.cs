@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
@@ -35,6 +36,7 @@ using Cratis.Monads;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 using IObserver = Cratis.Chronicle.Observation.IObserver;
@@ -53,6 +55,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
+/// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
@@ -66,6 +69,7 @@ public class EventSequence(
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
+    IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     /// <summary>
@@ -95,6 +99,8 @@ public class EventSequence(
     IConstraintValidation? _constraints;
     IReadOnlyCollection<IConstraintDefinition> _knownConstraints = [];
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
+    int _statePersistenceInterval = 1;
+    int _appendsSinceStateWrite;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
@@ -118,9 +124,27 @@ public class EventSequence(
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
         _knownConstraints = await ConstraintsGrain.GetDefinitions();
         _constraintsVersion = await ConstraintsGrain.GetVersion();
+        _statePersistenceInterval = Math.Max(1, options.Value.Events.StatePersistenceInterval);
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Flushes any state accumulated since the last periodic write so a subsequent activation can warm-start from it.
+    /// Correctness does not depend on this write — <see cref="EventSequencesStorageProvider"/> rebuilds the state from
+    /// the event tail on activation — it only lets the next activation skip re-deriving the per-event-type tails.
+    /// </remarks>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        if (_appendsSinceStateWrite > 0)
+        {
+            _appendsSinceStateWrite = 0;
+            await WriteStateAsync();
+        }
+
+        await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -384,7 +408,7 @@ public class EventSequence(
                 _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
             }
 
-            await WriteStateAsync();
+            await PersistStateAfterAppends(appendedCount);
             await (_appendedEventsQueues?.Enqueue(appendedEventsList.ToList()) ?? Task.CompletedTask);
 
             foreach (var (constraintContext, eventToAppend) in constraintContexts.Zip(eventsToAppend))
@@ -601,7 +625,7 @@ public class EventSequence(
             var appendedSequenceNumber = State.SequenceNumber;
             State.SequenceNumber = appendedSequenceNumber.Next();
             State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
-            await WriteStateAsync();
+            await PersistStateAfterAppends(1);
 
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
@@ -761,7 +785,7 @@ public class EventSequence(
             });
     }
 
-    async Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName, EventSequenceNumber nextAvailableSequenceNumber)
+    Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName, EventSequenceNumber nextAvailableSequenceNumber)
     {
         logger.DuplicateEvent(
             _eventSequenceKey.EventStore,
@@ -772,7 +796,7 @@ public class EventSequence(
             State.SequenceNumber);
         _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
         State.SequenceNumber = nextAvailableSequenceNumber;
-        await WriteStateAsync();
+        return Task.CompletedTask;
     }
 
     async Task HandleFailedAppendManyResult(
@@ -789,7 +813,7 @@ public class EventSequence(
             errorType => HandleAppendedDuplicateEventForMany(eventsToAppend, errorType.NextAvailableSequenceNumber));
     }
 
-    async Task HandleAppendedDuplicateEventForMany(List<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
+    Task HandleAppendedDuplicateEventForMany(List<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
     {
         logger.DuplicateEventInMany(
             _eventSequenceKey.EventStore,
@@ -810,6 +834,31 @@ public class EventSequence(
         }
 
         State.SequenceNumber = sequenceNumber;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Persists the event sequence state as a warm-start snapshot once at least
+    /// <see cref="Configuration.Events.StatePersistenceInterval"/> appends have accumulated since the last write,
+    /// rather than on every append.
+    /// </summary>
+    /// <param name="appendedCount">Number of events appended by the current operation.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The persisted state is only an optimization: <see cref="EventSequencesStorageProvider"/> rebuilds
+    /// <see cref="EventSequenceState.SequenceNumber"/> from the actual event tail — and the per-event-type tails via
+    /// aggregation — on every activation, so a crash between these periodic writes loses no sequence-number
+    /// correctness. The next append still gets the right number.
+    /// </remarks>
+    async Task PersistStateAfterAppends(int appendedCount)
+    {
+        _appendsSinceStateWrite += appendedCount;
+        if (_appendsSinceStateWrite < _statePersistenceInterval)
+        {
+            return;
+        }
+
+        _appendsSinceStateWrite = 0;
         await WriteStateAsync();
     }
 

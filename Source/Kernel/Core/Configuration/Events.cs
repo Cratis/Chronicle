@@ -28,4 +28,16 @@ public class Events
     /// A value of 0 means unbounded (no backpressure). Defaults to 2000 batches.
     /// </remarks>
     public int QueueBoundedCapacity { get; init; } = 2000;
+
+    /// <summary>
+    /// Number of appends after which an event sequence persists its state as a warm-start snapshot.
+    /// </summary>
+    /// <remarks>
+    /// Event sequence state (the next sequence number and the per-event-type tails) is authoritative in the
+    /// event tail and is rebuilt from it on activation, so it no longer needs to be written on every append.
+    /// It is instead flushed every this many appends and on deactivation, purely to let a subsequent activation
+    /// skip re-deriving the per-event-type tails. Correctness never depends on it: a crash between flushes loses
+    /// no sequence-number correctness. Defaults to 1000 appends.
+    /// </remarks>
+    public int StatePersistenceInterval { get; init; } = 1000;
 }
