@@ -58,6 +58,9 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
     public IInFlightEventsStorage InFlightEvents => throw new NotSupportedException();
 
     /// <inheritdoc/>
+    public IObserverHandledCountsStorage ObserverHandledCounts => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public IRecommendationStorage Recommendations => throw new NotSupportedException();
 
     /// <inheritdoc/>

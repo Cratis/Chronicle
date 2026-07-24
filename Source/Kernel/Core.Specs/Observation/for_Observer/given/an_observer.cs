@@ -52,6 +52,7 @@ public class an_observer : Specification
     protected IChronicleEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IInFlightEventsStorage _inFlightEventsStorage;
+    protected IObserverHandledCountsStorage _observerHandledCountsStorage;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventCompliance _eventCompliance;
     protected Observers _observersConfig;
@@ -69,15 +70,18 @@ public class an_observer : Specification
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
+        _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         _eventCompliance = Substitute.For<IEventCompliance>();
 
-        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage
+        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage / IObserverHandledCountsStorage
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
         _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
+        _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
+        _observerHandledCountsStorage.GetFor(Arg.Any<ObserverId>(), Arg.Any<Key>()).Returns(new Dictionary<EventTypeId, EventCount>());
 
         // By default, no schemas are known — events pass through unchanged.
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
