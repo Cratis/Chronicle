@@ -21,9 +21,6 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 public class EventTypesStorage : IEventTypesStorage
 {
     /// <inheritdoc/>
-    public Task Populate() => Task.CompletedTask;
-
-    /// <inheritdoc/>
     public Task Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
         Task.CompletedTask;
 

@@ -23,9 +23,6 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
 {
     /// <inheritdoc/>
-    public Task Populate() => Task.CompletedTask;
-
-    /// <inheritdoc/>
     public Task Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
         Task.CompletedTask;
 

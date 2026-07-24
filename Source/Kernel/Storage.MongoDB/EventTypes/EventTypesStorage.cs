@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -30,20 +29,6 @@ public class EventTypesStorage(
     IEventStoreDatabase sharedDatabase,
     ILogger<EventTypesStorage> logger) : IEventTypesStorage
 {
-    ConcurrentBag<EventType> _eventTypes = new();
-
-    /// <summary>
-    /// Populates the event types storage with existing event types from the database.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task Populate()
-    {
-        logger.Populating(eventStore);
-
-        using var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
-        _eventTypes = new ConcurrentBag<EventType>(await findResult.ToListAsync());
-    }
-
     /// <inheritdoc/>
     public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
@@ -126,10 +111,6 @@ public class EventTypesStorage(
         logger.Registering(definition.Id, EventTypeGeneration.First, eventStore);
 
         var mongoEventType = definition.ToMongoDB();
-
-        // Merge into existing event types in memory
-        _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != definition.Id));
-        _eventTypes.Add(mongoEventType);
 
         await GetCollection().ReplaceOneAsync(
             _ => _.Id == definition.Id,
