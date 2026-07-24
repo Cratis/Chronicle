@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Reactive;
+using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -48,41 +49,22 @@ public class EventTypesStorage(
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
-        var generationAsString = type.Generation.ToString();
+        var generationKey = type.Generation.ToString();
+        var schemaDocument = BsonDocument.Parse(schema.ToJson());
 
-        // Build the merged event type: preserve all existing schemas and add/update the current one
-        var schemas = new Dictionary<string, BsonDocument>();
-        var migrations = new List<EventTypeMigration>();
+        // Merge the incoming generation into the stored document by setting only its schema entry and the
+        // metadata fields. Other generations - which another silo may have registered - are left untouched,
+        // so a rolling deploy never clobbers generations this silo does not know about.
+        var update = Builders<EventType>.Update
+            .Set(_ => _.Owner, owner)
+            .Set(_ => _.Source, source)
+            .Set(_ => _.Tombstone, type.Tombstone)
+            .Set($"{nameof(EventType.Schemas).ToCamelCase()}.{generationKey}", schemaDocument);
 
-        var currentFromMemory = _eventTypes.FirstOrDefault(_ => _.Id == type.Id);
-        if (currentFromMemory is not null)
-        {
-            foreach (var (key, value) in currentFromMemory.Schemas)
-            {
-                schemas[key] = value;
-            }
-
-            if (currentFromMemory.Migrations is not null)
-            {
-                migrations.AddRange(currentFromMemory.Migrations);
-            }
-        }
-
-        schemas[generationAsString] = BsonDocument.Parse(schema.ToJson());
-
-        var mongoEventType = new EventType(type.Id, owner, source, type.Tombstone, schemas, migrations);
-
-        if (_eventTypes.Any(_ => _.Id == type.Id))
-        {
-            _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
-        }
-
-        _eventTypes.Add(mongoEventType);
-
-        await GetCollection().ReplaceOneAsync(
-            _ => _.Id == mongoEventType.Id,
-            mongoEventType,
-            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+        await GetCollection().UpdateOneAsync(
+            _ => _.Id == type.Id,
+            update,
+            new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
