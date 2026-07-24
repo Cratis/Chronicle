@@ -110,7 +110,9 @@ public class EventStore : IEventStore
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
         _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
-        UnitOfWorkManager = new UnitOfWorkManager(this);
+        UnitOfWorkManager = new UnitOfWorkManager(
+            this,
+            serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName));
         _correlationIdAccessor = correlationIdAccessor;
 
         _eventSerializer = new EventSerializer(

@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
+using System.Collections.Frozen;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -56,7 +57,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     /// force every test-class boundary to fail with 401 even though the bootstrap handler could
     /// recreate the rows. Only compiled when the <c>DEVELOPMENT</c> preprocessor symbol is set.
     /// </summary>
-    static readonly HashSet<string> _preservedTables = new(StringComparer.OrdinalIgnoreCase)
+    static readonly FrozenSet<string> _preservedTables = new[]
     {
         WellKnownTableNames.Users,
         WellKnownTableNames.Applications,
@@ -68,7 +69,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         WellKnownTableNames.Authorizations,
         WellKnownTableNames.Scopes,
         "__EFMigrationsHistory",
-    };
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ClusterDbContext>> _clusterOptions = new();

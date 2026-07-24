@@ -114,6 +114,13 @@ public class EventTypesStorage(
     {
         generation ??= EventTypeGeneration.First;
 
+        var generationKey = generation.ToString();
+        var fromMemory = _eventTypes.FirstOrDefault(_ => _.Id == type && _.Schemas.ContainsKey(generationKey));
+        if (fromMemory is not null)
+        {
+            return fromMemory.ToKernel(generation);
+        }
+
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = await result.ToListAsync();
