@@ -21,11 +21,11 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 public class EventTypesStorage : IEventTypesStorage
 {
     /// <inheritdoc/>
-    public Task Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
-        Task.CompletedTask;
+    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
+        Task.FromResult(false);
 
     /// <inheritdoc/>
-    public Task Register(EventTypeDefinition definition) => Task.CompletedTask;
+    public Task<bool> Register(EventTypeDefinition definition) => Task.FromResult(false);
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes() =>
@@ -69,5 +69,10 @@ public class EventTypesStorage : IEventTypesStorage
     {
         var eventType = new EventType(type, generation ?? EventTypeGeneration.First);
         return Task.FromResult(new EventTypeSchema(eventType, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
+    }
+
+    /// <inheritdoc/>
+    public void Invalidate(EventTypeId eventTypeId)
+    {
     }
 }
