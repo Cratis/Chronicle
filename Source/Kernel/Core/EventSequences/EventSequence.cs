@@ -380,9 +380,9 @@ public class EventSequence(
             await WriteStateAsync();
             await (_appendedEventsQueues?.Enqueue(appendedEventsList.ToList()) ?? Task.CompletedTask);
 
-            foreach (var constraintContext in constraintContexts)
+            foreach (var (constraintContext, eventToAppend) in constraintContexts.Zip(eventsToAppend))
             {
-                await constraintContext.Update(State.SequenceNumber);
+                await constraintContext.Update(eventToAppend.SequenceNumber);
             }
 
             return AppendManyResult.Success(correlationId, sequenceNumbers);
@@ -599,7 +599,7 @@ public class EventSequence(
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
             await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-            await constraintContext.Update(State.SequenceNumber);
+            await constraintContext.Update(appendedSequenceNumber);
 
             return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
