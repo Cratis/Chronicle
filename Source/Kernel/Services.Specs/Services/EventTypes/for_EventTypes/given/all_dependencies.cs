@@ -17,6 +17,7 @@ public class all_dependencies : Specification
     protected IEventTypesStorage _eventTypesStorage;
     protected IGrainFactory _grainFactory;
     protected IEventSequence _systemEventSequence;
+    protected Cratis.Chronicle.EventTypes.IEventTypesCacheClient _eventTypesCacheClient;
     protected IEventTypes _subject;
 
     void Establish()
@@ -26,9 +27,10 @@ public class all_dependencies : Specification
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _systemEventSequence = Substitute.For<IEventSequence>();
+        _eventTypesCacheClient = Substitute.For<Cratis.Chronicle.EventTypes.IEventTypesCacheClient>();
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_systemEventSequence);
-        _subject = new KernelEventTypes(_storage, _grainFactory);
+        _subject = new KernelEventTypes(_storage, _grainFactory, _eventTypesCacheClient);
     }
 }
