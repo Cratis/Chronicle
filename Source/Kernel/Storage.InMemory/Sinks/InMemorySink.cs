@@ -36,6 +36,8 @@ public class InMemorySink(
     readonly Dictionary<object, ExpandoObject> _collection = [];
     readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
     readonly Subject<object> _changeSubject = new();
+    readonly Lock _collectionLock = new();
+    readonly Type? _keyTargetType = readModel.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -52,17 +54,21 @@ public class InMemorySink(
     /// <param name="key"><see cref="Key"/> for the read model to remove.</param>
     public void RemoveAnyExisting(Key key)
     {
-        var collection = Collection;
         var keyValue = GetActualKeyValue(key);
-        collection.Remove(keyValue);
+        lock (_collectionLock)
+        {
+            Collection.Remove(keyValue);
+        }
     }
 
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        var collection = Collection;
         var keyValue = GetActualKeyValue(key);
-        if (collection.TryGetValue(keyValue, out var value)) return Task.FromResult<ExpandoObject?>(value);
+        lock (_collectionLock)
+        {
+            if (Collection.TryGetValue(keyValue, out var value)) return Task.FromResult<ExpandoObject?>(value);
+        }
 
         return Task.FromResult<ExpandoObject?>(null);
     }
@@ -71,19 +77,25 @@ public class InMemorySink(
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
         var state = changeset.InitialState.Clone();
-        var collection = Collection;
         var keyValue = GetActualKeyValue(key);
 
         if (changeset.HasBeenRemoved())
         {
-            collection.Remove(keyValue);
+            lock (_collectionLock)
+            {
+                Collection.Remove(keyValue);
+            }
+
             _changeSubject.OnNext(keyValue);
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
-        collection[keyValue] = result;
+        lock (_collectionLock)
+        {
+            Collection[keyValue] = result;
+        }
 
         // Notify observers of the change
         _changeSubject.OnNext(keyValue);
@@ -121,24 +133,36 @@ public class InMemorySink(
     /// <inheritdoc/>
     public Task Remove(ReadModelContainerName containerName)
     {
-        _rewindCollection.Clear();
+        lock (_collectionLock)
+        {
+            _rewindCollection.Clear();
+        }
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task PrepareInitialRun()
     {
-        Collection.Clear();
+        lock (_collectionLock)
+        {
+            Collection.Clear();
+        }
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
     {
-        var collection = Collection;
         var pathSegments = childPropertyPath.Segments.ToArray();
+        KeyValuePair<object, ExpandoObject>[] snapshot;
+        lock (_collectionLock)
+        {
+            snapshot = [.. Collection];
+        }
 
-        foreach (var (rootKey, document) in collection)
+        foreach (var (rootKey, document) in snapshot)
         {
             if (TryFindValueInDocument(document, pathSegments, 0, childValue))
             {
@@ -155,8 +179,7 @@ public class InMemorySink(
     /// <inheritdoc/>
     public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
-        var instances = Collection.Values.Skip(skip).Take(take);
-        var totalCount = Collection.Count;
+        var (instances, totalCount) = SnapshotInstances(skip, take);
         return Task.FromResult(new ReadModelInstances(instances, totalCount));
     }
 
@@ -167,16 +190,11 @@ public class InMemorySink(
         return Observable.Create<IEnumerable<ExpandoObject>>(observer =>
         {
             // Emit initial state
-            var initialInstances = Collection.Values.Skip(skip).Take(take);
-            observer.OnNext(initialInstances);
+            observer.OnNext(SnapshotInstances(skip, take).Instances);
 
             // Subscribe to changes on _changeSubject and emit updated instances
             return _changeSubject.Subscribe(
-                _ =>
-                {
-                    var instances = Collection.Values.Skip(skip).Take(take);
-                    observer.OnNext(instances);
-                },
+                _ => observer.OnNext(SnapshotInstances(skip, take).Instances),
                 observer.OnError,
                 observer.OnCompleted);
         });
@@ -187,6 +205,16 @@ public class InMemorySink(
     {
         _changeSubject?.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take)
+    {
+        lock (_collectionLock)
+        {
+            var collection = Collection;
+            var instances = collection.Values.Skip(skip).Take(take).ToArray();
+            return (instances, collection.Count);
+        }
     }
 
     object GetActualKeyValue(Key key)
@@ -203,10 +231,9 @@ public class InMemorySink(
             return stringBuilder.ToString();
         }
 
-        var targetType = readModel.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
-        if (targetType is not null)
+        if (_keyTargetType is not null)
         {
-            return TypeConversion.Convert(targetType, key.Value);
+            return TypeConversion.Convert(_keyTargetType, key.Value);
         }
 
         if (key.Value.IsConcept())
