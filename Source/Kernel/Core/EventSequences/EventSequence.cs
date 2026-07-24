@@ -715,7 +715,7 @@ public class EventSequence(
         EventTypeSchema eventSchema,
         CorrelationId correlationId)
     {
-        var validationErrors = eventSchema.Schema.Validate(content.ToJsonString());
+        var validationErrors = eventSchema.Schema.Validate(content);
         if (validationErrors.Count == 0)
         {
             return true;
