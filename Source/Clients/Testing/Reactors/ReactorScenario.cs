@@ -42,6 +42,7 @@ public class ReactorScenario<TReactor>
     readonly IServiceProvider? _explicitServiceProvider;
     readonly IEventTypes _eventTypes = Defaults.Instance.EventTypes;
     readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
+    readonly RecordingReactorSideEffectHandlers _recordingHandlers = new();
     IServiceProvider? _serviceProvider;
     IEventStore? _eventStore;
 
@@ -105,6 +106,55 @@ public class ReactorScenario<TReactor>
     public ReactorScenarioGivenBuilder<TReactor> Given => new(this);
 
     /// <summary>
+    /// Gets the side effects the reactor produced — the events and commands it returned from its handler methods —
+    /// flattened, with cross-stream event wrappers unwrapped to the underlying event.
+    /// </summary>
+    /// <remarks>
+    /// Populated only when no explicit <see cref="IReactorSideEffectHandlers"/> was supplied to the constructor; with
+    /// explicit handlers, assert against those instead.
+    /// </remarks>
+    public IReadOnlyList<object> Produced => _recordingHandlers.Produced;
+
+    /// <summary>
+    /// Asserts that the reactor produced at least one side effect of type <typeparamref name="T"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the produced event or command to assert.</typeparam>
+    /// <exception cref="ReactorSideEffectAssertionException">Thrown when no produced side effect is of type <typeparamref name="T"/>.</exception>
+    public void ShouldHaveProduced<T>() => ShouldHaveProduced<T>(_ => true);
+
+    /// <summary>
+    /// Asserts that the reactor produced at least one side effect of type <typeparamref name="T"/> matching the predicate.
+    /// </summary>
+    /// <typeparam name="T">The type of the produced event or command to assert.</typeparam>
+    /// <param name="predicate">The predicate the produced side effect must satisfy.</param>
+    /// <exception cref="ReactorSideEffectAssertionException">Thrown when no produced side effect of type <typeparamref name="T"/> matches.</exception>
+    public void ShouldHaveProduced<T>(Func<T, bool> predicate)
+    {
+        if (!_recordingHandlers.Produced.OfType<T>().Any(predicate))
+        {
+            var produced = _recordingHandlers.Produced.Count > 0
+                ? string.Join(", ", _recordingHandlers.Produced.Select(_ => _.GetType().Name))
+                : "nothing";
+            throw new ReactorSideEffectAssertionException(
+                $"Expected reactor '{typeof(TReactor).Name}' to produce a matching '{typeof(T).Name}', but it produced: {produced}.");
+        }
+    }
+
+    /// <summary>
+    /// Asserts that the reactor produced no side effect of type <typeparamref name="T"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the produced event or command that must not be present.</typeparam>
+    /// <exception cref="ReactorSideEffectAssertionException">Thrown when a produced side effect is of type <typeparamref name="T"/>.</exception>
+    public void ShouldNotHaveProduced<T>()
+    {
+        if (_recordingHandlers.Produced.OfType<T>().Any())
+        {
+            throw new ReactorSideEffectAssertionException(
+                $"Expected reactor '{typeof(TReactor).Name}' to produce no '{typeof(T).Name}', but it did.");
+        }
+    }
+
+    /// <summary>
     /// Seeds a pre-built read model instance for a specific event source so that a read-model handler-method parameter
     /// of the reactor is materialized with it.
     /// </summary>
@@ -151,7 +201,7 @@ public class ReactorScenario<TReactor>
             typeof(TReactor),
             activatedReactor,
             NullLogger<ReactorInvoker>.Instance,
-            _sideEffectHandlers,
+            _sideEffectHandlers ?? _recordingHandlers,
             eventStore,
             new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
             [
