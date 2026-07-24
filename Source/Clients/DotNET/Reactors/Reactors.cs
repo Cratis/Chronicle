@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json.Nodes;
@@ -45,8 +46,8 @@ public class Reactors : IReactors
     readonly IReactorMethodArgumentsResolver _argumentsResolver;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
-    readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
     readonly IChronicleServicesAccessor _servicesAccessor;
+    IReadOnlyDictionary<Type, IReactorHandler> _handlers = FrozenDictionary<Type, IReactorHandler>.Empty;
 
     bool _registered;
 
@@ -123,12 +124,8 @@ public class Reactors : IReactors
                                 CreateHandlerFor);
 
         DisconnectHandlers();
-        _handlers.Clear();
         _registered = false;
-        foreach (var handler in handlers)
-        {
-            _handlers.Add(handler);
-        }
+        _handlers = handlers.ToFrozenDictionary();
 
         return Task.CompletedTask;
     }
@@ -166,7 +163,11 @@ public class Reactors : IReactors
         var reactorHandler = CreateHandlerFor(reactorType);
 
         RegisterReactor(reactorHandler);
-        _handlers.Add(reactorType, reactorHandler);
+        var handlers = new Dictionary<Type, IReactorHandler>(_handlers)
+        {
+            { reactorType, reactorHandler }
+        };
+        _handlers = handlers.ToFrozenDictionary();
 
         return Task.FromResult(reactorHandler);
     }
@@ -271,7 +272,7 @@ public class Reactors : IReactors
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
-            _handlers.Remove(reactorType);
+            _handlers = _handlers.Where(_ => _.Key != reactorType).ToFrozenDictionary();
             register?.Dispose();
         });
         return handler;
@@ -293,12 +294,8 @@ public class Reactors : IReactors
             .ToArray();
 
         DisconnectHandlers();
-        _handlers.Clear();
 
-        foreach (var reactorType in reactorTypes)
-        {
-            _handlers[reactorType] = CreateHandlerFor(reactorType);
-        }
+        _handlers = reactorTypes.ToFrozenDictionary(_ => _, CreateHandlerFor);
     }
 
     void RegisterReactor(IReactorHandler handler)

@@ -21,7 +21,24 @@ using Microsoft.Extensions.FileProviders;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
-AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
+ILogger<Kernel>? logger = null;
+
+// Route process-level unhandled exceptions through the logging pipeline so they reach the
+// configured ILogger sinks and the OpenTelemetry exporter - not just the console. Until the
+// logger is resolved (and if logging itself fails), fall back to writing to the console. (#1343)
+AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+{
+    if (args.ExceptionObject is Exception exception)
+    {
+        LogCrash(log => log.UnhandledException(exception, args.IsTerminating), exception);
+    }
+};
+
+TaskScheduler.UnobservedTaskException += (_, args) =>
+{
+    LogCrash(log => log.UnobservedTaskException(args.Exception), args.Exception);
+    args.SetObserved();
+};
 
 // Force invariant culture for the Kernel
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -32,7 +49,7 @@ CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 var builder = WebApplication.CreateBuilder(args);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
-var logger = builder.Logging.Services
+logger = builder.Logging.Services
     .BuildServiceProvider()
     .GetRequiredService<ILoggerFactory>()
     .CreateLogger<Kernel>();
@@ -372,28 +389,24 @@ logger.ServerStarted(chronicleOptions.Port);
 
 await app.RunAsync(cancellationToken.Token);
 
-static void PrintExceptionInfo(Exception exception)
+void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {
-    Console.WriteLine($"Exception type: {exception.GetType().FullName}");
-    Console.WriteLine($"Exception message: {exception.Message}");
-    Console.WriteLine($"Stack Trace: {exception.StackTrace}");
-}
-
-static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
-{
-    if (args.ExceptionObject is Exception exception)
+    if (logger is not null)
     {
-        Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
-        PrintExceptionInfo(exception);
-
-        while (exception.InnerException != null)
+        try
         {
-            Console.WriteLine("\n------------ BEGIN INNER EXCEPTION ------------");
-            PrintExceptionInfo(exception.InnerException);
-            exception = exception.InnerException;
-            Console.WriteLine("------------ END INNER EXCEPTION ------------\n");
-        }
+            log(logger);
 
-        Console.WriteLine("************ END UNHANDLED EXCEPTION ************ ");
+            return;
+        }
+        catch (Exception loggingFailure)
+        {
+            // A failure while routing the crash through the logging pipeline must not mask the
+            // original exception - fall back to the console output below.
+            Console.WriteLine(loggingFailure);
+        }
     }
+
+    Console.WriteLine("************ UNHANDLED PROCESS-LEVEL EXCEPTION ************");
+    Console.WriteLine(exception);
 }

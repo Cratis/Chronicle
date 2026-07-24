@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
@@ -43,8 +44,8 @@ public class Reducers : IReducers
     readonly IActivitySource<Reducers> _activitySource;
     readonly ILogger<Reducers> _logger;
     readonly IReducerObservers _reducerObservers;
-    Dictionary<Type, IReducerHandler> _handlersByType = new();
-    Dictionary<Type, IReducerHandler> _handlersByModelType = new();
+    IReadOnlyDictionary<Type, IReducerHandler> _handlersByType = FrozenDictionary<Type, IReducerHandler>.Empty;
+    IReadOnlyDictionary<Type, IReducerHandler> _handlersByModelType = FrozenDictionary<Type, IReducerHandler>.Empty;
 
     bool _registered;
 
@@ -107,7 +108,7 @@ public class Reducers : IReducers
     {
         DisconnectHandlers();
         _handlersByType = _clientArtifacts.Reducers
-                            .ToDictionary(
+                            .ToFrozenDictionary(
                                 _ => _,
                                 reducerType =>
                                 {
@@ -117,7 +118,7 @@ public class Reducers : IReducers
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
 
-        _handlersByModelType = _handlersByType.ToDictionary(
+        _handlersByModelType = _handlersByType.ToFrozenDictionary(
             _ => _.Value.ReadModelType,
             _ => _.Value);
         return Task.CompletedTask;
@@ -158,8 +159,16 @@ public class Reducers : IReducers
         var modelType = typeof(TReadModel);
         var handler = CreateHandlerFor(reducerType, modelType);
         RegisterReducer(handler);
-        _handlersByType.Add(reducerType, handler);
-        _handlersByModelType.Add(modelType, handler);
+        var handlersByType = new Dictionary<Type, IReducerHandler>(_handlersByType)
+        {
+            { reducerType, handler }
+        };
+        var handlersByModelType = new Dictionary<Type, IReducerHandler>(_handlersByModelType)
+        {
+            { modelType, handler }
+        };
+        _handlersByType = handlersByType.ToFrozenDictionary();
+        _handlersByModelType = handlersByModelType.ToFrozenDictionary();
         return Task.FromResult<IReducerHandler>(handler);
     }
 
@@ -370,8 +379,8 @@ public class Reducers : IReducers
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
-            _handlersByType.Remove(reducerType);
-            _handlersByModelType.Remove(readModelType);
+            _handlersByType = _handlersByType.Where(_ => _.Key != reducerType).ToFrozenDictionary();
+            _handlersByModelType = _handlersByModelType.Where(_ => _.Key != readModelType).ToFrozenDictionary();
             register?.Dispose();
         });
 
@@ -395,10 +404,10 @@ public class Reducers : IReducers
 
         DisconnectHandlers();
 
-        _handlersByType = reducerTypes.ToDictionary(
+        _handlersByType = reducerTypes.ToFrozenDictionary(
             _ => _.ReducerType,
             _ => CreateHandlerFor(_.ReducerType, _.ReadModelType) as IReducerHandler);
-        _handlersByModelType = _handlersByType.ToDictionary(
+        _handlersByModelType = _handlersByType.ToFrozenDictionary(
             _ => _.Value.ReadModelType,
             _ => _.Value);
     }

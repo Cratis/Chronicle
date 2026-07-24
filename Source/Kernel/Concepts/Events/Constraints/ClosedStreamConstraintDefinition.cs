@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// <summary>
 /// Represents a definition for the closed-stream constraint.
 /// </summary>
-public class ClosedStreamConstraintDefinition : IConstraintDefinition
+public record ClosedStreamConstraintDefinition : IConstraintDefinition
 {
     /// <summary>
     /// The well-known name for the closed-stream constraint.
