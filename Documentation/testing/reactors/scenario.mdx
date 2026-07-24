@@ -51,6 +51,14 @@ A reactor can take a read model as a handler-method parameter, which Chronicle m
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/read-model" />
 
+## Asserting produced side effects
+
+When a reactor returns a side effect — an event or a command — assert it directly with `ShouldHaveProduced<T>`, with no mocks or event-store wiring:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/produced-side-effects" />
+
+The scenario records everything the reactor returns — flattening collections and unwrapping cross-stream event wrappers — so `ShouldHaveProduced<T>()`, its predicate overload, and `ShouldNotHaveProduced<T>()` all work against events and commands alike. The raw list is available on `Produced`.
+
 ## Example: email notification
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/email-example" />
