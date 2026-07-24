@@ -21,4 +21,16 @@ public class ReactorScenarioGivenBuilder<TReactor>(ReactorScenario<TReactor> sce
     /// <returns>A <see cref="ReactorSourceGivenBuilder{TReactor}"/> to continue the fluent chain.</returns>
     public ReactorSourceGivenBuilder<TReactor> ForEventSource(EventSourceId eventSourceId) =>
         new(scenario, eventSourceId);
+
+    /// <summary>
+    /// Specifies the <see cref="EventSourceId"/> to associate a seeded read model instance (or events) with.
+    /// </summary>
+    /// <remarks>
+    /// Use <c>.ReadModel(...)</c> on the returned builder to seed a read-model handler-method parameter of the
+    /// reactor, or <c>.Events(...)</c> to drive events.
+    /// </remarks>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to seed for.</param>
+    /// <returns>A <see cref="ReactorSourceGivenBuilder{TReactor}"/> to continue the fluent chain.</returns>
+    public ReactorSourceGivenBuilder<TReactor> ForEventSourceId(EventSourceId eventSourceId) =>
+        new(scenario, eventSourceId);
 }
