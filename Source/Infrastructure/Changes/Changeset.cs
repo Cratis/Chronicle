@@ -62,10 +62,12 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var workingState = CurrentState.Clone()!;
         var differences = SetProperties(workingState, propertyMappers, arrayIndexers);
 
-        if (differences.Count != 0)
+        if (differences.Count == 0)
         {
-            Add(new PropertiesChanged<TTarget>(workingState, differences));
+            return;
         }
+
+        Add(new PropertiesChanged<TTarget>(workingState, differences));
         CurrentState = workingState;
     }
 
