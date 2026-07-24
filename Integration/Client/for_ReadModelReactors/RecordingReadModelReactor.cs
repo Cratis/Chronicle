@@ -15,22 +15,11 @@ public class RecordingReadModelReactor : IReadModelReactor
 
     public EventContext? AddedContext { get; private set; }
 
-    public TaskCompletionSource ModifiedSignal { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-    public WatchedReadModel? ModifiedModel { get; private set; }
-
     public Task Added(WatchedReadModel model, EventContext context)
     {
         AddedModel = model;
         AddedContext = context;
         AddedSignal.TrySetResult();
-        return Task.CompletedTask;
-    }
-
-    public Task Modified(WatchedReadModel model, EventContext context)
-    {
-        ModifiedModel = model;
-        ModifiedSignal.TrySetResult();
         return Task.CompletedTask;
     }
 }
