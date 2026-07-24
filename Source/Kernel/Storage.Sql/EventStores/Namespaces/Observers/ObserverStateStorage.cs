@@ -26,7 +26,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => LiveQuery.Observe(GetAll);
+    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => LiveQuery.Observe(GetAll, database.LiveQueryPollingInterval);
 
     /// <inheritdoc/>
     public async Task<Observation.ObserverState> Get(ObserverId observerId)

@@ -132,10 +132,14 @@ public class SqlTokenStorage(IDatabase database, JsonSerializerOptions jsonSeria
     public async Task<long> Prune(DateTimeOffset threshold, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        var expired = await scope.DbContext.Tokens.Where(t => t.CreationDate != null && t.CreationDate < threshold).ToListAsync(cancellationToken);
-        scope.DbContext.Tokens.RemoveRange(expired);
+        var now = DateTimeOffset.UtcNow;
+        var prunable = await scope.DbContext.Tokens
+            .Where(t => t.CreationDate != null && t.CreationDate < threshold &&
+                        (t.Status != TokenStatuses.Valid || (t.ExpirationDate != null && t.ExpirationDate < now)))
+            .ToListAsync(cancellationToken);
+        scope.DbContext.Tokens.RemoveRange(prunable);
         await scope.DbContext.SaveChangesAsync(cancellationToken);
-        return expired.Count;
+        return prunable.Count;
     }
 
     static TokenEntity ToEntity(Token token) => new()

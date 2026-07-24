@@ -106,7 +106,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => LiveQuery.Observe(GetLatestForAllEventTypes);
+    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => LiveQuery.Observe(GetLatestForAllEventTypes, database.LiveQueryPollingInterval);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds)
@@ -159,7 +159,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
                 generation);
         }
 
-        return eventType.ToKernel();
+        return eventType.ToKernel(generation);
     }
 
     /// <inheritdoc/>

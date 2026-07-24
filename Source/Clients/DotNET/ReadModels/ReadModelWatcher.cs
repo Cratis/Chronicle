@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events;
 using ContractReadModels = Cratis.Chronicle.Contracts.ReadModels;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -21,6 +22,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     TaskCompletionSource _subscribedTcs;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;
+    IDisposable? _serverSubscription;
     bool _started;
 
     /// <summary>
@@ -38,6 +40,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         _stopped = stopped;
         _jsonSerializerOptions = jsonSerializerOptions;
         _eventStore.Connection.Lifecycle.OnConnected += ClientConnected;
+        _eventStore.Connection.Lifecycle.OnDisconnected += ClientDisconnected;
     }
 
     /// <inheritdoc/>
@@ -50,6 +53,9 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     public void Dispose()
     {
         _eventStore.Connection.Lifecycle.OnConnected -= ClientConnected;
+        _eventStore.Connection.Lifecycle.OnDisconnected -= ClientDisconnected;
+        _serverSubscription?.Dispose();
+        _serverSubscription = null;
         _stopped?.Invoke();
         _stopped = null;
         _observable.Dispose();
@@ -69,6 +75,10 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
             _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
+        // Dispose any prior subscription before opening a new server stream so a reconnect
+        // never leaks the subscription established for the previous connection.
+        _serverSubscription?.Dispose();
+
         var request = new ContractReadModels.WatchRequest
         {
             EventStore = _eventStore.Name,
@@ -77,21 +87,38 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
             EventSequenceId = EventSequences.EventSequenceId.Log
         };
         _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
-        _serverObservable.Subscribe(changeset =>
-        {
-            if (changeset.Subscribed)
+        _serverSubscription = _serverObservable.Subscribe(
+            changeset =>
             {
-                _subscribedTcs.TrySetResult();
-                return;
-            }
+                if (changeset.Subscribed)
+                {
+                    _subscribedTcs.TrySetResult();
+                    return;
+                }
 
-            var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
-            _observable.OnNext(new ReadModelChangeset<TReadModel>(
-                changeset.Namespace,
-                changeset.ModelKey,
-                readModel,
-                changeset.Removed));
-        });
+                var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
+                var changeContext = EventContext.From(
+                    _eventStore.Name,
+                    changeset.Namespace,
+                    EventType.Unknown,
+                    EventSourceType.Default,
+                    changeset.ModelKey,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    changeset.EventSequenceNumber,
+                    changeset.CorrelationId,
+                    changeset.Occurred);
+
+                _observable.OnNext(new ReadModelChangeset<TReadModel>(
+                    changeset.Namespace,
+                    changeset.ModelKey,
+                    readModel,
+                    changeset.Removed,
+                    ToChangeType(changeset.ChangeType),
+                    changeContext));
+            },
+            _ => ResetForReconnect(),
+            ResetForReconnect);
     }
 
     /// <inheritdoc/>
@@ -102,9 +129,32 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         Dispose();
     }
 
+    static ReadModelChangeType ToChangeType(ContractReadModels.ReadModelChangeType changeType) => changeType switch
+    {
+        ContractReadModels.ReadModelChangeType.Added => ReadModelChangeType.Added,
+        ContractReadModels.ReadModelChangeType.Removed => ReadModelChangeType.Removed,
+        _ => ReadModelChangeType.Modified
+    };
+
     Task ClientConnected()
     {
         Start();
         return Task.CompletedTask;
+    }
+
+    Task ClientDisconnected()
+    {
+        ResetForReconnect();
+        return Task.CompletedTask;
+    }
+
+    void ResetForReconnect()
+    {
+        // Tear down the current server stream and clear the started latch so the next
+        // OnConnected re-subscribes. Reached both on disconnect and on a stream fault or
+        // completion, so a dropped stream is never left silently non-emitting.
+        _serverSubscription?.Dispose();
+        _serverSubscription = null;
+        _started = false;
     }
 }

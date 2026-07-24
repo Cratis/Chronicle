@@ -125,6 +125,19 @@ public class IdentityStorage(
     }
 
     /// <inheritdoc/>
+    public async Task Rename(string subject, string name)
+    {
+        var update = Builders<MongoDBIdentity>.Update.Set(_ => _.Name, name);
+        await GetCollection().UpdateOneAsync(_ => _.Subject == subject, update).ConfigureAwait(false);
+
+        if (_identityIdsBySubject.TryGetValue(subject, out var identityId) &&
+            _identitiesByIdentityId.TryGetValue(identityId, out var existing))
+        {
+            _identitiesByIdentityId[identityId] = existing with { Name = name };
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<Identity>> GetAll()
     {
         using var result = await GetCollection().FindAsync(_ => true);

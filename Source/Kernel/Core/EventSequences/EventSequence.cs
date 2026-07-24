@@ -319,73 +319,13 @@ public class EventSequence(
             }
 
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
-            var eventsToAppend = new List<EventToAppendToStorage>();
-            var constraintContexts = new List<ConstraintValidationContext>();
-
-            foreach (var (eventToAppend, validAndCompliantEvent) in getValidAndCompliantEvents)
+            var validatedEvents = getValidAndCompliantEvents.ConvertAll(eventAndResult =>
             {
-                var (compliantEvent, constraintContext) = validAndCompliantEvent.AsT0;
-                constraintContexts.Add(constraintContext);
-                var eventHash = eventHashCalculator.Calculate(eventToAppend.EventType.Id, eventToAppend.EventSourceId, compliantEvent);
+                var (compliantEvent, constraintContext) = eventAndResult.Result.AsT0;
+                return (eventAndResult.Event, CompliantEvent: compliantEvent, ConstraintContext: constraintContext);
+            });
 
-                eventsToAppend.Add(new EventToAppendToStorage(
-                    State.SequenceNumber,
-                    eventToAppend.EventSourceType,
-                    eventToAppend.EventSourceId,
-                    eventToAppend.eventStreamType,
-                    eventToAppend.eventStreamId,
-                    eventToAppend.EventType,
-                    correlationId,
-                    causation,
-                    identity,
-                    eventToAppend.Tags,
-                    eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
-                    compliantEvent,
-                    eventHash,
-                    eventToAppend.Subject));
-
-                State.SequenceNumber = State.SequenceNumber.Next();
-            }
-
-            Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult = null;
-            do
-            {
-                await HandleFailedAppendManyResult(appendResult, eventsToAppend);
-                logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
-                appendResult = await EventSequenceStorage.AppendMany(eventsToAppend);
-            }
-            while (!appendResult.IsSuccess);
-
-            List<AppendedEvent> appendedEventsList = new();
-            await appendResult.Match(
-                success =>
-                {
-                    appendedEventsList = success.ToList();
-                    return Task.CompletedTask;
-                },
-                _ => Task.CompletedTask);
-
-            var appendedCount = appendedEventsList?.Count ?? 0;
-            logger.AppendManyReceived(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedCount);
-
-            appendedEventsList ??= [];
-            var sequenceNumbers = appendedEventsList.Select(e => e.Context.SequenceNumber).ToImmutableList();
-
-            foreach (var appendedEvent in appendedEventsList)
-            {
-                State.TailSequenceNumberPerEventType[appendedEvent.Context.EventType.Id] = appendedEvent.Context.SequenceNumber;
-                _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
-            }
-
-            await WriteStateAsync();
-            await (_appendedEventsQueues?.Enqueue(appendedEventsList.ToList()) ?? Task.CompletedTask);
-
-            foreach (var constraintContext in constraintContexts)
-            {
-                await constraintContext.Update(State.SequenceNumber);
-            }
-
-            return AppendManyResult.Success(correlationId, sequenceNumbers);
+            return await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
         }
         catch (Exception ex)
         {
@@ -522,6 +462,108 @@ public class EventSequence(
     public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
         ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId);
 
+    /// <summary>
+    /// Append a set of already validated and compliant events to storage — numbering the batch,
+    /// recovering from duplicate sequence numbers by re-numbering and resubmitting, and advancing
+    /// <see cref="EventSequenceState.SequenceNumber"/> only after the batch has been durably appended.
+    /// </summary>
+    /// <param name="validatedEvents">The validated and compliant events to append, each with its <see cref="ConstraintValidationContext"/>.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the append.</param>
+    /// <param name="causation">The <see cref="Causation"/> chain for the append.</param>
+    /// <param name="causedByChain">The chain of <see cref="IdentityId"/> that caused the append.</param>
+    /// <returns>The <see cref="AppendManyResult"/> describing the outcome.</returns>
+    /// <remarks>
+    /// The sequence numbers are computed against a local running value and only committed to
+    /// <see cref="EventSequenceState.SequenceNumber"/> after a successful storage append — mirroring the
+    /// single-event path, which advances the state after append. This means a thrown (non-duplicate)
+    /// storage error leaves the in-memory sequence number untouched, avoiding a permanent gap and a tail
+    /// that points at an event which was never persisted. On a <see cref="DuplicateEventSequenceNumber"/>
+    /// the whole batch is re-numbered from the reported next-available number before resubmission, so the
+    /// retry can make progress instead of resubmitting the same colliding numbers forever.
+    /// </remarks>
+    internal async Task<AppendManyResult> AppendManyToStorage(
+        IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintContext)> validatedEvents,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain)
+    {
+        var eventsToAppend = new List<EventToAppendToStorage>();
+        var constraintContexts = new List<ConstraintValidationContext>();
+
+        var nextSequenceNumber = State.SequenceNumber;
+        foreach (var (eventToAppend, compliantEvent, constraintContext) in validatedEvents)
+        {
+            constraintContexts.Add(constraintContext);
+            var eventHash = eventHashCalculator.Calculate(eventToAppend.EventType.Id, eventToAppend.EventSourceId, compliantEvent);
+
+            eventsToAppend.Add(new EventToAppendToStorage(
+                nextSequenceNumber,
+                eventToAppend.EventSourceType,
+                eventToAppend.EventSourceId,
+                eventToAppend.eventStreamType,
+                eventToAppend.eventStreamId,
+                eventToAppend.EventType,
+                correlationId,
+                causation,
+                causedByChain,
+                eventToAppend.Tags,
+                eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
+                compliantEvent,
+                eventHash,
+                eventToAppend.Subject));
+
+            nextSequenceNumber = nextSequenceNumber.Next();
+        }
+
+        Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult = null;
+        do
+        {
+            HandleFailedAppendManyResult(appendResult, eventsToAppend);
+            logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
+            appendResult = await EventSequenceStorage.AppendMany(eventsToAppend);
+        }
+        while (!appendResult.IsSuccess);
+
+        // Commit the advanced sequence number only after the batch has been durably appended, so a thrown
+        // storage error (handled by the caller's catch) cannot leave State.SequenceNumber advanced past
+        // events that were never persisted.
+        if (eventsToAppend.Count > 0)
+        {
+            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
+        }
+
+        List<AppendedEvent> appendedEventsList = new();
+        await appendResult.Match(
+            success =>
+            {
+                appendedEventsList = success.ToList();
+                return Task.CompletedTask;
+            },
+            _ => Task.CompletedTask);
+
+        var appendedCount = appendedEventsList?.Count ?? 0;
+        logger.AppendManyReceived(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedCount);
+
+        appendedEventsList ??= [];
+        var sequenceNumbers = appendedEventsList.Select(e => e.Context.SequenceNumber).ToImmutableList();
+
+        foreach (var appendedEvent in appendedEventsList)
+        {
+            State.TailSequenceNumberPerEventType[appendedEvent.Context.EventType.Id] = appendedEvent.Context.SequenceNumber;
+            _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
+        }
+
+        await WriteStateAsync();
+        await (_appendedEventsQueues?.Enqueue(appendedEventsList.ToList()) ?? Task.CompletedTask);
+
+        foreach (var constraintContext in constraintContexts)
+        {
+            await constraintContext.Update(State.SequenceNumber);
+        }
+
+        return AppendManyResult.Success(correlationId, sequenceNumbers);
+    }
+
     async Task<AppendResult> AppendValidAndCompliantEvent(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -629,7 +671,14 @@ public class EventSequence(
                 return schemaError;
             }
 
-            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+            // Constraint validation and index updates must operate on the ORIGINAL, pre-compliance content.
+            // PII encryption is non-deterministic (a fresh data key and nonce per value), so hashing the
+            // encrypted value would produce a different hash on every append — a [Unique] constraint on a
+            // [PII] property would then never detect a collision and silently do nothing. Build a plaintext
+            // expando from the original content for constraint purposes, while the encrypted expando is what
+            // actually gets appended and persisted.
+            var plaintextEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
             if (checkConstraintViolation.TryGetError(out var error))
             {
                 return error;
@@ -761,35 +810,43 @@ public class EventSequence(
         await WriteStateAsync();
     }
 
-    async Task HandleFailedAppendManyResult(
+    void HandleFailedAppendManyResult(
         Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult,
-        IEnumerable<EventToAppendToStorage> eventsToAppend)
+        List<EventToAppendToStorage> eventsToAppend)
     {
         if (appendResult is null)
         {
             return;
         }
 
-        await appendResult.Match(
-            _ => Task.CompletedTask,
-            errorType => HandleAppendedDuplicateEventForMany(eventsToAppend, errorType.NextAvailableSequenceNumber));
+        if (appendResult.TryGetError(out var duplicateError))
+        {
+            HandleAppendedDuplicateEventForMany(eventsToAppend, duplicateError.NextAvailableSequenceNumber);
+        }
     }
 
-    async Task HandleAppendedDuplicateEventForMany(IEnumerable<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
+    void HandleAppendedDuplicateEventForMany(List<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
     {
         logger.DuplicateEventInMany(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
             _eventSequenceId,
-            State.SequenceNumber);
+            nextAvailableSequenceNumber);
 
         foreach (var eventToAppend in eventsToAppend)
         {
             _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventSourceId, eventToAppend.EventType.Id.Value);
         }
 
-        State.SequenceNumber = nextAvailableSequenceNumber;
-        await WriteStateAsync();
+        // Re-number the whole batch from the next available sequence number so the resubmission no longer
+        // collides with the numbers already in storage. Without this the same colliding numbers would be
+        // resubmitted every retry and the single-threaded grain would wedge on DuplicateEventSequenceNumber.
+        var sequenceNumber = nextAvailableSequenceNumber;
+        for (var index = 0; index < eventsToAppend.Count; index++)
+        {
+            eventsToAppend[index] = eventsToAppend[index] with { SequenceNumber = sequenceNumber };
+            sequenceNumber = sequenceNumber.Next();
+        }
     }
 
     async Task OnConstraintsChanged(ConstraintsChanged payload)

@@ -3,6 +3,10 @@
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
+        <!-- The net8.0/net9.0 analyzers raise IDE0301 on `FrozenDictionary<K,V>.Empty` and suggest `[]`,
+             which does not compile for FrozenDictionary (CS0144). Only surfaces when `dotnet pack`
+             builds the down-level targets (regular builds are net10.0), so suppress it here. -->
+        <NoWarn>$(NoWarn);IDE0301</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

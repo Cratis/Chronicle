@@ -26,6 +26,9 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
     public IEnumerable<Type> Reactors => _current.Reactors;
 
     /// <inheritdoc/>
+    public IEnumerable<Type> ReadModelReactors => _current.ReadModelReactors;
+
+    /// <inheritdoc/>
     public IEnumerable<Type> Reducers => _current.Reducers;
 
     /// <inheritdoc/>

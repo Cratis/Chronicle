@@ -1,0 +1,71 @@
+---
+title: Reacting to Read Model Changes
+description: React to a read model being added, modified or removed with a convention-based IReadModelReactor, instead of subscribing to the watch stream yourself.
+---
+
+[Watching a read model](./watching-read-models) hands you a raw stream of changes: you subscribe, filter, branch on whether the instance was removed, and dispose the subscription yourself. When all you want is *"when an account appears, send a welcome; when it changes, sync it downstream"*, that plumbing is noise.
+
+A **read model reactor** removes it. You write a class, name a method after the change you care about — `Added`, `Modified` or `Removed` — and Chronicle dispatches to it. It is a convenience layer over the [Watch APIs](./watching-read-models): the same delivery underneath, none of the subscription bookkeeping.
+
+## Write the reactor
+
+Implement the `IReadModelReactor` marker interface and add a method named `Added`, `Modified` or `Removed`. The method name selects the change it reacts to, and the first parameter selects which read model is watched.
+
+<ChronicleClientTabs snippet="read-models/reacting-to-changes/reactor" />
+
+There is nothing to register. Reactors are discovered and started automatically, and their subscriptions are tracked and cleaned up when the client is disposed. React to as many read models as you like — one method per change, per model.
+
+## Handle a single instance or a collection
+
+A handler may be synchronous or asynchronous — return `void`, `Task`, or `Task<T>`. Its first parameter is either a single read model or a collection of them:
+
+<ChronicleClientTabs snippet="read-models/reacting-to-changes/collection" />
+
+## Take dependencies
+
+The first parameter is the read model; every parameter after it is resolved for you. Ask for the `EventContext` of the event that caused the change — that gives you its sequence number, occurrence time and correlation id — and ask for any service registered in the container. Inject through the constructor, the method signature, or both:
+
+<ChronicleClientTabs snippet="read-models/reacting-to-changes/dependencies" />
+
+## Return side effects
+
+A handler can append events, exactly like a [reactor side effect](../reactors/side-effects). Return a single event, a collection, an `EventForEventSourceId`, or a mix, and Chronicle appends them. The `[EventStreamType]` and `[EventSourceType]` attributes on the reactor are honored when it does.
+
+<ChronicleClientTabs snippet="read-models/reacting-to-changes/side-effects" />
+
+## The three change types
+
+| Method | Reacts to |
+| --- | --- |
+| `Added` | The read model instance was created for the first time. |
+| `Modified` | The read model instance changed. |
+| `Removed` | The read model instance was removed. |
+
+For **projection-backed** read models the change type and the causing event's context come straight from the server, so `Added` versus `Modified` is precise and `EventContext` is fully populated. Other backings infer more of this locally — see the limits below.
+
+## Watch through the materialized read model
+
+Apply the `[Materialized]` attribute to observe the materialized read model API instead of the change stream. Chronicle then deduces the change type by comparing successive materialized windows.
+
+<ChronicleClientTabs snippet="read-models/reacting-to-changes/materialized" />
+
+Reach for this only when you specifically want the materialized view — most reactors do not need it, and it trades away some fidelity, described next.
+
+## When the fit is imperfect
+
+A read model reactor is convenient, not transactional. Design for that:
+
+:::caution
+**Side effects are best-effort.** Returned events are appended fire-and-forget — a failure is logged, but nothing pauses or retries, because a read model reactor has no partition to fail. Ordering across rapid changes is not guaranteed. Make every handler **idempotent**: it may run again after a reconnect.
+:::
+
+- **Materialized fidelity is reduced.** The materialized API delivers full windows of already-deserialized instances, so the change type is inferred by comparing serialized values keyed by `id`, and the `EventContext` carries only the model key — no event sequence number.
+- **Reducer-backed read models infer additions client-side.** Reducers compute changesets locally with no server-provided change type, so the first time a key is seen it is reported as `Added` and everything after as `Modified`. Only projection-backed read models carry the precise change type and causing event context.
+
+When you need transactional, ordered, replayable reactions, react to the **domain event** with a [reactor](../reactors/) rather than to the derived read model.
+
+## Related topics
+
+- [Watching Read Models](./watching-read-models) — the lower-level change stream this builds on
+- [Reactors](../reactors/) — react to events directly, with delivery guarantees
+- [Reactor Side Effects](../reactors/side-effects) — the append model reused here

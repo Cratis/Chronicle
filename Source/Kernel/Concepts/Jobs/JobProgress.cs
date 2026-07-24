@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Concepts.Jobs;
 /// <summary>
 /// Represents progress of a job.
 /// </summary>
-public class JobProgress
+public record JobProgress
 {
     /// <summary>
     /// Gets or sets the total number of steps.

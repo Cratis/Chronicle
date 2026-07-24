@@ -33,6 +33,12 @@ public record ProjectionEventContext(
     bool _isKeyUnresolvable;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the read model instance did not exist before this event
+    /// and is therefore being created for the first time.
+    /// </summary>
+    public bool IsNewInstance { get; set; }
+
+    /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
     /// </summary>
     public IEnumerable<ProjectionFuture> DeferredFutures => _deferredFutures;
