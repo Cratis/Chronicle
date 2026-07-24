@@ -171,6 +171,11 @@ hostBuilder
         }
         else
         {
+            if (!isSqlStorage && !isInMemoryStorage && ConnectionStringLocality.IsNonLocal(chronicleOptions.Storage.ConnectionDetails))
+            {
+                logger.LocalhostClusteringAgainstSharedStorage();
+            }
+
             _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
         }
 
