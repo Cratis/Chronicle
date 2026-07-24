@@ -19,6 +19,11 @@ public static class WellKnownBroadcastChannelNames
     public const string ConstraintsChanged = "constraints-changed";
 
     /// <summary>
+    /// The name of the channel for when event types in an event store are registered or changed.
+    /// </summary>
+    public const string EventTypesChanged = "event-types-changed";
+
+    /// <summary>
     /// The name of the channel for notifications telling to reload state.
     /// </summary>
     public const string ReloadState = "reload-state";

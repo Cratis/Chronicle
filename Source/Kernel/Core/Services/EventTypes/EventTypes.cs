@@ -24,7 +24,11 @@ namespace Cratis.Chronicle.Services.Events;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grain references.</param>
-internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) : IEventTypes
+/// <param name="eventTypesChangedNotifier">Notifier for broadcasting event type changes to every silo so their caches evict.</param>
+internal sealed class EventTypes(
+    IStorage storage,
+    IGrainFactory grainFactory,
+    Cratis.Chronicle.EventTypes.IEventTypesChangedNotifier eventTypesChangedNotifier) : IEventTypes
 {
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
@@ -126,6 +130,15 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
                     source);
             }
 
+            // Tell every silo to evict its cache when this registration may have added or changed a
+            // generation - a brand-new type, a migration, or a multi-generation definition. A plain
+            // re-registration of an already-known single generation is left untouched to avoid needless
+            // cluster-wide eviction on client reconnects.
+            if (newGenerations.Count > 0 || eventType.Migrations.Count > 0 || eventType.Generations.Count > 1)
+            {
+                await eventTypesChangedNotifier.Notify(request.EventStore, eventTypeId);
+            }
+
             // Append system events for newly discovered event type generations.
             if (newGenerations.Count > 0)
             {
@@ -154,14 +167,17 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
     /// <inheritdoc/>
     public async Task RegisterSingle(RegisterSingleEventTypeRequest request)
     {
+        var chronicleType = request.Type.Type.ToChronicle();
         var schema = await JsonSchema.FromJsonAsync(request.Type.Schema);
         await storage
             .GetEventStore(request.EventStore).EventTypes
             .Register(
-                request.Type.Type.ToChronicle(),
+                chronicleType,
                 schema,
                 (Concepts.Events.EventTypeOwner)(int)request.Type.Owner,
                 (Concepts.Events.EventTypeSource)(int)request.Type.Source);
+
+        await eventTypesChangedNotifier.Notify(request.EventStore, chronicleType.Id);
     }
 
     /// <inheritdoc/>

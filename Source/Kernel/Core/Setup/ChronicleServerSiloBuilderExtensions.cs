@@ -58,6 +58,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 
         builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
+        builder.Services.TryAddSingleton<IEventTypesChangedNotifier, EventTypesChangedNotifier>();
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
@@ -74,6 +75,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
+            .AddBroadcastChannel(WellKnownBroadcastChannelNames.EventTypesChanged, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ReloadState, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddProjectionsService()
@@ -126,7 +128,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     storage,
                     sp.GetRequiredService<IEventCompliance>(),
                     jsonSerializerOptions),
-                new Cratis.Chronicle.Services.Events.EventTypes(storage, grainFactory),
+                new Cratis.Chronicle.Services.Events.EventTypes(storage, grainFactory, sp.GetRequiredService<IEventTypesChangedNotifier>()),
                 new Constraints(grainFactory),
                 new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
                 new FailedPartitions(storage),
