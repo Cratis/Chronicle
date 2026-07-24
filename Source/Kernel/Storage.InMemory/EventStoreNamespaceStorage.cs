@@ -72,6 +72,9 @@ public sealed class EventStoreNamespaceStorage(
     public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEventsStorage();
 
     /// <inheritdoc/>
+    public IObserverHandledCountsStorage ObserverHandledCounts { get; } = new ObserverHandledCountsStorage();
+
+    /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new RecommendationStorage();
 
     /// <inheritdoc/>
