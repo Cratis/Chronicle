@@ -49,6 +49,11 @@ public class ObserverState
     public IEnumerable<Key> CatchingUpPartitions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the partitions that have an in-flight (started but not yet acknowledged) event batch.
+    /// </summary>
+    public IEnumerable<Key> InFlightPartitions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the count of failed partitions for the observer.
     /// </summary>
     public int FailedPartitionCount { get; set; }
