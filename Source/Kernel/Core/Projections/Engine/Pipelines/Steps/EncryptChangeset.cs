@@ -33,9 +33,20 @@ public class EncryptChangeset(
             return context;
         }
 
+        var schema = projection.TargetReadModelSchema;
         var identifier = context.Event.Context.ResolveComplianceIdentifier(context.Key);
 
-        var schema = projection.TargetReadModelSchema;
+        // A read model whose schema graph declares no compliance metadata has no PII to encrypt.
+        // Applying compliance would return the state unchanged, so the whole-document self-compare and
+        // per-member re-encryption below would walk the entire document — children included — only to
+        // find nothing. Skip that work entirely and write the compliance subject directly. This mirrors
+        // the gate DecryptInitialState already applies on the read path, keeping write and read symmetric.
+        if (!schema.HasComplianceMetadata())
+        {
+            SetSubjectWithoutCompliance(context, identifier);
+            return context;
+        }
+
         var currentState = context.Changeset.CurrentState;
         var currentStateAsDictionary = (IDictionary<string, object?>)currentState;
         currentStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var currentSubjectValue);
@@ -82,6 +93,27 @@ public class EncryptChangeset(
         await EncryptComplianceForChildren(schema, identifier, context.Changeset.Changes);
 
         return context;
+    }
+
+    static void SetSubjectWithoutCompliance(ProjectionEventContext context, string identifier)
+    {
+        var currentState = context.Changeset.CurrentState;
+        var currentStateAsDictionary = (IDictionary<string, object?>)currentState;
+        currentStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var currentSubjectValue);
+        var subjectWasAbsent = currentSubjectValue is not string;
+
+        // Write the subject onto the state exactly as the compliance path would, so any consumer reading
+        // the current state after this step sees the same value regardless of whether the model has PII.
+        currentStateAsDictionary[WellKnownProperties.Subject] = identifier;
+
+        // Record the subject as a change only when it was previously absent — a whole-collection removal
+        // owns the document identity for that turn, so it must not be paired with a subject write.
+        if (subjectWasAbsent && context.Changeset.Changes.All(_ => _ is not ChildRemovedFromAll))
+        {
+            context.Changeset.Add(new PropertiesChanged<ExpandoObject>(
+                currentState,
+                [new PropertyDifference(WellKnownProperties.Subject, null, identifier)]));
+        }
     }
 
     async Task EncryptComplianceForChildren(JsonSchema schema, string identifier, IEnumerable<Change> changes)
