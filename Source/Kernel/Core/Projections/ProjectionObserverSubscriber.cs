@@ -128,7 +128,13 @@ public class ProjectionObserverSubscriber(
             {
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
-                isNewInstance = pipelineContext.IsNewInstance;
+
+                // Accumulate across the batch: a single OnNext delivers all events for one partition
+                // (e.g. AppendMany, or an observer draining a backlog on catch-up). If the instance was
+                // created by any event in the batch, the net change is an Add even when a later event in
+                // the same batch updates it — so OR rather than overwrite, else the create is misreported
+                // as Modified. HasBeenRemoved() on the final changeset still takes precedence below.
+                isNewInstance |= pipelineContext.IsNewInstance;
 
                 // Check if there are any failed partitions from bulk operations
                 if (pipelineContext.FailedPartitions.Any())
