@@ -8,11 +8,13 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Schemas;
@@ -50,12 +52,16 @@ public class an_event_sequence : Specification
     protected IIdentityStorage _identityStorage;
     protected IConstraintValidationFactory _constraintValidationFactory;
     protected IConstraintValidation _constraintValidation;
+    protected IConstraintValidation _currentValidation;
     protected IEventTypeMigrations _eventTypeMigrations;
     protected IJsonComplianceManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected RecordingConstraintValidator _recordingValidator;
     protected INamespaces _namespaces;
     protected IAppendedEventsQueues _appendedEventsQueues;
+    protected IConstraints _constraintsGrain;
+    protected IJobsManager _jobsManager;
+    protected List<IConstraintDefinition> _registeredConstraints;
 
     async Task Establish()
     {
@@ -96,7 +102,8 @@ public class an_event_sequence : Specification
         _eventTypeMigrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>())
             .Returns(new Dictionary<EventTypeGeneration, ExpandoObject>());
 
-        _constraintValidationFactory.Create(Arg.Any<EventSequenceKey>()).Returns(_constraintValidation);
+        _currentValidation = _constraintValidation;
+        _constraintValidationFactory.Create(Arg.Any<EventSequenceKey>()).Returns(_ => _currentValidation);
         _constraintValidation.Establish(
             Arg.Any<EventSourceId>(),
             Arg.Any<EventTypeId>(),
@@ -148,6 +155,12 @@ public class an_event_sequence : Specification
         _namespaces = Substitute.For<INamespaces>();
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
 
+        _registeredConstraints = [];
+        _constraintsGrain = Substitute.For<IConstraints>();
+        _constraintsGrain.GetDefinitions().Returns(_ => _registeredConstraints.ToArray());
+        _constraintsGrain.GetVersion().Returns(_ => ConstraintDefinitionComparison.ComputeVersion(_registeredConstraints));
+        _jobsManager = Substitute.For<IJobsManager>();
+
         _silo.AddService(_storage);
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);
@@ -160,6 +173,8 @@ public class an_event_sequence : Specification
         _silo.AddKeyedService<IActivitySource<EventSequence>>(WellKnown.MeterName, new ActivitySource<EventSequence>());
         _silo.AddProbe(_ => _namespaces);
         _silo.AddProbe(_ => _appendedEventsQueues);
+        _silo.AddProbe(_ => _constraintsGrain);
+        _silo.AddProbe(_ => _jobsManager);
 
         _eventSequence = await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
     }
