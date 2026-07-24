@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 /// <param name="ObserverIdentifier">The observer identifier for the read model.</param>
 /// <param name="Sink">The sink definition for the read model.</param>
 /// <param name="Schemas">The schemas per generation of the read model.</param>
+/// <param name="Indexes">The property paths of the indexes defined for the read model.</param>
 public record ReadModel(
     ReadModelIdentifier Id,
     ReadModelContainerName ContainerName,
@@ -28,4 +29,5 @@ public record ReadModel(
     ReadModelObserverType ObserverType,
     ReadModelObserverIdentifier ObserverIdentifier,
     SinkDefinition Sink,
-    IDictionary<string, BsonDocument> Schemas);
+    IDictionary<string, BsonDocument> Schemas,
+    IEnumerable<string> Indexes);

@@ -629,7 +629,14 @@ public class EventSequence(
                 return schemaError;
             }
 
-            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+            // Constraint validation and index updates must operate on the ORIGINAL, pre-compliance content.
+            // PII encryption is non-deterministic (a fresh data key and nonce per value), so hashing the
+            // encrypted value would produce a different hash on every append — a [Unique] constraint on a
+            // [PII] property would then never detect a collision and silently do nothing. Build a plaintext
+            // expando from the original content for constraint purposes, while the encrypted expando is what
+            // actually gets appended and persisted.
+            var plaintextEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
             if (checkConstraintViolation.TryGetError(out var error))
             {
                 return error;
@@ -763,7 +770,7 @@ public class EventSequence(
 
     async Task HandleFailedAppendManyResult(
         Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult,
-        IEnumerable<EventToAppendToStorage> eventsToAppend)
+        List<EventToAppendToStorage> eventsToAppend)
     {
         if (appendResult is null)
         {
@@ -775,7 +782,7 @@ public class EventSequence(
             errorType => HandleAppendedDuplicateEventForMany(eventsToAppend, errorType.NextAvailableSequenceNumber));
     }
 
-    async Task HandleAppendedDuplicateEventForMany(IEnumerable<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
+    async Task HandleAppendedDuplicateEventForMany(List<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
     {
         logger.DuplicateEventInMany(
             _eventSequenceKey.EventStore,
@@ -788,7 +795,14 @@ public class EventSequence(
             _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventSourceId, eventToAppend.EventType.Id.Value);
         }
 
-        State.SequenceNumber = nextAvailableSequenceNumber;
+        var sequenceNumber = nextAvailableSequenceNumber;
+        for (var index = 0; index < eventsToAppend.Count; index++)
+        {
+            eventsToAppend[index] = eventsToAppend[index] with { SequenceNumber = sequenceNumber };
+            sequenceNumber = sequenceNumber.Next();
+        }
+
+        State.SequenceNumber = sequenceNumber;
         await WriteStateAsync();
     }
 

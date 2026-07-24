@@ -276,14 +276,11 @@ public class EventSequenceStorage(
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            await session.AbortTransactionAsync().ConfigureAwait(false);
-            var highest = await _collection.Find(FilterDefinition<Event>.Empty)
-                                          .SortByDescendingSequenceNumber()
-                                          .Limit(1)
-                                          .SingleOrDefaultAsync()
-                                          .ConfigureAwait(false);
-            var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
-            return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
+            return await AbortAndResolveNextAvailableSequenceNumber(session).ConfigureAwait(false);
+        }
+        catch (MongoBulkWriteException<Event> bulkWriteException) when (bulkWriteException.WriteErrors.Any(writeError => writeError.Category == ServerErrorCategory.DuplicateKey))
+        {
+            return await AbortAndResolveNextAvailableSequenceNumber(session).ConfigureAwait(false);
         }
         catch
         {
@@ -864,26 +861,11 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task EnsureIndexes()
     {
-        const string SubjectIndexName = "subject_index";
-        var existingIndexes = new HashSet<string>();
-        using var cursor = await _collection.Indexes.ListAsync().ConfigureAwait(false);
-        await cursor.ForEachAsync(index =>
-        {
-            if (index.TryGetValue("name", out var name))
-            {
-                existingIndexes.Add(name.AsString);
-            }
-        }).ConfigureAwait(false);
-
-        if (existingIndexes.Contains(SubjectIndexName))
-        {
-            return;
-        }
-
-        await _collection.Indexes.CreateOneAsync(
+        await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
+        await _collection.EnsureIndexesAsync(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.Subject),
-                new CreateIndexOptions { Sparse = true, Name = SubjectIndexName })).ConfigureAwait(false);
+                new CreateIndexOptions { Sparse = true, Name = "subject_index" })).ConfigureAwait(false);
     }
 
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
@@ -936,5 +918,17 @@ public class EventSequenceStorage(
                 .Set(e => e.CorrelationId, redactionCorrelationId)
                 .Set(e => e.Causation, redactionCausation)
                 .Set(e => e.CausedBy, redactionCausedByChain));
+    }
+
+    async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
+    {
+        await session.AbortTransactionAsync().ConfigureAwait(false);
+        var highest = await _collection.Find(FilterDefinition<Event>.Empty)
+                                      .SortByDescendingSequenceNumber()
+                                      .Limit(1)
+                                      .SingleOrDefaultAsync()
+                                      .ConfigureAwait(false);
+        var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
+        return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
     }
 }
