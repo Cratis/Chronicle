@@ -30,11 +30,26 @@ dotnet add package Cratis.Chronicle.Testing
 
 ## Injecting dependencies
 
-Pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reactor depends on:
+Register the mocks and stubs the reactor depends on through the scenario's `Services` collection — the same `IServiceCollection` you use to configure an application. Logging is registered for you, so a reactor that injects `ILogger<T>` activates without any extra setup:
+
+```csharp
+var scenario = new ReactorScenario<CancellationReactor>();
+scenario.Services.AddSingleton(notificationServiceMock);
+```
+
+`Services` resolves both the reactor's constructor dependencies and any service-typed handler-method parameters. If a dependency is missing, the scenario throws `CannotActivateReactorForScenario`, naming the type it could not resolve.
+
+You can also pass a pre-built `IServiceProvider` to the constructor when you need full control over registration:
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/injecting-dependencies" />
 
-When no `IServiceProvider` is provided, `ReactorScenario<TReactor>` uses a `DefaultServiceProvider` that constructs the reactor via its default constructor.
+When neither is used, the scenario builds a provider from `Services` (with logging registered).
+
+## Seeding read models
+
+A reactor can take a read model as a handler-method parameter, which Chronicle materializes for the event source when the reactor runs. Seed the expected read-model state with `Given.ForEventSourceId(id).ReadModel(...)`, then drive the triggering event:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/read-model" />
 
 ## Example: email notification
 
@@ -47,5 +62,5 @@ When no `IServiceProvider` is provided, `ReactorScenario<TReactor>` uses a `Defa
 ## Notes
 
 - A fresh instance of `TReactor` is activated from the service provider for each `Events(...)` call, matching the production behavior where a new scope is created per event batch.
-- Event handling uses the same `ReactorInvoker` as in production, so convention-based method discovery (`On<TEvent>`) works identically.
+- Event handling uses the same `ReactorInvoker` as in production, so convention-based dispatch — where each handler method is matched by its event parameter type — works identically.
 - The `.Received()` assertions in the examples come from [NSubstitute](https://nsubstitute.github.io/). Any mocking framework works.
