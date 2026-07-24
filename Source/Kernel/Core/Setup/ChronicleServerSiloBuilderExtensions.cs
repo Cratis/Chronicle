@@ -77,6 +77,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ReloadState, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddEventTypesCacheInvalidation()
+            .AddEncryptionKeyCacheInvalidation()
             .AddProjectionsService()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
