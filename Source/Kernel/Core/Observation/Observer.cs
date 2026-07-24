@@ -330,7 +330,6 @@ public partial class Observer(
             _observerKey,
             observerDefinition,
             failures,
-            storage,
             _jobsManager,
             loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
