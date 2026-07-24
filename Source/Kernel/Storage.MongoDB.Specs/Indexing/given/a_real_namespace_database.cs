@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Indexing.given;
@@ -22,8 +21,6 @@ public abstract class a_real_namespace_database(MongoDBFixture fixture) : Specif
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
     string _databaseName = default!;
-
-    static a_real_namespace_database() => BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
 
     void Establish()
     {

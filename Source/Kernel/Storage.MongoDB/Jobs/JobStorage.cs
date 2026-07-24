@@ -23,7 +23,30 @@ namespace Cratis.Chronicle.Storage.MongoDB.Jobs;
 /// <param name="jobTypes"><see cref="IJobTypes"/> that knows about <see cref="JobType"/>.</param>
 public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobTypes) : IJobStorage
 {
+    const string StatusElementName = "status";
+    const string TypeElementName = "type";
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
+    /// <summary>
+    /// Gets the indexes maintained on the jobs collection.
+    /// </summary>
+    /// <remarks>
+    /// Keys are declared by stored BSON element name rather than by property expression: <see cref="JobState"/>
+    /// is persisted through a custom, non-document serializer that the MongoDB LINQ provider cannot introspect,
+    /// so an expression key over an enum member (Status/Type) throws ExpressionNotSupportedException when the
+    /// index is rendered against the server's serializer registry.
+    /// </remarks>
+    internal static IReadOnlyList<CreateIndexModel<JobState>> Indexes { get; } =
+    [
+        new(
+            Builders<JobState>.IndexKeys.Ascending(new StringFieldDefinition<JobState>(StatusElementName)),
+            new CreateIndexOptions { Name = "status", Background = true }),
+        new(
+            Builders<JobState>.IndexKeys
+                .Ascending(new StringFieldDefinition<JobState>(TypeElementName))
+                .Ascending(new StringFieldDefinition<JobState>(StatusElementName)),
+            new CreateIndexOptions { Name = "type_status", Background = true })
+    ];
 
     IMongoCollection<JobState> Collection => database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
@@ -169,15 +192,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
 
     IMongoCollection<TJobState> GetTypedCollection<TJobState>() => database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 
-    async Task EnsureIndexes() =>
-        await Collection.EnsureIndexesOnceAsync(
-            _ensuredIndexes,
-            new CreateIndexModel<JobState>(
-                Builders<JobState>.IndexKeys.Ascending(_ => _.Status),
-                new CreateIndexOptions { Name = "status", Background = true }),
-            new CreateIndexModel<JobState>(
-                Builders<JobState>.IndexKeys.Ascending(_ => _.Type).Ascending(_ => _.Status),
-                new CreateIndexOptions { Name = "type_status", Background = true })).ConfigureAwait(false);
+    async Task EnsureIndexes() => await Collection.EnsureIndexesOnceAsync(_ensuredIndexes, [.. Indexes]).ConfigureAwait(false);
 
     async Task<List<JobState>> GetJobsRaw(params JobStatus[] statuses)
     {
@@ -185,9 +200,11 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
 
         // The materialized Status field is kept in lockstep with the last status change (see the Job grain), so
         // filtering it directly is behavior-identical to the previous $arrayElemAt on statusChanges — and indexable.
+        // Filter by the stored element name (not a property expression) for the same serializer reason as the indexes.
         var filter = statuses.Length == 0
             ? Builders<JobState>.Filter.Empty
-            : Builders<JobState>.Filter.Or(statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status)));
+            : Builders<JobState>.Filter.Or(statuses.Select(status =>
+                Builders<JobState>.Filter.Eq(new StringFieldDefinition<JobState, JobStatus>(StatusElementName), status)));
 
         using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
         return await cursor.ToListAsync().ConfigureAwait(false);
