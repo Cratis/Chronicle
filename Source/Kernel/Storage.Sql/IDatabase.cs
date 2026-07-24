@@ -16,6 +16,11 @@ namespace Cratis.Chronicle.Storage.Sql;
 public interface IDatabase
 {
     /// <summary>
+    /// Gets the interval between polls of the database for live, database-watching queries.
+    /// </summary>
+    TimeSpan LiveQueryPollingInterval { get; }
+
+    /// <summary>
     /// Gets a database context scope for the cluster.
     /// </summary>
     /// <returns>A <see cref="DbContextScope{ClusterDbContext}"/> for the cluster.</returns>

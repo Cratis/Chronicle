@@ -26,4 +26,13 @@ public interface IIdentities
     /// <returns>An observable of a collection of <see cref="Identity"/>.</returns>
     [Operation]
     IObservable<IEnumerable<Identity>> ObserveIdentities(GetIdentitiesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Rename the display name of an identity based on its subject.
+    /// </summary>
+    /// <param name="request">The <see cref="RenameIdentityRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task RenameIdentity(RenameIdentityRequest request, CallContext context = default);
 }

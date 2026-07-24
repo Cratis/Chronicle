@@ -30,4 +30,11 @@ internal sealed class Identities(IStorage storage) : IIdentities
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
             .Select(_ => _.ToContract());
+
+    /// <inheritdoc/>
+    public Task RenameIdentity(RenameIdentityRequest request, CallContext context = default) =>
+        storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace).Identities
+            .Rename(request.Subject, request.Name);
 }

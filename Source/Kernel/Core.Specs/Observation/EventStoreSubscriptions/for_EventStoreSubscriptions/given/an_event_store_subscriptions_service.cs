@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptions.given;
 
@@ -15,6 +17,6 @@ public class an_event_store_subscriptions_service : Specification
     {
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
-        _service = new Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(_grainFactory, _storage);
+        _service = new Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(_grainFactory, _storage, Options.Create(new ChronicleOptions()));
     }
 }

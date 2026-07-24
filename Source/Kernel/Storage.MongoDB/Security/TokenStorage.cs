@@ -96,8 +96,10 @@ public class TokenStorage(IMongoDatabase database) : ITokenStorage
     /// <inheritdoc/>
     public async Task<long> Prune(DateTimeOffset threshold, CancellationToken cancellationToken = default)
     {
+        var now = DateTimeOffset.UtcNow;
         var result = await _collection.DeleteManyAsync(
-            _ => _.CreationDate != null && _.CreationDate < threshold,
+            _ => _.CreationDate != null && _.CreationDate < threshold &&
+                 (_.Status != TokenStatuses.Valid || (_.ExpirationDate != null && _.ExpirationDate < now)),
             cancellationToken);
 
         return result.DeletedCount;

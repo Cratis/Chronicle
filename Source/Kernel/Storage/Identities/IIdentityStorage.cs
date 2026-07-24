@@ -57,6 +57,19 @@ public interface IIdentityStorage
     Task<Identity> GetSingleFor(IdentityId identityId);
 
     /// <summary>
+    /// Rename the display name of the <see cref="Identity"/> identified by the given subject.
+    /// </summary>
+    /// <param name="subject">The subject that uniquely identifies the <see cref="Identity"/> to rename.</param>
+    /// <param name="name">The new name to set.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Only the display name is changed — the subject, username and on-behalf-of chain are preserved.
+    /// Chronicle keys PII encryption on the compliance subject, never on the display name, so renaming
+    /// an identity does not affect any encryption-key lookup.
+    /// </remarks>
+    Task Rename(string subject, string name);
+
+    /// <summary>
     /// Get all identities.
     /// </summary>
     /// <returns>Collection of <see cref="Identity"/>.</returns>

@@ -58,6 +58,14 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
             released is JsonValue releasedValue &&
             releasedValue.TryGetValue<string>(out var releasedText))
         {
+            // When the subject's encryption key has been crypto-shredded (GDPR right-to-erasure), the handler
+            // surfaces the erased value as an empty string. An erased collection reads as empty, so return an
+            // empty array rather than letting JsonNode.Parse(string.Empty) throw and poison the release path.
+            if (string.IsNullOrWhiteSpace(releasedText))
+            {
+                return new JsonArray();
+            }
+
             return JsonNode.Parse(releasedText) ?? released;
         }
 
