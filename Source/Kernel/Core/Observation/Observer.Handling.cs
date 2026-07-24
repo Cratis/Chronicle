@@ -118,13 +118,12 @@ public partial class Observer
         IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
         if (eventsToHandle.Length != 0)
         {
-            // Record the highest sequence number we're about to attempt for this partition. If the silo
-            // dies between this point and the post-handling state write, the entry survives to drive
-            // partition catch-up on the next activation. Recording the tail of the batch is enough: the
-            // in-flight entry is conceptually a marker that work *may have started* for this partition.
-            var inFlightStorage = await GetInFlightEventsStorage();
-            var inFlightTail = eventsToHandle[^1].Context.SequenceNumber;
-            await inFlightStorage.Add(_observerId, partition, inFlightTail);
+            // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
+            // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
+            // on the reloaded observer state and drives partition catch-up on the next activation.
+            var inFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition };
+            State = State with { InFlightPartitions = inFlightPartitions };
+            await WriteStateAsync();
 
             using (new WriteSuspension(this))
             {
@@ -217,6 +216,14 @@ public partial class Observer
 
             try
             {
+                // The in-flight marker has served its purpose now that the outcome is known, so clear it before the
+                // outcome is persisted — whichever state write happens below carries the removal. A partition that
+                // failed is recovered through FailedPartitions storage, so keeping its marker would only force a
+                // redundant catch-up for events we already know about.
+                var remainingInFlight = new HashSet<Key>(State.InFlightPartitions);
+                remainingInFlight.Remove(partition);
+                State = State with { InFlightPartitions = remainingInFlight };
+
                 if (failed)
                 {
                     await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
@@ -235,14 +242,6 @@ public partial class Observer
                 {
                     await GetObserverHandledCountsStorage().Increment(_observerId, partition, handledCountsPerEventType);
                 }
-
-                // Clear in-flight markers for everything we processed (successfully or otherwise). Failures
-                // are tracked through FailedPartitions storage; keeping the in-flight marker would force a
-                // double recovery for events we already know about.
-                var clearUpTo = numEventsSuccessfullyHandled > 0
-                    ? eventsToHandle.Take((int)numEventsSuccessfullyHandled.Value).Last().Context.SequenceNumber
-                    : tailEventSequenceNumber;
-                await inFlightStorage.RemoveUpTo(_observerId, partition, clearUpTo);
             }
             catch (Exception ex)
             {
@@ -351,12 +350,6 @@ public partial class Observer
             .GetEventStore(_observerKey.EventStore)
             .GetNamespace(_observerKey.Namespace)
             .ObserverHandledCounts;
-
-    Task<IInFlightEventsStorage> GetInFlightEventsStorage() =>
-        Task.FromResult(storage
-            .GetEventStore(_observerKey.EventStore)
-            .GetNamespace(_observerKey.Namespace)
-            .InFlightEvents);
 
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {

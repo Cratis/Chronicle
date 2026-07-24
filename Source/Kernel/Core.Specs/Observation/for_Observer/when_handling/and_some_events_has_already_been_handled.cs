@@ -49,5 +49,5 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
     [Fact] void should_handle_last_event() => _handledEvents.SequenceEqual(_eventToBeHandled).ShouldBeTrue();
     [Fact] void should_set_correct_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
     [Fact] void should_set_correct_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
-    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_write_state_twice() => _storageStats.Writes.ShouldEqual(2);
 }
