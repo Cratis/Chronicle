@@ -83,7 +83,12 @@ internal static class InProcessEventSequence
         // must provide a service provider with IGrainRuntime registered.
         var grainLifecycle = new TestGrainLifecycle();
         var testServiceProvider = new TestServiceProvider();
-        var grainRuntime = new TestGrainRuntime(testServiceProvider);
+
+        // The grain checks the constraints version on every append (to pick up constraints registered while it is
+        // active). In-process there is no constraints grain, so resolve it to a no-op that reports the unset version
+        // matching the grain's cached version — the check is a no-op and the injected validators stay in force.
+        var runtimeGrainFactory = new InProcessGrainFactory(constraints: new InProcessConstraintsGrain());
+        var grainRuntime = new TestGrainRuntime(testServiceProvider, runtimeGrainFactory);
         testServiceProvider.AddService<IGrainRuntime>(grainRuntime);
 
         var grainContext = new TestGrainContext
