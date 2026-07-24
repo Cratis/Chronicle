@@ -22,14 +22,10 @@ public class GrpcAuthenticationMiddleware(RequestDelegate next, ILogger<GrpcAuth
         if (contentType?.Contains("grpc") == true)
         {
             logger.GrpcRequestDetected();
-            foreach (var header in context.Request.Headers)
-            {
-                logger.Header(header.Key, header.Value!);
-            }
 
-            if (context.Request.Headers.TryGetValue("Authorization", out var authHeader))
+            if (context.Request.Headers.ContainsKey("Authorization"))
             {
-                logger.AuthorizationHeaderFound(authHeader!);
+                logger.AuthorizationHeaderFound();
             }
             else
             {
