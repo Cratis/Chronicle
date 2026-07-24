@@ -187,7 +187,10 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             return uniqueConstraintsStorage;
         }
 
-        return _uniqueConstraints[eventSequenceId] = new UniqueConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
+        return _uniqueConstraints[eventSequenceId] = new UniqueConstraintsStorage(
+            _eventStoreNamespaceDatabase,
+            eventSequenceId,
+            _loggerFactory.CreateLogger<UniqueConstraintsStorage>());
     }
 
     /// <inheritdoc/>

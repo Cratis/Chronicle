@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
@@ -21,6 +22,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Jobs;
 /// <param name="database"><see cref="IEventStoreNamespaceDatabase"/> for persistence.</param>
 public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepStorage
 {
+    readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
     IMongoCollection<JobStepState> Collection => database.GetCollection<JobStepState>(WellKnownCollectionNames.JobSteps);
 
     IMongoCollection<JobStepState> FailedCollection => database.GetCollection<JobStepState>(WellKnownCollectionNames.FailedJobSteps);
@@ -30,6 +33,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     {
         try
         {
+            await EnsureIndexes().ConfigureAwait(false);
             await Collection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
             await FailedCollection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
             return Catch.Success();
@@ -45,6 +49,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     {
         try
         {
+            await EnsureIndexes().ConfigureAwait(false);
             await Collection.DeleteManyAsync(GetJobIdFilter<JobStepState>(jobId)).ConfigureAwait(false);
             return Catch.Success();
         }
@@ -74,6 +79,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     {
         try
         {
+            await EnsureIndexes().ConfigureAwait(false);
             var includeAll = ShouldIncludeAllJobSteps(statuses);
             var failedJobSteps = new List<JobStepState>();
             var jobSteps = new List<JobStepState>();
@@ -108,6 +114,7 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     {
         try
         {
+            await EnsureIndexes().ConfigureAwait(false);
             var includeAll = ShouldIncludeAllJobSteps(statuses);
             var filter = GetJobIdFilter<JobStepState>(jobId);
             var count = 0L;
@@ -249,4 +256,13 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
     IMongoCollection<TJobStepState> GetTypedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.JobSteps);
 
     IMongoCollection<TJobStepState> GetTypedFailedCollection<TJobStepState>() => database.GetCollection<TJobStepState>(WellKnownCollectionNames.FailedJobSteps);
+
+    async Task EnsureIndexes()
+    {
+        var jobIdIndex = new CreateIndexModel<JobStepState>(
+            Builders<JobStepState>.IndexKeys.Ascending("_id.jobId"),
+            new CreateIndexOptions { Name = "jobId", Background = true });
+        await Collection.EnsureIndexesOnceAsync(_ensuredIndexes, jobIdIndex).ConfigureAwait(false);
+        await FailedCollection.EnsureIndexesOnceAsync(_ensuredIndexes, jobIdIndex).ConfigureAwait(false);
+    }
 }

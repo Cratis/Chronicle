@@ -19,5 +19,6 @@ public class ReadModelClassMap : IBsonClassMapFor<ReadModel>
         classMap.MapIdProperty(_ => _.Id);
         classMap.MapProperty(_ => _.ObserverType).SetDefaultValue(ReadModelObserverType.NotSet);
         classMap.MapProperty(_ => _.ObserverIdentifier).SetDefaultValue(ReadModelObserverIdentifier.Unspecified);
+        classMap.MapProperty(_ => _.Indexes).SetDefaultValue(Array.Empty<string>());
     }
 }

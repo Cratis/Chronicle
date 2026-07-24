@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
@@ -14,12 +16,20 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// </summary>
 /// <param name="eventStoreNamespaceDatabase"><see cref="IEventStoreNamespaceDatabase"/> for the storage.</param>
 /// <param name="eventSequenceId"><see cref="EventSequenceId"/> for the storage.</param>
-public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNamespaceDatabase, EventSequenceId eventSequenceId) : IUniqueConstraintsStorage
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class UniqueConstraintsStorage(
+    IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
+    EventSequenceId eventSequenceId,
+    ILogger<UniqueConstraintsStorage> logger) : IUniqueConstraintsStorage
 {
+    const string ValueIndexName = "value";
+    readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
     /// <inheritdoc/>
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
         var collection = GetCollectionFor(definition.Name, scopeKey);
+        await EnsureIndex(collection).ConfigureAwait(false);
 
         // Note: Case-insensitive comparison is now handled by hashing the value with case normalization
         // before it reaches the storage layer, so we can use a simple equality check here.
@@ -39,6 +49,7 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
     public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
     {
         var collection = GetCollectionFor(name, scopeKey);
+        await EnsureIndex(collection).ConfigureAwait(false);
         await collection.ReplaceOneAsync(
             u => u.EventSourceId == eventSourceId,
             new UniqueConstraintIndex(eventSourceId, value, sequenceNumber),
@@ -52,11 +63,44 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
         await collection.DeleteOneAsync(u => u.EventSourceId == eventSourceId);
     }
 
+    static Task<string> CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique) =>
+        collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<UniqueConstraintIndex>(
+                Builders<UniqueConstraintIndex>.IndexKeys.Ascending(_ => _.Value),
+                new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true }));
+
     IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName, string scopeKey = "")
     {
         var collectionName = string.IsNullOrEmpty(scopeKey)
             ? $"{eventSequenceId}+{constraintName}+constraint"
             : $"{eventSequenceId}+{constraintName}+{scopeKey}+constraint";
         return eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(collectionName);
+    }
+
+    async Task EnsureIndex(IMongoCollection<UniqueConstraintIndex> collection)
+    {
+        if (_ensuredIndexes.ContainsKey(collection.CollectionNamespace.FullName))
+        {
+            return;
+        }
+
+        var existing = await collection.GetIndexNamesAsync().ConfigureAwait(false);
+        if (!existing.Contains(ValueIndexName))
+        {
+            try
+            {
+                await CreateValueIndex(collection, unique: true).ConfigureAwait(false);
+            }
+            catch (MongoCommandException ex) when (ex.Code == 11000 || ex.Message.Contains("E11000", StringComparison.Ordinal))
+            {
+                // The collection already contains duplicate values from before the unique index existed, so the
+                // unique index cannot be built. Fall back to a non-unique index so lookups are still fast; the
+                // stored duplicates need to be reconciled before uniqueness can be enforced again.
+                logger.FallingBackToNonUniqueIndex(collection.CollectionNamespace.FullName);
+                await CreateValueIndex(collection, unique: false).ConfigureAwait(false);
+            }
+        }
+
+        _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
     }
 }

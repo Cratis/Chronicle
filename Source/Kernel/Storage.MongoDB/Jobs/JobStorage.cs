@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
-using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using OneOf.Types;
@@ -23,6 +23,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Jobs;
 /// <param name="jobTypes"><see cref="IJobTypes"/> that knows about <see cref="JobType"/>.</param>
 public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobTypes) : IJobStorage
 {
+    readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
     IMongoCollection<JobState> Collection => database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
@@ -146,6 +148,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
                 return JobError.TypeIsNotAssociatedWithAJobType;
             }
 
+            await EnsureIndexes().ConfigureAwait(false);
             var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
             var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
             var filter = statuses.Length == 0 ?
@@ -166,34 +169,27 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
 
     IMongoCollection<TJobState> GetTypedCollection<TJobState>() => database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 
+    async Task EnsureIndexes() =>
+        await Collection.EnsureIndexesOnceAsync(
+            _ensuredIndexes,
+            new CreateIndexModel<JobState>(
+                Builders<JobState>.IndexKeys.Ascending(_ => _.Status),
+                new CreateIndexOptions { Name = "status", Background = true }),
+            new CreateIndexModel<JobState>(
+                Builders<JobState>.IndexKeys.Ascending(_ => _.Type).Ascending(_ => _.Status),
+                new CreateIndexOptions { Name = "type_status", Background = true })).ConfigureAwait(false);
+
     async Task<List<JobState>> GetJobsRaw(params JobStatus[] statuses)
     {
-        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState.Status).ToCamelCase()), status));
+        await EnsureIndexes().ConfigureAwait(false);
 
-        if (statuses.Length == 0)
-        {
-            using var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
-            return await cursor.ToListAsync().ConfigureAwait(false);
-        }
+        // The materialized Status field is kept in lockstep with the last status change (see the Job grain), so
+        // filtering it directly is behavior-identical to the previous $arrayElemAt on statusChanges — and indexable.
+        var filter = statuses.Length == 0
+            ? Builders<JobState>.Filter.Empty
+            : Builders<JobState>.Filter.Or(statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status)));
 
-        var filter = new BsonDocument
-        {
-            {
-                "$expr", new BsonDocument("$in", new BsonArray
-                {
-                    new BsonDocument(
-                        "$arrayElemAt",
-                        new BsonArray
-                        {
-                                "$statusChanges.status",
-                                -1
-                        }),
-                    new BsonArray(statuses)
-                })
-            }
-        };
-
-        var aggregation = Collection.Aggregate().Match(filter);
-        return await aggregation.ToListAsync().ConfigureAwait(false);
+        using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        return await cursor.ToListAsync().ConfigureAwait(false);
     }
 }
