@@ -864,26 +864,11 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task EnsureIndexes()
     {
-        const string SubjectIndexName = "subject_index";
-        var existingIndexes = new HashSet<string>();
-        using var cursor = await _collection.Indexes.ListAsync().ConfigureAwait(false);
-        await cursor.ForEachAsync(index =>
-        {
-            if (index.TryGetValue("name", out var name))
-            {
-                existingIndexes.Add(name.AsString);
-            }
-        }).ConfigureAwait(false);
-
-        if (existingIndexes.Contains(SubjectIndexName))
-        {
-            return;
-        }
-
-        await _collection.Indexes.CreateOneAsync(
+        await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
+        await _collection.EnsureIndexesAsync(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.Subject),
-                new CreateIndexOptions { Sparse = true, Name = SubjectIndexName })).ConfigureAwait(false);
+                new CreateIndexOptions { Sparse = true, Name = "subject_index" })).ConfigureAwait(false);
     }
 
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
