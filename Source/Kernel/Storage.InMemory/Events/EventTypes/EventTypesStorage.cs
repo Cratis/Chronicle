@@ -70,4 +70,9 @@ public class EventTypesStorage : IEventTypesStorage
         var eventType = new EventType(type, generation ?? EventTypeGeneration.First);
         return Task.FromResult(new EventTypeSchema(eventType, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
     }
+
+    /// <inheritdoc/>
+    public void Invalidate(EventTypeId eventTypeId)
+    {
+    }
 }

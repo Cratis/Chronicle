@@ -178,6 +178,15 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         return eventType?.Schemas.ContainsKey(generation) ?? false;
     }
 
+    /// <inheritdoc/>
+    public void Invalidate(EventTypeId eventTypeId)
+    {
+        if (_eventTypes.Any(_ => _.Id == eventTypeId))
+        {
+            _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
+        }
+    }
+
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)
     {
         var eventTypeIdValue = eventTypeId.Value;

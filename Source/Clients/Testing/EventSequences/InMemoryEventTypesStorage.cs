@@ -72,4 +72,9 @@ internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
         var eventType = new EventType(type, generation ?? EventTypeGeneration.First);
         return Task.FromResult(new KernelEventTypes::EventTypeSchema(eventType, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
     }
+
+    /// <inheritdoc/>
+    public void Invalidate(EventTypeId eventTypeId)
+    {
+    }
 }

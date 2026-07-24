@@ -97,4 +97,15 @@ public interface IEventTypesStorage
     /// <param name="eventTypes">The <see cref="EventType"/> collection to get for.</param>
     /// <returns>A collection of <see cref="EventTypeSchema"/>, one per matched type respecting each type's generation.</returns>
     Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventType> eventTypes);
+
+    /// <summary>
+    /// Evict any cached schema and definition information held for a specific <see cref="EventTypeId"/>.
+    /// </summary>
+    /// <param name="eventTypeId">The <see cref="EventTypeId"/> to evict.</param>
+    /// <remarks>
+    /// Called locally after a registration and on every silo when an event type is registered elsewhere in the
+    /// cluster, so a peer cannot keep serving a stale definition after a new generation is added. Implementations
+    /// without an in-memory cache treat this as a no-op.
+    /// </remarks>
+    void Invalidate(EventTypeId eventTypeId);
 }
