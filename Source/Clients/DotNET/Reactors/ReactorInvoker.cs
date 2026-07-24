@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
@@ -53,8 +54,8 @@ public class ReactorInvoker(
     IReactorMethodArgumentsResolver? argumentsResolver = null,
     IServiceProvider? serviceProvider = null) : IReactorInvoker
 {
-    static readonly ConcurrentDictionary<Type, Dictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
-    readonly Dictionary<Type, MethodInfo> _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes);
+    static readonly ConcurrentDictionary<Type, FrozenDictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
+    readonly FrozenDictionary<Type, MethodInfo> _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes);
     readonly IReactorMethodArgumentsResolver _argumentsResolver = argumentsResolver ?? new ReactorMethodArgumentsResolver();
 
     /// <summary>
@@ -198,13 +199,13 @@ public class ReactorInvoker(
 
     static class MethodsByEventType
     {
-        public static Dictionary<Type, MethodInfo> Get(Type targetType, IEnumerable<Type> eventTypes) =>
+        public static FrozenDictionary<Type, MethodInfo> Get(Type targetType, IEnumerable<Type> eventTypes) =>
             _methodsByEventTypeCache.GetOrAdd(
                 targetType,
                 static (key, keyEventTypes) => Build(key, keyEventTypes),
                 eventTypes);
 
-        static Dictionary<Type, MethodInfo> Build(Type targetType, IEnumerable<Type> eventTypes)
+        static FrozenDictionary<Type, MethodInfo> Build(Type targetType, IEnumerable<Type> eventTypes)
         {
             var methodsByEventType = new Dictionary<Type, MethodInfo>();
 
@@ -231,7 +232,7 @@ public class ReactorInvoker(
                 }
             }
 
-            return methodsByEventType;
+            return methodsByEventType.ToFrozenDictionary();
         }
     }
 }

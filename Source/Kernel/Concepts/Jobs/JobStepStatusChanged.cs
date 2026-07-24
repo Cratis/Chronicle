@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Concepts.Jobs;
 /// <summary>
 /// Represents a state change event.
 /// </summary>
-public class JobStepStatusChanged
+public record JobStepStatusChanged
 {
     /// <summary>
     /// Gets or sets the <see cref="JobStepStatus"/>.

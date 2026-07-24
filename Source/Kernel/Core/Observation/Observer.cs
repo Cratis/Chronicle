@@ -319,6 +319,7 @@ public partial class Observer(
             _observerKey,
             observerDefinition,
             _jobsManager,
+            storage,
             loggerFactory.CreateLogger<Replay>()),
 
         new QuarantinedObserver(
