@@ -18,11 +18,13 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that resolves pending futures.
 /// </summary>
 /// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
+/// <param name="futuresTracker"><see cref="ProjectionFuturesTracker"/> shared with the <see cref="StoreFutures"/> step.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for creating changesets when resolving futures.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ResolveFutures(
     IProjectionFutures projectionFutures,
+    ProjectionFuturesTracker futuresTracker,
     ITypeFormats typeFormats,
     IObjectComparer objectComparer,
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
@@ -36,11 +38,18 @@ public class ResolveFutures(
             return context;
         }
 
+        // Nothing has been stored since resolution last drained the futures store, so skip the grain call
+        if (!futuresTracker.HasPending)
+        {
+            return context;
+        }
+
         // Attempt to resolve any pending futures now that we've processed a new event
         var futures = await projectionFutures.GetFutures();
 
         if (!futures.Any())
         {
+            futuresTracker.HasPending = false;
             return context;
         }
 
@@ -182,6 +191,9 @@ public class ResolveFutures(
                 }
             }
         }
+
+        // The final pass resolved nothing, so the last fetch reflects the futures still awaiting a parent
+        futuresTracker.HasPending = futures.Any();
 
         return context with { Event = latestResolvedEvent };
     }
