@@ -34,4 +34,10 @@ internal static partial class KernelLogMessages
 
     [LoggerMessage(LogLevel.Warning, "The Workbench feature is enabled but the Workbench UI is not embedded in this build - the server runs without serving the Workbench UI")]
     internal static partial void WorkbenchUINotEmbedded(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Critical, "Unhandled exception occurred (terminating: {IsTerminating})")]
+    internal static partial void UnhandledException(this ILogger<Kernel> logger, Exception exception, bool isTerminating);
+
+    [LoggerMessage(LogLevel.Error, "Unobserved task exception occurred")]
+    internal static partial void UnobservedTaskException(this ILogger<Kernel> logger, Exception exception);
 }

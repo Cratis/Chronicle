@@ -18,10 +18,26 @@ public static class ChronicleAspireBuilderExtensions
     /// Configures the Chronicle resource to use an external MongoDB connection string.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Sets the <c>Cratis__Chronicle__Storage__Type</c> container environment variable to <c>MongoDB</c>
     /// and <c>Cratis__Chronicle__Storage__ConnectionDetails</c> to the resolved MongoDB connection string.
     /// These map to <c>Cratis:Chronicle:Storage:Type</c> and <c>Cratis:Chronicle:Storage:ConnectionDetails</c>
     /// in the Chronicle server configuration respectively.
+    /// </para>
+    /// <para>
+    /// The MongoDB instance must be a replica set. Chronicle relies on MongoDB transactions and change
+    /// streams — used by observers, projections, and observable queries — and both require a replica set
+    /// rather than a standalone <c>mongod</c>. Against a standalone server the change-stream watch never
+    /// opens and observable read-model queries silently return their empty seed, which looks like a
+    /// projection bug rather than a storage-topology problem. Aspire's <c>AddMongoDB</c> starts a standalone
+    /// <c>mongod</c>, so point <paramref name="mongoDB"/> at a replica set instead — for example MongoDB
+    /// Atlas, or a single-node replica-set container that initializes itself.
+    /// </para>
+    /// <para>
+    /// A single-node replica set reached through a host-mapped port must be connected to with
+    /// <c>?directConnection=true</c> in the connection string, so the driver does not try to follow the
+    /// advertised replica-set member host (only reachable inside the container) back out and hang.
+    /// </para>
     /// </remarks>
     /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
     /// <param name="mongoDB">The <see cref="IResourceBuilder{T}"/> providing the MongoDB connection string.</param>
