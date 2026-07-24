@@ -74,7 +74,6 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
-            .AddBroadcastChannel(WellKnownBroadcastChannelNames.ReloadState, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddEventTypesCacheInvalidation()
             .AddEncryptionKeyCacheInvalidation()
@@ -105,7 +104,6 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton<IServices>(sp =>
         {
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
-            var clusterClient = sp.GetRequiredService<IClusterClient>();
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
@@ -150,7 +148,6 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
                 new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
                 new Cratis.Chronicle.Services.Host.Server(
-                    clusterClient,
                     grainFactory,
                     sp.GetRequiredService<Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>(),
                     sp.GetRequiredService<IInstancesOf<ICanPerformKernelStateReset>>(),
