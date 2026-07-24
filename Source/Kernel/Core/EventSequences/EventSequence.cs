@@ -763,7 +763,7 @@ public class EventSequence(
 
     async Task HandleFailedAppendManyResult(
         Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>? appendResult,
-        IEnumerable<EventToAppendToStorage> eventsToAppend)
+        List<EventToAppendToStorage> eventsToAppend)
     {
         if (appendResult is null)
         {
@@ -775,7 +775,7 @@ public class EventSequence(
             errorType => HandleAppendedDuplicateEventForMany(eventsToAppend, errorType.NextAvailableSequenceNumber));
     }
 
-    async Task HandleAppendedDuplicateEventForMany(IEnumerable<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
+    async Task HandleAppendedDuplicateEventForMany(List<EventToAppendToStorage> eventsToAppend, EventSequenceNumber nextAvailableSequenceNumber)
     {
         logger.DuplicateEventInMany(
             _eventSequenceKey.EventStore,
@@ -788,7 +788,14 @@ public class EventSequence(
             _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventSourceId, eventToAppend.EventType.Id.Value);
         }
 
-        State.SequenceNumber = nextAvailableSequenceNumber;
+        var sequenceNumber = nextAvailableSequenceNumber;
+        for (var index = 0; index < eventsToAppend.Count; index++)
+        {
+            eventsToAppend[index] = eventsToAppend[index] with { SequenceNumber = sequenceNumber };
+            sequenceNumber = sequenceNumber.Next();
+        }
+
+        State.SequenceNumber = sequenceNumber;
         await WriteStateAsync();
     }
 
