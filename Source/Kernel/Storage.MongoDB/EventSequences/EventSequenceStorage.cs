@@ -68,7 +68,12 @@ public class EventSequenceStorage(
         var collection = database.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, string>("_id"), eventSequenceId);
 
-        await collection.ReplaceOneAsync(filter, state.ToMongoDB(), new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+        var stateForStorage = state.ToMongoDB();
+        var update = Builders<EventSequenceState>.Update
+            .Set(_ => _.SequenceNumber, stateForStorage.SequenceNumber)
+            .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType);
+
+        await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -571,27 +576,13 @@ public class EventSequenceStorage(
         var groupDefinitions = new BsonDocument
         {
             { "_id", "$type" },
-            { "items", new BsonDocument("$push", "$_id") }
+            { "tail", new BsonDocument("$first", "$_id") }
         };
-        var projectDefinition = new BsonDocument(
-            "items", new BsonDocument(
-                "$slice", new BsonArray
-                {
-                    "$items",
-                    0,
-                    1
-                }));
-
-        var matchStage = PipelineStageDefinitionBuilder.Match(eventTypesFilter);
-        var sortStage = PipelineStageDefinitionBuilder.Sort(sortDefinition);
-        var groupStage = PipelineStageDefinitionBuilder.Group<BsonDocument, Guid>(groupDefinitions);
-        var projectStage = PipelineStageDefinitionBuilder.Project<BsonDocument>(projectDefinition);
 
         var aggregation = collection.Aggregate()
                   .Match(eventTypesFilter)
                   .Sort(sortDefinition)
-                  .Group(groupDefinitions)
-                  .Project(projectDefinition);
+                  .Group(groupDefinitions);
 
         var result = await aggregation.ToListAsync().ConfigureAwait(false);
         var resultAsDictionary = eventTypes.ToDictionary(_ => _, _ => EventSequenceNumber.Unavailable);
@@ -600,7 +591,7 @@ public class EventSequenceStorage(
             var eventType = eventTypes.FirstOrDefault(_ => _.Id == (EventTypeId)item["_id"].AsString);
             if (eventType != null)
             {
-                resultAsDictionary[eventType] = ToEventSequenceNumber(item["items"][0]);
+                resultAsDictionary[eventType] = ToEventSequenceNumber(item["tail"]);
             }
         }
 

@@ -10,13 +10,6 @@ namespace Cratis.Chronicle.Contracts.Host;
 public interface IServer
 {
     /// <summary>
-    /// Instruct the server to reload its state.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    [Operation]
-    Task ReloadState();
-
-    /// <summary>
     /// Gets version information about the running server instance.
     /// </summary>
     /// <returns>A <see cref="ServerVersionInfo"/> with server and contracts versions.</returns>
