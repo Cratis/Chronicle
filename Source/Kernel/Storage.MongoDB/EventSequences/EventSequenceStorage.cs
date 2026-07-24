@@ -276,14 +276,11 @@ public class EventSequenceStorage(
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            await session.AbortTransactionAsync().ConfigureAwait(false);
-            var highest = await _collection.Find(FilterDefinition<Event>.Empty)
-                                          .SortByDescendingSequenceNumber()
-                                          .Limit(1)
-                                          .SingleOrDefaultAsync()
-                                          .ConfigureAwait(false);
-            var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
-            return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
+            return await AbortAndResolveNextAvailableSequenceNumber(session).ConfigureAwait(false);
+        }
+        catch (MongoBulkWriteException<Event> bulkWriteException) when (bulkWriteException.WriteErrors.Any(writeError => writeError.Category == ServerErrorCategory.DuplicateKey))
+        {
+            return await AbortAndResolveNextAvailableSequenceNumber(session).ConfigureAwait(false);
         }
         catch
         {
@@ -921,5 +918,17 @@ public class EventSequenceStorage(
                 .Set(e => e.CorrelationId, redactionCorrelationId)
                 .Set(e => e.Causation, redactionCausation)
                 .Set(e => e.CausedBy, redactionCausedByChain));
+    }
+
+    async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
+    {
+        await session.AbortTransactionAsync().ConfigureAwait(false);
+        var highest = await _collection.Find(FilterDefinition<Event>.Empty)
+                                      .SortByDescendingSequenceNumber()
+                                      .Limit(1)
+                                      .SingleOrDefaultAsync()
+                                      .ConfigureAwait(false);
+        var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
+        return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
     }
 }

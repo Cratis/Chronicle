@@ -31,11 +31,22 @@ For production or staging environments, use the configure callback. This switche
 
 The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis__Chronicle__Storage__ConnectionDetails` environment variables on the Chronicle container using the connection string from the provided MongoDB resource.
 
-`mongo` can be any `IResourceBuilder<IResourceWithConnectionString>`, including:
+:::caution[Chronicle needs a MongoDB replica set]
+Chronicle uses MongoDB transactions, and its observers, projections, and observable queries rely on change streams — **both require MongoDB to run as a replica set**, not a standalone `mongod`. Against a standalone server the change-stream watch never opens, so observable read-model queries silently return their empty seed and it looks like a projection bug rather than a storage-topology problem.
 
-- A MongoDB Atlas connection string (`builder.AddConnectionString("...")`)
-- A Mongo container added directly in the AppHost: `builder.AddMongoDB("mongo")`
-- Any self-hosted or cloud MongoDB resource
+Aspire's `builder.AddMongoDB("mongo")` starts a **standalone** `mongod`, so it does not work with the slim image on its own — point `WithMongoDB` at a replica set instead.
+:::
+
+`mongo` can be any `IResourceBuilder<IResourceWithConnectionString>` that resolves to a replica set, including:
+
+- A MongoDB Atlas connection string (`builder.AddConnectionString("...")`) — Atlas clusters are always replica sets.
+- Any self-hosted or cloud MongoDB cluster reached through a connection string.
+
+For local development against the slim image, run MongoDB as a **single-node replica set** container that initializes itself, and hand `WithMongoDB` a connection string carrying `?directConnection=true`:
+
+<ChronicleClientTabs snippet="hosting/aspire/mongo-replica-set" />
+
+`directConnection=true` keeps the driver from following the advertised replica-set member host — `localhost:27017`, only reachable inside the container — back out and hanging. This is the same single-node-replica-set recipe Chronicle's own integration tests use. The embedded development image (`AddCratisChronicle()` with no configure callback) bundles a ready replica set, which is why the development path just works; the requirement only surfaces once you move to the slim image with an external database.
 
 ### PostgreSQL
 

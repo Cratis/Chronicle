@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
@@ -21,7 +22,7 @@ public class MongoDBKernelStateResetHandler(
     IOptions<MongoDBOptions> mongoDBOptions,
     IMongoDBClientManager clientManager) : ICanPerformKernelStateReset
 {
-    static readonly HashSet<string> _preservedDatabases = new(StringComparer.OrdinalIgnoreCase)
+    static readonly FrozenSet<string> _preservedDatabases = new[]
     {
         // MongoDB system databases
         "admin",
@@ -34,7 +35,7 @@ public class MongoDBKernelStateResetHandler(
         // to re-bootstrap auth from scratch. The bootstrap handler can recreate them,
         // but in-flight client tokens issued before the reset would still be rejected.
         WellKnownDatabaseNames.Chronicle,
-    };
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
     public bool CanReset()
