@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Jobs;
@@ -26,6 +27,7 @@ using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
@@ -62,6 +64,8 @@ public class an_event_sequence : Specification
     protected IConstraints _constraintsGrain;
     protected IJobsManager _jobsManager;
     protected List<IConstraintDefinition> _registeredConstraints;
+
+    protected virtual int StatePersistenceInterval => 1000;
 
     async Task Establish()
     {
@@ -168,6 +172,10 @@ public class an_event_sequence : Specification
         _silo.AddService(_expandoObjectConverter);
         _silo.AddService(Substitute.For<IEventSerializer>());
         _silo.AddService(Substitute.For<IEventHashCalculator>());
+        _silo.AddService<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
+        {
+            Events = new Configuration.Events { StatePersistenceInterval = StatePersistenceInterval }
+        }));
         _silo.AddService(NullLogger<EventSequence>.Instance);
         _silo.AddKeyedService<IMeter<EventSequence>>(WellKnown.MeterName, Substitute.For<IMeter<EventSequence>>());
         _silo.AddKeyedService<IActivitySource<EventSequence>>(WellKnown.MeterName, new ActivitySource<EventSequence>());
