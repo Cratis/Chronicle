@@ -14,6 +14,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
@@ -43,6 +44,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
         var namespaceDatabase = Substitute.For<IEventStoreNamespaceDatabase>();
         namespaceDatabase.Client.Returns(_client);
         namespaceDatabase.GetEventSequenceCollectionFor(Arg.Any<EventSequenceId>()).Returns(collection);
+        namespaceDatabase.GetEventSequenceCollectionAsBsonFor(Arg.Any<EventSequenceId>()).Returns(database.GetCollection<BsonDocument>("event-log"));
 
         var eventTypesStorage = Substitute.For<IEventTypesStorage>();
         eventTypesStorage.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>())
@@ -75,13 +77,15 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
         }
     }
 
-    protected EventToAppendToStorage EventAt(EventSequenceNumber sequenceNumber) => new(
+    protected EventToAppendToStorage EventAt(EventSequenceNumber sequenceNumber) => EventAt(sequenceNumber, _eventType);
+
+    protected EventToAppendToStorage EventAt(EventSequenceNumber sequenceNumber, EventType eventType) => new(
         sequenceNumber,
         EventSourceType.Default,
         "some-source",
         EventStreamType.All,
         EventStreamId.Default,
-        _eventType,
+        eventType,
         CorrelationId.NotSet,
         [],
         [],
