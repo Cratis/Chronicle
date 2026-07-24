@@ -9,9 +9,11 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that stores deferred futures.
 /// </summary>
 /// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
+/// <param name="futuresTracker"><see cref="ProjectionFuturesTracker"/> shared with the <see cref="ResolveFutures"/> step.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class StoreFutures(
     IProjectionFutures projectionFutures,
+    ProjectionFuturesTracker futuresTracker,
     ILogger<StoreFutures> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
@@ -25,7 +27,11 @@ public class StoreFutures(
         // Store any deferred futures that were created during processing
         foreach (var future in context.DeferredFutures)
         {
-            await projectionFutures.AddFuture(future);
+            var pending = await projectionFutures.AddFuture(future);
+            if (pending > 0)
+            {
+                futuresTracker.HasPending = true;
+            }
             logger.StoredFuture(future.Id, future.ProjectionId);
         }
 
