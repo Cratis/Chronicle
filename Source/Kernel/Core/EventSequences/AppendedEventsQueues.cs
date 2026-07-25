@@ -16,45 +16,80 @@ namespace Cratis.Chronicle.EventSequences;
 public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, IAppendedEventsQueues
 {
     IAppendedEventsQueue[] _queues = [];
+    AppendedEventsQueueRouter _router = null!;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _queues = Enumerable.Range(0, options.Value.Events.Queues).Select(_ => GrainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
-
-        return Task.CompletedTask;
+        var queueCount = options.Value.Events.Queues;
+        _queues = Enumerable.Range(0, queueCount).Select(_ => GrainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
+        _router = new AppendedEventsQueueRouter(queueCount);
+        await SeedRouter();
     }
 
     /// <inheritdoc/>
-    public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents) =>
-        await Parallel.ForEachAsync(_queues, async (queue, ctx) => await queue.Enqueue(appendedEvents));
+    public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
+    {
+        var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToArray();
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        await Parallel.ForEachAsync(GetTargetQueues(batch), async (queue, _) => await queue.Enqueue(batch));
+    }
 
     /// <inheritdoc/>
     public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
     {
-        // Deterministic hash-based queue assignment ensures the same observer always lands on
-        // the same queue across subscribe/unsubscribe cycles. The previous round-robin counter
-        // moved an observer to a different queue every time the Observing state was re-entered
-        // (e.g. after a catch-up cycle), leaving brief windows where dispatched events landed
-        // on a queue the observer was no longer subscribed to — surfacing as silently dropped
-        // events for projections that aggregate across event sources.
-        var queueIndex = GetQueueIndexFor(observerKey);
+        var eventTypesList = eventTypes as IReadOnlyCollection<EventType> ?? eventTypes.ToArray();
+        var queueIndex = _router.Subscribe(observerKey, eventTypesList.Select(eventType => eventType.Id));
         var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
-        await _queues[queueIndex].Subscribe(observerKey, eventTypes, filters);
+        await _queues[queueIndex].Subscribe(observerKey, eventTypesList, filters);
         return subscription;
     }
 
     /// <inheritdoc/>
     public async Task Unsubscribe(AppendedEventsQueueSubscription subscription)
     {
+        _router.Unsubscribe(subscription.Queue, subscription.ObserverKey);
         await _queues[subscription.Queue].Unsubscribe(subscription.ObserverKey);
     }
 
-    int GetQueueIndexFor(ObserverKey observerKey)
+    async Task SeedRouter()
     {
-        // Use the observer identifier as the hash input — it is stable for a given observer
-        // and produces a deterministic queue assignment.
-        var hash = observerKey.ObserverId.Value.GetHashCode(StringComparison.Ordinal);
-        return (int)((uint)hash % (uint)_queues.Length);
+        for (var queueIndex = 0; queueIndex < _queues.Length; queueIndex++)
+        {
+            try
+            {
+                var subscriptions = await _queues[queueIndex].GetSubscriptions();
+                _router.Seed(queueIndex, subscriptions);
+            }
+            catch
+            {
+                // A queue left unseeded keeps receiving every batch until it is reconciled: a missed delivery
+                // would silently drop events, whereas an extra delivery is idempotent for observers.
+            }
+        }
+    }
+
+    IEnumerable<IAppendedEventsQueue> GetTargetQueues(IReadOnlyList<AppendedEvent> batch)
+    {
+        var batchEventTypeIds = new HashSet<EventTypeId>();
+        foreach (var appendedEvent in batch)
+        {
+            var eventTypeId = appendedEvent.Context.EventType.Id;
+
+            // A redaction stands in for the original event type when matched by observers. Rather than duplicate
+            // that matching here, route redaction batches to every queue — they are rare — and let the queues filter.
+            if (eventTypeId == GlobalEventTypes.Redaction)
+            {
+                return _queues;
+            }
+
+            batchEventTypeIds.Add(eventTypeId);
+        }
+
+        return _router.GetQueuesToDeliverTo(batchEventTypeIds).Select(queueIndex => _queues[queueIndex]);
     }
 }

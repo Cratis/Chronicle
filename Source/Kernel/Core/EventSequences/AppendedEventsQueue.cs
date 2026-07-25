@@ -145,6 +145,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyList<AppendedEventsQueueObserverSubscription>> GetSubscriptions()
+    {
+        lock (_subscriptionsLock)
+        {
+            return Task.FromResult<IReadOnlyList<AppendedEventsQueueObserverSubscription>>([.. _subscriptions]);
+        }
+    }
+
+    /// <inheritdoc/>
     public void Dispose()
     {
         _isDisposed = true;
