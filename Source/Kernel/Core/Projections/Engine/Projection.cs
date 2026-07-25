@@ -119,6 +119,9 @@ public class Projection : IProjection, IDisposable
     public bool HasParent => Parent != default;
 
     /// <inheritdoc/>
+    public bool IsEventSourceKeyed { get; private set; }
+
+    /// <inheritdoc/>
     public IProjection? Parent { get; private set; }
 
     /// <inheritdoc/>
@@ -192,6 +195,13 @@ public class Projection : IProjection, IDisposable
         _eventTypesToKeyResolver = eventTypes.ToDictionary(
             _ => new EventType(_.EventType.Id, _.EventType.Generation, _.EventType.Tombstone),
             _ => _.KeyResolver);
+
+        // A child collection routes events to a parent document, so a projection with any child projection can
+        // collapse distinct event sources and must keep the coarse lock regardless of its own resolvers.
+        IsEventSourceKeyed =
+            eventTypes.Length > 0 &&
+            !ChildProjections.Any() &&
+            eventTypes.All(_ => _.ResolvesToEventSourceId);
 
         OwnEventTypes = ownEventTypes;
         OperationTypes = operationTypes;
