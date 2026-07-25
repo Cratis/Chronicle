@@ -16,6 +16,7 @@ using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Testing.EventSequences;
+using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
 using KernelConcept = KernelConcepts::Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Testing;
