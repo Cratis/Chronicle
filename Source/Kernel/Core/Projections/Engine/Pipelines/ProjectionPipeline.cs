@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="steps">Collection of <see cref="ICanPerformProjectionPipelineStep"/> to perform.</param>
 /// <param name="handleLock">Per-projection lock that serializes <see cref="Handle"/> calls across all pipeline instances that share the same projection identifier.</param>
+/// <param name="replayScopedCache">The <see cref="IReplayScopedCache"/> whose key-resolution caching is active only for the duration of a replay.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 public class ProjectionPipeline(
     EngineProjection projection,
@@ -32,6 +33,7 @@ public class ProjectionPipeline(
     IObjectComparer objectComparer,
     IEnumerable<ICanPerformProjectionPipelineStep> steps,
     SemaphoreSlim handleLock,
+    IReplayScopedCache replayScopedCache,
     ILogger<ProjectionPipeline> logger) : IProjectionPipeline
 {
     /// <summary>
@@ -55,16 +57,22 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        replayScopedCache.BeginReplaySession();
         await changesetStorage.BeginReplay(projection.ReadModel.ContainerName);
         await sink.BeginReplay(context);
     }
 
     /// <inheritdoc/>
-    public Task ResumeReplay(ReplayContext context) => sink.ResumeReplay(context);
+    public Task ResumeReplay(ReplayContext context)
+    {
+        replayScopedCache.BeginReplaySession();
+        return sink.ResumeReplay(context);
+    }
 
     /// <inheritdoc/>
     public async Task EndReplay(ReplayContext context)
     {
+        replayScopedCache.EndReplaySession();
         await sink.EndReplay(context);
         await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
     }

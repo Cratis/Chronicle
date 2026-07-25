@@ -61,7 +61,7 @@ public class ProjectionPipelineManager(
         }
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
-        var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
+        var replayScopedStorage = new ReplayScopedEventSequenceStorage(namespaceStorage.GetEventSequence(projection.EventSequenceId));
         var sink = await namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
@@ -70,10 +70,10 @@ public class ProjectionPipelineManager(
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
-            new ResolveKey(eventSequenceStorage, sink, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
+            new ResolveKey(replayScopedStorage, sink, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
             new DecryptInitialState(readModelsCompliance, eventStore, @namespace),
-            new HandleEvent(eventSequenceStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
+            new HandleEvent(replayScopedStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
             new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
             new StoreFutures(projectionFutures, futuresTracker, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
@@ -89,6 +89,7 @@ public class ProjectionPipelineManager(
             objectComparer,
             steps,
             handleLock,
+            replayScopedStorage,
             loggerFactory.CreateLogger<ProjectionPipeline>());
 
         return _pipelines[key] = newPipeline;
