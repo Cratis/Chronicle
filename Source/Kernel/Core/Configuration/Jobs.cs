@@ -31,6 +31,21 @@ public class Jobs
     public TimeSpan CleanupCadence { get; init; } = TimeSpan.FromHours(1);
 
     /// <summary>
+    /// Gets the number of successfully handled events after which a replay/catch-up job step makes its
+    /// progress checkpoint durable.
+    /// </summary>
+    /// <remarks>
+    /// A partitioned or global-order replay step reports its progress after every consecutive batch it hands
+    /// off (realistically every 1-3 events), and each report persisted the whole step document. That write is
+    /// debounced: the checkpoint is made durable once this many events have been reported, and any other state
+    /// write (a status change on completion, failure, or stop) flushes the pending checkpoint too. A step always
+    /// resumes from its last persisted checkpoint and re-reads forward, so a crash between debounced writes only
+    /// re-processes events already handled — because observers are idempotent, nothing is lost or double-applied.
+    /// A larger value trades a longer post-crash re-scan for fewer writes. Defaults to 100.
+    /// </remarks>
+    public int StepCheckpointBatchInterval { get; init; } = 100;
+
+    /// <summary>
     /// Gets the effective maximum parallel steps to use.
     /// </summary>
     /// <returns>The maximum parallel steps value.</returns>

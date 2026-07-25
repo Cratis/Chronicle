@@ -2,10 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Workers;
 using Cratis.Monads;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Jobs;
 
@@ -33,6 +36,8 @@ public abstract class JobStep<TRequest, TResult, TState>(
     CancellationTokenSource? _cancellationTokenSource = new();
     IJob _job = new NullJob();
     bool _currentlyRunning;
+    int _checkpointBatchInterval = 1;
+    int _checkpointsSinceLastWrite;
 
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
@@ -85,6 +90,11 @@ public abstract class JobStep<TRequest, TResult, TState>(
         state.State.Type = grainType;
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = new();
+
+        var configuredInterval = ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value is { } options
+            ? options.Jobs.StepCheckpointBatchInterval
+            : 1;
+        _checkpointBatchInterval = configuredInterval < 1 ? 1 : configuredInterval;
     }
 
     /// <inheritdoc/>
@@ -478,6 +488,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         try
         {
             await state.WriteStateAsync();
+            _checkpointsSinceLastWrite = 0;
             return Catch.Success();
         }
         catch (Exception ex)
@@ -485,6 +496,27 @@ public abstract class JobStep<TRequest, TResult, TState>(
             logger.FailedToWriteState(ex);
             return ex;
         }
+    }
+
+    /// <summary>
+    /// Saves the current grain state as a progress checkpoint, debounced so the write only happens once
+    /// <see cref="Configuration.Jobs.StepCheckpointBatchInterval"/> checkpoints have accumulated.
+    /// </summary>
+    /// <returns>A task representing the asynchronous action.</returns>
+    /// <remarks>
+    /// The in-memory state has already advanced when this is called; the write is deferred and any other state
+    /// write (such as a terminal status change) flushes the pending checkpoint. A step always resumes from its
+    /// last persisted checkpoint and re-reads forward, so a crash between debounced writes only re-processes
+    /// events the step had already handled — because observers are idempotent, this at-least-once relaxation
+    /// loses and double-applies nothing. It deliberately trades a longer post-crash re-scan for removing the
+    /// dominant per-batch write on the replay path.
+    /// </remarks>
+    protected Task<Catch> WriteCheckpointDebounced()
+    {
+        _checkpointsSinceLastWrite++;
+        return _checkpointsSinceLastWrite >= _checkpointBatchInterval
+            ? WriteStateAsync()
+            : Task.FromResult(Catch.Success());
     }
 
     /// <summary>

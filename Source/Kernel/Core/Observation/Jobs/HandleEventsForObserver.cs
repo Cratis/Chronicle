@@ -65,7 +65,7 @@ public class HandleEventsForObserver(
     {
         using var scope = logger.BeginJobStepScope(State);
         State.LastSuccessfullyHandledEventSequenceNumber = lastHandledEventSequenceNumber;
-        var writeStateResult = await WriteStateAsync();
+        var writeStateResult = await WriteCheckpointDebounced();
         if (writeStateResult.TryGetException(out var error))
         {
             logger.FailedToPersistSuccessfullyHandledEvent(error, lastHandledEventSequenceNumber);
