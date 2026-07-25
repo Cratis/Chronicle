@@ -33,6 +33,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </summary>
     const int MaxCoalescedBatchesPerDispatch = 100;
 
+    /// <summary>
+    /// How many times a spilled observer's catch-up trigger is retried before giving up. The whole no-loss guarantee
+    /// of the spill rests on the catch-up actually starting, so a transient failure to start it must not strand the
+    /// observer; retries make the trigger reliable and a final failure is logged as an error.
+    /// </summary>
+    const int MaxCatchupTriggerAttempts = 3;
+
+    static readonly TimeSpan _catchupTriggerRetryBaseDelay = TimeSpan.FromMilliseconds(200);
+
     readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
@@ -76,6 +85,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _channel = capacity > 0
             ? Channel.CreateBounded<IReadOnlyList<AppendedEvent>>(new BoundedChannelOptions(capacity)
             {
+                // Wait mode is load-bearing for the spill: with the channel full, TryWrite returns false (rather than
+                // dropping), which is how Enqueue detects overflow and spills to catch-up instead of blocking.
                 FullMode = BoundedChannelFullMode.Wait,
                 SingleReader = true,
                 SingleWriter = false
@@ -486,7 +497,41 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _logger.SpillingToCatchup(observerKeys.Length);
         foreach (var observerKey in observerKeys)
         {
-            _ = _grainFactory.GetGrain<IObserver>(observerKey).CatchUp();
+            _ = TriggerCatchup(observerKey);
+        }
+    }
+
+    /// <summary>
+    /// Starts an observer's catch-up out of the append path and does not swallow the outcome. <c>CatchUp</c> returns
+    /// once the catch-up job has been started (not when it completes), so this waits only for the start — never for
+    /// observer processing — and therefore never re-couples appends to observer speed. A failure to start is logged
+    /// and retried a bounded number of times so a transient transport/job-subsystem fault does not permanently strand
+    /// a spilled observer behind the gap; exhausting the retries is logged as an error.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the spilled observer to recover.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task TriggerCatchup(ObserverKey observerKey)
+    {
+        var observer = _grainFactory.GetGrain<IObserver>(observerKey);
+        for (var attempt = 1; attempt <= MaxCatchupTriggerAttempts && !_isDisposed; attempt++)
+        {
+            try
+            {
+                await observer.CatchUp();
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.SpillCatchupTriggerFailed(observerKey, attempt, MaxCatchupTriggerAttempts, ex);
+                if (attempt < MaxCatchupTriggerAttempts)
+                {
+                    await Task.Delay(_catchupTriggerRetryBaseDelay * attempt);
+                }
+                else
+                {
+                    _logger.SpillCatchupTriggerAbandoned(observerKey);
+                }
+            }
         }
     }
 
