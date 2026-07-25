@@ -34,6 +34,7 @@ public partial class Observer
         await CheckConnectedClient();
         await CheckJobTasks();
         await CheckNextSequenceNumber();
+        await FlushDebouncedProgressState();
     }
 
     async Task CheckConnectedClient()
