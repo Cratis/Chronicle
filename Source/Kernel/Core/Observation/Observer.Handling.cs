@@ -62,7 +62,7 @@ public partial class Observer
                 NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                 TailEventSequenceNumber = observedTailEventSequenceNumber
             };
-            await WriteStateAsync();
+            await WriteProgressStateDebounced();
             return;
         }
 
@@ -77,7 +77,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
-                await WriteStateAsync();
+                await WriteProgressStateDebounced();
                 return;
             }
 
@@ -90,7 +90,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
-                await WriteStateAsync();
+                await WriteProgressStateDebounced();
                 return;
             }
 
@@ -102,7 +102,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
-                await WriteStateAsync();
+                await WriteProgressStateDebounced();
                 return;
             }
         }
@@ -435,5 +435,41 @@ public partial class Observer
             LastHandledEventSequenceNumber = newLastHandledEvent,
             NextEventSequenceNumber = nextEventSequenceNumber
         };
+    }
+
+    /// <summary>
+    /// Persists a progress-only advance of <see cref="ObserverState.NextEventSequenceNumber"/> — the observer
+    /// moving past a batch that held nothing it is subscribed to — subject to debouncing.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The in-memory state has already advanced when this is called; the write is deferred until
+    /// <see cref="Cratis.Chronicle.Configuration.Observers.StatePersistenceBatchInterval"/> progress-only batches have accumulated (any other
+    /// state write flushes it sooner, and the watchdog and deactivation flush it on their own cadence). Because
+    /// catch-up (<see cref="CatchUp"/>) always resumes from the last persisted <see cref="ObserverState.NextEventSequenceNumber"/>
+    /// and observers are idempotent, a crash between debounced writes only re-scans events the observer had already
+    /// skipped — no event is lost or handled twice. This deliberately relaxes per-batch durability of progress in
+    /// exchange for removing the dominant write on selective observers.
+    /// </remarks>
+    async Task WriteProgressStateDebounced()
+    {
+        _debouncedProgressWrites++;
+        if (_debouncedProgressWrites >= _statePersistenceBatchInterval)
+        {
+            await WriteStateAsync();
+        }
+    }
+
+    /// <summary>
+    /// Flushes a progress-only advance that debouncing has left unpersisted, writing the observer state only when
+    /// there is a pending advance.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task FlushDebouncedProgressState()
+    {
+        if (_debouncedProgressWrites > 0)
+        {
+            await WriteStateAsync();
+        }
     }
 }
