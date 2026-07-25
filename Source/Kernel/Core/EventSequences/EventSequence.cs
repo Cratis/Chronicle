@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -30,7 +29,6 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Json;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -72,21 +70,6 @@ public class EventSequence(
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
-    /// <summary>
-    /// Default serialization plus geospatial converters so that typed geospatial values in the event
-    /// content (held as their CLR type in the ExpandoObject) are written as GeoJSON — keeping the
-    /// stored/transport shape consistent with what the schema-guided converter reads back.
-    /// </summary>
-    static readonly JsonSerializerOptions _contentSerializerOptions = new()
-    {
-        Converters =
-        {
-            new PointJsonConverter(),
-            new LineStringJsonConverter(),
-            new PolygonJsonConverter()
-        }
-    };
-
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
@@ -275,7 +258,7 @@ public class EventSequence(
                 return error;
             }
 
-            var (compliantEvent, constraintContext) = getValidAndCompliantEvent.AsT0;
+            var (compliantEvent, compliantContent, constraintContext) = getValidAndCompliantEvent.AsT0;
             var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
             if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
             {
@@ -293,6 +276,7 @@ public class EventSequence(
                 causedBy,
                 tags,
                 compliantEvent,
+                compliantContent,
                 constraintContext,
                 occurred,
                 subject);
@@ -324,7 +308,7 @@ public class EventSequence(
             // cannot both claim the same unique constraint value — the persisted index is only updated after
             // the whole batch has been appended, so without this earlier events in the batch are invisible.
             var batchClaims = new ConstraintBatchClaims();
-            var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
+            var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
             foreach (var e in events)
             {
                 var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
@@ -355,7 +339,7 @@ public class EventSequence(
 
             foreach (var (eventToAppend, validAndCompliantEvent) in getValidAndCompliantEvents)
             {
-                var (compliantEvent, constraintContext) = validAndCompliantEvent.AsT0;
+                var (compliantEvent, _, constraintContext) = validAndCompliantEvent.AsT0;
                 constraintContexts.Add(constraintContext);
                 var eventHash = eventHashCalculator.Calculate(eventToAppend.EventType.Id, eventToAppend.EventSourceId, compliantEvent);
 
@@ -564,6 +548,7 @@ public class EventSequence(
         Identity causedBy,
         IEnumerable<Tag> tags,
         ExpandoObject compliantEvent,
+        JsonObject compliantContent,
         ConstraintValidationContext constraintContext,
         DateTimeOffset? occurred = null,
         Subject? subject = null)
@@ -580,12 +565,8 @@ public class EventSequence(
 
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
 
-            // Convert the compliant event to JsonObject for migration
-            var json = JsonSerializer.Serialize(compliantEvent, _contentSerializerOptions);
-            var contentAsJson = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
-
-            // Migrate the event to all generations
-            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventType, contentAsJson);
+            // Migrate the event to all generations using the already-compliant content and expando
+            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventType, compliantContent, compliantEvent);
 
             // Calculate content hashes for each generation
             var contentHashes = migratedContent.ToDictionary(
@@ -640,7 +621,7 @@ public class EventSequence(
         }
     }
 
-    async Task<Result<(ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> GetValidAndCompliantEvent(
+    async Task<Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> GetValidAndCompliantEvent(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
         EventStreamType eventStreamType,
@@ -673,7 +654,7 @@ public class EventSequence(
                 return error;
             }
 
-            return (compliantEventAsExpandoObject, (ConstraintValidationContext)checkConstraintViolation);
+            return (compliantEventAsExpandoObject, compliantContent, (ConstraintValidationContext)checkConstraintViolation);
         }
         catch (Exception ex)
         {
