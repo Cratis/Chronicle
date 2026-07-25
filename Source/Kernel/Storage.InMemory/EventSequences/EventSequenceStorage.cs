@@ -3,12 +3,14 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Json;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.InMemory.EventSequences;
@@ -161,7 +163,36 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
         ExpandoObject content,
-        EventHash hash) => Task.CompletedTask;
+        EventHash hash)
+    {
+        lock (_lock)
+        {
+            var index = _events.FindIndex(_ => _.Context.SequenceNumber == sequenceNumber);
+            if (index < 0)
+            {
+                throw new NoEventAtSequenceNumber(eventSequenceId, sequenceNumber);
+            }
+
+            var original = _events[index];
+            var revision = new EventRevision(
+                eventType.Generation,
+                correlationId,
+                causation,
+                Identity.System,
+                occurred,
+                Serialize(content));
+
+            _events[index] = original with
+            {
+                Context = original.Context with { EventType = eventType, Hash = hash },
+                Content = content,
+                OriginalContent = original.IsRevised ? original.OriginalContent : Serialize(original.Content),
+                Revisions = [.. original.Revisions, revision]
+            };
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task<AppendedEvent> Redact(
@@ -170,9 +201,31 @@ public class EventSequenceStorage(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
-        DateTimeOffset occurred) =>
-        Task.FromResult(Events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber)
-            ?? throw new InvalidOperationException($"No event at sequence number {sequenceNumber}"));
+        DateTimeOffset occurred)
+    {
+        lock (_lock)
+        {
+            var index = _events.FindIndex(_ => _.Context.SequenceNumber == sequenceNumber);
+            if (index < 0)
+            {
+                throw new NoEventAtSequenceNumber(eventSequenceId, sequenceNumber);
+            }
+
+            var original = _events[index];
+
+            // Already redacted — return it as-is so the caller can skip the duplicate rewind, matching
+            // how the persistent providers signal "redaction already applied".
+            if (original.Context.EventType.Id == GlobalEventTypes.Redaction)
+            {
+                return Task.FromResult(original);
+            }
+
+            _events[index] = Redacted(original, reason, correlationId, causation, causedByChain, occurred);
+
+            // The pre-redaction event is returned, as the persistent providers do.
+            return Task.FromResult(original);
+        }
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventType>> Redact(
@@ -182,8 +235,30 @@ public class EventSequenceStorage(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
-        DateTimeOffset occurred) =>
-        Task.FromResult(Enumerable.Empty<EventType>());
+        DateTimeOffset occurred)
+    {
+        var affectedEventTypes = new HashSet<EventType>();
+        var eventTypeIds = eventTypes?.Select(_ => _.Id).ToHashSet();
+
+        lock (_lock)
+        {
+            for (var index = 0; index < _events.Count; index++)
+            {
+                var original = _events[index];
+                if (original.Context.EventSourceId != eventSourceId ||
+                    original.Context.EventType.Id == GlobalEventTypes.Redaction ||
+                    (eventTypeIds?.Count > 0 && !eventTypeIds.Contains(original.Context.EventType.Id)))
+                {
+                    continue;
+                }
+
+                affectedEventTypes.Add(new EventType(original.Context.EventType.Id, EventTypeGeneration.First, false));
+                _events[index] = Redacted(original, reason, correlationId, causation, causedByChain, occurred);
+            }
+        }
+
+        return Task.FromResult<IEnumerable<EventType>>(affectedEventTypes);
+    }
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetHeadSequenceNumber(
@@ -352,8 +427,111 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public Task ReplaceGenerationContent(
         EventSequenceNumber sequenceNumber,
-        IDictionary<EventTypeGeneration, ExpandoObject> content) => Task.CompletedTask;
+        IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        lock (_lock)
+        {
+            var index = _events.FindIndex(_ => _.Context.SequenceNumber == sequenceNumber);
+            if (index < 0)
+            {
+                throw new NoEventAtSequenceNumber(eventSequenceId, sequenceNumber);
+            }
 
+            var original = _events[index];
+            var latest = content
+                .OrderByDescending(_ => _.Key.Value)
+                .Select(_ => _.Value)
+                .FirstOrDefault() ?? original.Content;
+
+            _events[index] = original with
+            {
+                Content = latest,
+                GenerationalContent = content.ToDictionary(_ => (int)_.Key.Value, _ => Serialize(_.Value))
+            };
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Produces the redacted replacement for an event, mirroring how the persistent providers redact in place:
+    /// the event type becomes <see cref="GlobalEventTypes.Redaction"/>, the payload is replaced with a
+    /// <see cref="RedactionEventContent"/> describing what was redacted, and the auditing fields become the
+    /// redaction's. The sequence number and event source are preserved.
+    /// </summary>
+    /// <param name="original">The event being redacted.</param>
+    /// <param name="reason">The <see cref="RedactionReason"/>.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> of the redaction.</param>
+    /// <param name="causation">The causation chain behind the redaction.</param>
+    /// <param name="causedByChain">The identities that caused the redaction.</param>
+    /// <param name="occurred">When the redaction occurred.</param>
+    /// <returns>The redacted <see cref="AppendedEvent"/>.</returns>
+    static AppendedEvent Redacted(
+        AppendedEvent original,
+        RedactionReason reason,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred)
+    {
+        // This provider stores a single Identity per event rather than an identity chain, so the original
+        // chain cannot be carried into the redaction content; everything else mirrors the persistent providers.
+        var content = new RedactionEventContent(
+            reason,
+            original.Context.EventType.Id,
+            original.Context.Occurred,
+            original.Context.CorrelationId,
+            original.Context.Causation,
+            causedByChain);
+
+        return original with
+        {
+            Context = original.Context with
+            {
+                EventType = new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First, false),
+                Occurred = occurred,
+                CorrelationId = correlationId,
+                Causation = causation,
+                CausedBy = Identity.System
+            },
+            Content = ToExpandoObject(content),
+            OriginalContent = string.Empty,
+            GenerationalContent = new Dictionary<int, string>()
+        };
+    }
+
+    static ExpandoObject ToExpandoObject(RedactionEventContent content)
+    {
+        var expando = new ExpandoObject();
+        var values = (IDictionary<string, object?>)expando;
+        values["reason"] = content.Reason.Value;
+        values["originalEventType"] = content.OriginalEventType.Value;
+        values["occurred"] = content.Occurred;
+        values["correlationId"] = content.CorrelationId.Value;
+        values["causation"] = content.Causation;
+        values["causedBy"] = content.CausedBy;
+        return expando;
+    }
+
+    static string Serialize(ExpandoObject content) => JsonSerializer.Serialize(content, Globals.JsonSerializerOptions);
+
+    /// <summary>
+    /// Narrows the events by the supplied criteria, matching how the persistent storage providers build their queries.
+    /// </summary>
+    /// <remarks>
+    /// Each criterion carries a sentinel meaning "do not narrow on this dimension" — an unspecified
+    /// <see cref="EventSourceId"/>, a default/unspecified <see cref="EventSourceType"/>,
+    /// <see cref="EventStreamType.All"/>, the default <see cref="EventStreamId"/>, and an empty event type set.
+    /// Callers asking for "everything" pass those sentinels rather than <see langword="null"/>, so treating a
+    /// sentinel as a value to match on would narrow every event away.
+    /// </remarks>
+    /// <param name="events">The events to narrow.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to narrow by, or its unspecified sentinel.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/> to narrow by, or its default/unspecified sentinel.</param>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/> to narrow by, or <see cref="EventStreamType.All"/>.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> to narrow by, or its default sentinel.</param>
+    /// <param name="eventTypes">The event types to narrow by, or an empty set.</param>
+    /// <returns>The narrowed events.</returns>
     static IEnumerable<AppendedEvent> Filter(
         IEnumerable<AppendedEvent> events,
         EventSourceId? eventSourceId,
