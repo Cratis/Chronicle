@@ -152,7 +152,7 @@ public static class ExpandoObjectExtensions
     {
         var currentTarget = target as IDictionary<string, object>;
         var segments = property.Segments.ToArray();
-        var currentPath = new PropertyPath(string.Empty);
+        var currentPath = PropertyPath.Root;
 
         for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
         {
