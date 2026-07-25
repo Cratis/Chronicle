@@ -362,29 +362,29 @@ public class EventSequenceStorage(
         EventStreamId? eventStreamId,
         IEnumerable<EventType>? eventTypes)
     {
-        if (eventSourceId is not null)
+        if (eventSourceId?.IsSpecified == true)
         {
             events = events.Where(_ => _.Context.EventSourceId == eventSourceId);
         }
 
-        if (eventSourceType is not null)
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
         {
             events = events.Where(_ => _.Context.EventSourceType == eventSourceType);
         }
 
-        if (eventStreamType is not null)
+        if (eventStreamType?.IsAll == false)
         {
             events = events.Where(_ => _.Context.EventStreamType == eventStreamType);
         }
 
-        if (eventStreamId is not null)
+        if (eventStreamId?.IsDefault == false)
         {
             events = events.Where(_ => _.Context.EventStreamId == eventStreamId);
         }
 
-        if (eventTypes is not null)
+        var typeSet = eventTypes?.ToHashSet();
+        if (typeSet?.Count > 0)
         {
-            var typeSet = eventTypes.ToHashSet();
             events = events.Where(_ => typeSet.Contains(_.Context.EventType));
         }
 
