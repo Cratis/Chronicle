@@ -33,4 +33,14 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     /// <param name="observerKey"><see cref="ObserverKey"/> for the subscriber to unsubscribe.</param>
     /// <returns>Awaitable task.</returns>
     Task Unsubscribe(ObserverKey observerKey);
+
+    /// <summary>
+    /// Get a snapshot of the current subscriptions on the queue.
+    /// </summary>
+    /// <returns>Collection of <see cref="AppendedEventsQueueObserverSubscription"/> currently subscribed.</returns>
+    /// <remarks>
+    /// Used by <see cref="IAppendedEventsQueues"/> to reconcile its routing index on activation, since a queue's
+    /// subscriptions can outlive the routing grain's in-memory state.
+    /// </remarks>
+    Task<IReadOnlyList<AppendedEventsQueueObserverSubscription>> GetSubscriptions();
 }
