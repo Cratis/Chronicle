@@ -53,6 +53,19 @@ public interface IProjection
     bool HasParent { get; }
 
     /// <summary>
+    /// Gets a value indicating whether every event type this projection handles — including those folded in from
+    /// child projections — resolves its read-model key directly to the event's own event source id.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="true"/>, events for different event source ids always target different read-model
+    /// documents, so the pipeline may serialize its read-modify-write cycle striped per event source id instead of
+    /// across the whole projection. It is <see langword="false"/> for any projection that can collapse distinct
+    /// event sources onto one document — constant keys, joins, parent/child hierarchies, or keys read from event
+    /// content — for which the pipeline keeps the coarse whole-projection lock.
+    /// </remarks>
+    bool IsEventSourceKeyed { get; }
+
+    /// <summary>
     /// Gets the parent projection - if any.
     /// </summary>
     IProjection? Parent { get; }
