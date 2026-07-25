@@ -65,7 +65,7 @@ public class HandleEventsForObserver(
     {
         using var scope = logger.BeginJobStepScope(State);
         State.LastSuccessfullyHandledEventSequenceNumber = lastHandledEventSequenceNumber;
-        var writeStateResult = await WriteStateAsync();
+        var writeStateResult = await WriteCheckpointDebounced();
         if (writeStateResult.TryGetException(out var error))
         {
             logger.FailedToPersistSuccessfullyHandledEvent(error, lastHandledEventSequenceNumber);
@@ -324,8 +324,10 @@ public class HandleEventsForObserver(
         {
             case ObserverSubscriberState.Ok:
                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
-                var okHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
-                await _observer.ReportHandledEvents(partition, okHandledEvents);
+                var okCountsPerEventType = handledEvents
+                    .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
+                    .CountByEventType();
+                await _observer.ReportHandledEvents(partition, okCountsPerEventType);
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
                 return await HandleFailedSubscriberResult(
@@ -368,8 +370,10 @@ public class HandleEventsForObserver(
 
             await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-            var failedHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
-            await _observer.ReportHandledEvents(partition, failedHandledEvents);
+            var failedCountsPerEventType = handledEvents
+                .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
+                .CountByEventType();
+            await _observer.ReportHandledEvents(partition, failedCountsPerEventType);
         }
         else
         {

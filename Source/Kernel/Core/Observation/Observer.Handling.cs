@@ -24,9 +24,8 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task ReportHandledEvents(Key partition, IEnumerable<AppendedEvent> handledEvents)
+    public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
-        var countsPerEventType = CountByEventType(handledEvents);
         if (countsPerEventType.Count > 0)
         {
             await GetObserverHandledCountsStorage().Increment(_observerId, partition, countsPerEventType);
@@ -202,7 +201,7 @@ public partial class Observer
                         };
 
                         var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
-                        handledCountsPerEventType = CountByEventType(handledEvents);
+                        handledCountsPerEventType = handledEvents.CountByEventType();
                         State = WithIncrementedRunningTotals(State, handledCountsPerEventType);
                     }
                 }
@@ -248,22 +247,6 @@ public partial class Observer
                 logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
             }
         }
-    }
-
-    /// <summary>
-    /// Counts the provided handled events, broken down by event type identifier.
-    /// </summary>
-    /// <param name="handledEvents">The events that were successfully handled.</param>
-    /// <returns>The number of events per <see cref="EventTypeId"/>.</returns>
-    static Dictionary<EventTypeId, EventCount> CountByEventType(IEnumerable<AppendedEvent> handledEvents)
-    {
-        var counts = new Dictionary<EventTypeId, EventCount>();
-        foreach (var eventTypeId in handledEvents.Select(_ => _.Context.EventType.Id))
-        {
-            counts[eventTypeId] = counts.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
-        }
-
-        return counts;
     }
 
     /// <summary>
