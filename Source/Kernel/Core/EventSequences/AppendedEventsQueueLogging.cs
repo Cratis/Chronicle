@@ -16,4 +16,7 @@ internal static partial class AppendedEventsQueueLogMessages
 
     [LoggerMessage(LogLevel.Error, "An error occurred while handling appended events in queue. Keep on processing.")]
     internal static partial void QueueHandlerFailed(this ILogger<AppendedEventsQueue> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Debug, "Appended-events queue is full; spilling {NumberOfObservers} observer(s) to catch-up recovery")]
+    internal static partial void SpillingToCatchup(this ILogger<AppendedEventsQueue> logger, int numberOfObservers);
 }

@@ -27,6 +27,12 @@ namespace Cratis.Chronicle.EventSequences;
 [PreferLocalPlacement]
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
+    /// <summary>
+    /// Upper bound on how many queued batches a single dispatch coalesces before delivering. Bounds the size of the
+    /// merged batch (and therefore the work of one dispatch); any remaining backlog is drained on the next loop pass.
+    /// </summary>
+    const int MaxCoalescedBatchesPerDispatch = 100;
+
     readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
@@ -100,17 +106,38 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
+    /// <remarks>
+    /// Enqueue never blocks on observer consumption. When the bounded channel is full the batch is not queued;
+    /// instead the queue's subscribed observers are spilled to their catch-up path (see <see cref="SpillToCatchup"/>),
+    /// which re-reads the exact missed range from each observer's persisted next-event-sequence-number by cursor.
+    /// This deliberately relaxes the previous back-pressure guarantee — an append no longer waits for observers to
+    /// drain — so a slow observer can never stall appends. No event is lost: the events are already durable in the
+    /// event log before they are enqueued, and the observer's cursor is not advanced past the skipped range.
+    /// </remarks>
+    public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
         using var span = _activitySource.Enqueue();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
         span?.Activity?.Tag(_eventSequenceKey.Namespace);
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
+
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
-        await _channel.Writer.WriteAsync(batch);
-        _metrics?.EventsEnqueued(batch.Length);
+        if (_channel.Writer.TryWrite(batch))
+        {
+            _metrics?.EventsEnqueued(batch.Length);
+            return Task.CompletedTask;
+        }
+
+        if (Interlocked.Decrement(ref _pendingItems) == 0)
+        {
+            _queueEmptyEvent.Set();
+        }
+
+        SpillToCatchup();
+        _metrics?.EventsSpilledToCatchup(batch.Length);
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -337,7 +364,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         try
         {
-            await foreach (var events in _channel.Reader.ReadAllAsync())
+            while (await _channel.Reader.WaitToReadAsync())
             {
                 if (_isDisposed)
                 {
@@ -345,27 +372,36 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 }
 
                 _queueEmptyEvent.Reset();
+
+                // Coalesce the queued backlog: drain up to MaxCoalescedBatchesPerDispatch batches and dispatch them as
+                // one unit, turning a burst of single-event appends into one Handle call per partition instead of many.
+                var coalesced = new List<AppendedEvent>();
+                var batchesDrained = 0;
+                while (batchesDrained < MaxCoalescedBatchesPerDispatch && _channel.Reader.TryRead(out var events))
+                {
+                    coalesced.AddRange(events);
+                    batchesDrained++;
+                }
+
+                if (batchesDrained == 0)
+                {
+                    continue;
+                }
+
                 try
                 {
-                    var count = events.Count;
-                    Func<IReadOnlyList<AppendedEvent>, Task> handler = count == 1
-                        ? HandleSingle
-                        : HandlePartitioned;
-
-                    await handler(events);
-
-                    _metrics?.EventsHandled(count);
+                    await Dispatch(coalesced);
+                    _metrics?.EventsHandled(coalesced.Count);
                 }
                 catch (Exception ex)
                 {
-                    // Log and move on — the observer's own partition-failure and
-                    // catchup mechanism handles recovery. Retrying here would cause
-                    // an unbounded tight loop that exhausts memory.
+                    // Log and move on — the observer's own partition-failure and catchup mechanism handles recovery.
+                    // Retrying here would cause an unbounded tight loop that exhausts memory.
                     _logger.NotifyingObserversFailed(ex);
                     _metrics?.EventsHandlingFailures();
                 }
 
-                if (Interlocked.Decrement(ref _pendingItems) == 0)
+                if (Interlocked.Add(ref _pendingItems, -batchesDrained) == 0)
                 {
                     _queueEmptyEvent.Set();
                 }
@@ -377,29 +413,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    async Task HandleSingle(IReadOnlyList<AppendedEvent> events)
+    async Task Dispatch(IReadOnlyList<AppendedEvent> events)
     {
-        var @event = events[0];
-        foreach (var subscription in GetSubscriptionsSnapshot())
-        {
-            if (!MatchesSubscription(subscription, @event))
-            {
-                continue;
-            }
-
-            using var span = _activitySource.Dispatch();
-            span?.Activity?.Tag(subscription.ObserverKey);
-            var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-            await observer.Handle(@event.Context.EventSourceId, events);
-        }
-    }
-
-    async Task HandlePartitioned(IReadOnlyList<AppendedEvent> events)
-    {
-        // Sort events by sequence number and deliver consecutive same-partition batches.
-        // This prevents a race condition where processing one partition's events first
-        // advances the observer's NextEventSequenceNumber past lower-numbered events
-        // from other partitions, causing those events to be incorrectly skipped.
+        // Sort events by sequence number and deliver consecutive same-partition batches. Parallelism is across
+        // observers within a partition, never across partitions: handling a higher-numbered partition first would
+        // advance an observer's NextEventSequenceNumber past lower-numbered events from another partition and drop them.
         var sorted = events.OrderBy(e => e.Context.SequenceNumber).ToList();
 
         var index = 0;
@@ -428,7 +446,47 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 tasks.Add(DispatchWithTracing(observer, partition, actualEvents, subscription.ObserverKey));
             }
 
-            await Task.WhenAll(tasks);
+            try
+            {
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex)
+            {
+                // Contain the failure to this partition so a coalesced dispatch still delivers the remaining
+                // partitions; the observer's own partition-failure and catchup machinery recovers the failed one.
+                _logger.NotifyingObserversFailed(ex);
+                _metrics?.EventsHandlingFailures();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Relieves back-pressure without blocking the append: removes the queue's live subscriptions and drives each
+    /// affected observer through its catch-up path. Removing the subscriptions guarantees the consumer delivers no
+    /// further live batches to those observers, so their next-event-sequence-number cannot advance past the skipped
+    /// range; catch-up then recovers from that persisted cursor by re-reading the missed events from the log, and each
+    /// observer re-subscribes once it has caught up. Coarse by design — a burst that fills one queue spills every
+    /// observer sharing it — but safe: an extra catch-up is idempotent, whereas a dropped live delivery would lose
+    /// events silently.
+    /// </summary>
+    void SpillToCatchup()
+    {
+        ObserverKey[] observerKeys;
+        lock (_subscriptionsLock)
+        {
+            if (_subscriptions.Count == 0)
+            {
+                return;
+            }
+
+            observerKeys = _subscriptions.Select(subscription => subscription.ObserverKey).ToArray();
+            _subscriptions.Clear();
+        }
+
+        _logger.SpillingToCatchup(observerKeys.Length);
+        foreach (var observerKey in observerKeys)
+        {
+            _ = _grainFactory.GetGrain<IObserver>(observerKey).CatchUp();
         }
     }
 
