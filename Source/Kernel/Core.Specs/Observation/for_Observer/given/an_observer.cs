@@ -57,9 +57,11 @@ public class an_observer : Specification
     protected IEventCompliance _eventCompliance;
     protected Observers _observersConfig;
 
+    protected virtual Observers CreateObserversConfig() => new();
+
     async Task Establish()
     {
-        _observersConfig = new();
+        _observersConfig = CreateObserversConfig();
         _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _silo.AddService(_configurationProvider);

@@ -145,6 +145,9 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
             return;
         }
 
+        var stateTypeBeforeTransition = _currentState.GetType();
+        var storedStateBeforeTransition = State;
+
         _isTransitioning = true;
         _isLeaving = true;
         await OnBeforeLeavingState(_currentState);
@@ -163,7 +166,13 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
             stateMachineState.CurrentState = _currentState.GetType().FullName!;
         }
 
-        await WriteStateAsync();
+        // A transition that neither moved to a different state nor produced a new stored-state instance leaves the
+        // persisted document identical, so the write is skipped. The current-state type change captures the
+        // StateMachineState.CurrentState update above; a new State reference captures every OnLeave/OnEnter result.
+        if (_currentState.GetType() != stateTypeBeforeTransition || !ReferenceEquals(State, storedStateBeforeTransition))
+        {
+            await WriteStateAsync();
+        }
 
         _isTransitioning = false;
         if (_scheduledTransition != null)
