@@ -25,6 +25,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 {
     readonly List<Change> _changes = [];
     TTarget _initialState = initialState;
+    bool _hasChildCollectionOperations;
 
     /// <inheritdoc/>
     public TSource Incoming { get; set; } = incoming;
@@ -53,6 +54,11 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public void Add(Change change)
     {
         _changes.Add(change);
+        if (change is ChildAdded or ChildRemoved or ChildRemovedFromAll)
+        {
+            _hasChildCollectionOperations = true;
+        }
+
         Consolidate();
     }
 
@@ -414,9 +420,21 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     void Consolidate()
     {
         ConsolidateJoinsAgainstChildrenAdded(parent);
-        ConsolidatePropertiesChangedIntoChildAdded();
+
+        // ConsolidatePropertiesChangedIntoChildAdded and ConsolidateConflictingOperations only ever act
+        // on changesets that carry child collection operations; without any they return without touching
+        // the changes, so skipping them keeps the outcome identical while avoiding the per-add rescans.
+        if (_hasChildCollectionOperations)
+        {
+            ConsolidatePropertiesChangedIntoChildAdded();
+        }
+
         ConsolidateOverlappingPropertiesChanged();
-        ConsolidateConflictingOperations();
+
+        if (_hasChildCollectionOperations)
+        {
+            ConsolidateConflictingOperations();
+        }
     }
 
     void ConsolidatePropertiesChangedIntoChildAdded()

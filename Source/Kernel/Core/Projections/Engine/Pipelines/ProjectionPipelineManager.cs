@@ -44,9 +44,10 @@ public class ProjectionPipelineManager(
     /// new pipeline (the one EvictFor just created for the replay) still serialize on the
     /// same lock. Without this, the read-modify-write cycle in SetInitialState → HandleEvent
     /// → SaveChanges races for hierarchical or join projections, leaving parent/child links
-    /// empty.
+    /// empty. Each lock stripes purely event-source-keyed projections per event source id and
+    /// serializes all other projections coarsely; growth is bounded by projection count.
     /// </remarks>
-    readonly ConcurrentDictionary<string, SemaphoreSlim> _handleLocks = new();
+    readonly ConcurrentDictionary<string, ProjectionHandleLock> _handleLocks = new();
 
     /// <inheritdoc/>
     public async Task<IProjectionPipeline> GetFor(
@@ -80,7 +81,7 @@ public class ProjectionPipelineManager(
             new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
         ];
 
-        var handleLock = _handleLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());
 
         var newPipeline = new ProjectionPipeline(
             projection,
