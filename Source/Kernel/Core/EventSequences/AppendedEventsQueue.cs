@@ -16,6 +16,7 @@ using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Orleans.Placement;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// Represents the state of <see cref="AppendedEventsQueues"/>.
 /// </summary>
 [KeepAlive]
+[PreferLocalPlacement]
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     readonly ITaskFactory _taskFactory;

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
+using Orleans.Placement;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="options"><see cref="ChronicleOptions"/> for configuration.</param>
 [KeepAlive]
+[PreferLocalPlacement]
 public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, IAppendedEventsQueues
 {
     IAppendedEventsQueue[] _queues = [];
