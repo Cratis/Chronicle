@@ -9,9 +9,24 @@ It activates a fresh instance of `TReactor` from the provided service provider a
 
 In a [Cratis Specification](/testing-with-cratis/), the event delivered to the reactor is the **when**, and the side effect captured by a mock, fake, or test double is the **then**. The scenario keeps that test in-process while still using the production reactor invocation path.
 
-## Why use ReactorScenario
+## Start with a pure function
 
-End-to-end tests that require a live Chronicle server are accurate but slow. `ReactorScenario<TReactor>` drives the same reactor logic in-process so your specs remain fast and isolated without losing coverage of the handler logic.
+A reactor that returns its side effects — the command or event that should follow — is a pure function of `(event, read model)`. Test that logic by constructing the reactor and calling the handler directly: no Chronicle server, no service provider, no mocks.
+
+<ChronicleClientTabs snippet="testing/reactors/pure-function" />
+
+Keep these as your default. They are the fastest specs, and because they assert your reactor's contract rather than Chronicle's internals, they keep passing as the framework evolves. A reactor that instead injects `IEventLog`/`ICommandPipeline` and acts in the method body cannot be tested this way — returning side effects is what makes the pure-function test possible.
+
+## Reach for ReactorScenario to prove the wiring
+
+Some behavior is the framework's contract, not your logic, and a direct call cannot reach it:
+
+- Chronicle materializes the right read model for a handler-method parameter (including a custom `ICanResolveReadModelKey`);
+- a constructor or method-parameter dependency resolves as expected;
+- the right handler dispatches for a given event type;
+- the produced side effect flows through the real invoker.
+
+For those, `ReactorScenario<TReactor>` drives your reactor through the same in-process invocation path as production — accurate, but without a live Chronicle server, so specs stay fast. Its `ShouldHaveProduced<T>` assertion uses the same "then" as the pure-function test, so a spec graduates from one to the other without relearning how to assert.
 
 ## Installation
 
