@@ -14,6 +14,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Testing.Events;
 using Cratis.Json;
 using Cratis.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -47,15 +48,12 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly IEventTypes _eventTypes = defaults.EventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider = defaults.ClientArtifactsProvider;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
-#pragma warning disable CA2000 // Dispose objects before losing scope
-    readonly IClientArtifactsActivator _artifactsActivator = new ClientArtifactsActivator(
-        serviceProvider ?? new DefaultServiceProvider(),
-        new NullLoggerFactory());
-#pragma warning restore CA2000 // Dispose objects before losing scope
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
-    readonly EventStoreForTesting _eventStore = new(serviceProvider);
-    readonly IServiceProvider _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
+    readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
+    IServiceProvider? _resolvedServiceProvider;
+    IClientArtifactsActivator? _artifactsActivator;
+    EventStoreForTesting? _eventStore;
     TReadModel? _instance;
     IReadOnlyDictionary<EventSourceId, TReadModel> _instances = new Dictionary<EventSourceId, TReadModel>();
     bool _processed;
@@ -156,6 +154,18 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public ReadModelScenarioGivenBuilder<TReadModel> Given => new(this);
 
     /// <summary>
+    /// Gets the <see cref="IServiceCollection"/> used to resolve reducer and projection instances and their dependencies.
+    /// </summary>
+    /// <remarks>
+    /// Register the dependencies a reducer or projection needs here — for example NSubstitute mocks. When left
+    /// untouched (and no <see cref="IServiceProvider"/> was supplied to the constructor), a
+    /// <see cref="DefaultServiceProvider"/> is used, preserving the default activation behavior. Registering anything
+    /// here builds a standard provider (with logging) from it instead. Ignored when an <see cref="IServiceProvider"/>
+    /// was supplied to the constructor.
+    /// </remarks>
+    public IServiceCollection Services { get; } = new ServiceCollection();
+
+    /// <summary>
     /// Gets an <see cref="IReadModels"/> instance that returns pre-seeded read model instances for this scenario.
     /// </summary>
     /// <remarks>
@@ -163,7 +173,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <c>GetInstanceById</c> calls return the instances registered via
     /// <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
-    public IReadModels ReadModels => _eventStore.ReadModels;
+    public IReadModels ReadModels => EventStore().ReadModels;
 
     /// <summary>
     /// Enables strict event subscription: seeding an event the projection does not subscribe to raises
@@ -206,8 +216,16 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
     /// <param name="readModel">The read model instance to register.</param>
-    public void CollectReadModelFor(EventSourceId eventSourceId, TReadModel readModel) =>
-        _eventStore.RegisterReadModelInstance(eventSourceId, readModel);
+    public void CollectReadModelFor(EventSourceId eventSourceId, TReadModel readModel)
+    {
+        if (_eventStore is not null)
+        {
+            _eventStore.RegisterReadModelInstance(eventSourceId, readModel);
+            return;
+        }
+
+        _readModelSeeds.Add(store => store.RegisterReadModelInstance(eventSourceId, readModel));
+    }
 
     /// <summary>
     /// Collects events for a specific event source to be processed together when <see cref="Instance"/> is accessed.
@@ -248,6 +266,38 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         return Task.CompletedTask;
     }
 
+    IServiceProvider ResolvedServiceProvider() => _resolvedServiceProvider ??= serviceProvider ?? BuildServiceProvider();
+
+#pragma warning disable CA2000 // Dispose objects before losing scope — held for the scenario's lifetime
+    IClientArtifactsActivator ArtifactsActivator() =>
+        _artifactsActivator ??= new ClientArtifactsActivator(ResolvedServiceProvider(), new NullLoggerFactory());
+
+    EventStoreForTesting EventStore()
+    {
+        if (_eventStore is null)
+        {
+            _eventStore = new EventStoreForTesting(ResolvedServiceProvider());
+            foreach (var seed in _readModelSeeds)
+            {
+                seed(_eventStore);
+            }
+        }
+
+        return _eventStore;
+    }
+
+    IServiceProvider BuildServiceProvider()
+    {
+        if (!Services.Any())
+        {
+            return new DefaultServiceProvider();
+        }
+
+        Services.AddLogging();
+        return Services.BuildServiceProvider();
+    }
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
     void EnsureProcessed()
     {
         if (!_processed && _collectedEvents.Count > 0)
@@ -269,8 +319,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 reducerType,
                 eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())),
                 _eventTypes,
-                _artifactsActivator,
-                _serviceProvider,
+                ArtifactsActivator(),
+                ResolvedServiceProvider(),
                 _namingPolicy,
                 _initialState);
 
@@ -355,7 +405,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 projectionType,
                 _namingPolicy,
                 _eventTypes,
-                _artifactsActivator,
+                ArtifactsActivator(),
                 _jsonSerializerOptions
             ])!;
 
