@@ -4,13 +4,13 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Testing.Reactors;
 
 [EventType]
-public record TestingReactorScenarioVibeStarted(string Host);
+public record TestingReactorScenarioReminderVibeStarted(string Host);
 
 public record TestingReactorScenarioSendReminder(string Host);
 
 public class TestingReactorScenarioReminderReactor : IReactor
 {
-    public Task<TestingReactorScenarioSendReminder> VibeStarted(TestingReactorScenarioVibeStarted @event) =>
+    public Task<TestingReactorScenarioSendReminder> VibeStarted(TestingReactorScenarioReminderVibeStarted @event) =>
         Task.FromResult(new TestingReactorScenarioSendReminder(@event.Host));
 }
 
@@ -23,7 +23,7 @@ public static class TestingReactorScenarioProducedSideEffects
 
         await scenario.Given
             .ForEventSource(vibeId)
-            .Events(new TestingReactorScenarioVibeStarted("Ada"));
+            .Events(new TestingReactorScenarioReminderVibeStarted("Ada"));
 
         scenario.ShouldHaveProduced<TestingReactorScenarioSendReminder>(reminder => reminder.Host == "Ada");
     }
