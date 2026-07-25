@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Buffers;
 using System.Dynamic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.DependencyInjection;
 
@@ -25,45 +25,57 @@ public class EventHashCalculator : IEventHashCalculator
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
+    static readonly JsonWriterOptions _jsonWriterOptions = new()
+    {
+        Indented = false,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     /// <inheritdoc/>
     public EventHash Calculate(EventTypeId eventTypeId, EventSourceId eventSourceId, ExpandoObject content)
     {
-        var combinedData = $"{eventTypeId.Value}|{eventSourceId.Value}|{GetCanonicalJson(content)}";
-        var bytes = Encoding.UTF8.GetBytes(combinedData);
-        var hashBytes = SHA256.HashData(bytes);
+        var buffer = new ArrayBufferWriter<byte>();
+        buffer.Write(Encoding.UTF8.GetBytes($"{eventTypeId.Value}|{eventSourceId.Value}|"));
+        WriteCanonicalJson(content, buffer);
+        var hashBytes = SHA256.HashData(buffer.WrittenSpan);
         return Convert.ToBase64String(hashBytes);
     }
 
-    static string GetCanonicalJson(ExpandoObject obj)
+    static void WriteCanonicalJson(ExpandoObject content, IBufferWriter<byte> buffer)
     {
-        var json = JsonSerializer.Serialize(obj, _jsonSerializerOptions);
-        var jsonNode = JsonNode.Parse(json);
-        var sortedNode = SortJsonNode(jsonNode);
-        return JsonSerializer.Serialize(sortedNode, _jsonSerializerOptions);
+        var utf8 = JsonSerializer.SerializeToUtf8Bytes(content, _jsonSerializerOptions);
+        using var document = JsonDocument.Parse(utf8);
+        using var writer = new Utf8JsonWriter(buffer, _jsonWriterOptions);
+        WriteSorted(document.RootElement, writer);
+        writer.Flush();
     }
 
-    static JsonNode? SortJsonNode(JsonNode? node)
+    static void WriteSorted(JsonElement element, Utf8JsonWriter writer)
     {
-        if (node is JsonObject jsonObject)
+        switch (element.ValueKind)
         {
-            var sorted = new JsonObject();
-            foreach (var property in jsonObject.OrderBy(p => p.Key, StringComparer.Ordinal))
-            {
-                sorted[property.Key] = SortJsonNode(property.Value);
-            }
-            return sorted;
-        }
+            case JsonValueKind.Object:
+                writer.WriteStartObject();
+                foreach (var property in element.EnumerateObject().OrderBy(p => p.Name, StringComparer.Ordinal))
+                {
+                    writer.WritePropertyName(property.Name);
+                    WriteSorted(property.Value, writer);
+                }
+                writer.WriteEndObject();
+                break;
 
-        if (node is JsonArray jsonArray)
-        {
-            var sorted = new JsonArray();
-            foreach (var item in jsonArray)
-            {
-                sorted.Add(SortJsonNode(item));
-            }
-            return sorted;
-        }
+            case JsonValueKind.Array:
+                writer.WriteStartArray();
+                foreach (var item in element.EnumerateArray())
+                {
+                    WriteSorted(item, writer);
+                }
+                writer.WriteEndArray();
+                break;
 
-        return node?.DeepClone();
+            default:
+                element.WriteTo(writer);
+                break;
+        }
     }
 }

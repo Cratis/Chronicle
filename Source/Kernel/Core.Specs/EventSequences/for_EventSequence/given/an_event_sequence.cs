@@ -103,7 +103,7 @@ public class an_event_sequence : Specification
             .Returns(_ => Task.FromResult(new JsonObject()));
         _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>())
             .Returns(_ => new ExpandoObject());
-        _eventTypeMigrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>())
+        _eventTypeMigrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>())
             .Returns(new Dictionary<EventTypeGeneration, ExpandoObject>());
 
         _currentValidation = _constraintValidation;
