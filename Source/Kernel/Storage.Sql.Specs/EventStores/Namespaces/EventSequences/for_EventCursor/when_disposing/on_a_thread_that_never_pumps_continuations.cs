@@ -31,7 +31,7 @@ public class on_a_thread_that_never_pumps_continuations : given.a_cursor_over_a_
 
     sealed class discarding_synchronization_context : SynchronizationContext
     {
-        public override void Post(SendOrPostCallback callback, object? state)
+        public override void Post(SendOrPostCallback d, object? state)
         {
         }
     }

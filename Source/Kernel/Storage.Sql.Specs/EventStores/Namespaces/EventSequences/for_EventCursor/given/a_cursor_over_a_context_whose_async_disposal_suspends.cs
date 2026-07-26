@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.EntityFrameworkCore.Concepts;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Identities;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for
 /// which is what a network-backed provider does when it closes its connection. SQLite completes its disposal
 /// inline and would hide the difference between disposing the scope and blocking a thread on its disposal.
 /// </summary>
-public class a_cursor_over_a_context_whose_async_disposal_suspends : Specification, IDisposable
+public class a_cursor_over_a_context_whose_async_disposal_suspends : Specification
 {
     protected SqliteConnection _connection;
     protected EventCursor _cursor;
@@ -40,11 +39,7 @@ public class a_cursor_over_a_context_whose_async_disposal_suspends : Specificati
             Substitute.For<IIdentityStorage>());
     }
 
-    public void Dispose()
-    {
-        _connection.Dispose();
-        GC.SuppressFinalize(this);
-    }
+    void Destroy() => _connection.Dispose();
 
     sealed class suspending_event_sequence_db_context(DbContextOptions<EventSequenceDbContext> options)
         : EventSequenceDbContext(options, "event-sequence", Substitute.For<IEventSequenceMigrator>())
