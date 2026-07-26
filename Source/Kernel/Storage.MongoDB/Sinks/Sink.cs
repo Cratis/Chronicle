@@ -52,6 +52,18 @@ public class Sink(
     readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
+
+    /// <summary>
+    /// Highest event sequence number known to be applied to each document while a bulk window is open.
+    /// </summary>
+    /// <remarks>
+    /// Bulk mode answers <see cref="FindOrDefault"/> from <see cref="_bulkStateCache"/>, so a guarded write that
+    /// the server rejects must not leave its recomputed state in that cache — the next event for the same key
+    /// would read the doubled state and persist it. Seeded from the document the first uncached
+    /// <see cref="FindOrDefault"/> reads (no extra round trip) and advanced by every write queued in the window,
+    /// so an already applied event is recognized before its state is cached at all.
+    /// </remarks>
+    readonly ConcurrentDictionary<string, ulong> _bulkWatermarks = new();
     int _currentBulkSize;
     volatile bool _isBulkMode;
 
@@ -76,6 +88,13 @@ public class Sink(
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
+            if (_isBulkMode &&
+                instance.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var watermark) &&
+                watermark.IsNumeric)
+            {
+                RecordBulkWatermark(converter.ToBsonValue(key).ToString()!, (ulong)watermark.ToInt64());
+            }
+
             return expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
         }
 
@@ -83,10 +102,18 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber) =>
+        ApplyChanges(key, changeset, eventSequenceNumber, SinkWriteMode.Always);
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> ApplyChanges(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber)
+        EventSequenceNumber eventSequenceNumber,
+        SinkWriteMode mode)
     {
         var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
             change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
@@ -132,11 +159,30 @@ public class Sink(
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
                 _bulkStateCache.TryRemove(cacheKey, out _);
                 _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
+                _bulkWatermarks.TryRemove(cacheKey, out _);
                 return await FlushBulkIfNeeded();
             }
 
             await Collection.DeleteOneAsync(filter);
             return [];
+        }
+
+        // A guarded write is a conditional UPDATE of a document the caller already observed, never an insert:
+        // narrowing the filter to documents whose watermark is behind this event turns a crash-recovery
+        // redelivery into a no-op. Upsert is switched off because a filter that matches nothing would otherwise
+        // attempt an insert on an _id that already exists, which raises a duplicate key error and — inside an
+        // ordered bulk write — would discard every operation queued behind it.
+        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !usesJoinTargetsOnlyFilter)
+        {
+            if (_isBulkMode &&
+                _bulkWatermarks.TryGetValue(converter.ToBsonValue(key).ToString()!, out var applied) &&
+                applied >= eventSequenceNumber.Value)
+            {
+                return [];
+            }
+
+            filter = Builders<BsonDocument>.Filter.And(filter, BelowWatermark(eventSequenceNumber));
+            isUpsert = false;
         }
 
         // Run through and remove all children affected by ChildRemovedFromAll
@@ -169,6 +215,7 @@ public class Sink(
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
                 _bulkStateCache[cacheKey] = changeset.CurrentState;
                 _bulkKeysByCacheKey[cacheKey] = key;
+                RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
             }
 
             if (changeset.HasJoined())
@@ -203,6 +250,7 @@ public class Sink(
 
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
+        _bulkWatermarks.Clear();
         return Task.CompletedTask;
     }
 
@@ -220,6 +268,7 @@ public class Sink(
 
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
+        _bulkWatermarks.Clear();
     }
 
     /// <inheritdoc/>
@@ -359,6 +408,27 @@ public class Sink(
                 observer.OnCompleted);
         });
     }
+
+    /// <summary>
+    /// Builds the clause that restricts a write to documents that have not yet observed the given event.
+    /// </summary>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> about to be applied.</param>
+    /// <returns>The <see cref="FilterDefinition{TDocument}"/> matching documents behind the watermark.</returns>
+    /// <remarks>
+    /// Documents written before the watermark property existed carry no value at all, which the
+    /// <c>$exists</c> clause admits so they establish it on their first guarded write.
+    /// </remarks>
+    FilterDefinition<BsonDocument> BelowWatermark(EventSequenceNumber eventSequenceNumber) =>
+        Builders<BsonDocument>.Filter.Or(
+            Builders<BsonDocument>.Filter.Exists(WellKnownProperties.LastHandledEventSequenceNumber, false),
+            Builders<BsonDocument>.Filter.Lt(WellKnownProperties.LastHandledEventSequenceNumber, converter.ToBsonValue(eventSequenceNumber)));
+
+    void RecordBulkWatermark(string cacheKey, ulong eventSequenceNumber) =>
+        _bulkWatermarks.AddOrUpdate(
+            cacheKey,
+            static (_, incoming) => incoming,
+            static (_, current, incoming) => Math.Max(current, incoming),
+            eventSequenceNumber);
 
     async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)
     {

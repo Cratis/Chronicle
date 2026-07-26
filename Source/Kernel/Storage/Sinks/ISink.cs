@@ -52,6 +52,26 @@ public interface ISink
     Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
 
     /// <summary>
+    /// Update or insert read model based on key, controlling how the read model's last handled event sequence
+    /// number watermark participates in the write.
+    /// </summary>
+    /// <param name="key">Key of the read model to upsert.</param>
+    /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
+    /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
+    /// <param name="mode">The <see cref="SinkWriteMode"/> to apply the changes with.</param>
+    /// <returns>A collection of <see cref="FailedPartition"/> if any partitions failed.</returns>
+    /// <remarks>
+    /// A crash on the catch-up path resumes the job step from its last durable checkpoint and re-delivers every
+    /// event handled since, bypassing the observer's cursor filter. Read-modify-write changes — accumulators and
+    /// reducer folds — are corrupted by that redelivery. <see cref="SinkWriteMode.OnlyWhenAdvancingWatermark"/>
+    /// makes the write conditional on the incoming sequence number being beyond the stored watermark, which turns
+    /// the redelivery into a no-op. The default implementation ignores the mode so that a sink written against the
+    /// previous contract keeps compiling and behaving exactly as before; implement it to opt in to the guard.
+    /// </remarks>
+    Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode) =>
+        ApplyChanges(key, changeset, eventSequenceNumber);
+
+    /// <summary>
     /// Begin bulk operation mode.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
