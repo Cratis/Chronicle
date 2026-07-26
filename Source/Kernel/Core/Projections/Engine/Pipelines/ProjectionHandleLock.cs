@@ -26,8 +26,13 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// that is exactly the case the coarse mode exists for.
 /// </para>
 /// <para>
-/// The lock is process-local, since the manager that owns it is a per-process singleton. It serializes concurrent
-/// handling within one silo and makes no claim about two silos handling the same document at the same time.
+/// The lock is process-local, since the manager that owns it is a per-process singleton, and the subscriber keying
+/// is what makes that sufficient. A striped acquisition covers a single event source id, and the partition in
+/// <see cref="Cratis.Chronicle.Concepts.Observation.ObserverSubscriberKey"/> gives that event source one subscriber
+/// activation cluster wide, so two silos never handle it at the same time. A coarse acquisition covers a document
+/// several event sources share, which no per-partition activation can serialize, so a collapsing projection
+/// subscribes as <see cref="Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber"/> and receives
+/// every partition through one activation - putting all of its handling in the process that owns this lock.
 /// </para>
 /// <para>
 /// One instance is shared per projection (surviving pipeline cache eviction) so that concurrent handling across an
