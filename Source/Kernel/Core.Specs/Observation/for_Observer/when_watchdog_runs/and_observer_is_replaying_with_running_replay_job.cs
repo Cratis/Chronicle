@@ -17,10 +17,13 @@ public class and_observer_is_replaying_with_running_replay_job : given.an_observ
 
         _stateStorage.State = _stateStorage.State with { IsReplaying = true };
 
+        // Status is what IsPreparingOrRunning reads; StatusChanges alone leaves the job looking not-started, which
+        // would send the watchdog down the job-missing branch this spec exists to stay off.
         var runningJob = new JobState
         {
             Id = JobId.New(),
             Request = new ReplayObserverRequest(_observerKey, ObserverType.Reactor, []),
+            Status = JobStatus.Running,
             StatusChanges = [new JobStatusChanged { Status = JobStatus.Running, Occurred = DateTimeOffset.UtcNow }]
         };
 
@@ -32,4 +35,7 @@ public class and_observer_is_replaying_with_running_replay_job : given.an_observ
     async Task Because() => await _observer.RunWatchdogAsync();
 
     [Fact] void should_remain_in_replaying_state() => _stateStorage.State.IsReplaying.ShouldBeTrue();
+
+    [Fact] void should_leave_the_running_replay_job_alone() => _jobsManager.DidNotReceive()
+        .Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
 }
