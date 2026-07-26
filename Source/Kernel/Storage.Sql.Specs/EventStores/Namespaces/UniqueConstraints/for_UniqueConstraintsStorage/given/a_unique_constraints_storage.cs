@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 /// A single open connection is shared across every <see cref="IDatabase.UniqueConstraintTable"/> scope so saved
 /// claims survive between the storage's individual unit-of-work scopes.
 /// </summary>
-public class a_unique_constraints_storage : Specification, IDisposable
+public class a_unique_constraints_storage : Specification
 {
     protected const string ConstraintNameValue = "unique-name";
     protected static readonly EventStoreName _eventStore = "test-store";
@@ -42,11 +42,7 @@ public class a_unique_constraints_storage : Specification, IDisposable
         _storage = new UniqueConstraintsStorage(_eventStore, _namespace, EventSequenceId.Log, database);
     }
 
-    public void Dispose()
-    {
-        _connection.Dispose();
-        GC.SuppressFinalize(this);
-    }
+    void Destroy() => _connection.Dispose();
 
     UniqueConstraintDbContext CreateContext()
     {
