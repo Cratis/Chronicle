@@ -17,6 +17,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     const int MongoDBPort = 27018;
     const int ChroniclePort = 35001;
     static readonly string _certificatePath;
+    static readonly string _backupsPath;
 
     INetwork? _network;
     IContainer? _container;
@@ -27,6 +28,12 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
         var certificateDirectory = Path.Join(Path.GetTempPath(), "chronicle-benchmark-certs");
         _certificatePath = Path.Combine(certificateDirectory, "chronicle-benchmark.pfx");
         BenchmarkCertificateGenerator.GenerateAndSaveCertificate(_certificatePath, CertificatePassword);
+
+        // The bind mount source has to be a directory the container runtime can already see. A directory created
+        // moments earlier below the benchmark host's working directory is not, because BenchmarkDotNet regenerates
+        // that directory tree for every run, so the mount is anchored in a stable location instead.
+        _backupsPath = Path.Join(Path.GetTempPath(), "chronicle-benchmark-backups");
+        Directory.CreateDirectory(_backupsPath);
     }
 
     /// <summary>
@@ -77,8 +84,6 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     {
         if (_started) return;
 
-        Directory.CreateDirectory("backups");
-
         _network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
@@ -95,7 +100,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(ChroniclePort, 35000)
             .WithHostname("chronicle")
-            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
+            .WithBindMount(_backupsPath, "/backups")
             .WithBindMount(_certificatePath, "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePath", "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)
@@ -136,9 +141,18 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
                 await Task.Delay(2000);
             }
 
-            var logs = await container.GetLogsAsync();
-            Console.WriteLine(logs.Stdout);
-            Console.WriteLine(logs.Stderr);
+            // Logs are only available once the container resource exists, so a container that never got created
+            // must not take the retry loop down with it.
+            try
+            {
+                var logs = await container.GetLogsAsync();
+                Console.WriteLine(logs.Stdout);
+                Console.WriteLine(logs.Stderr);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Unable to read the container logs: {e.Message}");
+            }
         }
         while (failure is not null && ++retryCount < 10);
 
