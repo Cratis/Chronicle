@@ -105,6 +105,12 @@ internal sealed class ConnectionService(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The per-silo lookups are issued together, so a faulting silo no longer aborts the sweep before the remaining
+    /// silos are asked - every silo is queried, and the first fault surfaces once they have all settled rather than
+    /// immediately. The observable outcome is unchanged: the same exception type still propagates, and a fault still
+    /// fails the whole call rather than returning a partial cluster view.
+    /// </remarks>
     public async Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default)
     {
         var management = grainFactory.GetGrain<IManagementGrain>(0);
