@@ -17,6 +17,12 @@ namespace Cratis.Chronicle.Storage.Events.Constraints;
 /// validation and was only caught by the store enforcing uniqueness. It is a constraint violation rather than a
 /// storage malfunction, and every <see cref="IUniqueConstraintsStorage"/> implementation reports it this way so
 /// callers never have to recognize a provider-specific error.
+/// <para>
+/// It is diagnostic, not a rejection. The index is only written after the event is durable in the log, so the append
+/// that lost the claim has already happened and cannot be undone by reporting it; the event sequence logs this and
+/// still reports the append as successful. It does not reach the caller as a constraint violation on the append
+/// result. Reconciling the losing event source is an operator action.
+/// </para>
 /// </remarks>
 public class DuplicateUniqueConstraintValue(ConstraintName constraintName, EventSourceId eventSourceId)
     : Exception($"Event source '{eventSourceId}' cannot claim the value it holds for unique constraint '{constraintName}' - another event source already holds it.")

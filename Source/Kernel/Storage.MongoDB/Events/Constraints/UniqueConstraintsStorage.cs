@@ -50,7 +50,13 @@ public class UniqueConstraintsStorage(
     /// The unique index on the value is what settles a claim that two event sources make concurrently, and it
     /// reports the loser as a duplicate-key write error. That is a constraint violation, not a storage malfunction,
     /// so it is translated into <see cref="DuplicateUniqueConstraintValue"/> rather than surfacing a driver
-    /// exception callers would have to recognize.
+    /// exception callers would have to recognize. The translation is diagnostic only - see the remarks on
+    /// <see cref="DuplicateUniqueConstraintValue"/> for what a caller can and cannot do with it.
+    /// <para>
+    /// It also only fires while the index is genuinely unique. <see cref="EnsureIndex"/> falls back to a non-unique
+    /// index when the collection already holds duplicate values from before uniqueness was enforced, and while that
+    /// fallback is in place the store settles nothing and no duplicate-key error is ever raised.
+    /// </para>
     /// </remarks>
     public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
     {
