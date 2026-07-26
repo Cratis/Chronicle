@@ -109,25 +109,8 @@ internal sealed class ConnectionService(
     {
         var management = grainFactory.GetGrain<IManagementGrain>(0);
         var hosts = await management.GetHosts(onlyActive: true);
-        var clients = new List<ConnectedClient>();
-        foreach (var silo in hosts.Keys)
-        {
-            var connectedClients = await grainFactory.GetConnectedClients(silo).GetAllConnectedClients();
-            clients.AddRange(connectedClients.Select(client => new ConnectedClient
-            {
-                ConnectionId = client.ConnectionId,
-                Version = client.Version,
-                LastSeen = client.LastSeen,
-                IsRunningWithDebugger = client.IsRunningWithDebugger,
-                SiloAddress = silo.ToParsableString(),
-                ProcessId = client.ProcessId,
-                ProcessPath = client.ProcessPath,
-                MachineName = client.MachineName,
-                ClientType = client.ClientType
-            }));
-        }
-
-        return clients;
+        var clientsPerSilo = await Task.WhenAll(hosts.Keys.Select(GetConnectedClientsForSilo));
+        return clientsPerSilo.SelectMany(clients => clients).ToList();
     }
 
     /// <inheritdoc/>
@@ -163,6 +146,23 @@ internal sealed class ConnectionService(
             .Select(group => generator.GetSchema(group.ToArray()));
 
         return string.Join('\n', schemas);
+    }
+
+    async Task<IEnumerable<ConnectedClient>> GetConnectedClientsForSilo(SiloAddress silo)
+    {
+        var connectedClients = await grainFactory.GetConnectedClients(silo).GetAllConnectedClients();
+        return connectedClients.Select(client => new ConnectedClient
+        {
+            ConnectionId = client.ConnectionId,
+            Version = client.Version,
+            LastSeen = client.LastSeen,
+            IsRunningWithDebugger = client.IsRunningWithDebugger,
+            SiloAddress = silo.ToParsableString(),
+            ProcessId = client.ProcessId,
+            ProcessPath = client.ProcessPath,
+            MachineName = client.MachineName,
+            ClientType = client.ClientType
+        });
     }
 
     sealed class ConnectedClientsComparer : IEqualityComparer<IEnumerable<ConnectedClient>>
