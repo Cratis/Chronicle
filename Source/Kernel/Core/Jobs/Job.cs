@@ -354,26 +354,35 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
 
     async Task<bool> HandleResumeJobStepResult(JobStepId jobStepId, Result<StartJobStepError> result, IJobStep jobStepGrain)
     {
+        if (!result.TryGetError(out var error))
+        {
+            await TrySubscribeJobStep(jobStepId, jobStepGrain);
+            return false;
+        }
+        if (error is StartJobStepError.AlreadyStarted)
+        {
+            _logger.JobStepWasAlreadyStarted(jobStepId, error);
+            await TrySubscribeJobStep(jobStepId, jobStepGrain);
+            return false;
+        }
+        if (error is StartJobStepError.Completed)
+        {
+            _logger.JobStepWasAlreadyStarted(jobStepId, error);
+            return false;
+        }
+        _logger.FailedStartingJobStep(jobStepId, error);
+        return true;
+    }
+
+    async Task TrySubscribeJobStep(JobStepId jobStepId, IJobStep jobStepGrain)
+    {
         try
         {
-            if (result.TryGetError(out var error))
-            {
-                if (error is StartJobStepError.AlreadyStarted)
-                {
-                    await SubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
-                    return true;
-                }
-
-                _logger.FailedStartingJobStep(jobStepId, error);
-                return false;
-            }
             await SubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
-            return false;
         }
         catch (Exception ex)
         {
-            _logger.FailedStartingJobStep(ex, jobStepId);
-            return false;
+            _logger.FailedSubscribingToJobStep(ex, jobStepId);
         }
     }
 

@@ -111,6 +111,9 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Debug, "Job step {JobStepId} was already started. Outcome: {Outcome}")]
     internal static partial void JobStepWasAlreadyStarted(this ILogger<IJob> logger, JobStepId jobStepId, StartJobStepError outcome);
 
+    [LoggerMessage(LogLevel.Warning, "Job failed subscribing to job step {JobStepId}")]
+    internal static partial void FailedSubscribingToJobStep(this ILogger<IJob> logger, Exception ex, JobStepId jobStepId);
+
     [LoggerMessage(LogLevel.Warning, "Job failed recording job step {JobStepId} as failed. Error: {Error}")]
     internal static partial void FailedRecordingJobStepAsFailed(this ILogger<IJob> logger, JobStepId jobStepId, JobStepError error);
 

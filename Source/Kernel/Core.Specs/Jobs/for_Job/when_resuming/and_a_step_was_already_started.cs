@@ -1,0 +1,33 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Monads;
+using Moq;
+
+namespace Cratis.Chronicle.Jobs.for_Job.when_resuming;
+
+public class and_a_step_was_already_started : given.the_job
+{
+    JobStepId _jobStepId;
+    Mock<given.ISomeJobStep> _jobStep;
+    Result<ResumeJobSuccess, ResumeJobError> _result;
+
+    void Establish()
+    {
+        _job.ShouldBeResumable = true;
+        _jobStepId = Guid.Parse("2b2b2b2b-0000-0000-0000-000000000002");
+        _jobStep = AddJobStep(_jobStepId);
+        _jobStep.Setup(_ => _.Start(It.IsAny<GrainId>())).ReturnsAsync(Result<StartJobStepError>.Failed(StartJobStepError.AlreadyStarted));
+    }
+
+    async Task Because()
+    {
+        await _job.Start(new());
+        _job.CurrentState.Status = JobStatus.Stopped;
+        _result = await _job.Resume();
+    }
+
+    [Fact] void should_report_the_resume_as_successful() => _result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_report_the_job_as_resumed() => ((ResumeJobSuccess)_result).ShouldEqual(ResumeJobSuccess.Success);
+}
