@@ -24,13 +24,15 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting PII fields.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this pipeline belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this pipeline belongs to.</param>
+/// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 public class ReducerPipeline(
     ReadModelDefinition readModel,
     ISink sink,
     IObjectComparer objectComparer,
     IReadModelsCompliance readModelsCompliance,
     EventStoreName eventStore,
-    EventStoreNamespaceName eventStoreNamespace) : IReducerPipeline
+    EventStoreNamespaceName eventStoreNamespace,
+    bool guardWritesOnWatermark = true) : IReducerPipeline
 {
     /// <inheritdoc/>
     public ReadModelDefinition ReadModel { get; } = readModel;
@@ -100,7 +102,16 @@ public class ReducerPipeline(
 
         if (changeset.HasChanges)
         {
-            var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber);
+            // A reducer read model is always keyed by event source id, so its per-document event stream is
+            // monotonic and a redelivered batch can be recognized by the sequence number it carries. The batch
+            // that creates the instance is written unconditionally — there is no document to compare against,
+            // and a guarded write never inserts. The guard recognizes a redelivered batch by its last sequence
+            // number, so it neutralizes an identical redelivery; a resume that re-cuts the batch boundaries
+            // (only reachable after a partial batch failure) can still straddle the watermark.
+            var mode = guardWritesOnWatermark && initial is not null
+                ? SinkWriteMode.OnlyWhenAdvancingWatermark
+                : SinkWriteMode.Always;
+            var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode);
 
             if (failedPartitions.Any())
             {

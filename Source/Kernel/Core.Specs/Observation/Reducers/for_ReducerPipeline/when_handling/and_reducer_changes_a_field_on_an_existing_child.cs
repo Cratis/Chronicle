@@ -28,7 +28,8 @@ public class and_reducer_changes_a_field_on_an_existing_child : given.all_depend
         _sink.ApplyChanges(
                 Arg.Any<Concepts.Keys.Key>(),
                 Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(),
-                Arg.Any<EventSequenceNumber>())
+                Arg.Any<EventSequenceNumber>(),
+                Arg.Any<SinkWriteMode>())
             .Returns(callInfo =>
             {
                 _changeset = callInfo.ArgAt<IChangeset<AppendedEvent, ExpandoObject>>(1);
@@ -56,7 +57,7 @@ public class and_reducer_changes_a_field_on_an_existing_child : given.all_depend
         _differences = propertiesChanged.Differences.ToArray();
     }
 
-    [Fact] void should_apply_changes_to_the_sink() => _sink.Received(1).ApplyChanges(Arg.Any<Concepts.Keys.Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>());
+    [Fact] void should_apply_changes_to_the_sink() => _sink.Received(1).ApplyChanges(Arg.Any<Concepts.Keys.Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<SinkWriteMode>());
     [Fact] void should_preserve_the_top_level_difference() => _differences.Any(_ => _.PropertyPath.Path == "name" && _.Original!.Equals("Team One") && _.Changed!.Equals("Team Two")).ShouldBeTrue();
     [Fact] void should_collapse_the_child_field_difference_to_the_collection() => _differences.Any(_ => _.PropertyPath.Path == "[members]").ShouldBeTrue();
     [Fact] void should_not_emit_the_indexerless_child_field_difference() => _differences.Any(_ => _.PropertyPath.Path == "[members].status").ShouldBeFalse();
