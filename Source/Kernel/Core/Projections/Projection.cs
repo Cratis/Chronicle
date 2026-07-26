@@ -93,20 +93,11 @@ public class Projection(
             // Schedule replay as a separate grain turn so that SetDefinition() returns immediately.
             // Replay triggers observer.Replay() which calls GetDefinition() back on this grain — if
             // triggered inline, that re-entrant call deadlocks because the grain's execution slot is
-            // still held by SetDefinition(). With dueTime=Zero the timer fires in a new grain turn,
-            // after this call has returned, so GetDefinition() is free to execute.
-            // The timer disposes itself once it has fired, since a non-periodic timer stays registered
-            // on the activation until disposed and would otherwise accumulate per definition change.
+            // still held by SetDefinition(). Deferring to a separate turn lets this call return first,
+            // so GetDefinition() is free to execute.
             if (options.Value.Observers.ReplayOnDefinitionChange)
             {
-                IGrainTimer? replayTimer = null;
-                replayTimer = this.RegisterGrainTimer(
-                    async _ =>
-                    {
-                        replayTimer?.Dispose();
-                        await ReplayForAllNamespaces(key, namespaceNames);
-                    },
-                    new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+                this.ScheduleInSeparateTurn(() => ReplayForAllNamespaces(key, namespaceNames));
             }
             else
             {
