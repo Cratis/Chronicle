@@ -569,12 +569,9 @@ public class EventSequence(
         }
 
         await PersistStateAfterAppends(appendedCount);
-        await (_appendedEventsQueues?.Enqueue(appendedEventsList.ToList()) ?? Task.CompletedTask);
-
-        foreach (var (constraintContext, eventToAppend) in constraintContexts.Zip(eventsToAppend))
-        {
-            await constraintContext.Update(eventToAppend.SequenceNumber);
-        }
+        await CompleteDurableAppend(
+            appendedEventsList,
+            constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
 
         return AppendManyResult.Success(correlationId, sequenceNumbers);
     }
@@ -652,14 +649,68 @@ public class EventSequence(
 
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
-            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-            await constraintContext.Update(appendedSequenceNumber);
+            await CompleteDurableAppend(appendedEvents, [(constraintContext, appendedSequenceNumber)]);
 
             return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
         catch (Exception ex)
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
+        }
+    }
+
+    /// <summary>
+    /// Runs the steps that follow a durable append: handing the events to the appended-events queues for live
+    /// delivery, and persisting the constraint indexes the events feed.
+    /// </summary>
+    /// <param name="appendedEvents">The <see cref="AppendedEvent">events</see> that are already durable in the log.</param>
+    /// <param name="constraintUpdates">The <see cref="ConstraintValidationContext"/> of each appended event, paired with the <see cref="EventSequenceNumber"/> it got.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Neither step may fail the append, and neither may skip the other. The events are durable and
+    /// <see cref="EventSequenceState.SequenceNumber"/> has already advanced by the time this runs, so reporting a
+    /// failure would make a retrying client append the same event a second time. Losing the live dispatch is
+    /// recovered by spilling the queues' subscribers to their catch-up path - the same recovery the queues apply
+    /// under back-pressure - which re-reads the events from each observer's persisted cursor. The constraint indexes
+    /// are updated regardless of how the dispatch went, because a value that is durable in the log but missing from
+    /// its unique index is invisible to validation and lets a later duplicate through.
+    /// </remarks>
+    async Task CompleteDurableAppend(
+        List<AppendedEvent> appendedEvents,
+        IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> constraintUpdates)
+    {
+        try
+        {
+            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedEnqueueingAppendedEvents(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedEvents.Count, ex);
+            await SpillAppendedEventsQueuesToCatchup();
+        }
+
+        foreach (var (context, sequenceNumber) in constraintUpdates)
+        {
+            try
+            {
+                await context.Update(sequenceNumber);
+            }
+            catch (Exception ex)
+            {
+                logger.FailedUpdatingConstraintIndex(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, ex);
+            }
+        }
+    }
+
+    async Task SpillAppendedEventsQueuesToCatchup()
+    {
+        try
+        {
+            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedSpillingAppendedEventsQueuesToCatchup(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
         }
     }
 
