@@ -10,15 +10,25 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// striped per event source id, over a single shared, bounded set of stripes.
 /// </summary>
 /// <remarks>
-/// A lock is required because <see cref="ProjectionPipeline"/> is a plain class, not a grain: its
-/// <see cref="ProjectionPipeline.Handle"/> runs on the observer job steps off the grain activation thread, and the
-/// pipeline is cached once per projection by the singleton <see cref="IProjectionPipelineManager"/> and shared by
-/// every per-partition observer subscriber. Per-partition handling is therefore dispatched concurrently against the
-/// one shared pipeline, outside any single grain's turn-based isolation, so Orleans does not serialize it. Striping
-/// per resolved key preserves the actor-intended invariant — the same key is serialized, distinct keys run in
-/// parallel — without a coarse whole-projection lock. The fully actor-native alternative (a grain per
-/// (observer, partition) whose turn-based execution serializes each key with no explicit lock) is deliberately
-/// deferred to the observer-sharding work package, which is design-first.
+/// What is being guarded is a shared read-model document in the sink, not grain memory:
+/// <see cref="ProjectionPipeline.Handle"/> reads the current state, computes a changeset from it and writes the
+/// result back, so two overlapping calls that resolve to the same document lose one another's writes. Nothing in the
+/// actor model serializes that cycle, because <see cref="ProjectionPipeline"/> is a plain class cached once per
+/// projection by the singleton <see cref="IProjectionPipelineManager"/> and shared by every observer subscriber that
+/// dispatches into it. Striping per resolved key states the invariant precisely — handling that targets the same
+/// document is serialized, handling that targets distinct documents runs in parallel.
+/// <para>
+/// Sharding observers into a grain per partition does not remove the need for this lock. Per-partition grain
+/// isolation already exists: <see cref="Cratis.Chronicle.Concepts.Observation.ObserverSubscriberKey"/> carries the
+/// partition's <see cref="EventSourceId"/>, so every partition already resolves to its own subscriber activation, on
+/// the live delivery path and on the job path alike. The case a per-partition grain cannot serialize is a collapsing
+/// projection — joins, a constant key, or parent hierarchy resolution map several partitions onto one document — and
+/// that is exactly the case the coarse mode exists for.
+/// </para>
+/// <para>
+/// The lock is process-local, since the manager that owns it is a per-process singleton. It serializes concurrent
+/// handling within one silo and makes no claim about two silos handling the same document at the same time.
+/// </para>
 /// <para>
 /// One instance is shared per projection (surviving pipeline cache eviction) so that concurrent handling across an
 /// evicted-but-still-referenced pipeline and its replacement serialize on the same stripes. Growth is bounded to a
