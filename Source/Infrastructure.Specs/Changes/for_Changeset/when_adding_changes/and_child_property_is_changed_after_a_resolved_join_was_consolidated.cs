@@ -7,10 +7,10 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Changes.for_Changeset.when_adding_changes;
 
 /// <summary>
-/// A <see cref="ResolvedJoin"/> whose first change carries no property differences is consolidated away
-/// before the joined values arrive - they must still reach the child once they do.
+/// A change consolidated from a <see cref="ResolvedJoin"/> is applied exactly once, so a value set on
+/// the child after the join was consolidated survives every later consolidation pass.
 /// </summary>
-public class and_resolved_join_is_consolidated_before_carrying_any_properties : given.a_changeset_with_parent
+public class and_child_property_is_changed_after_a_resolved_join_was_consolidated : given.a_changeset_with_parent
 {
     PropertyPath _itemsProperty;
     PropertyPath _identifiedByProperty;
@@ -28,6 +28,7 @@ public class and_resolved_join_is_consolidated_before_carrying_any_properties : 
         var childDict = (IDictionary<string, object?>)_child;
         childDict["id"] = "child-1";
         childDict["name"] = "Original Name";
+        childDict["description"] = "Original Description";
 
         _arrayIndexers = new ArrayIndexers(
         [
@@ -44,21 +45,20 @@ public class and_resolved_join_is_consolidated_before_carrying_any_properties : 
         _parentChangeset.Add(_childAdded);
 
         _joinChangeset = _parentChangeset.ResolvedJoin(_itemsProperty, "child-1", _incoming, _arrayIndexers);
+        _joinChangeset.Add(new PropertiesChanged<ExpandoObject>(
+            _childInitialState,
+            [new PropertyDifference(new PropertyPath("name"), "Original Name", "Joined Name", ArrayIndexers.NoIndexers)]));
 
-        // Mirrors the projection pipeline, which adds the child before setting the joined properties.
-        _joinChangeset.Add(new ChildAdded(
-            new ExpandoObject(),
-            _itemsProperty,
-            _identifiedByProperty,
-            "child-1",
-            _arrayIndexers));
+        _parentChangeset.Add(new PropertiesChanged<ExpandoObject>(
+            _parentInitialState,
+            [new PropertyDifference(new PropertyPath("name"), "Joined Name", "Final Name", _arrayIndexers)]));
     }
 
     void Because() => _joinChangeset.Add(new PropertiesChanged<ExpandoObject>(
         _childInitialState,
-        [new PropertyDifference(new PropertyPath("name"), "Original Name", "Updated Name", ArrayIndexers.NoIndexers)]));
+        [new PropertyDifference(new PropertyPath("description"), "Original Description", "Joined Description", ArrayIndexers.NoIndexers)]));
 
-    [Fact] void should_apply_the_property_change_to_the_child() => ((IDictionary<string, object?>)_child)["name"].ShouldEqual("Updated Name");
-    [Fact] void should_remove_resolved_join() => _parentChangeset.Changes.OfType<ResolvedJoin>().ShouldBeEmpty();
+    [Fact] void should_not_reapply_the_already_consolidated_property() => ((IDictionary<string, object?>)_child)["name"].ShouldEqual("Final Name");
+    [Fact] void should_apply_the_new_property_change_to_the_child() => ((IDictionary<string, object?>)_child)["description"].ShouldEqual("Joined Description");
     [Fact] void should_keep_only_the_child_added() => _parentChangeset.Changes.ShouldContainOnly(_childAdded);
 }
