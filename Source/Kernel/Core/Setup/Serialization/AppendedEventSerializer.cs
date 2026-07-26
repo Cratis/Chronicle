@@ -27,7 +27,9 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// Runs on the Orleans serialization hot path for every <see cref="AppendedEvent"/> that crosses a grain or
 /// silo boundary. Schemas are cached per event type and generation on the write side and per unique schema
 /// text on the read side, so the blocking event type schema lookup and the schema parse only happen on the
-/// first occurrence of each event type per silo.
+/// first occurrence of each event type per silo. The write side caches a <see cref="Lazy{T}"/> rather than the
+/// resolved text, so a burst of first-time serializations of the same event type blocks one thread on the
+/// storage lookup instead of one per message; a failed lookup is evicted so it is retried rather than cached.
 /// </remarks>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/>.</param>
@@ -38,7 +40,7 @@ internal sealed class AppendedEventSerializer(
     IStorage storage) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     readonly ConcurrentDictionary<string, JsonSchema> _schemasBySchemaJson = new();
-    readonly ConcurrentDictionary<EventTypeSchemaKey, string> _schemaJsonByEventType = new();
+    readonly ConcurrentDictionary<EventTypeSchemaKey, Lazy<string>> _schemaJsonByEventType = new();
 
     /// <inheritdoc/>
     public object? DeepCopy(object? input, CopyContext context) => input;
@@ -76,14 +78,33 @@ internal sealed class AppendedEventSerializer(
     {
         var appendedEvent = (AppendedEvent)value;
         var key = new EventTypeSchemaKey(appendedEvent.Context.EventStore, appendedEvent.Context.EventType.Id, appendedEvent.Context.EventType.Generation);
-        var schemaJson = _schemaJsonByEventType.GetOrAdd(key, GetSchemaJson);
-        var appendedEventWithSchema = new AppendedEventWithSchema(appendedEvent, schemaJson);
+        var appendedEventWithSchema = new AppendedEventWithSchema(appendedEvent, GetSchemaJson(key));
 
         var json = JsonSerializer.Serialize(appendedEventWithSchema, jsonSerializerOptions);
         StringCodec.WriteField(ref writer, fieldIdDelta, json);
     }
 
     string GetSchemaJson(EventTypeSchemaKey key)
+    {
+        var schemaJson = _schemaJsonByEventType.GetOrAdd(
+            key,
+            static (keyToResolve, serializer) => new Lazy<string>(
+                () => serializer.ResolveSchemaJson(keyToResolve),
+                LazyThreadSafetyMode.ExecutionAndPublication),
+            this);
+
+        try
+        {
+            return schemaJson.Value;
+        }
+        catch
+        {
+            _schemaJsonByEventType.TryRemove(new KeyValuePair<EventTypeSchemaKey, Lazy<string>>(key, schemaJson));
+            throw;
+        }
+    }
+
+    string ResolveSchemaJson(EventTypeSchemaKey key)
     {
         var eventStore = storage.GetEventStore(key.EventStore);
         var eventType = eventStore.EventTypes.GetFor(key.EventTypeId, key.Generation).GetAwaiter().GetResult();
