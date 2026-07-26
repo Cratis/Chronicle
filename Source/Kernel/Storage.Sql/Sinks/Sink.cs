@@ -1540,7 +1540,7 @@ public class Sink : ISink
         return key.Value?.ToString() ?? string.Empty;
     }
 
-    sealed class ObservableInstancesDisposable(IDisposable subscription, IAsyncDisposable scope) : IDisposable
+    sealed class ObservableInstancesDisposable(IDisposable subscription, IDisposable scope) : IDisposable
     {
         bool _disposed;
 
@@ -1552,7 +1552,7 @@ public class Sink : ISink
             }
 
             subscription.Dispose();
-            scope.DisposeAsync().AsTask().Wait();
+            scope.Dispose();
             _disposed = true;
         }
     }
