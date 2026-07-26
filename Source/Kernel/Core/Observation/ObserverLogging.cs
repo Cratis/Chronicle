@@ -152,6 +152,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is behind from {NextEventSequenceNumber} but no longer subscribed on its appended-events queue. Re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedObserver(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
+    internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes

@@ -59,6 +59,10 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     }
 
     /// <inheritdoc/>
+    public async Task SpillToCatchup() =>
+        await Parallel.ForEachAsync(_queues, async (queue, _) => await queue.SpillToCatchup());
+
+    /// <inheritdoc/>
     public async Task<bool> IsSubscribed(ObserverKey observerKey)
     {
         var subscriptions = await _queues[_router.GetQueueIndexFor(observerKey)].GetSubscriptions();

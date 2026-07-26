@@ -32,13 +32,33 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         await CheckConnectedClient();
-        await CheckJobTasks();
+        await RecoverIfStuck();
+        await FlushDebouncedProgressState();
+    }
+
+    /// <summary>
+    /// Runs the recovery checks, stopping at the first one that acts on the observer.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Every check here recovers by re-routing the observer, and routing re-evaluates everything the later checks
+    /// look at - including starting a fresh catch-up. Running on past the first recovery therefore reads the
+    /// aftermath of that recovery as a second fault: a re-route whose catch-up job could not be started leaves the
+    /// observer preparing catch-up, which the very next check treats as stranded and recovers again, doubling the
+    /// catch-up attempts and the queue unsubscribe/subscribe cycles in a single tick. One tick, one recovery; the
+    /// next tick re-evaluates from a settled state.
+    /// </remarks>
+    async Task RecoverIfStuck()
+    {
+        if (await CheckJobTasks() || await CheckStrandedCatchupPreparation())
+        {
+            return;
+        }
+
         if (await CheckNextSequenceNumber())
         {
             await CheckStrandedSubscription();
         }
-
-        await FlushDebouncedProgressState();
     }
 
     async Task CheckConnectedClient()
@@ -84,11 +104,15 @@ public partial class Observer
         }
     }
 
-    async Task CheckJobTasks()
+    /// <summary>
+    /// Re-routes an observer whose progress depends on a job that is no longer there.
+    /// </summary>
+    /// <returns>True if the observer was re-routed, false if it was left alone.</returns>
+    async Task<bool> CheckJobTasks()
     {
         if (!_subscription.IsSubscribed)
         {
-            return;
+            return false;
         }
 
         if (State.IsReplaying)
@@ -103,7 +127,7 @@ public partial class Observer
             {
                 logger.WatchdogReplayJobMissing();
                 await TransitionTo<Routing>();
-                return;
+                return true;
             }
         }
 
@@ -111,7 +135,10 @@ public partial class Observer
         {
             logger.WatchdogCatchupJobMissing();
             await TransitionTo<Routing>();
+            return true;
         }
+
+        return false;
     }
 
     async Task<bool> HasRunningCatchupJob()

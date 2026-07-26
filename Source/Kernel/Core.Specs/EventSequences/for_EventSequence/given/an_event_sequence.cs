@@ -188,8 +188,16 @@ public class an_event_sequence : Specification
         _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
         _stateStorage.State = new EventSequenceState();
 
-        _eventSequence = await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
+        _eventSequence = await CreateEventSequence();
     }
+
+    /// <summary>
+    /// Creates the grain under test. Overridable so a spec can substitute a variant of <see cref="EventSequence"/>
+    /// whose infrastructure misbehaves in a way the substituted collaborators cannot express.
+    /// </summary>
+    /// <returns>The <see cref="EventSequence"/> to exercise.</returns>
+    protected virtual async Task<EventSequence> CreateEventSequence() =>
+        await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
 
     /// <summary>
     /// Build a single already validated and compliant event ready to be appended to storage, bypassing the

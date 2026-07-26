@@ -35,6 +35,18 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     Task Unsubscribe(AppendedEventsQueueSubscription subscription);
 
     /// <summary>
+    /// Recover every subscribed observer across all queues through their catch-up path, dropping their live
+    /// subscriptions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Used by the append side when a batch of durably appended events could not be handed to the queues at all, so
+    /// nothing would otherwise drive the affected observers past the gap. Coarse by design - it spills every observer
+    /// on the sequence - but safe, because an extra catch-up is idempotent while a lost live delivery is not.
+    /// </remarks>
+    Task SpillToCatchup();
+
+    /// <summary>
     /// Check whether an observer is currently subscribed on the queue it routes to.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> of the observer to check.</param>
