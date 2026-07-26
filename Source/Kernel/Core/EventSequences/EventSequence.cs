@@ -568,7 +568,6 @@ public class EventSequence(
             _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
         }
 
-        await PersistStateAfterAppends(appendedCount);
         await CompleteDurableAppend(
             appendedEventsList,
             constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
@@ -645,7 +644,6 @@ public class EventSequence(
             var appendedSequenceNumber = State.SequenceNumber;
             State.SequenceNumber = appendedSequenceNumber.Next();
             State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
-            await PersistStateAfterAppends(1);
 
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
@@ -660,25 +658,36 @@ public class EventSequence(
     }
 
     /// <summary>
-    /// Runs the steps that follow a durable append: handing the events to the appended-events queues for live
-    /// delivery, and persisting the constraint indexes the events feed.
+    /// Runs the steps that follow a durable append: snapshotting the sequence state, handing the events to the
+    /// appended-events queues for live delivery, and persisting the constraint indexes the events feed.
     /// </summary>
     /// <param name="appendedEvents">The <see cref="AppendedEvent">events</see> that are already durable in the log.</param>
     /// <param name="constraintUpdates">The <see cref="ConstraintValidationContext"/> of each appended event, paired with the <see cref="EventSequenceNumber"/> it got.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Neither step may fail the append, and neither may skip the other. The events are durable and
+    /// No step here may fail the append, and no step may skip the ones after it. The events are durable and
     /// <see cref="EventSequenceState.SequenceNumber"/> has already advanced by the time this runs, so reporting a
-    /// failure would make a retrying client append the same event a second time. Losing the live dispatch is
-    /// recovered by spilling the queues' subscribers to their catch-up path - the same recovery the queues apply
-    /// under back-pressure - which re-reads the events from each observer's persisted cursor. The constraint indexes
-    /// are updated regardless of how the dispatch went, because a value that is durable in the log but missing from
-    /// its unique index is invisible to validation and lets a later duplicate through.
+    /// failure would make a retrying client append the same event a second time. The state snapshot is only a
+    /// warm-start optimization - <see cref="EventSequencesStorageProvider"/> rebuilds the sequence number from the
+    /// event tail on activation - so a failed write costs nothing but the head start. Losing the live dispatch is
+    /// recovered by spilling the queues' subscribers to their catch-up path, the same recovery the queues apply
+    /// under back-pressure, which re-reads the events from each observer's persisted cursor. The constraint indexes
+    /// are updated regardless of how the earlier steps went, because a value that is durable in the log but missing
+    /// from its unique index is invisible to validation and lets a later duplicate through.
     /// </remarks>
     async Task CompleteDurableAppend(
         List<AppendedEvent> appendedEvents,
         IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> constraintUpdates)
     {
+        try
+        {
+            await PersistStateAfterAppends(appendedEvents.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedPersistingStateAfterAppends(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
+        }
+
         try
         {
             await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
