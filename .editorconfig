@@ -197,4 +197,14 @@ dotnet_diagnostic.MA0097.severity = none
 dotnet_diagnostic.MA0132.severity = none
 dotnet_diagnostic.MA0134.severity = none
 dotnet_diagnostic.MA0136.severity = none
+
+# ORLEANS0010 suggests adding [Alias] to grain interfaces and their methods. Acting on it is a
+# breaking wire change and must not be done piecemeal. Orleans identifies an invokable by a
+# compound alias of ("inv", GrainReference, the interface type, a method key). Without [Alias] the
+# method key is a hash of the signature and the interface is written as its full name plus
+# assembly; adding [Alias] switches the sender to the alias for whichever part it is applied to.
+# The receiver tolerates both -- the generated invokable keeps a registration for the old hash --
+# but the sender does not, so a silo carrying aliases cannot call one built without them. Turning
+# this on is therefore a major-version change: every alias must land at once and be validated by
+# the clustering CI, which exercises calls between separately built peers.
 dotnet_diagnostic.ORLEANS0010.severity = none
