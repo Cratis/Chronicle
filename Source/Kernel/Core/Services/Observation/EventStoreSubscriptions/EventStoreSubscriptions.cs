@@ -76,6 +76,12 @@ internal sealed class EventStoreSubscriptions(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The removals are appended together rather than one at a time, so the order in which they land in the system
+    /// event sequence relative to each other is no longer the order they appear in the request. Each removal targets
+    /// its own event source - the subscription identifier - so per-stream ordering is unaffected, and observers
+    /// partition by event source, so nothing observes the relative order of two different subscriptions being removed.
+    /// </remarks>
     public async Task Remove(RemoveEventStoreSubscriptions request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);

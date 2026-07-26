@@ -38,6 +38,17 @@ public class multiple_subscriptions : given.an_event_store_subscriptions_service
             Arg.Any<EventSourceId>(),
             Arg.Is<object>(@event => @event is EventStoreSubscriptionRemoved));
 
+    [Fact]
+    void should_target_each_subscription_with_its_own_event_source()
+    {
+        foreach (var subscriptionId in _request.SubscriptionIds)
+        {
+            _systemEventSequence.Received(1).Append(
+                (EventSourceId)subscriptionId,
+                Arg.Is<object>(@event => @event is EventStoreSubscriptionRemoved));
+        }
+    }
+
     async Task<AppendResult> AppendWhenAllAreInFlight()
     {
         await _gate.Enter();

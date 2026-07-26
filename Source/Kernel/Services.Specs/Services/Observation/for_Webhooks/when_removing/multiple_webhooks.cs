@@ -38,6 +38,17 @@ public class multiple_webhooks : given.a_webhooks_service
             Arg.Any<EventSourceId>(),
             Arg.Is<object>(@event => @event is WebhookRemoved));
 
+    [Fact]
+    void should_target_each_webhook_with_its_own_event_source()
+    {
+        foreach (var webhookId in _request.Webhooks)
+        {
+            _systemEventSequence.Received(1).Append(
+                (EventSourceId)webhookId,
+                Arg.Is<object>(@event => @event is WebhookRemoved));
+        }
+    }
+
     async Task<AppendResult> AppendWhenAllAreInFlight()
     {
         await _gate.Enter();
