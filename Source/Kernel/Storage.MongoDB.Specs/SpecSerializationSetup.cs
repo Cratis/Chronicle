@@ -4,6 +4,7 @@
 using System.Runtime.CompilerServices;
 using Cratis.Arc.MongoDB;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Conventions;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -15,6 +16,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// is faithful to the silo: the camelCase element-name convention (the persisted field is "status", not
 /// "Status") and concept serialization. Doing this in a spec base static constructor is too late once another
 /// spec has already touched a type — a fidelity gap that let a serializer-dependent index bug slip past specs.
+/// <para>
+/// The server also registers <see cref="IgnoreExtraElementsConvention"/> through <c>AddCratisMongoDB</c>. Without
+/// it, reading back any stored type that has no id member fails on the <c>_id</c> the server generated, which is a
+/// failure specs would see and production would not.
+/// </para>
 /// </remarks>
 internal static class SpecSerializationSetup
 {
@@ -25,6 +31,7 @@ internal static class SpecSerializationSetup
     internal static void Initialize()
     {
         new ConventionPacks().Provide();
+        ConventionRegistry.Register("IgnoreExtraElements", new ConventionPack { new IgnoreExtraElementsConvention(true) }, _ => true);
         BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
     }
 }
