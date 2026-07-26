@@ -36,13 +36,24 @@ public abstract class JobStep<TRequest, TResult, TState>(
     CancellationTokenSource? _cancellationTokenSource = new();
     IJob _job = new NullJob();
     bool _currentlyRunning;
-    int _checkpointBatchInterval = 1;
-    int _checkpointsSinceLastWrite;
+    JobStepCheckpointDebounce _checkpoints = new(1);
 
     /// <summary>
     /// Gets the <see cref="JobStepId"/> for this job step.
     /// </summary>
     protected JobStepId JobStepId => this.GetPrimaryKey();
+
+    /// <summary>
+    /// Gets a value indicating whether the step must make its progress checkpoint durable after every reported
+    /// batch, overriding <see cref="Configuration.Jobs.StepCheckpointBatchInterval"/>.
+    /// </summary>
+    /// <remarks>
+    /// Debouncing is only safe to the extent that redelivering the batches it leaves unpersisted is harmless. A
+    /// step whose subscriber cannot make redelivery a no-op overrides this to shrink its window to the same single
+    /// batch the live delivery path already has. That is window equalization, not idempotency - a crash between
+    /// handing a batch off and writing the checkpoint still re-delivers that batch.
+    /// </remarks>
+    protected virtual bool CheckpointAfterEveryBatch => false;
 
     /// <summary>
     /// Gets the parent job id.
@@ -91,10 +102,20 @@ public abstract class JobStep<TRequest, TResult, TState>(
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = new();
 
-        var configuredInterval = ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value is { } options
-            ? options.Jobs.StepCheckpointBatchInterval
-            : 1;
-        _checkpointBatchInterval = configuredInterval < 1 ? 1 : configuredInterval;
+        var jobs = ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value is { } options ? options.Jobs : null;
+        _checkpoints = new(jobs?.StepCheckpointBatchInterval ?? 1);
+
+        var flushInterval = jobs?.StepCheckpointFlushInterval ?? TimeSpan.Zero;
+        if (_checkpoints.BatchInterval > 1 && flushInterval > TimeSpan.Zero)
+        {
+            this.RegisterGrainTimer(
+                _ => FlushDebouncedCheckpoint(),
+                new GrainTimerCreationOptions
+                {
+                    DueTime = flushInterval,
+                    Period = flushInterval
+                });
+        }
     }
 
     /// <inheritdoc/>
@@ -488,7 +509,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         try
         {
             await state.WriteStateAsync();
-            _checkpointsSinceLastWrite = 0;
+            _checkpoints.Persisted();
             return Catch.Success();
         }
         catch (Exception ex)
@@ -505,19 +526,30 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <returns>A task representing the asynchronous action.</returns>
     /// <remarks>
     /// The in-memory state has already advanced when this is called; the write is deferred and any other state
-    /// write (such as a terminal status change) flushes the pending checkpoint. A step always resumes from its
-    /// last persisted checkpoint and re-reads forward, so a crash between debounced writes only re-processes
-    /// events the step had already handled — because observers are idempotent, this at-least-once relaxation
-    /// loses and double-applies nothing. It deliberately trades a longer post-crash re-scan for removing the
-    /// dominant per-batch write on the replay path.
+    /// write (such as a terminal status change) flushes the pending checkpoint, as does the timed flush governed
+    /// by <see cref="Configuration.Jobs.StepCheckpointFlushInterval"/>. A step always resumes from its last
+    /// persisted checkpoint and re-reads forward, so a crash between debounced writes re-delivers every batch
+    /// handled since — bypassing the observer's cursor filter, which makes it a genuine at-least-once relaxation
+    /// rather than a free one. Read models keyed by event source id absorb it because
+    /// <see cref="Configuration.ReadModels.GuardSinkWritesOnWatermark"/> makes the repeated sink write a no-op;
+    /// everything else opts out through <see cref="CheckpointAfterEveryBatch"/>.
     /// </remarks>
-    protected Task<Catch> WriteCheckpointDebounced()
-    {
-        _checkpointsSinceLastWrite++;
-        return _checkpointsSinceLastWrite >= _checkpointBatchInterval
+    protected Task<Catch> WriteCheckpointDebounced() =>
+        _checkpoints.Report(CheckpointAfterEveryBatch)
             ? WriteStateAsync()
             : Task.FromResult(Catch.Success());
-    }
+
+    /// <summary>
+    /// Writes a progress checkpoint that debouncing has left unpersisted, doing nothing when there is none.
+    /// </summary>
+    /// <returns>A task representing the asynchronous action.</returns>
+    /// <remarks>
+    /// Driven by a timer on the <see cref="Configuration.Jobs.StepCheckpointFlushInterval"/> cadence, because the
+    /// batch counter alone bounds nothing in time: a step that hands off a few batches and then goes quiet would
+    /// otherwise hold them unpersisted for as long as it stays activated.
+    /// </remarks>
+    protected Task<Catch> FlushDebouncedCheckpoint() =>
+        _checkpoints.HasPendingCheckpoint ? WriteStateAsync() : Task.FromResult(Catch.Success());
 
     /// <summary>
     /// Create <typeparamref name="TResult"/> result when the job step is stopped without having the job step task running.
