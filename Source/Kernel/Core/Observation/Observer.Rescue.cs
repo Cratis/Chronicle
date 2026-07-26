@@ -59,7 +59,7 @@ public partial class Observer
     /// makes <see cref="Observing"/> skip its missed-events check, so an observer left in it never observes anything
     /// again and, being kept alive, is never reactivated out of it.
     /// </summary>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>True if the preparation was cleared, false if there was nothing stranded.</returns>
     /// <remarks>
     /// The absence of a preparing or running catch-up job is what distinguishes a stranded preparation from a genuine
     /// one. The watchdog timer does not interleave with grain requests, so it can never observe the brief window
@@ -69,11 +69,11 @@ public partial class Observer
     /// catch-up was meant to close, which would spin the state machine between the two states. Re-routing through
     /// <see cref="Routing"/> is what makes the retry the job-start path promises actually happen.
     /// </remarks>
-    async Task CheckStrandedCatchupPreparation()
+    async Task<bool> CheckStrandedCatchupPreparation()
     {
         if (!_isPreparingCatchup || await HasRunningCatchupJob())
         {
-            return;
+            return false;
         }
 
         logger.WatchdogRescuingStrandedCatchupPreparation();
@@ -83,5 +83,7 @@ public partial class Observer
         {
             await TransitionTo<Routing>();
         }
+
+        return true;
     }
 }
