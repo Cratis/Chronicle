@@ -64,6 +64,19 @@ public class Sink(
     /// so an already applied event is recognized before its state is cached at all.
     /// </remarks>
     readonly ConcurrentDictionary<string, ulong> _bulkWatermarks = new();
+
+    /// <summary>
+    /// Documents whose delete is queued in the open bulk window but has not reached the server yet.
+    /// </summary>
+    /// <remarks>
+    /// The server still holds such a document, so an uncached <see cref="FindOrDefault"/> would report it as
+    /// present and the caller would treat the next event as an update of a live instance. On a document whose
+    /// write is guarded that is fatal: a guarded write never inserts, so the queued delete runs first and the
+    /// re-creating update matches nothing, losing the read model. Reporting the document as already gone restores
+    /// the unguarded, upserting write that re-creates it — and incidentally stops the caller merging onto state
+    /// that a queued delete has logically discarded.
+    /// </remarks>
+    readonly ConcurrentDictionary<string, byte> _bulkPendingDeletes = new();
     int _currentBulkSize;
     volatile bool _isBulkMode;
 
@@ -79,6 +92,11 @@ public class Sink(
             if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
             {
                 return cachedState;
+            }
+
+            if (_bulkPendingDeletes.ContainsKey(cacheKey))
+            {
+                return default;
             }
         }
 
@@ -160,6 +178,10 @@ public class Sink(
                 _bulkStateCache.TryRemove(cacheKey, out _);
                 _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
                 _bulkWatermarks.TryRemove(cacheKey, out _);
+
+                // Marked after the operation is queued, never before: a flush that observes the mark without the
+                // operation would clear it while the delete is still pending, which is the failure this prevents.
+                _bulkPendingDeletes[cacheKey] = 0;
                 return await FlushBulkIfNeeded();
             }
 
@@ -172,7 +194,7 @@ public class Sink(
         // redelivery into a no-op. Upsert is switched off because a filter that matches nothing would otherwise
         // attempt an insert on an _id that already exists, which raises a duplicate key error and — inside an
         // ordered bulk write — would discard every operation queued behind it.
-        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !usesJoinTargetsOnlyFilter)
+        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !usesJoinTargetsOnlyFilter && eventSequenceNumber.IsActualValue)
         {
             if (_isBulkMode &&
                 _bulkWatermarks.TryGetValue(converter.ToBsonValue(key).ToString()!, out var applied) &&
@@ -215,7 +237,11 @@ public class Sink(
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
                 _bulkStateCache[cacheKey] = changeset.CurrentState;
                 _bulkKeysByCacheKey[cacheKey] = key;
-                RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
+                _bulkPendingDeletes.TryRemove(cacheKey, out _);
+                if (eventSequenceNumber.IsActualValue)
+                {
+                    RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
+                }
             }
 
             if (changeset.HasJoined())
@@ -251,6 +277,7 @@ public class Sink(
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
         _bulkWatermarks.Clear();
+        _bulkPendingDeletes.Clear();
         return Task.CompletedTask;
     }
 
@@ -269,6 +296,7 @@ public class Sink(
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
         _bulkWatermarks.Clear();
+        _bulkPendingDeletes.Clear();
     }
 
     /// <inheritdoc/>
@@ -475,6 +503,7 @@ public class Sink(
     {
         List<WriteModel<BsonDocument>> snapshot;
         Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
+        string[] flushedPendingDeletes;
 
         lock (_bulkLock)
         {
@@ -485,6 +514,10 @@ public class Sink(
 
             snapshot = [.._bulkOperations];
             metadataSnapshot = new(_bulkOperationMetadata);
+
+            // Only the marks that exist now can belong to operations in this snapshot; a mark added afterwards
+            // belongs to a delete still queued and must survive the flush.
+            flushedPendingDeletes = [.._bulkPendingDeletes.Keys];
             _bulkOperations.Clear();
             _bulkOperationMetadata.Clear();
             _currentBulkSize = 0;
@@ -508,6 +541,13 @@ public class Sink(
             }
 
             return failedPartitions;
+        }
+        finally
+        {
+            foreach (var cacheKey in flushedPendingDeletes)
+            {
+                _bulkPendingDeletes.TryRemove(cacheKey, out _);
+            }
         }
     }
 

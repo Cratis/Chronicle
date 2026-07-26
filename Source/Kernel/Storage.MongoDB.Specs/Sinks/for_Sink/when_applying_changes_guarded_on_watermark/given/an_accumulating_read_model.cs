@@ -69,6 +69,17 @@ public abstract class an_accumulating_read_model(MongoDBFixture fixture) : Speci
         return changeset;
     }
 
+    protected static IChangeset<AppendedEvent, ExpandoObject> RemovalChangeset()
+    {
+        var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
+        changeset.InitialState.Returns(new ExpandoObject());
+        changeset.CurrentState.Returns(new ExpandoObject());
+        changeset.Changes.Returns([]);
+        changeset.HasBeenRemoved().Returns(true);
+        changeset.HasJoined().Returns(false);
+        return changeset;
+    }
+
     protected async Task<int> CurrentCount()
     {
         var instance = await _sink.FindOrDefault(_key);
