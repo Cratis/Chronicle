@@ -8,16 +8,11 @@ namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_getting_c
 
 /// <summary>
 /// The per-silo lookups are independent, so they are issued together rather than one silo at a time - the cost of the
-/// call is one round trip, not one per silo. Every silo's grain blocks until all of them have been entered, which only
-/// happens if the calls are in flight at the same time.
+/// call is one round trip, not one per silo.
 /// </summary>
 public class across_all_silos : given.a_connection_service_with_three_silos
 {
-    static readonly TimeSpan _waitForAllSilos = TimeSpan.FromSeconds(2);
-
-    readonly TaskCompletionSource _allSilosEntered = new();
-    int _silosEntered;
-    int _silosThatSawEveryOtherSiloInFlight;
+    readonly ConcurrentCallGate _gate = new(NumberOfSilos);
     IEnumerable<ContractConnectedClient> _result;
 
     void Establish()
@@ -25,31 +20,20 @@ public class across_all_silos : given.a_connection_service_with_three_silos
         for (var index = 0; index < NumberOfSilos; index++)
         {
             var silo = _silos[index];
-            _connectedClientsPerSilo[index].GetAllConnectedClients().Returns(_ => EnterAndWaitForAllSilos(silo));
+            _connectedClientsPerSilo[index].GetAllConnectedClients().Returns(_ => GetClientsWhenAllSilosAreInFlight(silo));
         }
     }
 
     async Task Because() => _result = await _connectionService.GetConnectedClients();
 
-    [Fact] void should_have_every_silo_in_flight_at_the_same_time() => _silosThatSawEveryOtherSiloInFlight.ShouldEqual(NumberOfSilos);
+    [Fact] void should_have_every_silo_in_flight_at_the_same_time() => _gate.AllCallsWereConcurrent.ShouldBeTrue();
     [Fact] void should_return_the_clients_from_every_silo() => _result.Count().ShouldEqual(NumberOfSilos);
     [Fact] void should_stamp_each_client_with_the_silo_it_is_connected_to() =>
         _result.Select(client => client.SiloAddress).ShouldContainOnly(_silos.Select(silo => silo.ToParsableString()));
 
-    async Task<IEnumerable<KernelConnectedClient>> EnterAndWaitForAllSilos(SiloAddress silo)
+    async Task<IEnumerable<KernelConnectedClient>> GetClientsWhenAllSilosAreInFlight(SiloAddress silo)
     {
-        if (Interlocked.Increment(ref _silosEntered) == NumberOfSilos)
-        {
-            _allSilosEntered.TrySetResult();
-        }
-
-        // A silo that leaves through the gate rather than the timeout was still in flight when the last silo arrived.
-        var left = await Task.WhenAny(_allSilosEntered.Task, Task.Delay(_waitForAllSilos));
-        if (left == _allSilosEntered.Task)
-        {
-            Interlocked.Increment(ref _silosThatSawEveryOtherSiloInFlight);
-        }
-
+        await _gate.Enter();
         return ClientOn(silo);
     }
 }
