@@ -70,10 +70,17 @@ public class Reducer(
             // Schedule replay as a separate grain turn so that SetDefinition() returns immediately.
             // Using dueTime=Zero ensures the timer fires after this grain turn completes,
             // keeping registration fast and replay as a separate concern.
+            // The timer disposes itself once it has fired, since a non-periodic timer stays registered
+            // on the activation until disposed and would otherwise accumulate per definition change.
             if (options.Value.Observers.ReplayOnDefinitionChange)
             {
-                this.RegisterGrainTimer(
-                    async _ => await ReplayForAllNamespaces(key, namespaceNames),
+                IGrainTimer? replayTimer = null;
+                replayTimer = this.RegisterGrainTimer(
+                    async _ =>
+                    {
+                        replayTimer?.Dispose();
+                        await ReplayForAllNamespaces(key, namespaceNames);
+                    },
                     new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
             }
             else

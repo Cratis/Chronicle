@@ -95,10 +95,17 @@ public class Projection(
             // triggered inline, that re-entrant call deadlocks because the grain's execution slot is
             // still held by SetDefinition(). With dueTime=Zero the timer fires in a new grain turn,
             // after this call has returned, so GetDefinition() is free to execute.
+            // The timer disposes itself once it has fired, since a non-periodic timer stays registered
+            // on the activation until disposed and would otherwise accumulate per definition change.
             if (options.Value.Observers.ReplayOnDefinitionChange)
             {
-                this.RegisterGrainTimer(
-                    async _ => await ReplayForAllNamespaces(key, namespaceNames),
+                IGrainTimer? replayTimer = null;
+                replayTimer = this.RegisterGrainTimer(
+                    async _ =>
+                    {
+                        replayTimer?.Dispose();
+                        await ReplayForAllNamespaces(key, namespaceNames);
+                    },
                     new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
             }
             else
