@@ -79,11 +79,7 @@ internal sealed class EventStoreSubscriptions(
     public async Task Remove(RemoveEventStoreSubscriptions request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
-
-        foreach (var subscriptionId in request.SubscriptionIds)
-        {
-            await eventSequence.Append(subscriptionId, new EventStoreSubscriptionRemoved());
-        }
+        await Task.WhenAll(request.SubscriptionIds.Select(subscriptionId => eventSequence.Append(subscriptionId, new EventStoreSubscriptionRemoved())));
     }
 
     /// <inheritdoc/>

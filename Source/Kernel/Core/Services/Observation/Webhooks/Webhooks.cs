@@ -109,12 +109,7 @@ internal sealed class Webhooks(
     public async Task Remove(RemoveWebhooks request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
-
-        foreach (var webhookId in request.Webhooks)
-        {
-            var @event = new WebhookRemoved();
-            await eventSequence.Append(webhookId, @event);
-        }
+        await Task.WhenAll(request.Webhooks.Select(webhookId => eventSequence.Append(webhookId, new WebhookRemoved())));
     }
 
     /// <inheritdoc/>
