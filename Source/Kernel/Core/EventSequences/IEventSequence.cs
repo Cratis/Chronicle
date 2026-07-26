@@ -17,6 +17,12 @@ namespace Cratis.Chronicle.EventSequences;
 public interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>
+    /// Rehydrate the event sequence.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Rehydrate();
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>
