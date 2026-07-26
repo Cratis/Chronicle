@@ -361,6 +361,14 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithEnvironment("Logging__LogLevel__Default", "Information")
             .WithEnvironment("Logging__LogLevel__Cratis", "Debug");
 
+        // Forwarded only when the host sets it. A crash-recovery scenario needs the kernel to make a durable
+        // checkpoint part way through a catch-up so the resume starts mid-range; at the shipped interval of 100
+        // cursor batches that takes more events than an integration run should append.
+        if (Environment.GetEnvironmentVariable("Cratis__Chronicle__Jobs__StepCheckpointBatchInterval") is { Length: > 0 } checkpointBatchInterval)
+        {
+            builder = builder.WithEnvironment("Cratis__Chronicle__Jobs__StepCheckpointBatchInterval", checkpointBatchInterval);
+        }
+
         // SQL backends (especially MSSQL) run EF Core migrations against a freshly-started
         // database container on startup. Give the health endpoint 5 minutes to respond.
         var waitStrategy = Wait.ForUnixContainer()

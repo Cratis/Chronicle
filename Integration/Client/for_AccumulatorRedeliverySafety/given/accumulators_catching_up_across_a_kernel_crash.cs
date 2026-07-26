@@ -32,8 +32,16 @@ namespace Cratis.Chronicle.Integration.for_AccumulatorRedeliverySafety.given;
 /// boundary and nothing was redelivered at all.
 /// </item>
 /// </list>
-/// The number of events is deliberately several times the default
-/// <c>Jobs.StepCheckpointBatchInterval</c> so the crash is very likely to land between two durable checkpoints.
+/// <para>
+/// <b>Coverage limit, deliberately left visible.</b> The debounce counts <i>cursor batches</i>, not events, and the
+/// driver's first page alone is a hundred-odd documents. At the shipped interval of 100 batches this event count
+/// produces no durable checkpoint at all, so the resume re-reads the whole range: excellent for the anti-vacuity
+/// assertion, but it never exercises a resume that starts <i>part way</i> through. To cover that, run the cell with
+/// <c>Cratis__Chronicle__Jobs__StepCheckpointBatchInterval</c> set low — the fixture forwards it to the kernel
+/// container when the host sets it. Expect <c>should_total_every_event_exactly_once</c> to become unreliable when
+/// you do: the reducer guard compares only a batch's last sequence number, so a resumed page that straddles the
+/// watermark is folded in full. That is the known residual, not a spec to tune until it passes.
+/// </para>
 /// </remarks>
 public class accumulators_catching_up_across_a_kernel_crash(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
 {
