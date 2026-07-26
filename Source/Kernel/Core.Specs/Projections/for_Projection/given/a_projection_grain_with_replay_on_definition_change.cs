@@ -12,7 +12,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;

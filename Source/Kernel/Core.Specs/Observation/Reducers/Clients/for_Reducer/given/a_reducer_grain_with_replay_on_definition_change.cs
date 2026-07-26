@@ -43,6 +43,8 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
         _silo.AddProbe(_ => namespacesGrain);
         _silo.AddProbe(_ => Substitute.For<IConnectedClients>());
 
+        // IsActive is false so that SetDefinitionAndSubscribe stops after scheduling replay, which is
+        // the only part this specification is about.
         _definition = CreateDefinition("the-read-model");
 
         // ReducerDefinition has no parameterless constructor, so the test silo cannot materialize an
@@ -55,8 +57,6 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
         _grain = await _silo.CreateGrainAsync<Reducer>(key.ToString());
     }
 
-    // IsActive is false so that SetDefinitionAndSubscribe stops after scheduling replay, which is
-    // the only part this specification is about.
     static ReducerDefinition CreateDefinition(string readModel) => new(
         "the-reducer",
         EventSequenceId.Log,
