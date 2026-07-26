@@ -58,6 +58,13 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
         await _queues[subscription.Queue].Unsubscribe(subscription.ObserverKey);
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> IsSubscribed(ObserverKey observerKey)
+    {
+        var subscriptions = await _queues[_router.GetQueueIndexFor(observerKey)].GetSubscriptions();
+        return subscriptions.Any(subscription => subscription.ObserverKey == observerKey);
+    }
+
     async Task SeedRouter()
     {
         for (var queueIndex = 0; queueIndex < _queues.Length; queueIndex++)

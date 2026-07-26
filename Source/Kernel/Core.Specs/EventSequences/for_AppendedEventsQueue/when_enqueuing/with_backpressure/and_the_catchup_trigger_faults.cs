@@ -24,6 +24,13 @@ public class and_the_catchup_trigger_faults : given.all_dependencies
     const int ExpectedAttempts = 3;
     const int ChannelCapacity = 1;
 
+    /// <summary>
+    /// How long to let the retry loop settle after it reached the expected attempt count, before the count is read.
+    /// The backoff between attempt N and N+1 is 200ms * N, so waiting well past 200ms * ExpectedAttempts lets an
+    /// unbounded loop take at least one more attempt and makes the exact-count assertion detect it.
+    /// </summary>
+    const int SettleMilliseconds = 1000;
+
     readonly EventType _eventType = new("faulting-catchup-event", 1);
     readonly TaskCompletionSource _blockObserver = new();
     ObserverKey _observerKey;
@@ -80,6 +87,10 @@ public class and_the_catchup_trigger_faults : given.all_dependencies
             await Task.Delay(20);
         }
 
+        // Reading the count the moment it reaches the bound cannot tell a bounded loop from an unbounded one.
+        // Let the loop settle first, so a loop that kept retrying is caught by the exact-count assertion.
+        await Task.Delay(SettleMilliseconds);
+
         _observedCatchupAttempts = CatchupAttempts();
         _blockObserver.SetResult();
     }
@@ -87,6 +98,6 @@ public class and_the_catchup_trigger_faults : given.all_dependencies
     int CatchupAttempts() =>
         _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.CatchUp));
 
-    [Fact] void should_observe_the_fault_and_retry_the_bounded_number_of_times() =>
+    [Fact] void should_observe_the_fault_and_retry_exactly_the_bounded_number_of_times() =>
         _observedCatchupAttempts.ShouldEqual(ExpectedAttempts);
 }
