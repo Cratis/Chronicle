@@ -138,9 +138,6 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task Rehydrate() => Task.CompletedTask;
-
-    /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(State.SequenceNumber);
 
     /// <inheritdoc/>
