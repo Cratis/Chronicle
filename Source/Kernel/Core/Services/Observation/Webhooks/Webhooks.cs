@@ -106,15 +106,16 @@ internal sealed class Webhooks(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The removals are appended together rather than one at a time, so the order in which they land in the system
+    /// event sequence relative to each other is no longer the order they appear in the request. Each removal targets
+    /// its own event source - the webhook identifier - so per-stream ordering is unaffected, and observers partition by
+    /// event source, so nothing observes the relative order of two different webhooks being removed.
+    /// </remarks>
     public async Task Remove(RemoveWebhooks request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
-
-        foreach (var webhookId in request.Webhooks)
-        {
-            var @event = new WebhookRemoved();
-            await eventSequence.Append(webhookId, @event);
-        }
+        await Task.WhenAll(request.Webhooks.Select(webhookId => eventSequence.Append(webhookId, new WebhookRemoved())));
     }
 
     /// <inheritdoc/>
