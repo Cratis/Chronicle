@@ -27,5 +27,7 @@ public class when_replacing_generation_content : given.a_storage_with_appended_e
     }
 
     [Fact] void should_expose_the_latest_generation_as_the_content() => ((IDictionary<string, object?>)_stored.Content)["value"].ShouldEqual("migrated");
+    [Fact] void should_report_the_latest_generation_on_the_event_type() => _stored.Context.EventType.Generation.ShouldEqual(new EventTypeGeneration(2));
+    [Fact] void should_keep_the_event_type_identifier() => _stored.Context.EventType.Id.ShouldEqual(_eventType.Id);
     [Fact] void should_retain_every_generation() => _stored.GenerationalContent.Keys.Order().ShouldEqual([1, 2]);
 }

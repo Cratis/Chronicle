@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Json;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.InMemory.EventSequences;
@@ -27,6 +26,8 @@ public class EventSequenceStorage(
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId) : IEventSequenceStorage
 {
+    static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
+
     readonly List<AppendedEvent> _events = [];
     readonly object _lock = new();
 
@@ -438,14 +439,16 @@ public class EventSequenceStorage(
             }
 
             var original = _events[index];
-            var latest = content
-                .OrderByDescending(_ => _.Key.Value)
-                .Select(_ => _.Value)
-                .FirstOrDefault() ?? original.Content;
+
+            // Surface the highest available generation, so observers and projections consuming a newer
+            // generation receive the migrated content — and report that generation on the event type,
+            // exactly as the persistent providers resolve a stored event with several generations.
+            var highestGeneration = content.Keys.MaxBy(_ => _.Value) ?? original.Context.EventType.Generation;
 
             _events[index] = original with
             {
-                Content = latest,
+                Context = original.Context with { EventType = new EventType(original.Context.EventType.Id, highestGeneration, false) },
+                Content = content.TryGetValue(highestGeneration, out var migrated) ? migrated : original.Content,
                 GenerationalContent = content.ToDictionary(_ => (int)_.Key.Value, _ => Serialize(_.Value))
             };
         }
@@ -500,6 +503,16 @@ public class EventSequenceStorage(
         };
     }
 
+    /// <summary>
+    /// Lays out a <see cref="RedactionEventContent"/> the way the persistent providers store it — the
+    /// camel-cased property names its serialized form produces, which the converters then read back raw.
+    /// </summary>
+    /// <remarks>
+    /// Keep this in step with <see cref="RedactionEventContent"/>: a property added there is not written
+    /// here automatically, and a redacted event would then carry less than it does in the other providers.
+    /// </remarks>
+    /// <param name="content">The redaction content to lay out.</param>
+    /// <returns>The redaction content as an <see cref="ExpandoObject"/> payload.</returns>
     static ExpandoObject ToExpandoObject(RedactionEventContent content)
     {
         var expando = new ExpandoObject();
@@ -513,7 +526,18 @@ public class EventSequenceStorage(
         return expando;
     }
 
-    static string Serialize(ExpandoObject content) => JsonSerializer.Serialize(content, Globals.JsonSerializerOptions);
+    /// <summary>
+    /// Renders event content as the JSON string form kept alongside an event for its original and
+    /// generational content.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately uses this type's own options rather than the shared global ones: those are mutable
+    /// process-wide state that another component may still be configuring, and touching them mid-flight
+    /// throws "JsonSerializerOptions instance is read-only or has already been used".
+    /// </remarks>
+    /// <param name="content">The content to render.</param>
+    /// <returns>The content as a JSON string.</returns>
+    static string Serialize(ExpandoObject content) => JsonSerializer.Serialize(content, _serializerOptions);
 
     /// <summary>
     /// Narrows the events by the supplied criteria, matching how the persistent storage providers build their queries.
