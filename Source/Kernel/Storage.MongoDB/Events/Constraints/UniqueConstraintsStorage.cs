@@ -46,14 +46,27 @@ public class UniqueConstraintsStorage(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The unique index on the value is what settles a claim that two event sources make concurrently, and it
+    /// reports the loser as a duplicate-key write error. That is a constraint violation, not a storage malfunction,
+    /// so it is translated into <see cref="DuplicateUniqueConstraintValue"/> rather than surfacing a driver
+    /// exception callers would have to recognize.
+    /// </remarks>
     public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
     {
         var collection = GetCollectionFor(name, scopeKey);
         await EnsureIndex(collection).ConfigureAwait(false);
-        await collection.ReplaceOneAsync(
-            u => u.EventSourceId == eventSourceId,
-            new UniqueConstraintIndex(eventSourceId, value, sequenceNumber),
-            new ReplaceOptions { IsUpsert = true });
+        try
+        {
+            await collection.ReplaceOneAsync(
+                u => u.EventSourceId == eventSourceId,
+                new UniqueConstraintIndex(eventSourceId, value, sequenceNumber),
+                new ReplaceOptions { IsUpsert = true });
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new DuplicateUniqueConstraintValue(name, eventSourceId);
+        }
     }
 
     /// <inheritdoc/>
