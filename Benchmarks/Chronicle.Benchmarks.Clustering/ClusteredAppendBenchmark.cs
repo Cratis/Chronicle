@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// subscribes to, so it is the append path alone. The reported mean is per appended event.
 /// </remarks>
 [MemoryDiagnoser]
-[SimpleJob(warmupCount: 1, iterationCount: 5, invocationCount: 1)]
+[SimpleJob(warmupCount: 2, iterationCount: 15, invocationCount: 1)]
 public class ClusteredAppendBenchmark : IAsyncDisposable
 {
     const int EventCount = 100;

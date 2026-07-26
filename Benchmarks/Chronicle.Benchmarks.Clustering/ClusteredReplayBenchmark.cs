@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// of the result. The reported mean is per replayed event.
 /// </remarks>
 [MemoryDiagnoser]
-[SimpleJob(warmupCount: 1, iterationCount: 5, invocationCount: 1)]
+[SimpleJob(warmupCount: 2, iterationCount: 15, invocationCount: 1)]
 public class ClusteredReplayBenchmark : IAsyncDisposable
 {
     const int EventSourceCount = 40;
@@ -57,7 +57,7 @@ public class ClusteredReplayBenchmark : IAsyncDisposable
         var projections = _fixture.EventStore1.Projections;
         _handler = projections.GetHandlerFor<ReplayThroughputProjection>();
         await _handler.WaitTillActive(_setupTimeout);
-        await _fixture.WaitForSubscribedObserver(projections.GetProjectionIdFor<ReplayThroughputProjection>(), _setupTimeout);
+        await _fixture.Readiness.WaitForSubscribedObserver(projections.GetProjectionIdFor<ReplayThroughputProjection>(), _setupTimeout);
 
         var eventSourceIds = Enumerable.Range(0, EventSourceCount).Select(_ => EventSourceId.New());
         var appendResults = await Task.WhenAll(eventSourceIds.Select(eventSourceId => _fixture.EventStore1.EventLog.AppendMany(
@@ -76,7 +76,7 @@ public class ClusteredReplayBenchmark : IAsyncDisposable
     public void PrepareIteration()
     {
         _handler!.WaitForState(ObserverRunningState.Active, _setupTimeout).GetAwaiter().GetResult();
-        _fixture!.WaitForNoJobsInFlight(_setupTimeout).GetAwaiter().GetResult();
+        _fixture!.Readiness.WaitForNoJobsInFlight(_setupTimeout).GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -96,7 +96,7 @@ public class ClusteredReplayBenchmark : IAsyncDisposable
         await _fixture.EventStore1.Jobs.WaitTillJobCompletesOrIsDeleted(jobId, _timeout);
         await _handler!.WaitForState(ObserverRunningState.Active, _timeout);
         await _handler!.WaitTillReachesEventSequenceNumber(_seededTail, _timeout);
-        await _fixture.WaitForNoJobsInFlight(_timeout);
+        await _fixture.Readiness.WaitForNoJobsInFlight(_timeout);
     }
 
     /// <summary>

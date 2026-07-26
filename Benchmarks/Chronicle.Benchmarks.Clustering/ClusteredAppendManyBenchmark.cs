@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// mean is per appended event.
 /// </remarks>
 [MemoryDiagnoser]
-[SimpleJob(warmupCount: 1, iterationCount: 5, invocationCount: 1)]
+[SimpleJob(warmupCount: 2, iterationCount: 15, invocationCount: 1)]
 public class ClusteredAppendManyBenchmark : IAsyncDisposable
 {
     const int BatchCount = 10;

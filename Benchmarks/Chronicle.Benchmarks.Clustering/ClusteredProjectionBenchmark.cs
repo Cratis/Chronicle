@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// The reported mean is per projected event.
 /// </remarks>
 [MemoryDiagnoser]
-[SimpleJob(warmupCount: 1, iterationCount: 5, invocationCount: 1)]
+[SimpleJob(warmupCount: 2, iterationCount: 15, invocationCount: 1)]
 public class ClusteredProjectionBenchmark : IAsyncDisposable
 {
     const int EventSourceCount = 20;
@@ -53,7 +53,7 @@ public class ClusteredProjectionBenchmark : IAsyncDisposable
         var projections = _fixture.EventStore1.Projections;
         _handler = projections.GetHandlerFor<ProjectionThroughputProjection>();
         await _handler.WaitTillActive(_setupTimeout);
-        await _fixture.WaitForSubscribedObserver(projections.GetProjectionIdFor<ProjectionThroughputProjection>(), _setupTimeout);
+        await _fixture.Readiness.WaitForSubscribedObserver(projections.GetProjectionIdFor<ProjectionThroughputProjection>(), _setupTimeout);
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public class ClusteredProjectionBenchmark : IAsyncDisposable
     public void PrepareIteration()
     {
         _eventSourceIds = [.. Enumerable.Range(0, EventSourceCount).Select(_ => EventSourceId.New())];
-        _fixture?.WaitForNoJobsInFlight(_setupTimeout).GetAwaiter().GetResult();
+        _fixture?.Readiness.WaitForNoJobsInFlight(_setupTimeout).GetAwaiter().GetResult();
     }
 
     /// <summary>
