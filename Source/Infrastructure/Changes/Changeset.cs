@@ -298,11 +298,13 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         // by its key, array property and identifier property. It takes the properties and resolves
         // them onto the child added. This avoids anyone working with a changeset to have to perform an
         // add and then perform an update on the child.
-        // The join is removed once merged - the child already carries its properties and leaving it in
-        // would make sinks apply them a second time. The changeset behind the join stays linked to the
-        // child instead, so changes arriving after the merge reach the child rather than being dropped
-        // along with the removed join. Only changes that have not been merged yet are ever applied, so
-        // a value set on the child after the merge is never reverted.
+        // A merged join is removed from the parent: the child already carries its properties, and a join
+        // left in place makes sinks apply them a second time. The changeset behind the join stays linked
+        // to the child it merged into, and forwards to that child every PropertiesChanged<TTarget> added
+        // to it from then on. That is the only change kind forwarded - a ChildAdded, ChildRemoved,
+        // Removed or NestedCleared added to a merged join's changeset is consumed with the join and
+        // never reaches the parent. Each difference is applied exactly once, by the merge or by the
+        // link, so a value written to the child afterwards stands.
         var changes = parent._changes;
         var resolvesToRemove = new List<ResolvedJoin>();
         foreach (var childAdded in changes.OfType<ChildAdded>())
