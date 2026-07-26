@@ -169,7 +169,7 @@ public class Sink : ISink
         }
 
         var entry = await GetOrAttachEntity(scope, id, key);
-        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !AdvancesWatermark(entry, eventSequenceNumber))
+        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && eventSequenceNumber.IsActualValue && !AdvancesWatermark(entry, eventSequenceNumber))
         {
             entry.State = EntityState.Detached;
             return _noFailedPartitions;
@@ -931,6 +931,13 @@ public class Sink : ISink
 
     void AdvanceLastHandledSequenceNumber(EntityEntry<DynamicReadModelEntity> entry, EventSequenceNumber eventSequenceNumber)
     {
+        // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
+        // range and permanently block every later guarded write to the row.
+        if (!eventSequenceNumber.IsActualValue)
+        {
+            return;
+        }
+
         var column = _columns.FirstOrDefault(c => string.Equals(c.Name, WellKnownProperties.LastHandledEventSequenceNumber, StringComparison.Ordinal));
         if (column is null)
         {

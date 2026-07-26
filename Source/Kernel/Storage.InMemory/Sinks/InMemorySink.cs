@@ -113,16 +113,24 @@ public class InMemorySink(
         ((dynamic)result).id = key.Value;
         lock (_collectionLock)
         {
-            if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !AdvancesWatermark(keyValue, eventSequenceNumber))
+            if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark &&
+                eventSequenceNumber.IsActualValue &&
+                !AdvancesWatermark(keyValue, eventSequenceNumber))
             {
                 return Task.FromResult<IEnumerable<FailedPartition>>([]);
             }
 
             Collection[keyValue] = result;
-            LastHandledEventSequenceNumbers[keyValue] =
-                LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var current)
-                    ? Math.Max(current, eventSequenceNumber.Value)
-                    : eventSequenceNumber.Value;
+
+            // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
+            // range and permanently block every later guarded write to this instance.
+            if (eventSequenceNumber.IsActualValue)
+            {
+                LastHandledEventSequenceNumbers[keyValue] =
+                    LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var current)
+                        ? Math.Max(current, eventSequenceNumber.Value)
+                        : eventSequenceNumber.Value;
+            }
         }
 
         // Notify observers of the change
