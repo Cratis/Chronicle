@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Webhooks;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ContractIWebhooks = Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks;
 using WebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
@@ -27,16 +29,18 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// <param name="encryption"><see cref="IEncryption"/> for encrypting sensitive data.</param>
 /// <param name="oauthClient"><see cref="IOAuthClient"/> for testing OAuth authorization.</param>
 /// <param name="webhookMediator"><see cref="IWebhookMediator"/> for testing webhook endpoints.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class Webhooks(
     IGrainFactory grainFactory,
     IStorage storage,
     IWebhookDefinitionComparer webhookDefinitionComparer,
     IEncryption encryption,
     IOAuthClient oauthClient,
-    IWebhookMediator webhookMediator) : ContractIWebhooks
+    IWebhookMediator webhookMediator,
+    IOptions<ChronicleOptions> options) : ContractIWebhooks
 {
     const string WebhookTestPartitionKey = "test";
-    static readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(10);
+    readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
 
     /// <inheritdoc/>
     public async Task Add(AddWebhooks request, CallContext context = default)

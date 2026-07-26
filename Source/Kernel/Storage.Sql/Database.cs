@@ -82,6 +82,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredDatabaseKeys = new();
 
     /// <inheritdoc/>
+    public TimeSpan LiveQueryPollingInterval { get; } = TimeSpan.FromSeconds(options.Value.Sql.LiveQueryPollIntervalSeconds);
+
+    /// <inheritdoc/>
     public async Task<DbContextScope<ClusterDbContext>> Cluster()
     {
         var connectionString = options.Value.Storage.ConnectionDetails;

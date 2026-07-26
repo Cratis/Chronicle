@@ -1,5 +1,6 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.Identities;
+import "google/protobuf/empty.proto";
 
 message GetIdentitiesRequest {
    string EventStore = 1;
@@ -14,7 +15,14 @@ message Identity {
    string UserName = 3;
    Identity OnBehalfOf = 4;
 }
+message RenameIdentityRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Subject = 3;
+   string Name = 4;
+}
 service Identities {
    rpc GetIdentities (GetIdentitiesRequest) returns (IEnumerable_Identity);
    rpc ObserveIdentities (GetIdentitiesRequest) returns (stream IEnumerable_Identity);
+   rpc RenameIdentity (RenameIdentityRequest) returns (.google.protobuf.Empty);
 }

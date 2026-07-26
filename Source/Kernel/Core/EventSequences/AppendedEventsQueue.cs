@@ -48,6 +48,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly IActivitySource<AppendedEventsQueue> _activitySource;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
+    readonly int _queueDepletionWaitTimeoutMs;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
@@ -81,6 +82,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _logger = logger;
 
         var eventsConfig = options.Value.Events;
+        _queueDepletionWaitTimeoutMs = eventsConfig.QueueDepletionWaitTimeoutMilliseconds;
         var capacity = eventsConfig.QueueBoundedCapacity;
         _channel = capacity > 0
             ? Channel.CreateBounded<IReadOnlyList<AppendedEvent>>(new BoundedChannelOptions(capacity)
@@ -254,7 +256,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                     }
                 }
 
-                await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(500));
+                await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs));
             }
         });
     }

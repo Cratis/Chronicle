@@ -27,4 +27,22 @@ public class ReactorSourceGivenBuilder<TReactor>(ReactorScenario<TReactor> scena
     /// <returns>A <see cref="Task"/> that completes when the reactor has handled all events.</returns>
     public Task Events(params object[] events) =>
         scenario.InvokeWith(eventSourceId, events);
+
+    /// <summary>
+    /// Seeds a pre-built read model instance for this event source, materializing the reactor's read-model
+    /// handler-method parameter of the same type with it.
+    /// </summary>
+    /// <remarks>
+    /// Use this when the reactor takes a read model as a handler-method parameter — seed the expected state here
+    /// rather than replaying events through a projection. Chain <c>.Events(...)</c> afterwards to drive the reactor.
+    /// </remarks>
+    /// <typeparam name="TReadModel">The type of read model to seed.</typeparam>
+    /// <param name="readModel">The read model instance to seed for this event source.</param>
+    /// <returns>This <see cref="ReactorSourceGivenBuilder{TReactor}"/> for further chaining.</returns>
+    public ReactorSourceGivenBuilder<TReactor> ReadModel<TReadModel>(TReadModel readModel)
+        where TReadModel : class
+    {
+        scenario.SeedReadModel(eventSourceId, readModel);
+        return this;
+    }
 }

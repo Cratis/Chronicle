@@ -168,6 +168,72 @@ public record ParentWithRemovableChildren(
     [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(RemovableChildItem.Id))]
     IEnumerable<RemovableChildItem> Items);
 
+public record PropertyRemovableChildItem(
+    [Key]
+    Guid Id,
+
+    string Name);
+
+public record ParentWithPropertyLevelRemovableChildren(
+    [Key]
+    Guid Id,
+
+    [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(PropertyRemovableChildItem.Id))]
+    [RemovedWith<ChildItemRemoved>(key: nameof(ChildItemRemoved.ItemId), parentKey: nameof(ChildItemRemoved.ParentId))]
+    IEnumerable<PropertyRemovableChildItem> Items);
+
+public record NestedRemovableGrandchild(
+    [Key]
+    Guid Id,
+
+    string Name);
+
+public record NestedRemovableItem(
+    [Key]
+    Guid Id,
+
+    [ChildrenFrom<SubItemAddedToItem>(key: nameof(SubItemAddedToItem.SubItemId), identifiedBy: nameof(NestedRemovableGrandchild.Id))]
+    [RemovedWith<SubItemRemovedFromItem>(key: nameof(SubItemRemovedFromItem.SubItemId), parentKey: nameof(SubItemRemovedFromItem.ItemId))]
+    IEnumerable<NestedRemovableGrandchild> SubItems);
+
+public record RootWithNestedRemovableGrandchildren(
+    [Key]
+    Guid Id,
+
+    [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(NestedRemovableItem.Id))]
+    IEnumerable<NestedRemovableItem> Items);
+
+public class ClassChildWithRemovableGrandchildren
+{
+    [Key]
+    public Guid Id { get; set; }
+
+    [ChildrenFrom<SubItemAddedToItem>(key: nameof(SubItemAddedToItem.SubItemId), identifiedBy: nameof(NestedRemovableGrandchild.Id))]
+    [RemovedWith<SubItemRemovedFromItem>(key: nameof(SubItemRemovedFromItem.SubItemId), parentKey: nameof(SubItemRemovedFromItem.ItemId))]
+    public IEnumerable<NestedRemovableGrandchild> SubItems { get; set; } = [];
+}
+
+public record RootWithClassChildGrandchildren(
+    [Key]
+    Guid Id,
+
+    [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(ClassChildWithRemovableGrandchildren.Id))]
+    IEnumerable<ClassChildWithRemovableGrandchildren> Items);
+
+public record JoinRemovableChildItem(
+    [Key]
+    Guid Id,
+
+    string Name);
+
+public record ParentWithPropertyLevelJoinRemovableChildren(
+    [Key]
+    Guid Id,
+
+    [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(JoinRemovableChildItem.Id))]
+    [RemovedWithJoin<ChildItemRemovedJoin>(key: nameof(ChildItemRemovedJoin.ItemId))]
+    IEnumerable<JoinRemovableChildItem> Items);
+
 [FromEvent<DebitAccountOpened>(ConstantKey = "fixed-key")]
 public record AccountInfoWithConstantKey(
     [Key]

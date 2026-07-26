@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_Webhooks.given;
 
@@ -24,6 +26,6 @@ public class a_webhooks_service_grain : Specification
         _encryption = Substitute.For<IEncryption>();
         _oauthClient = Substitute.For<IOAuthClient>();
         _webhookMediator = Substitute.For<IWebhookMediator>();
-        _webhooksService = new Services.Observation.Webhooks.Webhooks(_grainFactory, _storage, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator);
+        _webhooksService = new Services.Observation.Webhooks.Webhooks(_grainFactory, _storage, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator, Options.Create(new ChronicleOptions()));
     }
 }

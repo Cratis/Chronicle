@@ -137,7 +137,10 @@ public class EventTypesStorage(
         }
 
         var filter = GetFilterForSpecificEventType(type);
-        return await GetCollection().Find(filter).Limit(1).AnyAsync().ConfigureAwait(false);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        var eventTypes = await result.ToListAsync();
+
+        return eventTypes.Count > 0 && eventTypes[0].Schemas.ContainsKey(generation.ToString());
     }
 
     /// <inheritdoc/>

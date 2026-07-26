@@ -19,6 +19,15 @@ public class Observers
     public int SubscriberTimeout { get; init; } = 5;
 
     /// <summary>
+    /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
+    /// </summary>
+    /// <remarks>
+    /// Waiting ensures events are not lost if the client immediately starts publishing. When the timeout
+    /// elapses, the subscription may still activate asynchronously and the client is not blocked further.
+    /// </remarks>
+    public int SubscriptionReadyTimeout { get; init; } = 5;
+
+    /// <summary>
     /// Gets the maximum number of retries that can be attempted on a failed observer partition.
     /// </summary>
     /// <remarks>

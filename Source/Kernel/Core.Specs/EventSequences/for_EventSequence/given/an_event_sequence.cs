@@ -45,6 +45,7 @@ public class an_event_sequence : Specification
 
     protected List<EventSequenceNumber> _constraintIndexSequenceNumbers;
     protected EventSequenceNumber _appendedSequenceNumber;
+    protected Orleans.Core.IStorage<EventSequenceState> _stateStorage;
 
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
@@ -184,6 +185,31 @@ public class an_event_sequence : Specification
         _silo.AddProbe(_ => _constraintsGrain);
         _silo.AddProbe(_ => _jobsManager);
 
+        _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
+        _stateStorage.State = new EventSequenceState();
+
         _eventSequence = await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
+    }
+
+    /// <summary>
+    /// Build a single already validated and compliant event ready to be appended to storage, bypassing the
+    /// schema/compliance/constraint pipeline so specs can exercise the batch append and sequence-number logic directly.
+    /// </summary>
+    /// <returns>A validated event tuple in the shape expected by <see cref="EventSequence.AppendManyToStorage"/>.</returns>
+    protected static (EventToAppend Event, ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintContext) ValidatedEvent()
+    {
+        var eventSourceId = EventSourceId.New();
+        var eventType = new EventType("BatchEvent", EventTypeGeneration.First);
+        var content = new ExpandoObject();
+        var eventToAppend = new EventToAppend(
+            EventSourceType.Default,
+            eventSourceId,
+            EventStreamType.All,
+            new EventStreamId(EventStreamId.Default),
+            eventType,
+            [],
+            new JsonObject());
+        var constraintContext = new ConstraintValidationContext([], eventSourceId, eventType.Id, content);
+        return (eventToAppend, content, constraintContext);
     }
 }

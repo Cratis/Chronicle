@@ -69,7 +69,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
                 .GetFor(observerIds);
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
             if (observers.All(_ =>
-                _.LastHandledEventSequenceNumber >= request.TailEventSequenceNumber ||
+                (((EventSequenceNumber)_.LastHandledEventSequenceNumber).IsActualValue &&
+                 _.LastHandledEventSequenceNumber >= request.TailEventSequenceNumber) ||
                 failedObserverIds.Contains(_.Id)))
             {
                 return new WaitForObserverCompletionResponse

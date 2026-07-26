@@ -54,6 +54,12 @@ public class UnitOfWorkManager(
     void UnitOfWorkCompleted(IUnitOfWork unitOfWork)
     {
         _unitsOfWork.TryRemove(unitOfWork.CorrelationId, out _);
-        _current.Value = null!;
+
+        // Only clear Current when the completing unit is the current one - clearing unconditionally
+        // would wipe a different unit that became current while this one was still live.
+        if (ReferenceEquals(_current.Value, unitOfWork))
+        {
+            _current.Value = null!;
+        }
     }
 }

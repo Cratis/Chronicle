@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
@@ -121,11 +122,19 @@ public class ProjectionObserverSubscriber(
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
+            var isNewInstance = false;
 
             foreach (var @event in events)
             {
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
+
+                // Accumulate across the batch: a single OnNext delivers all events for one partition
+                // (e.g. AppendMany, or an observer draining a backlog on catch-up). If the instance was
+                // created by any event in the batch, the net change is an Add even when a later event in
+                // the same batch updates it — so OR rather than overwrite, else the create is misreported
+                // as Modified. HasBeenRemoved() on the final changeset still takes precedence below.
+                isNewInstance |= pipelineContext.IsNewInstance;
 
                 // Check if there are any failed partitions from bulk operations
                 if (pipelineContext.FailedPartitions.Any())
@@ -161,7 +170,20 @@ public class ProjectionObserverSubscriber(
                     model[WellKnownProperties.Subject] = JsonValue.Create(subject);
                 }
 
-                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model);
+                var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
+                {
+                    (true, _) => ReadModelChangeType.Removed,
+                    (false, true) => ReadModelChangeType.Added,
+                    _ => ReadModelChangeType.Modified
+                };
+
+                var change = new ReadModelChangeContext(
+                    changeType,
+                    lastSuccessfullyObservedEvent!.Context.SequenceNumber,
+                    lastSuccessfullyObservedEvent.Context.Occurred,
+                    lastSuccessfullyObservedEvent.Context.CorrelationId);
+
+                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model, change);
             }
 
             logger.SuccessfullyHandledAllEvents(_key);

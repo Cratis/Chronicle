@@ -8,35 +8,40 @@ using Cratis.Chronicle.Concepts.ReadModels;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Defines the per-projection grain that fans projection changesets out to subscribed observers.
+/// Defines the per-projection grain that fans projection changesets out to the subscriber grains of
+/// watching clients.
 /// </summary>
 /// <remarks>
-/// The grain is keyed by the projection identifier. Replaces the previous Orleans MemoryStreams
-/// pub-sub which had non-deterministic subscriber-propagation timing; direct grain-to-observer
-/// dispatch gives end-to-end delivery the instant <see cref="Subscribe"/> returns.
+/// The grain is keyed by the projection identifier and has a single activation cluster-wide, so it is the
+/// topology-correct rendezvous between the shared projection observer (which may run on any silo) and the
+/// per-connection watch subscribers (each pinned to the silo terminating its client connection). Fan-out
+/// is to <see cref="IReadModelChangesetSubscriber"/> grain references — reliably routed by Orleans — which
+/// replaces the previous <c>CreateObjectReference</c> grain-observer callback whose one-way dispatch was
+/// silently dropped on slower backends.
 /// </remarks>
 public interface IProjectionChangesetNotifier : IGrainWithStringKey
 {
     /// <summary>
-    /// Subscribe an observer to receive changeset notifications.
+    /// Subscribe a watch subscriber grain to receive changeset notifications.
     /// </summary>
-    /// <param name="observer">The <see cref="IProjectionChangesetObserver"/> to subscribe.</param>
+    /// <param name="subscriber">The <see cref="IReadModelChangesetSubscriber"/> to subscribe.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task Subscribe(IProjectionChangesetObserver observer);
+    Task Subscribe(IReadModelChangesetSubscriber subscriber);
 
     /// <summary>
-    /// Unsubscribe an observer from changeset notifications.
+    /// Unsubscribe a watch subscriber grain from changeset notifications.
     /// </summary>
-    /// <param name="observer">The <see cref="IProjectionChangesetObserver"/> to unsubscribe.</param>
+    /// <param name="subscriber">The <see cref="IReadModelChangesetSubscriber"/> to unsubscribe.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task Unsubscribe(IProjectionChangesetObserver observer);
+    Task Unsubscribe(IReadModelChangesetSubscriber subscriber);
 
     /// <summary>
-    /// Notify all subscribed observers of a new changeset.
+    /// Notify all subscribed watch subscribers of a new changeset.
     /// </summary>
     /// <param name="namespaceName">The <see cref="EventStoreNamespaceName"/> the changeset belongs to.</param>
     /// <param name="readModelKey">The <see cref="ReadModelKey"/> identifying the read model instance.</param>
     /// <param name="readModel">The serialized read model as a <see cref="JsonObject"/>.</param>
+    /// <param name="change">The <see cref="ReadModelChangeContext"/> describing the change and the event that caused it.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel);
+    Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change);
 }

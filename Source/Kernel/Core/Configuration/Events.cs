@@ -40,4 +40,13 @@ public class Events
     /// no sequence-number correctness. Defaults to 1000 appends.
     /// </remarks>
     public int StatePersistenceInterval { get; init; } = 1000;
+
+    /// <summary>
+    /// Timeout in milliseconds for the final wait on the appended-events queue to become empty when awaiting depletion.
+    /// </summary>
+    /// <remarks>
+    /// Bounds the wait for the queue-empty signal so awaiting depletion cannot hang indefinitely
+    /// when running outside a debugger.
+    /// </remarks>
+    public int QueueDepletionWaitTimeoutMilliseconds { get; init; } = 500;
 }
