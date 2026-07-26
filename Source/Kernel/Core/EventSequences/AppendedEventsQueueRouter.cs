@@ -36,14 +36,14 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
     /// <param name="observerKey"><see cref="ObserverKey"/> to resolve the queue for.</param>
     /// <returns>The zero-based queue index.</returns>
     /// <remarks>
-    /// The assignment is a stable hash of the observer identifier, so the same observer always lands on the
-    /// same queue across subscribe/unsubscribe cycles.
+    /// The assignment is a <see cref="StableHash"/> of the observer identifier, so the same observer always lands on
+    /// the same queue - across subscribe/unsubscribe cycles, across activations of this grain, and across silos.
+    /// <see cref="string.GetHashCode()"/> would not do: it is seeded randomly per process, so the assignment would
+    /// change whenever the grain reactivated in a new process, leaving an observer's earlier subscription stranded on
+    /// the queue it was originally assigned to and receiving events twice.
     /// </remarks>
-    public int GetQueueIndexFor(ObserverKey observerKey)
-    {
-        var hash = observerKey.ObserverId.Value.GetHashCode(StringComparison.Ordinal);
-        return (int)((uint)hash % (uint)queueCount);
-    }
+    public int GetQueueIndexFor(ObserverKey observerKey) =>
+        (int)(StableHash.Of(observerKey.ObserverId.Value) % (uint)queueCount);
 
     /// <summary>
     /// Seeds a queue with the authoritative snapshot of its current subscriptions.
