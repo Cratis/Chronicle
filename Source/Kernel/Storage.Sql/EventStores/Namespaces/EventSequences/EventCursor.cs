@@ -76,5 +76,5 @@ public class EventCursor(
     }
 
     /// <inheritdoc/>
-    public void Dispose() => _scope.DisposeAsync().AsTask().GetAwaiter().GetResult();
+    public void Dispose() => _scope.Dispose();
 }

@@ -148,8 +148,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             _queueEmptyEvent.Set();
         }
 
-        SpillToCatchup();
+        SpillSubscribersToCatchup();
         _metrics?.EventsSpilledToCatchup(batch.Length);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task SpillToCatchup()
+    {
+        SpillSubscribersToCatchup();
         return Task.CompletedTask;
     }
 
@@ -482,7 +489,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// observer sharing it — but safe: an extra catch-up is idempotent, whereas a dropped live delivery would lose
     /// events silently.
     /// </summary>
-    void SpillToCatchup()
+    void SpillSubscribersToCatchup()
     {
         ObserverKey[] observerKeys;
         lock (_subscriptionsLock)

@@ -35,6 +35,17 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     Task Unsubscribe(ObserverKey observerKey);
 
     /// <summary>
+    /// Recover the queue's subscribed observers through their catch-up path, dropping their live subscriptions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The queue does this on its own when back-pressure makes it skip a batch. It is exposed so the same recovery
+    /// can be driven from the append side when a batch never reached the queue at all - the events are durable
+    /// either way, and catch-up re-reads them from each observer's persisted cursor.
+    /// </remarks>
+    Task SpillToCatchup();
+
+    /// <summary>
     /// Get a snapshot of the current subscriptions on the queue.
     /// </summary>
     /// <returns>Collection of <see cref="AppendedEventsQueueObserverSubscription"/> currently subscribed.</returns>
