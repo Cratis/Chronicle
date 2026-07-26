@@ -508,15 +508,22 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// once the catch-up job has been started (not when it completes), so this waits only for the start — never for
     /// observer processing — and therefore never re-couples appends to observer speed. A failure to start is logged
     /// and retried a bounded number of times so a transient transport/job-subsystem fault does not permanently strand
-    /// a spilled observer behind the gap; exhausting the retries is logged as an error.
+    /// a spilled observer behind the gap; exhausting the retries is logged as an error. Disposal of the queue while
+    /// the retries are in progress abandons them, which is logged as well so no spill ever ends without a trace.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> of the spilled observer to recover.</param>
     /// <returns>Awaitable task.</returns>
     async Task TriggerCatchup(ObserverKey observerKey)
     {
         var observer = _grainFactory.GetGrain<IObserver>(observerKey);
-        for (var attempt = 1; attempt <= MaxCatchupTriggerAttempts && !_isDisposed; attempt++)
+        for (var attempt = 1; attempt <= MaxCatchupTriggerAttempts; attempt++)
         {
+            if (_isDisposed)
+            {
+                _logger.SpillCatchupTriggerAbandonedOnDispose(observerKey);
+                return;
+            }
+
             try
             {
                 await observer.CatchUp();

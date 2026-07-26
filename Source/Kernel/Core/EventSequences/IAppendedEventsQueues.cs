@@ -33,4 +33,16 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// <param name="subscription"><see cref="AppendedEventsQueueSubscription"/> to unsubscribe.</param>
     /// <returns>Awaitable task.</returns>
     Task Unsubscribe(AppendedEventsQueueSubscription subscription);
+
+    /// <summary>
+    /// Check whether an observer is currently subscribed on the queue it routes to.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer to check.</param>
+    /// <returns>True if the queue still holds a live subscription for the observer, false if not.</returns>
+    /// <remarks>
+    /// The authoritative answer comes from the queue grain itself, not from the routing index, because the queue can
+    /// drop subscriptions behind an observer's back - it does so when it spills to catch-up under back-pressure. An
+    /// observer that believes it is subscribed uses this to tell "still being delivered to" from "silently dropped".
+    /// </remarks>
+    Task<bool> IsSubscribed(ObserverKey observerKey);
 }
