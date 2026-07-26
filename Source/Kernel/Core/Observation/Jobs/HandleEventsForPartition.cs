@@ -59,7 +59,7 @@ public class HandleEventsForPartition(
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             var subscription = await _observer.GetSubscription();
             _eventSourceId = State.Partition.ToString();
-            _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription)) as IObserverSubscriber;
+            _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
         }
         await base.OnActivateAsync(cancellationToken);
     }
@@ -111,8 +111,7 @@ public class HandleEventsForPartition(
 
             if (subscription.IsSubscribed)
             {
-                var target = subscriberSelector.Select(subscription, request.Partition);
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, request.ToObserverSubscriberKey(target.SiloAddress)) as IObserverSubscriber;
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, request.Partition)) as IObserverSubscriber;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
             }
@@ -373,17 +372,8 @@ public class HandleEventsForPartition(
         }
     }
 
-    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription)
-    {
-        var target = subscriberSelector.Select(subscription, State.Partition);
-        return new(
-            State.ObserverKey.ObserverId,
-            State.ObserverKey.EventStore,
-            State.ObserverKey.Namespace,
-            State.ObserverKey.EventSequenceId,
-            State.Partition,
-            target.SiloAddress.ToParsableString());
-    }
+    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition) =>
+        subscription.GetSubscriberKeyFor(partition, subscriberSelector.Select(subscription, partition).SiloAddress);
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
