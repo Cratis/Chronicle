@@ -6,6 +6,7 @@ extern alias KernelConcepts;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.EventSequences;
+using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
 using KernelConcept = KernelConcepts::Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Testing;

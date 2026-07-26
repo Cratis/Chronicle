@@ -17,7 +17,7 @@ public record EventStreamId(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// Check whether or not the <see cref="EventStreamId"/> is the default.
     /// </summary>
-    public bool IsDefault => this != Default;
+    public bool IsDefault => this == Default;
 
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="EventStreamId"/>.
