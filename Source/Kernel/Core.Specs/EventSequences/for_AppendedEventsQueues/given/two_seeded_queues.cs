@@ -40,9 +40,7 @@ public class two_seeded_queues : Specification
             var queueGrain = Substitute.For<IAppendedEventsQueue>();
             queueGrain.GetSubscriptions().Returns(
             [
-                new AppendedEventsQueueObserverSubscription(
-                    new ObserverKey($"observer-{queueIndex}", _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceKey.EventSequenceId),
-                    [subscribed_event_type.Id])
+                new AppendedEventsQueueObserverSubscription(ObserverKeyFor($"observer-{queueIndex}"), [subscribed_event_type.Id])
             ]);
 
             _queueGrains[queueIndex] = queueGrain;
@@ -53,6 +51,18 @@ public class two_seeded_queues : Specification
 
         _queues = await _silo.CreateGrainAsync<AppendedEventsQueues>(_eventSequenceKey.ToString());
     }
+
+    protected ObserverKey ObserverKeyFor(string observerId) =>
+        new(observerId, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceKey.EventSequenceId);
+
+    /// <summary>
+    /// Resolves the queue an observer routes to through the same router the grain uses, so the specs stay correct
+    /// whatever the hash produces rather than hard-coding an index.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> to resolve the queue for.</param>
+    /// <returns>The zero-based queue index.</returns>
+    protected static int QueueIndexFor(ObserverKey observerKey) =>
+        new AppendedEventsQueueRouter(QueueCount).GetQueueIndexFor(observerKey);
 
     protected static AppendedEvent EventOfType(EventTypeId eventTypeId) => AppendedEvent.Empty() with
     {
