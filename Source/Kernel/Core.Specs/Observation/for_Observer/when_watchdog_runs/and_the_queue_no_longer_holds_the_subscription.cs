@@ -18,6 +18,12 @@ public class and_the_queue_no_longer_holds_the_subscription : given.an_observer_
 
     async Task Because() => await _observer.RunWatchdogAsync();
 
+    /// <summary>
+    /// The key is matched loosely on purpose. Observing.OnEnter builds the subscribe key from
+    /// ObserverState.Identifier, which the storage provider stamps in production but which stays
+    /// ObserverId.Unspecified under the test kit, so asserting the exact key here would fail for a
+    /// reason that cannot occur at runtime.
+    /// </summary>
     [Fact] void should_resubscribe_the_observer_to_its_queue() => _appendedEventsQueues
         .Received(1)
         .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
