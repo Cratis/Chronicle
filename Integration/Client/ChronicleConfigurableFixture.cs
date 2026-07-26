@@ -223,54 +223,6 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A completed <see cref="Task"/>.</returns>
     public Task RestartStorageAsync() => Task.CompletedTask;
 
-    /// <summary>
-    /// Stops and restarts the out-of-process kernel container, losing everything the kernel held only in memory.
-    /// </summary>
-    /// <returns>A <see cref="Task"/> that completes once the restarted kernel reports healthy again.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when there is no out-of-process kernel container.</exception>
-    /// <remarks>
-    /// This is a different fault from <see cref="RestartStorageAsync"/>: storage keeps every durable write, while a
-    /// kernel restart discards the in-memory grain state — including a job step's progress checkpoint that
-    /// debouncing has not made durable yet. Only the latter reproduces the crash-recovery redelivery window.
-    /// </remarks>
-    public async Task RestartKernelAsync()
-    {
-        if (_outOfProcessKernelContainer is null)
-        {
-            throw new InvalidOperationException("RestartKernelAsync is only valid in OutOfProcess mode.");
-        }
-
-        await _outOfProcessKernelContainer.StopAsync();
-        await _outOfProcessKernelContainer.StartAsync();
-        await WaitForKernelHealthy();
-    }
-
-    async Task WaitForKernelHealthy()
-    {
-        var deadline = DateTime.UtcNow.AddMinutes(2);
-        while (true)
-        {
-            try
-            {
-                var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?skipTlsValidation=true");
-                using var client = new ChronicleClient(new ChronicleClientOptions
-                {
-                    ConnectionString = connectionString,
-                    EventStore = "Testing",
-                    AutoDiscoverAndRegister = false,
-                    SkipKeepAlive = true
-                });
-                var eventStore = await client.GetEventStore("Testing");
-                await eventStore.EventLog.GetNextSequenceNumber();
-                return;
-            }
-            catch (Exception) when (DateTime.UtcNow < deadline)
-            {
-                await Task.Delay(500);
-            }
-        }
-    }
-
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
