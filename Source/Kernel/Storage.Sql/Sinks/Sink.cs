@@ -98,10 +98,27 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber) =>
+        ApplyChanges(key, changeset, eventSequenceNumber, SinkWriteMode.Always);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <see cref="SinkWriteMode.OnlyWhenAdvancingWatermark"/> is evaluated against the entity loaded into this
+    /// scope's change tracker and decided in process, so — unlike the MongoDB filter — it is a read-then-decide
+    /// rather than an atomic conditional update. That is sufficient because the mode is only ever requested for a
+    /// read model whose documents are keyed by event source id, and every such document is written through a
+    /// single Orleans activation (the observer subscriber is partitioned by event source id, and the projection
+    /// pipeline additionally stripes its read-modify-write cycle on the same key). The read-modify-write the
+    /// reducer and projection pipelines already perform depends on exactly that guarantee.
+    /// </remarks>
     public async Task<IEnumerable<FailedPartition>> ApplyChanges(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber)
+        EventSequenceNumber eventSequenceNumber,
+        SinkWriteMode mode)
     {
         var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
@@ -152,6 +169,12 @@ public class Sink : ISink
         }
 
         var entry = await GetOrAttachEntity(scope, id, key);
+        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && eventSequenceNumber.IsActualValue && !AdvancesWatermark(entry, eventSequenceNumber))
+        {
+            entry.State = EntityState.Detached;
+            return _noFailedPartitions;
+        }
+
         ApplyChangesToEntity(entry, nonJoinedChanges);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
         try
@@ -182,9 +205,9 @@ public class Sink : ISink
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Bulk mode is a no-op for the SQL sink: every <see cref="ApplyChanges"/> call commits
+    /// Bulk mode is a no-op for the SQL sink: every <c>ApplyChanges</c> call commits
     /// independently through its own <see cref="DbContext"/>. The MongoDB sink batches inside
-    /// a single bulk write because the engine may dispatch <see cref="ApplyChanges"/>
+    /// a single bulk write because the engine may dispatch <c>ApplyChanges</c>
     /// concurrently for one sink, and a shared <see cref="DbContext"/> would corrupt EF's
     /// non-thread-safe change tracker and deadlock under load. The operational guarantee bulk
     /// existed to provide — queries keep observing the previous state until the rebuild is
@@ -877,8 +900,44 @@ public class Sink : ISink
         entry.Property(column.Name).IsModified = true;
     }
 
+    /// <summary>
+    /// Determines whether a guarded write would move the row's last handled event sequence number forward.
+    /// </summary>
+    /// <param name="entry">The <see cref="EntityEntry{TEntity}"/> for the read model row.</param>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> about to be applied.</param>
+    /// <returns>True when the write must be applied, false when it must be skipped.</returns>
+    /// <remarks>
+    /// A guarded write never creates the row, matching the MongoDB sink, where a conditional upsert would surface
+    /// the already-applied case as a duplicate key error. A row that predates the watermark column carries no
+    /// value, which the null check admits so it establishes one on its first guarded write.
+    /// </remarks>
+    bool AdvancesWatermark(EntityEntry<DynamicReadModelEntity> entry, EventSequenceNumber eventSequenceNumber)
+    {
+        if (entry.State == EntityState.Added)
+        {
+            return false;
+        }
+
+        var column = _columns.FirstOrDefault(c => string.Equals(c.Name, WellKnownProperties.LastHandledEventSequenceNumber, StringComparison.Ordinal));
+        if (column is null ||
+            !entry.Entity.TryGetValue(column.Name, out var existingValue) ||
+            existingValue is null)
+        {
+            return true;
+        }
+
+        return Convert.ToInt64(existingValue, CultureInfo.InvariantCulture) < (long)eventSequenceNumber.Value;
+    }
+
     void AdvanceLastHandledSequenceNumber(EntityEntry<DynamicReadModelEntity> entry, EventSequenceNumber eventSequenceNumber)
     {
+        // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
+        // range and permanently block every later guarded write to the row.
+        if (!eventSequenceNumber.IsActualValue)
+        {
+            return;
+        }
+
         var column = _columns.FirstOrDefault(c => string.Equals(c.Name, WellKnownProperties.LastHandledEventSequenceNumber, StringComparison.Ordinal));
         if (column is null)
         {

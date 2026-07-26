@@ -5,12 +5,14 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
@@ -23,6 +25,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting PII fields.</param>
+/// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [Singleton]
 public class ProjectionPipelineManager(
@@ -31,6 +34,7 @@ public class ProjectionPipelineManager(
     IObjectComparer objectComparer,
     ITypeFormats typeFormats,
     IReadModelsCompliance readModelsCompliance,
+    IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IProjectionPipelineManager
 {
     readonly ConcurrentDictionary<string, IProjectionPipeline> _pipelines = new();
@@ -78,7 +82,7 @@ public class ProjectionPipelineManager(
             new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
             new StoreFutures(projectionFutures, futuresTracker, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
-            new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
+            new SaveChanges(sink, namespaceStorage.Changesets, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>())
         ];
 
         var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());

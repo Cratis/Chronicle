@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Orleans.TestKit;
 using Orleans.Utilities;
 namespace Cratis.Chronicle.Jobs.for_Job.given;
@@ -24,8 +25,38 @@ public class the_job : Specification
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected IJobStorage _jobStorage;
     protected IJobStepStorage _jobStepStorage;
+    protected IJobTypes _jobTypes;
 
     protected List<JobStepState> _storedJobStepStates;
+
+    protected int StoredJobStepsWith(JobStepStatus status) => _storedJobStepStates.Count(state => state.Status == status);
+
+    protected Mock<ISomeJobStep> AddJobStep(JobStepId jobStepId)
+    {
+        var key = new JobStepKey(_jobId, _jobKey.EventStore, _jobKey.Namespace);
+        _job.StepsToPrepare.Add(new(typeof(ISomeJobStep), jobStepId, key, new SomeRequest(), typeof(object)));
+
+        var probe = _silo.AddProbe<ISomeJobStep>(jobStepId, keyExtension: key);
+        probe.Setup(_ => _.Prepare(It.IsAny<object>())).ReturnsAsync(Result<PrepareJobStepError>.Success());
+        probe.Setup(_ => _.ReportStatusChange(It.IsAny<JobStepStatus>()))
+            .Returns((JobStepStatus status) =>
+            {
+                RecordJobStepStatus(jobStepId, status);
+                return Task.FromResult(Result<JobStepError>.Success());
+            });
+        return probe;
+    }
+
+    void RecordJobStepStatus(JobStepId jobStepId, JobStepStatus status)
+    {
+        var state = _storedJobStepStates.Find(_ => _.Id.JobStepId == jobStepId);
+        if (state is null)
+        {
+            state = new JobStepState { Id = new(_jobId, jobStepId) };
+            _storedJobStepStates.Add(state);
+        }
+        state.Status = status;
+    }
 
     async Task Establish()
     {
@@ -35,14 +66,17 @@ public class the_job : Specification
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _jobStorage = Substitute.For<IJobStorage>();
         _jobStepStorage = Substitute.For<IJobStepStorage>();
+        _jobTypes = Substitute.For<IJobTypes>();
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
 
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
 
-        _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>()).Returns(Task.FromResult(Catch<IImmutableList<JobStepState>>.Success(_storedJobStepStates.ToImmutableList())));
+        _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobStepState>>.Success(_storedJobStepStates.ToImmutableList())));
+        _jobTypes.GetFor(Arg.Any<Type>()).Returns(Result<JobType, IJobTypes.GetForError>.Success(new JobType("SomeJob")));
         _silo.AddService(_storage);
+        _silo.AddService(_jobTypes);
         _silo.AddService(NullLogger<IJob>.Instance);
         _silo.AddService(NullLogger<ObserverManager<IJobObserver>>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();

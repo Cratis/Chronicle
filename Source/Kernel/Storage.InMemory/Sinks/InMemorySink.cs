@@ -35,6 +35,8 @@ public class InMemorySink(
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];
     readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
+    readonly Dictionary<object, ulong> _lastHandledEventSequenceNumbers = [];
+    readonly Dictionary<object, ulong> _rewindLastHandledEventSequenceNumbers = [];
     readonly Subject<object> _changeSubject = new();
     readonly Lock _collectionLock = new();
     readonly Type? _keyTargetType = readModel.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
@@ -49,6 +51,17 @@ public class InMemorySink(
     public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
 
     /// <summary>
+    /// Gets the last handled event sequence number per read model key for the active collection.
+    /// </summary>
+    /// <remarks>
+    /// Held beside the documents rather than on them so the shape the sink hands back to readers is unchanged.
+    /// The persistent sinks keep the same value in a sink-owned system property that their read paths strip out
+    /// through the read model schema, so a caller observes the same thing either way.
+    /// </remarks>
+    Dictionary<object, ulong> LastHandledEventSequenceNumbers =>
+        _isReplaying ? _rewindLastHandledEventSequenceNumbers : _lastHandledEventSequenceNumbers;
+
+    /// <summary>
     /// Remove any existing read model by the given key.
     /// </summary>
     /// <param name="key"><see cref="Key"/> for the read model to remove.</param>
@@ -58,6 +71,7 @@ public class InMemorySink(
         lock (_collectionLock)
         {
             Collection.Remove(keyValue);
+            LastHandledEventSequenceNumbers.Remove(keyValue);
         }
     }
 
@@ -74,7 +88,11 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
+        ApplyChanges(key, changeset, eventSequenceNumber, SinkWriteMode.Always);
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
     {
         var state = changeset.InitialState.Clone();
         var keyValue = GetActualKeyValue(key);
@@ -84,6 +102,7 @@ public class InMemorySink(
             lock (_collectionLock)
             {
                 Collection.Remove(keyValue);
+                LastHandledEventSequenceNumbers.Remove(keyValue);
             }
 
             _changeSubject.OnNext(keyValue);
@@ -94,7 +113,24 @@ public class InMemorySink(
         ((dynamic)result).id = key.Value;
         lock (_collectionLock)
         {
+            if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark &&
+                eventSequenceNumber.IsActualValue &&
+                !AdvancesWatermark(keyValue, eventSequenceNumber))
+            {
+                return Task.FromResult<IEnumerable<FailedPartition>>([]);
+            }
+
             Collection[keyValue] = result;
+
+            // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
+            // range and permanently block every later guarded write to this instance.
+            if (eventSequenceNumber.IsActualValue)
+            {
+                LastHandledEventSequenceNumbers[keyValue] =
+                    LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var current)
+                        ? Math.Max(current, eventSequenceNumber.Value)
+                        : eventSequenceNumber.Value;
+            }
         }
 
         // Notify observers of the change
@@ -136,6 +172,7 @@ public class InMemorySink(
         lock (_collectionLock)
         {
             _rewindCollection.Clear();
+            _rewindLastHandledEventSequenceNumbers.Clear();
         }
 
         return Task.CompletedTask;
@@ -147,6 +184,7 @@ public class InMemorySink(
         lock (_collectionLock)
         {
             Collection.Clear();
+            LastHandledEventSequenceNumbers.Clear();
         }
 
         return Task.CompletedTask;
@@ -215,6 +253,27 @@ public class InMemorySink(
             var instances = collection.Values.Skip(skip).Take(take).ToArray();
             return (instances, collection.Count);
         }
+    }
+
+    /// <summary>
+    /// Determines whether a guarded write would move the read model's last handled event sequence number forward.
+    /// </summary>
+    /// <param name="keyValue">The resolved read model key.</param>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> about to be applied.</param>
+    /// <returns>True when the write must be applied, false when it must be skipped.</returns>
+    /// <remarks>
+    /// Callers must hold <c>_collectionLock</c>. A guarded write never creates the read model, matching the
+    /// persistent sinks, so an absent instance is a skip rather than an insert.
+    /// </remarks>
+    bool AdvancesWatermark(object keyValue, EventSequenceNumber eventSequenceNumber)
+    {
+        if (!Collection.ContainsKey(keyValue))
+        {
+            return false;
+        }
+
+        return !LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var lastHandled) ||
+               lastHandled < eventSequenceNumber.Value;
     }
 
     object GetActualKeyValue(Key key)

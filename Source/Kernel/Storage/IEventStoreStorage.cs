@@ -86,5 +86,12 @@ public interface IEventStoreStorage
     /// </summary>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get for.</param>
     /// <returns>The <see cref="IEventStoreNamespaceStorage"/> instance.</returns>
+    /// <remarks>
+    /// Every caller asking for the same <see cref="EventStoreNamespaceName"/> gets the same instance, including
+    /// callers racing on a cold cache. The namespace storage owns the namespace's sinks, and those keep in-memory
+    /// state — bulk-mode flags, in-replay flags, per-key state caches — that a second instance would not see. Two
+    /// instances for one namespace split that state, which is the failure <see cref="IStorage.Clear"/> describes.
+    /// Namespace names are matched exactly; they are derived byte for byte into physical database names.
+    /// </remarks>
     IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace);
 }

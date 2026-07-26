@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -45,6 +46,17 @@ public record ObserverSubscription(
     /// Check whether the subscription is subscribed.
     /// </summary>
     public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);
+
+    /// <summary>
+    /// Gets a value indicating whether the subscriber is a projection that collapses several event sources onto
+    /// one read model document.
+    /// </summary>
+    /// <remarks>
+    /// Such a projection - a join, a constant key or a parent hierarchy - is written to one document out of
+    /// order by design, so its writes cannot be guarded on the document's last handled event sequence number and
+    /// a redelivered batch would be applied twice.
+    /// </remarks>
+    public bool IsCollapsingProjection => SubscriberType.IsAssignableTo(typeof(ICollapsingProjectionObserverSubscriber));
 
     /// <summary>
     /// Gets the <see cref="ObserverSubscriberKey"/> that resolves the subscriber a partition's events are

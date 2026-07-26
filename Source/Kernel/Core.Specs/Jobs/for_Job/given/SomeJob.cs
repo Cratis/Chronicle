@@ -5,12 +5,16 @@ using System.Collections.Immutable;
 
 namespace Cratis.Chronicle.Jobs.for_Job.given;
 
-public class SomeJob : Job<SomeRequest, SomeJobState>
+public class SomeJob : Job<SomeRequest, SomeJobState>, IGrainType
 {
     public List<JobStepDetails> StepsToPrepare = [];
     public bool OnCompletedThrows;
     public bool ShouldBeRemovedAfterCompleted;
     public bool ShouldBeResumable;
+
+    public Type GrainType => typeof(ISomeJob);
+
+    public SomeJobState CurrentState => State;
 
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(SomeRequest request) =>
         Task.FromResult<IImmutableList<JobStepDetails>>(StepsToPrepare.ToImmutableList());

@@ -256,7 +256,8 @@ public abstract partial class Job<TRequest, TJobState>
     async Task<Result<StartJobError>> StartAndSubscribeToAllJobSteps(GrainId grainId)
     {
         var jobStepGrains = _jobStepGrains!;
-        var numFailedJobSteps = 0;
+        var totalJobSteps = jobStepGrains.Count;
+        var failedJobStepIds = new List<JobStepId>();
         await OnBeforeStartingJobSteps();
         foreach (var chunk in jobStepGrains.Chunk(MaxConcurrentJobStepStartups))
         {
@@ -266,7 +267,7 @@ public abstract partial class Job<TRequest, TJobState>
             {
                 if (exception is not null)
                 {
-                    numFailedJobSteps++;
+                    failedJobStepIds.Add(id);
                     _logger.FailedStartingJobStep(exception, id);
                     continue;
                 }
@@ -275,18 +276,48 @@ public abstract partial class Job<TRequest, TJobState>
                     await SubscribeJobStep(jobStepGrains[id].AsReference<IJobObserver>());
                     continue;
                 }
-                numFailedJobSteps++;
+                if (startError is StartJobStepError.AlreadyStarted or StartJobStepError.Completed)
+                {
+                    _logger.JobStepWasAlreadyStarted(id, startError);
+                    continue;
+                }
+                failedJobStepIds.Add(id);
                 _logger.FailedStartingJobStep(id, startError);
             }
         }
-        if (numFailedJobSteps == 0)
+        if (failedJobStepIds.Count == 0)
         {
             return Result<StartJobError>.Success();
         }
-        State.Progress.FailedSteps += numFailedJobSteps;
-        return numFailedJobSteps == jobStepGrains.Count
+        await RecordJobStepsAsFailed(failedJobStepIds, jobStepGrains);
+        State.Progress.FailedSteps += failedJobStepIds.Count;
+        return failedJobStepIds.Count == totalJobSteps
             ? StartJobError.AllJobStepsFailedStarting
             : StartJobError.FailedStartingSomeJobSteps;
+    }
+
+    async Task RecordJobStepsAsFailed(List<JobStepId> jobStepIds, Dictionary<JobStepId, IJobStep> jobStepGrains)
+    {
+        foreach (var chunk in jobStepIds.Chunk(MaxConcurrentJobStepStartups))
+        {
+            await Task.WhenAll(chunk.Select(id => RecordJobStepAsFailed(id, jobStepGrains[id])));
+        }
+    }
+
+    async Task RecordJobStepAsFailed(JobStepId id, IJobStep jobStep)
+    {
+        try
+        {
+            var reportResult = await jobStep.ReportStatusChange(JobStepStatus.Failed);
+            if (reportResult.TryGetError(out var error))
+            {
+                _logger.FailedRecordingJobStepAsFailed(id, error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedRecordingJobStepAsFailed(ex, id);
+        }
     }
 
     async Task<(JobStepId Id, Result<StartJobStepError> Result, Exception? Exception)> TryStartJobStep(JobStepId id, IJobStep jobStep, GrainId grainId)
