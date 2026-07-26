@@ -22,6 +22,8 @@ using Orleans.Core;
 using Orleans.Streams;
 using Orleans.TestKit;
 using Orleans.TestKit.Storage;
+using AppendedEventsQueueSubscription = Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription;
+using IAppendedEventsQueues = Cratis.Chronicle.EventSequences.IAppendedEventsQueues;
 using IChronicleEventStoreStorage = Cratis.Chronicle.Storage.IEventStoreStorage;
 using IChronicleStorage = Cratis.Chronicle.Storage.IStorage;
 using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
@@ -47,6 +49,7 @@ public class an_observer : Specification
     protected IStorage<FailedPartitions> _failedPartitionsStorage;
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
     protected IEventSequence _eventSequence;
+    protected IAppendedEventsQueues _appendedEventsQueues;
     protected IConfigurationForObserverProvider _configurationProvider;
     protected IChronicleStorage _storage;
     protected IChronicleEventStoreStorage _eventStoreStorage;
@@ -68,6 +71,15 @@ public class an_observer : Specification
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
         _eventSequence = Substitute.For<IEventSequence>();
+
+        // A subscribed observer is on its queue - the queue only drops it behind the observer's back when it spills
+        // to catch-up under back-pressure, which the specs that care about set up explicitly.
+        _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
+        _appendedEventsQueues
+            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+            .Returns(callInfo => new AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
+        _appendedEventsQueues.IsSubscribed(Arg.Any<ObserverKey>()).Returns(true);
+
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
@@ -99,6 +111,7 @@ public class an_observer : Specification
 
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);
+        _silo.AddProbe(_ => _appendedEventsQueues);
         _silo.AddProbe(_ => _eventSequence);
 
         _failedPartitionsState = Substitute.For<FailedPartitions>();

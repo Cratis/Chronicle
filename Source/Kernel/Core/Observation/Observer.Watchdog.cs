@@ -33,7 +33,11 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         await CheckConnectedClient();
         await CheckJobTasks();
-        await CheckNextSequenceNumber();
+        if (await CheckNextSequenceNumber())
+        {
+            await CheckStrandedSubscription();
+        }
+
         await FlushDebouncedProgressState();
     }
 
@@ -103,38 +107,38 @@ public partial class Observer
             }
         }
 
-        if (State.CatchingUpPartitions.Count > 0)
+        if (State.CatchingUpPartitions.Count > 0 && !await HasRunningCatchupJob())
         {
-            var catchupJobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
-            var hasRunningCatchupJob = catchupJobs.Any(job =>
-                job.Request is CatchUpObserverRequest req &&
-                req.ObserverKey == _observerKey &&
-                job.IsPreparingOrRunning);
-
-            if (!hasRunningCatchupJob)
-            {
-                logger.WatchdogCatchupJobMissing();
-                await TransitionTo<Routing>();
-            }
+            logger.WatchdogCatchupJobMissing();
+            await TransitionTo<Routing>();
         }
     }
 
-    async Task CheckNextSequenceNumber()
+    async Task<bool> HasRunningCatchupJob()
+    {
+        var catchupJobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
+        return catchupJobs.Any(job =>
+            job.Request is CatchUpObserverRequest request &&
+            request.ObserverKey == _observerKey &&
+            job.IsPreparingOrRunning);
+    }
+
+    async Task<bool> CheckNextSequenceNumber()
     {
         if (!_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
         {
-            return;
+            return false;
         }
 
         if (!State.NextEventSequenceNumber.IsActualValue)
         {
-            return;
+            return false;
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
         if (!tailSequenceNumber.IsActualValue)
         {
-            return;
+            return false;
         }
 
         var shouldUpdateTailEventSequenceNumber =
@@ -148,7 +152,7 @@ public partial class Observer
                 State = State with { TailEventSequenceNumber = tailSequenceNumber };
                 await WriteStateAsync();
             }
-            return;
+            return false;
         }
 
         var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(
@@ -165,11 +169,15 @@ public partial class Observer
                 TailEventSequenceNumber = tailSequenceNumber
             };
             await WriteStateAsync();
+            return false;
         }
-        else if (shouldUpdateTailEventSequenceNumber)
+
+        if (shouldUpdateTailEventSequenceNumber)
         {
             State = State with { TailEventSequenceNumber = tailSequenceNumber };
             await WriteStateAsync();
         }
+
+        return true;
     }
 }

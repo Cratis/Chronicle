@@ -26,4 +26,7 @@ internal static partial class AppendedEventsQueueLogMessages
 
     [LoggerMessage(LogLevel.Error, "Gave up starting catch-up for spilled observer {ObserverKey}; it may stay behind until it re-subscribes or reactivates")]
     internal static partial void SpillCatchupTriggerAbandoned(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+
+    [LoggerMessage(LogLevel.Warning, "Queue was disposed before catch-up could be started for spilled observer {ObserverKey}; it stays behind until it re-subscribes or reactivates")]
+    internal static partial void SpillCatchupTriggerAbandonedOnDispose(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
 }
