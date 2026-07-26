@@ -105,9 +105,16 @@ public class ReducerPipeline(
             // A reducer read model is always keyed by event source id, so its per-document event stream is
             // monotonic and a redelivered batch can be recognized by the sequence number it carries. The batch
             // that creates the instance is written unconditionally — there is no document to compare against,
-            // and a guarded write never inserts. The guard recognizes a redelivered batch by its last sequence
-            // number, so it neutralizes an identical redelivery; a resume that re-cuts the batch boundaries
-            // (only reachable after a partial batch failure) can still straddle the watermark.
+            // and a guarded write never inserts.
+            //
+            // The guard recognizes a redelivered batch by its LAST sequence number, so it neutralizes a redelivery
+            // whose batches reproduce the original boundaries. A resume that re-cuts them does not: the step
+            // restarts the cursor at the checkpoint's successor, and the driver's first page is a fixed document
+            // count while later pages are size-limited, so resumed pages routinely straddle the watermark and the
+            // already-applied prefix of such a batch is folded twice. Comparing against the last sequence number
+            // rather than the first is the deliberate choice there: it double-counts a straddling batch instead of
+            // dropping the part of it that is genuinely new. Closing the gap needs a per-document applied-range
+            // ledger, which is a separate design.
             var mode = guardWritesOnWatermark && initial is not null
                 ? SinkWriteMode.OnlyWhenAdvancingWatermark
                 : SinkWriteMode.Always;

@@ -106,7 +106,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
         _checkpoints = new(jobs?.StepCheckpointBatchInterval ?? 1);
 
         var flushInterval = jobs?.StepCheckpointFlushInterval ?? TimeSpan.Zero;
-        if (_checkpoints.BatchInterval > 1 && flushInterval > TimeSpan.Zero)
+
+        // A step that checkpoints after every batch never leaves one pending, so the timer would only ever find
+        // nothing to do.
+        if (_checkpoints.BatchInterval > 1 && flushInterval > TimeSpan.Zero && !CheckpointAfterEveryBatch)
         {
             this.RegisterGrainTimer(
                 _ => FlushDebouncedCheckpoint(),
