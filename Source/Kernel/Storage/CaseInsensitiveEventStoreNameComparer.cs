@@ -14,6 +14,12 @@ namespace Cratis.Chronicle.Storage;
 /// spellings of the same event store name resolve to a single instance rather than accumulating as separate
 /// entries. The key kept in the cache is the name as it was first registered, so the observable casing of an
 /// event store name is unaffected.
+/// <para>
+/// Comparison is ordinal, matching how event store names are compared everywhere else in the kernel — they are
+/// identifiers that become database names, not linguistic text. Kernel projects build with
+/// <c>InvariantGlobalization</c> enabled, where culture-aware comparison already collapses to ordinal semantics,
+/// so this only narrows resolution in a host that turns invariant globalization back off.
+/// </para>
 /// </remarks>
 public sealed class CaseInsensitiveEventStoreNameComparer : EqualityComparer<EventStoreName>
 {
