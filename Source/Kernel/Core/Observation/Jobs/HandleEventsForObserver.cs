@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -406,7 +405,7 @@ public class HandleEventsForObserver(
             // validates the Orleans activation context on the calling thread and throws "Activation access
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
-            var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, GetObserverSubscriberKey(partition, target.SiloAddress)) as IObserverSubscriber;
+            var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
             var result = await subscriber!.OnNext(partition, decryptedEvents, subscriberContext);
             return (result, decryptedEvents);
         }
@@ -427,17 +426,6 @@ public class HandleEventsForObserver(
         {
             logger.CancelledAfterHandlingEvents(lastHandledSequenceNumber);
         }
-    }
-
-    ObserverSubscriberKey GetObserverSubscriberKey(Key partition, SiloAddress siloAddress)
-    {
-        return new(
-            State.ObserverKey.ObserverId,
-            State.ObserverKey.EventStore,
-            State.ObserverKey.Namespace,
-            State.ObserverKey.EventSequenceId,
-            partition,
-            siloAddress.ToParsableString());
     }
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>

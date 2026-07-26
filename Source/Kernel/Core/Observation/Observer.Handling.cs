@@ -136,13 +136,7 @@ public partial class Observer
                     while (true)
                     {
                         var target = subscriberSelector.Select(_subscription, partition);
-                        var key = new ObserverSubscriberKey(
-                            _observerKey.ObserverId,
-                            _observerKey.EventStore,
-                            _observerKey.Namespace,
-                            _observerKey.EventSequenceId,
-                            partition,
-                            target.SiloAddress.ToParsableString());
+                        var key = _subscription.GetSubscriberKeyFor(partition, target.SiloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                         result = await subscriber.OnNext(partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
