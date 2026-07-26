@@ -33,6 +33,7 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         await CheckConnectedClient();
         await CheckJobTasks();
+        await CheckStrandedCatchupPreparation();
         if (await CheckNextSequenceNumber())
         {
             await CheckStrandedSubscription();
