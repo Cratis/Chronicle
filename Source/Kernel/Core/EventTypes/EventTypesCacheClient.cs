@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.EventTypes;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypesCacheClient"/> that fans out to the
-/// <see cref="IEventTypesCacheGrainService"/> on every silo, so each silo evicts its own event type cache.
+/// <see cref="IEventTypesCacheGrainService"/> on every silo, so each silo evicts its own event type caches.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventTypesCacheClient"/> class.

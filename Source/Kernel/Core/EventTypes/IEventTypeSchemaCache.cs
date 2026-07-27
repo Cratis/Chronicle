@@ -20,4 +20,11 @@ public interface IEventTypeSchemaCache
     /// <param name="generation">The <see cref="EventTypeGeneration"/> to get the schema for.</param>
     /// <returns>The schema as JSON.</returns>
     string GetSchemaJsonFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation);
+
+    /// <summary>
+    /// Evict every cached generation of a specific <see cref="EventTypeId"/>.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the event type belongs to.</param>
+    /// <param name="eventTypeId">The <see cref="EventTypeId"/> to evict.</param>
+    void Invalidate(EventStoreName eventStore, EventTypeId eventTypeId);
 }

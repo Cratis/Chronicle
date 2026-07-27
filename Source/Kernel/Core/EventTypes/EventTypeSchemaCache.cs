@@ -44,6 +44,15 @@ internal sealed class EventTypeSchemaCache(IStorage storage) : IEventTypeSchemaC
         }
     }
 
+    /// <inheritdoc/>
+    public void Invalidate(EventStoreName eventStore, EventTypeId eventTypeId)
+    {
+        foreach (var key in _schemaJsonByEventType.Keys.Where(_ => _.EventStore == eventStore && _.EventTypeId == eventTypeId))
+        {
+            _schemaJsonByEventType.TryRemove(key, out _);
+        }
+    }
+
     string ResolveSchemaJson(EventTypeSchemaKey key)
     {
         var eventStore = storage.GetEventStore(key.EventStore);
