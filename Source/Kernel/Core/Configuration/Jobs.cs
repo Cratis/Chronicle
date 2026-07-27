@@ -31,6 +31,38 @@ public class Jobs
     public TimeSpan CleanupCadence { get; init; } = TimeSpan.FromHours(1);
 
     /// <summary>
+    /// Gets the number of successfully handled events after which a replay/catch-up job step makes its
+    /// progress checkpoint durable.
+    /// </summary>
+    /// <remarks>
+    /// A partitioned or global-order replay step reports its progress after every consecutive batch it hands
+    /// off, and each report persisted the whole step document. That write is debounced: the checkpoint is made
+    /// durable once this many batches have been reported, and any other state write (a status change on
+    /// completion, failure, or stop) flushes the pending checkpoint too, as does
+    /// <see cref="StepCheckpointFlushInterval"/> for a step that has gone idle mid-range. A step always resumes
+    /// from its last persisted checkpoint and re-reads forward, so a crash between debounced writes re-delivers
+    /// every batch handled since that checkpoint. That redelivery bypasses the observer's cursor filter and is
+    /// <em>not</em> harmless on its own: an accumulating projection or a reducer would fold the same events twice.
+    /// It is made a no-op by <see cref="ReadModels.GuardSinkWritesOnWatermark"/>, which is only in force for read
+    /// models keyed by event source id; a projection that collapses several event sources onto one document
+    /// instead checkpoints after every batch. A larger value trades a longer post-crash re-scan for fewer writes.
+    /// Defaults to 100.
+    /// </remarks>
+    public int StepCheckpointBatchInterval { get; init; } = 100;
+
+    /// <summary>
+    /// Gets how long a replay/catch-up job step may hold an unpersisted progress checkpoint before it is
+    /// flushed regardless of how few batches have been reported.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="StepCheckpointBatchInterval"/> is a pure counter, so a step that hands off a few batches and
+    /// then goes quiet — a slow subscriber, a sparse partition, a step that stops mid-range — would keep those
+    /// batches unpersisted indefinitely and re-deliver all of them after a crash. This bounds that window in
+    /// time. Defaults to 5 seconds; a value of zero or less disables the timed flush.
+    /// </remarks>
+    public TimeSpan StepCheckpointFlushInterval { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// Gets the effective maximum parallel steps to use.
     /// </summary>
     /// <returns>The maximum parallel steps value.</returns>

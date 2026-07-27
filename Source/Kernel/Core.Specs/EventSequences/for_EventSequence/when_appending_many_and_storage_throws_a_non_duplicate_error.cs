@@ -21,7 +21,7 @@ public class when_appending_many_and_storage_throws_a_non_duplicate_error : give
             .ThrowsAsync(new given.SimulatedStorageError());
     }
 
-    async Task Because() => _exception = await Catch.Exception(() => _grain.AppendManyToStorage(
+    async Task Because() => _exception = await Catch.Exception(() => _eventSequence.AppendManyToStorage(
         [ValidatedEvent()],
         Cratis.Execution.CorrelationId.New(),
         [],
@@ -29,7 +29,7 @@ public class when_appending_many_and_storage_throws_a_non_duplicate_error : give
 
     [Fact] void should_fail_with_the_storage_error() => _exception.ShouldBeOfExactType<given.SimulatedStorageError>();
     [Fact] async Task should_not_advance_the_next_sequence_number() =>
-        (await _grain.GetNextSequenceNumber()).ShouldEqual(_nextSequenceNumber);
+        (await _eventSequence.GetNextSequenceNumber()).ShouldEqual(_nextSequenceNumber);
     [Fact] async Task should_not_advance_the_tail_sequence_number() =>
-        (await _grain.GetTailSequenceNumber()).ShouldEqual(_existingTail);
+        (await _eventSequence.GetTailSequenceNumber()).ShouldEqual(_existingTail);
 }

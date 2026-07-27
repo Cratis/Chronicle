@@ -64,6 +64,11 @@ public static class WellKnownCollectionNames
     public const string InFlightEvents = "in-flight-events";
 
     /// <summary>
+    /// The collection that holds per-partition handled-event counts for observers.
+    /// </summary>
+    public const string ObserverHandledCounts = "observer-handled-counts";
+
+    /// <summary>
     /// The collection that holds identities.
     /// </summary>
     public const string Identities = "identities";

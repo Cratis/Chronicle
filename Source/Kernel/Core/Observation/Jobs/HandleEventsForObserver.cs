@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -65,7 +64,7 @@ public class HandleEventsForObserver(
     {
         using var scope = logger.BeginJobStepScope(State);
         State.LastSuccessfullyHandledEventSequenceNumber = lastHandledEventSequenceNumber;
-        var writeStateResult = await WriteStateAsync();
+        var writeStateResult = await WriteCheckpointDebounced();
         if (writeStateResult.TryGetException(out var error))
         {
             logger.FailedToPersistSuccessfullyHandledEvent(error, lastHandledEventSequenceNumber);
@@ -324,8 +323,10 @@ public class HandleEventsForObserver(
         {
             case ObserverSubscriberState.Ok:
                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
-                var okHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
-                await _observer.ReportHandledEvents(partition, okHandledEvents);
+                var okCountsPerEventType = handledEvents
+                    .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
+                    .CountByEventType();
+                await _observer.ReportHandledEvents(partition, okCountsPerEventType);
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
                 return await HandleFailedSubscriberResult(
@@ -368,8 +369,10 @@ public class HandleEventsForObserver(
 
             await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-            var failedHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
-            await _observer.ReportHandledEvents(partition, failedHandledEvents);
+            var failedCountsPerEventType = handledEvents
+                .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
+                .CountByEventType();
+            await _observer.ReportHandledEvents(partition, failedCountsPerEventType);
         }
         else
         {
@@ -402,7 +405,7 @@ public class HandleEventsForObserver(
             // validates the Orleans activation context on the calling thread and throws "Activation access
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
-            var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, GetObserverSubscriberKey(partition, target.SiloAddress)) as IObserverSubscriber;
+            var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
             var result = await subscriber!.OnNext(partition, decryptedEvents, subscriberContext);
             return (result, decryptedEvents);
         }
@@ -423,17 +426,6 @@ public class HandleEventsForObserver(
         {
             logger.CancelledAfterHandlingEvents(lastHandledSequenceNumber);
         }
-    }
-
-    ObserverSubscriberKey GetObserverSubscriberKey(Key partition, SiloAddress siloAddress)
-    {
-        return new(
-            State.ObserverKey.ObserverId,
-            State.ObserverKey.EventStore,
-            State.ObserverKey.Namespace,
-            State.ObserverKey.EventSequenceId,
-            partition,
-            siloAddress.ToParsableString());
     }
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>

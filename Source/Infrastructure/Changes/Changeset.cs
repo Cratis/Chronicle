@@ -24,7 +24,10 @@ namespace Cratis.Chronicle.Changes;
 public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incoming, TTarget initialState, Changeset<TSource, TTarget>? parent = null) : IChangeset<TSource, TTarget>
 {
     readonly List<Change> _changes = [];
+    readonly List<ResolvedJoinChangeset> _resolvedJoinChangesets = [];
+    readonly List<ChildAdded> _consolidatedIntoChildren = [];
     TTarget _initialState = initialState;
+    bool _hasChildCollectionOperations;
 
     /// <inheritdoc/>
     public TSource Incoming { get; set; } = incoming;
@@ -53,6 +56,12 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     public void Add(Change change)
     {
         _changes.Add(change);
+        if (change is ChildAdded or ChildRemoved or ChildRemovedFromAll)
+        {
+            _hasChildCollectionOperations = true;
+        }
+
+        ApplyToConsolidatedChildren(change);
         Consolidate();
     }
 
@@ -62,10 +71,12 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var workingState = CurrentState.Clone()!;
         var differences = SetProperties(workingState, propertyMappers, arrayIndexers);
 
-        if (differences.Count != 0)
+        if (differences.Count == 0)
         {
-            Add(new PropertiesChanged<TTarget>(workingState, differences));
+            return;
         }
+
+        Add(new PropertiesChanged<TTarget>(workingState, differences));
         CurrentState = workingState;
     }
 
@@ -84,8 +95,9 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     {
         var workingState = CurrentState.Clone()!;
         var childChangeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
-        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes));
-        Consolidate();
+        var resolvedJoin = new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes);
+        _resolvedJoinChangesets.Add(new(resolvedJoin, childChangeset));
+        Add(resolvedJoin);
         CurrentState = workingState;
         return childChangeset;
     }
@@ -285,6 +297,13 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         // by its key, array property and identifier property. It takes the properties and resolves
         // them onto the child added. This avoids anyone working with a changeset to have to perform an
         // add and then perform an update on the child.
+        // A merged join is removed from the parent: the child already carries its properties, and a join
+        // left in place makes sinks apply them a second time. The changeset behind the join stays linked
+        // to the child it merged into, and forwards to that child every PropertiesChanged<TTarget> added
+        // to it from then on. That is the only change kind forwarded - a ChildAdded, ChildRemoved,
+        // Removed or NestedCleared added to a merged join's changeset is consumed with the join and
+        // never reaches the parent. Each difference is applied exactly once, by the merge or by the
+        // link, so a value written to the child afterwards stands.
         var changes = parent._changes;
         var resolvesToRemove = new List<ResolvedJoin>();
         foreach (var childAdded in changes.OfType<ChildAdded>())
@@ -294,22 +313,30 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                     _.ArrayIndexers.All.Any(a =>
                         a.ArrayProperty == childAdded.ChildrenProperty &&
                         a.IdentifierProperty == childAdded.IdentifiedByProperty &&
-                        a.Identifier == childAdded.Key));
+                        a.Identifier == childAdded.Key))
+                .ToArray();
 
-            resolvedJoins
-                .SelectMany(_ => _.Changes.OfType<PropertiesChanged<TTarget>>())
-                .SelectMany(_ => _.Differences)
-                .ForEach(difference =>
-                {
-                    var propertyPath = PropertyPath.CreateFrom([difference.PropertyPath.LastSegment]);
-                    propertyPath.SetValue(childAdded.Child, difference.Changed!, difference.ArrayIndexers);
-                });
+            foreach (var resolvedJoin in resolvedJoins)
+            {
+                ApplyDifferencesToChild(
+                    childAdded.Child,
+                    resolvedJoin.Changes.OfType<PropertiesChanged<TTarget>>().SelectMany(_ => _.Differences));
+
+                parent.LinkConsolidatedJoinToChild(resolvedJoin, childAdded);
+            }
 
             resolvesToRemove.AddRange(resolvedJoins);
         }
 
         resolvesToRemove.ForEach(_ => changes.Remove(_));
     }
+
+    static void ApplyDifferencesToChild(object child, IEnumerable<PropertyDifference> differences) =>
+        differences.ForEach(difference =>
+        {
+            var propertyPath = PropertyPath.CreateFrom([difference.PropertyPath.LastSegment]);
+            propertyPath.SetValue(child, difference.Changed!, difference.ArrayIndexers);
+        });
 
     static PropertyDifference CreateUpdatedDifferenceFor(PropertyDifference ancestor, PropertyDifference descendant, object state)
     {
@@ -409,12 +436,39 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
             .All(_ => _);
     }
 
+    void LinkConsolidatedJoinToChild(ResolvedJoin resolvedJoin, ChildAdded childAdded) =>
+        _resolvedJoinChangesets
+            .Find(_ => ReferenceEquals(_.Join, resolvedJoin))?
+            .Changeset._consolidatedIntoChildren.Add(childAdded);
+
+    void ApplyToConsolidatedChildren(Change change)
+    {
+        if (_consolidatedIntoChildren.Count == 0 || change is not PropertiesChanged<TTarget> propertiesChanged)
+        {
+            return;
+        }
+
+        _consolidatedIntoChildren.ForEach(childAdded => ApplyDifferencesToChild(childAdded.Child, propertiesChanged.Differences));
+    }
+
     void Consolidate()
     {
         ConsolidateJoinsAgainstChildrenAdded(parent);
-        ConsolidatePropertiesChangedIntoChildAdded();
+
+        // ConsolidatePropertiesChangedIntoChildAdded and ConsolidateConflictingOperations only ever act
+        // on changesets that carry child collection operations; without any they return without touching
+        // the changes, so skipping them keeps the outcome identical while avoiding the per-add rescans.
+        if (_hasChildCollectionOperations)
+        {
+            ConsolidatePropertiesChangedIntoChildAdded();
+        }
+
         ConsolidateOverlappingPropertiesChanged();
-        ConsolidateConflictingOperations();
+
+        if (_hasChildCollectionOperations)
+        {
+            ConsolidateConflictingOperations();
+        }
     }
 
     void ConsolidatePropertiesChangedIntoChildAdded()
@@ -641,4 +695,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     sealed record PropertyDifferenceInChange(int ChangeIndex, PropertyDifference Difference);
+
+    sealed record ResolvedJoinChangeset(ResolvedJoin Join, Changeset<TSource, TTarget> Changeset);
 }

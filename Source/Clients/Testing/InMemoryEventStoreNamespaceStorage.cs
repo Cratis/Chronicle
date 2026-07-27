@@ -17,7 +17,10 @@ using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Testing.EventSequences;
+using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
+using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using KernelEventSequences = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Testing;
@@ -57,6 +60,9 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IInFlightEventsStorage InFlightEvents => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public IObserverHandledCountsStorage ObserverHandledCounts => throw new NotSupportedException();
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations => throw new NotSupportedException();

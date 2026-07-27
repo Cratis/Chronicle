@@ -24,14 +24,19 @@ public class JsonSchema
     readonly JsonSchema? _root;
 
     /// <summary>
-    /// Lazy caches for parsed schema components.
+    /// Lazy caches for parsed and derived schema components.
     /// </summary>
     /// <remarks>
     /// A single <see cref="JsonSchema"/> instance is cached and shared (for example the event-type schemas held by the
     /// client <c>EventTypes</c>) and read concurrently — projections, reducers, key resolvers, the MongoDB converter,
-    /// and constraint registration all flatten the same instance. The caches are therefore published with release
-    /// semantics: each is built fully into a local before the <c>volatile</c> field is assigned, so a concurrent reader
-    /// never observes a half-populated dictionary or list (which previously surfaced as a property "not existing").
+    /// constraint registration, schema validation, and compliance handling all read the same instance. Because a schema
+    /// is effectively immutable once built (it is parsed from stored JSON and then only read), the derived answers below
+    /// — the flattened property set, whether the schema carries compliance metadata, and the resolved <c>$ref</c>/item
+    /// schemas — are memoized on the instance rather than recomputed per read; there is no cluster-wide invalidation
+    /// concern because nothing mutates a published schema, and each memo is bounded by the schema's own size. The caches
+    /// are published with release semantics: each is built fully into a local before the <c>volatile</c> field is
+    /// assigned, so a concurrent reader never observes a half-populated dictionary or list (which previously surfaced as
+    /// a property "not existing").
     /// </remarks>
     volatile SyncedPropertiesDictionary? _propertiesCache;
     volatile List<JsonSchema>? _allOfCache;
@@ -39,6 +44,11 @@ public class JsonSchema
     volatile List<JsonSchema>? _oneOfCache;
     volatile Dictionary<string, JsonSchema>? _definitionsCache;
     volatile ExtensionDataDictionary? _extensionDataCache;
+    volatile IReadOnlyList<JsonSchemaProperty>? _flattenedPropertiesCache;
+    volatile Dictionary<string, JsonSchemaProperty>? _flattenedPropertiesByNameCache;
+    volatile Cached<bool>? _hasComplianceMetadataCache;
+    volatile Cached<JsonSchema?>? _referenceCache;
+    volatile Cached<JsonSchema?>? _itemCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonSchema"/> class (empty schema).
@@ -194,7 +204,20 @@ public class JsonSchema
     /// <summary>
     /// Gets the resolved $ref schema.
     /// </summary>
-    public JsonSchema? Reference => HasReference ? ResolveRef() : null;
+    public JsonSchema? Reference
+    {
+        get
+        {
+            var cached = _referenceCache;
+            if (cached is not null)
+            {
+                return cached.Value;
+            }
+
+            var resolved = HasReference ? ResolveRef() : null;
+            return (_referenceCache = new Cached<JsonSchema?>(resolved)).Value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the item schema (for arrays).
@@ -203,11 +226,16 @@ public class JsonSchema
     {
         get
         {
-            if (Node["items"] is JsonObject itemNode)
+            var cached = _itemCache;
+            if (cached is not null)
             {
-                return new JsonSchemaProperty(string.Empty, (JsonObject)itemNode.DeepClone(), Root);
+                return cached.Value;
             }
-            return null;
+
+            var resolved = Node["items"] is JsonObject itemNode
+                ? new JsonSchemaProperty(string.Empty, (JsonObject)itemNode.DeepClone(), Root)
+                : null;
+            return (_itemCache = new Cached<JsonSchema?>(resolved)).Value;
         }
         set
         {
@@ -219,6 +247,8 @@ public class JsonSchema
             {
                 Node["items"] = value.Node.DeepClone();
             }
+
+            _itemCache = null;
         }
     }
 
@@ -394,6 +424,26 @@ public class JsonSchema
     }
 
     /// <summary>
+    /// Gets the flattened properties of this schema, including inherited properties resolved through <c>allOf</c> references.
+    /// </summary>
+    internal IReadOnlyList<JsonSchemaProperty> FlattenedProperties => _flattenedPropertiesCache ??= BuildFlattenedProperties();
+
+    /// <summary>
+    /// Gets the flattened properties keyed by name, using case-insensitive lookup.
+    /// </summary>
+    internal IReadOnlyDictionary<string, JsonSchemaProperty> FlattenedPropertiesByName => _flattenedPropertiesByNameCache ??= BuildFlattenedPropertiesByName();
+
+    /// <summary>
+    /// Gets or sets the memoized answer to whether this schema carries compliance metadata.
+    /// A getter value of <see langword="null"/> means it has not been computed yet.
+    /// </summary>
+    internal bool? CachedHasComplianceMetadata
+    {
+        get => _hasComplianceMetadataCache is { } cache ? cache.Value : null;
+        set => _hasComplianceMetadataCache = value is { } computed ? new Cached<bool>(computed) : null;
+    }
+
+    /// <summary>
     /// Gets the root schema for $ref resolution.
     /// </summary>
     internal JsonSchema Root => _root ?? this;
@@ -513,35 +563,28 @@ public class JsonSchema
                 return errors;
             }
 
-            var schemaProperties = this
-                .GetFlattenedProperties()
-                .ToDictionary(_ => _.Name, StringComparer.OrdinalIgnoreCase);
-
-            // Check required properties
-            if (Node["required"] is JsonArray required)
-            {
-                foreach (var propName in required
-                    .Select(req => req?.GetValue<string>())
-                    .Where(propName => propName is not null))
-                {
-                    if (!obj.ContainsKey(propName!))
-                    {
-                        if (schemaProperties.TryGetValue(propName!, out var schemaProperty) &&
-                            (schemaProperty.Type.HasFlag(JsonObjectType.Null) || schemaProperty.IsNullable()))
-                        {
-                            continue;
-                        }
-
-                        errors.Add(new JsonSchemaValidationError(propName, JsonSchemaValidationErrorKind.PropertyRequired, $"Property '{propName}' is required."));
-                    }
-                }
-            }
+            ValidateRequiredProperties(obj, errors);
         }
         catch (JsonException ex)
         {
             errors.Add(new JsonSchemaValidationError(null, JsonSchemaValidationErrorKind.Unknown, ex.Message));
         }
 
+        return errors;
+    }
+
+    /// <summary>
+    /// Validates an already-parsed JSON object against this schema (basic required property checks).
+    /// </summary>
+    /// <param name="content">The <see cref="JsonObject"/> to validate.</param>
+    /// <returns>A list of <see cref="JsonSchemaValidationError"/> describing any validation errors.</returns>
+    /// <remarks>
+    /// Equivalent to <see cref="Validate(string)"/> for object content, but avoids re-parsing content the caller already holds.
+    /// </remarks>
+    public IList<JsonSchemaValidationError> Validate(JsonObject content)
+    {
+        var errors = new List<JsonSchemaValidationError>();
+        ValidateRequiredProperties(content, errors);
         return errors;
     }
 
@@ -621,6 +664,35 @@ public class JsonSchema
         return list;
     }
 
+    List<JsonSchemaProperty> BuildFlattenedProperties()
+    {
+        var properties = new List<JsonSchemaProperty>();
+        CollectPropertiesInto(properties);
+        return properties;
+    }
+
+    void CollectPropertiesInto(List<JsonSchemaProperty> properties)
+    {
+        // Direct properties on this schema.
+        properties.AddRange(Properties.Values);
+
+        // Traverse allOf schemas (handles both inheritance refs and inline property groups).
+        foreach (var allOfSchema in AllOf)
+        {
+            if (allOfSchema.HasReference)
+            {
+                allOfSchema.Reference?.CollectPropertiesInto(properties);
+            }
+            else
+            {
+                allOfSchema.CollectPropertiesInto(properties);
+            }
+        }
+    }
+
+    Dictionary<string, JsonSchemaProperty> BuildFlattenedPropertiesByName() =>
+        FlattenedProperties.ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
+
     JsonSchema? ResolveRef()
     {
         var refValue = Node["$ref"]?.GetValue<string>();
@@ -657,6 +729,41 @@ public class JsonSchema
         }
 
         return current is JsonObject resolved ? new JsonSchema((JsonObject)resolved.DeepClone(), root) : null;
+    }
+
+    void ValidateRequiredProperties(JsonObject content, List<JsonSchemaValidationError> errors)
+    {
+        var schemaProperties = FlattenedPropertiesByName;
+
+        if (Node["required"] is JsonArray required)
+        {
+            foreach (var propName in required
+                .Select(req => req?.GetValue<string>())
+                .Where(propName => propName is not null))
+            {
+                if (!content.ContainsKey(propName!))
+                {
+                    if (schemaProperties.TryGetValue(propName!, out var schemaProperty) &&
+                        (schemaProperty.Type.HasFlag(JsonObjectType.Null) || schemaProperty.IsNullable()))
+                    {
+                        continue;
+                    }
+
+                    errors.Add(new JsonSchemaValidationError(propName, JsonSchemaValidationErrorKind.PropertyRequired, $"Property '{propName}' is required."));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A write-once holder for a memoized value, published to a <see langword="volatile"/> field so a concurrent reader
+    /// distinguishes an absent holder (not yet computed) from a computed value that may itself be <see langword="null"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the memoized value.</typeparam>
+    /// <param name="value">The value to hold.</param>
+    sealed class Cached<T>(T value)
+    {
+        public T Value { get; } = value;
     }
 
     /// <summary>

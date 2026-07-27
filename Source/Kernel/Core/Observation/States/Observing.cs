@@ -46,6 +46,14 @@ public class Observing(
     }.ToImmutableList();
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Subscribing to the queue before reading the tail is load-bearing and must not be reordered.
+    /// <see cref="IEventSequence.GetTailSequenceNumber"/> is served concurrently with an in-flight append, so it can
+    /// report a tail from before that append commits. Because the subscription already exists by then, the appended
+    /// event is delivered live and the stale-low tail costs nothing. Reading the tail first would reopen the gap it is
+    /// meant to close: an append committing between the read and the subscribe is enqueued to a queue this observer is
+    /// not yet subscribed to, and the missed-events check below - run against the older tail - would not see it either.
+    /// </remarks>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         using var scope = logger.BeginObservingScope(state, eventStore, @namespace, eventSequenceId);

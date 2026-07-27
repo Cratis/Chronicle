@@ -22,16 +22,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     public BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema)
     {
         var document = new BsonDocument();
-        var schemaProperties = schema.GetFlattenedProperties();
+        var schemaPropertiesByName = schema.GetFlattenedProperties().ToDictionary(_ => _.Name);
         foreach (var keyValue in expandoObject as IDictionary<string, object?>)
         {
-            BsonValue value = BsonNull.Value;
+            BsonValue value;
 
             var name = keyValue.Key;
-            var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
-            if (schemaProperty is null && name == "id")
+            if (!schemaPropertiesByName.TryGetValue(name, out var schemaProperty) && name == "id")
             {
-                schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == "Id");
+                schemaPropertiesByName.TryGetValue("Id", out schemaProperty);
             }
 
             if (schemaProperty is null)
@@ -55,18 +54,16 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     {
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
-        var schemaProperties = schema.GetFlattenedProperties();
+        var schemaPropertiesByName = schema.GetFlattenedProperties().ToDictionary(_ => _.Name);
 
         foreach (var element in document.Elements)
         {
             object? value;
             var name = GetNameForPropertyInExpandoObject(element);
 
-            var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
-            if (schemaProperty is null && name == "id")
+            if (!schemaPropertiesByName.TryGetValue(name, out var schemaProperty) && name == "id")
             {
-                var pascalCaseSchemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == "Id");
-                if (pascalCaseSchemaProperty is not null)
+                if (schemaPropertiesByName.TryGetValue("Id", out var pascalCaseSchemaProperty))
                 {
                     schemaProperty = pascalCaseSchemaProperty;
                     name = "Id";

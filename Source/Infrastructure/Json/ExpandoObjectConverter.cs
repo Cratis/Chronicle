@@ -25,13 +25,14 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     public JsonObject ToJsonObject(ExpandoObject expandoObject, JsonSchema schema)
     {
         var jsonObject = new JsonObject();
+        var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
         var schemaProperties = schema.GetFlattenedProperties().ToList();
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the expando object is preserved.
         if (schemaProperties.Count == 0)
         {
-            foreach (var (key, value) in expandoObject as IDictionary<string, object?>)
+            foreach (var (key, value) in expandoObjectAsDictionary)
             {
                 var node = ConvertUnknownSchemaTypeToJsonValue(value);
                 if (node is not null)
@@ -45,35 +46,23 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         foreach (var property in schemaProperties)
         {
-            JsonNode? value = null;
-
-            // Prefer an exact-case match; fall back to a case-insensitive match. Using
-            // SingleOrDefault here would throw "Sequence contains more than one matching
-            // element" when the source expando carries both casings of the same name
-            // (e.g. both `Id` and `id`).
-            var keyValue = expandoObject.FirstOrDefault(_ => _.Key == property.Name);
-            if (keyValue.Key is null)
-            {
-                keyValue = expandoObject.FirstOrDefault(_ => _.Key.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
-            }
-
             var name = property.Name;
-            var schemaProperty = schemaProperties.Find(_ => _.Name == name);
-            if (schemaProperty is null)
+
+            // Prefer an exact-case match; fall back to a case-insensitive match. The source expando
+            // may carry both casings of the same name (e.g. both `Id` and `id`).
+            if (!expandoObjectAsDictionary.TryGetValue(name, out var sourceValue))
             {
-                ConvertUnknownSchemaTypeToJsonValue(keyValue.Value);
-            }
-            else
-            {
-                value = ConvertToJsonNode(keyValue.Value, schemaProperty);
+                sourceValue = expandoObjectAsDictionary.FirstOrDefault(_ => _.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
             }
 
-            if (value is null && schemaProperty is not null)
+            var value = ConvertToJsonNode(sourceValue, property);
+
+            if (value is null)
             {
                 var defaultValue = property.GetDefaultValue(typeFormats);
                 if (defaultValue is not null)
                 {
-                    value = ConvertToJsonNode(defaultValue, schemaProperty);
+                    value = ConvertToJsonNode(defaultValue, property);
                 }
             }
 
@@ -118,15 +107,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             object? value = null;
             if (sourceValue is not null)
             {
-                var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
-                if (schemaProperty is null)
-                {
-                    value = ConvertUnknownSchemaTypeToClrType(sourceValue);
-                }
-                else
-                {
-                    value = ConvertFromJsonNode(sourceValue, schemaProperty);
-                }
+                value = ConvertFromJsonNode(sourceValue, property);
             }
 
             value ??= property.GetDefaultValue(typeFormats);

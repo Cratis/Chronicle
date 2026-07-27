@@ -5,11 +5,10 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage;
 using Cratis.Strings;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
@@ -25,20 +24,19 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// </summary>
 /// <remarks>
 /// Runs on the Orleans serialization hot path for every <see cref="AppendedEvent"/> that crosses a grain or
-/// silo boundary. Schemas are cached per event type and generation on the write side and per unique schema
-/// text on the read side, so the blocking event type schema lookup and the schema parse only happen on the
-/// first occurrence of each event type per silo.
+/// silo boundary. The write side resolves the schema through the silo-wide <see cref="IEventTypeSchemaCache"/>,
+/// which is evicted whenever an event type is re-registered; the read side caches the parsed schema per unique
+/// schema text, which needs no eviction since a changed schema is a different key.
 /// </remarks>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/>.</param>
-/// <param name="storage">The <see cref="IStorage"/>.</param>
+/// <param name="schemaCache">The <see cref="IEventTypeSchemaCache"/> to resolve event type schemas from.</param>
 internal sealed class AppendedEventSerializer(
     JsonSerializerOptions jsonSerializerOptions,
     IExpandoObjectConverter expandoObjectConverter,
-    IStorage storage) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
+    IEventTypeSchemaCache schemaCache) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     readonly ConcurrentDictionary<string, JsonSchema> _schemasBySchemaJson = new();
-    readonly ConcurrentDictionary<EventTypeSchemaKey, string> _schemaJsonByEventType = new();
 
     /// <inheritdoc/>
     public object? DeepCopy(object? input, CopyContext context) => input;
@@ -75,22 +73,15 @@ internal sealed class AppendedEventSerializer(
         where TBufferWriter : IBufferWriter<byte>
     {
         var appendedEvent = (AppendedEvent)value;
-        var key = new EventTypeSchemaKey(appendedEvent.Context.EventStore, appendedEvent.Context.EventType.Id, appendedEvent.Context.EventType.Generation);
-        var schemaJson = _schemaJsonByEventType.GetOrAdd(key, GetSchemaJson);
+        var schemaJson = schemaCache.GetSchemaJsonFor(
+            appendedEvent.Context.EventStore,
+            appendedEvent.Context.EventType.Id,
+            appendedEvent.Context.EventType.Generation);
         var appendedEventWithSchema = new AppendedEventWithSchema(appendedEvent, schemaJson);
 
         var json = JsonSerializer.Serialize(appendedEventWithSchema, jsonSerializerOptions);
         StringCodec.WriteField(ref writer, fieldIdDelta, json);
     }
-
-    string GetSchemaJson(EventTypeSchemaKey key)
-    {
-        var eventStore = storage.GetEventStore(key.EventStore);
-        var eventType = eventStore.EventTypes.GetFor(key.EventTypeId, key.Generation).GetAwaiter().GetResult();
-        return eventType.Schema.ToJson();
-    }
-
-    readonly record struct EventTypeSchemaKey(EventStoreName EventStore, EventTypeId EventTypeId, EventTypeGeneration Generation);
 
     sealed record AppendedEventWithSchema(AppendedEvent AppendedEvent, string Schema);
 }

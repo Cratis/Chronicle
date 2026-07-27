@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Dynamic;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
@@ -29,12 +30,12 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Json;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 using IObserver = Cratis.Chronicle.Observation.IObserver;
@@ -53,6 +54,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
+/// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
@@ -66,23 +68,9 @@ public class EventSequence(
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
+    IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
-    /// <summary>
-    /// Default serialization plus geospatial converters so that typed geospatial values in the event
-    /// content (held as their CLR type in the ExpandoObject) are written as GeoJSON — keeping the
-    /// stored/transport shape consistent with what the schema-guided converter reads back.
-    /// </summary>
-    static readonly JsonSerializerOptions _contentSerializerOptions = new()
-    {
-        Converters =
-        {
-            new PointJsonConverter(),
-            new LineStringJsonConverter(),
-            new PolygonJsonConverter()
-        }
-    };
-
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
@@ -93,12 +81,19 @@ public class EventSequence(
     IMeterScope<EventSequence>? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
+    IReadOnlyCollection<IConstraintDefinition> _knownConstraints = [];
+    ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
+    TimeSpan _constraintsVersionCheckInterval;
+    long _lastConstraintsVersionCheck;
+    int _statePersistenceInterval = 1;
+    int _appendsSinceStateWrite;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverDefinitionsStorage ObserverStorage => _observerDefinitionsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Observers;
     IClosedStreamsConstraintStorage ClosedStreamsStorage => _closedStreamsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetClosedStreamsConstraints(_eventSequenceId);
     ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage);
+    IConstraints ConstraintsGrain => GrainFactory.GetGrain<IConstraints>(new ConstraintsKey(_eventSequenceKey.EventStore));
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -113,9 +108,33 @@ public class EventSequence(
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(_eventSequenceKey);
 
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        _knownConstraints = await ConstraintsGrain.GetDefinitions();
+        _constraintsVersion = await ConstraintsGrain.GetVersion();
+
+        // The version was just read, so the next check is due one full interval from now.
+        _constraintsVersionCheckInterval = options.Value.Events.ConstraintsVersionCheckInterval;
+        _lastConstraintsVersionCheck = Stopwatch.GetTimestamp();
+        _statePersistenceInterval = Math.Max(1, options.Value.Events.StatePersistenceInterval);
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Flushes any state accumulated since the last periodic write so a subsequent activation can warm-start from it.
+    /// Correctness does not depend on this write — <see cref="EventSequencesStorageProvider"/> rebuilds the state from
+    /// the event tail on activation — it only lets the next activation skip re-deriving the per-event-type tails.
+    /// </remarks>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        if (_appendsSinceStateWrite > 0)
+        {
+            _appendsSinceStateWrite = 0;
+            await WriteStateAsync();
+        }
+
+        await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -239,13 +258,14 @@ public class EventSequence(
     {
         try
         {
+            await RefreshConstraintsIfChanged();
             var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, subject);
             if (getValidAndCompliantEvent.TryGetError(out var error))
             {
                 return error;
             }
 
-            var (compliantEvent, constraintContext) = getValidAndCompliantEvent.AsT0;
+            var (compliantEvent, compliantContent, constraintContext) = getValidAndCompliantEvent.AsT0;
             var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
             if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
             {
@@ -263,6 +283,7 @@ public class EventSequence(
                 causedBy,
                 tags,
                 compliantEvent,
+                compliantContent,
                 constraintContext,
                 occurred,
                 subject);
@@ -287,13 +308,14 @@ public class EventSequence(
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
+            await RefreshConstraintsIfChanged();
             events = events as IList<EventToAppend> ?? events.ToList();
 
             // Validate sequentially with a shared set of batch claims so that two events in the same batch
             // cannot both claim the same unique constraint value — the persisted index is only updated after
             // the whole batch has been appended, so without this earlier events in the batch are invisible.
             var batchClaims = new ConstraintBatchClaims();
-            var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
+            var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
             foreach (var e in events)
             {
                 var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
@@ -321,7 +343,7 @@ public class EventSequence(
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
             var validatedEvents = getValidAndCompliantEvents.ConvertAll(eventAndResult =>
             {
-                var (compliantEvent, constraintContext) = eventAndResult.Result.AsT0;
+                var (compliantEvent, _, constraintContext) = eventAndResult.Result.AsT0;
                 return (eventAndResult.Event, CompliantEvent: compliantEvent, ConstraintContext: constraintContext);
             });
 
@@ -553,13 +575,9 @@ public class EventSequence(
             _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
         }
 
-        await WriteStateAsync();
-        await (_appendedEventsQueues?.Enqueue(appendedEventsList.ToList()) ?? Task.CompletedTask);
-
-        foreach (var constraintContext in constraintContexts)
-        {
-            await constraintContext.Update(State.SequenceNumber);
-        }
+        await CompleteDurableAppend(
+            appendedEventsList,
+            constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
 
         return AppendManyResult.Success(correlationId, sequenceNumbers);
     }
@@ -575,6 +593,7 @@ public class EventSequence(
         Identity causedBy,
         IEnumerable<Tag> tags,
         ExpandoObject compliantEvent,
+        JsonObject compliantContent,
         ConstraintValidationContext constraintContext,
         DateTimeOffset? occurred = null,
         Subject? subject = null)
@@ -591,12 +610,8 @@ public class EventSequence(
 
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
 
-            // Convert the compliant event to JsonObject for migration
-            var json = JsonSerializer.Serialize(compliantEvent, _contentSerializerOptions);
-            var contentAsJson = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
-
-            // Migrate the event to all generations
-            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventType, contentAsJson);
+            // Migrate the event to all generations using the already-compliant content and expando
+            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventType, compliantContent, compliantEvent);
 
             // Calculate content hashes for each generation
             var contentHashes = migratedContent.ToDictionary(
@@ -636,12 +651,10 @@ public class EventSequence(
             var appendedSequenceNumber = State.SequenceNumber;
             State.SequenceNumber = appendedSequenceNumber.Next();
             State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
-            await WriteStateAsync();
 
             _metrics?.AppendedEvent(eventSourceId, eventType.Id);
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
-            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-            await constraintContext.Update(State.SequenceNumber);
+            await CompleteDurableAppend(appendedEvents, [(constraintContext, appendedSequenceNumber)]);
 
             return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
@@ -651,7 +664,73 @@ public class EventSequence(
         }
     }
 
-    async Task<Result<(ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> GetValidAndCompliantEvent(
+    /// <summary>
+    /// Runs the steps that follow a durable append: snapshotting the sequence state, handing the events to the
+    /// appended-events queues for live delivery, and persisting the constraint indexes the events feed.
+    /// </summary>
+    /// <param name="appendedEvents">The <see cref="AppendedEvent">events</see> that are already durable in the log.</param>
+    /// <param name="constraintUpdates">The <see cref="ConstraintValidationContext"/> of each appended event, paired with the <see cref="EventSequenceNumber"/> it got.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// No step here may fail the append, and no step may skip the ones after it. The events are durable and
+    /// <see cref="EventSequenceState.SequenceNumber"/> has already advanced by the time this runs, so reporting a
+    /// failure would make a retrying client append the same event a second time. The state snapshot is only a
+    /// warm-start optimization - <see cref="EventSequencesStorageProvider"/> rebuilds the sequence number from the
+    /// event tail on activation - so a failed write costs nothing but the head start. Losing the live dispatch is
+    /// recovered by spilling the queues' subscribers to their catch-up path, the same recovery the queues apply
+    /// under back-pressure, which re-reads the events from each observer's persisted cursor. The constraint indexes
+    /// are updated regardless of how the earlier steps went, because a value that is durable in the log but missing
+    /// from its unique index is invisible to validation and lets a later duplicate through.
+    /// </remarks>
+    async Task CompleteDurableAppend(
+        List<AppendedEvent> appendedEvents,
+        IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> constraintUpdates)
+    {
+        try
+        {
+            await PersistStateAfterAppends(appendedEvents.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedPersistingStateAfterAppends(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
+        }
+
+        try
+        {
+            await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedEnqueueingAppendedEvents(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedEvents.Count, ex);
+            await SpillAppendedEventsQueuesToCatchup();
+        }
+
+        foreach (var (context, sequenceNumber) in constraintUpdates)
+        {
+            try
+            {
+                await context.Update(sequenceNumber);
+            }
+            catch (Exception ex)
+            {
+                logger.FailedUpdatingConstraintIndex(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, ex);
+            }
+        }
+    }
+
+    async Task SpillAppendedEventsQueuesToCatchup()
+    {
+        try
+        {
+            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedSpillingAppendedEventsQueuesToCatchup(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
+        }
+    }
+
+    async Task<Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> GetValidAndCompliantEvent(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
         EventStreamType eventStreamType,
@@ -684,7 +763,7 @@ public class EventSequence(
                 return error;
             }
 
-            return (compliantEventAsExpandoObject, (ConstraintValidationContext)checkConstraintViolation);
+            return (compliantEventAsExpandoObject, compliantContent, (ConstraintValidationContext)checkConstraintViolation);
         }
         catch (Exception ex)
         {
@@ -750,7 +829,7 @@ public class EventSequence(
         EventTypeSchema eventSchema,
         CorrelationId correlationId)
     {
-        var validationErrors = eventSchema.Schema.Validate(content.ToJsonString());
+        var validationErrors = eventSchema.Schema.Validate(content);
         if (validationErrors.Count == 0)
         {
             return true;
@@ -796,7 +875,7 @@ public class EventSequence(
             });
     }
 
-    async Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName, EventSequenceNumber nextAvailableSequenceNumber)
+    Task HandleAppendedDuplicateEvent(EventType eventType, EventSourceId eventSourceId, string eventName, EventSequenceNumber nextAvailableSequenceNumber)
     {
         logger.DuplicateEvent(
             _eventSequenceKey.EventStore,
@@ -807,7 +886,7 @@ public class EventSequence(
             State.SequenceNumber);
         _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
         State.SequenceNumber = nextAvailableSequenceNumber;
-        await WriteStateAsync();
+        return Task.CompletedTask;
     }
 
     void HandleFailedAppendManyResult(
@@ -849,24 +928,119 @@ public class EventSequence(
         }
     }
 
+    /// <summary>
+    /// Persists the event sequence state as a warm-start snapshot once at least
+    /// <see cref="Configuration.Events.StatePersistenceInterval"/> appends have accumulated since the last write,
+    /// rather than on every append.
+    /// </summary>
+    /// <param name="appendedCount">Number of events appended by the current operation.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The persisted state is only an optimization: <see cref="EventSequencesStorageProvider"/> rebuilds
+    /// <see cref="EventSequenceState.SequenceNumber"/> from the actual event tail — and the per-event-type tails via
+    /// aggregation — on every activation, so a crash between these periodic writes loses no sequence-number
+    /// correctness. The next append still gets the right number.
+    /// </remarks>
+    async Task PersistStateAfterAppends(int appendedCount)
+    {
+        _appendsSinceStateWrite += appendedCount;
+        if (_appendsSinceStateWrite < _statePersistenceInterval)
+        {
+            return;
+        }
+
+        _appendsSinceStateWrite = 0;
+        await WriteStateAsync();
+    }
+
     async Task OnConstraintsChanged(ConstraintsChanged payload)
     {
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
-
-        var changedConstraintsRequiringReindex = payload.Changes
-            .Where(_ => _.RequiresReindex)
-            .ToArray();
-
-        if (changedConstraintsRequiringReindex.Length > 0)
-        {
-            var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-            await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changedConstraintsRequiringReindex));
-        }
+        await StartReindexJob(payload.Changes.Where(_ => _.RequiresReindex).ToArray());
     }
 
     Task OnConstraintsChangedError(Exception exception)
     {
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Re-reads the constraint validators when the constraints registered for the event store have changed since this
+    /// grain last observed them, starting a reindex job for any unique constraints whose index must be rebuilt.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The <see cref="WellKnownBroadcastChannelNames.ConstraintsChanged"/> broadcast never reaches sequence grains
+    /// (they are keyed differently to the constraints grain and are not implicit channel subscribers), so constraint
+    /// changes are picked up here instead by a <see cref="ConstraintsVersion"/> check. The version is a
+    /// content-derived stamp, so it is stable across constraints-grain deactivation and consistent across silos —
+    /// the validators are only re-read, and a reindex only started, when the constraints genuinely changed.
+    /// <para>
+    /// The check is throttled to <see cref="Configuration.Events.ConstraintsVersionCheckInterval"/> rather than run
+    /// on every append. Reading the version is cheap inside the constraints grain, but reaching it is not: there is
+    /// one activation per event store, single-threaded, so an unthrottled check would serialize every append in the
+    /// event store behind that one grain's turn — across every sequence, namespace and silo — and pay a cross-silo
+    /// call for each sequence not co-located with it. Throttling bounds how long an already-active sequence can miss
+    /// a newly registered constraint; it does not affect a sequence activating afterwards, which reads the
+    /// constraints outright.
+    /// </para>
+    /// </remarks>
+    async Task RefreshConstraintsIfChanged()
+    {
+        if (!IsConstraintsVersionCheckDue())
+        {
+            return;
+        }
+
+        var version = await ConstraintsGrain.GetVersion();
+        if (version == _constraintsVersion)
+        {
+            return;
+        }
+
+        var previous = _knownConstraints;
+        var current = await ConstraintsGrain.GetDefinitions();
+        _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+        _knownConstraints = current;
+        _constraintsVersion = version;
+        await StartReindexJob(ConstraintDefinitionComparison.GetReindexChanges(previous, current));
+    }
+
+    /// <summary>
+    /// Decides whether enough time has passed to check the constraints version again.
+    /// </summary>
+    /// <returns>True when the check is due, false when the last one is still within the interval.</returns>
+    /// <remarks>
+    /// The timestamp is advanced when the check is found due rather than after it completes, so a slow or failing
+    /// constraints grain cannot make every subsequent append re-attempt the call. No synchronization is needed: the
+    /// grain is non-reentrant, so only one turn is ever inside this.
+    /// </remarks>
+    bool IsConstraintsVersionCheckDue()
+    {
+        if (_constraintsVersionCheckInterval <= TimeSpan.Zero)
+        {
+            return true;
+        }
+
+        var now = Stopwatch.GetTimestamp();
+        if (Stopwatch.GetElapsedTime(_lastConstraintsVersionCheck, now) < _constraintsVersionCheckInterval)
+        {
+            return false;
+        }
+
+        _lastConstraintsVersionCheck = now;
+        return true;
+    }
+
+    async Task StartReindexJob(IReadOnlyCollection<ConstraintDefinitionChange> changesRequiringReindex)
+    {
+        if (changesRequiringReindex.Count == 0)
+        {
+            return;
+        }
+
+        var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changesRequiringReindex));
     }
 
     async Task RewindPartitionForAffectedObservers(

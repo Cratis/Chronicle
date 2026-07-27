@@ -145,27 +145,56 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
             return;
         }
 
+        var stateTypeBeforeTransition = _currentState.GetType();
+        var storedStateBeforeTransition = State;
+
         _isTransitioning = true;
         _isLeaving = true;
-        await OnBeforeLeavingState(_currentState);
-        State = await _currentState.OnLeave(State);
-        await OnAfterLeavingState(_currentState);
-        _isLeaving = false;
 
-        _currentState = _states[stateType];
-
-        await OnBeforeEnteringState(_currentState);
-        State = await _currentState.OnEnter(State);
-        await OnAfterEnteringState(_currentState);
-
-        if (State is StateMachineState stateMachineState)
+        // OnLeave and OnEnter run arbitrary state code that does I/O, so either can throw. The in-transition flags
+        // must come down regardless: a stuck _isTransitioning turns every later transition into a scheduled one that
+        // never runs, and a stuck _isLeaving makes every later transition throw
+        // TransitioningDuringOnLeaveIsNotSupported - either way the machine can never change state again, and being
+        // kept alive it is never reactivated out of it. A transition scheduled from inside a transition that then
+        // failed is dropped with it; it was an intent of a transition that never completed, and re-running it later
+        // on the back of an unrelated one would be arbitrary.
+        try
         {
-            stateMachineState.CurrentState = _currentState.GetType().FullName!;
+            await OnBeforeLeavingState(_currentState);
+            State = await _currentState.OnLeave(State);
+            await OnAfterLeavingState(_currentState);
+            _isLeaving = false;
+
+            _currentState = _states[stateType];
+
+            await OnBeforeEnteringState(_currentState);
+            State = await _currentState.OnEnter(State);
+            await OnAfterEnteringState(_currentState);
+
+            if (State is StateMachineState stateMachineState)
+            {
+                stateMachineState.CurrentState = _currentState.GetType().FullName!;
+            }
+
+            // A transition that neither moved to a different state nor produced a new stored-state instance leaves the
+            // persisted document identical, so the write is skipped. The current-state type change captures the
+            // StateMachineState.CurrentState update above; a new State reference captures every OnLeave/OnEnter result.
+            if (_currentState.GetType() != stateTypeBeforeTransition || !ReferenceEquals(State, storedStateBeforeTransition))
+            {
+                await WriteStateAsync();
+            }
+        }
+        catch
+        {
+            _scheduledTransition = null;
+            throw;
+        }
+        finally
+        {
+            _isLeaving = false;
+            _isTransitioning = false;
         }
 
-        await WriteStateAsync();
-
-        _isTransitioning = false;
         if (_scheduledTransition != null)
         {
             var stateToTransitionTo = _scheduledTransition;

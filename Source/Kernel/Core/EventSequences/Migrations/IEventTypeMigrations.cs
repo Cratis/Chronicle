@@ -19,6 +19,7 @@ public interface IEventTypeMigrations
     /// <param name="eventStore">The <see cref="EventStoreName"/> to migrate for.</param>
     /// <param name="eventType">The <see cref="EventType"/> being migrated.</param>
     /// <param name="content">The event content as <see cref="JsonObject"/>.</param>
+    /// <param name="contentAsExpandoObject">The same content already converted to an <see cref="ExpandoObject"/>, reused directly when the event type has a single generation.</param>
     /// <returns>A dictionary mapping each generation to its corresponding content.</returns>
-    Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content);
+    Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject);
 }

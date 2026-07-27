@@ -16,6 +16,15 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class Constraints(IClusterClient clusterClient) : Grain<ConstraintsState>, IConstraints
 {
     readonly IBroadcastChannelProvider _constraintsChangedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ConstraintsChanged);
+    ConstraintsVersion? _version;
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyCollection<IConstraintDefinition>> GetDefinitions() =>
+        Task.FromResult<IReadOnlyCollection<IConstraintDefinition>>(State.Constraints.ToArray());
+
+    /// <inheritdoc/>
+    public Task<ConstraintsVersion> GetVersion() =>
+        Task.FromResult(_version ??= ConstraintDefinitionComparison.ComputeVersion(State.Constraints));
 
     /// <inheritdoc/>
     public async Task Register(IEnumerable<IConstraintDefinition> definitions)
@@ -50,6 +59,7 @@ public class Constraints(IClusterClient clusterClient) : Grain<ConstraintsState>
         if (hasChanges)
         {
             await WriteStateAsync();
+            _version = null;
             await ConstraintsChanged(changes);
         }
     }

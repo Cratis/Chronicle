@@ -167,16 +167,6 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
 
-        // 3d. Reset the EventTypesStorage in-memory cache for the test event store.
-        //     EventTypesStorage caches registered schemas in a ConcurrentBag<EventType> field
-        //     that is never cleared by database drops — HasFor/GetFor check this cache first and
-        //     can return stale schemas from a previous test's event types, causing
-        //     EventTypeSchemaChanged when two test suites define the same event type name with
-        //     different properties. Calling Populate() re-reads from MongoDB (now empty) and
-        //     replaces the cache, ensuring the next RegisterAll starts with a clean schema state.
-        var storage = Services.GetRequiredService<IStorage>();
-        await storage.GetEventStore(Constants.EventStore).EventTypes.Populate();
-
         // 4. Re-discover artifacts from the current test fixture. Discover() creates new
         //    handler objects with fresh CancellationTokens (but does not register them yet).
         var eventStore = Services.GetRequiredService<IEventStore>();
