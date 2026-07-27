@@ -23,9 +23,11 @@ public class Events
     /// Bounded capacity of each appended-events queue channel.
     /// </summary>
     /// <remarks>
-    /// When the channel is full the producer (AppendMany) awaits instead of returning, providing
-    /// backpressure that prevents the kernel from accepting more appends than observers can process.
-    /// A value of 0 means unbounded (no backpressure). Defaults to 2000 batches.
+    /// When the channel is full the batch is not queued: the queue's subscribed observers are spilled to their
+    /// catch-up path, which re-reads the missed range from each observer's persisted cursor. Appends therefore
+    /// never wait for observers to drain. A smaller value spills sooner, trading live delivery for catch-up;
+    /// a larger one absorbs longer bursts at the cost of memory. A value of 0 means unbounded, which never
+    /// spills. Defaults to 2000 batches.
     /// </remarks>
     public int QueueBoundedCapacity { get; init; } = 2000;
 
