@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -69,6 +70,7 @@ public static class SerializationConfigurationExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCustomSerializers(this IServiceCollection services)
     {
+        services.AddSingleton<IEventTypeSchemaCache, EventTypeSchemaCache>();
         services.AddSerializer(builder =>
         {
             builder.Services

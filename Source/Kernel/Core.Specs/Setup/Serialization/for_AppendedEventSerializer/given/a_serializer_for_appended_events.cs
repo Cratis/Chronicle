@@ -42,7 +42,7 @@ public class a_serializer_for_appended_events : Specification
         services.AddSingleton(new JsonSerializerOptions());
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(storage);
-        services.AddSerializer(builder => builder.Services.AddCompleteSerializer<AppendedEventSerializer>());
+        services.AddSerializer(builder => builder.Services.AddCustomSerializers());
         _serializer = services.BuildServiceProvider().GetRequiredService<Serializer>();
     }
 
