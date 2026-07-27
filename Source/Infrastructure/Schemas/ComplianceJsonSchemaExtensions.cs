@@ -18,22 +18,21 @@ public static class ComplianceJsonSchemaExtensions
     const int MaxComplianceTraversalDepth = 64;
 
     /// <summary>
-    /// Ensure the compliance metadata is correct with correct types.
+    /// Ensure the compliance metadata on the schema node itself is typed rather than raw JSON.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to ensure.</param>
+    /// <remarks>
+    /// This normalizes only the node it is given, and deliberately so. Compliance metadata can sit at any depth
+    /// — inside a value object, inside an array's item schema — but every reader goes through
+    /// <see cref="GetComplianceMetadata(JsonSchema)"/>, which accepts the raw <see cref="JsonArray"/> form just
+    /// as readily as the typed one, for whichever node it is handed. Walking the whole schema here would deep
+    /// clone every nested node on each stored-schema load and change nothing about what those readers see.
+    /// </remarks>
     public static void EnsureComplianceMetadata(this JsonSchema schema)
     {
         lock (schema)
         {
             ConvertComplianceIfNeeded(schema);
-
-            if (schema.Properties.Count > 0)
-            {
-                foreach (var property in schema.Properties)
-                {
-                    ConvertComplianceIfNeeded(property.Value);
-                }
-            }
         }
     }
 
