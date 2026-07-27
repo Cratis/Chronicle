@@ -164,7 +164,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
                 return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobIsNotPrepared);
             }
 
-            if (_jobStepGrains?.Count == 0)
+            if (_jobStepGrains is null or { Count: 0 })
             {
                 _jobStepGrains = await GetIdAndGrainReferenceForNonCompletedJobSteps();
             }
@@ -175,7 +175,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             await OnBeforeResumingJobSteps();
             var grainId = this.GetGrainId();
 
-            var tasks = _jobStepGrains!.Select(async jobStepIdAndGrain =>
+            var tasks = _jobStepGrains.Select(async jobStepIdAndGrain =>
             {
                 var result = await jobStepIdAndGrain.Value.Start(grainId);
                 return (jobStepIdAndGrain.Key, result, jobStepIdAndGrain.Value);
