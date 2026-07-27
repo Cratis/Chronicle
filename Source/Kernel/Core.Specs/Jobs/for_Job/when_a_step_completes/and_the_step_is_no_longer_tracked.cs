@@ -39,5 +39,5 @@ public class and_the_step_is_no_longer_tracked : given.the_job
     [Fact] void should_not_report_an_error() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_count_the_step_as_successful() => _job.CurrentState.Progress.SuccessfulSteps.ShouldEqual(1);
     [Fact] void should_leave_the_job_running() => _job.CurrentState.Status.ShouldEqual(JobStatus.Running);
-    [Fact] void should_keep_tracking_the_known_steps() => _job.CurrentState.Progress.TotalSteps.ShouldEqual(2);
+    [Fact] void should_not_change_the_total_step_count() => _job.CurrentState.Progress.TotalSteps.ShouldEqual(2);
 }
