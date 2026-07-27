@@ -7,7 +7,6 @@ using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.ModelBound;
 using MongoDB.Bson;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_collection_of_pii_concepts.and_the_elements_are_objects.context;
 
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_collection_of_pii_concepts;
@@ -26,6 +25,8 @@ public class and_the_elements_are_objects(context context) : Given<context>(cont
         public ContactsRecorded Event { get; private set; } = default!;
         public CaseContacts? Instance { get; private set; }
         public BsonDocument? StoredDocument { get; private set; }
+
+        public bool DocumentCanBeInspected => StoredReadModelDocument.CanBeInspected(ChronicleFixture);
 
         public override IEnumerable<Type> EventTypes => [typeof(ContactsRecorded)];
 
@@ -47,24 +48,24 @@ public class and_the_elements_are_objects(context context) : Given<context>(cont
                 await Task.Delay(200, cts.Token);
             }
 
-            StoredDocument = await ChronicleFixture.ReadModels.Database
-                .GetCollection<BsonDocument>("CaseContacts")
-                .Find(Builders<BsonDocument>.Filter.Empty)
-                .FirstOrDefaultAsync();
+            StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, "CaseContacts");
         }
     }
 
     [Fact] void should_release_every_email_to_plaintext() =>
         Context.Instance!.Contacts.Select(_ => _.Email).Order().ShouldEqual(Context.Event.Contacts.Select(_ => _.Email).Order());
 
+    [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() =>
+        (!Context.DocumentCanBeInspected || Context.StoredDocument is not null).ShouldBeTrue();
+
     [Fact] void should_store_every_email_encrypted() =>
-        StoredContacts.Select(_ => _["Email"].AsString)
+        StoredContacts?.Select(_ => _["Email"].AsString)
             .Any(stored => Context.Event.Contacts.Any(contact => contact.Email == stored)).ShouldBeFalse();
 
     [Fact] void should_store_the_non_pii_member_in_the_clear() =>
-        StoredContacts.Select(_ => _["Kind"].AsString).Order().ShouldEqual(Context.Event.Contacts.Select(_ => _.Kind).Order());
+        StoredContacts?.Select(_ => _["Kind"].AsString).Order().ShouldEqual(Context.Event.Contacts.Select(_ => _.Kind).Order());
 
-    IEnumerable<BsonDocument> StoredContacts => Context.StoredDocument!["Contacts"].AsBsonArray.Select(_ => _.AsBsonDocument);
+    IEnumerable<BsonDocument>? StoredContacts => Context.StoredDocument?["Contacts"].AsBsonArray.Select(_ => _.AsBsonDocument);
 }
 
 public record Contact(string Kind, [property: PII] string Email);

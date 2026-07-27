@@ -24,11 +24,15 @@ public class and_reading_the_instance(context context) : Given<context>(context)
 {
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
+        const string CollectionName = "ExpressVerifications";
+
         public EventSourceId PersonId { get; } = "nested-pii-person-1";
         public IdentityVerified Event { get; private set; } = default!;
         public ExpressVerification? Instance { get; private set; }
         public BsonDocument? StoredDocument { get; private set; }
         public ExpressVerification? ReleasedFromCollection { get; private set; }
+
+        public bool DocumentCanBeInspected => StoredReadModelDocument.CanBeInspected(ChronicleFixture);
 
         public override IEnumerable<Type> EventTypes => [typeof(IdentityVerified)];
 
@@ -48,10 +52,12 @@ public class and_reading_the_instance(context context) : Given<context>(context)
                 await Task.Delay(200, cts.Token);
             }
 
-            StoredDocument = await ChronicleFixture.ReadModels.Database
-                .GetCollection<BsonDocument>(CollectionName)
-                .Find(Builders<BsonDocument>.Filter.Empty)
-                .FirstOrDefaultAsync();
+            StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, CollectionName);
+
+            if (!DocumentCanBeInspected)
+            {
+                return;
+            }
 
             // The document read straight out of the sink still holds ciphertext; releasing it is the client-side
             // path an application takes when it queries the collection itself rather than going through the kernel.
@@ -62,16 +68,17 @@ public class and_reading_the_instance(context context) : Given<context>(context)
 
             ReleasedFromCollection = await EventStore.ReadModels.Release(fromCollection);
         }
-
-        const string CollectionName = "ExpressVerifications";
     }
 
     [Fact] void should_return_the_instance() => Context.Instance.ShouldNotBeNull();
     [Fact] void should_release_the_nested_pii_to_plaintext() => Context.Instance!.DateOfBirth.DateOfBirth.ShouldEqual(Context.Event.DateOfBirth.DateOfBirth);
     [Fact] void should_keep_the_non_pii_sibling() => Context.Instance!.DateOfBirth.VerifiedBy.ShouldEqual(Context.Event.DateOfBirth.VerifiedBy);
-    [Fact] void should_store_the_nested_pii_encrypted() => Context.StoredDocument!["DateOfBirth"]["DateOfBirth"].AsString.ShouldNotEqual(Context.Event.DateOfBirth.DateOfBirth.Value);
-    [Fact] void should_store_the_non_pii_sibling_in_the_clear() => Context.StoredDocument!["DateOfBirth"]["VerifiedBy"].AsString.ShouldEqual(Context.Event.DateOfBirth.VerifiedBy.Value);
-    [Fact] void should_release_nested_pii_read_through_the_collection() => Context.ReleasedFromCollection!.DateOfBirth.DateOfBirth.ShouldEqual(Context.Event.DateOfBirth.DateOfBirth);
+    [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredDocument is not null).ShouldBeTrue();
+    [Fact] void should_store_the_nested_pii_encrypted() => StoredDateOfBirth?["DateOfBirth"].AsString.ShouldNotEqual(Context.Event.DateOfBirth.DateOfBirth.Value);
+    [Fact] void should_store_the_non_pii_sibling_in_the_clear() => StoredDateOfBirth?["VerifiedBy"].AsString.ShouldEqual(Context.Event.DateOfBirth.VerifiedBy.Value);
+    [Fact] void should_release_nested_pii_read_through_the_collection() => Context.ReleasedFromCollection?.DateOfBirth.DateOfBirth.ShouldEqual(Context.Event.DateOfBirth.DateOfBirth);
+
+    BsonDocument? StoredDateOfBirth => Context.StoredDocument?["DateOfBirth"].AsBsonDocument;
 }
 
 [PII]

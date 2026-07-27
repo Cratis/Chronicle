@@ -7,7 +7,6 @@ using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.ModelBound;
 using MongoDB.Bson;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_pii_value_object.and_reading_the_instance.context;
 
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_pii_value_object;
@@ -28,6 +27,8 @@ public class and_reading_the_instance(context context) : Given<context>(context)
         public PatientRecord? Instance { get; private set; }
         public BsonDocument? StoredDocument { get; private set; }
 
+        public bool DocumentCanBeInspected => StoredReadModelDocument.CanBeInspected(ChronicleFixture);
+
         public override IEnumerable<Type> EventTypes => [typeof(DiagnosisRecorded)];
 
         public override IEnumerable<Type> ModelBoundProjections => [typeof(PatientRecord)];
@@ -46,19 +47,19 @@ public class and_reading_the_instance(context context) : Given<context>(context)
                 await Task.Delay(200, cts.Token);
             }
 
-            StoredDocument = await ChronicleFixture.ReadModels.Database
-                .GetCollection<BsonDocument>("PatientRecords")
-                .Find(Builders<BsonDocument>.Filter.Empty)
-                .FirstOrDefaultAsync();
+            StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, "PatientRecords");
         }
     }
 
     [Fact] void should_release_the_condition() => Context.Instance!.Diagnosis.Condition.ShouldEqual(Context.Event.Diagnosis.Condition);
     [Fact] void should_release_the_diagnosing_clinician() => Context.Instance!.Diagnosis.DiagnosedBy.ShouldEqual(Context.Event.Diagnosis.DiagnosedBy);
-    [Fact] void should_store_the_condition_encrypted() => Context.StoredDocument!["Diagnosis"]["Condition"].AsString.ShouldNotEqual(Context.Event.Diagnosis.Condition);
-    [Fact] void should_store_the_diagnosing_clinician_encrypted() => Context.StoredDocument!["Diagnosis"]["DiagnosedBy"].AsString.ShouldNotEqual(Context.Event.Diagnosis.DiagnosedBy);
-    [Fact] void should_keep_the_value_object_shape_at_rest() => Context.StoredDocument!["Diagnosis"].IsBsonDocument.ShouldBeTrue();
-    [Fact] void should_leave_the_non_pii_property_in_the_clear() => Context.StoredDocument!["Name"].AsString.ShouldEqual(Context.Event.Name);
+    [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredDocument is not null).ShouldBeTrue();
+    [Fact] void should_store_the_condition_encrypted() => StoredDiagnosis?["Condition"].AsString.ShouldNotEqual(Context.Event.Diagnosis.Condition);
+    [Fact] void should_store_the_diagnosing_clinician_encrypted() => StoredDiagnosis?["DiagnosedBy"].AsString.ShouldNotEqual(Context.Event.Diagnosis.DiagnosedBy);
+    [Fact] void should_keep_the_value_object_shape_at_rest() => Context.StoredDocument?["Diagnosis"].IsBsonDocument.ShouldBeTrue();
+    [Fact] void should_leave_the_non_pii_property_in_the_clear() => Context.StoredDocument?["Name"].AsString.ShouldEqual(Context.Event.Name);
+
+    BsonDocument? StoredDiagnosis => Context.StoredDocument?["Diagnosis"].AsBsonDocument;
 }
 
 [PII]

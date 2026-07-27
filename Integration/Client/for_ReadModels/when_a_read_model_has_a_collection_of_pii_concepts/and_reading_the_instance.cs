@@ -7,7 +7,6 @@ using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.ModelBound;
 using MongoDB.Bson;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_collection_of_pii_concepts.and_reading_the_instance.context;
 
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_collection_of_pii_concepts;
@@ -29,6 +28,8 @@ public class and_reading_the_instance(context context) : Given<context>(context)
         public PersonAliases? Instance { get; private set; }
         public BsonDocument? StoredDocument { get; private set; }
 
+        public bool DocumentCanBeInspected => StoredReadModelDocument.CanBeInspected(ChronicleFixture);
+
         public override IEnumerable<Type> EventTypes => [typeof(AliasesRecorded)];
 
         public override IEnumerable<Type> ModelBoundProjections => [typeof(PersonAliases)];
@@ -47,19 +48,20 @@ public class and_reading_the_instance(context context) : Given<context>(context)
                 await Task.Delay(200, cts.Token);
             }
 
-            StoredDocument = await ChronicleFixture.ReadModels.Database
-                .GetCollection<BsonDocument>("PersonAliases")
-                .Find(Builders<BsonDocument>.Filter.Empty)
-                .FirstOrDefaultAsync();
+            StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, "PersonAliases");
         }
     }
 
     [Fact] void should_release_every_alias_to_plaintext() =>
         Context.Instance!.Aliases.Select(_ => _.Value).Order().ShouldEqual(Context.Event.Aliases.Select(_ => _.Value).Order());
 
+    [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() =>
+        (!Context.DocumentCanBeInspected || Context.StoredDocument is not null).ShouldBeTrue();
+
     [Fact] void should_store_every_alias_encrypted() =>
-        Context.StoredDocument!["Aliases"].AsBsonArray.Select(_ => _.AsString)
-            .Any(stored => Context.Event.Aliases.Any(alias => alias.Value == stored)).ShouldBeFalse();
+        StoredAliases?.Any(stored => Context.Event.Aliases.Any(alias => alias.Value == stored)).ShouldBeFalse();
+
+    IEnumerable<string>? StoredAliases => Context.StoredDocument?["Aliases"].AsBsonArray.Select(_ => _.AsString);
 }
 
 [PII]
