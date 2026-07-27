@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -21,6 +22,7 @@ public class a_serializer_for_appended_events : Specification
     protected static readonly EventTypeId _eventTypeId = "some-event-type";
 
     protected IEventTypesStorage _eventTypesStorage;
+    protected IEventTypeSchemaCache _schemaCache;
     protected EventTypeSchema _schema;
     protected Serializer _serializer;
 
@@ -42,8 +44,10 @@ public class a_serializer_for_appended_events : Specification
         services.AddSingleton(new JsonSerializerOptions());
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(storage);
-        services.AddSerializer(builder => builder.Services.AddCompleteSerializer<AppendedEventSerializer>());
-        _serializer = services.BuildServiceProvider().GetRequiredService<Serializer>();
+        services.AddSerializer(builder => builder.Services.AddCustomSerializers());
+        var provider = services.BuildServiceProvider();
+        _schemaCache = provider.GetRequiredService<IEventTypeSchemaCache>();
+        _serializer = provider.GetRequiredService<Serializer>();
     }
 
     protected static AppendedEvent AnEvent() =>
