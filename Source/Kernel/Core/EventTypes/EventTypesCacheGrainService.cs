@@ -29,6 +29,11 @@ public class EventTypesCacheGrainService(
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IEventTypesCacheGrainService
 {
     /// <inheritdoc/>
+    /// <remarks>
+    /// The storage cache must be evicted before the schema cache: the schema cache resolves through storage,
+    /// so a serialization arriving between the two evictions would otherwise repopulate the schema cache from
+    /// the schema that is still stale in storage.
+    /// </remarks>
     public Task Invalidate(EventStoreName eventStore, EventTypeId eventTypeId)
     {
         storage.GetEventStore(eventStore).EventTypes.Invalidate(eventTypeId);

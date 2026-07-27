@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.EventTypes.for_EventTypeSchemaCache.given;
 public class a_schema_cache : Specification
 {
     protected static readonly EventStoreName _eventStore = "some-event-store";
+    protected static readonly EventStoreName _otherEventStore = "some-other-event-store";
     protected static readonly EventTypeId _eventTypeId = "some-event-type";
     protected static readonly EventTypeId _otherEventTypeId = "some-other-event-type";
     protected static readonly EventTypeGeneration _firstGeneration = EventTypeGeneration.First;

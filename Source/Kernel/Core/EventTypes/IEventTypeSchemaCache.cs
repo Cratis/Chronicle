@@ -19,12 +19,20 @@ public interface IEventTypeSchemaCache
     /// <param name="eventTypeId">The <see cref="EventTypeId"/> to get the schema for.</param>
     /// <param name="generation">The <see cref="EventTypeGeneration"/> to get the schema for.</param>
     /// <returns>The schema as JSON.</returns>
+    /// <exception cref="Exception">
+    /// Propagates whatever the underlying event type storage lookup throws. A failed lookup is not cached, so
+    /// the next call retries it.
+    /// </exception>
     string GetSchemaJsonFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation);
 
     /// <summary>
-    /// Evict every cached generation of a specific <see cref="EventTypeId"/>.
+    /// Evict every cached generation of a specific <see cref="EventTypeId"/> within one event store.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the event type belongs to.</param>
     /// <param name="eventTypeId">The <see cref="EventTypeId"/> to evict.</param>
+    /// <remarks>
+    /// Scoped to <paramref name="eventStore"/> - the same <see cref="EventTypeId"/> in another event store is
+    /// a distinct schema and stays cached.
+    /// </remarks>
     void Invalidate(EventStoreName eventStore, EventTypeId eventTypeId);
 }
