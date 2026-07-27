@@ -42,6 +42,21 @@ public class Events
     public int StatePersistenceInterval { get; init; } = 1000;
 
     /// <summary>
+    /// Gets how often an active event sequence checks whether the event store's constraints have changed.
+    /// </summary>
+    /// <remarks>
+    /// The <c>ConstraintsChanged</c> broadcast never reaches sequence grains, so a sequence instead polls the
+    /// constraints grain for a content-derived version stamp and re-reads its validators when the stamp moves.
+    /// That grain is a single activation per event store, so polling it on every append would put one
+    /// cluster-wide, single-threaded grain turn — a cross-silo call for every sequence not co-located with it —
+    /// in front of every append, capping append throughput at that one grain's turn rate. Checking at most this
+    /// often keeps the poll off the hot path, and bounds how long a constraint registered after a sequence
+    /// activated can go unenforced by that sequence. A value of <see cref="TimeSpan.Zero"/> checks on every
+    /// append. Defaults to 1 second.
+    /// </remarks>
+    public TimeSpan ConstraintsVersionCheckInterval { get; init; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
     /// Timeout in milliseconds for the final wait on the appended-events queue to become empty when awaiting depletion.
     /// </summary>
     /// <remarks>

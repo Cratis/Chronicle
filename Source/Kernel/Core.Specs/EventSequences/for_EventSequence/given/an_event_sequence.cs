@@ -68,6 +68,12 @@ public class an_event_sequence : Specification
 
     protected virtual int StatePersistenceInterval => 1000;
 
+    /// <summary>
+    /// Gets the interval the constraints-version check is throttled to. Zero — the default for specs — checks on
+    /// every append, so specs about picking up constraint changes do not have to wait out a production interval.
+    /// </summary>
+    protected virtual TimeSpan ConstraintsVersionCheckInterval => TimeSpan.Zero;
+
     async Task Establish()
     {
         _eventSequenceKey = new EventSequenceKey(EventSequenceId.Log, EventStore, EventStoreNamespace);
@@ -175,7 +181,11 @@ public class an_event_sequence : Specification
         _silo.AddService(Substitute.For<IEventHashCalculator>());
         _silo.AddService<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
         {
-            Events = new Configuration.Events { StatePersistenceInterval = StatePersistenceInterval }
+            Events = new Configuration.Events
+            {
+                StatePersistenceInterval = StatePersistenceInterval,
+                ConstraintsVersionCheckInterval = ConstraintsVersionCheckInterval
+            }
         }));
         _silo.AddService(NullLogger<EventSequence>.Instance);
         _silo.AddKeyedService<IMeter<EventSequence>>(WellKnown.MeterName, Substitute.For<IMeter<EventSequence>>());

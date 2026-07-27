@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
@@ -82,6 +83,8 @@ public class EventSequence(
     IConstraintValidation? _constraints;
     IReadOnlyCollection<IConstraintDefinition> _knownConstraints = [];
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
+    TimeSpan _constraintsVersionCheckInterval;
+    long _lastConstraintsVersionCheck;
     int _statePersistenceInterval = 1;
     int _appendsSinceStateWrite;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
@@ -107,6 +110,10 @@ public class EventSequence(
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
         _knownConstraints = await ConstraintsGrain.GetDefinitions();
         _constraintsVersion = await ConstraintsGrain.GetVersion();
+
+        // The version was just read, so the next check is due one full interval from now.
+        _constraintsVersionCheckInterval = options.Value.Events.ConstraintsVersionCheckInterval;
+        _lastConstraintsVersionCheck = Stopwatch.GetTimestamp();
         _statePersistenceInterval = Math.Max(1, options.Value.Events.StatePersistenceInterval);
 
         await EventSequenceStorage.EnsureIndexes();
@@ -965,12 +972,26 @@ public class EventSequence(
     /// <remarks>
     /// The <see cref="WellKnownBroadcastChannelNames.ConstraintsChanged"/> broadcast never reaches sequence grains
     /// (they are keyed differently to the constraints grain and are not implicit channel subscribers), so constraint
-    /// changes are picked up here instead by a cheap <see cref="ConstraintsVersion"/> check on each append. The version
-    /// is a content-derived stamp, so it is stable across constraints-grain deactivation and consistent across silos —
+    /// changes are picked up here instead by a <see cref="ConstraintsVersion"/> check. The version is a
+    /// content-derived stamp, so it is stable across constraints-grain deactivation and consistent across silos —
     /// the validators are only re-read, and a reindex only started, when the constraints genuinely changed.
+    /// <para>
+    /// The check is throttled to <see cref="Configuration.Events.ConstraintsVersionCheckInterval"/> rather than run
+    /// on every append. Reading the version is cheap inside the constraints grain, but reaching it is not: there is
+    /// one activation per event store, single-threaded, so an unthrottled check would serialize every append in the
+    /// event store behind that one grain's turn — across every sequence, namespace and silo — and pay a cross-silo
+    /// call for each sequence not co-located with it. Throttling bounds how long an already-active sequence can miss
+    /// a newly registered constraint; it does not affect a sequence activating afterwards, which reads the
+    /// constraints outright.
+    /// </para>
     /// </remarks>
     async Task RefreshConstraintsIfChanged()
     {
+        if (!IsConstraintsVersionCheckDue())
+        {
+            return;
+        }
+
         var version = await ConstraintsGrain.GetVersion();
         if (version == _constraintsVersion)
         {
@@ -983,6 +1004,32 @@ public class EventSequence(
         _knownConstraints = current;
         _constraintsVersion = version;
         await StartReindexJob(ConstraintDefinitionComparison.GetReindexChanges(previous, current));
+    }
+
+    /// <summary>
+    /// Decides whether enough time has passed to check the constraints version again.
+    /// </summary>
+    /// <returns>True when the check is due, false when the last one is still within the interval.</returns>
+    /// <remarks>
+    /// The timestamp is advanced when the check is found due rather than after it completes, so a slow or failing
+    /// constraints grain cannot make every subsequent append re-attempt the call. No synchronization is needed: the
+    /// grain is non-reentrant, so only one turn is ever inside this.
+    /// </remarks>
+    bool IsConstraintsVersionCheckDue()
+    {
+        if (_constraintsVersionCheckInterval <= TimeSpan.Zero)
+        {
+            return true;
+        }
+
+        var now = Stopwatch.GetTimestamp();
+        if (Stopwatch.GetElapsedTime(_lastConstraintsVersionCheck, now) < _constraintsVersionCheckInterval)
+        {
+            return false;
+        }
+
+        _lastConstraintsVersionCheck = now;
+        return true;
     }
 
     async Task StartReindexJob(IReadOnlyCollection<ConstraintDefinitionChange> changesRequiringReindex)
