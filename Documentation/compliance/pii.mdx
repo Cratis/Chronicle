@@ -4,12 +4,14 @@ uid: Chronicle.Compliance.PII
 
 # PII Attribute
 
-The `[PII]` attribute marks data as personally identifiable information (PII) under GDPR. When Chronicle sees this attribute on an event property or a `ConceptAs<T>` type, it encrypts the value automatically when the event is written to the event log and decrypts it transparently on read.
+The `[PII]` attribute marks data as personally identifiable information (PII) under GDPR. When Chronicle sees this attribute on an event property or a type, it encrypts the value automatically when the event is written to the event log and decrypts it transparently on read.
+
+Personal data rarely sits in a flat list of properties. A date of birth arrives wrapped in a `VerifiedDateOfBirth` value object alongside who verified it; a diagnosis carries the condition and the clinician together. Chronicle follows the marker down through that structure: whether you mark a concept nested inside a value object, or the value object type itself, encryption lands on the individual values at the bottom. The document keeps its shape, each value stays independently encrypted, and the release on read mirrors the encryption on write.
 
 <ChronicleClientTabs snippet="compliance/pii/import" />
 
 :::note[Client coverage]
-Kotlin (`@Pii`), Elixir (`pii/1,2`), and TypeScript (`@pii()`) all have a real, working equivalent for marking an **event property** as PII — see [Applying to an event property](#applying-to-an-event-property) below. The **class-level** form (marking a `ConceptAs<T>` type itself as PII, so every property using that type is covered) is tied to C#'s `ConceptAs<T>` pattern specifically; Kotlin/Java/Elixir have no equivalent typed-wrapper convention established in this corpus, so those tabs — and the two runtime restrictions that only make sense in that context (`EventSourceId`, non-`ConceptAs` classes) — stay C#-only for now.
+Kotlin (`@Pii`), Elixir (`pii/1,2`), and TypeScript (`@pii()`) all have a real, working equivalent for marking an **event property** as PII — see [Applying to an event property](#applying-to-an-event-property) below. The **class-level** form (marking a `ConceptAs<T>` type itself as PII, so every property using that type is covered) is tied to C#'s `ConceptAs<T>` pattern specifically; Kotlin/Java/Elixir have no equivalent typed-wrapper convention established in this corpus, so those tabs — and the `EventSourceId` restriction that only makes sense in that context — stay C#-only for now.
 :::
 
 ## Attribute definition
@@ -35,8 +37,10 @@ The optional `details` parameter lets you record *why* the value is classified a
 |---|---|---|
 | `ConceptAs<T>` class | Yes | Preferred approach — marks the concept type itself as PII |
 | Event property | Yes | Marks a single property of an event as PII |
+| Value object class | Yes | Marks every value the type holds as PII, however deeply nested |
+| Property typed as a value object | Yes | Same effect, scoped to that one property |
+| Collection property | Yes | The collection is encrypted as a whole — see [Collections are encrypted as a whole](#collections-are-encrypted-as-a-whole) |
 | `EventSourceId` or `EventSourceId<T>` | **No** | Throws `PIINotSupportedOnEventSourceId` at runtime |
-| Any other class type | **No** | Throws `PIIAppliedToNonConceptAsType` at runtime |
 
 ## Applying to an event property
 
@@ -55,6 +59,26 @@ The preferred approach is to mark the `ConceptAs<T>` type itself as PII. Every p
 > [!TIP]
 > Use <xref:Fundamentals.Concepts> as a reference for the full `ConceptAs<T>` pattern. For guidance on declaring compliance on concept types, see [Applying PII to ConceptAs types](pii-with-concepts).
 
+## Applying to a value object
+
+Not every piece of personal data is a single value. When a whole value object is personal — a diagnosis, a passport, a home address — mark the type itself. Every value it holds is then treated as PII wherever that type appears, without annotating each member.
+
+<ChronicleClientTabs snippet="compliance/pii/value-object-class" />
+
+Chronicle pushes the marker down to the individual values rather than encrypting the object as one blob. In storage you still see a `Diagnosis` sub-document with a `Condition` and a `DiagnosedBy` field; both hold ciphertext. That matters for more than tidiness: the shape is what lets the read model materialize back into its value-object type, and it keeps each value separately encrypted rather than fused into a single opaque string.
+
+The same happens when you mark a *property* whose type is a value object — the effect is identical, just scoped to that one property instead of to the type everywhere.
+
+## Nesting
+
+The marker does not have to sit at the top level. A `ConceptAs<T>` marked `[PII]` is found wherever it ends up — directly on an event, one level down inside a value object, or deeper still.
+
+<ChronicleClientTabs snippet="compliance/pii/nested-value-object" />
+
+Here only `dateOfBirth.dateOfBirth` is encrypted. `verifiedBy` sits beside it in the same value object and stays readable, because the concept carries the classification, not its container.
+
+This is what makes concept-level `[PII]` worth reaching for: you declare the rule once on the type, and it holds no matter how the value is later composed into events and read models.
+
 ## Constraints
 
 ### EventSourceId is not supported
@@ -65,15 +89,11 @@ Applying `[PII]` to a type that inherits from `EventSourceId` or `EventSourceId<
 
 Event source identifiers are used to look up encryption keys and group events. Encrypting them would make key lookup impossible. If the identifier itself is sensitive, use a non-sensitive surrogate (such as a random `Guid`) as the event source identifier and store the sensitive value in a `[PII]`-marked event property.
 
-### Non-ConceptAs class types are not supported
+### Collections are encrypted as a whole
 
-Applying `[PII]` to a class that does not inherit from `ConceptAs<T>` throws `PIIAppliedToNonConceptAsType` at runtime:
+A `[PII]` marker on a collection property behaves differently from one on a value object. The collection is encrypted as a single value rather than element by element, and its shape is restored when it is released. That keeps the data protected, but the individual elements are not separately encrypted and cannot be queried or indexed on the server.
 
-<ChronicleClientTabs snippet="compliance/pii/non-concept-class" />
-
-This restriction is .NET-client-specific — the TypeScript `@pii()` decorator does not check that its target extends `ConceptAs<T>`.
-
-The `[PII]` attribute at the class level is reserved for `ConceptAs<T>` types. Use a property-level `[PII]` annotation instead if you need to mark individual fields on a class.
+When you need per-element encryption, model the collection as its own person-scoped read model keyed by the subject and join at the query edge, rather than nesting it inside a larger document.
 
 ## Details parameter
 
