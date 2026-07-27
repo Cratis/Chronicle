@@ -98,7 +98,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         var resolvedJoin = new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes);
         _resolvedJoinChangesets.Add(new(resolvedJoin, childChangeset));
         Add(resolvedJoin);
-        Consolidate();
         CurrentState = workingState;
         return childChangeset;
     }

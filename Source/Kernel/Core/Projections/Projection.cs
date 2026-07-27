@@ -375,12 +375,11 @@ public class Projection(
                 var childKeyResult = await childKeyResolver(eventSequenceStorage, NullSink.Instance, context.Event);
                 if (childKeyResult is ResolvedKey childResolvedKey)
                 {
-                    var childContext = new ProjectionEventContext(
-                        childResolvedKey.Key,
-                        context.Event,
-                        context.Changeset,
-                        child.GetOperationTypeFor(context.Event.Context.EventType),
-                        context.IsJoin);
+                    var childContext = context with
+                    {
+                        Key = childResolvedKey.Key,
+                        OperationType = child.GetOperationTypeFor(context.Event.Context.EventType)
+                    };
                     await HandleEventFor(child, childContext, eventSequenceStorage);
                     continue;
                 }

@@ -51,6 +51,9 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} failed")]
     internal static partial void StepFailed(this ILogger<IJob> logger, JobStepId jobStepId);
 
+    [LoggerMessage(LogLevel.Debug, "Step {JobStepId} is no longer tracked by the job, skipping unsubscribe")]
+    internal static partial void CompletedJobStepIsNoLongerTracked(this ILogger<IJob> logger, JobStepId jobStepId);
+
     [LoggerMessage(LogLevel.Trace, "Preparing job steps for running")]
     internal static partial void PrepareJobStepsForRunning(this ILogger<IJob> logger);
 

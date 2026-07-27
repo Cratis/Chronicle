@@ -117,8 +117,15 @@ public abstract partial class Job<TRequest, TJobState>
         }
         finally
         {
-            await UnsubscribeJobStep(_jobStepGrains![stepId].AsReference<IJobObserver>());
-            _jobStepGrains.Remove(stepId, out _);
+            if (_jobStepGrains is not null && _jobStepGrains.TryGetValue(stepId, out var jobStepGrain))
+            {
+                await UnsubscribeJobStep(jobStepGrain.AsReference<IJobObserver>());
+                _jobStepGrains.Remove(stepId, out _);
+            }
+            else
+            {
+                _logger.CompletedJobStepIsNoLongerTracked(stepId);
+            }
         }
     }
 
