@@ -183,7 +183,7 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
 - OAuth tokens across nodes assume the cluster shares signing keys for `/connect/token` — worth
   verifying server-side when scale-out auth is exercised.
 
-- **Phase 6 — done.** `TestApps/Composition`: an Aspire AppHost running 2 Kernel instances (real
+- **Phase 6 — done.** `Samples/Composition`: an Aspire AppHost running 2 Kernel instances (real
   Orleans/MongoDB cluster, distinct silo/gateway ports), 2 instances of an AspNetCore test app
   (SimpleConsole's capabilities ported to a web UI, plus a per-instance reactor invocation log to
   make fan-out visible), a CoreDNS container serving the `_chronicle._tcp` SRV records the web
@@ -221,7 +221,7 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
       pattern `WebServer.cs` already used for standalone hosting. This is a genuine product fix,
       not composition-only plumbing: any Kernel Server deployment relying on `Features.Workbench`
       to serve its own UI was previously getting a 404.
-  - `TestApps/WorkbenchHost` is kept (not deleted) — it demonstrates the still-legitimate
+  - `Samples/WorkbenchHost` is kept (not deleted) — it demonstrates the still-legitimate
     standalone-hosting case (Workbench pointed at an already-running/remote cluster without
     embedding a Kernel), and is what originally exercised the `Connections`/`Workbench` library
     fixes below. Composition just no longer uses it as the "load-balanced Workbench," since the
@@ -248,13 +248,13 @@ Follows the precedent of `CLUSTERING.md` as a living status/design doc while the
 
 ## Phase 7 — Least-connections load balancing (default) — done
 
-Prompted by `TestApps/Composition` reliably showing both web apps' connections landing on the
+Prompted by `Samples/Composition` reliably showing both web apps' connections landing on the
 *same* silo — round-robin's random starting offset collides about half the time with only two
 servers, which is exactly the small-fleet case this composition demonstrates.
 
 - **Aspire dashboard**: fixed port (`ASPNETCORE_URLS=http://localhost:18888`) and anonymous
   access (`ASPIRE_ALLOW_UNSECURED_TRANSPORT` + `ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS`), set
-  before `DistributedApplication.CreateBuilder` in `TestApps/Composition/Program.cs` — local-dev
+  before `DistributedApplication.CreateBuilder` in `Samples/Composition/Program.cs` — local-dev
   convenience only, so every run uses the same URL with no login-token query string to copy.
 - **Connected-clients query is now observable**: `ConnectionService.ObserveConnectedClients`
   polls `GetConnectedClients` (aggregating across all silos via `IManagementGrain.GetHosts`) on a
@@ -292,10 +292,10 @@ servers, which is exactly the small-fleet case this composition demonstrates.
     instead of the actual long-lived gRPC channel. Cross-checking against the kernel-reported
     `/connections/count` (the authoritative source) resolved the ambiguity.
   - Once probing the right scheme/port and reading the authoritative per-silo count, three
-    consecutive cold-start `TestApps/Composition` runs (kernels and both web apps launched
+    consecutive cold-start `Samples/Composition` runs (kernels and both web apps launched
     together by Aspire, the original failure scenario) each split 1-1 across the two silos.
 - `LoadBalancerStrategies.Create` defaults to `least-connections` when no `loadBalancer` query
-  parameter is given (was `round-robin`); `TestApps/Composition`'s connection string spells the
+  parameter is given (was `round-robin`); `Samples/Composition`'s connection string spells the
   option out explicitly anyway, to demonstrate it by example rather than rely on the default.
 - Documented in `Documentation/connection-strings/server.md` — strategy comparison table,
   the probe/reserve/jitter mechanics, and why a server that doesn't answer is treated as maximally

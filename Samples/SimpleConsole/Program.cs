@@ -7,7 +7,7 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.Sinks;
 using Cratis.Execution;
 using Microsoft.Extensions.Logging;
-using TestApp;
+using Samples;
 
 using var telemetry = Telemetry.Build();
 

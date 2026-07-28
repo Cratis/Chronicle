@@ -22,10 +22,10 @@
         <PackageReference Include="Testcontainers" />
     </ItemGroup>
 
-    <!-- Reuse the exact CoreDNS zone the Composition TestApp serves, so the +srv integration
+    <!-- Reuse the exact CoreDNS zone the Composition sample serves, so the +srv integration
          spec resolves against the same DNS records the scale-out story runs against. -->
     <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)../../../TestApps/Composition/dns/Corefile" Link="dns/Corefile" CopyToOutputDirectory="PreserveNewest" />
-        <None Include="$(MSBuildThisFileDirectory)../../../TestApps/Composition/dns/chronicle.local.zone" Link="dns/chronicle.local.zone" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="$(MSBuildThisFileDirectory)../../../Samples/Composition/dns/Corefile" Link="dns/Corefile" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="$(MSBuildThisFileDirectory)../../../Samples/Composition/dns/chronicle.local.zone" Link="dns/chronicle.local.zone" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>
