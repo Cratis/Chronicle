@@ -2,13 +2,13 @@
 
 ## Rule Description
 
-A model-bound `[Join<TEvent>]` copies a `[PII]` value out of a stream identified by something other than the read model's own compliance subject.
+A join copies a `[PII]` value out of a stream identified by something other than the read model's own compliance subject.
 
-A join reads `TEvent` from the stream whose event source id is the value of the `on` property. When that property is not the read model's own key/subject, the joined event belongs to a *different* subject — and any `[PII]` value it carries was encrypted under *that* subject's key.
+A join reads `TEvent` from the stream whose event source id is the value of the join key. When that key is not the read model's own key/subject, the joined event belongs to a *different* subject — and any `[PII]` value it carries was encrypted under *that* subject's key.
 
 Join a value that is not `[PII]`, or resolve the personal value at the query edge under the subject that owns it. If the joined value is not in fact personal data, remove the `[PII]` marking from the event property (or from its concept type) so the compliance metadata matches reality.
 
-The rule covers the model-bound `[Join<TEvent>]` attribute; the fluent equivalent — `builder.Join<TEvent>(_ => _.On(...))` on an `IProjectionFor<T>` — is not analyzed, so the same care applies there by hand.
+Both spellings are covered: the model-bound `[Join<TEvent>(on: ...)]` attribute, and the fluent `builder.Join<TEvent>(_ => _.On(...))` on an `IProjectionFor<T>`. For the fluent form, a `[PII]` value counts as reaching the read model either through an explicit `.Set(x => x.P).To(e => e.Q)` mapping or through AutoMap matching an identically named read model property.
 
 ## Severity
 
@@ -20,7 +20,9 @@ Error
 
 ## Why This Rule Exists
 
-Chronicle stores exactly one compliance subject per read model instance and releases every `[PII]` property on that instance under it. A joined value encrypted under another subject's key therefore cannot be decrypted, and the failure surfaces as a raw OpenSSL `oaep decoding error` rather than anything naming the mismatch. It is not confined to the one document either: the release runs at materialization, so the failure freezes *every* partition of the projection, and reading the read model through the CLI returns the same opaque 500.
+Chronicle stores exactly one compliance subject per read model instance and releases every `[PII]` property on that instance under it. A joined value encrypted under another subject's key therefore cannot be decrypted. It is not confined to the one document either: the release runs at materialization, so the failure freezes *every* partition of the projection, and reading the read model through the CLI returns the same failure.
+
+When a projection does slip through — built dynamically, or from a source the analyzer cannot see — Chronicle raises `ComplianceMetadataActionFailed`, naming the property, the subject it was released under, and this rule, rather than surfacing the underlying OpenSSL `oaep decoding error` on its own.
 
 The rule is not only about the read failing. Materializing one person's data into a read model subjected to *another* identity puts that data outside the reach of their erasure — crypto-shredding the owner's key does not touch a copy sitting under a different subject. A cross-subject `[PII]` join is an erasure defect regardless of whether it can be decrypted, which is why this is an error rather than a warning.
 
