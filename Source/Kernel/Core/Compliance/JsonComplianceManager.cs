@@ -30,7 +30,7 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result, "apply", async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
+        await HandleActionFor(schema, identifier, result, ComplianceMetadataActionFailed.ApplyAction, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 
@@ -43,7 +43,7 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result!, "release", async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
+        await HandleActionFor(schema, identifier, result!, ComplianceMetadataActionFailed.ReleaseAction, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 
@@ -96,12 +96,12 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                         try
                         {
                             var handled = await action(handler, identifier, value);
-                            json[property] = actionName == "release" ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
+                            json[property] = actionName == ComplianceMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
                             handlerApplied = true;
                         }
                         catch (Exception ex)
                         {
-                            throw new InvalidOperationException($"Failed to {actionName} compliance metadata for property '{propertyPath}'.", ex);
+                            throw new ComplianceMetadataActionFailed(actionName, propertyPath, identifier, ex);
                         }
                     }
                 }
@@ -170,7 +170,7 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                             }
                             catch (Exception ex)
                             {
-                                throw new InvalidOperationException($"Failed to {actionName} compliance metadata for property '{elementPath}'.", ex);
+                                throw new ComplianceMetadataActionFailed(actionName, elementPath, identifier, ex);
                             }
                         }
                     }
