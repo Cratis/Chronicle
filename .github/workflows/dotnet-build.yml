@@ -15,6 +15,10 @@ env:
 
 on:
   workflow_dispatch:
+  # Nightly full-coverage run. Pull requests cover the default storage backend
+  # only, so this is where sqlite, postgresql and mssql get exercised.
+  schedule:
+    - cron: "0 2 * * *"
   pull_request:
     branches:
       - "**"
@@ -209,6 +213,9 @@ jobs:
       # the Docker image still comes from dotnet-build.
       dotnet-cache-key: ${{ needs.dotnet-build-development.outputs.dotnet-cache-key }}
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
+      # Every storage backend on the nightly schedule and on manual dispatch;
+      # pull requests run the default backend only.
+      all-providers: ${{ github.event_name != 'pull_request' }}
 
   integration-api:
     runs-on: ubuntu-latest

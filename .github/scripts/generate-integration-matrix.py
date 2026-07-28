@@ -2,14 +2,18 @@
 """Generate the GitHub Actions matrix for the client integration specs.
 
 Every client integration namespace -- a directory under ``Integration/Client``
-that contains ``[Fact]`` tests -- runs against every infrastructure
-configuration (runtime mode x storage backend). Large namespaces are split
+that contains ``[Fact]`` tests -- runs against a set of infrastructure
+configurations (runtime mode x storage backend). Large namespaces are split
 into several shards that run as separate, parallel jobs so the slowest single
 job no longer gates the whole workflow.
 
 Sharding only changes how the work is distributed: every shard of a namespace
 together covers exactly the same tests as the un-sharded namespace would, so
-coverage across all five infrastructure configurations is preserved.
+coverage across the selected infrastructure configurations is preserved.
+
+Which configurations are selected depends on ``--all-providers``. Pull requests
+run the default backend only; the nightly schedule and manual dispatch run all
+of them.
 
 Balancing is by ``[Fact]`` count across test classes. Each spec file declares
 the facts on its first top-level class, so a shard targets a class with
@@ -20,6 +24,7 @@ a dotted ancestor of another, e.g. a genuine nested type, is folded into the
 same shard so the substring filter still owns it exactly once.)
 """
 
+import argparse
 import json
 import os
 import re
@@ -48,6 +53,13 @@ INFRA_CONFIGS = [
     ("outofprocess", "postgresql", True),
     ("outofprocess", "mssql", True),
 ]
+
+# Storage backends covered on every pull request. Running all five backends per
+# PR meant each shard was built and started five times over, and the four
+# non-default backends re-verified storage-provider behavior that the change
+# under review usually does not touch. The full set still runs on the nightly
+# schedule and on demand -- see --all-providers.
+DEFAULT_DATABASES = {"mongodb"}
 
 _NAMESPACE_RE = re.compile(r"^\s*namespace\s+([A-Za-z0-9_.]+)", re.MULTILINE)
 # A top-level type declaration starts at column 0 (no leading whitespace). The
@@ -146,11 +158,26 @@ def _shards_for(namespace):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--all-providers",
+        action="store_true",
+        help="Include every storage backend. Without it only the backends in "
+        "DEFAULT_DATABASES are included, which is what pull requests run.",
+    )
+    args = parser.parse_args()
+
+    configs = [
+        config
+        for config in INFRA_CONFIGS
+        if args.all_providers or config[1] in DEFAULT_DATABASES
+    ]
+
     include = []
     for namespace in _namespaces_with_facts():
         fully_qualified = NAMESPACE_PREFIX + namespace
         for shard_label, test_filter in _shards_for(namespace):
-            for mode, database, needs_docker in INFRA_CONFIGS:
+            for mode, database, needs_docker in configs:
                 include.append(
                     {
                         "namespace": fully_qualified,

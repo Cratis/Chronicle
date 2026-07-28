@@ -11,6 +11,11 @@ on:
         description: "Chronicle Docker image to use for out-of-process tests"
         required: true
         type: string
+      all-providers:
+        description: "Run every storage backend rather than just the default one"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   discover:
@@ -24,14 +29,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Each client namespace runs against all five infrastructure configs;
+      # Each client namespace runs against the selected infrastructure configs;
       # large namespaces are additionally split into parallel shards so the
       # slowest single job no longer gates the whole run. The shard set covers
       # exactly the same tests as the un-sharded namespace -- see the script.
+      # Pull requests cover the default backend; the nightly schedule and
+      # manual dispatch pass all-providers to cover every backend.
       - name: Discover Client integration namespaces
         id: client
         run: |
-          echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py)" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
+        env:
+          ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
 
       - name: Discover Kernel integration namespaces
         id: kernel
