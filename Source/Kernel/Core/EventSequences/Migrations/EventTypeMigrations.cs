@@ -23,7 +23,7 @@ public class EventTypeMigrations(
     IExpandoObjectConverter expandoObjectConverter) : IEventTypeMigrations
 {
     /// <inheritdoc/>
-    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content)
+    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject)
     {
         var result = new Dictionary<EventTypeGeneration, ExpandoObject>();
         var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
@@ -31,11 +31,10 @@ public class EventTypeMigrations(
         // Get the event type definition with all generations and migrations
         var definition = await eventTypesStorage.GetDefinition(eventType.Id);
 
-        // If there's only one generation, just convert and return
+        // If there's only one generation, reuse the already-built expando instead of re-converting.
         if (!definition.Generations.Skip(1).Any())
         {
-            var schema = definition.Generations.First().Schema;
-            result[eventType.Generation] = expandoObjectConverter.ToExpandoObject(content, schema);
+            result[eventType.Generation] = contentAsExpandoObject;
             return result;
         }
 

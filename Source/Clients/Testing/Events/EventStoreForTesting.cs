@@ -42,6 +42,10 @@ using Cratis.Types;
 using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
+using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
+using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
+using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
@@ -97,7 +101,10 @@ public class EventStoreForTesting : IEventStore
             _namingPolicy);
 
         var topLevelGrainFactory = new TestingGrainFactory();
-        var topLevelStorage = new InMemoryStorage(new InMemoryEventSequenceStorage(KernelSequenceConcepts::EventSequenceId.Log));
+        var topLevelStorage = new InMemoryStorage(new InMemoryEventSequenceStorage(
+            (KernelConceptsNs::EventStoreName)(string)Name,
+            (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace,
+            KernelSequenceConcepts::EventSequenceId.Log));
         Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _jsonSerializerOptions);
 
         var loggerFactory = new NullLoggerFactory();
@@ -311,7 +318,7 @@ public class EventStoreForTesting : IEventStore
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)Name;
         var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace;
 
-        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
+        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
         var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();

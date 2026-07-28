@@ -47,10 +47,7 @@ dotnet add package Cratis.Chronicle.Testing
 
 Register the mocks and stubs the reactor depends on through the scenario's `Services` collection — the same `IServiceCollection` you use to configure an application. Logging is registered for you, so a reactor that injects `ILogger<T>` activates without any extra setup:
 
-```csharp
-var scenario = new ReactorScenario<CancellationReactor>();
-scenario.Services.AddSingleton(notificationServiceMock);
-```
+<ChronicleClientTabs snippet="testing/reactors/scenario/services" />
 
 `Services` resolves both the reactor's constructor dependencies and any service-typed handler-method parameters. If a dependency is missing, the scenario throws `CannotActivateReactorForScenario`, naming the type it could not resolve.
 

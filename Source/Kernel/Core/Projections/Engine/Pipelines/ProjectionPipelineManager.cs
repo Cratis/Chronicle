@@ -5,12 +5,14 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
@@ -23,6 +25,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting PII fields.</param>
+/// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [Singleton]
 public class ProjectionPipelineManager(
@@ -31,6 +34,7 @@ public class ProjectionPipelineManager(
     IObjectComparer objectComparer,
     ITypeFormats typeFormats,
     IReadModelsCompliance readModelsCompliance,
+    IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IProjectionPipelineManager
 {
     readonly ConcurrentDictionary<string, IProjectionPipeline> _pipelines = new();
@@ -44,9 +48,10 @@ public class ProjectionPipelineManager(
     /// new pipeline (the one EvictFor just created for the replay) still serialize on the
     /// same lock. Without this, the read-modify-write cycle in SetInitialState → HandleEvent
     /// → SaveChanges races for hierarchical or join projections, leaving parent/child links
-    /// empty.
+    /// empty. Each lock stripes purely event-source-keyed projections per event source id and
+    /// serializes all other projections coarsely; growth is bounded by projection count.
     /// </remarks>
-    readonly ConcurrentDictionary<string, SemaphoreSlim> _handleLocks = new();
+    readonly ConcurrentDictionary<string, ProjectionHandleLock> _handleLocks = new();
 
     /// <inheritdoc/>
     public async Task<IProjectionPipeline> GetFor(
@@ -61,25 +66,26 @@ public class ProjectionPipelineManager(
         }
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
-        var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
+        var replayScopedStorage = new ReplayScopedEventSequenceStorage(namespaceStorage.GetEventSequence(projection.EventSequenceId));
         var sink = await namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
-        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>());
+        var futuresTracker = new ProjectionFuturesTracker();
+        var resolveFuturesStep = new ResolveFutures(projectionFutures, futuresTracker, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>());
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
-            new ResolveKey(eventSequenceStorage, sink, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
+            new ResolveKey(replayScopedStorage, sink, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
             new DecryptInitialState(readModelsCompliance, eventStore, @namespace),
-            new HandleEvent(eventSequenceStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
+            new HandleEvent(replayScopedStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
             new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
-            new StoreFutures(projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
+            new StoreFutures(projectionFutures, futuresTracker, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
-            new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
+            new SaveChanges(sink, namespaceStorage.Changesets, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>())
         ];
 
-        var handleLock = _handleLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());
 
         var newPipeline = new ProjectionPipeline(
             projection,
@@ -88,6 +94,7 @@ public class ProjectionPipelineManager(
             objectComparer,
             steps,
             handleLock,
+            replayScopedStorage,
             loggerFactory.CreateLogger<ProjectionPipeline>());
 
         return _pipelines[key] = newPipeline;

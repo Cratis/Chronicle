@@ -35,7 +35,7 @@ public class Storage(
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IStorage
 {
-    readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
+    readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
     /// <inheritdoc/>
     public ISystemStorage System => new SystemStorage(database);
@@ -71,19 +71,21 @@ public class Storage(
     {
         ThrowIfEventStoreNameIsInvalid(eventStore);
 
-        var pair = _eventStores
-            .Select(kvp => new { kvp.Key, kvp.Value })
-            .FirstOrDefault(_ => _.Key.Value.Equals(eventStore.Value, StringComparison.InvariantCultureIgnoreCase));
-
-        if (pair is not null)
+        if (_eventStores.TryGetValue(eventStore, out var existing))
         {
-            return pair.Value;
+            return existing;
         }
 
         var collection = GetCollection();
-        collection.ReplaceOne(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true });
 
-        var eventStoreStorage = new EventStoreStorage(
+        // Use Task.Run to avoid deadlocking Orleans grain task schedulers: the async continuations inside this
+        // call must not be posted back to the Orleans ActivationTaskScheduler, which would be the case if called
+        // directly with GetAwaiter().GetResult() from within a grain method.
+        Task.Run(() => collection.ReplaceOneAsync(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true }))
+            .GetAwaiter()
+            .GetResult();
+
+        var created = new EventStoreStorage(
             eventStore,
             database.GetEventStoreDatabase(eventStore),
             expandoObjectConverter,
@@ -93,7 +95,7 @@ public class Storage(
             options,
             loggerFactory);
 
-        return _eventStores[eventStore] = eventStoreStorage;
+        return _eventStores.GetOrAdd(eventStore, created);
     }
 
     /// <inheritdoc/>

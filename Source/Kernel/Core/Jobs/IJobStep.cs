@@ -25,6 +25,11 @@ public interface IJobStep : IGrainWithGuidCompoundKey
     /// </summary>
     /// <param name="jobGrainId">The <see cref="GrainId"/> for the parent job.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Starting is idempotent. <see cref="StartJobStepError.AlreadyStarted"/> and <see cref="StartJobStepError.Completed"/>
+    /// report that the work is already in flight or already done - they are outcomes of a repeated start, not failures,
+    /// and the step still reports its own completion to the job.
+    /// </remarks>
     Task<Result<StartJobStepError>> Start(GrainId jobGrainId);
 
     /// <summary>

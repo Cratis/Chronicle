@@ -4,10 +4,10 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -19,11 +19,13 @@ namespace Cratis.Chronicle.Observation.States;
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
 /// <param name="definitionState">The persistent state <see cref="ObserverDefinition"/> for the observer.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
+/// <param name="storage"><see cref="IStorage"/> for resetting the per-partition handled-event counts.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Replay(
     ObserverKey observerKey,
     IPersistentState<ObserverDefinition> definitionState,
     IJobsManager jobsManager,
+    IStorage storage,
     ILogger<Replay> logger) : BaseObserverState
 {
     /// <inheritdoc/>
@@ -71,12 +73,18 @@ public class Replay(
                 logger.StartReplayJob();
                 return Task.CompletedTask;
             });
+
+        await storage
+            .GetEventStore(observerKey.EventStore)
+            .GetNamespace(observerKey.Namespace)
+            .ObserverHandledCounts
+            .RemoveAllFor(state.Identifier);
+
         return state with
         {
             IsReplaying = true,
             HandledEventCount = EventCount.Zero,
-            HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty,
-            HandledEventCountPerPartition = ImmutableDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>.Empty
+            HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty
         };
     }
 }

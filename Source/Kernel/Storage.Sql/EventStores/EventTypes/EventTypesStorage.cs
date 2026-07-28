@@ -22,14 +22,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
-    public async Task Populate()
-    {
-        await using var scope = await database.EventStore(eventStore);
-        _eventTypes = new ConcurrentBag<EventType>(await scope.DbContext.EventTypes.ToListAsync());
-    }
-
-    /// <inheritdoc/>
-    public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
+    public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
         await using var scope = await database.EventStore(eventStore);
 
@@ -41,7 +34,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
             var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[type.Generation]);
             if (existingSchema.ToJson() == schema.ToJson())
             {
-                return;
+                return false;
             }
         }
 
@@ -55,10 +48,11 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
+        return true;
     }
 
     /// <inheritdoc/>
-    public async Task Register(EventTypeDefinition definition)
+    public async Task<bool> Register(EventTypeDefinition definition)
     {
         await using var scope = await database.EventStore(eventStore);
 
@@ -69,6 +63,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
+        return true;
     }
 
     /// <inheritdoc/>
@@ -183,6 +178,15 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         var eventType = await GetSpecificEventType(type);
         return eventType?.Schemas.ContainsKey(generation) ?? false;
+    }
+
+    /// <inheritdoc/>
+    public void Invalidate(EventTypeId eventTypeId)
+    {
+        if (_eventTypes.Any(_ => _.Id == eventTypeId))
+        {
+            _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
+        }
     }
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)

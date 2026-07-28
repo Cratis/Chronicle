@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.StateMachines;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -42,6 +43,7 @@ public class a_replay_state : Specification
             _observerKey,
             _definitionState,
             _jobsManager,
+            Substitute.For<IStorage>(),
             Substitute.For<ILogger<Replay>>());
         _state.SetStateMachine(_observer);
 

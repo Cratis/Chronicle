@@ -61,7 +61,7 @@ public class when_migrating_with_upcast_using_default_value : given.all_dependen
             .Returns(_gen2ExpandoObject);
     }
 
-    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventStoreName, _eventType, _content);
+    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventStoreName, _eventType, _content, _contentAsExpandoObject);
 
     [Fact] void should_return_two_generations() => _result.Count.ShouldEqual(2);
     [Fact] void should_contain_source_generation() => _result.ContainsKey(1).ShouldBeTrue();

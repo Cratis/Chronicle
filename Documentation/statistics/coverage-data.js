@@ -1,14 +1,14 @@
 window.COVERAGE_DATA = {
-  "lastUpdate": 1784970869396,
+  "lastUpdate": 1785196012630,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis.Chronicle": [
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 72.3,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 72.59,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -149,8 +149,8 @@ window.COVERAGE_DATA = {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
         "lineCoverage": 42.6,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -290,9 +290,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 80.5,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 82.5,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -576,9 +576,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 50.8,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 50.5,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -741,9 +741,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 69.09,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 69.8,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -884,8 +884,8 @@ window.COVERAGE_DATA = {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
         "lineCoverage": 76.09,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -1094,9 +1094,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 72.7,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 73.2,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -1296,9 +1296,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 41,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 41.3,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -1484,9 +1484,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 69.3,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 74.2,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -1626,9 +1626,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 70.7,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 70.3,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -1768,9 +1768,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 33.7,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 35.29,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -1911,8 +1911,8 @@ window.COVERAGE_DATA = {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
         "lineCoverage": 91.8,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -2052,9 +2052,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 47.3,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 46.3,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -2173,9 +2173,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 70.2,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 70,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -2366,9 +2366,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 86.1,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 86.2,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -2410,9 +2410,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 79.09,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 79.2,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -2448,8 +2448,8 @@ window.COVERAGE_DATA = {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
         "lineCoverage": 82,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-15",
@@ -2463,9 +2463,9 @@ window.COVERAGE_DATA = {
       {
         "date": "2026-07-23",
         "week": "2026-M07-W4",
-        "lineCoverage": 41.8,
-        "version": "feat/reactorscenario-di-and-seeding",
-        "commit": "e698aea"
+        "lineCoverage": 39.2,
+        "version": "perf/kernel-performance-release",
+        "commit": "29835c2"
       },
       {
         "date": "2026-07-19",

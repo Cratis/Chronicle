@@ -3,16 +3,17 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using MongoDB.Bson;
+using MongoEventType = Cratis.Chronicle.Storage.MongoDB.Events.EventTypes.EventType;
 
-namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes.for_EventTypesStorage.when_checking_has_for;
+namespace Cratis.Chronicle.Storage.MongoDB.EventTypes.for_EventTypesStorage.when_checking_has_for;
 
-public class and_event_type_has_only_the_first_generation : given.an_event_types_storage
+public class and_event_type_has_only_the_first_generation : given.a_mocked_event_types_storage
 {
     bool _hasFirstGeneration;
     bool _hasSecondGeneration;
 
     void Establish() =>
-        _eventTypesInDatabase.Add(new EventType(
+        _eventTypesInDatabase.Add(new MongoEventType(
             _eventTypeId,
             EventTypeOwner.Client,
             EventTypeSource.Code,
