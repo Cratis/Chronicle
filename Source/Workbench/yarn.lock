@@ -300,71 +300,70 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc.react.mvvm@npm:^20.10.3":
-  version: 20.10.4
-  resolution: "@cratis/arc.react.mvvm@npm:20.10.4"
+"@cratis/arc.react.mvvm@npm:^20.62.4":
+  version: 20.62.4
+  resolution: "@cratis/arc.react.mvvm@npm:20.62.4"
   dependencies:
-    "@cratis/arc": "npm:20.10.4"
-    "@cratis/arc.react": "npm:20.10.4"
-    mobx: "npm:^6.15.0"
+    "@cratis/arc": "npm:20.62.4"
+    "@cratis/arc.react": "npm:20.62.4"
+    mobx: "npm:^6.15.3"
     mobx-react: "npm:^9.2.1"
-    reflect-metadata: "npm:^0.2.2"
     rxjs: "npm:^7.8.2"
     tsyringe: "npm:^4.10.0"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
     react-router-dom: ^7.0.0
-  checksum: 10/f666bb46996663303ddfa13b12b0a5444ba988b5c2c2d03a4b73bad9fc81b7ea9b68ee64d478e35e8a927b7fa46c8760ccc2138d8e5ff2deaaad8b9e3c10022b
+  checksum: 10/2967458a27ee15811b3f040b1b61deee10e804f67a76d246fed04a573e83619f72d52bceb149f390f33e6577473d2ae2ca9b5ca83e16867c7900c76f3b184319
   languageName: node
   linkType: hard
 
-"@cratis/arc.react@npm:^20.10.4":
-  version: 20.10.4
-  resolution: "@cratis/arc.react@npm:20.10.4"
+"@cratis/arc.react@npm:^20.62.4":
+  version: 20.62.4
+  resolution: "@cratis/arc.react@npm:20.62.4"
   dependencies:
-    "@cratis/arc": "npm:20.10.4"
+    "@cratis/arc": "npm:20.62.4"
     tsyringe: "npm:^4.10.0"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/0d69d09704bbcef92f8579aeb53fc4edb86312ddd3c7493028fa7a89d77b174a488e803857fec532fdbbc51ec6a8e94f8dcaa17990193d25d30d5bc7240710bc
+  checksum: 10/dbb58a6d35e543281877868fadfb863d5876fced1e19aa9e0d177f6741c5b50af2d1c0b33229170e797fcaafd8990deea0cc65198726d8f517754db04b266931
   languageName: node
   linkType: hard
 
-"@cratis/arc.vite@npm:^20.10.3":
-  version: 20.10.4
-  resolution: "@cratis/arc.vite@npm:20.10.4"
+"@cratis/arc.vite@npm:^20.62.4":
+  version: 20.62.4
+  resolution: "@cratis/arc.vite@npm:20.62.4"
   dependencies:
-    "@cratis/arc": "npm:20.10.4"
+    "@cratis/arc": "npm:20.62.4"
+    "@swc/core": "npm:^1.15.43"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/3b4e8f1ca6280a5a4ed78b3ad0a84f59db32f78c0d26d8e8f8cdf82e9a491d8be0f661ff867f1d60256dcfb46da2affaf27262c9bccae699ebe4aef283dd6501
+  checksum: 10/9a4ef7fcca680bcb1741f938a2852d10db9cd8cd910bda82dc9e343ac709c2e6a5c7fb7b55dca4edfc0614b25bb6d504615ebae498d3e259b6e8e1bd0c9911c9
   languageName: node
   linkType: hard
 
-"@cratis/arc@npm:^20.10.4":
-  version: 20.10.4
-  resolution: "@cratis/arc@npm:20.10.4"
+"@cratis/arc@npm:^20.62.4":
+  version: 20.62.4
+  resolution: "@cratis/arc@npm:20.62.4"
   dependencies:
-    "@cratis/fundamentals": "npm:^7.7.3"
-  checksum: 10/c41eeb41b3e9e7134248ef805a411d5942c3e4570c2d942b9c8fa8e9de784f62935cc97dcd48dff0b3861e8e0727e8da30bf4b4faa104294cab148370108b74f
+    "@cratis/fundamentals": "npm:^7.16.0"
+    rxjs: "npm:^7.8.2"
+  checksum: 10/496b9256641dcd0317cfc879ba63f4c5d6b09f02e37ca086710b95b98f4003074f0b058146490048a732b1211af6dfd22142d7d2199bcb34bbc866735ec89d88
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^1.8.2":
-  version: 1.8.2
-  resolution: "@cratis/components@npm:1.8.2"
+"@cratis/components@npm:^1.10.2":
+  version: 1.10.2
+  resolution: "@cratis/components@npm:1.10.2"
   dependencies:
     allotment: "npm:1.20.5"
-    framer-motion: "npm:12.38.0"
+    framer-motion: "npm:12.40.0"
     pixi.js: "npm:^8.17.1"
     primeicons: "npm:7.0.0"
-    primereact: "npm:10.9.7"
-    quill: "npm:^2.0.3"
+    primereact: "npm:10.9.8"
     react-icons: "npm:5.6.0"
-    react-leaflet: "npm:^5.0.0"
-    react-router-dom: "npm:7.14.2"
-    ts-deepmerge: "npm:7.0.3"
+    react-router-dom: "npm:7.15.1"
+    ts-deepmerge: "npm:8.0.0"
     usehooks-ts: "npm:3.1.1"
   peerDependencies:
     "@cratis/arc": ^20.3.1
@@ -374,16 +373,14 @@ __metadata:
     react-dom: ^19.0.0
     reflect-metadata: 0.2.2
     tsyringe: 4.10.0
-  checksum: 10/22b1128146db00847d845f507072f91cb624336a89326c280f36985e603a6b4749475f900c92c81f1d6d2fe5f2349b653cbab1f2a78a47963842017c6512f432
+  checksum: 10/b7717f84b9eb43d2f029e84ae82994250998ab362f1b4ef8e4a6e890d140177d7e12111bc3eb265d3a061f441f42d04ec8f6803873e989b4ed7bbf21d4998faf
   languageName: node
   linkType: hard
 
-"@cratis/fundamentals@npm:^7.7.3":
-  version: 7.7.6
-  resolution: "@cratis/fundamentals@npm:7.7.6"
-  dependencies:
-    reflect-metadata: "npm:^0.2.2"
-  checksum: 10/da58170f842ff9d47077daa5d93655f9dd5859f47e9848433ecb0ed97907ba87e6a1eab015b0ae68274dac4551da19554650f0b38db70f0f94a9bdebefe30961
+"@cratis/fundamentals@npm:^7.16.0":
+  version: 7.16.6
+  resolution: "@cratis/fundamentals@npm:7.16.6"
+  checksum: 10/dc346b7ea2379111f0294f8232a55699dcca24cfeb0b62190e3f48aa2ddf9508ba0c76c16b48f01e10be5241f6c361ac8c6941fd51b9f17d7a2f8cd1c0f5bb72
   languageName: node
   linkType: hard
 
@@ -936,17 +933,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@react-leaflet/core@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@react-leaflet/core@npm:3.0.0"
-  peerDependencies:
-    leaflet: ^1.9.0
-    react: ^19.0.0
-    react-dom: ^19.0.0
-  checksum: 10/193f4928ff609a922493f05e2f301f53a3d9b8387e90fc6ab4bc4f78f97272cad000fbdf0f1d23069f67cb35d3d855734ce5a5feab98619aebfc3334be2967c7
-  languageName: node
-  linkType: hard
-
 "@rolldown/binding-android-arm64@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-android-arm64@npm:1.0.0-rc.17"
@@ -1348,6 +1334,158 @@ __metadata:
     typescript:
       optional: true
   checksum: 10/d0e6dd61c5de9f5c624316e0018ea96d2d0d3e2b3c09168b11574c347c6b22af85f6a6110900ce8502010eb31f6dab52f4825254bb76d9db92e077a6be1b4d72
+  languageName: node
+  linkType: hard
+
+"@swc/core-darwin-arm64@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-darwin-arm64@npm:1.15.46"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@swc/core-darwin-x64@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-darwin-x64@npm:1.15.46"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@swc/core-linux-arm-gnueabihf@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.15.46"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@swc/core-linux-arm64-gnu@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-linux-arm64-gnu@npm:1.15.46"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@swc/core-linux-arm64-musl@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-linux-arm64-musl@npm:1.15.46"
+  conditions: os=linux & cpu=arm64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@swc/core-linux-ppc64-gnu@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-linux-ppc64-gnu@npm:1.15.46"
+  conditions: os=linux & cpu=ppc64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@swc/core-linux-s390x-gnu@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-linux-s390x-gnu@npm:1.15.46"
+  conditions: os=linux & cpu=s390x & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@swc/core-linux-x64-gnu@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-linux-x64-gnu@npm:1.15.46"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@swc/core-linux-x64-musl@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-linux-x64-musl@npm:1.15.46"
+  conditions: os=linux & cpu=x64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@swc/core-win32-arm64-msvc@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-win32-arm64-msvc@npm:1.15.46"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@swc/core-win32-ia32-msvc@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-win32-ia32-msvc@npm:1.15.46"
+  conditions: os=win32 & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"@swc/core-win32-x64-msvc@npm:1.15.46":
+  version: 1.15.46
+  resolution: "@swc/core-win32-x64-msvc@npm:1.15.46"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@swc/core@npm:^1.15.43":
+  version: 1.15.46
+  resolution: "@swc/core@npm:1.15.46"
+  dependencies:
+    "@swc/core-darwin-arm64": "npm:1.15.46"
+    "@swc/core-darwin-x64": "npm:1.15.46"
+    "@swc/core-linux-arm-gnueabihf": "npm:1.15.46"
+    "@swc/core-linux-arm64-gnu": "npm:1.15.46"
+    "@swc/core-linux-arm64-musl": "npm:1.15.46"
+    "@swc/core-linux-ppc64-gnu": "npm:1.15.46"
+    "@swc/core-linux-s390x-gnu": "npm:1.15.46"
+    "@swc/core-linux-x64-gnu": "npm:1.15.46"
+    "@swc/core-linux-x64-musl": "npm:1.15.46"
+    "@swc/core-win32-arm64-msvc": "npm:1.15.46"
+    "@swc/core-win32-ia32-msvc": "npm:1.15.46"
+    "@swc/core-win32-x64-msvc": "npm:1.15.46"
+    "@swc/counter": "npm:^0.1.3"
+    "@swc/types": "npm:^0.1.27"
+  peerDependencies:
+    "@swc/helpers": ">=0.5.17"
+  dependenciesMeta:
+    "@swc/core-darwin-arm64":
+      optional: true
+    "@swc/core-darwin-x64":
+      optional: true
+    "@swc/core-linux-arm-gnueabihf":
+      optional: true
+    "@swc/core-linux-arm64-gnu":
+      optional: true
+    "@swc/core-linux-arm64-musl":
+      optional: true
+    "@swc/core-linux-ppc64-gnu":
+      optional: true
+    "@swc/core-linux-s390x-gnu":
+      optional: true
+    "@swc/core-linux-x64-gnu":
+      optional: true
+    "@swc/core-linux-x64-musl":
+      optional: true
+    "@swc/core-win32-arm64-msvc":
+      optional: true
+    "@swc/core-win32-ia32-msvc":
+      optional: true
+    "@swc/core-win32-x64-msvc":
+      optional: true
+  peerDependenciesMeta:
+    "@swc/helpers":
+      optional: true
+  checksum: 10/7345ee1a99729f0082bfe7988bada60c8390bc8642cb06d33514773a0ab1b6a350d0213538058daedbf964871e1056426971c7c1993c8da5d50c52b86c4b6371
+  languageName: node
+  linkType: hard
+
+"@swc/counter@npm:^0.1.3":
+  version: 0.1.3
+  resolution: "@swc/counter@npm:0.1.3"
+  checksum: 10/df8f9cfba9904d3d60f511664c70d23bb323b3a0803ec9890f60133954173047ba9bdeabce28cd70ba89ccd3fd6c71c7b0bd58be85f611e1ffbe5d5c18616598
+  languageName: node
+  linkType: hard
+
+"@swc/types@npm:^0.1.27":
+  version: 0.1.27
+  resolution: "@swc/types@npm:0.1.27"
+  dependencies:
+    "@swc/counter": "npm:^0.1.3"
+  checksum: 10/96b8161fbb3a151741c0b286a5886609219accc45c67b7cf946376c352d76e6c0fb11554d3e1daee3e55fe82156e8237b82245cda8e706f580d1c03272cfa29a
   languageName: node
   linkType: hard
 
@@ -3769,7 +3907,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-diff@npm:^1.1.2, fast-diff@npm:^1.3.0":
+"fast-diff@npm:^1.1.2":
   version: 1.3.0
   resolution: "fast-diff@npm:1.3.0"
   checksum: 10/9e57415bc69cd6efcc720b3b8fe9fdaf42dcfc06f86f0f45378b1fa512598a8aac48aa3928c8751d58e2f01bb4ba4f07e4f3d9bc0d57586d45f1bd1e872c6cde
@@ -3914,12 +4052,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"framer-motion@npm:12.38.0":
-  version: 12.38.0
-  resolution: "framer-motion@npm:12.38.0"
+"framer-motion@npm:12.40.0":
+  version: 12.40.0
+  resolution: "framer-motion@npm:12.40.0"
   dependencies:
-    motion-dom: "npm:^12.38.0"
-    motion-utils: "npm:^12.36.0"
+    motion-dom: "npm:^12.40.0"
+    motion-utils: "npm:^12.39.0"
     tslib: "npm:^2.4.0"
   peerDependencies:
     "@emotion/is-prop-valid": "*"
@@ -3932,7 +4070,7 @@ __metadata:
       optional: true
     react-dom:
       optional: true
-  checksum: 10/4d529d1648a8e31ec9859e7ff1296b7e4ef0028eb09cbc7d626068766ab53e486038b431fac33b1438a1cc076a244e6843c5a8c0f38442885832308452b4b25e
+  checksum: 10/2e74f03ef09ea48a92d418741d925725951eaeaf2d716865b26d8c0aab4e0b4a2d337d596693bdb641209d9d170055d677423ba1d2a76a07d15ca11c0eb677fc
   languageName: node
   linkType: hard
 
@@ -4993,24 +5131,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash-es@npm:^4.17.21":
-  version: 4.18.1
-  resolution: "lodash-es@npm:4.18.1"
-  checksum: 10/8bfad225ef09ef42b04283cdaf7830efcc2ba29ae41b56501c74422155ee1ccaa1f0f6e8319def3451a1fe54dec501c8e4bee622bae2b2d98ac993731e0a5cce
-  languageName: node
-  linkType: hard
-
 "lodash.clamp@npm:^4.0.0":
   version: 4.0.3
   resolution: "lodash.clamp@npm:4.0.3"
   checksum: 10/02baa03ebb96f2ce8d9cec28b21fa3ed808c32f3b8fe54e2f990f1177779b13dcda69232db72d7285763e14a0ee64666a82a2047558eaba7198580173756c888
-  languageName: node
-  linkType: hard
-
-"lodash.clonedeep@npm:^4.5.0":
-  version: 4.5.0
-  resolution: "lodash.clonedeep@npm:4.5.0"
-  checksum: 10/957ed243f84ba6791d4992d5c222ffffca339a3b79dbe81d2eaf0c90504160b500641c5a0f56e27630030b18b8e971ea10b44f928a977d5ced3c8948841b555f
   languageName: node
   linkType: hard
 
@@ -5028,7 +5152,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash.isequal@npm:^4.0.0, lodash.isequal@npm:^4.5.0":
+"lodash.isequal@npm:^4.0.0":
   version: 4.5.0
   resolution: "lodash.isequal@npm:4.5.0"
   checksum: 10/82fc58a83a1555f8df34ca9a2cd300995ff94018ac12cc47c349655f0ae1d4d92ba346db4c19bbfc90510764e0c00ddcc985a358bdcd4b3b965abf8f2a48a214
@@ -5246,10 +5370,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx@npm:^6.15.0":
-  version: 6.15.0
-  resolution: "mobx@npm:6.15.0"
-  checksum: 10/cf7fd4f96d521962c87883a7d41d745ba35af6130265f619e22c2d1ddff875e7f766726984f53bf5d5e215074146e6b190bc0e8668eb675cca9cb5d5204987fa
+"mobx@npm:^6.15.3":
+  version: 6.16.1
+  resolution: "mobx@npm:6.16.1"
+  checksum: 10/01753230a35d2f8a376d4f0e5b0096848141a6c1567f09f4a5e6f7a983814e971141eccb58288e737a7b259618312e4c963523100ccc13f5505881ead7066c80
   languageName: node
   linkType: hard
 
@@ -5295,19 +5419,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"motion-dom@npm:^12.38.0":
-  version: 12.38.0
-  resolution: "motion-dom@npm:12.38.0"
+"motion-dom@npm:^12.40.0":
+  version: 12.42.2
+  resolution: "motion-dom@npm:12.42.2"
   dependencies:
-    motion-utils: "npm:^12.36.0"
-  checksum: 10/78c040b46d93273932cf80c70e39845be5a442dcaf18d4345b45a9193de9dfa87c885b609943cb652115e4eac5d46ef40b452185073dd43fc328b134f9975e90
+    motion-utils: "npm:^12.39.0"
+  checksum: 10/f3ad9476f51aa35bae00b289e93ce9ddedd8cee0c988d12efd5cffd0c8227df20cc666116794034217827a8f717810b3567d034946fed2abac7c18f53522fe59
   languageName: node
   linkType: hard
 
-"motion-utils@npm:^12.36.0":
-  version: 12.36.0
-  resolution: "motion-utils@npm:12.36.0"
-  checksum: 10/c4a2a7ffac48ca44082d6d31b115f245025060a7e69d70dac062646d8f96c39e5662a7c8a51f255566fdf8e719ef1269a8e9aa3a04fc263bb65b5a7b61331901
+"motion-utils@npm:^12.39.0":
+  version: 12.39.0
+  resolution: "motion-utils@npm:12.39.0"
+  checksum: 10/5aa2972bf38c44e44e0a39a70202ce69d585d88d28b37975ca0849756b8614e28d5ebd263ed806e94886b1fe684ce28ee630c4556c465581eaa6dca420249486
   languageName: node
   linkType: hard
 
@@ -5590,13 +5714,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"parchment@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "parchment@npm:3.0.0"
-  checksum: 10/67b91be827794c146b36bf56aa958e7519c8c47ff5298d7008eee3083ac33fdafdec4bb0f4b308d25b20c0e74775a4a729e280154209acf0e4d759d8ffc939ae
-  languageName: node
-  linkType: hard
-
 "parent-module@npm:^1.0.0":
   version: 1.0.1
   resolution: "parent-module@npm:1.0.1"
@@ -5778,7 +5895,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"primereact@npm:10.9.7, primereact@npm:^10.9.7":
+"primereact@npm:10.9.8":
+  version: 10.9.8
+  resolution: "primereact@npm:10.9.8"
+  dependencies:
+    "@types/react-transition-group": "npm:^4.4.1"
+    react-transition-group: "npm:^4.4.1"
+  peerDependencies:
+    "@types/react": ^17.0.0 || ^18.0.0 || ^19.0.0
+    react: ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10/33e1ed3b69829b02f40fb3547063f2432f1b7a23d39d418bdf83b5ba57084c0e8521d77646818982e00e57c9e47db51036fe166915f8b08501de729f2c4ab3dc
+  languageName: node
+  linkType: hard
+
+"primereact@npm:^10.9.7":
   version: 10.9.7
   resolution: "primereact@npm:10.9.7"
   dependencies:
@@ -5824,29 +5958,6 @@ __metadata:
   version: 1.2.3
   resolution: "queue-microtask@npm:1.2.3"
   checksum: 10/72900df0616e473e824202113c3df6abae59150dfb73ed13273503127235320e9c8ca4aaaaccfd58cf417c6ca92a6e68ee9a5c3182886ae949a768639b388a7b
-  languageName: node
-  linkType: hard
-
-"quill-delta@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "quill-delta@npm:5.1.0"
-  dependencies:
-    fast-diff: "npm:^1.3.0"
-    lodash.clonedeep: "npm:^4.5.0"
-    lodash.isequal: "npm:^4.5.0"
-  checksum: 10/6cd9a634dd729504b0d13b25718f3dfa6b54fc5144cc682d32f229c5da2e50726222858f9f6612a676f9e2b0a2ec3173d3d678fdc96b1040ba725bfc35af3fbe
-  languageName: node
-  linkType: hard
-
-"quill@npm:^2.0.3":
-  version: 2.0.3
-  resolution: "quill@npm:2.0.3"
-  dependencies:
-    eventemitter3: "npm:^5.0.1"
-    lodash-es: "npm:^4.17.21"
-    parchment: "npm:^3.0.0"
-    quill-delta: "npm:^5.1.0"
-  checksum: 10/e4207da2250c3a194eb02f2506c2af06c27633772c2f5f7da45f48913f34c00d313bb2bcbb27a8473b8a55a7d7d9a1ae4966417a5038059cd1c7fb14bd793f13
   languageName: node
   linkType: hard
 
@@ -5913,19 +6024,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-leaflet@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "react-leaflet@npm:5.0.0"
-  dependencies:
-    "@react-leaflet/core": "npm:^3.0.0"
-  peerDependencies:
-    leaflet: ^1.9.0
-    react: ^19.0.0
-    react-dom: ^19.0.0
-  checksum: 10/170bf8d83141c8406fddc8cab41608ec6938efaafa5ae08c2060f9c0739370b84ed61d809c092d9f9ea79461399519f18f1cdf06dcb0e26d61d89eda46fb30be
-  languageName: node
-  linkType: hard
-
 "react-router-dom@npm:7.14.2":
   version: 7.14.2
   resolution: "react-router-dom@npm:7.14.2"
@@ -5935,6 +6033,18 @@ __metadata:
     react: ">=18"
     react-dom: ">=18"
   checksum: 10/1819cf481a581941509d390800cd6e5fbf6feae27e6a82a96b1e2a14af35e8ffe9667870e73dab6d973462a2b5136e3c3f54a30ccd6925e011be01fceb56a8fb
+  languageName: node
+  linkType: hard
+
+"react-router-dom@npm:7.15.1":
+  version: 7.15.1
+  resolution: "react-router-dom@npm:7.15.1"
+  dependencies:
+    react-router: "npm:7.15.1"
+  peerDependencies:
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: 10/9cb9bbfc48983eaeb50e3dd24ee97c7f4c43e503a586563a0fd70629dffeec1aea27595bc099cd849ef25adae227945641f4477c031b5e1c338415aff254ecc7
   languageName: node
   linkType: hard
 
@@ -5951,6 +6061,22 @@ __metadata:
     react-dom:
       optional: true
   checksum: 10/6a12db0f6c8fd9b08631da98ba5e8c63675f4830cb7dccf1d70f3da23acbbc39079f48479b7c2c94b4ecd138fb1e0d4d8efd60914c48b224bfd8f1fd87b3b8cd
+  languageName: node
+  linkType: hard
+
+"react-router@npm:7.15.1":
+  version: 7.15.1
+  resolution: "react-router@npm:7.15.1"
+  dependencies:
+    cookie: "npm:^1.0.1"
+    set-cookie-parser: "npm:^2.6.0"
+  peerDependencies:
+    react: ">=18"
+    react-dom: ">=18"
+  peerDependenciesMeta:
+    react-dom:
+      optional: true
+  checksum: 10/0d9f352839708f13586e41bc21d4e74d1ef94ac747d8ba99a424734d17c7f9512926b16ac28a7659cc44ee4dd60b64f63ed58c704deb1cc68800056b377d3b40
   languageName: node
   linkType: hard
 
@@ -6013,7 +6139,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"reflect-metadata@npm:^0.2.2":
+"reflect-metadata@npm:0.2.2":
   version: 0.2.2
   resolution: "reflect-metadata@npm:0.2.2"
   checksum: 10/1c93f9ac790fea1c852fde80c91b2760420069f4862f28e6fae0c00c6937a56508716b0ed2419ab02869dd488d123c4ab92d062ae84e8739ea7417fae10c4745
@@ -6886,13 +7012,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-deepmerge@npm:7.0.3":
-  version: 7.0.3
-  resolution: "ts-deepmerge@npm:7.0.3"
-  checksum: 10/fbe1d5d7b2561430c0faa17f76e84e9b025ab1ea01812b5bbab9d5aebdad1eca8263908d9359a17348de66eb27fd42b9861f92bd1eba70906b1ae647729c3680
-  languageName: node
-  linkType: hard
-
 "ts-deepmerge@npm:8.0.0":
   version: 8.0.0
   resolution: "ts-deepmerge@npm:8.0.0"
@@ -7093,6 +7212,16 @@ __metadata:
     eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
     typescript: ">=4.8.4 <6.1.0"
   checksum: 10/d35d30bdcff5b9644c9bf500d3ad74cebbd41612bf2669c3e3208cd74ee43302941666336acfca65bc44352b9b58c0455afe0a9e7106f12e54789b8c1f16dc11
+  languageName: node
+  linkType: hard
+
+"typescript-for-eslint@npm:typescript@6.0.3":
+  version: 6.0.3
+  resolution: "typescript@npm:6.0.3"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10/0ef2357a4cffd916b52b683a021cdab0f81eea4e9aa35f2d254581c9a5106da02224e3392e1b0ed42b7a48f80c966e5f52b8e1a27941fa0523c1705a9c2e0330
   languageName: node
   linkType: hard
 
@@ -7678,10 +7807,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/arc.react": "npm:^20.10.3"
-    "@cratis/arc.react.mvvm": "npm:^20.10.3"
-    "@cratis/arc.vite": "npm:^20.10.3"
-    "@cratis/components": "npm:^1.8.2"
+    "@cratis/arc.react": "npm:^20.62.4"
+    "@cratis/arc.react.mvvm": "npm:^20.62.4"
+    "@cratis/arc.vite": "npm:^20.62.4"
+    "@cratis/components": "npm:^1.10.2"
     "@eslint/eslintrc": "npm:3.3.5"
     "@eslint/js": "npm:10.0.1"
     "@monaco-editor/react": "npm:^4.7.0"
@@ -7729,6 +7858,7 @@ __metadata:
     react-dom: "npm:19.2.5"
     react-icons: "npm:^5.6.0"
     react-router-dom: "npm:7.14.2"
+    reflect-metadata: "npm:0.2.2"
     sinon: "npm:21.1.2"
     sinon-chai: "npm:4.0.1"
     storybook: "npm:^10.3.5"
@@ -7738,6 +7868,7 @@ __metadata:
     tsconfig-paths: "npm:4.2.0"
     typescript: "npm:7.0.2"
     typescript-eslint: "npm:8.59.1"
+    typescript-for-eslint: "npm:typescript@6.0.3"
     usehooks-ts: "npm:3.1.1"
     vite: "npm:8.0.16"
     vite-plugin-commonjs: "npm:0.10.4"

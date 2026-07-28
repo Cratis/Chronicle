@@ -96,7 +96,8 @@ const defaultConfig = [
             '**/templates/**',
             '**/Api/**',
             '**/rollup.config.mjs',
-            '**/vite.config.ts'
+            '**/vite.config.ts',
+            '**/link-eslint-typescript.cjs'
         ],
     },
     {
