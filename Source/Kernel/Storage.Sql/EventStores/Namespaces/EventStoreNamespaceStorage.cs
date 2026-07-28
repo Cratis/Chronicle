@@ -58,6 +58,9 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEvents.InFlightEventsStorage(eventStore, @namespace);
 
     /// <inheritdoc/>
+    public IObserverHandledCountsStorage ObserverHandledCounts { get; } = new ObserverHandledCounts.ObserverHandledCountsStorage(eventStore, @namespace);
+
+    /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new Recommendations.RecommendationStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>

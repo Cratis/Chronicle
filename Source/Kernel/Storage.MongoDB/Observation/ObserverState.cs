@@ -49,6 +49,11 @@ public class ObserverState
     public IEnumerable<Key> CatchingUpPartitions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the partitions that have an in-flight (started but not yet acknowledged) event batch.
+    /// </summary>
+    public IEnumerable<Key> InFlightPartitions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the count of failed partitions for the observer.
     /// </summary>
     public int FailedPartitionCount { get; set; }
@@ -74,7 +79,12 @@ public class ObserverState
     public IDictionary<string, ulong> HandledEventCountPerEventType { get; set; } = new Dictionary<string, ulong>();
 
     /// <summary>
-    /// Gets or sets the number of events successfully handled per partition, broken down by event type identifier.
+    /// Gets or sets the legacy per-partition handled-event counts, broken down by event type identifier.
     /// </summary>
+    /// <remarks>
+    /// Retained only so that documents written before the per-partition counts were moved to their own
+    /// collection can still be read and split into that collection on first load. New state is never written
+    /// with this field populated; it is cleared once migrated.
+    /// </remarks>
     public IDictionary<string, IDictionary<string, ulong>> HandledEventCountPerPartition { get; set; } = new Dictionary<string, IDictionary<string, ulong>>();
 }

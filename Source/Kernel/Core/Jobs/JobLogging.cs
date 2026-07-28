@@ -51,6 +51,9 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} failed")]
     internal static partial void StepFailed(this ILogger<IJob> logger, JobStepId jobStepId);
 
+    [LoggerMessage(LogLevel.Debug, "Step {JobStepId} is no longer tracked by the job, skipping unsubscribe")]
+    internal static partial void CompletedJobStepIsNoLongerTracked(this ILogger<IJob> logger, JobStepId jobStepId);
+
     [LoggerMessage(LogLevel.Trace, "Preparing job steps for running")]
     internal static partial void PrepareJobStepsForRunning(this ILogger<IJob> logger);
 
@@ -107,6 +110,18 @@ internal static partial class JobLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Job failed starting job step {JobStepId}")]
     internal static partial void FailedStartingJobStep(this ILogger<IJob> logger, Exception ex, JobStepId jobStepId);
+
+    [LoggerMessage(LogLevel.Debug, "Job step {JobStepId} was already started. Outcome: {Outcome}")]
+    internal static partial void JobStepWasAlreadyStarted(this ILogger<IJob> logger, JobStepId jobStepId, StartJobStepError outcome);
+
+    [LoggerMessage(LogLevel.Warning, "Job failed subscribing to job step {JobStepId}")]
+    internal static partial void FailedSubscribingToJobStep(this ILogger<IJob> logger, Exception ex, JobStepId jobStepId);
+
+    [LoggerMessage(LogLevel.Warning, "Job failed recording job step {JobStepId} as failed. Error: {Error}")]
+    internal static partial void FailedRecordingJobStepAsFailed(this ILogger<IJob> logger, JobStepId jobStepId, JobStepError error);
+
+    [LoggerMessage(LogLevel.Warning, "Job failed recording job step {JobStepId} as failed")]
+    internal static partial void FailedRecordingJobStepAsFailed(this ILogger<IJob> logger, Exception ex, JobStepId jobStepId);
 
     [LoggerMessage(LogLevel.Debug, "Not all steps was completed successfully")]
     internal static partial void AllStepsNotCompletedSuccessfully(this ILogger<IJob> logger);

@@ -96,6 +96,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);
+        ObserverHandledCounts = new ObserverHandledCountsStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
         Sinks = sinks;
@@ -132,6 +133,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IInFlightEventsStorage InFlightEvents { get; }
+
+    /// <inheritdoc/>
+    public IObserverHandledCountsStorage ObserverHandledCounts { get; }
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; }
@@ -183,7 +187,10 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             return uniqueConstraintsStorage;
         }
 
-        return _uniqueConstraints[eventSequenceId] = new UniqueConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
+        return _uniqueConstraints[eventSequenceId] = new UniqueConstraintsStorage(
+            _eventStoreNamespaceDatabase,
+            eventSequenceId,
+            _loggerFactory.CreateLogger<UniqueConstraintsStorage>());
     }
 
     /// <inheritdoc/>

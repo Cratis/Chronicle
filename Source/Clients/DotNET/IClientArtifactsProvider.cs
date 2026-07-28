@@ -31,6 +31,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Reactors { get; }
 
     /// <summary>
+    /// Gets all the available read model reactor types.
+    /// </summary>
+    IEnumerable<Type> ReadModelReactors { get; }
+
+    /// <summary>
     /// Gets all the available reducer types.
     /// </summary>
     IEnumerable<Type> Reducers { get; }

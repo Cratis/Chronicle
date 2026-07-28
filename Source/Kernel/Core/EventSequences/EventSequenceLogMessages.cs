@@ -66,4 +66,16 @@ internal static partial class EventSequenceLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Duplicate event detected during AppendMany with sequence number {SequenceNumber} in event sequence '{EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
     internal static partial void DuplicateEventInMany(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(LogLevel.Error, "Failed persisting the warm-start state snapshot after appending in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. The next activation re-derives it from the event tail")]
+    internal static partial void FailedPersistingStateAfterAppends(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "Failed enqueueing {Count} durably appended events for live delivery in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Spilling the queues to catch-up")]
+    internal static partial void FailedEnqueueingAppendedEvents(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int count, Exception exception);
+
+    [LoggerMessage(LogLevel.Critical, "Failed spilling the appended-events queues to catch-up in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Observers recover on their next watchdog run")]
+    internal static partial void FailedSpillingAppendedEventsQueuesToCatchup(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
+
+    [LoggerMessage(LogLevel.Critical, "Failed updating the constraint index for the durably appended event at sequence number {SequenceNumber} in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. A later duplicate of its value can pass validation")]
+    internal static partial void FailedUpdatingConstraintIndex(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, Exception exception);
 }

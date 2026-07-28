@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFailedPartitionsStorage
 {
     readonly IMongoCollection<FailedPartition> _collection = database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
+    readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
@@ -29,6 +31,7 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     /// <inheritdoc/>
     public async Task Save(ObserverId observerId, FailedPartitions failedPartitions)
     {
+        await EnsureIndexes().ConfigureAwait(false);
         foreach (var failedPartition in failedPartitions.ResolvedPartitions)
         {
             await _collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
@@ -46,6 +49,7 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     /// <inheritdoc/>
     public async Task<FailedPartitions> GetFor(ObserverId? observerId)
     {
+        await EnsureIndexes().ConfigureAwait(false);
         using var cursor = observerId is null ?
             await _collection.FindAsync(_ => true).ConfigureAwait(false) :
             await _collection.FindAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
@@ -59,6 +63,7 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     /// <inheritdoc/>
     public async Task<FailedPartitions> GetFor(IEnumerable<ObserverId> observerIds)
     {
+        await EnsureIndexes().ConfigureAwait(false);
         var ids = observerIds.Distinct().ToArray();
         if (ids.Length == 0)
         {
@@ -72,4 +77,11 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
             Partitions = await cursor.ToListAsync()
         };
     }
+
+    Task EnsureIndexes() =>
+        _collection.EnsureIndexesOnceAsync(
+            _ensuredIndexes,
+            new CreateIndexModel<FailedPartition>(
+                Builders<FailedPartition>.IndexKeys.Ascending(_ => _.ObserverId),
+                new CreateIndexOptions { Name = "observerId", Background = true }));
 }

@@ -1,0 +1,65 @@
+---
+name: Kotlin Build
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+"on":
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Source/Clients/Kotlin/**"
+      - "Source/Kernel/Contracts/**"
+      - "Source/Kernel/Protobuf/**"
+      - "Source/Tools/ProtoGenerator/**"
+
+jobs:
+  kotlin-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build Contracts
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate proto files
+        run: |
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            "$CONTRACTS_DLL" \
+            Source/Kernel/Protobuf
+
+      - name: Copy proto files into Kotlin project
+        run: |
+          mkdir -p Source/Clients/Kotlin/src/main/proto
+          cp -r Source/Kernel/Protobuf/* Source/Clients/Kotlin/src/main/proto/
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Compile Kotlin client
+        working-directory: ./Source/Clients/Kotlin
+        run: gradle compileKotlin --no-configuration-cache

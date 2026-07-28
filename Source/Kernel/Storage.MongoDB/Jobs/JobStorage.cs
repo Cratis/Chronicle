@@ -1,13 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
-using Cratis.Strings;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using OneOf.Types;
 
@@ -23,6 +22,31 @@ namespace Cratis.Chronicle.Storage.MongoDB.Jobs;
 /// <param name="jobTypes"><see cref="IJobTypes"/> that knows about <see cref="JobType"/>.</param>
 public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobTypes) : IJobStorage
 {
+    const string StatusElementName = "status";
+    const string TypeElementName = "type";
+    readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
+    /// <summary>
+    /// Gets the indexes maintained on the jobs collection.
+    /// </summary>
+    /// <remarks>
+    /// Keys are declared by stored BSON element name rather than by property expression: <see cref="JobState"/>
+    /// is persisted through a custom, non-document serializer that the MongoDB LINQ provider cannot introspect,
+    /// so an expression key over an enum member (Status/Type) throws ExpressionNotSupportedException when the
+    /// index is rendered against the server's serializer registry.
+    /// </remarks>
+    internal static IReadOnlyList<CreateIndexModel<JobState>> Indexes { get; } =
+    [
+        new(
+            Builders<JobState>.IndexKeys.Ascending(new StringFieldDefinition<JobState>(StatusElementName)),
+            new CreateIndexOptions { Name = "status", Background = true }),
+        new(
+            Builders<JobState>.IndexKeys
+                .Ascending(new StringFieldDefinition<JobState>(TypeElementName))
+                .Ascending(new StringFieldDefinition<JobState>(StatusElementName)),
+            new CreateIndexOptions { Name = "type_status", Background = true })
+    ];
+
     IMongoCollection<JobState> Collection => database.GetCollection<JobState>(WellKnownCollectionNames.Jobs);
 
     /// <inheritdoc/>
@@ -61,14 +85,7 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
     {
         try
         {
-            var statusFilters = statuses.Select(status =>
-                Builders<JobState>.Filter.Eq(_ => _.Status, status));
-
-            var filter = statuses.Length == 0 ?
-                Builders<JobState>.Filter.Empty :
-                Builders<JobState>.Filter.Or(statusFilters);
-
-            return Catch.Success(Collection.Observe(filter));
+            return Catch.Success(Collection.Observe(StatusFilter<JobState>(statuses)));
         }
         catch (Exception ex)
         {
@@ -146,13 +163,8 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
                 return JobError.TypeIsNotAssociatedWithAJobType;
             }
 
-            var jobTypeFilter = Builders<JobState>.Filter.Eq(_ => _.Type, jobType);
-            var statusFilters = statuses.Select(status => Builders<JobState>.Filter.Eq(_ => _.Status, status));
-            var filter = statuses.Length == 0 ?
-                jobTypeFilter :
-                Builders<JobState>.Filter.And(jobTypeFilter, Builders<JobState>.Filter.Or(statusFilters));
-            var filterAsBsonDocument = filter.ToBsonDocument();
-            using var cursor = await GetTypedCollection<TJobState>().FindAsync(filterAsBsonDocument).ConfigureAwait(false);
+            await EnsureIndexes().ConfigureAwait(false);
+            using var cursor = await GetTypedCollection<TJobState>().FindAsync(TypeAndStatusFilter<TJobState>(jobType, statuses)).ConfigureAwait(false);
             var jobs = await cursor.ToListAsync().ConfigureAwait(false);
             return jobs.ToImmutableList();
         }
@@ -162,38 +174,55 @@ public class JobStorage(IEventStoreNamespaceDatabase database, IJobTypes jobType
         }
     }
 
+    /// <summary>
+    /// Gets the filter matching jobs in any of the given statuses, or every job when no status is given.
+    /// </summary>
+    /// <param name="statuses">The <see cref="JobStatus">statuses</see> to match.</param>
+    /// <typeparam name="TDocument">The job state document type the filter is built for.</typeparam>
+    /// <returns>The <see cref="FilterDefinition{TDocument}"/> to query with.</returns>
+    /// <remarks>
+    /// Fields are named by stored BSON element name rather than by property expression, for the same reason the
+    /// indexes are: <see cref="JobState"/> is persisted through a custom, non-document serializer the MongoDB LINQ
+    /// provider cannot introspect, so an expression over an enum member throws ExpressionNotSupportedException when
+    /// the filter is rendered against the server's serializer registry.
+    /// </remarks>
+    internal static FilterDefinition<TDocument> StatusFilter<TDocument>(IReadOnlyCollection<JobStatus> statuses) =>
+        statuses.Count == 0
+            ? Builders<TDocument>.Filter.Empty
+            : Builders<TDocument>.Filter.Or(statuses.Select(status =>
+                Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, JobStatus>(StatusElementName), status)));
+
+    /// <summary>
+    /// Gets the filter matching jobs of a given type, narrowed to any of the given statuses when statuses are given.
+    /// </summary>
+    /// <param name="jobType">The <see cref="JobType"/> to match.</param>
+    /// <param name="statuses">The <see cref="JobStatus">statuses</see> to narrow to.</param>
+    /// <typeparam name="TDocument">The job state document type the filter is built for.</typeparam>
+    /// <returns>The <see cref="FilterDefinition{TDocument}"/> to query with.</returns>
+    /// <remarks>
+    /// Named by stored BSON element name for the reason given on <see cref="StatusFilter{TDocument}"/>.
+    /// </remarks>
+    internal static FilterDefinition<TDocument> TypeAndStatusFilter<TDocument>(JobType jobType, IReadOnlyCollection<JobStatus> statuses)
+    {
+        var jobTypeFilter = Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, JobType>(TypeElementName), jobType);
+        return statuses.Count == 0
+            ? jobTypeFilter
+            : Builders<TDocument>.Filter.And(jobTypeFilter, StatusFilter<TDocument>(statuses));
+    }
+
     static FilterDefinition<TDocument> GetIdFilter<TDocument>(Guid id) => Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, Guid>("_id"), id);
 
     IMongoCollection<TJobState> GetTypedCollection<TJobState>() => database.GetCollection<TJobState>(WellKnownCollectionNames.Jobs);
 
+    async Task EnsureIndexes() => await Collection.EnsureIndexesOnceAsync(_ensuredIndexes, [.. Indexes]).ConfigureAwait(false);
+
     async Task<List<JobState>> GetJobsRaw(params JobStatus[] statuses)
     {
-        var statusFilters = statuses.Select(status => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, JobStatus>(nameof(JobState.Status).ToCamelCase()), status));
+        await EnsureIndexes().ConfigureAwait(false);
 
-        if (statuses.Length == 0)
-        {
-            using var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
-            return await cursor.ToListAsync().ConfigureAwait(false);
-        }
-
-        var filter = new BsonDocument
-        {
-            {
-                "$expr", new BsonDocument("$in", new BsonArray
-                {
-                    new BsonDocument(
-                        "$arrayElemAt",
-                        new BsonArray
-                        {
-                                "$statusChanges.status",
-                                -1
-                        }),
-                    new BsonArray(statuses)
-                })
-            }
-        };
-
-        var aggregation = Collection.Aggregate().Match(filter);
-        return await aggregation.ToListAsync().ConfigureAwait(false);
+        // The materialized Status field is kept in lockstep with the last status change (see the Job grain), so
+        // filtering it directly is behavior-identical to the previous $arrayElemAt on statusChanges — and indexable.
+        using var cursor = await Collection.FindAsync(StatusFilter<JobState>(statuses)).ConfigureAwait(false);
+        return await cursor.ToListAsync().ConfigureAwait(false);
     }
 }

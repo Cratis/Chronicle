@@ -8,6 +8,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ConnectionService = KernelCore::Cratis.Chronicle.Services.Clients.ConnectionService;
 using IConnectedClients = KernelCore::Cratis.Chronicle.Clients.IConnectedClients;
 using KernelConnectionId = KernelConcepts::Cratis.Chronicle.Concepts.Clients.ConnectionId;
@@ -103,7 +104,7 @@ internal class ChronicleConnection(
             Environment.MachineName,
             ".NET");
 
-        _connectionService = new ConnectionService(grainFactory, localSiloDetails, loggerFactory.CreateLogger<ConnectionService>());
+        _connectionService = new ConnectionService(grainFactory, localSiloDetails, loggerFactory.CreateLogger<ConnectionService>(), Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()));
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

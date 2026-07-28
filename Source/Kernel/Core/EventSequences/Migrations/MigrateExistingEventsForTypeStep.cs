@@ -83,7 +83,8 @@ public class MigrateExistingEventsForTypeStep(
                     var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(
                         jobStepKey.EventStore,
                         @event.Context.EventType,
-                        contentAsJson);
+                        contentAsJson,
+                        @event.Content);
 
                     await eventSequenceStorage.ReplaceGenerationContent(
                         @event.Context.SequenceNumber,

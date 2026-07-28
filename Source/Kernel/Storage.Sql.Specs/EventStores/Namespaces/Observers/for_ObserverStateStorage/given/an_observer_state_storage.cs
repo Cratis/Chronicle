@@ -42,6 +42,7 @@ public class an_observer_state_storage : Specification, IDisposable
         _load.SetResult();
 
         _database = Substitute.For<IDatabase>();
+        _database.LiveQueryPollingInterval.Returns(TimeSpan.FromSeconds(2));
         _database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
             .Returns(_ => CreateScopeWhenLoaded());
 

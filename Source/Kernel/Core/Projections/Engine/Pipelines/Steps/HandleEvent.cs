@@ -43,7 +43,11 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
             if (child.HasKeyResolverFor(eventType))
             {
                 var keyResolver = child.GetKeyResolverFor(eventType);
-                var keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
+                if (!context.TryGetResolvedKey(keyResolver, out var keyResult))
+                {
+                    keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
+                    context.MemoizeResolvedKey(keyResolver, keyResult);
+                }
 
                 // Handle deferred key resolution for child projections
                 if (keyResult is DeferredKey deferredChild)
@@ -67,8 +71,10 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
             }
             else
             {
+                // A projection registers a key resolver for every event type its whole subtree handles,
+                // so a missing resolver here means neither this child nor any of its descendants project
+                // this event — descending would walk the subtree only to do nothing.
                 logger.ChildNoKeyResolver(child.Path, eventType.Id);
-                await Perform(child, context);
             }
         }
 

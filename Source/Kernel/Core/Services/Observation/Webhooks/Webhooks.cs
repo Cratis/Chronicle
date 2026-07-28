@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Webhooks;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ContractIWebhooks = Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks;
 using WebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
@@ -27,16 +29,18 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// <param name="encryption"><see cref="IEncryption"/> for encrypting sensitive data.</param>
 /// <param name="oauthClient"><see cref="IOAuthClient"/> for testing OAuth authorization.</param>
 /// <param name="webhookMediator"><see cref="IWebhookMediator"/> for testing webhook endpoints.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class Webhooks(
     IGrainFactory grainFactory,
     IStorage storage,
     IWebhookDefinitionComparer webhookDefinitionComparer,
     IEncryption encryption,
     IOAuthClient oauthClient,
-    IWebhookMediator webhookMediator) : ContractIWebhooks
+    IWebhookMediator webhookMediator,
+    IOptions<ChronicleOptions> options) : ContractIWebhooks
 {
     const string WebhookTestPartitionKey = "test";
-    static readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(10);
+    readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
 
     /// <inheritdoc/>
     public async Task Add(AddWebhooks request, CallContext context = default)
@@ -102,15 +106,16 @@ internal sealed class Webhooks(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The removals are appended together rather than one at a time, so the order in which they land in the system
+    /// event sequence relative to each other is no longer the order they appear in the request. Each removal targets
+    /// its own event source - the webhook identifier - so per-stream ordering is unaffected, and observers partition by
+    /// event source, so nothing observes the relative order of two different webhooks being removed.
+    /// </remarks>
     public async Task Remove(RemoveWebhooks request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
-
-        foreach (var webhookId in request.Webhooks)
-        {
-            var @event = new WebhookRemoved();
-            await eventSequence.Append(webhookId, @event);
-        }
+        await Task.WhenAll(request.Webhooks.Select(webhookId => eventSequence.Append(webhookId, new WebhookRemoved())));
     }
 
     /// <inheritdoc/>

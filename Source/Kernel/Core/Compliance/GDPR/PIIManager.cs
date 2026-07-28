@@ -12,7 +12,8 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// Initializes a new instance of the <see cref="PIIManager"/> class.
 /// </remarks>
 /// <param name="keyStore">The <see cref="IEncryptionKeyStorage"/>.</param>
-public class PIIManager(IEncryptionKeyStorage keyStore) : Grain, IPIIManager
+/// <param name="cacheClient">The <see cref="IEncryptionKeyCacheClient"/> used to evict the key from every silo's cache.</param>
+public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClient cacheClient) : Grain, IPIIManager
 {
     /// <inheritdoc/>
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
@@ -21,5 +22,6 @@ public class PIIManager(IEncryptionKeyStorage keyStore) : Grain, IPIIManager
         var primaryKey = (PIIManagerKey)primaryKeyExtension!;
 
         await keyStore.DeleteFor(primaryKey.EventStore, primaryKey.Namespace, identifier);
+        await cacheClient.Evict(primaryKey.EventStore, primaryKey.Namespace, identifier);
     }
 }

@@ -20,7 +20,6 @@ public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanPro
         }
 
         ThrowIfEventSourceId(type);
-        ThrowIfNotConceptAs(type);
 
         return true;
     }
@@ -70,31 +69,6 @@ public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanPro
         {
             throw new PIINotSupportedOnEventSourceId(type);
         }
-    }
-
-    static void ThrowIfNotConceptAs(Type type)
-    {
-        if (!InheritsFromConceptAs(type))
-        {
-            throw new PIIAppliedToNonConceptAsType(type);
-        }
-    }
-
-    static bool InheritsFromConceptAs(Type type)
-    {
-        var current = type.BaseType;
-
-        while (current is not null)
-        {
-            if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(ConceptAs<>))
-            {
-                return true;
-            }
-
-            current = current.BaseType;
-        }
-
-        return false;
     }
 
     static bool InheritsFromGenericEventSourceId(Type type)

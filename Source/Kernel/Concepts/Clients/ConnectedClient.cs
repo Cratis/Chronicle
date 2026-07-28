@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Concepts.Clients;
 /// <summary>
 /// Represents the information related to a connected client.
 /// </summary>
-public class ConnectedClient
+public record ConnectedClient
 {
     /// <summary>
     /// Gets the unique connection id.

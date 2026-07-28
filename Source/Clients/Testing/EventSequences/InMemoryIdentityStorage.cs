@@ -47,6 +47,9 @@ internal sealed class InMemoryIdentityStorage : IIdentityStorage
         Task.FromResult(KernelIdentities::Identity.System);
 
     /// <inheritdoc/>
+    public Task Rename(string subject, string name) => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task<IEnumerable<KernelIdentities::Identity>> GetAll() =>
         Task.FromResult(Enumerable.Empty<KernelIdentities::Identity>());
 

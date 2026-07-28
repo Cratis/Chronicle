@@ -25,7 +25,7 @@ public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase data
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> ObserveAll() => LiveQuery.Observe(GetAll);
+    public ISubject<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> ObserveAll() => LiveQuery.Observe(GetAll, database.LiveQueryPollingInterval);
 
     /// <inheritdoc/>
     public async Task<bool> Has(WebhookId id)

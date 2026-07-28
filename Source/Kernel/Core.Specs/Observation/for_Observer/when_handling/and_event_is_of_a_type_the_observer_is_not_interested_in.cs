@@ -21,5 +21,5 @@ public class and_event_is_of_a_type_the_observer_is_not_interested_in : given.an
 
     [Fact] void should_not_forward_to_subscriber() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_set_next_sequence_number() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)54UL);
-    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_debounce_the_progress_write_below_the_persistence_interval() => _storageStats.Writes.ShouldEqual(0);
 }

@@ -86,12 +86,16 @@ public sealed class TokenStorage : ITokenStorage
     /// <inheritdoc/>
     public Task<long> Prune(DateTimeOffset threshold, CancellationToken cancellationToken = default)
     {
-        var expired = _tokens.Values.Where(_ => _.CreationDate is { } createdAt && createdAt < threshold).ToList();
-        foreach (var token in expired)
+        var now = DateTimeOffset.UtcNow;
+        var prunable = _tokens.Values
+            .Where(_ => _.CreationDate is { } createdAt && createdAt < threshold &&
+                        (_.Status != TokenStatuses.Valid || (_.ExpirationDate is { } expiresAt && expiresAt < now)))
+            .ToList();
+        foreach (var token in prunable)
         {
             _tokens.TryRemove(token.Id, out _);
         }
 
-        return Task.FromResult<long>(expired.Count);
+        return Task.FromResult<long>(prunable.Count);
     }
 }

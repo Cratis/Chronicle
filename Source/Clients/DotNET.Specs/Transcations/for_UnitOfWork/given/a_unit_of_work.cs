@@ -15,6 +15,7 @@ public class a_unit_of_work : Specification
     protected IEventSequence _eventSequence;
     protected bool _onCompletedCalled;
     protected IEnumerable<EventForEventSourceId> _eventsAppended;
+    protected IDictionary<EventSourceId, ConcurrencyScope> _concurrencyScopesAppended;
     protected AppendManyResult _appendResult;
 
     void Establish()
@@ -35,6 +36,7 @@ public class a_unit_of_work : Specification
             .Returns(callInfo =>
             {
                 _eventsAppended = callInfo.Arg<IEnumerable<EventForEventSourceId>>();
+                _concurrencyScopesAppended = callInfo.Arg<IDictionary<EventSourceId, ConcurrencyScope>>();
                 return _appendResult;
             });
     }

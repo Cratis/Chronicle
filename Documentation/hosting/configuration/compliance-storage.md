@@ -2,7 +2,7 @@
 
 Chronicle stores encryption keys alongside the rest of your application data by default. When you configure a dedicated compliance storage, those keys are stored in a separate, independently secured backend — such as HashiCorp Vault — so that key material never resides in the same database as the encrypted events.
 
-If no compliance storage is explicitly configured, Chronicle uses the general [storage](storage.md) backend for encryption keys.
+If no compliance storage is explicitly configured, Chronicle uses the general [storage](storage) backend for encryption keys.
 
 ## Configuration
 

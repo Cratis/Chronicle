@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
@@ -22,10 +23,21 @@ using Orleans.Providers;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionObserverSubscriber"/>.
+/// Represents an implementation of <see cref="IProjectionObserverSubscriber"/> and
+/// <see cref="ICollapsingProjectionObserverSubscriber"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
+/// <para>
+/// Which of the two interfaces a projection subscribes as decides how its activations are keyed, and that is the
+/// whole difference between them: a projection keyed on the event source id gets an activation per partition,
+/// spread across the cluster, while a projection whose key can collapse several event sources onto one document
+/// gets a single activation for every partition. The latter is what makes the coarse mode of
+/// <see cref="ProjectionHandleLock"/> - which is process local - sufficient: without it, two silos would run the
+/// read-modify-write cycle against the same document without seeing each other's lock. The cost is that a
+/// collapsing projection is bounded by one activation on one silo, which is what the coarse lock already implied
+/// within a silo.
+/// </para>
 /// </remarks>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
@@ -38,7 +50,7 @@ public class ProjectionObserverSubscriber(
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,
     IStorage storage,
-    ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+    ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, ICollapsingProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;
@@ -121,11 +133,19 @@ public class ProjectionObserverSubscriber(
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
+            var isNewInstance = false;
 
             foreach (var @event in events)
             {
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
+
+                // Accumulate across the batch: a single OnNext delivers all events for one partition
+                // (e.g. AppendMany, or an observer draining a backlog on catch-up). If the instance was
+                // created by any event in the batch, the net change is an Add even when a later event in
+                // the same batch updates it — so OR rather than overwrite, else the create is misreported
+                // as Modified. HasBeenRemoved() on the final changeset still takes precedence below.
+                isNewInstance |= pipelineContext.IsNewInstance;
 
                 // Check if there are any failed partitions from bulk operations
                 if (pipelineContext.FailedPartitions.Any())
@@ -161,7 +181,20 @@ public class ProjectionObserverSubscriber(
                     model[WellKnownProperties.Subject] = JsonValue.Create(subject);
                 }
 
-                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model);
+                var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
+                {
+                    (true, _) => ReadModelChangeType.Removed,
+                    (false, true) => ReadModelChangeType.Added,
+                    _ => ReadModelChangeType.Modified
+                };
+
+                var change = new ReadModelChangeContext(
+                    changeType,
+                    lastSuccessfullyObservedEvent!.Context.SequenceNumber,
+                    lastSuccessfullyObservedEvent.Context.Occurred,
+                    lastSuccessfullyObservedEvent.Context.CorrelationId);
+
+                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model, change);
             }
 
             logger.SuccessfullyHandledAllEvents(_key);

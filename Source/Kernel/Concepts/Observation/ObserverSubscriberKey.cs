@@ -28,6 +28,16 @@ public record ObserverSubscriberKey(
     string SiloAddress)
 {
     /// <summary>
+    /// The reserved <see cref="Concepts.Events.EventSourceId"/> that stands in for the partition of a subscriber
+    /// that receives every partition of an observer through a single grain activation.
+    /// </summary>
+    /// <remarks>
+    /// The value is reserved for this purpose; a key holding it identifies the one activation an unpartitioned
+    /// subscriber has, rather than the activation for a specific event source.
+    /// </remarks>
+    public static readonly EventSourceId AllPartitions = new("__all-partitions");
+
+    /// <summary>
     /// The unspecified key.
     /// </summary>
     public static readonly ObserverSubscriberKey Unspecified = new(

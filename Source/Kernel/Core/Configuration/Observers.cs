@@ -19,6 +19,15 @@ public class Observers
     public int SubscriberTimeout { get; init; } = 5;
 
     /// <summary>
+    /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
+    /// </summary>
+    /// <remarks>
+    /// Waiting ensures events are not lost if the client immediately starts publishing. When the timeout
+    /// elapses, the subscription may still activate asynchronously and the client is not blocked further.
+    /// </remarks>
+    public int SubscriptionReadyTimeout { get; init; } = 5;
+
+    /// <summary>
     /// Gets the maximum number of retries that can be attempted on a failed observer partition.
     /// </summary>
     /// <remarks>
@@ -66,6 +75,22 @@ public class Observers
     /// are progressing, and that the <c>NextEventSequenceNumber</c> is up-to-date.
     /// </summary>
     public int WatchdogInterval { get; init; } = 60;
+
+    /// <summary>
+    /// Gets the number of consecutive progress-only batches after which the observer's
+    /// <c>NextEventSequenceNumber</c> is made durable.
+    /// </summary>
+    /// <remarks>
+    /// When an observer sees a batch that contains nothing it is subscribed to, it only advances
+    /// <c>NextEventSequenceNumber</c> past the skipped events. Persisting that advance on every such
+    /// batch is pure write amplification, so it is debounced: the state is written once this many
+    /// progress-only batches have accumulated. The pending advance is also flushed on the watchdog
+    /// tick (the time bound, governed by <see cref="WatchdogInterval"/>) and on deactivation. Catch-up
+    /// recovers any progress not yet persisted after a crash — the re-scanned events are ones the
+    /// observer already skipped and observers are idempotent, so nothing is lost or double-handled.
+    /// A larger value trades a longer post-crash re-scan for fewer writes. Defaults to 100.
+    /// </remarks>
+    public int StatePersistenceBatchInterval { get; init; } = 100;
 
     /// <summary>
     /// Gets the strategy used to fan events out when multiple instances of the same client are

@@ -17,16 +17,18 @@ public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutur
         Task.FromResult<IEnumerable<ProjectionFuture>>(State.Futures);
 
     /// <inheritdoc/>
-    public async Task AddFuture(ProjectionFuture future)
+    public async Task<int> AddFuture(ProjectionFuture future)
     {
         if (State.Futures.Any(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
         {
-            return;
+            return State.Futures.Count;
         }
 
         State.Futures.Add(future);
         State.AddedFutures.Add(future);
         await WriteStateAsync();
+        State.AddedFutures.Clear();
+        return State.Futures.Count;
     }
 
     /// <inheritdoc/>
@@ -39,5 +41,6 @@ public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutur
             State.ResolvedFutures.Add(future);
         }
         await WriteStateAsync();
+        State.ResolvedFutures.Clear();
     }
 }

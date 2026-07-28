@@ -7,7 +7,7 @@
 - name: Features
   href: features.md
 - name: Storage
-  href: storage.md
+  href: storage.mdx
 - name: Compliance Storage
   href: compliance-storage.md
 - name: Clustering

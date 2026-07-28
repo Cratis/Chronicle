@@ -27,6 +27,12 @@ public interface IEventSourceOperations
     /// </summary>
     /// <param name="concurrencyScope">The concurrency scope to set.</param>
     /// <returns>The current instance of <see cref="EventSourceOperations"/>.</returns>
+    /// <remarks>
+    /// A <see cref="ConcurrencyScope.NotSet"/> value does not override a scope that has already
+    /// been set for the event source, so that a later event added without a scope cannot silently
+    /// disable the concurrency check. A non-<see cref="ConcurrencyScope.NotSet"/> value overrides
+    /// any previously set scope.
+    /// </remarks>
     EventSourceOperations WithConcurrencyScope(ConcurrencyScope concurrencyScope);
 
     /// <summary>
