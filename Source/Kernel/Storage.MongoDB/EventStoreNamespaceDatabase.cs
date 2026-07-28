@@ -41,7 +41,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IMongoDBClientManager clientManager,
         IOptions<MongoDBOptions> mongoDBOptions)
     {
-        var databaseName = $"{eventStore}+es+{@namespace}";
+        var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace);
         var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
             DatabaseName = databaseName
