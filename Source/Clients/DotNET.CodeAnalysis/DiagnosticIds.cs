@@ -190,4 +190,9 @@ public static class DiagnosticIds
     /// The event type generations referenced by an event type migration must share one explicit [EventType] id.
     /// </summary>
     public const string MigrationGenerationEventTypeId = "CHR0037";
+
+    /// <summary>
+    /// A model-bound [Join] copies a [PII] value from a stream keyed by something other than the read model's own compliance subject.
+    /// </summary>
+    public const string CrossSubjectPiiJoin = "CHR0038";
 }
