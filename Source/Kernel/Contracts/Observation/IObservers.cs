@@ -54,6 +54,16 @@ public interface IObservers
     Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default);
 
     /// <summary>
+    /// Get the connected clients an observer's subscription delivers events to. Only client-owned
+    /// observers have connected clients; for kernel-owned observers the result is empty.
+    /// </summary>
+    /// <param name="request">The <see cref="GetConnectedClientsForObserverRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A collection of <see cref="Clients.ConnectedClient"/>.</returns>
+    [Operation]
+    Task<IEnumerable<Clients.ConnectedClient>> GetConnectedClientsForObserver(GetConnectedClientsForObserverRequest request, CallContext context = default);
+
+    /// <summary>
     /// Get all observers.
     /// </summary>
     /// <param name="request">The <see cref="AllObserversRequest"/>.</param>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chronicle Test App</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 1.5rem; max-width: 70rem; margin-inline: auto; }
+        h1 { font-size: 1.4rem; }
+        h2 { font-size: 1.1rem; margin-top: 2rem; border-bottom: 1px solid #8884; padding-bottom: .3rem; }
+        .banner { padding: .6rem 1rem; border-radius: .5rem; background: #4667; display: flex; gap: 2rem; flex-wrap: wrap; font-size: .9rem; }
+        .banner strong { font-size: 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #8883; font-size: .9rem; }
+        button { margin: 0 .15rem; padding: .25rem .6rem; border-radius: .35rem; border: 1px solid #8886; background: #68a4; cursor: pointer; }
+        button:hover { background: #68a8; }
+        #log { font-family: ui-monospace, monospace; font-size: .8rem; white-space: pre-wrap; background: #8881; border-radius: .5rem; padding: .8rem; max-height: 14rem; overflow-y: auto; }
+        .ok { color: #2a4; }
+        .fail { color: #d43; }
+        .muted { opacity: .6; }
+    </style>
+</head>
+<body>
+    <h1>Chronicle Test App</h1>
+    <div class="banner">
+        <span>Instance <strong id="instance-name">…</strong></span>
+        <span>Connection <strong id="instance-connection">…</strong></span>
+        <span>Event store <strong id="instance-store">…</strong></span>
+    </div>
+
+    <h2>Employees</h2>
+    <table>
+        <thead>
+            <tr><th>Employee</th><th>Title</th><th>Email</th><th>Address</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="employees"></tbody>
+    </table>
+
+    <h2>Customer with PII</h2>
+    <p class="muted">Registers a customer whose personal data is encrypted at rest by the kernel.</p>
+    <button onclick="registerCustomer()">Register customer</button>
+    <button onclick="viewCustomer()">View customer read model</button>
+    <div id="customer"></div>
+
+    <h2>Activity</h2>
+    <div id="log"></div>
+
+    <h2>Reactor invocations on this instance</h2>
+    <p class="muted">
+        With multiple instances of this app connected, the kernel fans partitions out across them -
+        act on different employees (partitions) and watch which instance's reactor gets each one.
+    </p>
+    <table>
+        <thead>
+            <tr><th>When</th><th>Partition</th><th>Event</th><th>Details</th></tr>
+        </thead>
+        <tbody id="reactor-invocations"></tbody>
+    </table>
+
+    <script>
+        const log = (message, ok = true) => {
+            const line = document.createElement('div');
+            line.className = ok ? 'ok' : 'fail';
+            line.textContent = `${new Date().toLocaleTimeString()}  ${message}`;
+            const container = document.getElementById('log');
+            container.prepend(line);
+        };
+
+        const post = async (url) => {
+            const response = await fetch(url, { method: 'POST' });
+            const result = await response.json();
+            log(result.message ?? JSON.stringify(result), result.success !== false);
+            await refreshEmployees();
+        };
+
+        const refreshInstance = async () => {
+            const instance = await (await fetch('api/instance')).json();
+            document.getElementById('instance-name').textContent = instance.name;
+            document.getElementById('instance-connection').textContent = instance.connectionId;
+            document.getElementById('instance-store').textContent = instance.eventStore;
+        };
+
+        const refreshEmployees = async () => {
+            const employees = await (await fetch('api/employees')).json();
+            document.getElementById('employees').innerHTML = employees.map(employee => `
+                <tr>
+                    <td>${employee.firstName} ${employee.lastName}<br /><span class="muted">${employee.id}</span></td>
+                    <td>${employee.title || '—'}</td>
+                    <td>${employee.email || '—'}</td>
+                    <td>${employee.address ? `${employee.address}, ${employee.city}, ${employee.country}` : '—'}</td>
+                    <td>
+                        <button onclick="post('api/employees/${employee.id}/promote')">Promote</button>
+                        <button onclick="post('api/employees/${employee.id}/move')">Move</button>
+                        <button onclick="post('api/employees/${employee.id}/set-email')">Set email</button>
+                        <button onclick="post('api/employees/${employee.id}/steal-email')" title="Tries to take the next employee's email - rejected by the unique constraint">Steal email</button>
+                        <button onclick="post('api/employees/${employee.id}/transactional')" title="Unit of work spanning two employees">Transactional</button>
+                    </td>
+                </tr>`).join('');
+        };
+
+        const refreshReactorInvocations = async () => {
+            const invocations = await (await fetch('api/reactor-invocations')).json();
+            document.getElementById('reactor-invocations').innerHTML = invocations.map(invocation => `
+                <tr>
+                    <td>${new Date(invocation.occurred).toLocaleTimeString()}</td>
+                    <td>${invocation.eventSourceId}</td>
+                    <td>${invocation.event}</td>
+                    <td>${invocation.details}</td>
+                </tr>`).join('');
+        };
+
+        const registerCustomer = async () => post('api/customers/register');
+
+        const viewCustomer = async () => {
+            const response = await fetch('api/customers/sample');
+            const customer = await response.json();
+            if (!response.ok) {
+                log(customer.message, false);
+                return;
+            }
+
+            document.getElementById('customer').innerHTML = `
+                <table>
+                    <tr><th>Full name</th><td>${customer.fullName} <span class="muted">[PII]</span></td></tr>
+                    <tr><th>Email</th><td>${customer.email} <span class="muted">[PII]</span></td></tr>
+                    <tr><th>Phone</th><td>${customer.phoneNumber} <span class="muted">[PII]</span></td></tr>
+                    <tr><th>Street</th><td>${customer.streetAddress} <span class="muted">[PII]</span></td></tr>
+                    <tr><th>City</th><td>${customer.city} <span class="muted">[PII]</span></td></tr>
+                    <tr><th>Postal code</th><td>${customer.postalCode} <span class="muted">[PII]</span></td></tr>
+                    <tr><th>Country</th><td>${customer.country}</td></tr>
+                    <tr><th>Customer number</th><td>${customer.customerNumber}</td></tr>
+                    <tr><th>Account status</th><td>${customer.accountStatus}</td></tr>
+                    <tr><th>Total orders</th><td>${customer.totalOrders}</td></tr>
+                </table>`;
+        };
+
+        refreshInstance();
+        refreshEmployees();
+        refreshReactorInvocations();
+        setInterval(refreshReactorInvocations, 2000);
+        setInterval(refreshEmployees, 5000);
+    </script>
+</body>
+</html>

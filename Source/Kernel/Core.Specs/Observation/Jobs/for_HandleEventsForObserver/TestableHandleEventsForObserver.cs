@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="storage">The storage for the cluster.</param>
 /// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains.</param>
+/// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
 /// <param name="logger">The logger.</param>
 public class TestableHandleEventsForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -28,8 +29,9 @@ public class TestableHandleEventsForObserver(
     IStorage storage,
     IEventCompliance eventCompliance,
     IGrainFactory grainFactory,
+    IObserverSubscriberSelector subscriberSelector,
     ILogger<HandleEventsForObserver> logger)
-    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, logger), IGrainType
+    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, subscriberSelector, logger), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;

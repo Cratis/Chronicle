@@ -5,6 +5,9 @@ using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Storage.Sql.Cluster.Security;
+using InMemoryAuthorizationStorage = Cratis.Chronicle.Storage.InMemory.Security.AuthorizationStorage;
+using InMemoryScopeStorage = Cratis.Chronicle.Storage.InMemory.Security.ScopeStorage;
+using InMemoryTokenStorage = Cratis.Chronicle.Storage.InMemory.Security.TokenStorage;
 using MongoDbApplicationStorage = Cratis.Chronicle.Storage.MongoDB.Security.ApplicationStorage;
 using MongoDbAuthorizationStorage = Cratis.Chronicle.Storage.MongoDB.Security.AuthorizationStorage;
 using MongoDbScopeStorage = Cratis.Chronicle.Storage.MongoDB.Security.ScopeStorage;
@@ -32,10 +35,11 @@ public static class OpenIddictServiceCollectionExtensions
             return services;
         }
 
-        // Add Security storage implementations for OpenIddict — use SQL or MongoDB depending on storage type
+        // Add Security storage implementations for OpenIddict — use SQL, in-memory or MongoDB depending on storage type
         var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
             || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
             || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
+        var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 
         if (isSqlStorage)
         {
@@ -43,6 +47,15 @@ public static class OpenIddictServiceCollectionExtensions
             services.AddSingleton<IAuthorizationStorage, SqlAuthorizationStorage>();
             services.AddSingleton<IScopeStorage, SqlScopeStorage>();
             services.AddSingleton<ITokenStorage, SqlTokenStorage>();
+        }
+        else if (isInMemoryStorage)
+        {
+            // The application store is shared with the seeded system storage so the internal client resolves;
+            // tokens, scopes and authorizations are created at runtime and live in their own in-memory stores.
+            services.AddSingleton(sp => sp.GetRequiredService<ISystemStorage>().Applications);
+            services.AddSingleton<IAuthorizationStorage, InMemoryAuthorizationStorage>();
+            services.AddSingleton<IScopeStorage, InMemoryScopeStorage>();
+            services.AddSingleton<ITokenStorage, InMemoryTokenStorage>();
         }
         else
         {

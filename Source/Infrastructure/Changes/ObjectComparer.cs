@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reflection;
 using System.Text.Json;
@@ -20,6 +21,9 @@ namespace Cratis.Chronicle.Changes;
 [Singleton]
 public class ObjectComparer : IObjectComparer
 {
+    readonly ConcurrentDictionary<Type, PropertyInfo[]> _propertiesByType = new();
+    readonly ConcurrentDictionary<Type, MethodInfo> _genericCompareToByType = new();
+
     /// <inheritdoc/>
     public bool Compare(object? left, object? right, out IEnumerable<PropertyDifference> differences) =>
         Compare(left, right, ObjectComparerMode.Strict, out differences);
@@ -48,9 +52,37 @@ public class ObjectComparer : IObjectComparer
         return allDifferences.Count == 0;
     }
 
+    /// <summary>
+    /// Gets the public instance <see cref="PropertyInfo">properties</see> for a <see cref="Type"/>, caching the result.
+    /// </summary>
+    /// <param name="type">The <see cref="Type"/> to get properties for.</param>
+    /// <returns>The <see cref="PropertyInfo"/> array for the type.</returns>
+    /// <remarks>
+    /// A type's properties never change at runtime, so the cache never needs invalidating; it grows only by the
+    /// finite set of read model types compared during a process' lifetime.
+    /// </remarks>
+    internal PropertyInfo[] GetPropertiesFor(Type type) =>
+        _propertiesByType.GetOrAdd(type, static forType => forType.GetProperties());
+
+    /// <summary>
+    /// Gets the <see cref="IComparable{T}.CompareTo(T)"/> <see cref="MethodInfo"/> for a <see cref="Type"/>, caching the result.
+    /// </summary>
+    /// <param name="type">The <see cref="Type"/> to resolve the method for.</param>
+    /// <returns>The resolved <see cref="MethodInfo"/>.</returns>
+    /// <remarks>
+    /// A type's interface implementations never change at runtime, so the cache never needs invalidating; it grows
+    /// only by the finite set of comparable types compared during a process' lifetime.
+    /// </remarks>
+    internal MethodInfo GetGenericCompareToFor(Type type) =>
+        _genericCompareToByType.GetOrAdd(type, static forType =>
+        {
+            var comparableInterface = forType.GetInterface(typeof(IComparable<>).Name);
+            return comparableInterface!.GetMethod(nameof(IComparable<object>.CompareTo), BindingFlags.Public | BindingFlags.Instance)!;
+        });
+
     void ComparePropertiesFor(Type type, object? left, object? right, PropertyPath currentPropertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
     {
-        foreach (var property in type.GetProperties())
+        foreach (var property in GetPropertiesFor(type))
         {
             // Skip indexer properties (e.g. this[int]) — they cannot be read without index
             // arguments, and GetValue without them throws a parameter-count mismatch. This surfaces
@@ -296,9 +328,8 @@ public class ObjectComparer : IObjectComparer
                 }
                 else
                 {
-                    var comparableInterface = type.GetInterface(typeof(IComparable<>).Name);
-                    var compareToMethod = comparableInterface!.GetMethod(nameof(IComparable<object>.CompareTo), BindingFlags.Public | BindingFlags.Instance);
-                    different = ((int)compareToMethod!.Invoke(leftValue, [rightValue])!) != 0;
+                    var compareToMethod = GetGenericCompareToFor(type);
+                    different = ((int)compareToMethod.Invoke(leftValue, [rightValue])!) != 0;
                 }
             }
             else if (!leftValue!.Equals(rightValue))

@@ -17,6 +17,14 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </summary>
 public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 {
+    /// <summary>
+    /// Indexes dropped as part of the index prune: the "eventSourceId" text index (no $text query exists; equality
+    /// is served by the eventSourceId compounds), the single-field "eventTypeId" ({type:1}, covered by the
+    /// type_sequenceNumber compound), the single-field "eventStreamType" (covered by the eventStreamType_eventStreamId
+    /// compound), and the "contentHashes" wildcard index (never filtered on).
+    /// </summary>
+    static readonly string[] _obsoleteEventIndexNames = ["eventSourceId", "eventTypeId", "eventStreamType", "contentHashes"];
+
     readonly IMongoDatabase _database;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
@@ -33,7 +41,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IMongoDBClientManager clientManager,
         IOptions<MongoDBOptions> mongoDBOptions)
     {
-        var databaseName = $"{eventStore}+es+{@namespace}";
+        var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace);
         var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
             DatabaseName = databaseName
@@ -60,9 +68,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     public IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId)
     {
         var collectionName = GetCollectionNameFor(eventSequenceId);
-        var collection = _database.GetCollection<Event>(collectionName);
-        CreateIndexesForEventSequenceIfNotCreated(collection, eventSequenceId);
-        return collection;
+        return _database.GetCollection<Event>(collectionName);
     }
 
     /// <inheritdoc/>
@@ -75,166 +81,103 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <inheritdoc/>
     public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(WellKnownCollectionNames.Observers);
 
-    void CreateIndexesForEventSequenceIfNotCreated(IMongoCollection<Event> collection, EventSequenceId eventSequenceId)
+    /// <inheritdoc/>
+    public async Task EnsureIndexesForEventSequence(EventSequenceId eventSequenceId)
     {
-        if (!_indexedEventSequences.ContainsKey(eventSequenceId))
+        if (_indexedEventSequences.ContainsKey(eventSequenceId))
         {
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Text(_ => _.EventSourceId),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventSourceId",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending(_ => _.Type),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventTypeId",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending(_ => _.Occurred),
-                    new CreateIndexOptions
-                    {
-                        Name = "occurred",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Combine(
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.Type)),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventSourceId_eventTypeId",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventSourceType",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventStreamType",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventStreamId",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Combine(
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventStreamType_eventStreamId",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Combine(
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventStreamType_eventStreamId_eventSourceType",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Combine(
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventSourceId_eventStreamType_eventStreamId",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Combine(
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventSourceId_eventStreamType_eventStreamId_eventSourceType",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Combine(
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.Type),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Combine(
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.Type),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
-                        Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
-                    new CreateIndexOptions
-                    {
-                        Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId_eventSourceType",
-                        Background = true
-                    }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Ascending(x => x.Tags),
-                    new CreateIndexOptions { Name = "tags" }));
-
-            collection.Indexes.CreateOne(
-                new CreateIndexModel<Event>(
-                    Builders<Event>.IndexKeys.Wildcard(_ => _.ContentHashes),
-                    new CreateIndexOptions
-                    {
-                        Name = "contentHashes",
-                        Background = true
-                    }));
-
-            _indexedEventSequences.TryAdd(eventSequenceId, true);
+            return;
         }
+
+        var collection = _database.GetCollection<Event>(GetCollectionNameFor(eventSequenceId));
+        var existing = await collection.GetIndexNamesAsync().ConfigureAwait(false);
+
+        foreach (var obsolete in _obsoleteEventIndexNames.Where(existing.Contains))
+        {
+            await collection.Indexes.DropOneAsync(obsolete).ConfigureAwait(false);
+        }
+
+        var missing = DesiredEventIndexes().Where(model => !existing.Contains(model.Options.Name)).ToArray();
+        if (missing.Length > 0)
+        {
+            await collection.Indexes.CreateManyAsync(missing).ConfigureAwait(false);
+        }
+
+        _indexedEventSequences.TryAdd(eventSequenceId, true);
+    }
+
+    static IEnumerable<CreateIndexModel<Event>> DesiredEventIndexes()
+    {
+        yield return new(
+            Builders<Event>.IndexKeys.Ascending(_ => _.Type).Descending(_ => _.SequenceNumber),
+            new CreateIndexOptions { Name = "type_sequenceNumber", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Ascending(_ => _.Occurred),
+            new CreateIndexOptions { Name = "occurred", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType),
+            new CreateIndexOptions { Name = "eventSourceType", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+            new CreateIndexOptions { Name = "eventStreamId", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.Type)),
+            new CreateIndexOptions { Name = "eventSourceId_eventTypeId", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
+            new CreateIndexOptions { Name = "eventStreamType_eventStreamId", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
+            new CreateIndexOptions { Name = "eventStreamType_eventStreamId_eventSourceType", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
+            new CreateIndexOptions { Name = "eventSourceId_eventStreamType_eventStreamId", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
+            new CreateIndexOptions { Name = "eventSourceId_eventStreamType_eventStreamId_eventSourceType", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
+            new CreateIndexOptions { Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType)),
+            new CreateIndexOptions { Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId_eventSourceType", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Ascending(x => x.Tags),
+            new CreateIndexOptions { Name = "tags" });
     }
 
     string GetCollectionNameFor(EventSequenceId eventSequenceId) => eventSequenceId.Value;

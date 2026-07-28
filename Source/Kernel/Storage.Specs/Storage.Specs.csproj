@@ -7,11 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- Exclude broken tests that reference old refactored types -->
-        <Compile Remove="Sinks/InMemory/for_InMemorySink/when_trying_to_find_root_key_by_child_value/**/*.cs" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>

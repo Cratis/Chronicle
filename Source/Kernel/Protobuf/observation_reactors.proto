@@ -58,6 +58,7 @@ message EventTypeWithKeyExpression {
 message EventsToObserve {
    string Partition = 1;
    repeated AppendedEvent Events = 2;
+   ReplayState ReplayState = 3;
 }
 message HasReactorRequest {
    string EventStore = 1;
@@ -111,6 +112,13 @@ message RegisterReactor {
    string EventStore = 2;
    string Namespace = 3;
    ReactorDefinition Reactor = 4;
+}
+enum ReplayState {
+   REPLAY_STATE_None = 0;
+   BeginReplay = 1;
+   EndReplay = 2;
+   BeginReplayPartition = 3;
+   EndReplayPartition = 4;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {

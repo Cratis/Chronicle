@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.MongoDB.Serialization;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using Orleans.Providers.MongoDB.Configuration;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -24,7 +25,7 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options) =>
-        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle);
+        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB);
 
     /// <summary>
     /// Configure Chronicle to use MongoDB.
@@ -32,27 +33,32 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
     /// <param name="server">Connection string for the MongoDB server.</param>
     /// <param name="database">Name of the database to use. Defaults to the <see cref="WellKnownDatabaseNames.Chronicle"/>.</param>
+    /// <param name="useClustering">Whether to also use MongoDB for Orleans cluster membership, letting multiple nodes form one cluster.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle)
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false)
     {
         var settings = GetMongoClientSettings(server);
 
-        builder.SiloBuilder
-            .UseMongoDBClient(_ => settings)
+        builder.SiloBuilder.UseMongoDBClient(_ => settings);
 
-            // .UseMongoDBClustering(options =>
-            // {
-            //     options.DatabaseName = database;
-            //     options.Strategy = MongoDBMembershipStrategy.Multiple;
-            // })
-            .UseMongoDBReminders(options => options.DatabaseName = database);
+        if (useClustering)
+        {
+            builder.SiloBuilder.UseMongoDBClustering(options =>
+            {
+                options.DatabaseName = database;
+                options.Strategy = MongoDBMembershipStrategy.Multiple;
+            });
+        }
+
+        builder.SiloBuilder.UseMongoDBReminders(options => options.DatabaseName = database);
 
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
             services.AddSingleton<IDatabase, Database>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
-            services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
+            services.AddSingleton<EncryptionKeyStorage>();
+            services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IStorage, Storage.Storage>();

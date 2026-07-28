@@ -17,6 +17,7 @@
     <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Cratis.Screenplay" />
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />

@@ -5,7 +5,7 @@ extern alias KernelConcepts;
 extern alias KernelCore;
 
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage.Sinks.InMemory;
+using Cratis.Chronicle.Storage.InMemory.Sinks;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelKey = KernelConcepts::Cratis.Chronicle.Concepts.Keys.Key;

@@ -31,10 +31,8 @@ public class ObserverKeys(
             Builders<Event>.Filter.Gte(_ => _.SequenceNumber, fromEventSequenceNumber),
             Builders<Event>.Filter.In(_ => _.Type, _eventTypes));
 
-        var cursor = collection.DistinctAsync(_ => _.EventSourceId, filter, cancellationToken: cancellationToken)
-                                .ConfigureAwait(false)
-                                .GetAwaiter()
-                                .GetResult();
-        return new ObserverKeysAsyncEnumerator(cursor);
+        return new ObserverKeysAsyncEnumerator(
+            ct => collection.DistinctAsync(_ => _.EventSourceId, filter, cancellationToken: ct),
+            cancellationToken);
     }
 }

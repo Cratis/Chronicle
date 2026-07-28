@@ -67,6 +67,13 @@ public class ChronicleOptions(
     public string ProgramIdentifier { get; set; } = "[N/A]";
 
     /// <summary>
+    /// Gets or sets the <see cref="ILoadBalancerStrategy"/> to use when the connection string holds
+    /// multiple servers. When not set, the strategy named by the connection string's loadBalancer
+    /// option is used, defaulting to round-robin.
+    /// </summary>
+    public ILoadBalancerStrategy? LoadBalancerStrategy { get; set; }
+
+    /// <summary>
     /// Gets the <see cref="JsonSerializerOptions"/> to use.
     /// </summary>
     public JsonSerializerOptions JsonSerializerOptions { get; set; } = jsonSerializerOptions ?? new JsonSerializerOptions();

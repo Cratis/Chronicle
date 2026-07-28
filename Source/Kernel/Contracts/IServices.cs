@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -135,4 +136,9 @@ public interface IServices
     /// Gets the <see cref="IServer"/> service.
     /// </summary>
     IServer Server { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IConnectionService"/> service.
+    /// </summary>
+    IConnectionService Connections { get; }
 }

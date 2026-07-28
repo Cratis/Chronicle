@@ -35,4 +35,20 @@ public interface IConnectionService
     /// <returns>A <see cref="Task{TResult}"/> containing the <see cref="DescriptorSetResponse"/>.</returns>
     [Operation]
     Task<DescriptorSetResponse> GetDescriptorSet();
+
+    /// <summary>
+    /// Get all clients connected to the server, across all silos in the cluster.
+    /// </summary>
+    /// <param name="context">The <see cref="CallContext"/> for the call.</param>
+    /// <returns>A collection of <see cref="ConnectedClient"/>.</returns>
+    [Operation]
+    Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default);
+
+    /// <summary>
+    /// Observe all clients connected to the server, across all silos in the cluster.
+    /// </summary>
+    /// <param name="context">The <see cref="CallContext"/> for the call.</param>
+    /// <returns>An observable of a collection of <see cref="ConnectedClient"/>.</returns>
+    [Operation]
+    IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default);
 }

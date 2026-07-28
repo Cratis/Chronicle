@@ -22,6 +22,8 @@ using Orleans.Core;
 using Orleans.Streams;
 using Orleans.TestKit;
 using Orleans.TestKit.Storage;
+using AppendedEventsQueueSubscription = Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription;
+using IAppendedEventsQueues = Cratis.Chronicle.EventSequences.IAppendedEventsQueues;
 using IChronicleEventStoreStorage = Cratis.Chronicle.Storage.IEventStoreStorage;
 using IChronicleStorage = Cratis.Chronicle.Storage.IStorage;
 using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
@@ -47,37 +49,53 @@ public class an_observer : Specification
     protected IStorage<FailedPartitions> _failedPartitionsStorage;
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
     protected IEventSequence _eventSequence;
+    protected IAppendedEventsQueues _appendedEventsQueues;
     protected IConfigurationForObserverProvider _configurationProvider;
     protected IChronicleStorage _storage;
     protected IChronicleEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IInFlightEventsStorage _inFlightEventsStorage;
+    protected IObserverHandledCountsStorage _observerHandledCountsStorage;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventCompliance _eventCompliance;
     protected Observers _observersConfig;
 
+    protected virtual Observers CreateObserversConfig() => new();
+
     async Task Establish()
     {
-        _observersConfig = new();
+        _observersConfig = CreateObserversConfig();
         _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _silo.AddService(_configurationProvider);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
         _eventSequence = Substitute.For<IEventSequence>();
+
+        // A subscribed observer is on its queue - the queue only drops it behind the observer's back when it spills
+        // to catch-up under back-pressure, which the specs that care about set up explicitly.
+        _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
+        _appendedEventsQueues
+            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+            .Returns(callInfo => new AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
+        _appendedEventsQueues.IsSubscribed(Arg.Any<ObserverKey>()).Returns(true);
+
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
+        _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         _eventCompliance = Substitute.For<IEventCompliance>();
 
-        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage
+        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage / IObserverHandledCountsStorage
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
         _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
+        _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
+        _observerHandledCountsStorage.GetFor(Arg.Any<ObserverId>(), Arg.Any<Key>()).Returns(new Dictionary<EventTypeId, EventCount>());
 
         // By default, no schemas are known — events pass through unchanged.
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
@@ -89,9 +107,11 @@ public class an_observer : Specification
 
         _silo.AddService(_storage);
         _silo.AddService(_eventCompliance);
+        _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);
+        _silo.AddProbe(_ => _appendedEventsQueues);
         _silo.AddProbe(_ => _eventSequence);
 
         _failedPartitionsState = Substitute.For<FailedPartitions>();

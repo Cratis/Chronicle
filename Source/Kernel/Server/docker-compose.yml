@@ -1,10 +1,38 @@
 services:
   # ─── MongoDB (default profile) ────────────────────────────────────────────────
+  # Run mongo:8 as a single-node replica set so Chronicle can use MongoDB transactions
+  # (AppendMany, unit of work, Orleans membership). mongo-init initializes the replica set.
   mongo:
-    image: cratis/mongodb
+    image: mongo:8
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     profiles: [mongodb, ""]
     ports:
       - 27017:27017
+
+  # One-shot initializer: waits for mongo to answer, then initiates the rs0 replica set with the
+  # member advertising localhost:27017 so host clients reach it after replica-set host discovery.
+  mongo-init:
+    image: mongo:8
+    profiles: [mongodb, ""]
+    depends_on:
+      - mongo
+    restart: "no"
+    command:
+      - /bin/bash
+      - -lc
+      - |
+        until mongosh --host mongo --quiet --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+          sleep 1
+        done
+        mongosh --host mongo --quiet --eval "
+        try {
+          rs.status();
+        } catch (e) {
+          rs.initiate({
+            _id: 'rs0',
+            members: [{ _id: 0, host: 'localhost:27017' }]
+          });
+        }"
 
   # ─── PostgreSQL ────────────────────────────────────────────────────────────────
   postgres:

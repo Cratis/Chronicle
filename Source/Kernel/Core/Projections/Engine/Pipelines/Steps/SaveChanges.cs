@@ -14,8 +14,9 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// </summary>
 /// <param name="sink"><see cref="ISink"/> to use.</param>
 /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
+/// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger<SaveChanges> logger) : ICanPerformProjectionPipelineStep
+public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
@@ -66,7 +67,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
             }
 
             // TODO: Return the number of affected records and pass this along to the changeset storage
-            var failedPartitions = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber);
+            var failedPartitions = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, WriteModeFor(projection, context));
 
             if (failedPartitions.Any())
             {
@@ -99,4 +100,24 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
 
         return context;
     }
+
+    /// <summary>
+    /// Decides whether this write may be made conditional on advancing the read model's last handled event
+    /// sequence number.
+    /// </summary>
+    /// <param name="projection">The <see cref="IProjection"/> being saved for.</param>
+    /// <param name="context">The <see cref="ProjectionEventContext"/> for the event.</param>
+    /// <returns>The <see cref="SinkWriteMode"/> to write with.</returns>
+    /// <remarks>
+    /// Only a projection whose every event resolves its document key to the event's own event source id has a
+    /// monotonic per-document stream; anything that collapses event sources onto one document — a join, a constant
+    /// key, a parent hierarchy — is deliberately written out of order and would lose events to the guard. The
+    /// event that creates the instance is written unconditionally: there is no document to compare a watermark
+    /// against, and a guarded write never inserts. On a redelivery of that same creating event the instance is
+    /// already there, so the write is guarded and correctly does nothing.
+    /// </remarks>
+    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context) =>
+        guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
+            ? SinkWriteMode.OnlyWhenAdvancingWatermark
+            : SinkWriteMode.Always;
 }

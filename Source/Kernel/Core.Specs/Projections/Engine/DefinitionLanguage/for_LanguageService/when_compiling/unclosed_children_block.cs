@@ -17,5 +17,5 @@ public class unclosed_children_block : given.a_language_service_expecting_errors
     void Because() => Compile(Declaration);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_missing_child_property() => _errors.Errors.ShouldContain(e => e.Message.Contains("as") || e.Message.Contains("identifier") || e.Message.Contains("expect"));
+    [Fact] void should_report_invalid_children_placement() => _errors.Errors.ShouldContain(e => e.Message.Contains("children transactions"));
 }

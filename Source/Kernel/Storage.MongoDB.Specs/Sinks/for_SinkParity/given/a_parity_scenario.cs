@@ -15,7 +15,7 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.Sinks.InMemory;
+using Cratis.Chronicle.Storage.InMemory.Sinks;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity.given;
@@ -30,6 +30,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 {
     readonly ObjectComparer _objectComparer = new();
 
+    int _appliedStates;
     IMongoClient _client = default!;
     string _databaseName = default!;
     InMemorySink _inMemorySink = default!;
@@ -156,13 +157,18 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 
     async Task ApplyThroughBoth(Func<ExpandoObject> stateFactory)
     {
+        // Each state stands for a distinct event, so it has to carry its own sequence number: the reducer
+        // pipeline only writes a state that advances the read model's watermark, and reusing one number would
+        // make every state after the first a no-op.
+        var sequenceNumber = new EventSequenceNumber((ulong)_appliedStates++);
+
         await _inMemoryPipeline.Handle(
-            new ReducerContext([CreateEvent()], _key),
-            (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), stateFactory())));
+            new ReducerContext([CreateEvent(sequenceNumber)], _key),
+            (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), stateFactory())));
 
         await _mongoPipeline.Handle(
-            new ReducerContext([CreateEvent()], _key),
-            (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), stateFactory())));
+            new ReducerContext([CreateEvent(sequenceNumber)], _key),
+            (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), stateFactory())));
     }
 
     ReadModelDefinition CreateReadModelDefinition() =>
@@ -181,7 +187,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
             },
             []);
 
-    AppendedEvent CreateEvent()
+    AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber)
     {
         var context = EventContext.From(
             "test-store",
@@ -191,7 +197,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
             _key.Value.ToString()!,
             EventStreamType.All,
             EventStreamId.Default,
-            EventSequenceNumber.First,
+            sequenceNumber,
             CorrelationId.NotSet);
 
         return new AppendedEvent(context, new ExpandoObject());

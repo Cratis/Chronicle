@@ -7,9 +7,6 @@ namespace Cratis.Chronicle.Connections;
 
 internal static partial class OAuthTokenProviderLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Initializing OAuth token provider for endpoint: {Endpoint}")]
-    internal static partial void InitializingTokenProvider(this ILogger<OAuthTokenProvider> logger, string endpoint);
-
     [LoggerMessage(LogLevel.Debug, "Using cached access token (expires at {ExpiryTime})")]
     internal static partial void UsingCachedToken(this ILogger<OAuthTokenProvider> logger, DateTimeOffset expiryTime);
 
@@ -27,4 +24,10 @@ internal static partial class OAuthTokenProviderLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Refreshing access token by clearing cache and requesting new token")]
     internal static partial void RefreshingAccessToken(this ILogger<OAuthTokenProvider> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping token fetch - the previous attempt failed moments ago")]
+    internal static partial void ThrottlingTokenFetch(this ILogger<OAuthTokenProvider> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to fetch new access token from {Endpoint} - serving cached token valid until {ExpiryTime}")]
+    internal static partial void ServingCachedTokenAfterFailedFetch(this ILogger<OAuthTokenProvider> logger, string endpoint, DateTimeOffset expiryTime, Exception ex);
 }

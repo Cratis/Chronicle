@@ -20,8 +20,8 @@ public interface IProjectionFutures : IGrainWithStringKey
     /// Add a future that needs resolution.
     /// </summary>
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
-    /// <returns>Awaitable task.</returns>
-    Task AddFuture(ProjectionFuture future);
+    /// <returns>The number of futures pending resolution after the add.</returns>
+    Task<int> AddFuture(ProjectionFuture future);
 
     /// <summary>
     /// Resolve a future that has been successfully resolved.

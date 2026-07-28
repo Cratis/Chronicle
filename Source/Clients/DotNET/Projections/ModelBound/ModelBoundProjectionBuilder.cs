@@ -406,14 +406,23 @@ internal class ModelBoundProjectionBuilder(
             targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName);
         }
 
-        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
-        {
-            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
-        }
+        // A [RemovedWith] that sits alongside a [ChildrenFrom] on the same collection property means "remove the
+        // keyed child", so it must land on the child definition (created below), never on the root — where it
+        // would remove the whole read-model document. A [RemovedWith] on any other property keeps its
+        // root-document-removal meaning.
+        var isChildrenCollection = isRoot && parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>().Any();
 
-        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+        if (!isChildrenCollection)
         {
-            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+            foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+            {
+                targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+            }
+
+            foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+            {
+                targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+            }
         }
 
         // Only process ChildrenFromAttribute when at root level.
@@ -423,6 +432,21 @@ internal class ModelBoundProjectionBuilder(
             foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
             {
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
+            }
+
+            // Route the property-level [RemovedWith] / [RemovedWithJoin] to the child definition just created,
+            // so cancelling a keyed child removes that one child rather than the whole document.
+            if (isChildrenCollection && definition.Children.TryGetValue(propertyName, out var childrenDefinition))
+            {
+                foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+                {
+                    childrenDefinition.RemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+                }
+
+                foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+                {
+                    childrenDefinition.RemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+                }
             }
 
             if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
@@ -530,14 +554,24 @@ internal class ModelBoundProjectionBuilder(
             targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, property.Name, propertyName);
         }
 
-        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
-        {
-            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
-        }
+        // A [RemovedWith] that sits alongside a [ChildrenFrom] on the same collection property means "remove the
+        // keyed child", so it must land on that collection's own child definition, never on the containing
+        // definition — where it would remove the whole document (at root) or the whole parent item (nested).
+        // A root children collection is re-homed just below; a nested one is re-homed by ProcessNestedChildren.
+        // A [RemovedWith] on any other property keeps its containing-document-removal meaning.
+        var isChildrenCollection = property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>().Any();
 
-        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+        if (!isChildrenCollection)
         {
-            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+            foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+            {
+                targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+            }
+
+            foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+            {
+                targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+            }
         }
 
         // Only process ChildrenFromAttribute when at root level.
@@ -548,6 +582,21 @@ internal class ModelBoundProjectionBuilder(
             {
                 var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
+            }
+
+            // Route the property-level [RemovedWith] / [RemovedWithJoin] to the child definition just created,
+            // so cancelling a keyed child removes that one child rather than the whole document.
+            if (isChildrenCollection && definition.Children.TryGetValue(propertyName, out var childrenDefinition))
+            {
+                foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+                {
+                    childrenDefinition.RemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+                }
+
+                foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+                {
+                    childrenDefinition.RemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
+                }
             }
 
             if (Attribute.IsDefined(property, typeof(NestedAttribute)))

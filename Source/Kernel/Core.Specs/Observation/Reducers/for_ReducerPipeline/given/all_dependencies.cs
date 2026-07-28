@@ -75,6 +75,9 @@ public class all_dependencies : Specification
         _sink.ApplyChanges(Arg.Any<Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>())
             .Returns(Task.FromResult(Enumerable.Empty<FailedPartition>()));
 
+        _sink.ApplyChanges(Arg.Any<Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<SinkWriteMode>())
+            .Returns(Task.FromResult(Enumerable.Empty<FailedPartition>()));
+
         _pipeline = new ReducerPipeline(
             _readModelDefinition,
             _sink,

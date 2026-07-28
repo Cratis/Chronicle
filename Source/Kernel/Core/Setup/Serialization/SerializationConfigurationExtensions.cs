@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -69,6 +70,7 @@ public static class SerializationConfigurationExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCustomSerializers(this IServiceCollection services)
     {
+        services.AddSingleton<IEventTypeSchemaCache, EventTypeSchemaCache>();
         services.AddSerializer(builder =>
         {
             builder.Services
@@ -77,6 +79,7 @@ public static class SerializationConfigurationExtensions
                 .AddCompleteSerializer<ConcurrencyScopesSerializer>()
                 .AddCompleteSerializer<ExpandoObjectSerializer>()
                 .AddLinqCollectionCopier();
+            builder.Services.AddSingleton<ITypeFilter, CratisTypesFilter>();
         });
         return services;
     }
@@ -101,6 +104,13 @@ public static class SerializationConfigurationExtensions
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <typeparam name="TSerializer">Type of serializer.</typeparam>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    /// <remarks>
+    /// Each registration is its own singleton descriptor, so <typeparamref name="TSerializer"/> is instantiated
+    /// once per interface it is registered for rather than once in total. State a serializer keeps in instance
+    /// fields is therefore only shared between members of the same interface - anything written from
+    /// <see cref="IGeneralizedCopier"/> and read from <see cref="IGeneralizedCodec"/> lands in different
+    /// objects. Put state that must be shared in its own singleton and inject it.
+    /// </remarks>
     public static IServiceCollection AddCompleteSerializer<TSerializer>(this IServiceCollection services)
         where TSerializer : class, IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
     {

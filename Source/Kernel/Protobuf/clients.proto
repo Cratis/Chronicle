@@ -6,6 +6,21 @@ message ConnectRequest {
    string ConnectionId = 1;
    string ClientVersion = 2;
    bool IsRunningWithDebugger = 3;
+   int32 ProcessId = 4;
+   string ProcessPath = 5;
+   string MachineName = 6;
+   string ClientType = 7;
+}
+message ConnectedClient {
+   string ConnectionId = 1;
+   string Version = 2;
+   SerializableDateTimeOffset LastSeen = 3;
+   bool IsRunningWithDebugger = 4;
+   string SiloAddress = 5;
+   int32 ProcessId = 6;
+   string ProcessPath = 7;
+   string MachineName = 8;
+   string ClientType = 9;
 }
 message ConnectionKeepAlive {
    string ConnectionId = 1;
@@ -13,8 +28,17 @@ message ConnectionKeepAlive {
 message DescriptorSetResponse {
    string SchemaDefinition = 1;
 }
+message IEnumerable_ConnectedClient {
+   repeated ConnectedClient items = 1;
+}
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
+message SerializableDateTimeOffset {
+   string Value = 1;
+}
 service ConnectionService {
    rpc Connect (ConnectRequest) returns (stream .Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive);
    rpc ConnectionKeepAlive (.Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive) returns (.google.protobuf.Empty);
+   rpc GetConnectedClients (.google.protobuf.Empty) returns (IEnumerable_ConnectedClient);
    rpc GetDescriptorSet (.google.protobuf.Empty) returns (DescriptorSetResponse);
+   rpc ObserveConnectedClients (.google.protobuf.Empty) returns (stream IEnumerable_ConnectedClient);
 }

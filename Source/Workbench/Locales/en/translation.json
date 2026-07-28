@@ -27,6 +27,25 @@
             }
         }
     },
+    "connectedClients": {
+        "title": "Connected Clients",
+        "empty": "No clients are connected",
+        "columns": {
+            "server": "Server",
+            "connectionId": "Connection",
+            "clientType": "Type",
+            "version": "Version",
+            "lastSeen": "Last Seen",
+            "debugger": "Debugger",
+            "processId": "PID",
+            "processPath": "Process",
+            "machineName": "Machine"
+        },
+        "views": {
+            "flat": "Flat",
+            "bySilo": "By Silo"
+        }
+    },
     "mainMenu": {
         "recommendations": "Recommendations",
         "jobs": "Jobs",
@@ -52,7 +71,8 @@
         "system": {
             "groupLabel": "System",
             "users": "Users",
-            "applications": "Applications"
+            "applications": "Applications",
+            "connectedClients": "Connected Clients"
         }
     },
     "eventStore": {
@@ -381,6 +401,28 @@
                     "replaying": "Replaying",
                     "disconnected": "Disconnected",
                     "quarantined": "Quarantined"
+                },
+                "details": {
+                    "sequence": "Sequence",
+                    "observerType": "Type",
+                    "owner": "Owner",
+                    "state": "State",
+                    "nextEventSequenceNumber": "Next event sequence number",
+                    "lastHandledEventSequenceNumber": "Last handled event sequence number",
+                    "handledEventCount": "Handled events",
+                    "connectedClients": {
+                        "title": "Connected Clients",
+                        "empty": "No clients are connected to this observer",
+                        "columns": {
+                            "connectionId": "Connection",
+                            "clientType": "Type",
+                            "version": "Version",
+                            "machineName": "Machine",
+                            "processId": "PID",
+                            "processPath": "Process",
+                            "lastSeen": "Last Seen"
+                        }
+                    }
                 }
             },
             "failedPartitions": {

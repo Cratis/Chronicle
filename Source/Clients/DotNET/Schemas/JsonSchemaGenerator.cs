@@ -110,22 +110,73 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
+    /// <summary>
+    /// Adds compliance metadata to a schema node, descending into an object's properties so that the
+    /// metadata always lands on the leaves that actually hold a value.
+    /// </summary>
+    /// <param name="schema">The schema node to add to.</param>
+    /// <param name="metadata">The <see cref="ComplianceMetadata"/> to add.</param>
+    /// <remarks>
+    /// A compliance marker can be declared on something that is not a single value: a <c>[PII]</c> attribute
+    /// on a composite value-object type, or on a property whose type is such an object. Compliance is applied
+    /// per value, so leaving the marker on the container would make Chronicle hand the whole JSON object to the
+    /// value handler and store one opaque ciphertext string where the schema still says "object". Releasing that
+    /// gives back a string, not an object, and the read model then fails to materialize. Pushing the metadata
+    /// down to every leaf keeps encryption symmetric with the release walk, keeps each value independently
+    /// encrypted, and preserves the document shape.
+    /// <para>
+    /// An array-typed node is deliberately left as a container: coarse compliance on a whole collection is an
+    /// established, separately handled behavior (the collection is blob-encrypted and its shape restored on
+    /// release). Object members reached *through* an array's item schema are still descended into.
+    /// </para>
+    /// </remarks>
     static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata)
     {
+        var metadataAsArray = metadata as IReadOnlyCollection<ComplianceMetadata> ?? [.. metadata];
+
+        if (schema["properties"] is JsonObject properties && properties.Count > 0)
+        {
+            foreach (var (_, propertySchema) in properties.ToArray())
+            {
+                if (propertySchema is JsonObject propertySchemaObject)
+                {
+                    AddComplianceMetadata(propertySchemaObject, metadataAsArray);
+                }
+            }
+
+            return;
+        }
+
         if (!schema.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey))
         {
             schema[ComplianceJsonSchemaExtensions.ComplianceKey] = new JsonArray();
         }
 
         var complianceArr = schema[ComplianceJsonSchemaExtensions.ComplianceKey]!.AsArray();
-        foreach (var item in metadata)
+        foreach (var item in metadataAsArray.Where(item => !HasMetadataOfType(complianceArr, item.MetadataType.Value)))
         {
             complianceArr.Add(JsonSerializer.SerializeToNode(
                 new ComplianceSchemaMetadata(item.MetadataType.Value, item.Details)));
         }
     }
 
-    static bool IsNullableConceptProperty(JsonSchemaExporterContext context)
+    /// <summary>
+    /// Checks whether a compliance array already carries metadata of a given type.
+    /// </summary>
+    /// <param name="complianceArray">The compliance array to check.</param>
+    /// <param name="metadataType">The metadata type to look for.</param>
+    /// <returns>True when the metadata type is already present, false if not.</returns>
+    /// <remarks>
+    /// A leaf can be reached by more than one marker — for example a <c>[PII]</c> concept inside a value object
+    /// whose type is itself marked <c>[PII]</c>. Recording the same metadata type twice adds nothing and makes
+    /// the generated schema noisier to read and to diff.
+    /// </remarks>
+    static bool HasMetadataOfType(JsonArray complianceArray, string metadataType) =>
+        complianceArray
+            .OfType<JsonObject>()
+            .Any(_ => _[nameof(ComplianceSchemaMetadata.metadataType)]?.GetValue<string>() == metadataType);
+
+    static bool IsAnnotatedNullable(JsonSchemaExporterContext context)
     {
         var nullabilityCtx = new NullabilityInfoContext();
         switch (context.PropertyInfo?.AttributeProvider)
@@ -142,6 +193,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                 return false;
         }
     }
+
+    static bool PropertyIsNullable(Type type, JsonSchemaExporterContext context) =>
+        Nullable.GetUnderlyingType(type) is not null || IsAnnotatedNullable(context);
 
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {
@@ -166,7 +220,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                     AddComplianceMetadata(conceptSchemaObj, _metadataResolver.GetMetadataFor(type));
                 }
 
-                if (IsNullableConceptProperty(context) &&
+                if (PropertyIsNullable(type, context) &&
                     conceptSchemaObj.TryGetPropertyValue("format", out var format))
                 {
                     var formatStr = format!.GetValue<string>();
@@ -194,6 +248,16 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             {
                 var underlyingItemType = elementType.GetConceptValueType();
                 var itemSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingItemType, _exporterOptions);
+
+                // The element concept's own compliance metadata has to be carried onto the item schema. This
+                // branch bypasses the scalar-concept path above, so without it a [PII] concept loses its
+                // classification the moment it is put in a list — and a value that is encrypted as a scalar
+                // would be persisted in the clear as a list element.
+                if (itemSchema is JsonObject itemSchemaObject && _metadataResolver.HasMetadataFor(elementType))
+                {
+                    AddComplianceMetadata(itemSchemaObject, _metadataResolver.GetMetadataFor(elementType));
+                }
+
                 return new JsonObject
                 {
                     ["type"] = "array",
@@ -247,7 +311,20 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         // Add format for known types
         if (_typeFormats.IsKnown(formatType))
         {
-            schemaObj["format"] = _typeFormats.GetFormatForType(formatType);
+            var format = _typeFormats.GetFormatForType(formatType);
+
+            // Preserve the nullable marker for known value types (e.g. DateTimeOffset?, int?). STJ's
+            // JsonSchemaExporter does not carry the Nullable<T>/NRT marker into the format, so a nullable
+            // scalar would otherwise share its non-nullable form's format — making IsNullable() false and
+            // GetDefaultValue() synthesize a type-default sentinel (e.g. 0001-01-01 for DateTimeOffset) for an
+            // unset optional at read time. Appending '?' makes IsNullable() return true so the value
+            // materializes as null/absent instead. Symmetric with the nullable-concept handling above.
+            if (PropertyIsNullable(type, context) && !format.EndsWith('?'))
+            {
+                format += "?";
+            }
+
+            schemaObj["format"] = format;
         }
 
         // Add compliance metadata for the type

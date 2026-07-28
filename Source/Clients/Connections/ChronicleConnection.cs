@@ -41,7 +41,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
     readonly int? _maxSendMessageSize;
-    readonly ITaskFactory _tasks;
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly CancellationToken _cancellationToken;
     readonly ILogger<ChronicleConnection> _logger;
@@ -52,10 +51,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly bool _skipTlsValidation;
     readonly bool _skipCompatibilityCheck;
     readonly bool _skipKeepAlive;
+    readonly IChronicleServerAddressResolver _serverAddressResolver;
+    readonly ILoadBalancerStrategy _loadBalancerStrategy;
     readonly SemaphoreSlim _connectLock = new(1, 1);
+    readonly ConnectionWatchdog _watchDog;
+    ChronicleServerAddress? _currentServerAddress;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
-    DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
     IServices _services;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
@@ -79,6 +81,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
     /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect. Useful for short-lived clients like CLIs.</param>
     /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect. Useful for short-lived clients like CLIs.</param>
+    /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses. Defaults to <see cref="ChronicleServerAddressResolver"/>.</param>
+    /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or least-connections.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
@@ -97,7 +101,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         string? certificatePassword = null,
         ITokenProvider? tokenProvider = null,
         bool skipCompatibilityCheck = false,
-        bool skipKeepAlive = false)
+        bool skipKeepAlive = false,
+        IChronicleServerAddressResolver? serverAddressResolver = null,
+        ILoadBalancerStrategy? loadBalancerStrategy = null)
     {
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
@@ -107,7 +113,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _maxReceiveMessageSize = maxReceiveMessageSize;
         _maxSendMessageSize = maxSendMessageSize;
         Lifecycle = connectionLifecycle;
-        _tasks = tasks;
         _correlationIdAccessor = correlationIdAccessor;
         _cancellationToken = cancellationToken;
         _logger = logger;
@@ -115,6 +120,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
+        _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation);
+        _watchDog = new ConnectionWatchdog(
+            tasks,
+            OnSessionDropped,
+            Connect,
+            loggerFactory.CreateLogger<ConnectionWatchdog>(),
+            cancellationToken);
 
         _cancellationToken.Register(() =>
         {
@@ -129,6 +142,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; }
+
+    /// <summary>
+    /// Gets the <see cref="ChronicleServerAddress"/> the connection is currently using, or the
+    /// first configured address when no connection has been established yet.
+    /// </summary>
+    public ChronicleServerAddress CurrentServerAddress => _currentServerAddress ?? _connectionString.ServerAddress;
 
     /// <inheritdoc/>
     IServices IChronicleServicesAccessor.Services
@@ -149,6 +168,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (_tokenProvider is IDisposable disposableTokenProvider)
         {
             disposableTokenProvider.Dispose();
+        }
+        if (_loadBalancerStrategy is IDisposable disposableLoadBalancerStrategy)
+        {
+            disposableLoadBalancerStrategy.Dispose();
         }
     }
 
@@ -182,7 +205,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
 
-        _channel = CreateGrpcChannel();
+        var serverAddresses = await _serverAddressResolver.Resolve(_connectionString);
+        _currentServerAddress = await _loadBalancerStrategy.Next(serverAddresses);
+        _channel = CreateGrpcChannel(_currentServerAddress);
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
         var callInvoker = _channel
             .Intercept(new AuthenticationClientInterceptor(_tokenProvider, _loggerFactory.CreateLogger<AuthenticationClientInterceptor>()))
@@ -246,7 +271,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
             callInvoker.CreateGrpcService<IUsers>(clientFactory),
             callInvoker.CreateGrpcService<IApplications>(clientFactory),
-            callInvoker.CreateGrpcService<IServer>(clientFactory));
+            callInvoker.CreateGrpcService<IServer>(clientFactory),
+            callInvoker.CreateGrpcService<IConnectionService>(clientFactory));
 
         if (_skipKeepAlive)
         {
@@ -256,14 +282,19 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
 
         _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
-        _lastKeepAlive = DateTimeOffset.UtcNow;
+        _watchDog.NotifyKeepAlive();
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _keepAliveSubscription = _connectionService.Connect(
             new()
             {
                 ConnectionId = Lifecycle.ConnectionId,
+                ClientVersion = ClientProcess.Version,
                 IsRunningWithDebugger = Debugger.IsAttached,
+                ProcessId = ClientProcess.Id,
+                ProcessPath = ClientProcess.Path,
+                MachineName = ClientProcess.MachineName,
+                ClientType = ClientProcess.ClientType,
             }).Subscribe(HandleConnection);
 
         try
@@ -278,7 +309,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         finally
         {
-            StartWatchDog();
+            _watchDog.Start();
         }
     }
 
@@ -290,7 +321,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
-    GrpcChannel CreateGrpcChannel()
+    GrpcChannel CreateGrpcChannel(ChronicleServerAddress serverAddress)
     {
         X509Certificate2? certificate = null;
         try
@@ -320,7 +351,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             httpHandler.SslOptions.RemoteCertificateValidationCallback =
                 CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
 
-            var address = $"https://{_connectionString.ServerAddress.Host}:{_connectionString.ServerAddress.Port}";
+            var address = $"https://{serverAddress.Host}:{serverAddress.Port}";
 
             var channel = GrpcChannel.ForAddress(
                 address,
@@ -365,7 +396,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _connectTcs?.SetResult();
         }
-        _lastKeepAlive = DateTimeOffset.UtcNow;
+        _watchDog.NotifyKeepAlive();
 
         if (!Debugger.IsAttached)
         {
@@ -373,43 +404,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
-    void StartWatchDog()
+    async Task OnSessionDropped()
     {
-        _ = _tasks.Run(
-            async () =>
-            {
-                while (!_cancellationToken.IsCancellationRequested)
-                {
-                    await _tasks.Delay(1000, _cancellationToken);
-                    var delta = DateTimeOffset.UtcNow.Subtract(_lastKeepAlive);
-                    if (delta.TotalSeconds > 5)
-                    {
-                        break;
-                    }
-                }
-
-                if (_connectTcs?.Task.IsCompleted == true)
-                {
-                    _logger.Disconnected();
-                    await Lifecycle.Disconnected();
-                }
-                _logger.Reconnecting();
-                try
-                {
-                    await Connect();
-                }
-                catch (OperationCanceledException)
-                {
-                    // Expected on shutdown — let the task exit.
-                }
-                catch (Exception ex)
-                {
-                    // Registration failed (application code issue). Log prominently so the developer
-                    // can diagnose and fix the problem. The new watchdog started inside ConnectInternal's
-                    // finally block will continue monitoring the physical connection.
-                    _logger.RegistrationFailed(ex);
-                }
-            },
-            _cancellationToken);
+        if (_connectTcs?.Task.IsCompleted == true)
+        {
+            _logger.Disconnected();
+            await Lifecycle.Disconnected();
+        }
     }
 }

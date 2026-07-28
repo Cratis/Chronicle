@@ -135,6 +135,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that client {ConnectionId} is no longer connected. Unsubscribing observer.")]
     internal static partial void WatchdogClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that client instance {ConnectionId} is no longer connected. Removing it from the fan out targets.")]
+    internal static partial void WatchdogClientInstanceDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Client instance {ConnectionId} reported disconnected while handling partition {Partition}. Retrying with the remaining instances.")]
+    internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, Key partition);
+
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
     internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
 
@@ -143,6 +149,12 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
     internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is behind from {NextEventSequenceNumber} but no longer subscribed on its appended-events queue. Re-routing observer.")]
+    internal static partial void WatchdogRescuingStrandedObserver(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
+    internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes

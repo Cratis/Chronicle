@@ -810,7 +810,7 @@ public class ProjectionFactory(
 
         if (projectionDefinition.FromEventProperty is not null)
         {
-            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.FromEventProperty.Event, keyResolvers.FromEventSourceId));
+            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.FromEventProperty.Event, keyResolvers.FromEventSourceId, ResolvesToEventSourceId: true));
         }
 
         var distinctOwnEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).Select(_ => _.EventType).ToArray();
@@ -865,8 +865,20 @@ public class ProjectionFactory(
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, PropertyPath joinOnProperty)
     {
-        var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
+        // For a ROOT-level join, resolve the join source's key as its raw event source id — never coerced to
+        // the read model's key type. The join value is the join-ON value (e.g. a string organization number),
+        // not the root's key (e.g. a Guid); routing it through the read-model-key-typed resolver would
+        // Guid.Parse a non-Guid string and permanently freeze the partition. ForJoin matches it against
+        // existing roots (and defers to the row-creation-time ResolveJoin backfill when none exists yet).
+        // A CHILD join keeps the key-expression resolver: its resolved value becomes the child's array-indexer
+        // identifier, which must be typed to the child's identified-by property to locate the child.
+        var keyResolver = projection.HasParent
+            ? GetKeyResolverFor(projection, key, actualIdentifiedByProperty).Resolver
+            : keyResolvers.FromEventSourceId;
         keyResolver = keyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty, joinOnProperty);
+
+        // A join matches the event against existing roots by a joined value, collapsing distinct event sources onto
+        // one document, so it is never purely event-source-keyed.
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
 
@@ -879,10 +891,10 @@ public class ProjectionFactory(
             projection.HasParent,
             projection.HasParent ? projection.Parent!.IdentifiedByProperty.Path : "N/A");
 
-        var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
+        var (keyResolver, resolvesToEventSourceId) = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
         if (!hasParent)
         {
-            return new EventTypeWithKeyResolver(eventType, keyResolver);
+            return new EventTypeWithKeyResolver(eventType, keyResolver, resolvesToEventSourceId);
         }
 
         // Default to EventSourceId for parent key when not explicitly specified
@@ -899,17 +911,19 @@ public class ProjectionFactory(
         var parentKeyResolver = GetParentKeyResolverFor(parentProjection, effectiveParentKey, parentIdentifiedByProperty);
         keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
 
+        // A parent-hierarchy resolver routes the child event to its parent document, collapsing distinct event
+        // sources onto one document, so it is never purely event-source-keyed.
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
 
-    KeyResolver GetKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty)
+    (KeyResolver Resolver, bool ResolvesToEventSourceId) GetKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty)
     {
         if (key is not null && key.Value.Length != 0 && keyExpressionResolvers.CanResolve(key))
         {
-            return keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
+            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty), false);
         }
 
-        return keyResolvers.FromEventSourceId;
+        return (keyResolvers.FromEventSourceId, true);
     }
 
     KeyResolver GetParentKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty)

@@ -17,6 +17,7 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 import strings from 'Strings';
 import { applyCoordinateFormatting } from 'Components/CoordinateFormatter/CoordinateFormatter';
+import css from './EventDetails.module.css';
 
 interface RevisionOption {
     label: string;
@@ -217,7 +218,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
     const generationPlaceholder = hasMultipleGenerations ? generationOptions.find(o => o.value === item.context.eventType.generation)?.label : undefined;
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
+        <div className={css.eventDetails}>
             <h2 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-color)' }}>
                 {item.context.eventType.id}
             </h2>
@@ -253,22 +254,18 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                     )}
                 </div>
             )}
-            <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <TabView>
                 <TabPanel header="Context">
-                    <div style={{ height: '100%', overflow: 'auto' }}>
-                        <ObjectContentEditor
-                            object={contextObject as Json}
-                            schema={contextSchema}
-                        />
-                    </div>
+                    <ObjectContentEditor
+                        object={contextObject as Json}
+                        schema={contextSchema}
+                    />
                 </TabPanel>
                 <TabPanel header="Content">
-                    <div style={{ height: '100%', overflow: 'auto' }}>
-                        <ObjectContentEditor
-                            object={formattedContent as Json}
-                            schema={formattedSchema}
-                        />
-                    </div>
+                    <ObjectContentEditor
+                        object={formattedContent as Json}
+                        schema={formattedSchema}
+                    />
                 </TabPanel>
             </TabView>
         </div>

@@ -110,7 +110,9 @@ public class EventStore : IEventStore
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
         _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
-        UnitOfWorkManager = new UnitOfWorkManager(this);
+        UnitOfWorkManager = new UnitOfWorkManager(
+            this,
+            serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName));
         _correlationIdAccessor = correlationIdAccessor;
 
         _eventSerializer = new EventSerializer(
@@ -215,6 +217,20 @@ public class EventStore : IEventStore
             materializedReadModels,
             loggerFactory.CreateLogger<ReadModels.ReadModels>());
 
+        var readModelReactorInvoker = new ReadModels.ReadModelReactorInvoker(
+            reactorSideEffectHandlers,
+            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(Types.Types.Instance, serviceProvider)),
+            loggerFactory.CreateLogger<ReadModels.ReadModelReactorInvoker>());
+
+        ReadModelReactors = new ReadModels.ReadModelReactors(
+            this,
+            clientArtifactsProvider,
+            artifactActivator,
+            serviceProvider,
+            readModelReactorInvoker,
+            jsonSerializerOptions,
+            loggerFactory.CreateLogger<ReadModels.ReadModelReactors>());
+
         Seeding = new EventSeeding(
             eventStoreName,
             connection,
@@ -279,6 +295,9 @@ public class EventStore : IEventStore
     public IReadModels ReadModels { get; }
 
     /// <inheritdoc/>
+    public IReadModelReactors ReadModelReactors { get; }
+
+    /// <inheritdoc/>
     public IEventSeeding Seeding { get; }
 
     /// <inheritdoc/>
@@ -323,6 +342,9 @@ public class EventStore : IEventStore
 
         // Auto-subscribe to any external event stores referenced by observers
         await RegisterExternalEventStoreSubscriptionsAsync();
+
+        // Start watching read models for any registered read model reactors
+        ReadModelReactors.Start();
 
         // Seed events only after all observers are registered
         await Seeding.Register();

@@ -6,6 +6,9 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
+using Cratis.Screenplay;
+using Cratis.Screenplay.Diagnostics;
+using Cratis.Screenplay.Syntax.Projections;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
@@ -20,6 +23,15 @@ public class LanguageService(
     DeclarativeCodeGenerator declarativeCodeGenerator,
     ModelBoundCodeGenerator modelBoundCodeGenerator) : ILanguageService
 {
+    /// <summary>
+    /// Screenplay requires a projection to declare at least one block. Chronicle's projection declaration
+    /// language also counts `automap`, `no automap` and `sequence` as directives, so this specific
+    /// diagnostic is relaxed when any of those are present on the projection.
+    /// </summary>
+    const string MissingDirectivesDiagnosticSuffix = "must contain at least one directive";
+
+    readonly ScreenplayCompiler _compiler = new();
+
     /// <inheritdoc/>
     public Result<ProjectionDefinition, CompilerErrors> Compile(
         string definition,
@@ -27,24 +39,30 @@ public class LanguageService(
         IEnumerable<ReadModelDefinition> readModelDefinitions,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        var tokenizer = new Tokenizer(definition);
-        var tokenizeResult = tokenizer.Tokenize();
+        var result = _compiler.CompileProjection(definition);
+        var syntax = result.Value;
+        var hasDirectiveEquivalents = syntax is not null && (syntax.AutoMap != AutoMapMode.Inherit || syntax.Sequence is not null);
+        var errors = GetErrors(result.Diagnostics, ignoreMissingDirectives: hasDirectiveEquivalents);
 
-        return tokenizeResult.Match(
-            tokens =>
+        if (syntax is null || errors.HasErrors)
+        {
+            return errors;
+        }
+
+        // Validate the projection if schemas are provided
+        if (readModelDefinitions.Any() || eventTypeSchemas.Any())
+        {
+            var validator = new ProjectionValidator(readModelDefinitions, eventTypeSchemas);
+            validator.Validate(syntax, errors);
+
+            if (errors.HasErrors)
             {
-                var parser = new Parser(tokens);
-                var parseResult = parser.Parse();
+                return errors;
+            }
+        }
 
-                return parseResult.Match(
-                    document =>
-                    {
-                        var compiler = new Compiler();
-                        return compiler.Compile(document, owner, readModelDefinitions, eventTypeSchemas);
-                    },
-                    parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
-            },
-            parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
+        var visitor = new ProjectionDefinitionSyntaxVisitor(owner);
+        return visitor.Visit(syntax);
     }
 
     /// <inheritdoc/>
@@ -54,24 +72,19 @@ public class LanguageService(
     /// <inheritdoc/>
     public Result<ReadModelIdentifier, CompilerErrors> GetReadModelIdentifier(string definition)
     {
-        var tokenizer = new Tokenizer(definition);
-        var tokenizeResult = tokenizer.Tokenize();
+        var result = _compiler.CompileProjection(definition);
+        var syntax = result.Value;
 
-        return tokenizeResult.Match(
-            tokens =>
-            {
-                var parser = new Parser(tokens);
-                var parseResult = parser.Parse();
+        // Resolving the read model identifier only needs the projection declaration itself,
+        // so an otherwise empty projection body is not an error here.
+        var errors = GetErrors(result.Diagnostics, ignoreMissingDirectives: true);
 
-                return parseResult.Match(
-                    document =>
-                    {
-                        var compiler = new Compiler();
-                        return compiler.GetReadModelIdentifier(document);
-                    },
-                    parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
-            },
-            parsingErrors => CompilerErrors.FromParsingErrors(parsingErrors));
+        if (syntax is null || errors.HasErrors)
+        {
+            return errors;
+        }
+
+        return syntax.ReadModel is null ? ReadModelIdentifier.Inferred : new ReadModelIdentifier(syntax.ReadModel);
     }
 
     /// <inheritdoc/>
@@ -81,4 +94,15 @@ public class LanguageService(
     /// <inheritdoc/>
     public string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
         modelBoundCodeGenerator.Generate(definition, readModelDefinition).ToFullString();
+
+    static CompilerErrors GetErrors(IEnumerable<Diagnostic> diagnostics, bool ignoreMissingDirectives)
+    {
+        var errors = diagnostics
+            .Where(diagnostic =>
+                diagnostic.Severity == DiagnosticSeverity.Error &&
+                !(ignoreMissingDirectives && diagnostic.Message.EndsWith(MissingDirectivesDiagnosticSuffix, StringComparison.Ordinal)))
+            .Select(diagnostic => new CompilerError(diagnostic.Message, diagnostic.Location.Line, diagnostic.Location.Column));
+
+        return new CompilerErrors(errors);
+    }
 }

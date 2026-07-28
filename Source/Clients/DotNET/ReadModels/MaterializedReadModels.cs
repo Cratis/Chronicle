@@ -48,35 +48,25 @@ public class MaterializedReadModels(
 
         // Get the read model identifier
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
-        var pageSize = take.Value == InstanceCount.Unlimited.Value ? int.MaxValue : take.Value;
-        var page = 0;
-
-        // Calculate skip by converting to page-based pagination
-        if (skip.Value > 0 && take.Value > 0 && take.Value != InstanceCount.Unlimited.Value)
-        {
-            page = skip.Value / take.Value;
-        }
-
-        var skipWithinPage = skip.Value % take.Value;
+        var paging = CalculatePaging(skip, take);
 
         var request = new GetInstancesRequest
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             ReadModel = readModelIdentifier,
-            Page = page,
-            PageSize = pageSize
+            Page = paging.Page,
+            PageSize = paging.PageSize
         };
 
         var response = await chronicleServicesAccessor.Services.MaterializedReadModels.GetInstances(request);
         var instances = response.Instances
-            .Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
-
-        // If there's a remaining skip within the page, skip those instances
-        var result = skipWithinPage > 0 ? instances.Skip(skipWithinPage) : instances;
+            .Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!)
+            .Skip(paging.LocalSkip)
+            .Take(paging.LocalTake);
 
         // Release (decrypt) the instances before returning
-        return await ReleaseInstances(result);
+        return await ReleaseInstances(instances);
     }
 
     /// <inheritdoc/>
@@ -96,38 +86,72 @@ public class MaterializedReadModels(
 
         // Get the read model identifier
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
-        var pageSize = take.Value == InstanceCount.Unlimited.Value ? int.MaxValue : take.Value;
-        var page = 0;
-
-        // Calculate skip by converting to page-based pagination
-        if (skip.Value > 0 && take.Value > 0 && take.Value != InstanceCount.Unlimited.Value)
-        {
-            page = skip.Value / take.Value;
-        }
-
-        var skipWithinPage = skip.Value % take.Value;
+        var paging = CalculatePaging(skip, take);
 
         var request = new ObserveInstancesRequest
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             ReadModel = readModelIdentifier,
-            Page = page,
-            PageSize = pageSize
+            Page = paging.Page,
+            PageSize = paging.PageSize
         };
 
         return chronicleServicesAccessor.Services.MaterializedReadModels.ObserveInstances(request)
             .SelectMany(async response =>
             {
                 var instances = response.Instances
-                    .Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
-
-                // If there's a remaining skip within the page, skip those instances
-                var filteredInstances = skipWithinPage > 0 ? instances.Skip(skipWithinPage) : instances;
+                    .Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!)
+                    .Skip(paging.LocalSkip)
+                    .Take(paging.LocalTake);
 
                 // Release (decrypt) the instances before returning
-                return await ReleaseInstances(filteredInstances);
+                return await ReleaseInstances(instances);
             });
+    }
+
+    /// <summary>
+    /// Translates a requested <paramref name="skip"/>/<paramref name="take"/> window into the server's
+    /// page-aligned paging contract plus the local slicing needed to return the exact window.
+    /// </summary>
+    /// <param name="skip">The number of instances to skip.</param>
+    /// <param name="take">The number of instances to take.</param>
+    /// <returns>The server page and page size to request, and the local skip and take to apply to the response.</returns>
+    /// <remarks>
+    /// The server only exposes page-aligned offsets (its effective offset is always <c>Page * PageSize</c>).
+    /// When <paramref name="skip"/> is a multiple of <paramref name="take"/> the requested window is exactly one
+    /// server page, so the page request is used directly. When it is not, the window <c>[skip, skip+take)</c>
+    /// straddles two server pages; a covering range is fetched from the start and sliced locally so the full
+    /// <paramref name="take"/> items are returned instead of only the tail of the first page.
+    /// </remarks>
+    static (int Page, int PageSize, int LocalSkip, int LocalTake) CalculatePaging(InstanceCountToSkip skip, InstanceCount take)
+    {
+        var skipCount = Math.Max(0, skip.Value);
+        var takeCount = take.Value;
+
+        // Unlimited take: fetch everything from the start and skip locally.
+        if (takeCount == InstanceCount.Unlimited.Value)
+        {
+            return (0, int.MaxValue, skipCount, int.MaxValue);
+        }
+
+        // A take of zero (or less) requests no instances — fetch nothing (and never divide by zero below).
+        if (takeCount <= 0)
+        {
+            return (0, 0, 0, 0);
+        }
+
+        // Page-aligned skip: the requested window is exactly one server page.
+        if (skipCount % takeCount == 0)
+        {
+            return (skipCount / takeCount, takeCount, 0, takeCount);
+        }
+
+        // Non-aligned skip: the window straddles two server pages. Fetch a covering range from the
+        // start (page size guarded against int overflow) and slice it locally to the requested window.
+        var coveringPageSize = (int)Math.Min(int.MaxValue, (long)skipCount + takeCount);
+
+        return (0, coveringPageSize, skipCount, takeCount);
     }
 
     async Task<IEnumerable<TReadModel>> ReleaseInstances<TReadModel>(IEnumerable<TReadModel> instances)

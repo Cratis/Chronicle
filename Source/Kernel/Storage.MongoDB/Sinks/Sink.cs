@@ -52,6 +52,31 @@ public class Sink(
     readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
+
+    /// <summary>
+    /// Highest event sequence number known to be applied to each document while a bulk window is open.
+    /// </summary>
+    /// <remarks>
+    /// Bulk mode answers <see cref="FindOrDefault"/> from <see cref="_bulkStateCache"/>, so a guarded write that
+    /// the server rejects must not leave its recomputed state in that cache — the next event for the same key
+    /// would read the doubled state and persist it. Seeded from the document the first uncached
+    /// <see cref="FindOrDefault"/> reads (no extra round trip) and advanced by every write queued in the window,
+    /// so an already applied event is recognized before its state is cached at all.
+    /// </remarks>
+    readonly ConcurrentDictionary<string, ulong> _bulkWatermarks = new();
+
+    /// <summary>
+    /// Documents whose delete is queued in the open bulk window but has not reached the server yet.
+    /// </summary>
+    /// <remarks>
+    /// The server still holds such a document, so an uncached <see cref="FindOrDefault"/> would report it as
+    /// present and the caller would treat the next event as an update of a live instance. On a document whose
+    /// write is guarded that is fatal: a guarded write never inserts, so the queued delete runs first and the
+    /// re-creating update matches nothing, losing the read model. Reporting the document as already gone restores
+    /// the unguarded, upserting write that re-creates it — and incidentally stops the caller merging onto state
+    /// that a queued delete has logically discarded.
+    /// </remarks>
+    readonly ConcurrentDictionary<string, byte> _bulkPendingDeletes = new();
     int _currentBulkSize;
     volatile bool _isBulkMode;
 
@@ -68,6 +93,11 @@ public class Sink(
             {
                 return cachedState;
             }
+
+            if (_bulkPendingDeletes.ContainsKey(cacheKey))
+            {
+                return default;
+            }
         }
 
         var collection = Collection;
@@ -76,6 +106,13 @@ public class Sink(
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
+            if (_isBulkMode &&
+                instance.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var watermark) &&
+                watermark.IsNumeric)
+            {
+                RecordBulkWatermark(converter.ToBsonValue(key).ToString()!, (ulong)watermark.ToInt64());
+            }
+
             return expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
         }
 
@@ -83,14 +120,21 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber) =>
+        ApplyChanges(key, changeset, eventSequenceNumber, SinkWriteMode.Always);
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> ApplyChanges(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber)
+        EventSequenceNumber eventSequenceNumber,
+        SinkWriteMode mode)
     {
         var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
             change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
-        var keyFilterValue = converter.ToBsonValue(key);
         var hasConstructiveChanges = changeset.Changes.Any(change =>
             change is ChildAdded or ChildRemoved);
 
@@ -105,10 +149,25 @@ public class Sink(
         var hasJoined = changeset.HasJoined();
         var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
 
-        var filter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin ?
+        // Compute the _id filter value only when the document is actually keyed by _id. For a join whose
+        // target documents are matched by the join column (the Empty filter below), the resolved key carries
+        // the JOIN VALUE — which for a differently-typed read model key (e.g. a string organization number
+        // against a Guid-keyed model) cannot be converted to the _id type and throws "Unrecognized Guid
+        // format", freezing the partition — even though that value is never used to key a document here.
+        var usesJoinTargetsOnlyFilter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin;
+        var filter = usesJoinTargetsOnlyFilter ?
             FilterDefinition<BsonDocument>.Empty :
-            Builders<BsonDocument>.Filter.Eq("_id", keyFilterValue);
-        var isUpsert = !onlyPropertyUpdatesAlongsideJoin;
+            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+
+        // A ROOT-level join (no array indexers) never CONSTRUCTS a root document — it only enriches an
+        // existing root matched by the join column; the root's own key is set by its From/[FromEvent] source.
+        // Upserting on the resolved key for a root join would materialize a phantom root keyed by the JOIN
+        // VALUE, which for a differently-typed read model key (e.g. a string organization number against a
+        // Guid-keyed model) is stored with a string _id and freezes the partition the moment a later read
+        // coerces it back to the key type ("Unrecognized Guid format"). A CHILD join (has array indexers)
+        // still upserts so it can construct the child structure regardless of seed order.
+        var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
+        var isUpsert = !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
 
         if (changeset.HasBeenRemoved())
         {
@@ -118,11 +177,34 @@ public class Sink(
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
                 _bulkStateCache.TryRemove(cacheKey, out _);
                 _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
+                _bulkWatermarks.TryRemove(cacheKey, out _);
+
+                // Marked after the operation is queued, never before: a flush that observes the mark without the
+                // operation would clear it while the delete is still pending, which is the failure this prevents.
+                _bulkPendingDeletes[cacheKey] = 0;
                 return await FlushBulkIfNeeded();
             }
 
             await Collection.DeleteOneAsync(filter);
             return [];
+        }
+
+        // A guarded write is a conditional UPDATE of a document the caller already observed, never an insert:
+        // narrowing the filter to documents whose watermark is behind this event turns a crash-recovery
+        // redelivery into a no-op. Upsert is switched off because a filter that matches nothing would otherwise
+        // attempt an insert on an _id that already exists, which raises a duplicate key error and — inside an
+        // ordered bulk write — would discard every operation queued behind it.
+        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !usesJoinTargetsOnlyFilter && eventSequenceNumber.IsActualValue)
+        {
+            if (_isBulkMode &&
+                _bulkWatermarks.TryGetValue(converter.ToBsonValue(key).ToString()!, out var applied) &&
+                applied >= eventSequenceNumber.Value)
+            {
+                return [];
+            }
+
+            filter = Builders<BsonDocument>.Filter.And(filter, BelowWatermark(eventSequenceNumber));
+            isUpsert = false;
         }
 
         // Run through and remove all children affected by ChildRemovedFromAll
@@ -155,6 +237,11 @@ public class Sink(
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
                 _bulkStateCache[cacheKey] = changeset.CurrentState;
                 _bulkKeysByCacheKey[cacheKey] = key;
+                _bulkPendingDeletes.TryRemove(cacheKey, out _);
+                if (eventSequenceNumber.IsActualValue)
+                {
+                    RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
+                }
             }
 
             if (changeset.HasJoined())
@@ -189,6 +276,8 @@ public class Sink(
 
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
+        _bulkWatermarks.Clear();
+        _bulkPendingDeletes.Clear();
         return Task.CompletedTask;
     }
 
@@ -206,6 +295,8 @@ public class Sink(
 
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
+        _bulkWatermarks.Clear();
+        _bulkPendingDeletes.Clear();
     }
 
     /// <inheritdoc/>
@@ -346,6 +437,27 @@ public class Sink(
         });
     }
 
+    /// <summary>
+    /// Builds the clause that restricts a write to documents that have not yet observed the given event.
+    /// </summary>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> about to be applied.</param>
+    /// <returns>The <see cref="FilterDefinition{TDocument}"/> matching documents behind the watermark.</returns>
+    /// <remarks>
+    /// Documents written before the watermark property existed carry no value at all, which the
+    /// <c>$exists</c> clause admits so they establish it on their first guarded write.
+    /// </remarks>
+    FilterDefinition<BsonDocument> BelowWatermark(EventSequenceNumber eventSequenceNumber) =>
+        Builders<BsonDocument>.Filter.Or(
+            Builders<BsonDocument>.Filter.Exists(WellKnownProperties.LastHandledEventSequenceNumber, false),
+            Builders<BsonDocument>.Filter.Lt(WellKnownProperties.LastHandledEventSequenceNumber, converter.ToBsonValue(eventSequenceNumber)));
+
+    void RecordBulkWatermark(string cacheKey, ulong eventSequenceNumber) =>
+        _bulkWatermarks.AddOrUpdate(
+            cacheKey,
+            static (_, incoming) => incoming,
+            static (_, current, incoming) => Math.Max(current, incoming),
+            eventSequenceNumber);
+
     async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)
     {
         var indexNames = new HashSet<string>();
@@ -391,6 +503,7 @@ public class Sink(
     {
         List<WriteModel<BsonDocument>> snapshot;
         Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
+        string[] flushedPendingDeletes;
 
         lock (_bulkLock)
         {
@@ -401,6 +514,10 @@ public class Sink(
 
             snapshot = [.._bulkOperations];
             metadataSnapshot = new(_bulkOperationMetadata);
+
+            // Only the marks that exist now can belong to operations in this snapshot; a mark added afterwards
+            // belongs to a delete still queued and must survive the flush.
+            flushedPendingDeletes = [.._bulkPendingDeletes.Keys];
             _bulkOperations.Clear();
             _bulkOperationMetadata.Clear();
             _currentBulkSize = 0;
@@ -424,6 +541,13 @@ public class Sink(
             }
 
             return failedPartitions;
+        }
+        finally
+        {
+            foreach (var cacheKey in flushedPendingDeletes)
+            {
+                _bulkPendingDeletes.TryRemove(cacheKey, out _);
+            }
         }
     }
 

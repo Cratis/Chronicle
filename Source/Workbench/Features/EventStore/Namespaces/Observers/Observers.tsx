@@ -21,7 +21,11 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
+import { Allotment } from 'allotment';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
+import { getObserverTypeAsText } from './getObserverTypeAsText';
+import { getObserverOwnerAsText } from './getObserverOwnerAsText';
+import { ObserverDetails } from './ObserverDetails';
 import { ObserverSequenceType } from './ObserverSequenceType';
 
 const legacyEventLogSequenceId = '00000000-0000-0000-0000-000000000000';
@@ -70,34 +74,9 @@ const getObserverSequenceTypeLabel = (sequenceType: ObserverSequenceType) => {
     }
 };
 
-const observerType = (observer: ObserverInformation) => {
-    switch (observer.type) {
-        case ObserverType.unknown:
-            return strings.eventStore.namespaces.observers.types.unknown;
-        case ObserverType.reactor:
-            return strings.eventStore.namespaces.observers.types.reactor;
-        case ObserverType.projection:
-            return strings.eventStore.namespaces.observers.types.projection;
-        case ObserverType.reducer:
-            return strings.eventStore.namespaces.observers.types.reducer;
-        case ObserverType.external:
-            return strings.eventStore.namespaces.observers.types.external;
-    }
-    return strings.eventStore.namespaces.observers.types.unknown;
-};
+const observerType = (observer: ObserverInformation) => getObserverTypeAsText(observer.type);
 
-const observerOwner = (observer: ObserverInformation) => {
-    switch (observer.owner) {
-        case ObserverOwner.none:
-            return strings.eventStore.namespaces.observers.owners.none;
-        case ObserverOwner.client:
-            return strings.eventStore.namespaces.observers.owners.client;
-        case ObserverOwner.kernel:
-            return strings.eventStore.namespaces.observers.owners.kernel;
-    }
-
-    return strings.eventStore.namespaces.observers.owners.none;
-};
+const observerOwner = (observer: ObserverInformation) => getObserverOwnerAsText(observer.owner);
 
 const runningState = (observer: ObserverInformation) => {
     return getObserverRunningStateAsText(observer.runningState);
@@ -238,72 +217,83 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                 <Menubar model={menuItems} end={searchInput} />
             </div>
             <div className='flex-1 overflow-hidden px-4 pb-4'>
-                <DataTable
-                    value={observerRows}
-                    selectionMode='single'
-                    selection={viewModel.selectedObserver}
-                    onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
-                    dataKey='id'
-                    filters={filters}
-                    filterDisplay='menu'
-                    onFilter={(e) => setFilters(e.filters)}
-                    globalFilterFields={['id', 'eventSequenceId']}
-                    emptyMessage={strings.eventStore.namespaces.observers.empty}
-                    scrollable
-                    scrollHeight='flex'
-                    style={{ height: '100%' }}>
-                    <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
-                    <Column
-                        field='eventSequenceId'
-                        header={strings.eventStore.namespaces.observers.columns.sequence}
-                        sortable
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField='sequenceType'
-                        filterElement={observerSequenceTypeFilterTemplate} />
-                    <Column
-                        field='type'
-                        header={strings.eventStore.namespaces.observers.columns.observerType}
-                        sortable
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField='type'
-                        filterElement={observerTypeFilterTemplate}
-                        body={observerType} />
-                    <Column
-                        field='owner'
-                        header={strings.eventStore.namespaces.observers.columns.owner}
-                        sortable
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField='owner'
-                        filterElement={observerOwnerFilterTemplate}
-                        body={observerOwner} />
-                    <Column
-                        field='nextEventSequenceNumber'
-                        dataType='numeric'
-                        header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
-                        sortable />
-                    <Column
-                        field='handledEventCount'
-                        dataType='numeric'
-                        header={strings.eventStore.namespaces.observers.columns.handledEventCount}
-                        sortable />
-                    <Column
-                        field='runningState'
-                        dataType='numeric'
-                        header={strings.eventStore.namespaces.observers.columns.state}
-                        sortable
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField='runningState'
-                        filterElement={runningStateFilterTemplate}
-                        body={runningState} />
-                </DataTable>
+                <Allotment className='h-full' proportionalLayout={false}>
+                    <Allotment.Pane className='flex-grow'>
+                        <DataTable
+                            value={observerRows}
+                            selectionMode='single'
+                            selection={viewModel.selectedObserver}
+                            onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
+                            dataKey='id'
+                            filters={filters}
+                            filterDisplay='menu'
+                            onFilter={(e) => setFilters(e.filters)}
+                            globalFilterFields={['id', 'eventSequenceId']}
+                            emptyMessage={strings.eventStore.namespaces.observers.empty}
+                            scrollable
+                            scrollHeight='flex'
+                            style={{ height: '100%' }}>
+                            <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                            <Column
+                                field='eventSequenceId'
+                                header={strings.eventStore.namespaces.observers.columns.sequence}
+                                sortable
+                                showFilterMatchModes={false}
+                                filter
+                                filterMenuStyle={{ width: '14rem' }}
+                                filterField='sequenceType'
+                                filterElement={observerSequenceTypeFilterTemplate} />
+                            <Column
+                                field='type'
+                                header={strings.eventStore.namespaces.observers.columns.observerType}
+                                sortable
+                                showFilterMatchModes={false}
+                                filter
+                                filterMenuStyle={{ width: '14rem' }}
+                                filterField='type'
+                                filterElement={observerTypeFilterTemplate}
+                                body={observerType} />
+                            <Column
+                                field='owner'
+                                header={strings.eventStore.namespaces.observers.columns.owner}
+                                sortable
+                                showFilterMatchModes={false}
+                                filter
+                                filterMenuStyle={{ width: '14rem' }}
+                                filterField='owner'
+                                filterElement={observerOwnerFilterTemplate}
+                                body={observerOwner} />
+                            <Column
+                                field='nextEventSequenceNumber'
+                                dataType='numeric'
+                                header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
+                                sortable />
+                            <Column
+                                field='handledEventCount'
+                                dataType='numeric'
+                                header={strings.eventStore.namespaces.observers.columns.handledEventCount}
+                                sortable />
+                            <Column
+                                field='runningState'
+                                dataType='numeric'
+                                header={strings.eventStore.namespaces.observers.columns.state}
+                                sortable
+                                showFilterMatchModes={false}
+                                filter
+                                filterMenuStyle={{ width: '14rem' }}
+                                filterField='runningState'
+                                filterElement={runningStateFilterTemplate}
+                                body={runningState} />
+                        </DataTable>
+                    </Allotment.Pane>
+                    {viewModel.selectedObserver &&
+                        <Allotment.Pane preferredSize='450px'>
+                            <ObserverDetails
+                                observer={viewModel.selectedObserver}
+                                eventStore={params.eventStore!}
+                                namespace={viewModel.currentNamespace} />
+                        </Allotment.Pane>}
+                </Allotment>
             </div>
         </Page>
     );

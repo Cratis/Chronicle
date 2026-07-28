@@ -4,9 +4,11 @@
 using System.Diagnostics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Configuration;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Clients;
 
@@ -15,13 +17,19 @@ namespace Cratis.Chronicle.Clients;
 /// </summary>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 [KeepAlive]
+[ConnectedClientsPlacement]
 public class ConnectedClients(
     ILogger<ConnectedClients> logger,
-    [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter) : Grain, IConnectedClients
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
+    IOptions<ChronicleOptions> options) : Grain, IConnectedClients
 {
-    static readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(2);
+    readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
+    readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
+    readonly int _staleThresholdSeconds = options.Value.ConnectedClients.StaleThresholdSeconds;
     readonly List<ConnectedClient> _clients = [];
+    readonly List<DateTimeOffset> _reservations = [];
     IGrainTimer? _reviseConnectedClientsTimer;
 
     /// <inheritdoc/>
@@ -43,7 +51,11 @@ public class ConnectedClients(
     public Task OnClientConnected(
         ConnectionId connectionId,
         string version,
-        bool isRunningWithDebugger)
+        bool isRunningWithDebugger,
+        int processId,
+        string processPath,
+        string machineName,
+        string clientType)
     {
         logger.ClientConnected(connectionId);
 
@@ -53,8 +65,21 @@ public class ConnectedClients(
             ConnectionId = connectionId,
             Version = version,
             LastSeen = DateTimeOffset.UtcNow,
-            IsRunningWithDebugger = isRunningWithDebugger
+            IsRunningWithDebugger = isRunningWithDebugger,
+            ProcessId = processId,
+            ProcessPath = processPath,
+            MachineName = machineName,
+            ClientType = clientType
         });
+
+        // The real connection just registered - if it was preceded by a reservation, that
+        // reservation has now been fulfilled. Clear the oldest one rather than leave it to expire
+        // on its own, so GetConnectionCount() doesn't double-count this client for up to
+        // _reservationTtl after it already connected.
+        if (_reservations.Count > 0)
+        {
+            _reservations.RemoveAt(0);
+        }
 
         meter.ConnectedClients(_clients.Count);
 
@@ -94,6 +119,21 @@ public class ConnectedClients(
     public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(_clients.AsEnumerable());
 
     /// <inheritdoc/>
+    public Task<int> GetConnectionCount()
+    {
+        RemoveExpiredReservations();
+        return Task.FromResult(_clients.Count + _reservations.Count);
+    }
+
+    /// <inheritdoc/>
+    public Task ReserveConnection()
+    {
+        RemoveExpiredReservations();
+        _reservations.Add(DateTimeOffset.UtcNow);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Exists(_ => _.ConnectionId == connectionId));
 
     /// <inheritdoc/>
@@ -105,16 +145,24 @@ public class ConnectedClients(
 
     async Task ReviseConnectedClients(CancellationToken cancellationToken)
     {
+        RemoveExpiredReservations();
+
         if (Debugger.IsAttached) return;
 
         foreach (var connectedClient in _clients.ToArray())
         {
             if (connectedClient.IsRunningWithDebugger) continue;
 
-            if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-5))
+            if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-_staleThresholdSeconds))
             {
-                await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 5 seconds ago");
+                await OnClientDisconnected(connectedClient.ConnectionId, $"Last seen was more than {_staleThresholdSeconds} seconds ago");
             }
         }
+    }
+
+    void RemoveExpiredReservations()
+    {
+        var cutoff = DateTimeOffset.UtcNow - _reservationTtl;
+        _reservations.RemoveAll(reservedAt => reservedAt < cutoff);
     }
 }

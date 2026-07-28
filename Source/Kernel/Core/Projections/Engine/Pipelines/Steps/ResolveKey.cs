@@ -25,7 +25,11 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
     {
         logger.ResolvingKey(context.Event.Context.SequenceNumber);
         var keyResolver = projection.GetKeyResolverFor(context.Event.Context.EventType);
-        var keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
+        if (!context.TryGetResolvedKey(keyResolver, out var keyResult))
+        {
+            keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
+            context.MemoizeResolvedKey(keyResolver, keyResult);
+        }
 
         // Handle deferred key resolution - this means the parent wasn't found in Sink yet
         if (keyResult is DeferredKey deferredKey)

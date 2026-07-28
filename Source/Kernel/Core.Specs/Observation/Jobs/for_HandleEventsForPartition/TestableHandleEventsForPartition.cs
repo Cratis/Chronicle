@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition;
 /// <param name="throttle">The throttle for limiting parallel execution.</param>
 /// <param name="storage">The storage for the cluster.</param>
 /// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
+/// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
 /// <param name="logger">The logger.</param>
 public class TestableHandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -28,8 +29,9 @@ public class TestableHandleEventsForPartition(
     IJobStepThrottle throttle,
     IStorage storage,
     IEventCompliance eventCompliance,
+    IObserverSubscriberSelector subscriberSelector,
     ILogger<HandleEventsForPartition> logger)
-    : HandleEventsForPartition(state, throttle, storage, eventCompliance, logger), IGrainType
+    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, logger), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance);
     static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -37,6 +39,11 @@ public class TestableHandleEventsForPartition(
 
     /// <inheritdoc/>
     public Type GrainType => typeof(IHandleEventsForPartition);
+
+    /// <summary>
+    /// Gets a value indicating whether the step persists its progress checkpoint after every reported batch.
+    /// </summary>
+    public bool IsCheckpointingAfterEveryBatch => CheckpointAfterEveryBatch;
 
     /// <inheritdoc/>
     protected override IHandleEventsForPartition GetSelfGrainReference() => Substitute.For<IHandleEventsForPartition>();

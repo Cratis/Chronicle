@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json.Nodes;
@@ -45,8 +46,8 @@ public class Reactors : IReactors
     readonly IReactorMethodArgumentsResolver _argumentsResolver;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
-    readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
     readonly IChronicleServicesAccessor _servicesAccessor;
+    IReadOnlyDictionary<Type, IReactorHandler> _handlers = FrozenDictionary<Type, IReactorHandler>.Empty;
 
     bool _registered;
 
@@ -123,12 +124,8 @@ public class Reactors : IReactors
                                 CreateHandlerFor);
 
         DisconnectHandlers();
-        _handlers.Clear();
         _registered = false;
-        foreach (var handler in handlers)
-        {
-            _handlers.Add(handler);
-        }
+        _handlers = handlers.ToFrozenDictionary();
 
         return Task.CompletedTask;
     }
@@ -166,7 +163,11 @@ public class Reactors : IReactors
         var reactorHandler = CreateHandlerFor(reactorType);
 
         RegisterReactor(reactorHandler);
-        _handlers.Add(reactorType, reactorHandler);
+        var handlers = new Dictionary<Type, IReactorHandler>(_handlers)
+        {
+            { reactorType, reactorHandler }
+        };
+        _handlers = handlers.ToFrozenDictionary();
 
         return Task.FromResult(reactorHandler);
     }
@@ -271,7 +272,7 @@ public class Reactors : IReactors
         CancellationTokenRegistration? register = null;
         register = handler.CancellationToken.Register(() =>
         {
-            _handlers.Remove(reactorType);
+            _handlers = _handlers.Where(_ => _.Key != reactorType).ToFrozenDictionary();
             register?.Dispose();
         });
         return handler;
@@ -293,12 +294,8 @@ public class Reactors : IReactors
             .ToArray();
 
         DisconnectHandlers();
-        _handlers.Clear();
 
-        foreach (var reactorType in reactorTypes)
-        {
-            _handlers[reactorType] = CreateHandlerFor(reactorType);
-        }
+        _handlers = reactorTypes.ToFrozenDictionary(_ => _, CreateHandlerFor);
     }
 
     void RegisterReactor(IReactorHandler handler)
@@ -330,6 +327,34 @@ public class Reactors : IReactors
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, handler.CancellationToken);
 
+        // Re-establish the observation after the stream ends. A cross-store
+        // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
+        // forever, so onCompleted fires with no error — without re-subscribing
+        // there, the reactor silently goes Disconnected and never recovers until
+        // the whole client reconnects (which is why cross-service invite accepts
+        // stranded). The 2s delay avoids a hot loop if the stream keeps ending.
+        void ScheduleReconnect()
+        {
+            if (handler.CancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                    _logger.ReconnectingReactor(handler.Id);
+                    RegisterReactor(handler);
+                }
+                catch (OperationCanceledException ex)
+                {
+                    _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
+                }
+            });
+        }
+
         // https://github.com/dotnet/reactive/issues/459
         eventsToObserve
             .Select(events => Observable.FromAsync(async () =>
@@ -352,20 +377,13 @@ public class Reactors : IReactors
                     var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
                     _logger.RegisteringReactorFailed(handler.Id, streamFailed);
                     messages.Dispose();
-
-                    if (!handler.CancellationToken.IsCancellationRequested)
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
-                                _logger.ReconnectingReactor(handler.Id);
-                                RegisterReactor(handler);
-                            }
-                            catch (OperationCanceledException) { }
-                        });
-                    }
+                    ScheduleReconnect();
+                },
+                () =>
+                {
+                    _logger.RegisteringReactorStreamCompleted(handler.Id);
+                    messages.Dispose();
+                    ScheduleReconnect();
                 });
     }
 

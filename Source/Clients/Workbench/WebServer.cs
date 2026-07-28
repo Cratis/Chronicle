@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Workbench;
@@ -18,9 +19,11 @@ namespace Cratis.Chronicle.Workbench;
 /// </summary>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="workbenchOptions">The <see cref="ChronicleWorkbenchOptions"/>.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class WebServer(
     IServiceProvider serviceProvider,
-    IOptions<ChronicleWorkbenchOptions> workbenchOptions) : IHostedService, IDisposable
+    IOptions<ChronicleWorkbenchOptions> workbenchOptions,
+    ILogger<WebServer> logger) : IHostedService, IDisposable
 {
     readonly CancellationTokenSource _cancellationTokenSource = new();
     WebApplication? _webApplication;
@@ -32,71 +35,16 @@ public class WebServer(
         _ = Task.Run(
             async () =>
             {
-                var builder = WebApplication.CreateBuilder();
-                builder.Configuration.Sources.Clear();
-                var chronicleServices = serviceProvider.GetRequiredService<IServices>();
-                builder.Services.AddSingleton(chronicleServices);
-
-                builder.Host
-                    .AddCratisArc(
-                        options =>
-                        {
-                            options.CorrelationId = workbenchOptions.Value.ArcOptions.CorrelationId;
-                            options.Tenancy = workbenchOptions.Value.ArcOptions.Tenancy;
-                            options.IdentityDetailsProvider = workbenchOptions.Value.ArcOptions.IdentityDetailsProvider;
-                        });
-
-                builder.Services.AddCratisChronicleApi();
-                builder.Services.Configure<MvcOptions>(options => options.UseRoutePrefix(workbenchOptions.Value.BasePath));
-                builder.WebHost
-                    .UseKestrel(options =>
-                    {
-                        options.ConfigureEndpointDefaults(_ => { });
-                        options.ListenAnyIP(workbenchOptions.Value.Port);
-                    });
-
-                _webApplication = builder.Build();
-
-                var basePath = workbenchOptions.Value.BasePath;
-                if (!basePath.StartsWith('/')) basePath = $"/{basePath}";
-                if (basePath.EndsWith('/')) basePath = basePath[0..^1];
-
-                _webApplication.UseCratisChronicleApi();
-
-                var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
-                var rootResourceNamespace = $"{rootType.Namespace}.Files";
-                IFileProvider fileProvider = new ManifestEmbeddedFileProvider(rootType.Assembly, rootResourceNamespace);
-
-                var indexFile = string.Empty;
-                var file = fileProvider.GetFileInfo("index.html");
-
-                if (file.Exists)
+                try
                 {
-                    await using var stream = file.CreateReadStream();
-                    using var reader = new StreamReader(stream);
-                    indexFile = await reader.ReadToEndAsync();
-
-                    indexFile = indexFile
-                        .Replace("src=\"/", $"src=\"{basePath}/")
-                        .Replace("href=\"/", $"href=\"{basePath}/")
-                        .Replace("name=\"base-path\" content=\"\"", $"name=\"base-path\" content=\"{basePath}\"");
+                    await RunWebServer();
                 }
-                fileProvider = new StaticFilesFileProvider(fileProvider, basePath, indexFile);
-
-                _webApplication.UseDefaultFiles(new DefaultFilesOptions
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    FileProvider = fileProvider,
-                    RequestPath = basePath
-                });
-                var staticFileOptions = new StaticFileOptions
-                {
-                    FileProvider = fileProvider,
-                    RequestPath = string.Empty
-                };
-                _webApplication.UseStaticFiles(staticFileOptions);
-                _webApplication.MapFallbackToFile("index.html", staticFileOptions);
-
-                await _webApplication.RunAsync(_cancellationTokenSource.Token);
+                    // The task is fire and forget - without this, a startup failure disappears
+                    // silently and the Workbench is just "not there".
+                    logger.WebServerFailed(ex);
+                }
             });
 
         return Task.CompletedTask;
@@ -117,6 +65,102 @@ public class WebServer(
         if (!_disposed)
         {
             _cancellationTokenSource.Dispose();
+            (_webApplication as IDisposable)?.Dispose();
         }
+    }
+
+    async Task RunWebServer()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Configuration.Sources.Clear();
+
+        // The testing/development hosts run with eager container validation, which the
+        // convention-based registrations are not shaped for - match how Chronicle hosts run.
+        builder.Host.UseDefaultServiceProvider(options =>
+        {
+            options.ValidateScopes = false;
+            options.ValidateOnBuild = false;
+        });
+
+        // Resolved per use rather than captured once - the hosting application's connection
+        // recreates its service proxies on reconnect/failover.
+        builder.Services.AddTransient(_ => serviceProvider.GetRequiredService<IServices>());
+
+        // Forward the hosting application's connection when it has one, so nothing in this
+        // application tries to construct its own.
+        if (serviceProvider.GetService<Connections.IChronicleConnection>() is { } connection)
+        {
+            builder.Services.AddSingleton(connection);
+        }
+
+        builder.Host
+            .AddCratisArc(
+                options =>
+                {
+                    options.CorrelationId = workbenchOptions.Value.ArcOptions.CorrelationId;
+                    options.Tenancy = workbenchOptions.Value.ArcOptions.Tenancy;
+                    options.IdentityDetailsProvider = workbenchOptions.Value.ArcOptions.IdentityDetailsProvider;
+
+                    // The Workbench frontend proxies are generated against the same route
+                    // shape the kernel-embedded API uses.
+                    options.GeneratedApis.RoutePrefix = "api";
+                    options.GeneratedApis.SegmentsToSkipForRoute = 3;
+                });
+
+        // The API must reuse the IServices from the hosting application (registered above) -
+        // with useGrpc left at its default, AddCratisChronicleApi registers its own
+        // connection-backed IServices pointing at the default localhost endpoint, shadowing
+        // the host's connection.
+        builder.Services.AddCratisChronicleApi(useGrpc: false);
+        builder.Services.Configure<MvcOptions>(options => options.UseRoutePrefix(workbenchOptions.Value.BasePath));
+        builder.WebHost
+            .UseKestrel(options =>
+            {
+                options.ConfigureEndpointDefaults(_ => { });
+                options.ListenAnyIP(workbenchOptions.Value.Port);
+            });
+
+        _webApplication = builder.Build();
+
+        var basePath = workbenchOptions.Value.BasePath;
+        if (!basePath.StartsWith('/')) basePath = $"/{basePath}";
+        if (basePath.EndsWith('/')) basePath = basePath[0..^1];
+
+        _webApplication.UseCratisChronicleApi();
+
+        var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
+        var rootResourceNamespace = $"{rootType.Namespace}.Files";
+        IFileProvider fileProvider = new ManifestEmbeddedFileProvider(rootType.Assembly, rootResourceNamespace);
+
+        var indexFile = string.Empty;
+        var file = fileProvider.GetFileInfo("index.html");
+
+        if (file.Exists)
+        {
+            await using var stream = file.CreateReadStream();
+            using var reader = new StreamReader(stream);
+            indexFile = await reader.ReadToEndAsync();
+
+            indexFile = indexFile
+                .Replace("src=\"/", $"src=\"{basePath}/")
+                .Replace("href=\"/", $"href=\"{basePath}/")
+                .Replace("name=\"base-path\" content=\"\"", $"name=\"base-path\" content=\"{basePath}\"");
+        }
+        fileProvider = new StaticFilesFileProvider(fileProvider, basePath, indexFile);
+
+        _webApplication.UseDefaultFiles(new DefaultFilesOptions
+        {
+            FileProvider = fileProvider,
+            RequestPath = basePath
+        });
+        var staticFileOptions = new StaticFileOptions
+        {
+            FileProvider = fileProvider,
+            RequestPath = string.Empty
+        };
+        _webApplication.UseStaticFiles(staticFileOptions);
+        _webApplication.MapFallbackToFile("index.html", staticFileOptions);
+
+        await _webApplication.RunAsync(_cancellationTokenSource.Token);
     }
 }

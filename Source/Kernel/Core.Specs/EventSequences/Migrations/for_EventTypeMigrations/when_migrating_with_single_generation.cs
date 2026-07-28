@@ -12,7 +12,6 @@ public class when_migrating_with_single_generation : given.all_dependencies
 {
     IDictionary<EventTypeGeneration, ExpandoObject> _result;
     EventTypeDefinition _definition;
-    ExpandoObject _expectedExpandoObject;
 
     async Task Establish()
     {
@@ -25,18 +24,15 @@ public class when_migrating_with_single_generation : given.all_dependencies
             []);
 
         _eventTypesStorage.GetDefinition(_eventType.Id).Returns(_definition);
-
-        _expectedExpandoObject = new ExpandoObject();
-        _expandoObjectConverter
-            .ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>())
-            .Returns(_expectedExpandoObject);
     }
 
-    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventStoreName, _eventType, _content);
+    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventStoreName, _eventType, _content, _contentAsExpandoObject);
 
     [Fact] void should_return_single_generation() => _result.Count.ShouldEqual(1);
 
     [Fact] void should_contain_source_generation() => _result.ContainsKey(_eventType.Generation).ShouldBeTrue();
 
-    [Fact] void should_return_converted_expando_object() => _result[_eventType.Generation].ShouldEqual(_expectedExpandoObject);
+    [Fact] void should_reuse_the_already_built_expando_object() => _result[_eventType.Generation].ShouldBeSame(_contentAsExpandoObject);
+
+    [Fact] void should_not_convert_the_content_again() => _expandoObjectConverter.DidNotReceive().ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>());
 }

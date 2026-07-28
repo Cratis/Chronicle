@@ -32,8 +32,33 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         await CheckConnectedClient();
-        await CheckJobTasks();
-        await CheckNextSequenceNumber();
+        await RecoverIfStuck();
+        await FlushDebouncedProgressState();
+    }
+
+    /// <summary>
+    /// Runs the recovery checks, stopping at the first one that acts on the observer.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Every check here recovers by re-routing the observer, and routing re-evaluates everything the later checks
+    /// look at - including starting a fresh catch-up. Running on past the first recovery therefore reads the
+    /// aftermath of that recovery as a second fault: a re-route whose catch-up job could not be started leaves the
+    /// observer preparing catch-up, which the very next check treats as stranded and recovers again, doubling the
+    /// catch-up attempts and the queue unsubscribe/subscribe cycles in a single tick. One tick, one recovery; the
+    /// next tick re-evaluates from a settled state.
+    /// </remarks>
+    async Task RecoverIfStuck()
+    {
+        if (await CheckJobTasks() || await CheckStrandedCatchupPreparation())
+        {
+            return;
+        }
+
+        if (await CheckNextSequenceNumber())
+        {
+            await CheckStrandedSubscription();
+        }
     }
 
     async Task CheckConnectedClient()
@@ -43,12 +68,35 @@ public partial class Observer
             return;
         }
 
+        // Clients are tracked on the silo terminating their connection - the silo their target
+        // names. If that silo is gone, the placement director gives a fresh, empty activation that
+        // correctly reports the client as disconnected.
+        if (_subscription.Targets.Count > 0)
+        {
+            foreach (var target in _subscription.Targets.ToArray())
+            {
+                var connectedClientsForTarget = GrainFactory.GetConnectedClients(target.SiloAddress);
+                if (!await connectedClientsForTarget.IsConnected(target.ConnectedClient!.ConnectionId))
+                {
+                    logger.WatchdogClientInstanceDisconnected(target.ConnectedClient.ConnectionId);
+                    RemoveSubscriberTarget(target);
+                }
+            }
+
+            if (_subscription.Targets.Count == 0)
+            {
+                await Unsubscribe();
+            }
+
+            return;
+        }
+
         if (_subscription.Arguments is not ConnectedClient connectedClient)
         {
             return;
         }
 
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(0);
+        var connectedClients = GrainFactory.GetConnectedClients(_subscription.SiloAddress);
         if (!await connectedClients.IsConnected(connectedClient.ConnectionId))
         {
             logger.WatchdogClientDisconnected(connectedClient.ConnectionId);
@@ -56,11 +104,15 @@ public partial class Observer
         }
     }
 
-    async Task CheckJobTasks()
+    /// <summary>
+    /// Re-routes an observer whose progress depends on a job that is no longer there.
+    /// </summary>
+    /// <returns>True if the observer was re-routed, false if it was left alone.</returns>
+    async Task<bool> CheckJobTasks()
     {
         if (!_subscription.IsSubscribed)
         {
-            return;
+            return false;
         }
 
         if (State.IsReplaying)
@@ -75,42 +127,45 @@ public partial class Observer
             {
                 logger.WatchdogReplayJobMissing();
                 await TransitionTo<Routing>();
-                return;
+                return true;
             }
         }
 
-        if (State.CatchingUpPartitions.Count > 0)
+        if (State.CatchingUpPartitions.Count > 0 && !await HasRunningCatchupJob())
         {
-            var catchupJobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
-            var hasRunningCatchupJob = catchupJobs.Any(job =>
-                job.Request is CatchUpObserverRequest req &&
-                req.ObserverKey == _observerKey &&
-                job.IsPreparingOrRunning);
-
-            if (!hasRunningCatchupJob)
-            {
-                logger.WatchdogCatchupJobMissing();
-                await TransitionTo<Routing>();
-            }
+            logger.WatchdogCatchupJobMissing();
+            await TransitionTo<Routing>();
+            return true;
         }
+
+        return false;
     }
 
-    async Task CheckNextSequenceNumber()
+    async Task<bool> HasRunningCatchupJob()
+    {
+        var catchupJobs = await _jobsManager.GetJobsOfType<ICatchUpObserver, CatchUpObserverRequest>();
+        return catchupJobs.Any(job =>
+            job.Request is CatchUpObserverRequest request &&
+            request.ObserverKey == _observerKey &&
+            job.IsPreparingOrRunning);
+    }
+
+    async Task<bool> CheckNextSequenceNumber()
     {
         if (!_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
         {
-            return;
+            return false;
         }
 
         if (!State.NextEventSequenceNumber.IsActualValue)
         {
-            return;
+            return false;
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
         if (!tailSequenceNumber.IsActualValue)
         {
-            return;
+            return false;
         }
 
         var shouldUpdateTailEventSequenceNumber =
@@ -124,7 +179,7 @@ public partial class Observer
                 State = State with { TailEventSequenceNumber = tailSequenceNumber };
                 await WriteStateAsync();
             }
-            return;
+            return false;
         }
 
         var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(
@@ -141,11 +196,15 @@ public partial class Observer
                 TailEventSequenceNumber = tailSequenceNumber
             };
             await WriteStateAsync();
+            return false;
         }
-        else if (shouldUpdateTailEventSequenceNumber)
+
+        if (shouldUpdateTailEventSequenceNumber)
         {
             State = State with { TailEventSequenceNumber = tailSequenceNumber };
             await WriteStateAsync();
         }
+
+        return true;
     }
 }

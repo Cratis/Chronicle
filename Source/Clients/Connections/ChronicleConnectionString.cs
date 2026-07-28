@@ -51,10 +51,10 @@ public class ChronicleConnectionString
     /// The development <see cref="ChronicleConnectionString"/> pointing to localhost configured with the default dev credentials.
     /// </summary>
     /// <remarks>
-    /// TLS certificate validation is skipped so a development client connects to the self-signed certificate
-    /// the Chronicle server generates when none is configured. Production connections validate the certificate.
+    /// TLS certificate validation is skipped by default (see <see cref="ChronicleConnectionStringBuilder.SkipTlsValidation"/>),
+    /// so a development client connects to the self-signed certificate the Chronicle server generates when none is configured.
     /// </remarks>
-    public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000?skipTlsValidation=true");
+    public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000");
 
     readonly ChronicleConnectionStringBuilder _builder;
 
@@ -79,9 +79,30 @@ public class ChronicleConnectionString
     }
 
     /// <summary>
-    /// Gets the <see cref="ChronicleServerAddress"/> for the server.
+    /// Gets the <see cref="ChronicleServerAddress"/> for the server. When multiple servers are
+    /// configured, this is the first server in the list.
     /// </summary>
     public ChronicleServerAddress ServerAddress { get; } = new("localhost", 35000);
+
+    /// <summary>
+    /// Gets all the <see cref="ChronicleServerAddress"/> entries configured for the connection.
+    /// </summary>
+    public IReadOnlyList<ChronicleServerAddress> ServerAddresses => _builder.ServerAddresses;
+
+    /// <summary>
+    /// Gets a value indicating whether the connection string uses the DNS SRV lookup scheme (chronicle+srv).
+    /// </summary>
+    public bool IsSrv => _builder.IsSrv;
+
+    /// <summary>
+    /// Gets the name of the load balancer strategy to use when multiple servers are available, if specified.
+    /// </summary>
+    public string? LoadBalancer => _builder.LoadBalancer;
+
+    /// <summary>
+    /// Gets the DNS name server (host[:port]) used for chronicle+srv lookups, if specified.
+    /// </summary>
+    public string? SrvNameServer => _builder.SrvNameServer;
 
     /// <summary>
     /// Gets the username for authentication, if specified. This maps to client id using `client_credentials` flow.

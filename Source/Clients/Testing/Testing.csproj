@@ -27,6 +27,9 @@
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage.InMemory/Storage.InMemory.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
@@ -43,9 +46,9 @@
         </PackageReference>
     </ItemGroup>
 
-    <!-- Pack Orleans runtime assemblies into lib/ so they are available without nuspec dependencies -->
+    <!-- Pack Orleans and the kernel's Screenplay compiler runtime assemblies into lib/ so they are available without nuspec dependencies -->
     <PropertyGroup>
-        <PrivatePackageRuntimeAssemblyRegex>^Orleans\..*\.dll$</PrivatePackageRuntimeAssemblyRegex>
+        <PrivatePackageRuntimeAssemblyRegex>^(Orleans\..*|Cratis\.Screenplay)\.dll$</PrivatePackageRuntimeAssemblyRegex>
     </PropertyGroup>
 
 </Project>

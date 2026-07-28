@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
@@ -11,6 +12,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -36,6 +38,8 @@ public class all_dependencies : Specification
     protected IReadModelsCompliance _complianceHelper;
     protected IEventCompliance _eventCompliance;
     protected IReducerMediator _reducerMediator;
+    protected IProjectionChangesetMediator _changesetMediator;
+    protected ILocalSiloDetails _localSiloDetails;
     protected Contracts.ReadModels.IReadModels _service;
 
     void Establish()
@@ -72,8 +76,12 @@ public class all_dependencies : Specification
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _complianceManager = Substitute.For<IJsonComplianceManager>();
         _reducerMediator = Substitute.For<IReducerMediator>();
+        _changesetMediator = Substitute.For<IProjectionChangesetMediator>();
         _eventCompliance = Substitute.For<IEventCompliance>();
         _complianceHelper = Substitute.For<IReadModelsCompliance>();
+
+        _localSiloDetails = Substitute.For<ILocalSiloDetails>();
+        _localSiloDetails.SiloAddress.Returns(SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 0));
 
         // Mock the Release methods to return the input unchanged by default.
         _complianceHelper.Release(
@@ -103,6 +111,8 @@ public class all_dependencies : Specification
             _storage,
             _expandoObjectConverter,
             _reducerMediator,
+            _changesetMediator,
+            _localSiloDetails,
             _complianceHelper,
             _eventCompliance,
             new JsonSerializerOptions());

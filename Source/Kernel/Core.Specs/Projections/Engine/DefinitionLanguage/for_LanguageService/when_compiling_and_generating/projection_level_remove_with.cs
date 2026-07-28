@@ -9,7 +9,7 @@ public class projection_level_remove_with : given.a_language_service_with_schema
 {
     const string Declaration = """
         projection Group => GroupReadModel
-          from GroupCreated automap
+          from GroupCreated
 
           remove with GroupDeleted
         """;

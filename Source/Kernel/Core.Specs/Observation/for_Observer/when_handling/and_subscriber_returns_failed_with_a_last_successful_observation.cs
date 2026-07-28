@@ -37,7 +37,7 @@ public class and_subscriber_returns_failed_with_a_last_successful_observation : 
         AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, _eventSequenceNumberToHandle),
         AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, _eventSequenceNumberToHandle.Next())]);
 
-    [Fact] void should_write_state_twice() => _storageStats.Writes.ShouldEqual(2);
+    [Fact] void should_write_state_thrice() => _storageStats.Writes.ShouldEqual(3);
     [Fact] void should_write_correct_last_handled_event_sequence_number_state() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(_eventSequenceNumberToHandle);
     [Fact] void should_write_correct_next_event_sequence_number_state() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual(_eventSequenceNumberToHandle.Next());
     [Fact] void should_increment_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);

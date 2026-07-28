@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -15,6 +16,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.given;
@@ -33,6 +35,8 @@ public class a_performing_job_step : Specification
     protected EventSourceId? _eventSourceIdFilter;
     protected EventSequenceNumber _startSequenceNumber = EventSequenceNumber.Unavailable;
     protected readonly List<HandledBatch> _handledBatches = [];
+
+    protected virtual Cratis.Chronicle.Configuration.Jobs CreateJobsConfig() => new();
 
     protected static AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId) =>
         AppendedEvent.EmptyWithEventSequenceNumber(sequenceNumber) with
@@ -98,6 +102,7 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
+        _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
         var eventCompliance = Substitute.For<IEventCompliance>();
         eventCompliance
@@ -109,6 +114,10 @@ public class a_performing_job_step : Specification
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
+
+        var options = Substitute.For<IOptions<ChronicleOptions>>();
+        options.Value.Returns(new ChronicleOptions { Jobs = CreateJobsConfig() });
+        _silo.AddService(options);
 
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
             nameof(JobStepState),
