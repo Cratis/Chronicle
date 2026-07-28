@@ -71,7 +71,7 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (FindPiiSource(builderCallback, eventType, readModelType, AutoMapIsOn(invocation)) is not { } source)
+        if (FindPiiSource(builderCallback, eventType, readModelType, AutoMapIsOn(invocation, readModelType)) is not { } source)
         {
             return;
         }
@@ -117,9 +117,17 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
             return null;
         }
 
-        var mappableNames = CrossSubjectPiiJoin.GetMembers(readModelType)
-            .Where(member => !member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.NoAutoMapAttributeName))
+        // A positional record surfaces each member twice — once as the property, once as the constructor
+        // parameter — and [NoAutoMap] written without a target lands only on the parameter. Excluding the one
+        // entry that carries it would leave the other behind, so exclude the name outright.
+        var excludedNames = CrossSubjectPiiJoin.GetMembers(readModelType)
+            .Where(member => member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.NoAutoMapAttributeName))
             .Select(member => member.Name)
+            .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var mappableNames = CrossSubjectPiiJoin.GetMembers(readModelType)
+            .Select(member => member.Name)
+            .Where(name => !excludedNames.Contains(name))
             .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
 
         var autoMapped = CrossSubjectPiiJoin.GetMembers(eventType)
@@ -133,13 +141,16 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
     /// Determine whether AutoMap is still on for the projection this join belongs to.
     /// </summary>
     /// <param name="invocation">The join invocation.</param>
+    /// <param name="readModelType">The read model being projected.</param>
     /// <returns>True when AutoMap can carry properties across, false when it was turned off.</returns>
     /// <remarks>
-    /// <c>.NoAutoMap()</c> turns AutoMap off for a scope. Rather than model that scope from syntax, any
-    /// <c>NoAutoMap</c> anywhere in the declaring member suppresses the implicit half of the check — the rule is
-    /// an error, so it errs towards missing a case over breaking a correct build.
+    /// AutoMap is turned off two ways: <c>[NoAutoMap]</c> on the read model itself, and <c>.NoAutoMap()</c> on the
+    /// builder. The latter applies to a scope, which is not modelled from syntax — any <c>NoAutoMap</c> anywhere in
+    /// the declaring member suppresses the implicit half of the check. The rule is an error, so it errs towards
+    /// missing a case over breaking a correct build.
     /// </remarks>
-    static bool AutoMapIsOn(InvocationExpressionSyntax invocation) =>
+    static bool AutoMapIsOn(InvocationExpressionSyntax invocation, INamedTypeSymbol readModelType) =>
+        !WellKnownTypes.HasAttribute(readModelType, WellKnownTypes.NoAutoMapAttributeName) &&
         invocation.Ancestors()
             .OfType<MemberDeclarationSyntax>()
             .FirstOrDefault()
