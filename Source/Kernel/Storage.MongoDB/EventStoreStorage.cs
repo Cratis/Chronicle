@@ -103,18 +103,19 @@ public class EventStoreStorage(
             return instance;
         }
 
-        return _namespaces[@namespace] =
-            new EventStoreNamespaceStorage(
-                EventStore,
-                @namespace,
-                eventStoreDatabase.GetNamespaceDatabase(@namespace),
-                EventTypes,
-                Observers,
-                expandoObjectConverter,
-                jsonSerializerOptions,
-                sinksFactory(@namespace),
-                jobTypes,
-                options,
-                loggerFactory);
+        var created = new EventStoreNamespaceStorage(
+            EventStore,
+            @namespace,
+            eventStoreDatabase.GetNamespaceDatabase(@namespace),
+            EventTypes,
+            Observers,
+            expandoObjectConverter,
+            jsonSerializerOptions,
+            sinksFactory(@namespace),
+            jobTypes,
+            options,
+            loggerFactory);
+
+        return _namespaces.GetOrAdd(@namespace, created);
     }
 }

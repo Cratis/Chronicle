@@ -58,6 +58,11 @@ public interface IEventStoreNamespaceStorage
     IInFlightEventsStorage InFlightEvents { get; }
 
     /// <summary>
+    /// Gets the <see cref="IObserverHandledCountsStorage"/> for the event store namespace.
+    /// </summary>
+    IObserverHandledCountsStorage ObserverHandledCounts { get; }
+
+    /// <summary>
     /// Gets the <see cref="IRecommendationStorage"/> for the event store namespace.
     /// </summary>
     IRecommendationStorage Recommendations { get; }

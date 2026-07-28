@@ -147,7 +147,7 @@ internal sealed class TestingServices(
         new KernelIdentitiesService(storage));
 
     readonly Lazy<IEventTypes> _eventTypes = new(() =>
-        new KernelEventTypesService(storage, grainFactory));
+        new KernelEventTypesService(storage, grainFactory, new EventSequences.NoOpEventTypesCacheClient()));
 
     readonly Lazy<IRecommendations> _recommendations = new(() =>
         new KernelRecommendationsService(grainFactory, storage));
@@ -162,7 +162,7 @@ internal sealed class TestingServices(
         new KernelApplicationsService(grainFactory, storage));
 
     readonly Lazy<IServer> _server = new(() =>
-        new KernelServerService(null!, null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
+        new KernelServerService(null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
 
     readonly Lazy<IEventStores> _eventStores = new(() =>
         new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));

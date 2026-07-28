@@ -68,6 +68,8 @@ public partial class Observer(
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
+    int _statePersistenceBatchInterval = 1;
+    int _debouncedProgressWrites;
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
@@ -94,12 +96,14 @@ public partial class Observer(
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);
 
         var config = await configurationProvider.GetFor(_observerKey);
+        _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         RegisterWatchdog(config.WatchdogInterval);
     }
 
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        await FlushDebouncedProgressState();
         if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
         {
             await TransitionTo<Disconnected>();
@@ -319,6 +323,7 @@ public partial class Observer(
             _observerKey,
             observerDefinition,
             _jobsManager,
+            storage,
             loggerFactory.CreateLogger<Replay>()),
 
         new QuarantinedObserver(
@@ -329,7 +334,6 @@ public partial class Observer(
             _observerKey,
             observerDefinition,
             failures,
-            storage,
             _jobsManager,
             loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
@@ -462,6 +466,11 @@ public partial class Observer(
     {
         if (_stateWritingSuspended) return;
         await base.WriteStateAsync();
+
+        // Any actual persist carries the observer's current NextEventSequenceNumber, so it flushes whatever
+        // progress-only advance was being debounced. Resetting the counter keeps the debounce window bounded by
+        // the most recent write from any source, not only the progress-only path.
+        _debouncedProgressWrites = 0;
     }
 
     static bool FiltersAreEqual(ObserverFilters? left, ObserverFilters? right)

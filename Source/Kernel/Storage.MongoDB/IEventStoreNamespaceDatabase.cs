@@ -45,4 +45,12 @@ public interface IEventStoreNamespaceDatabase
     /// </summary>
     /// <returns>The collection instance.</returns>
     IMongoCollection<ObserverState> GetObserverStateCollection();
+
+    /// <summary>
+    /// Ensures the indexes for an event sequence collection exist, pruning obsolete ones. Runs at most once per
+    /// event sequence for the lifetime of the database instance.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to ensure indexes for.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task EnsureIndexesForEventSequence(EventSequenceId eventSequenceId);
 }

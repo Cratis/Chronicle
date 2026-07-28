@@ -50,7 +50,10 @@ public class ChangesetConverter(
             arrayFiltersForDocument,
             eventSequenceNumber);
 
-        if (hasChanges)
+        // EventSequenceNumber sentinels (Unavailable, Max) are not positions in the sequence. Letting one through
+        // would pin the $max watermark at the top of the range and permanently block every later guarded write to
+        // the document.
+        if (hasChanges && eventSequenceNumber.IsActualValue)
         {
             BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
         }

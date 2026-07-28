@@ -4,8 +4,10 @@
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Reducers;
 
@@ -16,11 +18,13 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting PII fields.</param>
+/// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 public class ReducerPipelineFactory(
     IGrainFactory grainFactory,
     IStorage storage,
     IObjectComparer objectComparer,
-    IReadModelsCompliance readModelsCompliance) : IReducerPipelineFactory
+    IReadModelsCompliance readModelsCompliance,
+    IOptions<ChronicleOptions> options) : IReducerPipelineFactory
 {
     /// <inheritdoc/>
     public async Task<IReducerPipeline> Create(
@@ -31,6 +35,13 @@ public class ReducerPipelineFactory(
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
         var sink = await namespaceStorage.Sinks.GetFor(readModel);
-        return new ReducerPipeline(readModel, sink, objectComparer, readModelsCompliance, eventStore, @namespace);
+        return new ReducerPipeline(
+            readModel,
+            sink,
+            objectComparer,
+            readModelsCompliance,
+            eventStore,
+            @namespace,
+            options.Value.ReadModels.GuardSinkWritesOnWatermark);
     }
 }

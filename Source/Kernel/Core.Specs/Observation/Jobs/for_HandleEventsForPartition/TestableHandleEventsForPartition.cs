@@ -40,6 +40,11 @@ public class TestableHandleEventsForPartition(
     /// <inheritdoc/>
     public Type GrainType => typeof(IHandleEventsForPartition);
 
+    /// <summary>
+    /// Gets a value indicating whether the step persists its progress checkpoint after every reported batch.
+    /// </summary>
+    public bool IsCheckpointingAfterEveryBatch => CheckpointAfterEveryBatch;
+
     /// <inheritdoc/>
     protected override IHandleEventsForPartition GetSelfGrainReference() => Substitute.For<IHandleEventsForPartition>();
 

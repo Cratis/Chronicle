@@ -23,10 +23,21 @@ using Orleans.Providers;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionObserverSubscriber"/>.
+/// Represents an implementation of <see cref="IProjectionObserverSubscriber"/> and
+/// <see cref="ICollapsingProjectionObserverSubscriber"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
+/// <para>
+/// Which of the two interfaces a projection subscribes as decides how its activations are keyed, and that is the
+/// whole difference between them: a projection keyed on the event source id gets an activation per partition,
+/// spread across the cluster, while a projection whose key can collapse several event sources onto one document
+/// gets a single activation for every partition. The latter is what makes the coarse mode of
+/// <see cref="ProjectionHandleLock"/> - which is process local - sufficient: without it, two silos would run the
+/// read-modify-write cycle against the same document without seeing each other's lock. The cost is that a
+/// collapsing projection is bounded by one activation on one silo, which is what the coarse lock already implied
+/// within a silo.
+/// </para>
 /// </remarks>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
@@ -39,7 +50,7 @@ public class ProjectionObserverSubscriber(
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,
     IStorage storage,
-    ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+    ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, ICollapsingProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;

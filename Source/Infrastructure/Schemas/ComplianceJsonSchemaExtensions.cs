@@ -80,8 +80,21 @@ public static class ComplianceJsonSchemaExtensions
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
     /// <returns>True if it has, false if not.</returns>
-    public static bool HasComplianceMetadata(this JsonSchema schema) =>
-        HasComplianceMetadata(schema, [], 0);
+    /// <remarks>
+    /// The recursive walk is run once per schema instance and its result memoized, because the answer is invoked for
+    /// every appended and read event and a schema is effectively immutable once built.
+    /// </remarks>
+    public static bool HasComplianceMetadata(this JsonSchema schema)
+    {
+        if (schema.CachedHasComplianceMetadata is { } cached)
+        {
+            return cached;
+        }
+
+        var result = HasComplianceMetadata(schema, [], 0);
+        schema.CachedHasComplianceMetadata = result;
+        return result;
+    }
 
     /// <summary>
     /// Check if the property has compliance metadata.

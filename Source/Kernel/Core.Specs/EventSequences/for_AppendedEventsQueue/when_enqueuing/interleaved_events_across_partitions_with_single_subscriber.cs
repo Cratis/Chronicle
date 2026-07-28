@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing;
 
 /// <summary>
-/// Regression spec for the race condition where HandlePartitioned grouped events by
+/// Regression spec for the race condition where Dispatch grouped events by
 /// partition before delivering them. This caused the observer's NextEventSequenceNumber
 /// to advance past lower-numbered events from the other partition, dropping them.
 /// </summary>

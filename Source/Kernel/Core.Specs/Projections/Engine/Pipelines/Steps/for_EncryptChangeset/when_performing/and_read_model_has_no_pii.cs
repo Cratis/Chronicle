@@ -19,6 +19,7 @@ public class and_read_model_has_no_pii : given.all_dependencies
     async Task Because() => _result = await _step.Perform(_projection, _context);
 
     [Fact] void should_not_call_compliance_manager_apply() => _complianceManager.DidNotReceive().Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Schemas.JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
+    [Fact] void should_not_compare_the_document_against_itself() => _objectComparer.DidNotReceive().Compare(Arg.Any<ExpandoObject>(), Arg.Any<ExpandoObject>(), out Arg.Any<IEnumerable<PropertyDifference>>());
     [Fact] void should_return_context() => _result.ShouldNotBeNull();
     [Fact] void should_add_subject_difference_to_changeset() => _context.Changeset.Changes
         .OfType<PropertiesChanged<ExpandoObject>>()

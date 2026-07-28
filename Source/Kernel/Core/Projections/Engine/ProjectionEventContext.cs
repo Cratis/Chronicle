@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -30,6 +31,7 @@ public record ProjectionEventContext(
     readonly List<ProjectionFuture> _deferredFutures = [];
     readonly List<FailedPartition> _failedPartitions = [];
     readonly List<PendingFutureSave> _pendingFutureSaves = [];
+    readonly Dictionary<KeyResolver, KeyResolverResult> _resolvedKeys = [];
     bool _isKeyUnresolvable;
 
     /// <summary>
@@ -108,6 +110,30 @@ public record ProjectionEventContext(
     /// Marks the root key as permanently unresolvable. Subsequent pipeline steps skip all processing.
     /// </summary>
     public void MarkKeyUnresolvable() => _isKeyUnresolvable = true;
+
+    /// <summary>
+    /// Tries to get the <see cref="KeyResolverResult"/> already resolved by a <see cref="KeyResolver"/> within this context.
+    /// </summary>
+    /// <param name="resolver">The <see cref="KeyResolver"/> that produced the result.</param>
+    /// <param name="result">The memoized <see cref="KeyResolverResult"/> when present.</param>
+    /// <returns>True when a memoized result exists; otherwise false.</returns>
+    /// <remarks>
+    /// A context represents a single event, so the memo is scoped to that event and shared across the
+    /// <c>with</c>-copies produced as the pipeline descends the projection hierarchy. The key is the
+    /// <see cref="KeyResolver"/> instance: a parent projection reuses the exact resolver delegates of its
+    /// descendants, so <see cref="Pipelines.Steps.HandleEvent"/> reuses the result already produced by
+    /// <see cref="Pipelines.Steps.ResolveKey"/> instead of resolving the same key a second time.
+    /// </remarks>
+    public bool TryGetResolvedKey(KeyResolver resolver, [NotNullWhen(true)] out KeyResolverResult? result) =>
+        _resolvedKeys.TryGetValue(resolver, out result);
+
+    /// <summary>
+    /// Memoizes the <see cref="KeyResolverResult"/> produced by a <see cref="KeyResolver"/> for reuse within this context.
+    /// </summary>
+    /// <param name="resolver">The <see cref="KeyResolver"/> that produced the result.</param>
+    /// <param name="result">The <see cref="KeyResolverResult"/> to memoize.</param>
+    public void MemoizeResolvedKey(KeyResolver resolver, KeyResolverResult result) =>
+        _resolvedKeys[resolver] = result;
 
     /// <summary>
     /// Adds a failed partition to the context.

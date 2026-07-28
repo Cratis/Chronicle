@@ -14,6 +14,8 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// </summary>
 public static class ChangesetExtensions
 {
+    static readonly PropertyPath _readModelInstanceInitializedProperty = WellKnownProperties.ReadModelInstanceInitialized;
+
     /// <summary>
     /// Set the model instance as not initialized.
     /// </summary>
@@ -25,7 +27,7 @@ public static class ChangesetExtensions
             new PropertiesChanged<ExpandoObject>(
                 changeset.CurrentState,
                 [
-                    new PropertyDifference(WellKnownProperties.ReadModelInstanceInitialized, null, isInitialized)
+                    new PropertyDifference(_readModelInstanceInitializedProperty, null, isInitialized)
                 ]));
     }
 

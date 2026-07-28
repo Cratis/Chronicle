@@ -75,6 +75,19 @@ public record ObserverState(
         = EventSequenceNumber.Unavailable;
 
     /// <summary>
+    /// Gets or inits the partitions that have an in-flight event batch — one the observer has started handling
+    /// but not yet acknowledged.
+    /// </summary>
+    /// <remarks>
+    /// A partition is recorded here, and the state made durable, immediately before its subscriber is invoked, and
+    /// removed once the outcome of that invocation is known. Persisting the markers as part of the observer state
+    /// (rather than in a separate write) lets a crash that interrupted handling recover the affected partitions on
+    /// the next activation without an extra round trip per handled batch. The marker's only purpose is this
+    /// durability ordering relative to the subscriber call.
+    /// </remarks>
+    public ISet<Key> InFlightPartitions { get; init; } = new HashSet<Key>();
+
+    /// <summary>
     /// Gets or inits the total number of events the observer has successfully handled.
     /// </summary>
     public EventCount HandledEventCount { get; init; } = EventCount.Zero;
@@ -94,10 +107,4 @@ public record ObserverState(
         get => HandledEventCountPerEventType;
         set => HandledEventCountPerEventType = value;
     }
-
-    /// <summary>
-    /// Gets or inits the number of events successfully handled per partition, broken down by event type identifier.
-    /// Used to compute the contribution of a specific partition so it can be subtracted when that partition is replayed.
-    /// </summary>
-    public IReadOnlyDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>> HandledEventCountPerPartition { get; init; } = ImmutableDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>.Empty;
 }

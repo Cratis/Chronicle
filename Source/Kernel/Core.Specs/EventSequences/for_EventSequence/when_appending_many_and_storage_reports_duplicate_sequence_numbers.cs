@@ -48,7 +48,7 @@ public class when_appending_many_and_storage_reports_duplicate_sequence_numbers 
             });
     }
 
-    async Task Because() => _result = await _grain.AppendManyToStorage(
+    async Task Because() => _result = await _eventSequence.AppendManyToStorage(
         [ValidatedEvent(), ValidatedEvent()],
         Cratis.Execution.CorrelationId.New(),
         [],
@@ -58,5 +58,5 @@ public class when_appending_many_and_storage_reports_duplicate_sequence_numbers 
     [Fact] void should_resubmit_with_non_colliding_sequence_numbers() => _lastSubmittedSequenceNumbers.Any(_usedSequenceNumbers.Contains).ShouldBeFalse();
     [Fact] void should_have_succeeded() => _result.IsSuccess.ShouldBeTrue();
     [Fact] async Task should_advance_next_sequence_number_past_the_renumbered_batch() =>
-        (await _grain.GetNextSequenceNumber()).ShouldEqual((EventSequenceNumber)12UL);
+        (await _eventSequence.GetNextSequenceNumber()).ShouldEqual((EventSequenceNumber)12UL);
 }

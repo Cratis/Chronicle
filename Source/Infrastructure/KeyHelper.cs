@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
+using System.Reflection;
 using Cratis.Concepts;
 
 namespace Cratis.Chronicle;
@@ -14,6 +16,8 @@ public static class KeyHelper
     /// Gets the separator character used in string representations.
     /// </summary>
     public const char Separator = '#';
+
+    static readonly ConcurrentDictionary<Type, (ConstructorInfo Constructor, ParameterInfo[] Parameters)> _constructorsByType = new();
 
     /// <summary>
     /// Combine the parts into a string representation of a key.
@@ -32,11 +36,14 @@ public static class KeyHelper
     /// <param name="key">String representation to create from.</param>
     /// <typeparam name="T">Type of key to create.</typeparam>
     /// <returns>A new instance of the key.</returns>
+    /// <remarks>
+    /// The reflected constructor and parameters for <typeparamref name="T"/> are memoized. The set of grain key
+    /// types is fixed at compile time, so the cache is bounded and never needs invalidation.
+    /// </remarks>
     public static T Parse<T>(string key)
     {
         var elements = key.Split(Separator);
-        var constructor = typeof(T).GetConstructors()[0];
-        var parameters = constructor.GetParameters();
+        var (constructor, parameters) = _constructorsByType.GetOrAdd(typeof(T), ResolveConstructorSignature);
         List<object> arguments = [];
 
         for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++)
@@ -66,5 +73,11 @@ public static class KeyHelper
         }
 
         return (T)constructor.Invoke([.. arguments]);
+    }
+
+    static (ConstructorInfo Constructor, ParameterInfo[] Parameters) ResolveConstructorSignature(Type type)
+    {
+        var constructor = type.GetConstructors()[0];
+        return (constructor, constructor.GetParameters());
     }
 }
