@@ -1,10 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// TypeScript 7 ships a native (Go) compiler whose npm package no longer exposes
+// the programmatic compiler API (ts.createSourceFile / ts.SyntaxKind / …), so this
+// script parses with @swc/core instead, matching the approach @cratis/arc.vite's
+// EmitMetadataPlugin takes for the same reason.
+
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ts from 'typescript';
+import { parseSync } from '@swc/core';
 
 const generatedModules = [
     'clients',
@@ -39,7 +44,7 @@ const generatedIndexPath = path.join(generatedDirectory, 'index.ts');
 const getExportedSymbols = async (filePath) =>
 {
     const sourceText = await fs.readFile(filePath, 'utf8');
-    const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const module = parseSync(sourceText, { syntax: 'typescript', tsx: false });
     const exportedSymbols = new Map();
 
     /**
@@ -53,63 +58,52 @@ const getExportedSymbols = async (filePath) =>
         exportedSymbols.set(name, currentKind === 'value' || kind === 'value' ? 'value' : 'type');
     };
 
-    for (const statement of sourceFile.statements)
+    for (const statement of module.body)
     {
-        const hasExportModifier = statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false;
-
-        if (!hasExportModifier && !ts.isExportDeclaration(statement))
+        if (statement.type === 'ExportNamedDeclaration')
         {
-            continue;
-        }
-
-        if (ts.isInterfaceDeclaration(statement))
-        {
-            addExport(statement.name.text, 'type');
-            continue;
-        }
-
-        if (ts.isTypeAliasDeclaration(statement))
-        {
-            addExport(statement.name.text, 'type');
-            continue;
-        }
-
-        if (ts.isEnumDeclaration(statement) && statement.name)
-        {
-            addExport(statement.name.text, 'value');
-            continue;
-        }
-
-        if (ts.isClassDeclaration(statement) && statement.name)
-        {
-            addExport(statement.name.text, 'value');
-            continue;
-        }
-
-        if (ts.isFunctionDeclaration(statement) && statement.name)
-        {
-            addExport(statement.name.text, 'value');
-            continue;
-        }
-
-        if (ts.isVariableStatement(statement))
-        {
-            for (const declaration of statement.declarationList.declarations)
+            for (const specifier of statement.specifiers)
             {
-                if (ts.isIdentifier(declaration.name))
+                if (specifier.type !== 'ExportSpecifier')
                 {
-                    addExport(declaration.name.text, 'value');
+                    continue;
                 }
+
+                const name = (specifier.exported ?? specifier.orig).value;
+                addExport(name, statement.typeOnly || specifier.isTypeOnly ? 'type' : 'value');
             }
             continue;
         }
 
-        if (ts.isExportDeclaration(statement) && statement.exportClause && ts.isNamedExports(statement.exportClause))
+        if (statement.type !== 'ExportDeclaration')
         {
-            for (const element of statement.exportClause.elements)
-            {
-                addExport(element.name.text, element.isTypeOnly ? 'type' : 'value');
-            }
+            continue;
+        }
+
+        const declaration = statement.declaration;
+
+        switch (declaration.type)
+        {
+            case 'TsInterfaceDeclaration':
+            case 'TsTypeAliasDeclaration':
+                addExport(declaration.id.value, 'type');
+                break;
+
+            case 'TsEnumDeclaration':
+            case 'ClassDeclaration':
+            case 'FunctionDeclaration':
+                addExport((declaration.id ?? declaration.identifier).value, 'value');
+                break;
+
+            case 'VariableDeclaration':
+                for (const variableDeclaration of declaration.declarations)
+                {
+                    if (variableDeclaration.id.type === 'Identifier')
+                    {
+                        addExport(variableDeclaration.id.value, 'value');
+                    }
+                }
+                break;
         }
     }
 
