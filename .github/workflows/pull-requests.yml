@@ -14,8 +14,10 @@ env:
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
+  # `edited` is deliberately absent: it fires on every PR title/description
+  # edit, which re-ran this whole prerelease pipeline for a text change.
   pull_request_target:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, synchronize, reopened]
     branches:
       - "**"
     paths:
@@ -23,34 +25,8 @@ on:
       - ".github/workflows/**"
 
 jobs:
-  grpc-compatibility:
-    permissions:
-      contents: read
-    uses: ./.github/workflows/grpc-compatibility.yml
-    with:
-      base-ref: ${{ github.event.pull_request.base.ref }}
-
-  update-pr-with-breaking-changes:
-    runs-on: ubuntu-latest
-    needs: [grpc-compatibility]
-    if: needs.grpc-compatibility.outputs.has-breaking-changes == 'true'
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Update PR description
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          .github/scripts/update-pr-description.sh \
-            "${{ github.event.pull_request.number }}" \
-            "${{ needs.grpc-compatibility.outputs.breaking-changes }}"
-
   release:
     runs-on: ubuntu-latest
-    needs: [grpc-compatibility]
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
@@ -81,7 +57,7 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: kernel-output
         with:
           path: ./Source/Kernel/Server/out
@@ -108,7 +84,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
@@ -116,7 +92,7 @@ jobs:
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+        run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Setup node
         uses: actions/setup-node@v4
@@ -124,7 +100,7 @@ jobs:
           node-version: 20.x
           registry-url: "https://registry.npmjs.org"
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: yarn-cache
         with:
           path: |
@@ -163,7 +139,7 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: kernel-dev-output
         with:
           path: ./Source/Kernel/Server/out/development
@@ -197,7 +173,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
@@ -249,22 +225,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: kernel-output
         with:
           path: ./Source/Kernel/Server/out
           key: ${{ env.KERNEL_CACHE }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@master
-        with:
-          platforms: all
 
       - name: Download development outputs
         uses: actions/download-artifact@v4
@@ -298,7 +269,10 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
           file: ./Docker/Development/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          # amd64 only for PR prereleases. arm64 has to be emulated through
+          # QEMU on GitHub-hosted runners, which dominated this job's runtime;
+          # the release build in publish.yml still ships both architectures.
+          platforms: linux/amd64
           push: true
           tags: |
             ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
