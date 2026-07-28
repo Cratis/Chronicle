@@ -3,11 +3,13 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Operations;
+using Cratis.Traces;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -17,11 +19,21 @@ namespace Cratis.Chronicle.Transactions;
 /// <param name="correlationId">The <see cref="CorrelationId"/> for the <see cref="IUnitOfWork"/>.</param>
 /// <param name="onCompleted">The action to call when the <see cref="IUnitOfWork"/> is completed.</param>
 /// <param name="eventStore">The <see cref="IEventStore"/> to use for the <see cref="IUnitOfWork"/>.</param>
+/// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
 public class UnitOfWork(
     CorrelationId correlationId,
     Action<IUnitOfWork> onCompleted,
-    IEventStore eventStore) : IUnitOfWork
+    IEventStore eventStore,
+    IActivitySource<UnitOfWork>? activitySource = null) : IUnitOfWork
 {
+    /// <summary>
+    /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client unit of work traces.
+    /// </summary>
+    internal static readonly IActivitySource<UnitOfWork> DefaultActivitySource =
+        new ActivitySource<UnitOfWork>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
+
+    readonly IActivitySource<UnitOfWork> _activitySource = activitySource ?? DefaultActivitySource;
+
     AppendManyResult _appendManyResult = new();
     EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
     Action<IUnitOfWork> _onCompleted = onCompleted;
@@ -84,25 +96,37 @@ public class UnitOfWork(
     /// <inheritdoc/>
     public async Task Commit()
     {
+        using var span = _activitySource.Commit(correlationId.ToString());
+
         ThrowIfUnitOfWorkIsCompleted();
 
-        if (_eventSequenceOperations is not null)
+        try
         {
-            var result = await _eventSequenceOperations.Perform();
-            if (result.SequenceNumbers?.Any() == true)
+            if (_eventSequenceOperations is not null)
             {
-                _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
+                var result = await _eventSequenceOperations.Perform();
+                if (result.SequenceNumbers?.Any() == true)
+                {
+                    _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
+                }
+                _appendManyResult = result;
             }
-            _appendManyResult = result;
         }
-
-        _isCommitted = true;
-        _onCompleted(this);
+        finally
+        {
+            // Completion must run even when the append throws (RpcException, unknown event type,
+            // serialization error) - otherwise the unit leaks in the manager's dictionary and the
+            // AsyncLocal Current keeps pointing at a completed unit. The exception still propagates.
+            _isCommitted = true;
+            _onCompleted(this);
+        }
     }
 
     /// <inheritdoc/>
     public Task Rollback()
     {
+        using var span = _activitySource.Rollback(correlationId.ToString());
+
         ThrowIfUnitOfWorkIsCompleted();
         _isRolledBack = true;
         _eventSequenceOperations?.Clear();

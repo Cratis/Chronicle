@@ -26,12 +26,22 @@ public interface IEventSequence : IGrainWithStringKey
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>
+    /// <remarks>
+    /// Served concurrently with an in-flight append rather than queued behind it. The sequence number is only advanced
+    /// after the append is durable, so the value returned during an append is the one from before it commits.
+    /// </remarks>
+    [AlwaysInterleave]
     Task<EventSequenceNumber> GetNextSequenceNumber();
 
     /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence.
     /// </summary>
     /// <returns>Tail sequence number.</returns>
+    /// <remarks>
+    /// Served concurrently with an in-flight append rather than queued behind it. The sequence number is only advanced
+    /// after the append is durable, so the value returned during an append is the one from before it commits.
+    /// </remarks>
+    [AlwaysInterleave]
     Task<EventSequenceNumber> GetTailSequenceNumber();
 
     /// <summary>

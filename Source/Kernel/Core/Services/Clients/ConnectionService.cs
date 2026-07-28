@@ -4,9 +4,11 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Reflection;
 using ProtoBuf.Meta;
@@ -19,13 +21,16 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo terminating the client connections.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class ConnectionService(
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
-    ILogger<ConnectionService> logger) : IConnectionService
+    ILogger<ConnectionService> logger,
+    IOptions<ChronicleOptions> options) : IConnectionService
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
-    static readonly TimeSpan _observeConnectedClientsInterval = TimeSpan.FromSeconds(1);
+    readonly TimeSpan _observeConnectedClientsInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.ObserveIntervalSeconds);
+    readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.KeepAliveIntervalSeconds);
 
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -51,7 +56,7 @@ internal sealed class ConnectionService(
                 {
                     while (!context.CancellationToken.IsCancellationRequested)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                        await Task.Delay(_keepAliveInterval).ConfigureAwait(false);
 
                         if (context.CancellationToken.IsCancellationRequested)
                         {
@@ -100,29 +105,18 @@ internal sealed class ConnectionService(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The per-silo lookups are issued together, so a faulting silo no longer aborts the sweep before the remaining
+    /// silos are asked - every silo is queried, and the first fault surfaces once they have all settled rather than
+    /// immediately. The observable outcome is unchanged: the same exception type still propagates, and a fault still
+    /// fails the whole call rather than returning a partial cluster view.
+    /// </remarks>
     public async Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default)
     {
         var management = grainFactory.GetGrain<IManagementGrain>(0);
         var hosts = await management.GetHosts(onlyActive: true);
-        var clients = new List<ConnectedClient>();
-        foreach (var silo in hosts.Keys)
-        {
-            var connectedClients = await grainFactory.GetConnectedClients(silo).GetAllConnectedClients();
-            clients.AddRange(connectedClients.Select(client => new ConnectedClient
-            {
-                ConnectionId = client.ConnectionId,
-                Version = client.Version,
-                LastSeen = client.LastSeen,
-                IsRunningWithDebugger = client.IsRunningWithDebugger,
-                SiloAddress = silo.ToParsableString(),
-                ProcessId = client.ProcessId,
-                ProcessPath = client.ProcessPath,
-                MachineName = client.MachineName,
-                ClientType = client.ClientType
-            }));
-        }
-
-        return clients;
+        var clientsPerSilo = await Task.WhenAll(hosts.Keys.Select(GetConnectedClientsForSilo));
+        return clientsPerSilo.SelectMany(clients => clients).ToList();
     }
 
     /// <inheritdoc/>
@@ -158,6 +152,23 @@ internal sealed class ConnectionService(
             .Select(group => generator.GetSchema(group.ToArray()));
 
         return string.Join('\n', schemas);
+    }
+
+    async Task<IEnumerable<ConnectedClient>> GetConnectedClientsForSilo(SiloAddress silo)
+    {
+        var connectedClients = await grainFactory.GetConnectedClients(silo).GetAllConnectedClients();
+        return connectedClients.Select(client => new ConnectedClient
+        {
+            ConnectionId = client.ConnectionId,
+            Version = client.Version,
+            LastSeen = client.LastSeen,
+            IsRunningWithDebugger = client.IsRunningWithDebugger,
+            SiloAddress = silo.ToParsableString(),
+            ProcessId = client.ProcessId,
+            ProcessPath = client.ProcessPath,
+            MachineName = client.MachineName,
+            ClientType = client.ClientType
+        });
     }
 
     sealed class ConnectedClientsComparer : IEqualityComparer<IEnumerable<ConnectedClient>>

@@ -45,14 +45,19 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
-    /// Report a batch of events that have been successfully handled for a partition.
+    /// Report a batch of successfully handled events for a partition as counts broken down by event type.
     /// Increments both the aggregate and per-event-type handled event counts, as well as
     /// the per-partition breakdown used to subtract counts when a partition is replayed.
     /// </summary>
     /// <param name="partition">The <see cref="Key"/> of the partition that handled the events.</param>
-    /// <param name="handledEvents">The events that were successfully handled.</param>
+    /// <param name="countsPerEventType">The number of successfully handled events, broken down by <see cref="EventTypeId"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReportHandledEvents(Key partition, IEnumerable<AppendedEvent> handledEvents);
+    /// <remarks>
+    /// Only the counts are needed to maintain the observer's handled-event statistics, so callers pass those
+    /// rather than the full <see cref="AppendedEvent"/> payloads. On the replay path this avoids shipping the
+    /// decrypted events across the grain boundary a second time when the observer only reads their type ids.
+    /// </remarks>
+    Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType);
 
     /// <summary>
     /// Get the subscription for the observer.

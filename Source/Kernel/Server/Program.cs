@@ -17,11 +17,27 @@ using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.Extensions.FileProviders;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
-AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
+ILogger<Kernel>? logger = null;
+
+// Route process-level unhandled exceptions through the logging pipeline so they reach the
+// configured ILogger sinks and the OpenTelemetry exporter - not just the console. Until the
+// logger is resolved (and if logging itself fails), fall back to writing to the console. (#1343)
+AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+{
+    if (args.ExceptionObject is Exception exception)
+    {
+        LogCrash(log => log.UnhandledException(exception, args.IsTerminating), exception);
+    }
+};
+
+TaskScheduler.UnobservedTaskException += (_, args) =>
+{
+    LogCrash(log => log.UnobservedTaskException(args.Exception), args.Exception);
+    args.SetObserved();
+};
 
 // Force invariant culture for the Kernel
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -32,7 +48,7 @@ CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 var builder = WebApplication.CreateBuilder(args);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
-var logger = builder.Logging.Services
+logger = builder.Logging.Services
     .BuildServiceProvider()
     .GetRequiredService<ILoggerFactory>()
     .CreateLogger<Kernel>();
@@ -171,6 +187,11 @@ hostBuilder
         }
         else
         {
+            if (!isSqlStorage && !isInMemoryStorage && ConnectionStringLocality.IsNonLocal(chronicleOptions.Storage.ConnectionDetails))
+            {
+                logger.LocalhostClusteringAgainstSharedStorage();
+            }
+
             _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
         }
 
@@ -263,17 +284,18 @@ app.UseRouting();
 
 app.UseCratisArc();
 
-// The Workbench UI is built once and embedded into Cratis.Chronicle.Workbench - the kernel serves
-// that same embedded asset set directly rather than expecting its own physical wwwroot. The
-// embedded manifest only exists when the frontend was built before the Workbench assembly - a
-// source build without the frontend output skips embedding entirely, and the kernel must keep
-// running without the UI rather than fail at startup.
+// The Workbench UI is built once and reaches a deployment either embedded into
+// Cratis.Chronicle.Workbench or as files in the web root next to the binary - see WorkbenchUI for
+// why both exist. Serve whichever is present, and keep running without the UI when neither is:
+// a Kernel-only deployment legitimately ships no Workbench.
 var workbenchAssembly = typeof(WorkbenchWebApplicationBuilderExtensions).Assembly;
-var hasWorkbenchUI = workbenchAssembly.GetManifestResourceNames().Contains("Microsoft.Extensions.FileProviders.Embedded.Manifest.xml");
-var serveWorkbench = chronicleOptions.Features.Workbench && chronicleOptions.Features.Api && hasWorkbenchUI;
-if (chronicleOptions.Features.Workbench && !hasWorkbenchUI)
+var workbenchFileProvider = WorkbenchUI.Resolve(
+    WorkbenchUI.ResolveEmbedded(workbenchAssembly, $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files"),
+    app.Environment.WebRootFileProvider);
+var serveWorkbench = chronicleOptions.Features.Workbench && chronicleOptions.Features.Api && workbenchFileProvider is not null;
+if (chronicleOptions.Features.Workbench && workbenchFileProvider is null)
 {
-    logger.WorkbenchUINotEmbedded();
+    logger.WorkbenchUINotAvailable(app.Environment.WebRootPath ?? "<not set>");
 }
 
 var workbenchStaticFileOptions = new StaticFileOptions();
@@ -281,9 +303,6 @@ var workbenchStaticFileOptions = new StaticFileOptions();
 // Map workbench static files BEFORE authentication so they are publicly accessible
 if (serveWorkbench)
 {
-    var workbenchFileProvider = new ManifestEmbeddedFileProvider(
-        workbenchAssembly,
-        $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files");
     workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = workbenchFileProvider });
     app.UseStaticFiles(workbenchStaticFileOptions);
@@ -351,7 +370,7 @@ app.MapPost(
 // Map workbench fallback route AFTER API endpoints to avoid conflicts
 if (serveWorkbench)
 {
-    app.MapFallbackToFile("index.html", workbenchStaticFileOptions).AllowAnonymous();
+    app.MapFallbackToFile(WorkbenchUI.EntryPoint, workbenchStaticFileOptions).AllowAnonymous();
 }
 
 using var cancellationToken = new CancellationTokenSource();
@@ -367,28 +386,24 @@ logger.ServerStarted(chronicleOptions.Port);
 
 await app.RunAsync(cancellationToken.Token);
 
-static void PrintExceptionInfo(Exception exception)
+void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {
-    Console.WriteLine($"Exception type: {exception.GetType().FullName}");
-    Console.WriteLine($"Exception message: {exception.Message}");
-    Console.WriteLine($"Stack Trace: {exception.StackTrace}");
-}
-
-static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
-{
-    if (args.ExceptionObject is Exception exception)
+    if (logger is not null)
     {
-        Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
-        PrintExceptionInfo(exception);
-
-        while (exception.InnerException != null)
+        try
         {
-            Console.WriteLine("\n------------ BEGIN INNER EXCEPTION ------------");
-            PrintExceptionInfo(exception.InnerException);
-            exception = exception.InnerException;
-            Console.WriteLine("------------ END INNER EXCEPTION ------------\n");
-        }
+            log(logger);
 
-        Console.WriteLine("************ END UNHANDLED EXCEPTION ************ ");
+            return;
+        }
+        catch (Exception loggingFailure)
+        {
+            // A failure while routing the crash through the logging pipeline must not mask the
+            // original exception - fall back to the console output below.
+            Console.WriteLine(loggingFailure);
+        }
     }
+
+    Console.WriteLine("************ UNHANDLED PROCESS-LEVEL EXCEPTION ************");
+    Console.WriteLine(exception);
 }

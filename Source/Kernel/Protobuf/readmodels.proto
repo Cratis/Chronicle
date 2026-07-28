@@ -145,12 +145,21 @@ message ObserveInstancesResponse {
    int32 Page = 3;
    int32 PageSize = 4;
 }
+enum ReadModelChangeType {
+   Added = 0;
+   Modified = 1;
+   Removed = 2;
+}
 message ReadModelChangeset {
    string Namespace = 1;
    string ModelKey = 2;
    string ReadModel = 3;
    bool Removed = 4;
    bool Subscribed = 5;
+   ReadModelChangeType ChangeType = 6;
+   uint64 EventSequenceNumber = 7;
+   SerializableDateTimeOffset Occurred = 8;
+   .bcl.Guid CorrelationId = 9; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
 message ReadModelDefinition {
    ReadModelType Type = 1;

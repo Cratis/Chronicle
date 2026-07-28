@@ -4,10 +4,12 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ConceptsEventStoreSubscriptionDefinition = Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
 using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
@@ -20,9 +22,11 @@ namespace Cratis.Chronicle.Services.Observation.EventStoreSubscriptions;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing subscription definitions.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class EventStoreSubscriptions(
     IGrainFactory grainFactory,
-    IStorage storage) : ContractIEventStoreSubscriptions
+    IStorage storage,
+    IOptions<ChronicleOptions> options) : ContractIEventStoreSubscriptions
 {
     /// <inheritdoc/>
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
@@ -61,7 +65,7 @@ internal sealed class EventStoreSubscriptions(
             {
                 await subscriptionsManager.WaitUntilSubscribed(
                     new EventStoreSubscriptionId(subscription.Identifier),
-                    TimeSpan.FromSeconds(5));
+                    TimeSpan.FromSeconds(options.Value.Observers.SubscriptionReadyTimeout));
             }
             catch (TimeoutException)
             {
@@ -72,14 +76,16 @@ internal sealed class EventStoreSubscriptions(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The removals are appended together rather than one at a time, so the order in which they land in the system
+    /// event sequence relative to each other is no longer the order they appear in the request. Each removal targets
+    /// its own event source - the subscription identifier - so per-stream ordering is unaffected, and observers
+    /// partition by event source, so nothing observes the relative order of two different subscriptions being removed.
+    /// </remarks>
     public async Task Remove(RemoveEventStoreSubscriptions request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
-
-        foreach (var subscriptionId in request.SubscriptionIds)
-        {
-            await eventSequence.Append(subscriptionId, new EventStoreSubscriptionRemoved());
-        }
+        await Task.WhenAll(request.SubscriptionIds.Select(subscriptionId => eventSequence.Append(subscriptionId, new EventStoreSubscriptionRemoved())));
     }
 
     /// <inheritdoc/>

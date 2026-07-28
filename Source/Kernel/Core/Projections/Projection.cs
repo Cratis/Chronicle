@@ -93,13 +93,11 @@ public class Projection(
             // Schedule replay as a separate grain turn so that SetDefinition() returns immediately.
             // Replay triggers observer.Replay() which calls GetDefinition() back on this grain — if
             // triggered inline, that re-entrant call deadlocks because the grain's execution slot is
-            // still held by SetDefinition(). With dueTime=Zero the timer fires in a new grain turn,
-            // after this call has returned, so GetDefinition() is free to execute.
+            // still held by SetDefinition(). Deferring to a separate turn lets this call return first,
+            // so GetDefinition() is free to execute.
             if (options.Value.Observers.ReplayOnDefinitionChange)
             {
-                this.RegisterGrainTimer(
-                    async _ => await ReplayForAllNamespaces(key, namespaceNames),
-                    new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+                this.ScheduleInSeparateTurn(() => ReplayForAllNamespaces(key, namespaceNames));
             }
             else
             {
@@ -377,12 +375,11 @@ public class Projection(
                 var childKeyResult = await childKeyResolver(eventSequenceStorage, NullSink.Instance, context.Event);
                 if (childKeyResult is ResolvedKey childResolvedKey)
                 {
-                    var childContext = new ProjectionEventContext(
-                        childResolvedKey.Key,
-                        context.Event,
-                        context.Changeset,
-                        child.GetOperationTypeFor(context.Event.Context.EventType),
-                        context.IsJoin);
+                    var childContext = context with
+                    {
+                        Key = childResolvedKey.Key,
+                        OperationType = child.GetOperationTypeFor(context.Event.Context.EventType)
+                    };
                     await HandleEventFor(child, childContext, eventSequenceStorage);
                     continue;
                 }

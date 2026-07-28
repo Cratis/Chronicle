@@ -36,7 +36,8 @@ public static class SqlChronicleBuilderExtensions
 
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
-        builder.Services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
+        builder.Services.AddSingleton<EncryptionKeyStorage>();
+        builder.Services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
         builder.Services.AddDbContextFactory<ClusterDbContext>((serviceProvider, optionsBuilder) =>
         {
             optionsBuilder

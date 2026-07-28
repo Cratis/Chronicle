@@ -13,7 +13,8 @@ namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching;
 public class and_read_model_has_pii_property_without_a_subject : given.all_dependencies
 {
     IProjectionChangesetNotifier _notifier;
-    TaskCompletionSource<IProjectionChangesetObserver> _observerCaptured;
+    IReadModelChangesetSubscriber _subscriber;
+    TaskCompletionSource<ChangesetForwarder> _forwarderCaptured;
     string? _releasedSubject;
 
     void Establish()
@@ -48,17 +49,17 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
         };
         _readModel.GetDefinition().Returns(Task.FromResult(_readModelDefinition));
 
-        _observerCaptured = new();
+        _forwarderCaptured = new();
         _notifier = Substitute.For<IProjectionChangesetNotifier>();
+        _subscriber = Substitute.For<IReadModelChangesetSubscriber>();
         _grainFactory.GetGrain<IProjectionChangesetNotifier>(Arg.Any<string>()).Returns(_notifier);
-        _grainFactory
-            .CreateObjectReference<IProjectionChangesetObserver>(Arg.Any<IProjectionChangesetObserver>())
-            .Returns(ci => ci.Arg<IProjectionChangesetObserver>());
+        _grainFactory.GetGrain<IReadModelChangesetSubscriber>(Arg.Any<string>()).Returns(_subscriber);
 
-        _notifier.When(n => n.Subscribe(Arg.Any<IProjectionChangesetObserver>()))
-            .Do(ci => _observerCaptured.SetResult(ci.Arg<IProjectionChangesetObserver>()));
-        _notifier.Subscribe(Arg.Any<IProjectionChangesetObserver>()).Returns(Task.CompletedTask);
-        _notifier.Unsubscribe(Arg.Any<IProjectionChangesetObserver>()).Returns(Task.CompletedTask);
+        _changesetMediator.When(m => m.Subscribe(Arg.Any<Guid>(), Arg.Any<ChangesetForwarder>()))
+            .Do(ci => _forwarderCaptured.SetResult(ci.Arg<ChangesetForwarder>()));
+
+        _notifier.Subscribe(Arg.Any<IReadModelChangesetSubscriber>()).Returns(Task.CompletedTask);
+        _notifier.Unsubscribe(Arg.Any<IReadModelChangesetSubscriber>()).Returns(Task.CompletedTask);
     }
 
     async Task Because()
@@ -67,7 +68,7 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
             new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" },
             default).Subscribe(_ => { });
 
-        var observer = await _observerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var forwarder = await _forwarderCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // The forwarded changeset carries no __subject — only the read model's own identifier. The observable
         // path must infer the compliance subject from it (matching the one-shot query paths) rather than
@@ -78,7 +79,15 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
             ["name"] = "encrypted-name"
         };
 
-        await observer.OnChangeset("test-namespace", "key-1", model);
+        await forwarder(
+            "test-namespace",
+            "key-1",
+            model,
+            new Concepts.ReadModels.ReadModelChangeContext(
+                Concepts.ReadModels.ReadModelChangeType.Added,
+                Concepts.Events.EventSequenceNumber.First,
+                DateTimeOffset.UtcNow,
+                Cratis.Execution.CorrelationId.NotSet));
     }
 
     [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());

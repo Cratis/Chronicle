@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -18,6 +19,8 @@ namespace Cratis.Compliance.MongoDB;
 /// <param name="database"><see cref="IEventStoreDatabase"/> to use for accessing database.</param>
 public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
 {
+    readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
     /// <inheritdoc/>
     public async Task SaveFor(
         EventStoreName eventStore,
@@ -26,7 +29,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EncryptionKey key,
         EncryptionKeyRevision? revision = null)
     {
-        var collection = GetCollection(eventStore, eventStoreNamespace);
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
         var actualRevision = IsLatest(revision)
             ? await GetNextRevision(collection, identifier)
             : revision!;
@@ -45,7 +48,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKey key)
     {
-        var collection = GetCollection(eventStore, eventStoreNamespace);
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
         if (await TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
         {
             return existing;
@@ -74,14 +77,14 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var collection = GetCollection(eventStore, eventStoreNamespace);
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
         if (IsLatest(revision))
         {
-            return await collection.CountDocumentsAsync(_ => _.Id.Identifier == identifier) > 0;
+            return await collection.Find(_ => _.Id.Identifier == identifier).Limit(1).AnyAsync();
         }
 
         var id = new EncryptionKeyId(identifier, revision!);
-        return await collection.CountDocumentsAsync(_ => _.Id == id) == 1;
+        return await collection.Find(_ => _.Id == id).Limit(1).AnyAsync();
     }
 
     /// <inheritdoc/>
@@ -91,7 +94,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var collection = GetCollection(eventStore, eventStoreNamespace);
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
 
         EncryptionKeyForIdentifier? keyDoc;
         if (IsLatest(revision))
@@ -127,7 +130,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var collection = GetCollection(eventStore, eventStoreNamespace);
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
         if (IsLatest(revision))
         {
             await collection.DeleteManyAsync(_ => _.Id.Identifier == identifier);
@@ -151,9 +154,17 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         return latestDoc is null ? (EncryptionKeyRevision)1u : latestDoc.Id.Revision.Value + 1u;
     }
 
-    IMongoCollection<EncryptionKeyForIdentifier> GetCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
+    async Task<IMongoCollection<EncryptionKeyForIdentifier>> GetCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
     {
         var eventStoreDatabase = database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(eventStoreNamespace);
-        return eventStoreDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
+        var collection = eventStoreDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
+        await collection.EnsureIndexesOnceAsync(
+            _ensuredIndexes,
+            new CreateIndexModel<EncryptionKeyForIdentifier>(
+                Builders<EncryptionKeyForIdentifier>.IndexKeys
+                    .Ascending(_ => _.Id.Identifier)
+                    .Descending(_ => _.Id.Revision),
+                new CreateIndexOptions { Name = "id_identifier_id_revision", Background = true })).ConfigureAwait(false);
+        return collection;
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -23,10 +24,15 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public Task ReportHandledEvents(Key partition, IEnumerable<AppendedEvent> handledEvents)
+    public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
-        State = WithIncrementedHandledEventCounts(State, partition, handledEvents);
-        return WriteStateAsync();
+        if (countsPerEventType.Count > 0)
+        {
+            await GetObserverHandledCountsStorage().Increment(_observerId, partition, countsPerEventType);
+            State = WithIncrementedRunningTotals(State, countsPerEventType);
+        }
+
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -55,7 +61,7 @@ public partial class Observer
                 NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                 TailEventSequenceNumber = observedTailEventSequenceNumber
             };
-            await WriteStateAsync();
+            await WriteProgressStateDebounced();
             return;
         }
 
@@ -70,7 +76,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
-                await WriteStateAsync();
+                await WriteProgressStateDebounced();
                 return;
             }
 
@@ -83,7 +89,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
-                await WriteStateAsync();
+                await WriteProgressStateDebounced();
                 return;
             }
 
@@ -95,7 +101,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
-                await WriteStateAsync();
+                await WriteProgressStateDebounced();
                 return;
             }
         }
@@ -108,15 +114,15 @@ public partial class Observer
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
+        IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
         if (eventsToHandle.Length != 0)
         {
-            // Record the highest sequence number we're about to attempt for this partition. If the silo
-            // dies between this point and the post-handling state write, the entry survives to drive
-            // partition catch-up on the next activation. Recording the tail of the batch is enough: the
-            // in-flight entry is conceptually a marker that work *may have started* for this partition.
-            var inFlightStorage = await GetInFlightEventsStorage();
-            var inFlightTail = eventsToHandle[^1].Context.SequenceNumber;
-            await inFlightStorage.Add(_observerId, partition, inFlightTail);
+            // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
+            // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
+            // on the reloaded observer state and drives partition catch-up on the next activation.
+            var inFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition };
+            State = State with { InFlightPartitions = inFlightPartitions };
+            await WriteStateAsync();
 
             using (new WriteSuspension(this))
             {
@@ -130,13 +136,7 @@ public partial class Observer
                     while (true)
                     {
                         var target = subscriberSelector.Select(_subscription, partition);
-                        var key = new ObserverSubscriberKey(
-                            _observerKey.ObserverId,
-                            _observerKey.EventStore,
-                            _observerKey.Namespace,
-                            _observerKey.EventSequenceId,
-                            partition,
-                            target.SiloAddress.ToParsableString());
+                        var key = _subscription.GetSubscriberKeyFor(partition, target.SiloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                         result = await subscriber.OnNext(partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
@@ -195,7 +195,8 @@ public partial class Observer
                         };
 
                         var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
-                        State = WithIncrementedHandledEventCounts(State, partition, handledEvents);
+                        handledCountsPerEventType = handledEvents.CountByEventType();
+                        State = WithIncrementedRunningTotals(State, handledCountsPerEventType);
                     }
                 }
                 catch (Exception ex)
@@ -208,6 +209,14 @@ public partial class Observer
 
             try
             {
+                // The in-flight marker has served its purpose now that the outcome is known, so clear it before the
+                // outcome is persisted — whichever state write happens below carries the removal. A partition that
+                // failed is recovered through FailedPartitions storage, so keeping its marker would only force a
+                // redundant catch-up for events we already know about.
+                var remainingInFlight = new HashSet<Key>(State.InFlightPartitions);
+                remainingInFlight.Remove(partition);
+                State = State with { InFlightPartitions = remainingInFlight };
+
                 if (failed)
                 {
                     await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
@@ -222,13 +231,10 @@ public partial class Observer
                     await WriteStateAsync();
                 }
 
-                // Clear in-flight markers for everything we processed (successfully or otherwise). Failures
-                // are tracked through FailedPartitions storage; keeping the in-flight marker would force a
-                // double recovery for events we already know about.
-                var clearUpTo = numEventsSuccessfullyHandled > 0
-                    ? eventsToHandle.Take((int)numEventsSuccessfullyHandled.Value).Last().Context.SequenceNumber
-                    : tailEventSequenceNumber;
-                await inFlightStorage.RemoveUpTo(_observerId, partition, clearUpTo);
+                if (handledCountsPerEventType.Count > 0)
+                {
+                    await GetObserverHandledCountsStorage().Increment(_observerId, partition, handledCountsPerEventType);
+                }
             }
             catch (Exception ex)
             {
@@ -238,59 +244,50 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Returns a new <see cref="ObserverState"/> with handled event counts incremented
-    /// for the given partition and the provided successfully handled events.
+    /// Returns a new <see cref="ObserverState"/> with the running handled-event totals incremented by the
+    /// counts of a single handled batch. The per-partition breakdown lives in the dedicated
+    /// <see cref="IObserverHandledCountsStorage"/> and is not part of <see cref="ObserverState"/>.
     /// </summary>
     /// <param name="state">The current <see cref="ObserverState"/> to update.</param>
-    /// <param name="partition">The <see cref="Key"/> identifying the partition whose counts to increment.</param>
-    /// <param name="handledEvents">The events that were successfully handled.</param>
-    /// <returns>A new <see cref="ObserverState"/> with <see cref="ObserverState.HandledEventCount"/>, <see cref="ObserverState.HandledEventCountPerEventType"/>, and <see cref="ObserverState.HandledEventCountPerPartition"/> incremented accordingly.</returns>
-    static ObserverState WithIncrementedHandledEventCounts(
+    /// <param name="countsPerEventType">The number of events handled in the batch, broken down by <see cref="EventTypeId"/>.</param>
+    /// <returns>A new <see cref="ObserverState"/> with <see cref="ObserverState.HandledEventCount"/> and <see cref="ObserverState.HandledEventCountPerEventType"/> incremented accordingly.</returns>
+    static ObserverState WithIncrementedRunningTotals(
         ObserverState state,
-        Key partition,
-        IEnumerable<AppendedEvent> handledEvents)
+        IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
-        var perEventType = new Dictionary<EventTypeId, EventCount>(state.HandledEventCountPerEventType);
-        var perPartition = new Dictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(state.HandledEventCountPerPartition);
-        var partitionCounts = perPartition.TryGetValue(partition, out var existing)
-            ? new Dictionary<EventTypeId, EventCount>(existing)
-            : [];
-
-        var count = 0UL;
-        foreach (var eventTypeId in handledEvents.Select(_ => _.Context.EventType.Id))
-        {
-            count++;
-            perEventType[eventTypeId] = perEventType.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
-            partitionCounts[eventTypeId] = partitionCounts.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
-        }
-
-        if (count == 0)
+        if (countsPerEventType.Count == 0)
         {
             return state;
         }
 
-        perPartition[partition] = partitionCounts;
+        var perEventType = new Dictionary<EventTypeId, EventCount>(state.HandledEventCountPerEventType);
+        var total = 0UL;
+        foreach (var (eventTypeId, count) in countsPerEventType)
+        {
+            total += count.Value;
+            perEventType[eventTypeId] = perEventType.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
+        }
+
         return state with
         {
-            HandledEventCount = state.HandledEventCount + count,
-            HandledEventCountPerEventType = perEventType,
-            HandledEventCountPerPartition = perPartition
+            HandledEventCount = state.HandledEventCount + total,
+            HandledEventCountPerEventType = perEventType
         };
     }
 
     /// <summary>
-    /// Returns a new <see cref="ObserverState"/> with the given partition's contribution
-    /// subtracted from all handled event counts, and the partition removed from <see cref="ObserverState.HandledEventCountPerPartition"/>.
-    /// Used when a partition replay begins.
+    /// Returns a new <see cref="ObserverState"/> with the given partition's contribution subtracted from the
+    /// running handled-event totals. Used when a partition replay begins; the partition's counts come from the
+    /// dedicated <see cref="IObserverHandledCountsStorage"/>.
     /// </summary>
     /// <param name="state">The current <see cref="ObserverState"/> to update.</param>
-    /// <param name="partition">The <see cref="Key"/> identifying the partition whose counts to subtract.</param>
-    /// <returns>A new <see cref="ObserverState"/> with the partition's counts removed and aggregates adjusted.</returns>
+    /// <param name="partitionCounts">The partition's handled-event counts, broken down by <see cref="EventTypeId"/>.</param>
+    /// <returns>A new <see cref="ObserverState"/> with the partition's counts subtracted from the aggregates.</returns>
     static ObserverState WithSubtractedPartitionHandledEventCounts(
         ObserverState state,
-        Key partition)
+        IReadOnlyDictionary<EventTypeId, EventCount> partitionCounts)
     {
-        if (!state.HandledEventCountPerPartition.TryGetValue(partition, out var partitionCounts))
+        if (partitionCounts.Count == 0)
         {
             return state;
         }
@@ -314,9 +311,6 @@ public partial class Observer
             }
         }
 
-        var perPartition = new Dictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(state.HandledEventCountPerPartition);
-        perPartition.Remove(partition);
-
         var newTotal = state.HandledEventCount.Value > totalForPartition
             ? state.HandledEventCount.Value - totalForPartition
             : 0UL;
@@ -324,16 +318,15 @@ public partial class Observer
         return state with
         {
             HandledEventCount = newTotal,
-            HandledEventCountPerEventType = perEventType,
-            HandledEventCountPerPartition = perPartition
+            HandledEventCountPerEventType = perEventType
         };
     }
 
-    Task<IInFlightEventsStorage> GetInFlightEventsStorage() =>
-        Task.FromResult(storage
+    IObserverHandledCountsStorage GetObserverHandledCountsStorage() =>
+        storage
             .GetEventStore(_observerKey.EventStore)
             .GetNamespace(_observerKey.Namespace)
-            .InFlightEvents);
+            .ObserverHandledCounts;
 
     async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
@@ -419,5 +412,41 @@ public partial class Observer
             LastHandledEventSequenceNumber = newLastHandledEvent,
             NextEventSequenceNumber = nextEventSequenceNumber
         };
+    }
+
+    /// <summary>
+    /// Persists a progress-only advance of <see cref="ObserverState.NextEventSequenceNumber"/> — the observer
+    /// moving past a batch that held nothing it is subscribed to — subject to debouncing.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The in-memory state has already advanced when this is called; the write is deferred until
+    /// <see cref="Cratis.Chronicle.Configuration.Observers.StatePersistenceBatchInterval"/> progress-only batches have accumulated (any other
+    /// state write flushes it sooner, and the watchdog and deactivation flush it on their own cadence). Because
+    /// catch-up (<see cref="CatchUp"/>) always resumes from the last persisted <see cref="ObserverState.NextEventSequenceNumber"/>
+    /// and observers are idempotent, a crash between debounced writes only re-scans events the observer had already
+    /// skipped — no event is lost or handled twice. This deliberately relaxes per-batch durability of progress in
+    /// exchange for removing the dominant write on selective observers.
+    /// </remarks>
+    async Task WriteProgressStateDebounced()
+    {
+        _debouncedProgressWrites++;
+        if (_debouncedProgressWrites >= _statePersistenceBatchInterval)
+        {
+            await WriteStateAsync();
+        }
+    }
+
+    /// <summary>
+    /// Flushes a progress-only advance that debouncing has left unpersisted, writing the observer state only when
+    /// there is a pending advance.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task FlushDebouncedProgressState()
+    {
+        if (_debouncedProgressWrites > 0)
+        {
+            await WriteStateAsync();
+        }
     }
 }

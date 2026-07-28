@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -20,6 +21,7 @@ public class all_dependencies : Specification
     protected EventStoreName _eventStoreName;
     protected EventType _eventType;
     protected JsonObject _content;
+    protected ExpandoObject _contentAsExpandoObject;
 
     void Establish()
     {
@@ -33,5 +35,6 @@ public class all_dependencies : Specification
         _eventTypeMigrations = new EventTypeMigrations(_storage, _expandoObjectConverter);
         _eventType = new EventType(Guid.NewGuid().ToString(), 1);
         _content = new JsonObject { ["name"] = "John Doe" };
+        _contentAsExpandoObject = new ExpandoObject();
     }
 }

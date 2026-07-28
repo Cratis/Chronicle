@@ -4,7 +4,6 @@
 using System.Collections;
 using System.Dynamic;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Objects;
@@ -49,9 +48,23 @@ public partial class PropertyPath
     /// <param name="path">Path to the property relative within an object.</param>
     public PropertyPath(string path)
     {
-        _segments = path.Split('.').Select(ResolvePropertyPathSegment).ToArray();
+        _segments = SegmentsFrom(path);
+        Path = Render(_segments);
+    }
 
-        Path = string.Join('.', (IEnumerable<object>)_segments);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PropertyPath"/> class from segments that are already resolved.
+    /// </summary>
+    /// <param name="segments">The resolved segments the path consists of.</param>
+    /// <param name="path">The rendering of <paramref name="segments"/>.</param>
+    /// <remarks>
+    /// Rendering a segment always parses back to that same segment, so composing resolved segments is equivalent to
+    /// parsing the rendered path again - only without the split, regular expression and join it would cost.
+    /// </remarks>
+    PropertyPath(IPropertyPathSegment[] segments, string path)
+    {
+        _segments = segments;
+        Path = path;
     }
 
     /// <summary>
@@ -117,23 +130,17 @@ public partial class PropertyPath
     /// <returns>A merged <see cref="PropertyPath"/>.</returns>
     public static PropertyPath operator +(PropertyPath left, PropertyPath right)
     {
-        var builder = new StringBuilder();
-        if (left.Path.Length > 0)
+        if (right.Path.Length == 0)
         {
-            builder.Append(left.Path);
+            return new([.. left._segments], left.Path);
         }
 
-        if (left.Path.Length > 0 && right.Path.Length > 0)
+        if (left.Path.Length == 0)
         {
-            builder.Append('.');
+            return new([.. right._segments], right.Path);
         }
 
-        if (right.Path.Length > 0)
-        {
-            builder.Append(right.Path);
-        }
-
-        return new(builder.ToString());
+        return new([.. left._segments, .. right._segments], $"{left.Path}.{right.Path}");
     }
 
     /// <summary>
@@ -183,11 +190,7 @@ public partial class PropertyPath
             name = $"[{name}]]";
         }
 
-        if (Path.Length == 0)
-        {
-            return new(name);
-        }
-        return new($"{Path}.{name}");
+        return Append(SegmentsFrom(name));
     }
 
     /// <summary>
@@ -198,28 +201,15 @@ public partial class PropertyPath
     /// <remarks>This operation does not mutate the original.</remarks>
     public PropertyPath AddArrayIndex(string identifier)
     {
-        var identifierPropertyPath = new PropertyPath(identifier);
-        var segments = identifierPropertyPath.Segments.ToArray();
-        var builder = new StringBuilder();
-        if (segments.Length > 1)
+        var identifierSegments = SegmentsFrom(identifier);
+        var added = new IPropertyPathSegment[identifierSegments.Length];
+        for (var index = 0; index < identifierSegments.Length - 1; index++)
         {
-            for (var i = 0; i < segments.Length - 1; i++)
-            {
-                if (i > 0)
-                {
-                    builder.Append('.');
-                }
-                builder.Append(segments[i].Value);
-            }
-            builder.Append('.');
+            added[index] = ResolvePropertyPathSegment(identifierSegments[index].Value);
         }
-        builder.Append('[').Append(segments[^1].Value).Append(']');
 
-        if (Path.Length == 0)
-        {
-            return new(builder.ToString());
-        }
-        return new($"{Path}.{builder}");
+        added[^1] = ResolvePropertyPathSegment($"[{identifierSegments[^1].Value}]");
+        return Append(added);
     }
 
     /// <summary>
@@ -227,7 +217,7 @@ public partial class PropertyPath
     /// </summary>
     /// <returns>A new <see cref="PropertyPath"/> with the segment appended.</returns>
     /// <remarks>This operation does not mutate the original.</remarks>
-    public PropertyPath AddThisAccessor() => new($"{Path}.{ThisAccessorValue}");
+    public PropertyPath AddThisAccessor() => new([.. _segments, new ThisAccessor()], $"{Path}.{ThisAccessorValue}");
 
     /// <summary>
     /// Check whether or not there is a value at the path of the property for a specific target.
@@ -340,6 +330,20 @@ public partial class PropertyPath
     internal static partial Regex ArrayIndexRegexGenerator();
 #pragma warning restore MA0190
 
+    static string Render(IPropertyPathSegment[] segments) => string.Join('.', (IEnumerable<object>)segments);
+
+    static IPropertyPathSegment[] SegmentsFrom(string path)
+    {
+        var parts = path.Split('.');
+        var segments = new IPropertyPathSegment[parts.Length];
+        for (var index = 0; index < parts.Length; index++)
+        {
+            segments[index] = ResolvePropertyPathSegment(parts[index]);
+        }
+
+        return segments;
+    }
+
     static IPropertyPathSegment ResolvePropertyPathSegment(string segment)
     {
         var match = ArrayIndexRegexGenerator().Match(segment);
@@ -352,5 +356,13 @@ public partial class PropertyPath
             return new ThisAccessor();
         }
         return new PropertyName(segment);
+    }
+
+    PropertyPath Append(IPropertyPathSegment[] segments)
+    {
+        var appendedPath = Render(segments);
+        return Path.Length == 0
+            ? new(segments, appendedPath)
+            : new([.. _segments, .. segments], $"{Path}.{appendedPath}");
     }
 }

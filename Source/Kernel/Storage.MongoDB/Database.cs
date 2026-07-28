@@ -77,7 +77,7 @@ public class Database : IDatabase
         }
 
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
-        var databaseName = (@namespace == EventStoreNamespaceName.Default) ? $"{eventStore}" : $"{eventStore}+{@namespace}";
+        var databaseName = DatabaseNames.ForReadModels(eventStore, @namespace);
         var urlBuilder = new MongoUrlBuilder(_mongoDBOptions.Value.Server)
         {
             DatabaseName = databaseName

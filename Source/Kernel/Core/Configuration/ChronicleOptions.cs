@@ -62,6 +62,11 @@ public class ChronicleOptions
     public Storage Storage { get; init; } = new Storage();
 
     /// <summary>
+    /// Gets or inits the SQL storage backend configuration.
+    /// </summary>
+    public Sql Sql { get; init; } = new Sql();
+
+    /// <summary>
     /// Gets or inits the compliance configuration.
     /// When <see cref="Encryption.Storage"/> is not set, the general <see cref="Storage"/> is used for compliance data.
     /// </summary>
@@ -71,6 +76,16 @@ public class ChronicleOptions
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();
+
+    /// <summary>
+    /// Gets the connected clients configuration.
+    /// </summary>
+    public Clients ConnectedClients { get; init; } = new Clients();
+
+    /// <summary>
+    /// Gets the webhooks configuration.
+    /// </summary>
+    public Webhooks Webhooks { get; init; } = new Webhooks();
 
     /// <summary>
     /// Gets the clustering configuration.

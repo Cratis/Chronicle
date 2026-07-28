@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.when_entering;
 
 public class and_there_are_no_in_flight_entries : given.a_catching_up_in_flight_state
 {
-    void Establish() => _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
+    void Establish() => _storedState = _storedState with { InFlightPartitions = new HashSet<Key>() };
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 

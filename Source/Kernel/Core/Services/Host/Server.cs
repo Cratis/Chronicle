@@ -3,13 +3,11 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Host;
-using Cratis.Chronicle.Host;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Types;
 using Microsoft.AspNetCore.Authorization;
-using Orleans.BroadcastChannel;
 
 // Primary-constructor parameters used inside #if DEVELOPMENT trip CS9113 in release builds.
 #pragma warning disable CS9113
@@ -19,28 +17,16 @@ namespace Cratis.Chronicle.Services.Host;
 /// <summary>
 /// Represents an implementation of <see cref="IServer"/>.
 /// </summary>
-/// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> instance.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> instance.</param>
 /// <param name="resetHandlers">Storage components that wipe their backing store during a development reset.</param>
 /// <param name="bootstrapResetHandler">Re-runs kernel bootstrap (identity, system event store) after storage is wiped.</param>
 internal sealed class Server(
-    IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IInstancesOf<ICanPerformKernelStateReset> resetHandlers,
     KernelBootstrapResetHandler bootstrapResetHandler) : IServer
 {
-    readonly IBroadcastChannelProvider _reloadStateChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ReloadState);
-
-    /// <inheritdoc/>
-    public async Task ReloadState()
-    {
-        var channelId = ChannelId.Create(WellKnownBroadcastChannelNames.ReloadState, "Server");
-        var channelWriter = _reloadStateChannel.GetChannelWriter<ReloadState>(channelId);
-        await channelWriter.Publish(new ReloadState());
-    }
-
     /// <inheritdoc/>
     public Task<ServerVersionInfo> GetVersionInfo()
     {
