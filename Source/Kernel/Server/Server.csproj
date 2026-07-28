@@ -37,9 +37,6 @@
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
         <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
-        <PackageReference Include="Microsoft.IdentityModel.Protocols" />
-        <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
         <PackageReference Include="OpenIddict.AspNetCore" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
