@@ -40,6 +40,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0035](CHR0035) | Read model declares a reserved '_subject' property | Error | Chronicle reserves the `_subject` field in a read model's document for internal compliance-subject tracking; a same-named property collides with it |
 | [CHR0036](CHR0036) | Reducer must not have mutable state | Warning | Reducers are re-created and replayed, so mutable instance state or direct storage injection makes the fold non-deterministic; keep them stateless |
 | [CHR0037](CHR0037) | Event type migration generations must share one explicit [EventType] id | Warning | The two generations referenced by an EventTypeMigration must carry the same explicit [EventType] id and differ only by generation, or the migration never applies |
+| [CHR0038](CHR0038) | [Join] of a [PII] value crosses the compliance subject | Error | A model-bound [Join] that copies a [PII] value from a stream keyed by something other than the read model's own subject cannot be decrypted and freezes the projection; it also puts that data beyond the owner's erasure |
 
 ## Quick Fixes
 

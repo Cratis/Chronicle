@@ -64,3 +64,5 @@
   href: CHR0036.mdx
 - name: CHR0037 - Event type migration generations must share one explicit [EventType] id
   href: CHR0037.mdx
+- name: CHR0038 - [Join] of a [PII] value crosses the compliance subject
+  href: CHR0038.mdx

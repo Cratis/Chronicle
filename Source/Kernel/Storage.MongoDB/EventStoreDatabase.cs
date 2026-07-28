@@ -44,7 +44,7 @@ public class EventStoreDatabase : IEventStoreDatabase
         var client = clientManager.GetClientFor(settings);
 
         // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
-        _database = client.GetDatabase($"{eventStore.Value}+es");
+        _database = client.GetDatabase(DatabaseNames.ForEventStore(eventStore));
         _eventStore = eventStore;
         _clientManager = clientManager;
         _mongoDBOptions = mongoDBOptions;
