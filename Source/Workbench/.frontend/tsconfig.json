@@ -25,61 +25,63 @@
         "noFallthroughCasesInSwitch": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "baseUrl": "..",
         "paths": {
             "Api": [
-                "./Api"
+                "../Api"
             ],
             "Api/*": [
-                "Api/*"
+                "../Api/*"
             ],
             "assets": [
-                "./assets"
+                "../assets"
             ],
             "assets/*": [
-                "./assets/*"
+                "../assets/*"
             ],
             "Shared/*": [
-                "Shared/*"
+                "../Shared/*"
             ],
             "Shared": [
-                "Shared/index"
+                "../Shared/index"
             ],
             "State/*": [
-                "State/*"
+                "../State/*"
             ],
             "Components/*": [
-                "Components/*"
+                "../Components/*"
             ],
             "Components": [
-                "Components/index"
+                "../Components/index"
             ],
             "Icons/*": [
-                "Icons/*"
+                "../Icons/*"
             ],
             "Icons": [
-                "Icons/index"
+                "../Icons/index"
             ],
             "Browser": [
-                "./Infrastructure/Browser"
+                "../Infrastructure/Browser"
             ],
             "Browser/*": [
-                "./Infrastructure/Browser/*"
+                "../Infrastructure/Browser/*"
             ],
             "Layout/*": [
-                "Layout/*"
+                "../Layout/*"
             ],
             "Features/*": [
-                "Features/*"
+                "../Features/*"
+            ],
+            "Features": [
+                "../Features/index"
             ],
             "Strings": [
-                "./Strings"
+                "../Strings"
             ],
             "Strings/*": [
-                "./Strings/*"
+                "../Strings/*"
             ],
             "given": [
-                "./given.ts"
+                "../given.ts"
             ]
         }
     },

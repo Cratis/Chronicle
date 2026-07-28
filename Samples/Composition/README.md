@@ -29,7 +29,7 @@ fresh session (or a failover) still picks a kernel via round-robin.
 ## Run it
 
 ```shell
-dotnet run --project TestApps/Composition
+dotnet run --project Samples/Composition
 ```
 
 ## What to verify

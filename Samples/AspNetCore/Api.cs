@@ -5,7 +5,7 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Execution;
-using TestApp;
+using Samples;
 
 namespace AspNetCore;
 
@@ -19,7 +19,7 @@ public static class Api
     /// </summary>
     /// <param name="app">The <see cref="WebApplication"/> to map on.</param>
     /// <returns>The <see cref="WebApplication"/> for continuation.</returns>
-    public static WebApplication MapTestAppApi(this WebApplication app)
+    public static WebApplication MapSampleApi(this WebApplication app)
     {
         app.MapGet("/api/instance", (IEventStore eventStore) => new
         {

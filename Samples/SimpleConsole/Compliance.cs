@@ -7,7 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reducers;
 using Cratis.Concepts;
 
-namespace TestApp;
+namespace Samples;
 
 // ---------------------------------------------------------------------------
 // PII-typed ConceptAs wrappers

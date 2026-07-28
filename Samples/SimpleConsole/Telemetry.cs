@@ -7,7 +7,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-namespace TestApp;
+namespace Samples;
 
 /// <summary>
 /// Bootstraps OpenTelemetry tracing and metrics for the console sample.

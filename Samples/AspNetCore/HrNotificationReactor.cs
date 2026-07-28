@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
-using TestApp;
+using Samples;
 
 namespace AspNetCore;
 

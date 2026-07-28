@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Provides a shared CoreDNS container for the chronicle+srv integration specs.
 /// It runs the same <c>coredns/coredns:1.12.1</c> image and serves the exact same
-/// <c>chronicle.local</c> zone the Composition TestApp uses, so the client's DNS SRV resolution
+/// <c>chronicle.local</c> zone the Composition sample uses, so the client's DNS SRV resolution
 /// is exercised against the real records the scale-out story relies on.
 /// </summary>
 public sealed class DnsServerFixture : IAsyncLifetime
