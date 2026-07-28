@@ -27,6 +27,7 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
     const string OnMethodName = "On";
     const string SetMethodName = "Set";
     const string ToMethodName = "To";
+    const string NoAutoMapMethodName = "NoAutoMap";
     const string ProjectionBuilderInterfaceName = "IProjectionBuilder";
     const string JoinBuilderInterfaceName = "IJoinBuilder";
 
@@ -70,7 +71,7 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (FindPiiSource(context, builderCallback, eventType, readModelType) is not { } source)
+        if (FindPiiSource(builderCallback, eventType, readModelType, AutoMapIsOn(invocation)) is not { } source)
         {
             return;
         }
@@ -87,20 +88,21 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
     /// <summary>
     /// Find a <c>[PII]</c> value on the joined event that ends up on the read model.
     /// </summary>
-    /// <param name="context">The analysis context.</param>
     /// <param name="builderCallback">The join builder callback.</param>
     /// <param name="eventType">The joined event type.</param>
     /// <param name="readModelType">The read model being projected.</param>
+    /// <param name="autoMapIsOn">Whether AutoMap can carry unmapped properties across.</param>
     /// <returns>The offending mapping, or <see langword="null"/> when no PII reaches the read model.</returns>
     /// <remarks>
     /// A join fills the read model both explicitly, through <c>.Set(x =&gt; x.P).To(e =&gt; e.Q)</c>, and implicitly
-    /// through AutoMap, which matches identically named properties. Both routes are inspected.
+    /// through AutoMap, which matches identically named properties. The explicit route always applies; the
+    /// implicit one only while AutoMap is on.
     /// </remarks>
     static (string TargetName, string EventPropertyName)? FindPiiSource(
-        SyntaxNodeAnalysisContext context,
         ExpressionSyntax builderCallback,
         INamedTypeSymbol eventType,
-        INamedTypeSymbol readModelType)
+        INamedTypeSymbol readModelType,
+        bool autoMapIsOn)
     {
         foreach (var (targetName, eventPropertyName) in GetExplicitMappings(builderCallback))
         {
@@ -110,13 +112,19 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
             }
         }
 
-        var readModelNames = CrossSubjectPiiJoin.GetMembers(readModelType)
+        if (!autoMapIsOn)
+        {
+            return null;
+        }
+
+        var mappableNames = CrossSubjectPiiJoin.GetMembers(readModelType)
+            .Where(member => !member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.NoAutoMapAttributeName))
             .Select(member => member.Name)
             .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var member in CrossSubjectPiiJoin.GetMembers(eventType))
         {
-            if (readModelNames.Contains(member.Name) && CrossSubjectPiiJoin.IsPii(eventType, member.Name))
+            if (mappableNames.Contains(member.Name) && CrossSubjectPiiJoin.IsPii(eventType, member.Name))
             {
                 return (member.Name, member.Name);
             }
@@ -124,6 +132,24 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
 
         return null;
     }
+
+    /// <summary>
+    /// Determine whether AutoMap is still on for the projection this join belongs to.
+    /// </summary>
+    /// <param name="invocation">The join invocation.</param>
+    /// <returns>True when AutoMap can carry properties across, false when it was turned off.</returns>
+    /// <remarks>
+    /// <c>.NoAutoMap()</c> turns AutoMap off for a scope. Rather than model that scope from syntax, any
+    /// <c>NoAutoMap</c> anywhere in the declaring member suppresses the implicit half of the check — the rule is
+    /// an error, so it errs towards missing a case over breaking a correct build.
+    /// </remarks>
+    static bool AutoMapIsOn(InvocationExpressionSyntax invocation) =>
+        invocation.Ancestors()
+            .OfType<MemberDeclarationSyntax>()
+            .FirstOrDefault()
+            ?.DescendantNodes()
+            .OfType<MemberAccessExpressionSyntax>()
+            .Any(member => member.Name.Identifier.Text == NoAutoMapMethodName) != true;
 
     static bool TryGetOnProperty(SyntaxNodeAnalysisContext context, ExpressionSyntax builderCallback, out string on)
     {

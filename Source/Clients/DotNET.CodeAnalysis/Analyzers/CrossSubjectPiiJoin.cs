@@ -38,8 +38,17 @@ static class CrossSubjectPiiJoin
     /// <param name="typeSymbol">The read model type.</param>
     /// <returns>The name of the subject member, or <see langword="null"/> when none can be resolved.</returns>
     /// <remarks>
-    /// Mirrors Chronicle's own resolution order: an explicit [Subject], then an explicit [Key], then an
-    /// <c>EventSourceId&lt;T&gt;</c>-derived value (which is both), and finally the conventional 'Id'.
+    /// <para>
+    /// At runtime the compliance subject is the resolved document key (see <c>ResolveComplianceIdentifier</c>),
+    /// with <c>ReadModelSubjectResolver</c> preferring an explicit [Subject] and otherwise falling back to 'Id'.
+    /// Neither is reproducible from syntax alone, so this is a deliberate approximation of both: an explicit
+    /// [Subject], then an explicit [Key], then an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
+    /// </para>
+    /// <para>
+    /// The approximation is exact for the shapes that matter — a read model keyed by 'Id', by [Key], or by an
+    /// <c>EventSourceId&lt;T&gt;</c> identity. A read model that carries a [Subject] distinct from its key is
+    /// where it can diverge, and there the join is reported rather than skipped.
+    /// </para>
     /// </remarks>
     internal static string? GetSubjectMemberName(INamedTypeSymbol typeSymbol)
     {
