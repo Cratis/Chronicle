@@ -17,7 +17,6 @@ using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.Extensions.FileProviders;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -285,17 +284,18 @@ app.UseRouting();
 
 app.UseCratisArc();
 
-// The Workbench UI is built once and embedded into Cratis.Chronicle.Workbench - the kernel serves
-// that same embedded asset set directly rather than expecting its own physical wwwroot. The
-// embedded manifest only exists when the frontend was built before the Workbench assembly - a
-// source build without the frontend output skips embedding entirely, and the kernel must keep
-// running without the UI rather than fail at startup.
+// The Workbench UI is built once and reaches a deployment either embedded into
+// Cratis.Chronicle.Workbench or as files in the web root next to the binary - see WorkbenchUI for
+// why both exist. Serve whichever is present, and keep running without the UI when neither is:
+// a Kernel-only deployment legitimately ships no Workbench.
 var workbenchAssembly = typeof(WorkbenchWebApplicationBuilderExtensions).Assembly;
-var hasWorkbenchUI = workbenchAssembly.GetManifestResourceNames().Contains("Microsoft.Extensions.FileProviders.Embedded.Manifest.xml");
-var serveWorkbench = chronicleOptions.Features.Workbench && chronicleOptions.Features.Api && hasWorkbenchUI;
-if (chronicleOptions.Features.Workbench && !hasWorkbenchUI)
+var workbenchFileProvider = WorkbenchUI.Resolve(
+    WorkbenchUI.ResolveEmbedded(workbenchAssembly, $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files"),
+    app.Environment.WebRootFileProvider);
+var serveWorkbench = chronicleOptions.Features.Workbench && chronicleOptions.Features.Api && workbenchFileProvider is not null;
+if (chronicleOptions.Features.Workbench && workbenchFileProvider is null)
 {
-    logger.WorkbenchUINotEmbedded();
+    logger.WorkbenchUINotAvailable(app.Environment.WebRootPath ?? "<not set>");
 }
 
 var workbenchStaticFileOptions = new StaticFileOptions();
@@ -303,9 +303,6 @@ var workbenchStaticFileOptions = new StaticFileOptions();
 // Map workbench static files BEFORE authentication so they are publicly accessible
 if (serveWorkbench)
 {
-    var workbenchFileProvider = new ManifestEmbeddedFileProvider(
-        workbenchAssembly,
-        $"{typeof(WorkbenchWebApplicationBuilderExtensions).Namespace}.Files");
     workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = workbenchFileProvider });
     app.UseStaticFiles(workbenchStaticFileOptions);
@@ -373,7 +370,7 @@ app.MapPost(
 // Map workbench fallback route AFTER API endpoints to avoid conflicts
 if (serveWorkbench)
 {
-    app.MapFallbackToFile("index.html", workbenchStaticFileOptions).AllowAnonymous();
+    app.MapFallbackToFile(WorkbenchUI.EntryPoint, workbenchStaticFileOptions).AllowAnonymous();
 }
 
 using var cancellationToken = new CancellationTokenSource();
