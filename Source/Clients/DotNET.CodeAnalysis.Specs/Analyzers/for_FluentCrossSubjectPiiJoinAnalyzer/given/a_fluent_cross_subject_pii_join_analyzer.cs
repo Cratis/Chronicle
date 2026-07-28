@@ -45,7 +45,7 @@ public class a_fluent_cross_subject_pii_join_analyzer : Specification
             "        ISetBuilder<TReadModel, TEvent, TProperty, IJoinBuilder<TReadModel, TEvent>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
             "    }",
             "",
-            "    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter)]",
+            "    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Property | AttributeTargets.Parameter, Inherited = true)]",
             "    public sealed class NoAutoMapAttribute : Attribute { }",
             "",
             "    public interface IProjectionBuilder<TReadModel, TBuilder>",
