@@ -31,3 +31,28 @@ flowchart TB
     A --> DBa[("database: tenant-a")]
     B --> DBb[("database: tenant-b")]
 ```
+
+## Database Naming
+
+The databases are named from the event store name and the namespace. For an event store named
+`Ada` on MongoDB:
+
+| Holds | Namespace `Default` | Namespace `tenant-a` |
+| --- | --- | --- |
+| Event store wide state | `Ada+es` | `Ada+es` |
+| Event sequences | `Ada+es+Default` | `Ada+es+tenant-a` |
+| Read models | `Ada` | `Ada+tenant-a` |
+
+Note the one asymmetry: **read models of the default namespace are materialized into the bare event
+store name**, without a namespace suffix, while event sequences suffix every namespace including the
+default. Anything reading read models outside Chronicle — for instance an injected
+`IMongoCollection<TReadModel>` bound to a database name composed by hand — has to reproduce that rule.
+Composing `<eventStore>+<namespace>` unconditionally resolves `Ada+Default`, a database that does not
+exist, and reads then come back **empty rather than failing**.
+
+Since the namespace becomes part of a database name, it has to be a legal one. MongoDB rejects the
+characters `/ \ . " $ * < > : | ?`, the space, and the null character, and limits the whole name to 63
+bytes. This bites most often when the namespace is resolved from a tenant id — a display-style tenant id
+such as `Hive Consulting` composes a name MongoDB will not accept. Chronicle checks the composed name and
+throws `InvalidDatabaseName`, naming the event store, the namespace, and the offending character, rather
+than letting the driver fail later with a bare `Invalid namespace specified`.

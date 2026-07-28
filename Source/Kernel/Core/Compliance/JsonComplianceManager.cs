@@ -49,15 +49,24 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
 
     static JsonNode RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
     {
-        // A coarse [PII] on a whole collection is blob-encrypted to a single ciphertext string, even though
-        // its schema type stays array. Releasing it decrypts back to the original JSON array text; re-parse
-        // that text into the JsonArray the schema expects so the read model round-trips into its collection
-        // type rather than a raw string (which fails to deserialize into IReadOnlyList<T>). A scalar PII
-        // decrypts to a plain string and is left untouched.
-        if (propertySchema.IsArray &&
+        // A coarse compliance marker on a whole container is blob-encrypted to a single ciphertext string, even
+        // though its schema type stays array (a collection) or object (a value object). Releasing it decrypts
+        // back to the original JSON text; re-parse that text into the container the schema expects so the read
+        // model round-trips into its collection or value-object type rather than a raw string (which fails to
+        // deserialize). A scalar decrypts to a plain string and is left untouched.
+        var isContainer = propertySchema.IsArray || propertySchema.Type.HasFlag(JsonObjectType.Object);
+        if (isContainer &&
             released is JsonValue releasedValue &&
             releasedValue.TryGetValue<string>(out var releasedText))
         {
+            // When the subject's encryption key has been crypto-shredded (GDPR right-to-erasure), the handler
+            // surfaces the erased value as an empty string. An erased container reads as empty, so return an
+            // empty container rather than letting JsonNode.Parse(string.Empty) throw and poison the release path.
+            if (string.IsNullOrWhiteSpace(releasedText))
+            {
+                return propertySchema.IsArray ? new JsonArray() : new JsonObject();
+            }
+
             return JsonNode.Parse(releasedText) ?? released;
         }
 
@@ -97,8 +106,12 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                     }
                 }
 
-                if (value is JsonObject jsonObjectValue)
+                if (!handlerApplied && value is JsonObject jsonObjectValue)
                 {
+                    // Only descend when the property was not handled as a whole. A handled container has already
+                    // been replaced by its ciphertext, so recursing would mutate the detached original — the work
+                    // is thrown away on apply, and on release it would decrypt members that were never separately
+                    // encrypted.
                     await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)

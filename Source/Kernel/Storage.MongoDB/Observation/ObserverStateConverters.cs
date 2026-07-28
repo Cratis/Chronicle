@@ -23,18 +23,14 @@ public static class ObserverStateConverters
             RunningState = state.RunningState,
             ReplayingPartitions = state.ReplayingPartitions,
             CatchingUpPartitions = state.CatchingUpPartitions,
+            InFlightPartitions = state.InFlightPartitions,
             FailedPartitionCount = state.FailedPartitionCount,
             IsReplaying = state.IsReplaying,
             SubscribesToAllEvents = state.SubscribesToAllEvents,
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
                 kvp => kvp.Key.Value,
-                kvp => kvp.Value.Value),
-            HandledEventCountPerPartition = state.HandledEventCountPerPartition.ToDictionary(
-                kvp => kvp.Key.ToString(),
-                kvp => (IDictionary<string, ulong>)kvp.Value.ToDictionary(
-                    innerKvp => innerKvp.Key.Value,
-                    innerKvp => innerKvp.Value.Value))
+                kvp => kvp.Value.Value)
         };
 
     /// <summary>
@@ -56,15 +52,11 @@ public static class ObserverStateConverters
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            InFlightPartitions = state.InFlightPartitions.ToHashSet(),
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
                 kvp => (Concepts.Events.EventTypeId)kvp.Key,
-                kvp => (Concepts.Events.EventCount)kvp.Value),
-            HandledEventCountPerPartition = state.HandledEventCountPerPartition.ToDictionary(
-                kvp => (Concepts.Keys.Key)kvp.Key,
-                kvp => (IReadOnlyDictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>)kvp.Value.ToDictionary(
-                    innerKvp => (Concepts.Events.EventTypeId)innerKvp.Key,
-                    innerKvp => (Concepts.Events.EventCount)innerKvp.Value))
+                kvp => (Concepts.Events.EventCount)kvp.Value)
         };
 
     /// <summary>
@@ -86,15 +78,11 @@ public static class ObserverStateConverters
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            InFlightPartitions = state.InFlightPartitions.ToHashSet(),
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
                 kvp => (Concepts.Events.EventTypeId)kvp.Key,
-                kvp => (Concepts.Events.EventCount)kvp.Value),
-            HandledEventCountPerPartition = state.HandledEventCountPerPartition.ToDictionary(
-                kvp => (Concepts.Keys.Key)kvp.Key,
-                kvp => (IReadOnlyDictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>)kvp.Value.ToDictionary(
-                    innerKvp => (Concepts.Events.EventTypeId)innerKvp.Key,
-                    innerKvp => (Concepts.Events.EventCount)innerKvp.Value))
+                kvp => (Concepts.Events.EventCount)kvp.Value)
         };
 
     /// <summary>

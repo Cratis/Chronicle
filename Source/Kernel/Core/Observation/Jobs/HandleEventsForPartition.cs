@@ -46,8 +46,19 @@ public class HandleEventsForPartition(
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
+    bool _isCollapsingProjection;
 
     IHandleEventsForPartition _selfGrainReference = null!;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A projection that collapses several event sources onto one read model document is deliberately written out
+    /// of order per document, so its sink write cannot be guarded on the read model's watermark and a redelivered
+    /// batch would be applied twice. Checkpointing after every batch shrinks that window to the single batch the
+    /// live delivery path already carries. It equalizes the window with the live path; it does not make the
+    /// subscriber idempotent.
+    /// </remarks>
+    protected override bool CheckpointAfterEveryBatch => _isCollapsingProjection;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -59,7 +70,8 @@ public class HandleEventsForPartition(
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             var subscription = await _observer.GetSubscription();
             _eventSourceId = State.Partition.ToString();
-            _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription)) as IObserverSubscriber;
+            _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
+            _isCollapsingProjection = subscription.IsCollapsingProjection;
         }
         await base.OnActivateAsync(cancellationToken);
     }
@@ -69,7 +81,7 @@ public class HandleEventsForPartition(
     {
         using var scope = logger.BeginJobStepScope(State);
         State.LastSuccessfullyHandledEventSequenceNumber = lastHandledEventSequenceNumber;
-        var writeStateResult = await WriteStateAsync();
+        var writeStateResult = await WriteCheckpointDebounced();
         if (writeStateResult.TryGetException(out var error))
         {
             logger.FailedToPersistSuccessfullyHandledEvent(error, lastHandledEventSequenceNumber);
@@ -111,8 +123,8 @@ public class HandleEventsForPartition(
 
             if (subscription.IsSubscribed)
             {
-                var target = subscriberSelector.Select(subscription, request.Partition);
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, request.ToObserverSubscriberKey(target.SiloAddress)) as IObserverSubscriber;
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, request.Partition)) as IObserverSubscriber;
+                _isCollapsingProjection = subscription.IsCollapsingProjection;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
             }
@@ -207,8 +219,10 @@ public class HandleEventsForPartition(
                             lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
                             await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-                            var okHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
-                            await _observer.ReportHandledEvents(currentState.Partition, okHandledEvents);
+                            var okCountsPerEventType = handledEvents
+                                .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
+                                .CountByEventType();
+                            await _observer.ReportHandledEvents(currentState.Partition, okCountsPerEventType);
                             break;
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -223,8 +237,10 @@ public class HandleEventsForPartition(
 
                                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                                 lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-                                var failedHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
-                                await _observer.ReportHandledEvents(currentState.Partition, failedHandledEvents);
+                                var failedCountsPerEventType = handledEvents
+                                    .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
+                                    .CountByEventType();
+                                await _observer.ReportHandledEvents(currentState.Partition, failedCountsPerEventType);
                             }
                             else
                             {
@@ -369,17 +385,8 @@ public class HandleEventsForPartition(
         }
     }
 
-    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription)
-    {
-        var target = subscriberSelector.Select(subscription, State.Partition);
-        return new(
-            State.ObserverKey.ObserverId,
-            State.ObserverKey.EventStore,
-            State.ObserverKey.Namespace,
-            State.ObserverKey.EventSequenceId,
-            State.Partition,
-            target.SiloAddress.ToParsableString());
-    }
+    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition) =>
+        subscription.GetSubscriberKeyFor(partition, subscriberSelector.Select(subscription, partition).SiloAddress);
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);

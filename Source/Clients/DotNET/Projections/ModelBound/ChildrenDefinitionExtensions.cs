@@ -383,16 +383,25 @@ static class ChildrenDefinitionExtensions
                         childrenDef.Join.ProcessJoinAttribute(getOrCreateEventType, namingPolicy, joinAttr, joinEventType, parameter.Name!, paramPropertyName);
                     }
 
-                    // Process RemovedWith attributes on constructor parameters
-                    foreach (var (removedAttr, removedEventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
-                    {
-                        childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, namingPolicy, removedAttr, removedEventType);
-                    }
+                    // A [RemovedWith] alongside a [ChildrenFrom] on the same parameter is the removal trigger for
+                    // that nested (grandchild) collection, not for this child — ProcessNestedChildren routes it to
+                    // the grandchild definition. Adding it to this child's definition would remove the whole child
+                    // item instead.
+                    var parameterIsNestedCollection = parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>().Any();
 
-                    // Process RemovedWithJoin attributes on constructor parameters
-                    foreach (var (removedJoinAttr, removedJoinEventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+                    // Process RemovedWith attributes on constructor parameters
+                    if (!parameterIsNestedCollection)
                     {
-                        childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, namingPolicy, removedJoinAttr, removedJoinEventType);
+                        foreach (var (removedAttr, removedEventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+                        {
+                            childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, namingPolicy, removedAttr, removedEventType);
+                        }
+
+                        // Process RemovedWithJoin attributes on constructor parameters
+                        foreach (var (removedJoinAttr, removedJoinEventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+                        {
+                            childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, namingPolicy, removedJoinAttr, removedJoinEventType);
+                        }
                     }
                 }
             }
@@ -462,6 +471,11 @@ static class ChildrenDefinitionExtensions
                         definition,
                         childType,
                         visitedChildTypes);
+
+                    // A [RemovedWith] alongside the [ChildrenFrom] on this nested collection removes the keyed
+                    // grandchild, so route it onto the nested child definition just created — not onto this
+                    // parent child definition, where it would remove the whole parent item.
+                    parentChildrenDef.RouteNestedRemovedWith(getOrCreateEventType, namingPolicy, parameter.Name!, parameter);
                 }
 
                 if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
@@ -500,6 +514,11 @@ static class ChildrenDefinitionExtensions
                     definition,
                     childType,
                     visitedChildTypes);
+
+                // A [RemovedWith] alongside the [ChildrenFrom] on this nested collection removes the keyed
+                // grandchild, so route it onto the nested child definition just created — not onto this
+                // parent child definition, where it would remove the whole parent item.
+                parentChildrenDef.RouteNestedRemovedWith(getOrCreateEventType, namingPolicy, property.Name, property);
             }
 
             if (Attribute.IsDefined(property, typeof(NestedAttribute)))
@@ -530,6 +549,40 @@ static class ChildrenDefinitionExtensions
         foreach (var (attr, eventType) in childType.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
         {
             childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, namingPolicy, attr, eventType);
+        }
+    }
+
+    /// <summary>
+    /// Routes a nested collection member's <c>[RemovedWith]</c> / <c>[RemovedWithJoin]</c> onto the nested child
+    /// definition that <see cref="ProcessChildrenFromAttributeForNestedChildren"/> just created under
+    /// <paramref name="parentChildrenDef"/>, so a keyed grandchild is removed rather than the whole parent item.
+    /// </summary>
+    /// <param name="parentChildrenDef">The parent child definition holding the nested collection.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <param name="namingPolicy">The naming policy for converting property names.</param>
+    /// <param name="memberName">The nested collection member name.</param>
+    /// <param name="member">The parameter or property carrying the nested collection's attributes.</param>
+    static void RouteNestedRemovedWith(
+        this ChildrenDefinition parentChildrenDef,
+        Func<Type, EventType> getOrCreateEventType,
+        INamingPolicy namingPolicy,
+        string memberName,
+        ICustomAttributeProvider member)
+    {
+        var nestedChildName = namingPolicy.GetPropertyName(new PropertyPath(memberName));
+        if (!parentChildrenDef.Children.TryGetValue(nestedChildName, out var nestedChildDef))
+        {
+            return;
+        }
+
+        foreach (var (attr, eventType) in member.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+        {
+            nestedChildDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, namingPolicy, attr, eventType);
+        }
+
+        foreach (var (attr, eventType) in member.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+        {
+            nestedChildDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, namingPolicy, attr, eventType);
         }
     }
 

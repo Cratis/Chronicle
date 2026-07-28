@@ -23,7 +23,9 @@ public class a_model_bound_projection_builder : Specification
             typeof(ReadModelRemoved),
             typeof(ReadModelRemovedJoin),
             typeof(ChildItemRemoved),
-            typeof(ChildItemRemovedJoin)
+            typeof(ChildItemRemovedJoin),
+            typeof(SubItemAddedToItem),
+            typeof(SubItemRemovedFromItem)
         ]);
 
         builder = new ModelBoundProjectionBuilder(naming_policy, event_types);

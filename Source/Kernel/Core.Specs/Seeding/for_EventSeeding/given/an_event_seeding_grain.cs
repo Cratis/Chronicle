@@ -14,6 +14,7 @@ public class an_event_seeding_grain : Specification
     protected EventSeeding _grain;
     protected IPersistentState<EventSeeds> _state;
     protected IEventSequence _eventSequence;
+    protected IGrainFactory _grainFactory;
     protected EventSeedingKey _key;
     protected ILogger<EventSeeding> _logger;
 
@@ -22,13 +23,14 @@ public class an_event_seeding_grain : Specification
         _key = new EventSeedingKey("TestEventStore", "TestNamespace");
         _state = Substitute.For<IPersistentState<EventSeeds>>();
         _eventSequence = Substitute.For<IEventSequence>();
+        _grainFactory = Substitute.For<IGrainFactory>();
         _logger = Substitute.For<ILogger<EventSeeding>>();
 
         _state.State.Returns(new EventSeeds(
             new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
             new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>()));
 
-        _grain = new EventSeeding(_state, _logger);
+        _grain = new EventSeeding(_state, _grainFactory, _logger);
 
         // Simulate OnActivateAsync by setting internal fields via reflection
         var keyField = typeof(EventSeeding).GetField("_key", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

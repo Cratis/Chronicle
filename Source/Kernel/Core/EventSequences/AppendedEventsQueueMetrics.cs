@@ -20,6 +20,9 @@ internal static partial class AppendedEventsQueueMetrics
 
     [Counter<int>("chronicle-appended-events-queue-events-handling-failures", "Number of events that has handling failures")]
     internal static partial void EventsHandlingFailures(this IMeterScope<AppendedEventsQueue> meter);
+
+    [Counter<int>("chronicle-appended-events-queue-events-spilled-to-catchup", "Number of events spilled to observer catch-up when the queue was full")]
+    internal static partial void EventsSpilledToCatchup(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 }
 
 internal static class AppendedEventsQueueMetricsScopes

@@ -28,19 +28,6 @@ public class RoundRobinObserverSubscriberSelector : IObserverSubscriberSelector
         {
             0 => new(subscription.SiloAddress, null),
             1 => subscription.Targets[0],
-            _ => subscription.Targets[(int)(Hash(partition.ToString() ?? string.Empty) % (uint)subscription.Targets.Count)]
+            _ => subscription.Targets[(int)(StableHash.Of(partition.ToString() ?? string.Empty) % (uint)subscription.Targets.Count)]
         };
-
-    static uint Hash(string value)
-    {
-        // FNV-1a: deterministic across processes, unlike string.GetHashCode().
-        var hash = 2166136261u;
-        foreach (var character in value)
-        {
-            hash ^= character;
-            hash *= 16777619u;
-        }
-
-        return hash;
-    }
 }

@@ -23,6 +23,15 @@ public class EventSourceOperations : IEventSourceOperations
     /// <inheritdoc/>
     public EventSourceOperations WithConcurrencyScope(ConcurrencyScope concurrencyScope)
     {
+        // A concurrency scope that has already been set for this event source must not be reset to
+        // NotSet by a later event added to the same source - that would silently drop the source
+        // from the concurrency check and disable optimistic concurrency. A real (non-NotSet) scope
+        // still overrides an earlier one.
+        if (concurrencyScope == ConcurrencyScope.NotSet && ConcurrencyScope != ConcurrencyScope.NotSet)
+        {
+            return this;
+        }
+
         ConcurrencyScope = concurrencyScope;
         return this;
     }

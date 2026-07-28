@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -19,11 +18,10 @@ namespace Cratis.Chronicle.Observation.States;
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
 /// <param name="definitionState"><see cref="IPersistentState{ObserverDefinition}"/> for the observer's definition.</param>
 /// <param name="failuresState"><see cref="IPersistentState{FailedPartitions}"/> for the observer's failed partitions.</param>
-/// <param name="storage"><see cref="IStorage"/> for accessing the in-flight events store.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for starting partition catch-up jobs.</param>
 /// <param name="logger">Logger for logging.</param>
 /// <remarks>
-/// On entry, every partition that has an in-flight event marker — but is not already failed,
+/// On entry, every partition recorded as in-flight on the observer state — but that is not already failed,
 /// replaying, or catching up — gets a dedicated catch-up job starting from the next event after
 /// the observer's last confirmed sequence number. The state then transitions to <see cref="Routing"/>
 /// so the observer can resume normal operation. If enqueueing a catch-up job throws, the observer
@@ -33,7 +31,6 @@ public class CatchingUpInFlight(
     ObserverKey observerKey,
     IPersistentState<ObserverDefinition> definitionState,
     IPersistentState<FailedPartitions> failuresState,
-    IStorage storage,
     IJobsManager jobsManager,
     ILogger<CatchingUpInFlight> logger) : BaseObserverState
 {
@@ -59,23 +56,15 @@ public class CatchingUpInFlight(
             return state;
         }
 
-        var inFlightStorage = storage
-            .GetEventStore(observerKey.EventStore)
-            .GetNamespace(observerKey.Namespace)
-            .InFlightEvents;
-
-        var entries = (await inFlightStorage.GetFor(observerKey.ObserverId)).ToArray();
-        if (entries.Length == 0)
+        if (state.InFlightPartitions.Count == 0)
         {
             await StateMachine.TransitionTo<Routing>();
             return state;
         }
 
-        logger.RecoveringInFlightPartitions(entries.Length);
+        logger.RecoveringInFlightPartitions(state.InFlightPartitions.Count);
 
-        var partitions = entries
-            .Select(_ => _.Partition)
-            .Distinct()
+        var partitions = state.InFlightPartitions
             .Where(p =>
                 !state.CatchingUpPartitions.Contains(p) &&
                 !state.ReplayingPartitions.Contains(p) &&

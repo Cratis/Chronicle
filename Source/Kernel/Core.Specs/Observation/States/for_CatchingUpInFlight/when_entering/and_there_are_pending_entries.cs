@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.when_entering;
@@ -13,16 +12,12 @@ public class and_there_are_pending_entries : given.a_catching_up_in_flight_state
     Key _firstPartition = "partition-one";
     Key _secondPartition = "partition-two";
 
-    void Establish()
-    {
-        _storedState = _storedState with { LastHandledEventSequenceNumber = (EventSequenceNumber)9UL };
-        _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>())
-            .Returns(
-            [
-                new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _firstPartition, EventSequenceNumber = (EventSequenceNumber)10UL },
-                new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _secondPartition, EventSequenceNumber = (EventSequenceNumber)11UL }
-            ]);
-    }
+    void Establish() =>
+        _storedState = _storedState with
+        {
+            LastHandledEventSequenceNumber = (EventSequenceNumber)9UL,
+            InFlightPartitions = new HashSet<Key> { _firstPartition, _secondPartition }
+        };
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 

@@ -45,6 +45,9 @@ public class IdentityStorage : IIdentityStorage
         Task.FromResult(Identity.System);
 
     /// <inheritdoc/>
+    public Task Rename(string subject, string name) => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task<IEnumerable<Identity>> GetAll() =>
         Task.FromResult(Enumerable.Empty<Identity>());
 

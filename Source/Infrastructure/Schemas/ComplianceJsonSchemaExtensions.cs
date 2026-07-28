@@ -18,22 +18,21 @@ public static class ComplianceJsonSchemaExtensions
     const int MaxComplianceTraversalDepth = 64;
 
     /// <summary>
-    /// Ensure the compliance metadata is correct with correct types.
+    /// Ensure the compliance metadata on the schema node itself is typed rather than raw JSON.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to ensure.</param>
+    /// <remarks>
+    /// This normalizes only the node it is given, and deliberately so. Compliance metadata can sit at any depth
+    /// — inside a value object, inside an array's item schema — but every reader goes through
+    /// <see cref="GetComplianceMetadata(JsonSchema)"/>, which accepts the raw <see cref="JsonArray"/> form just
+    /// as readily as the typed one, for whichever node it is handed. Walking the whole schema here would deep
+    /// clone every nested node on each stored-schema load and change nothing about what those readers see.
+    /// </remarks>
     public static void EnsureComplianceMetadata(this JsonSchema schema)
     {
         lock (schema)
         {
             ConvertComplianceIfNeeded(schema);
-
-            if (schema.Properties.Count > 0)
-            {
-                foreach (var property in schema.Properties)
-                {
-                    ConvertComplianceIfNeeded(property.Value);
-                }
-            }
         }
     }
 
@@ -81,8 +80,21 @@ public static class ComplianceJsonSchemaExtensions
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
     /// <returns>True if it has, false if not.</returns>
-    public static bool HasComplianceMetadata(this JsonSchema schema) =>
-        HasComplianceMetadata(schema, [], 0);
+    /// <remarks>
+    /// The recursive walk is run once per schema instance and its result memoized, because the answer is invoked for
+    /// every appended and read event and a schema is effectively immutable once built.
+    /// </remarks>
+    public static bool HasComplianceMetadata(this JsonSchema schema)
+    {
+        if (schema.CachedHasComplianceMetadata is { } cached)
+        {
+            return cached;
+        }
+
+        var result = HasComplianceMetadata(schema, [], 0);
+        schema.CachedHasComplianceMetadata = result;
+        return result;
+    }
 
     /// <summary>
     /// Check if the property has compliance metadata.

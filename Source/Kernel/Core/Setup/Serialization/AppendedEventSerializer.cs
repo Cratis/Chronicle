@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage;
 using Cratis.Strings;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
@@ -21,14 +22,22 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// <summary>
 /// Represents a serializer for appended events.
 /// </summary>
+/// <remarks>
+/// Runs on the Orleans serialization hot path for every <see cref="AppendedEvent"/> that crosses a grain or
+/// silo boundary. The write side resolves the schema through the silo-wide <see cref="IEventTypeSchemaCache"/>,
+/// which is evicted whenever an event type is re-registered; the read side caches the parsed schema per unique
+/// schema text, which needs no eviction since a changed schema is a different key.
+/// </remarks>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/>.</param>
-/// <param name="storage">The <see cref="IStorage"/>.</param>
+/// <param name="schemaCache">The <see cref="IEventTypeSchemaCache"/> to resolve event type schemas from.</param>
 internal sealed class AppendedEventSerializer(
     JsonSerializerOptions jsonSerializerOptions,
     IExpandoObjectConverter expandoObjectConverter,
-    IStorage storage) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
+    IEventTypeSchemaCache schemaCache) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
+    readonly ConcurrentDictionary<string, JsonSchema> _schemasBySchemaJson = new();
+
     /// <inheritdoc/>
     public object? DeepCopy(object? input, CopyContext context) => input;
 
@@ -54,7 +63,7 @@ internal sealed class AppendedEventSerializer(
         var appendedEventJson = jsonObject[nameof(AppendedEventWithSchema.AppendedEvent).ToCamelCase()]!;
         var content = appendedEventJson[nameof(AppendedEvent.Content).ToCamelCase()];
         var contentAsJson = (JsonObject)content!;
-        var schema = JsonSchema.FromJsonAsync(appendedEventWithSchema.Schema).GetAwaiter().GetResult();
+        var schema = _schemasBySchemaJson.GetOrAdd(appendedEventWithSchema.Schema, JsonSchema.FromJson);
         var contentAsExpando = expandoObjectConverter.ToExpandoObject(contentAsJson, schema);
         return appendedEventWithSchema.AppendedEvent with { Content = contentAsExpando };
     }
@@ -64,9 +73,11 @@ internal sealed class AppendedEventSerializer(
         where TBufferWriter : IBufferWriter<byte>
     {
         var appendedEvent = (AppendedEvent)value;
-        var eventStore = storage.GetEventStore(appendedEvent.Context.EventStore);
-        var eventType = eventStore.EventTypes.GetFor(appendedEvent.Context.EventType.Id, appendedEvent.Context.EventType.Generation).GetAwaiter().GetResult();
-        var appendedEventWithSchema = new AppendedEventWithSchema(appendedEvent, eventType.Schema.ToJson());
+        var schemaJson = schemaCache.GetSchemaJsonFor(
+            appendedEvent.Context.EventStore,
+            appendedEvent.Context.EventType.Id,
+            appendedEvent.Context.EventType.Generation);
+        var appendedEventWithSchema = new AppendedEventWithSchema(appendedEvent, schemaJson);
 
         var json = JsonSerializer.Serialize(appendedEventWithSchema, jsonSerializerOptions);
         StringCodec.WriteField(ref writer, fieldIdDelta, json);

@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -31,5 +34,9 @@ public class the_provider : Specification
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(eventStoreNamespaceStorage);
         eventStoreStorage.EventTypes.Returns(eventTypesStorage);
         eventStoreNamespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(eventSequenceStorage);
+
+        eventTypesStorage.GetLatestForAllEventTypes().Returns(Task.FromResult<IEnumerable<EventTypeSchema>>([]));
+        eventSequenceStorage.GetTailSequenceNumbersForEventTypes(Arg.Any<IEnumerable<EventType>>())
+            .Returns(Task.FromResult<IImmutableDictionary<EventType, EventSequenceNumber>>(ImmutableDictionary<EventType, EventSequenceNumber>.Empty));
     }
 }

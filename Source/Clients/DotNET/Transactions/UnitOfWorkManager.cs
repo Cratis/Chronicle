@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Traces;
 
 namespace Cratis.Chronicle.Transactions;
 
@@ -10,7 +12,10 @@ namespace Cratis.Chronicle.Transactions;
 /// Represents an implementation of <see cref="IUnitOfWorkManager"/>.
 /// </summary>
 /// <param name="eventStore">The <see cref="IEventStore"/> to use for the <see cref="IUnitOfWork"/>.</param>
-public class UnitOfWorkManager(IEventStore eventStore) : IUnitOfWorkManager
+/// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
+public class UnitOfWorkManager(
+    IEventStore eventStore,
+    IActivitySource<UnitOfWork>? activitySource = null) : IUnitOfWorkManager
 {
     static readonly AsyncLocal<IUnitOfWork> _current = new();
     readonly ConcurrentDictionary<CorrelationId, IUnitOfWork> _unitsOfWork = new();
@@ -31,7 +36,8 @@ public class UnitOfWorkManager(IEventStore eventStore) : IUnitOfWorkManager
         var unitOfWork = new UnitOfWork(
             correlationId,
             UnitOfWorkCompleted,
-            eventStore);
+            eventStore,
+            activitySource);
         _current.Value = unitOfWork;
         _unitsOfWork[correlationId] = unitOfWork;
         return unitOfWork;
@@ -48,6 +54,12 @@ public class UnitOfWorkManager(IEventStore eventStore) : IUnitOfWorkManager
     void UnitOfWorkCompleted(IUnitOfWork unitOfWork)
     {
         _unitsOfWork.TryRemove(unitOfWork.CorrelationId, out _);
-        _current.Value = null!;
+
+        // Only clear Current when the completing unit is the current one - clearing unconditionally
+        // would wipe a different unit that became current while this one was still live.
+        if (ReferenceEquals(_current.Value, unitOfWork))
+        {
+            _current.Value = null!;
+        }
     }
 }

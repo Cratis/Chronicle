@@ -10,10 +10,11 @@ namespace Cratis.Chronicle.Testing;
 /// Represents a minimal <see cref="IGrainRuntime"/> for constructing grains outside an Orleans silo.
 /// </summary>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/> to use.</param>
-internal sealed class TestGrainRuntime(IServiceProvider serviceProvider) : IGrainRuntime
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> the constructed grain resolves grains through.</param>
+internal sealed class TestGrainRuntime(IServiceProvider serviceProvider, IGrainFactory grainFactory) : IGrainRuntime
 {
     /// <inheritdoc/>
-    public IGrainFactory GrainFactory => throw new NotSupportedException("GrainFactory is not supported in test scenarios.");
+    public IGrainFactory GrainFactory { get; } = grainFactory;
 
     /// <inheritdoc/>
     public ITimerRegistry TimerRegistry => throw new NotSupportedException("TimerRegistry is not supported in test scenarios.");

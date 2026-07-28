@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- BenchmarkDotNet locates the project file by assembly name, so the two must match. -->
+    <RootNamespace>Cratis.Chronicle.Benchmarks.Clustering</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DisableProxyGenerator>true</DisableProxyGenerator>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Cratis.Arc" />
+    <PackageReference Include="Cratis.Arc.MongoDB" />
+    <PackageReference Include="EphemeralMongo" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" />
+    <PackageReference Include="Microsoft.Orleans.TestingHost" />
+    <!-- Not used by the benchmarks. XUnit.Integration keeps xunit private, but Cratis type discovery
+         walks its types at startup and needs the assembly on disk to do so. -->
+    <PackageReference Include="xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
+    <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
+    <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
+    <ProjectReference Include="../../Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj">
+      <Aliases>KernelConcepts</Aliases>
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
+    <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">
+      <Aliases>KernelCore</Aliases>
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>

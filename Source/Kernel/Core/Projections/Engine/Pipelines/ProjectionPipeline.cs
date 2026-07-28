@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="steps">Collection of <see cref="ICanPerformProjectionPipelineStep"/> to perform.</param>
 /// <param name="handleLock">Per-projection lock that serializes <see cref="Handle"/> calls across all pipeline instances that share the same projection identifier.</param>
+/// <param name="replayScopedCache">The <see cref="IReplayScopedCache"/> whose key-resolution caching is active only for the duration of a replay.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 public class ProjectionPipeline(
     EngineProjection projection,
@@ -31,40 +32,49 @@ public class ProjectionPipeline(
     IChangesetStorage changesetStorage,
     IObjectComparer objectComparer,
     IEnumerable<ICanPerformProjectionPipelineStep> steps,
-    SemaphoreSlim handleLock,
+    ProjectionHandleLock handleLock,
+    IReplayScopedCache replayScopedCache,
     ILogger<ProjectionPipeline> logger) : IProjectionPipeline
 {
     /// <summary>
-    /// Serializes <see cref="Handle"/> calls per projection.
+    /// Serializes the read-modify-write cycle in <see cref="Handle"/>.
     /// </summary>
     /// <remarks>
     /// The pipeline performs a read-modify-write cycle against the sink for each event:
     /// SetInitialState reads the current state, HandleEvent computes the changeset, and
-    /// SaveChanges writes the new state back. Multiple concurrent Handle() calls — which
-    /// happen when catch-up or replay runs per-partition steps in parallel for a projection
-    /// whose key collapses all partitions into a single read-model document (e.g. constant
-    /// key, joins, or hierarchical parent/child resolution) — would race on this cycle and
-    /// produce lost updates or missing parent/child links. The lock is owned by
-    /// <see cref="IProjectionPipelineManager"/> so it survives pipeline eviction: a replay
-    /// evicts the cached pipeline and creates a new one, but already-activated subscribers
-    /// still hold the old pipeline reference; both pipelines must share the same lock so the
-    /// concurrent paths still serialize.
+    /// SaveChanges writes the new state back. Multiple concurrent Handle() calls happen when
+    /// catch-up or replay runs per-partition steps in parallel, and when a replay evicts the
+    /// cached pipeline while already-activated subscribers still hold the old pipeline reference.
+    /// For a projection whose key collapses all partitions into a single read-model document
+    /// (constant key, joins, or hierarchical parent/child resolution) those calls would race and
+    /// produce lost updates or missing parent/child links, so the whole projection is serialized
+    /// coarsely. For a purely event-source-keyed projection (<see cref="IProjection.IsEventSourceKeyed"/>)
+    /// events for different event source ids target different documents, so handling is striped
+    /// per event source id — same-key calls serialize, different-key calls run in parallel. The
+    /// lock is owned by <see cref="IProjectionPipelineManager"/> so it survives pipeline eviction:
+    /// both the old and new pipeline share the same stripes so the concurrent paths still serialize.
     /// </remarks>
-    readonly SemaphoreSlim _handleLock = handleLock;
+    readonly ProjectionHandleLock _handleLock = handleLock;
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        replayScopedCache.BeginReplaySession();
         await changesetStorage.BeginReplay(projection.ReadModel.ContainerName);
         await sink.BeginReplay(context);
     }
 
     /// <inheritdoc/>
-    public Task ResumeReplay(ReplayContext context) => sink.ResumeReplay(context);
+    public Task ResumeReplay(ReplayContext context)
+    {
+        replayScopedCache.BeginReplaySession();
+        return sink.ResumeReplay(context);
+    }
 
     /// <inheritdoc/>
     public async Task EndReplay(ReplayContext context)
     {
+        replayScopedCache.EndReplaySession();
         await sink.EndReplay(context);
         await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
     }
@@ -78,34 +88,33 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
-        await _handleLock.WaitAsync();
-        try
-        {
-            logger.StartingPipeline(@event.Context.SequenceNumber);
-            var context = ProjectionEventContext.Empty(objectComparer, @event) with
-            {
-                OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
-            };
+        // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping
+        // on the event source id is striping on the resolved key: same-key handling serializes, different-key
+        // handling runs in parallel. Any projection that can collapse partitions keeps the coarse lock.
+        using var handleScope = projection.IsEventSourceKeyed
+            ? await _handleLock.AcquireFor(@event.Context.EventSourceId)
+            : await _handleLock.AcquireCoarse();
 
-            foreach (var step in steps)
+        logger.StartingPipeline(@event.Context.SequenceNumber);
+        var context = ProjectionEventContext.Empty(objectComparer, @event) with
+        {
+            OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
+        };
+
+        foreach (var step in steps)
+        {
+            try
             {
-                try
-                {
-                    context = await step.Perform(projection, context);
-                }
-                catch (Exception ex)
-                {
-                    logger.ErrorPerformingStep(ex, step.GetType(), @event.Context.SequenceNumber);
-                    throw;
-                }
+                context = await step.Perform(projection, context);
             }
-            logger.CompletedAllSteps(@event.Context.SequenceNumber);
+            catch (Exception ex)
+            {
+                logger.ErrorPerformingStep(ex, step.GetType(), @event.Context.SequenceNumber);
+                throw;
+            }
+        }
+        logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
-            return context;
-        }
-        finally
-        {
-            _handleLock.Release();
-        }
+        return context;
     }
 }

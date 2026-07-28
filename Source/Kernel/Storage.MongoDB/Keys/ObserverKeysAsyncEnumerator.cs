@@ -14,11 +14,15 @@ namespace Cratis.Chronicle.Storage.MongoDB.Keys;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ObserverKeysAsyncEnumerator"/> class.
 /// </remarks>
-/// <param name="cursor">The inner <see cref="IAsyncCursor{T}"/>.</param>
-public class ObserverKeysAsyncEnumerator(IAsyncCursor<EventSourceId> cursor) : IAsyncEnumerator<Key>
+/// <param name="cursorFactory">Factory that opens the inner <see cref="IAsyncCursor{T}"/> when first enumerated.</param>
+/// <param name="cancellationToken">The <see cref="CancellationToken"/> to open the cursor with.</param>
+public class ObserverKeysAsyncEnumerator(
+    Func<CancellationToken, Task<IAsyncCursor<EventSourceId>>> cursorFactory,
+    CancellationToken cancellationToken) : IAsyncEnumerator<Key>
 {
     Key? _current;
     Queue<Key>? _queue;
+    IAsyncCursor<EventSourceId>? _cursor;
 
     /// <inheritdoc/>
     public Key Current => _current!;
@@ -26,23 +30,27 @@ public class ObserverKeysAsyncEnumerator(IAsyncCursor<EventSourceId> cursor) : I
     /// <inheritdoc/>
     public ValueTask DisposeAsync()
     {
-        cursor.Dispose();
+        _cursor?.Dispose();
         return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async ValueTask<bool> MoveNextAsync()
     {
+        // Open the cursor lazily so the whole-collection distinct runs asynchronously on first enumeration
+        // rather than blocking a thread when the enumerator is created.
+        _cursor ??= await cursorFactory(cancellationToken);
+
         if (_queue is null)
         {
-            var result = await cursor.MoveNextAsync();
+            var result = await _cursor.MoveNextAsync(cancellationToken);
             if (!result)
             {
                 _current = null;
                 return false;
             }
 
-            _queue = new(cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
+            _queue = new(_cursor.Current.Select(_ => new Key(_.Value, ArrayIndexers.NoIndexers)));
         }
 
         if (_queue.Count == 0)

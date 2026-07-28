@@ -33,13 +33,12 @@ public static class ObjectExtensions
             return (T)(object)ExpandoObjectExtensions.Clone(expandoObject);
         }
 
-        if (source is Guid)
+        var valueType = source.GetType();
+        if (IsImmutableValue(valueType))
         {
             return source;
         }
 
-        var valueType = source.GetType();
-        if (valueType.IsPrimitive || valueType == typeof(string)) return source;
         if (valueType.IsConcept())
         {
             return (T)ConceptFactory.CreateConceptInstance(valueType, source.GetConceptValue());
@@ -151,6 +150,26 @@ public static class ObjectExtensions
 
         return left.Equals(right);
     }
+
+    /// <summary>
+    /// Determines whether a <see cref="Type"/> is an immutable value that can be cloned by sharing the same instance.
+    /// </summary>
+    /// <param name="type">The <see cref="Type"/> to evaluate.</param>
+    /// <returns>True if the type is an immutable value, false otherwise.</returns>
+    /// <remarks>
+    /// These types are immutable, so returning the original instance is a valid deep clone. Doing so avoids
+    /// round-tripping them through JSON serialization, which produces a value equal to the original for all of them.
+    /// </remarks>
+    static bool IsImmutableValue(Type type) =>
+        type.IsPrimitive ||
+        type.IsEnum ||
+        type == typeof(string) ||
+        type == typeof(Guid) ||
+        type == typeof(decimal) ||
+        type == typeof(DateTime) ||
+        type == typeof(DateTimeOffset) ||
+        type == typeof(DateOnly) ||
+        type == typeof(TimeOnly);
 
     static object CreateInstanceOf(Type type)
     {

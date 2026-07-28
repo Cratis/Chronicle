@@ -16,12 +16,8 @@ public static class JsonSchemaExtensions
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
     /// <returns>Collection of <see cref="JsonSchemaProperty"/>.</returns>
-    public static IEnumerable<JsonSchemaProperty> GetFlattenedProperties(this JsonSchema schema)
-    {
-        var properties = new List<JsonSchemaProperty>();
-        CollectPropertiesFrom(schema, properties);
-        return properties;
-    }
+    public static IEnumerable<JsonSchemaProperty> GetFlattenedProperties(this JsonSchema schema) =>
+        schema.FlattenedProperties;
 
     /// <summary>
     /// Checks if the schema has a key property.
@@ -263,29 +259,6 @@ public static class JsonSchemaExtensions
                 }
 
                 break;
-        }
-    }
-
-    static void CollectPropertiesFrom(JsonSchema schema, List<JsonSchemaProperty> properties)
-    {
-        // Direct properties on this schema
-        properties.AddRange(schema.Properties.Values);
-
-        // Traverse allOf schemas (handles both inheritance refs and inline property groups)
-        foreach (var allOfSchema in schema.AllOf)
-        {
-            if (allOfSchema.HasReference)
-            {
-                var resolved = allOfSchema.Reference;
-                if (resolved is not null)
-                {
-                    CollectPropertiesFrom(resolved, properties);
-                }
-            }
-            else
-            {
-                CollectPropertiesFrom(allOfSchema, properties);
-            }
         }
     }
 }

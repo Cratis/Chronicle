@@ -20,7 +20,7 @@ public class Storage(
     ISystemStorage systemStorage,
     IInstancesOf<ISinkFactory> sinkFactories) : IStorage
 {
-    readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
+    readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
     /// <inheritdoc/>
     public ISystemStorage System => systemStorage;
@@ -41,13 +41,9 @@ public class Storage(
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
-        var pair = _eventStores
-            .Select(kvp => new { kvp.Key, kvp.Value })
-            .FirstOrDefault(_ => _.Key.Value.Equals(eventStore.Value, StringComparison.InvariantCultureIgnoreCase));
-
-        if (pair is not null)
+        if (_eventStores.TryGetValue(eventStore, out var existing))
         {
-            return pair.Value;
+            return existing;
         }
 
         // TODO: This logic should be replaced by formalizing event stores as a Grain and it ensuring existence. Service layer should do this.
@@ -61,11 +57,12 @@ public class Storage(
             Task.Run(() => clusterStorage.SaveEventStore(eventStore)).GetAwaiter().GetResult();
         }
 
-        return _eventStores[eventStore] =
-                clusterStorage.CreateStorageForEventStore(
-                    eventStore,
-                    (eventStoreNamespaceName) =>
-                        new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
+        var created = clusterStorage.CreateStorageForEventStore(
+            eventStore,
+            (eventStoreNamespaceName) =>
+                new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
+
+        return _eventStores.GetOrAdd(eventStore, created);
     }
 
     /// <inheritdoc/>

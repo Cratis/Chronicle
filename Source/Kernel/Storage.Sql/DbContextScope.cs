@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="DbContext">The database context.</param>
 /// <param name="OnDispose">Action to execute on dispose.</param>
 /// <typeparam name="T">The type of the DbContext.</typeparam>
-public record DbContextScope<T>(T DbContext, Action OnDispose) : IAsyncDisposable
+public record DbContextScope<T>(T DbContext, Action OnDispose) : IAsyncDisposable, IDisposable
     where T : DbContext
 {
     /// <inheritdoc/>
@@ -19,5 +19,19 @@ public record DbContextScope<T>(T DbContext, Action OnDispose) : IAsyncDisposabl
     {
         OnDispose?.Invoke();
         await DbContext.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Releases the scope from a synchronous context.
+    /// </summary>
+    /// <remarks>
+    /// Exists for callers bound to a synchronous disposal contract - <see cref="IDisposable"/> implementations
+    /// that cannot be widened to <see cref="IAsyncDisposable"/> without a breaking change. Those callers would
+    /// otherwise have to block a thread on <see cref="DisposeAsync"/>, which is never allowed in grain context.
+    /// </remarks>
+    public void Dispose()
+    {
+        OnDispose?.Invoke();
+        DbContext.Dispose();
     }
 }

@@ -3,20 +3,25 @@
 
 extern alias KernelCore;
 
+using KernelConstraints = KernelCore::Cratis.Chronicle.Events.Constraints;
 using KernelEventSequences = KernelCore::Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
 /// <summary>
 /// Represents a fake <see cref="IGrainFactory"/> that returns the in-process kernel
-/// <see cref="KernelEventSequences::EventSequence"/> grain for any <see cref="KernelEventSequences::IEventSequence"/> lookup.
+/// <see cref="KernelEventSequences::EventSequence"/> grain for any <see cref="KernelEventSequences::IEventSequence"/> lookup,
+/// and an optional in-process <see cref="KernelConstraints::IConstraints"/> for the grain's own constraints-version lookups.
 /// </summary>
 /// <remarks>
 /// All grain factory methods other than <c>GetGrain&lt;TGrainInterface&gt;(string, string?)</c> throw
-/// <see cref="NotSupportedException"/>, since only event-sequence grain lookups are needed in test scenarios.
+/// <see cref="NotSupportedException"/>, since only string-keyed grain lookups are needed in test scenarios.
 /// </remarks>
-/// <param name="grain">The kernel <see cref="KernelEventSequences::EventSequence"/> grain to return.</param>
-internal sealed class InProcessGrainFactory(KernelEventSequences::EventSequence grain) : IGrainFactory
+/// <param name="grain">The kernel <see cref="KernelEventSequences::EventSequence"/> grain to return, if any.</param>
+/// <param name="constraints">The in-process <see cref="KernelConstraints::IConstraints"/> to return, if any.</param>
+internal sealed class InProcessGrainFactory(
+    KernelEventSequences::EventSequence? grain = null,
+    KernelConstraints::IConstraints? constraints = null) : IGrainFactory
 {
     /// <inheritdoc/>
     public TGrainInterface GetGrain<TGrainInterface>(Guid primaryKey, string? grainClassNamePrefix = null)
@@ -32,9 +37,14 @@ internal sealed class InProcessGrainFactory(KernelEventSequences::EventSequence 
     public TGrainInterface GetGrain<TGrainInterface>(string primaryKey, string? grainClassNamePrefix = null)
         where TGrainInterface : IGrainWithStringKey
     {
-        if (grain is TGrainInterface result)
+        if (grain is TGrainInterface fromGrain)
         {
-            return result;
+            return fromGrain;
+        }
+
+        if (constraints is TGrainInterface fromConstraints)
+        {
+            return fromConstraints;
         }
 
         throw new NotSupportedException($"Grain interface '{typeof(TGrainInterface).FullName}' is not supported in test scenarios.");

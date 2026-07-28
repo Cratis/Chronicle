@@ -78,7 +78,7 @@ public class EventStoreStorage(
     public IReducerDefinitionsStorage Reducers { get; } = new ReducerDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase);
+    public IProjectionDefinitionsStorage Projections { get; } = new CachingProjectionDefinitionsStorage(new ProjectionDefinitionsStorage(eventStoreDatabase));
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
@@ -103,18 +103,19 @@ public class EventStoreStorage(
             return instance;
         }
 
-        return _namespaces[@namespace] =
-            new EventStoreNamespaceStorage(
-                EventStore,
-                @namespace,
-                eventStoreDatabase.GetNamespaceDatabase(@namespace),
-                EventTypes,
-                Observers,
-                expandoObjectConverter,
-                jsonSerializerOptions,
-                sinksFactory(@namespace),
-                jobTypes,
-                options,
-                loggerFactory);
+        var created = new EventStoreNamespaceStorage(
+            EventStore,
+            @namespace,
+            eventStoreDatabase.GetNamespaceDatabase(@namespace),
+            EventTypes,
+            Observers,
+            expandoObjectConverter,
+            jsonSerializerOptions,
+            sinksFactory(@namespace),
+            jobTypes,
+            options,
+            loggerFactory);
+
+        return _namespaces.GetOrAdd(@namespace, created);
     }
 }

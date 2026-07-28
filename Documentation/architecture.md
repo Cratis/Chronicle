@@ -81,7 +81,7 @@ Keeping event processing in the kernel means your application stays thin: it exp
 
 - [Concepts](./concepts/) — each piece in depth, starting with the [Glossary](./concepts/glossary.md).
 - [Projections, reducers, and reactors](./concepts/observer-patterns.md) — what runs inside the kernel.
-- [Storage configuration](./hosting/configuration/storage.md) — MongoDB, PostgreSQL, Microsoft SQL Server, and SQLite.
+- [Storage configuration](./hosting/configuration/storage) — MongoDB, PostgreSQL, Microsoft SQL Server, and SQLite.
 - [CLI Chronicle commands](/cli/chronicle/) — operate events, observers, read models, jobs, and recommendations from a terminal.
 - [OpenTelemetry](./hosting/configuration/open-telemetry.md) — logs, traces, and metrics.
 - [Hosting](./hosting/) — running the kernel in development and production.

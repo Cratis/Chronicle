@@ -49,7 +49,10 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
 
-        State = WithSubtractedPartitionHandledEventCounts(State, partition);
+        var handledCountsStorage = GetObserverHandledCountsStorage();
+        var partitionCounts = await handledCountsStorage.GetFor(_observerId, partition);
+        State = WithSubtractedPartitionHandledEventCounts(State, partitionCounts);
+        await handledCountsStorage.RemoveFor(_observerId, partition);
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, Definition.EventTypes));
 
         State.ReplayingPartitions.Add(partition);

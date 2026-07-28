@@ -33,7 +33,7 @@ public class and_subscriber_returns_failed_without_a_last_successful_observation
 
     async Task Because() => await _observer.Handle(EventSourceId, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, _eventSequenceNumberToHandle)]);
 
-    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_write_state_twice() => _storageStats.Writes.ShouldEqual(2);
     [Fact] void should_have_same_next_event_sequence_number_state() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual(_eventSequenceNumberToHandle);
     [Fact] void should_have_same_last_handled_event_sequence_number_state() => _stateStorage.State.LastHandledEventSequenceNumber.Value.ShouldEqual(41UL);
     [Fact] void should_increment_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);

@@ -21,7 +21,8 @@ namespace Cratis.Chronicle.Projections.Engine;
 public class Projection : IProjection, IDisposable
 {
     readonly Subject<ProjectionEventContext> _subject = new();
-    Dictionary<EventType, KeyResolver> _eventTypesToKeyResolver = [];
+    Dictionary<EventTypeId, KeyResolver> _keyResolverByEventTypeId = [];
+    Dictionary<EventTypeId, ProjectionOperationType> _operationTypeByEventTypeId = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -119,6 +120,9 @@ public class Projection : IProjection, IDisposable
     public bool HasParent => Parent != default;
 
     /// <inheritdoc/>
+    public bool IsEventSourceKeyed { get; private set; }
+
+    /// <inheritdoc/>
     public IProjection? Parent { get; private set; }
 
     /// <inheritdoc/>
@@ -132,40 +136,38 @@ public class Projection : IProjection, IDisposable
     internal CompositeDisposable Subscriptions { get; } = new();
 
     /// <inheritdoc/>
-    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Event.Context.EventType.Id));
+    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => _keyResolverByEventTypeId.ContainsKey(_.Event.Context.EventType.Id));
 
     /// <inheritdoc/>
-    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Context.EventType.Id));
+    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => _keyResolverByEventTypeId.ContainsKey(_.Context.EventType.Id));
 
     /// <inheritdoc/>
     public void OnNext(ProjectionEventContext context) => _subject.OnNext(context);
 
     /// <inheritdoc/>
-    public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.Keys.Any(_ => _.Id == eventType.Id);
+    public bool Accepts(EventType eventType) => _keyResolverByEventTypeId.ContainsKey(eventType.Id);
 
     /// <inheritdoc/>
     public bool HasKeyResolverFor(EventType eventType) =>
-        _eventTypesToKeyResolver.Keys.Any(_ => _.Id == eventType.Id);
+        _keyResolverByEventTypeId.ContainsKey(eventType.Id);
 
     /// <inheritdoc/>
     public KeyResolver GetKeyResolverFor(EventType eventType)
     {
-        var resolvedKey = _eventTypesToKeyResolver.Keys.FirstOrDefault(_ => _.Id == eventType.Id);
-        if (resolvedKey == default)
+        if (!_keyResolverByEventTypeId.TryGetValue(eventType.Id, out var keyResolver))
         {
-            ThrowIfMissingKeyResolverForEventType(new(eventType.Id, eventType.Generation, eventType.Tombstone));
+            throw new MissingKeyResolverForEventType(new(eventType.Id, eventType.Generation, eventType.Tombstone));
         }
 
-        return _eventTypesToKeyResolver[resolvedKey!];
+        return keyResolver;
     }
 
     /// <inheritdoc/>
     public ProjectionOperationType GetOperationTypeFor(EventType eventType)
     {
-        var match = OperationTypes.Keys.FirstOrDefault(_ => _.Id == eventType.Id);
-        if (match != default)
+        if (_operationTypeByEventTypeId.TryGetValue(eventType.Id, out var operationType))
         {
-            return OperationTypes[match];
+            return operationType;
         }
 
         foreach (var child in ChildProjections)
@@ -189,12 +191,41 @@ public class Projection : IProjection, IDisposable
         EventTypesWithKeyResolver = eventTypesWithKeyResolver;
         var eventTypes = eventTypesWithKeyResolver.ToArray();
         EventTypes = eventTypes.Select(_ => _.EventType).ToArray();
-        _eventTypesToKeyResolver = eventTypes.ToDictionary(
-            _ => new EventType(_.EventType.Id, _.EventType.Generation, _.EventType.Tombstone),
-            _ => _.KeyResolver);
+
+        // Dispatch matches purely by event type id (ignoring generation/tombstone), so the resolver map is
+        // keyed by id. When several entries share an id, the first in registration order wins — the same
+        // entry the previous FirstOrDefault-by-id scan returned.
+        var keyResolverByEventTypeId = new Dictionary<EventTypeId, KeyResolver>();
+        foreach (var entry in eventTypes)
+        {
+            if (!keyResolverByEventTypeId.ContainsKey(entry.EventType.Id))
+            {
+                keyResolverByEventTypeId[entry.EventType.Id] = entry.KeyResolver;
+            }
+        }
+
+        _keyResolverByEventTypeId = keyResolverByEventTypeId;
+
+        // A child collection routes events to a parent document, so a projection with any child projection can
+        // collapse distinct event sources and must keep the coarse lock regardless of its own resolvers.
+        IsEventSourceKeyed =
+            eventTypes.Length > 0 &&
+            !ChildProjections.Any() &&
+            eventTypes.All(_ => _.ResolvesToEventSourceId);
 
         OwnEventTypes = ownEventTypes;
         OperationTypes = operationTypes;
+
+        var operationTypeByEventTypeId = new Dictionary<EventTypeId, ProjectionOperationType>();
+        foreach (var (eventType, operationType) in operationTypes)
+        {
+            if (!operationTypeByEventTypeId.ContainsKey(eventType.Id))
+            {
+                operationTypeByEventTypeId[eventType.Id] = operationType;
+            }
+        }
+
+        _operationTypeByEventTypeId = operationTypeByEventTypeId;
     }
 
     /// <inheritdoc/>
@@ -206,13 +237,5 @@ public class Projection : IProjection, IDisposable
         _subject.OnCompleted();
         Subscriptions.Dispose();
         _subject.Dispose();
-    }
-
-    void ThrowIfMissingKeyResolverForEventType(EventType eventType)
-    {
-        if (!_eventTypesToKeyResolver.ContainsKey(eventType))
-        {
-            throw new MissingKeyResolverForEventType(eventType);
-        }
     }
 }
