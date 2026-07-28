@@ -104,12 +104,12 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
         INamedTypeSymbol readModelType,
         bool autoMapIsOn)
     {
-        foreach (var (targetName, eventPropertyName) in GetExplicitMappings(builderCallback))
+        var explicitMapping = GetExplicitMappings(builderCallback)
+            .FirstOrDefault(mapping => CrossSubjectPiiJoin.IsPii(eventType, mapping.EventPropertyName));
+
+        if (explicitMapping.EventPropertyName is not null)
         {
-            if (CrossSubjectPiiJoin.IsPii(eventType, eventPropertyName))
-            {
-                return (targetName, eventPropertyName);
-            }
+            return explicitMapping;
         }
 
         if (!autoMapIsOn)
@@ -122,15 +122,11 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
             .Select(member => member.Name)
             .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var member in CrossSubjectPiiJoin.GetMembers(eventType))
-        {
-            if (mappableNames.Contains(member.Name) && CrossSubjectPiiJoin.IsPii(eventType, member.Name))
-            {
-                return (member.Name, member.Name);
-            }
-        }
+        var autoMapped = CrossSubjectPiiJoin.GetMembers(eventType)
+            .FirstOrDefault(member => mappableNames.Contains(member.Name) && CrossSubjectPiiJoin.IsPii(eventType, member.Name))
+            .Name;
 
-        return null;
+        return autoMapped is null ? null : (autoMapped, autoMapped);
     }
 
     /// <summary>
@@ -155,16 +151,16 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
     {
         on = string.Empty;
 
-        foreach (var invocation in builderCallback.DescendantNodes().OfType<InvocationExpressionSyntax>())
-        {
-            if (invocation.Expression is not MemberAccessExpressionSyntax member ||
-                member.Name.Identifier.Text != OnMethodName ||
-                invocation.ArgumentList.Arguments.Count != 1 ||
-                !IsJoinBuilderMethod(context, invocation))
-            {
-                continue;
-            }
+        var onInvocations = builderCallback.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(invocation =>
+                invocation.Expression is MemberAccessExpressionSyntax member &&
+                member.Name.Identifier.Text == OnMethodName &&
+                invocation.ArgumentList.Arguments.Count == 1 &&
+                IsJoinBuilderMethod(context, invocation));
 
+        foreach (var invocation in onInvocations)
+        {
             if (TryGetSimpleMemberName(invocation.ArgumentList.Arguments[0].Expression, out on))
             {
                 return true;
