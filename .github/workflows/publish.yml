@@ -440,7 +440,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: cratis/chronicle
           readme-filepath: ./Docker/README.md
-          short-description: "Event sourcing engine - stores events as the source of truth and keeps read models up to date from them."
+          short-description: "Event sourcing engine - stores events as the source of truth and derives read models from them."
 
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
