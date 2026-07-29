@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -17,15 +18,30 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 /// <c>ExpandoObjectConverter</c> to fall back to generic unknown-type
 /// conversion - preserving all event content without schema-driven type coercion.
 /// No compliance rules, migrations, or validations are applied.
+/// What has been registered is remembered for the lifetime of the process, so that registering the same event
+/// types again - which every client does when it reconnects - is recognized as the no-op it is.
 /// </remarks>
 public class EventTypesStorage : IEventTypesStorage
 {
-    /// <inheritdoc/>
-    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
-        Task.FromResult(false);
+    readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitions = new();
 
     /// <inheritdoc/>
-    public Task<bool> Register(EventTypeDefinition definition) => Task.FromResult(false);
+    public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
+        Register(new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []));
+
+    /// <inheritdoc/>
+    public Task<bool> Register(EventTypeDefinition definition)
+    {
+        _definitions.AddOrUpdate(
+            definition.Id,
+            static (_, incoming) => incoming,
+            static (_, existing, incoming) => Merge(existing, incoming),
+            definition);
+
+        // There is no cache anywhere to evict for an in-memory single-node store, so a registration never asks
+        // anyone to invalidate.
+        return Task.FromResult(false);
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes() =>
@@ -37,7 +53,7 @@ public class EventTypesStorage : IEventTypesStorage
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions() =>
-        Task.FromResult(Enumerable.Empty<EventTypeDefinition>());
+        Task.FromResult<IEnumerable<EventTypeDefinition>>([.. _definitions.Values]);
 
     /// <inheritdoc/>
     public Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId) =>
@@ -75,4 +91,14 @@ public class EventTypesStorage : IEventTypesStorage
     public void Invalidate(EventTypeId eventTypeId)
     {
     }
+
+    static EventTypeDefinition Merge(EventTypeDefinition existing, EventTypeDefinition incoming) =>
+        incoming with
+        {
+            Generations = existing.Generations
+                .Where(_ => incoming.Generations.All(incomingGeneration => incomingGeneration.Generation != _.Generation))
+                .Concat(incoming.Generations)
+                .ToList(),
+            Migrations = incoming.Migrations.Any() ? incoming.Migrations : existing.Migrations
+        };
 }
