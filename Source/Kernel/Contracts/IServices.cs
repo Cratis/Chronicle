@@ -6,6 +6,7 @@ using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -96,6 +97,11 @@ public interface IServices
     /// Gets the <see cref="IWebhooks"/> service.
     /// </summary>
     IWebhooks Webhooks { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IExternalServices"/> service.
+    /// </summary>
+    IExternalServices ExternalServices { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventStoreSubscriptions"/> service.

@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -36,6 +37,7 @@ using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventComplianc
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
 using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
+using KernelExternalServicesService = KernelCore::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
 using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
@@ -121,6 +123,9 @@ internal sealed class TestingServices(
             null!,
             new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+
+    readonly Lazy<IExternalServices> _externalServices = new(() =>
+        new KernelExternalServicesService(storage));
 
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
         new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
@@ -221,6 +226,9 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IWebhooks Webhooks => _webhooks.Value;
+
+    /// <inheritdoc/>
+    public IExternalServices ExternalServices => _externalServices.Value;
 
     /// <inheritdoc/>
     public IEventStoreSubscriptions EventStoreSubscriptions => _eventStoreSubscriptions.Value;

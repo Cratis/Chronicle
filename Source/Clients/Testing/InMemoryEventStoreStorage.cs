@@ -6,6 +6,7 @@ extern alias KernelConcepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
@@ -71,6 +72,9 @@ internal sealed class InMemoryEventStoreStorage(
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public IExternalServiceDefinitionsStorage ExternalServices => throw new NotSupportedException();
 
     /// <inheritdoc/>
     public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions => throw new NotSupportedException();

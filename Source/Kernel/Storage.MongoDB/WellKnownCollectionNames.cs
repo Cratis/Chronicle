@@ -104,6 +104,11 @@ public static class WellKnownCollectionNames
     public const string WebhookDefinitions = "webhooks";
 
     /// <summary>
+    /// The collection that holds external service definitions.
+    /// </summary>
+    public const string ExternalServiceDefinitions = "external-services";
+
+    /// <summary>
     /// The collection that holds event store subscription definitions.
     /// </summary>
     public const string EventStoreSubscriptionDefinitions = "event-store-subscriptions";

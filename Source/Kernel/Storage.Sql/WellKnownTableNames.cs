@@ -194,6 +194,11 @@ public static class WellKnownTableNames
     public const string WebhookDefinitions = "WebhookDefinitions";
 
     /// <summary>
+    /// The table that holds external service definitions.
+    /// </summary>
+    public const string ExternalServiceDefinitions = "ExternalServiceDefinitions";
+
+    /// <summary>
     /// The table that holds encryption keys for compliance handling.
     /// </summary>
     public const string EncryptionKeys = "EncryptionKeys";

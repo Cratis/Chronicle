@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
@@ -65,6 +66,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IWebhookDefinitionsStorage"/> for the event store.
     /// </summary>
     IWebhookDefinitionsStorage Webhooks { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IExternalServiceDefinitionsStorage"/> for the event store.
+    /// </summary>
+    IExternalServiceDefinitionsStorage ExternalServices { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventStoreSubscriptionDefinitionsStorage"/> for the event store.

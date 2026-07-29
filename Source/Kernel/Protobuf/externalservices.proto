@@ -1,0 +1,69 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.ExternalServices;
+import "google/protobuf/empty.proto";
+
+message AddExternalServices {
+   string EventStore = 1;
+   repeated ExternalServiceDefinition ExternalServices = 2;
+}
+message BasicAuthorization {
+   string Username = 1;
+   string Password = 2;
+}
+message BearerTokenAuthorization {
+   string Token = 1;
+}
+message DatabaseEndpointConfiguration {
+   string Host = 1;
+   int32 Port = 2;
+   string Database = 3;
+   string Username = 4;
+   string Password = 5;
+   map<string,string> Options = 6;
+}
+message ExternalServiceDefinition {
+   string Id = 1;
+   string Name = 2;
+   ExternalServiceEndpoint Endpoint = 3;
+}
+message ExternalServiceEndpoint {
+   ExternalServiceEndpointType Type = 1;
+   HttpEndpointConfiguration Http = 2;
+   DatabaseEndpointConfiguration Database = 3;
+}
+enum ExternalServiceEndpointType {
+   Http = 0;
+   MsSql = 1;
+   PostgreSql = 2;
+}
+message GetExternalServicesRequest {
+   string EventStore = 1;
+}
+message HttpEndpointConfiguration {
+   string Url = 1;
+   OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization Authorization = 2;
+   map<string,string> Headers = 3;
+}
+message IEnumerable_ExternalServiceDefinition {
+   repeated ExternalServiceDefinition items = 1;
+}
+message OAuthAuthorization {
+   string Authority = 1;
+   string ClientId = 2;
+   string ClientSecret = 3;
+}
+message OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization {
+   BasicAuthorization Value0 = 1;
+   BearerTokenAuthorization Value1 = 2;
+   OAuthAuthorization Value2 = 3;
+}
+message RemoveExternalServices {
+   string EventStore = 1;
+   repeated string ExternalServices = 2;
+}
+service ExternalServices {
+   rpc Add (AddExternalServices) returns (.google.protobuf.Empty);
+   rpc GetExternalServices (GetExternalServicesRequest) returns (IEnumerable_ExternalServiceDefinition);
+   rpc ObserveExternalServices (GetExternalServicesRequest) returns (stream IEnumerable_ExternalServiceDefinition);
+   rpc Remove (RemoveExternalServices) returns (.google.protobuf.Empty);
+}

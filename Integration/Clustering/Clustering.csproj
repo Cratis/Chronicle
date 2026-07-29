@@ -6,7 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../../Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />

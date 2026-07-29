@@ -14,6 +14,7 @@ using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventStoreSubscriptions;
+using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
@@ -190,6 +191,7 @@ public class EventStore : IEventStore
 
         Projections = projections;
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
+        ExternalServices = new ExternalServices.ExternalServices(this, loggerFactory.CreateLogger<ExternalServices.ExternalServices>());
         Subscriptions = new EventStoreSubscriptions.EventStoreSubscriptions(EventTypes, this, loggerFactory.CreateLogger<EventStoreSubscriptions.EventStoreSubscriptions>());
         FailedPartitions = new FailedPartitions(this);
 
@@ -284,6 +286,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IWebhooks Webhooks { get; }
+
+    /// <inheritdoc/>
+    public IExternalServices ExternalServices { get; }
 
     /// <inheritdoc/>
     public IEventStoreSubscriptions Subscriptions { get; }

@@ -63,6 +63,7 @@
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
+            "captures": "Captures",
             "reducers": "Reducers",
             "reactors": "Reactors",
             "sinks": "Sinks",
@@ -217,6 +218,60 @@
                     "oauth": "OAuth (Client Credentials)"
                 }
             },
+            "externalServices": {
+                "title": "External Services",
+                "empty": "No external services found",
+                "actions": {
+                    "add": "Add",
+                    "remove": "Remove"
+                },
+                "columns": {
+                    "name": "Name",
+                    "endpointType": "Endpoint Type",
+                    "endpoint": "Endpoint",
+                    "url": "URL",
+                    "authorization": "Authorization",
+                    "host": "Host",
+                    "port": "Port",
+                    "database": "Database",
+                    "username": "Username"
+                },
+                "dialogs": {
+                    "addExternalService": {
+                        "title": "Add External Service",
+                        "name": "Name",
+                        "endpointType": "Endpoint Type",
+                        "url": "URL",
+                        "authType": "Authorization Type",
+                        "basicUsername": "Username",
+                        "basicPassword": "Password",
+                        "bearerToken": "Bearer Token",
+                        "oauthAuthority": "OAuth Authority URL",
+                        "oauthClientId": "Client ID",
+                        "oauthClientSecret": "Client Secret",
+                        "host": "Host",
+                        "port": "Port",
+                        "database": "Database",
+                        "username": "Username",
+                        "password": "Password"
+                    },
+                    "removeExternalService": {
+                        "title": "Remove External Service",
+                        "message": "Are you sure you want to remove the external service '{name}'?"
+                    }
+                },
+                "endpointTypes": {
+                    "http": "HTTP",
+                    "msSql": "Microsoft SQL Server",
+                    "postgreSql": "PostgreSQL"
+                },
+                "authTypes": {
+                    "none": "None",
+                    "basic": "Basic",
+                    "bearer": "Bearer Token",
+                    "oauth": "OAuth (Client Credentials)"
+                }
+            },
             "projections": {
                 "title": "Projections",
                 "empty": "No projections",
@@ -247,6 +302,23 @@
                         "message": "This projection has no read model type specified. Enter a name to create one automatically from the event properties.",
                         "readModelNameLabel": "Read Model Name"
                     }
+                }
+            },
+            "captures": {
+                "title": "Captures",
+                "empty": "No captures",
+                "emptyEditor": "No captures. Press New to create one",
+                "columns": {
+                    "name": "Name"
+                },
+                "actions": {
+                    "new": "New",
+                    "save": "Save"
+                },
+                "saveDisabledReasons": {
+                    "emptyContent": "Editor is empty",
+                    "noChanges": "No changes to save",
+                    "validationErrors": "Fix validation errors first"
                 }
             }
         },
@@ -573,6 +645,12 @@
                 "eventProperty": "Event Property",
                 "type": "Type"
             }
+        },
+        "captureEditor": {
+            "tooltips": {
+                "help": "Show Capture Declaration Language help panel"
+            },
+            "languageReference": "Capture Declaration Language Reference"
         },
         "schemaEditor": {
             "columns": {
