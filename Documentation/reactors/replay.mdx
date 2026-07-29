@@ -1,0 +1,26 @@
+# Replay
+
+A reactor sees the same event twice for different reasons: once as it happens, and again whenever its observer
+is replayed. Those often call for different work — a confirmation that should go out once when an order is
+placed has no business going out again while a read model is being rebuilt.
+
+Mark a second handler for the same event type with the `Replay` attribute and it takes over for the duration
+of the replay.
+
+<ChronicleClientTabs snippet="reactors/replay/basic" />
+
+The rules are:
+
+- With a `Replay` handler, **only** it runs during a replay — the regular handler does not also run.
+- Without one, the regular handler runs during a replay exactly as it always has, so adding this to one event
+  type changes nothing for the others.
+- An event type handled **only** by a `Replay` handler is still subscribed to, so the replay it exists for
+  delivers it.
+
+Reach for [OnceOnly](once-only) instead when the side effect should simply not happen again. Use `Replay` when
+a replay needs to do something *different* rather than nothing.
+
+:::note[Client coverage]
+`Replay` is currently C#-only — Kotlin, Java, Elixir, and TypeScript have no equivalent marker, so a replay
+always re-runs the regular handler in those clients.
+:::

@@ -3,7 +3,6 @@
 
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Jobs.for_JobStateSerializer.given;
@@ -17,22 +16,9 @@ public class a_job_state_serializer : Specification
     {
         RegisterConceptSerializers();
 
-        if (!BsonClassMap.IsClassMapRegistered(typeof(JobState)))
-        {
-            BsonClassMap.RegisterClassMap<JobState>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapMember(c => c.Id);
-                cm.MapMember(c => c.Details);
-                cm.MapMember(c => c.Type);
-                cm.MapMember(c => c.Status);
-                cm.MapMember(c => c.Created);
-                cm.MapMember(c => c.StatusChanges);
-                cm.MapMember(c => c.Progress);
-                cm.MapMember(c => c.Request);
-            });
-        }
-
+        // JobState itself is mapped by the server's own JobStateClassMap, registered for the whole assembly in
+        // SpecSerializationSetup. Mapping it here instead would unmap nothing and leave Request mapped, giving
+        // these specs a document shape the silo never writes.
         if (!BsonClassMap.IsClassMapRegistered(typeof(SampleJobRequest)))
         {
             BsonClassMap.RegisterClassMap<SampleJobRequest>(cm =>

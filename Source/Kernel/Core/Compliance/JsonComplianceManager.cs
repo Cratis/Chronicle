@@ -87,7 +87,13 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
             if (schema.Properties is not null && value is not null)
             {
                 var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
-                var propertySchema = schema.GetFlattenedProperties().Single(_ => _.Name == property);
+                var flattenedProperties = schema.GetFlattenedProperties();
+
+                // FirstOrDefault rather than Single: a schema flattened across inheritance can declare the same
+                // property name more than once, and the duplicate is not a reason to fail the whole walk.
+                var propertySchema = flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
+                    throw new CompliancePropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
+
                 var handlerApplied = false;
                 foreach (var metadata in propertySchema.GetComplianceMetadata().Concat(complianceMetadataForContainer).DistinctBy(_ => _.metadataType))
                 {

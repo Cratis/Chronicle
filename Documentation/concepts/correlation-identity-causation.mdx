@@ -23,6 +23,16 @@ Kotlin's correlation manager scopes the id per-thread (`ThreadLocal`); Elixir an
 
 Every client provides the same three sentinel identities for well-known cases — `System`, `NotSet`, and `Unknown` — and supports on-behalf-of delegation chains (an identity that acted *for* another identity) via a `withoutDuplicates()`/`without_duplicates/1` helper that collapses repeated subjects in a long chain.
 
+### Renaming an identity
+
+The name recorded alongside an identity is a display name, and people's names change. Renaming updates it in
+one place for every event that identity has ever caused — the events themselves are untouched, since the name
+is not part of the fact they record.
+
+<ChronicleClientTabs snippet="concepts/correlation-identity-causation/renaming-an-identity" />
+
+The subject is the identity's stable key. It is what events are recorded against, so it does not change.
+
 ## Causation
 
 <ChronicleClientTabs snippet="concepts/correlation-identity-causation/causation" />

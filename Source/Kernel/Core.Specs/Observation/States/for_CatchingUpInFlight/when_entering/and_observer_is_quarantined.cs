@@ -24,5 +24,5 @@ public class and_observer_is_quarantined : given.a_catching_up_in_flight_state
         .DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());
 
-    [Fact] void should_transition_to_routing() => _observer.Received(1).TransitionTo<Routing>();
+    [Fact] void should_transition_to_routing() => _stateMachine.Received(1).TransitionTo<Routing>();
 }

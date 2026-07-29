@@ -16,23 +16,29 @@ namespace Cratis.Chronicle.Reactors;
 public class ReactorMiddlewares(ActivatedArtifact<IReactorMiddleware>[] activatedMiddlewares) : IReactorMiddlewares
 {
     /// <inheritdoc/>
-    public Task BeforeInvoke(EventContext eventContext, object @event)
+    public Task BeforeInvoke(EventContext eventContext, object @event) => BeforeInvoke(ReactorId.Unspecified, eventContext, @event);
+
+    /// <inheritdoc/>
+    public Task AfterInvoke(EventContext eventContext, object @event) => AfterInvoke(ReactorId.Unspecified, eventContext, @event);
+
+    /// <inheritdoc/>
+    public Task BeforeInvoke(ReactorId reactorId, EventContext eventContext, object @event)
     {
         if (activatedMiddlewares.Length == 0)
         {
             return Task.CompletedTask;
         }
-        return Task.WhenAll(activatedMiddlewares.Select(_ => _.Instance.BeforeInvoke(eventContext, @event)));
+        return Task.WhenAll(activatedMiddlewares.Select(_ => _.Instance.BeforeInvoke(reactorId, eventContext, @event)));
     }
 
     /// <inheritdoc/>
-    public Task AfterInvoke(EventContext eventContext, object @event)
+    public Task AfterInvoke(ReactorId reactorId, EventContext eventContext, object @event)
     {
         if (activatedMiddlewares.Length == 0)
         {
             return Task.CompletedTask;
         }
-        return Task.WhenAll(activatedMiddlewares.Select(_ => _.Instance.AfterInvoke(eventContext, @event)));
+        return Task.WhenAll(activatedMiddlewares.Select(_ => _.Instance.AfterInvoke(reactorId, eventContext, @event)));
     }
 
     /// <inheritdoc/>

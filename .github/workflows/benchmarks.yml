@@ -3,10 +3,9 @@ name: Benchmarks
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-# Benchmarks on pull requests are covered by the `benchmarks` job in
-# dotnet-build.yml, which reuses that workflow's cached build instead of
-# compiling again from scratch. This workflow tracks the series on main,
-# where its cache key also lines up with the one publish.yml restores.
+# This is where the benchmark series lives. Pull requests only check that the benchmark projects still
+# build (the `benchmarks-build` job in dotnet-build.yml) - running them there added ~13 minutes to the
+# critical path for a result that could never fail the build.
 on:
   workflow_dispatch:
   push:
@@ -32,16 +31,21 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.PAT_WORKFLOWS }}
 
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
+      # Kept as its own step: when the build and the run share one step, a build failure is reported as a
+      # successful step and only surfaces later as "no benchmark result was found".
+      - name: Build Benchmarks
+        working-directory: ./Benchmarks/Chronicle.Benchmarks
+        run: dotnet build -c Release /p:TreatWarningsAsErrors=false
+
       - name: Run Benchmarks
         working-directory: ./Benchmarks/Chronicle.Benchmarks
-        run: |
-          dotnet build -c Release /p:TreatWarningsAsErrors=false
-          dotnet run -c Release --no-build -- --filter '*' --exporters json --artifacts BenchmarkDotNet.Artifacts
+        run: dotnet run -c Release --no-build -- --filter '*' --exporters json --artifacts BenchmarkDotNet.Artifacts
 
       - name: Find and Copy Results
         run: |
@@ -69,3 +73,19 @@ jobs:
         with:
           name: benchmark-data
           path: Documentation/benchmarks/benchmark-data.json
+
+      # The series used to reach the repository by way of a cache written on the pull request and restored at
+      # release time. With the run living here, commit it directly - the same shape coverage statistics use.
+      - name: Commit benchmark results
+        if: github.event_name == 'push'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add Documentation/benchmarks/benchmark-data.json
+          if git diff --staged --quiet; then
+            echo "No benchmark result changes to commit"
+          else
+            git commit -m "Update benchmark results [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push
+          fi

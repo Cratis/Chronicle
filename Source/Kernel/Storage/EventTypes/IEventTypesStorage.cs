@@ -36,6 +36,47 @@ public interface IEventTypesStorage
     Task<bool> Register(EventTypeDefinition definition);
 
     /// <summary>
+    /// Register a whole batch of <see cref="EventTypeToRegister">event types</see> in one operation.
+    /// </summary>
+    /// <param name="eventTypes">The <see cref="EventTypeToRegister">event types</see> to register.</param>
+    /// <returns>The <see cref="EventTypeId">identifiers</see> of the event types whose stored representation was created or changed.</returns>
+    /// <remarks>
+    /// A client registers every event type it knows about at startup, so doing it one at a time costs a round trip
+    /// per event type against the underlying store. Taking the whole batch lets an implementation collapse that into
+    /// a single read and a single write. The default implementation registers one at a time, so an implementation
+    /// only needs to override this when it can do better.
+    /// Only the identifiers of event types that actually changed are returned - re-registering identical event types
+    /// yields none, so routine client reconnects do not trigger cluster-wide cache eviction.
+    /// </remarks>
+    async Task<IEnumerable<EventTypeId>> Register(IEnumerable<EventTypeToRegister> eventTypes)
+    {
+        var mutated = new List<EventTypeId>();
+
+        foreach (var eventType in eventTypes)
+        {
+            var definition = eventType.Definition;
+            var generations = definition.Generations.ToList();
+
+            // A single generation without migrations is exactly what the simple registration expresses - anything
+            // else needs the full definition.
+            var changed = generations.Count == 1 && !definition.Migrations.Any()
+                ? await Register(
+                    new EventType(definition.Id, generations[0].Generation, definition.Tombstone),
+                    generations[0].Schema,
+                    definition.Owner,
+                    eventType.Source)
+                : await Register(definition);
+
+            if (changed)
+            {
+                mutated.Add(definition.Id);
+            }
+        }
+
+        return mutated;
+    }
+
+    /// <summary>
     /// Get the latest <see cref="EventTypeSchema">event schema</see> for all registered <see cref="EventType">event types</see>.
     /// </summary>
     /// <returns>A collection of <see cref="EventTypeSchema">event schemas</see>.</returns>

@@ -197,41 +197,35 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     static bool PropertyIsNullable(Type type, JsonSchemaExporterContext context) =>
         Nullable.GetUnderlyingType(type) is not null || IsAnnotatedNullable(context);
 
+    static void ThrowIfSelfReferencing(Type type, Type representedAs)
+    {
+        if (representedAs == type)
+        {
+            throw new SelfReferencingJsonSchemaType(type);
+        }
+    }
+
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {
         var type = context.TypeInfo.Type;
         var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
+        // An explicit [JsonSchemaType] declaration states what a type's own JsonConverter actually produces.
+        // System.Text.Json's schema exporter cannot introspect a custom converter, so without this the schema
+        // describes the CLR shape while the wire carries something else entirely — and the value stops
+        // round-tripping through the sink. It is resolved before the concept branch so an explicit declaration
+        // always wins over an inferred representation, and after the Nullable<> unwrap so that a nullable
+        // value type is recognized as its adorned underlying type.
+        if (formatType.GetCustomAttribute<JsonSchemaTypeAttribute>() is { } jsonSchemaType)
+        {
+            ThrowIfSelfReferencing(formatType, jsonSchemaType.Type);
+            return RepresentAs(jsonSchemaType.Type, type, context);
+        }
+
         // Handle concept types - redirect to the underlying primitive type's schema
         if (type.IsConcept())
         {
-            var underlyingType = type.GetConceptValueType();
-            var conceptSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingType, _exporterOptions);
-
-            // Preserve nullable marker for concept types (e.g. EventSequenceNumber?).
-            // STJ's JsonSchemaExporter does not propagate NRT nullable markers through custom converters,
-            // so we check the actual property nullability via NullabilityInfoContext. When the property
-            // is nullable we append '?' to the format so that IsNullable() returns true and
-            // GetDefaultValue() returns null rather than the primitive default (e.g. 0 for ulong).
-            if (conceptSchema is JsonObject conceptSchemaObj)
-            {
-                if (_metadataResolver.HasMetadataFor(type))
-                {
-                    AddComplianceMetadata(conceptSchemaObj, _metadataResolver.GetMetadataFor(type));
-                }
-
-                if (PropertyIsNullable(type, context) &&
-                    conceptSchemaObj.TryGetPropertyValue("format", out var format))
-                {
-                    var formatStr = format!.GetValue<string>();
-                    if (!formatStr.EndsWith('?'))
-                    {
-                        conceptSchemaObj["format"] = formatStr + "?";
-                    }
-                }
-            }
-
-            return conceptSchema;
+            return RepresentAs(type.GetConceptValueType(), type, context);
         }
 
         // Handle enumerables whose element type is a concept (e.g. IReadOnlyList<Requirement>).
@@ -368,5 +362,47 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         return schema;
+    }
+
+    /// <summary>
+    /// Produces the schema of a different type in place of the declared type's own schema.
+    /// </summary>
+    /// <param name="representedAs">The <see cref="Type"/> whose schema describes what actually goes on the wire.</param>
+    /// <param name="declaredType">The declared <see cref="Type"/> being represented.</param>
+    /// <param name="context">The <see cref="JsonSchemaExporterContext"/> of the node being transformed.</param>
+    /// <returns>The schema node for <paramref name="representedAs"/>, carrying the declared type's metadata.</returns>
+    /// <remarks>
+    /// The declared type's compliance metadata has to travel onto the substituted schema — the classification
+    /// belongs to the value, not to the shape it happens to serialize as, and losing it here would persist a
+    /// <c>[PII]</c> value in the clear.
+    /// <para>
+    /// The nullable marker has to be re-applied for the same reason: System.Text.Json's schema exporter does not
+    /// propagate NRT nullable markers through custom converters, so the actual property nullability is read via
+    /// <see cref="NullabilityInfoContext"/>. When the property is nullable, '?' is appended to the format so that
+    /// <c>IsNullable()</c> returns true and <c>GetDefaultValue()</c> returns null rather than the primitive
+    /// default (e.g. 0 for ulong).
+    /// </para>
+    /// </remarks>
+    JsonNode RepresentAs(Type representedAs, Type declaredType, JsonSchemaExporterContext context)
+    {
+        var representedSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(representedAs, _exporterOptions);
+        if (representedSchema is not JsonObject representedSchemaObject) return representedSchema;
+
+        if (_metadataResolver.HasMetadataFor(declaredType))
+        {
+            AddComplianceMetadata(representedSchemaObject, _metadataResolver.GetMetadataFor(declaredType));
+        }
+
+        if (PropertyIsNullable(declaredType, context) &&
+            representedSchemaObject.TryGetPropertyValue("format", out var format))
+        {
+            var formatValue = format!.GetValue<string>();
+            if (!formatValue.EndsWith('?'))
+            {
+                representedSchemaObject["format"] = formatValue + "?";
+            }
+        }
+
+        return representedSchema;
     }
 }

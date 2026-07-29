@@ -37,6 +37,25 @@ public Task MethodName(TEvent @event, EventContext context)
 - **Return type** — `Task` or `void`, or a side-effect type (`TEvent`, `ReactorSideEffect`, or a collection of either) returned directly (sync) or wrapped in `Task<...>` (async). Prefer `Task`/async for real side effects, but synchronous returns are fully supported — there is no "always async" requirement.
 - **Method name** — can be anything descriptive. The name is for readability, not dispatch.
 
+## Handling replay differently — `[Replay]`
+
+A reactor sees the same event twice for different reasons: as it happens, and again when its observer is replayed. When those call for different work, mark a second handler for the same event type with **`[Replay]`** and it takes over for the duration of the replay.
+
+```csharp
+public class OrderNotifications(INotificationService notifications) : IReactor
+{
+    public Task OrderPlaced(OrderPlaced @event) => notifications.Notify($"Order {@event.Number} placed.");
+
+    [Replay]
+    public Task OrderPlacedDuringReplay(OrderPlaced @event) => Task.CompletedTask;
+}
+```
+
+- With a `[Replay]` handler, **only** it runs during replay — the regular handler does not also run.
+- Without one, the regular handler runs during replay exactly as before, so this changes nothing for existing reactors.
+- An event type handled *only* by a `[Replay]` handler is still subscribed to.
+- Reach for **`[OnceOnly]`** instead when the side effect should simply not happen again; use `[Replay]` when replay needs to do something *different* rather than nothing.
+
 ## Taking Dependencies
 
 Beyond the event and `EventContext`, a handler method can take any number of additional parameters as dependencies. Only the first parameter is fixed (it is the event that drives dispatch); every parameter after it is resolved when the method is invoked.

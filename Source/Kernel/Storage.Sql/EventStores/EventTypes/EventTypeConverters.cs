@@ -126,6 +126,10 @@ public static class EventTypeConverters
         var generations = eventType.Schemas.Select(kvp =>
         {
             var schema = JsonSchema.FromJson(kvp.Value);
+
+            // Normalize exactly like ToKernel does - callers compare a stored schema against an incoming one, and a
+            // difference in compliance metadata alone would read as a breaking schema change.
+            schema.EnsureComplianceMetadata();
             return new EventTypeGenerationDefinition(new EventTypeGeneration(kvp.Key), schema);
         }).ToList();
 

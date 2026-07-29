@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Observation.States.for_Observing.given;
 public class an_observing_state : Specification
 {
     protected IObserver _observer;
+    protected IStateMachine<ObserverState> _stateMachine;
     protected IAppendedEventsQueues _appendedEventsQueues;
     protected IEventSequence _eventSequence;
     protected Observing _state;
@@ -44,7 +45,8 @@ public class an_observing_state : Specification
         _eventStoreNamespace = "some_namespace";
         _eventSequenceId = EventSequenceId.Log;
 
-        _observer = Substitute.For<IObserver>();
+        _observer = Substitute.For<IObserver, IStateMachine<ObserverState>>();
+        _stateMachine = (IStateMachine<ObserverState>)_observer;
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
         _appendedEventsQueue = Substitute.For<IAppendedEventsQueue>();
         _eventSequence = Substitute.For<IEventSequence>();
@@ -74,7 +76,7 @@ public class an_observing_state : Specification
             _definitionState,
             _eventSequence,
             Substitute.For<ILogger<Observing>>());
-        _state.SetStateMachine(_observer);
+        _state.SetStateMachine(_stateMachine);
         _storedState = new ObserverState
         {
             Identifier = _observerId,

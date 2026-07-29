@@ -22,6 +22,8 @@
   href: concurrency.mdx
 - name: Cross-cutting properties
   href: cross-cutting-properties.mdx
+- name: Overriding schema representation
+  href: schema-representation.mdx
 - name: Revision
   href: revision.md
 - name: Redaction
