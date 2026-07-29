@@ -34,9 +34,29 @@ public static class ChronicleContainerImageTags
     public const string DevelopmentSlimTag = "latest-development-slim";
 
     /// <summary>
+    /// MongoDB container image name.
+    /// </summary>
+    public const string MongoDBImage = "mongo";
+
+    /// <summary>
+    /// Tag for the MongoDB container image used by <c>AddCratisChronicleMongoDB</c>.
+    /// </summary>
+    public const string MongoDBTag = "8.0";
+
+    /// <summary>
+    /// Name of the single-node replica set that <c>AddCratisChronicleMongoDB</c> initiates.
+    /// </summary>
+    public const string MongoDBReplicaSetName = "rs0";
+
+    /// <summary>
     /// Name of the gRPC endpoint.
     /// </summary>
     public const string GrpcEndpointName = "grpc";
+
+    /// <summary>
+    /// Name of the MongoDB TCP endpoint.
+    /// </summary>
+    public const string MongoDBEndpointName = "tcp";
 
     /// <summary>
     /// Environment variable key for the Chronicle storage type (e.g. <c>MongoDB</c>).
