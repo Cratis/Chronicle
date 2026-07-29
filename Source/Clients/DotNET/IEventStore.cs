@@ -8,6 +8,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.ExternalServices;
+using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
@@ -119,6 +120,11 @@ public interface IEventStore
     /// Gets the <see cref="IPIIManager"/> for managing PII encryption keys (GDPR right-to-erasure) for the event store.
     /// </summary>
     IPIIManager PII { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IIdentityManager"/> for managing identities for the event store.
+    /// </summary>
+    IIdentityManager Identities { get; }
 
     /// <summary>
     /// Discover all artifacts for the event store.
