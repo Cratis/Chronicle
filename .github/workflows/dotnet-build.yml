@@ -26,6 +26,10 @@ on:
       - "Source/**/*.cs"
       - "Source/**/*.csproj"
       - "Integration/**"
+      # The benchmarks job builds these, so a change here has to run it. Without this a broken benchmark
+      # project lands green and fails on the next unrelated pull request instead.
+      - "Benchmarks/**/*.cs"
+      - "Benchmarks/**/*.csproj"
       - ".github/workflows/dotnet-build.yml"
       - ".github/workflows/integration.yml"
 
@@ -405,11 +409,15 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
+      # Kept as its own step: when the build and the run share one step, a build failure is reported as a
+      # successful step and only surfaces three steps later as "no benchmark result was found".
+      - name: Build Benchmarks
+        working-directory: ./Benchmarks/Chronicle.Benchmarks
+        run: dotnet build -c Release /p:TreatWarningsAsErrors=false
+
       - name: Run Benchmarks
         working-directory: ./Benchmarks/Chronicle.Benchmarks
-        run: |
-          dotnet build -c Release /p:TreatWarningsAsErrors=false
-          dotnet run -c Release --no-build -- --filter '*' --exporters json --artifacts BenchmarkDotNet.Artifacts
+        run: dotnet run -c Release --no-build -- --filter '*' --exporters json --artifacts BenchmarkDotNet.Artifacts
 
       - name: Find and Copy Results
         run: |
