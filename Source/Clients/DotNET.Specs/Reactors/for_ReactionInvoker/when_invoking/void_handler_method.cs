@@ -29,8 +29,10 @@ public class void_handler_method : Specification
     async Task Because() => _result = await _invoker.Invoke(new MyEvent(), EventContext.Empty);
 
     [Fact] void should_succeed() => _result.ExceptionResult.TryGetException(out _).ShouldBeFalse();
-    [Fact] void should_call_before_invoke() => _middlewares.Received(1).BeforeInvoke(Arg.Any<EventContext>(), Arg.Any<object>());
-    [Fact] void should_call_after_invoke() => _middlewares.Received(1).AfterInvoke(Arg.Any<EventContext>(), Arg.Any<object>());
+    [Fact] void should_call_before_invoke() => _middlewares.Received(1).BeforeInvoke(Arg.Any<ReactorId>(), Arg.Any<EventContext>(), Arg.Any<object>());
+    [Fact] void should_call_after_invoke() => _middlewares.Received(1).AfterInvoke(Arg.Any<ReactorId>(), Arg.Any<EventContext>(), Arg.Any<object>());
+    [Fact] void should_tell_before_invoke_which_reactor_is_running() => _middlewares.Received(1).BeforeInvoke(typeof(ReactorWithVoidHandlerMethodForEventType).GetReactorId(), Arg.Any<EventContext>(), Arg.Any<object>());
+    [Fact] void should_tell_after_invoke_which_reactor_is_running() => _middlewares.Received(1).AfterInvoke(typeof(ReactorWithVoidHandlerMethodForEventType).GetReactorId(), Arg.Any<EventContext>(), Arg.Any<object>());
 
     class ReactorWithVoidHandlerMethodForEventType : IReactor
     {

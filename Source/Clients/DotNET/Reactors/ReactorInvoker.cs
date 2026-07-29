@@ -81,7 +81,7 @@ public class ReactorInvoker(
 
             if (_methodsByEventType.TryGetValue(eventType, out var method))
             {
-                await middlewares.BeforeInvoke(eventContext, content);
+                await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
                 var arguments = await _argumentsResolver.Resolve(
                     method,
@@ -117,7 +117,7 @@ public class ReactorInvoker(
             // So we catch and log any exceptions from the middlewares.
             try
             {
-                await middlewares.AfterInvoke(eventContext, content);
+                await middlewares.AfterInvoke(reactorId, eventContext, content);
             }
             catch (Exception ex)
             {
