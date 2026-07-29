@@ -55,20 +55,28 @@ public class JobStateSerializer(IJobTypes jobTypes) : SerializerBase<JobState>
     {
         var actualType = args.NominalType ?? typeof(JobState);
         var (jobState, requestBookmark, endBookmark) = DeserializeJobStateExceptRequest(context, actualType);
-        context.Reader.ReturnToBookmark(requestBookmark);
-        var jobRequestClrType = jobTypes.GetRequestClrTypeForOrThrow(jobState.Type);
-        actualType.GetProperty(nameof(JobState.Request))!
-            .SetValue(jobState, BsonSerializer.Deserialize(context.Reader, jobRequestClrType));
 
-        context.Reader.ReturnToBookmark(endBookmark);
+        // Serialize only writes the request when there is one, and JobState.Request starts out unset, so a state
+        // persisted before its request was assigned has no request element to come back to. Leave it unset rather
+        // than returning to a bookmark that was never taken.
+        if (requestBookmark is not null)
+        {
+            context.Reader.ReturnToBookmark(requestBookmark);
+            var jobRequestClrType = jobTypes.GetRequestClrTypeForOrThrow(jobState.Type);
+            actualType.GetProperty(nameof(JobState.Request))!
+                .SetValue(jobState, BsonSerializer.Deserialize(context.Reader, jobRequestClrType));
+
+            context.Reader.ReturnToBookmark(endBookmark);
+        }
+
         context.Reader.ReadEndDocument();
         return jobState;
     }
 
-    static (JobState JobState, BsonReaderBookmark JobRequestBookmark, BsonReaderBookmark EndBookmark) DeserializeJobStateExceptRequest(BsonDeserializationContext context, Type actualType)
+    static (JobState JobState, BsonReaderBookmark? JobRequestBookmark, BsonReaderBookmark EndBookmark) DeserializeJobStateExceptRequest(BsonDeserializationContext context, Type actualType)
     {
         var jobState = (JobState)Activator.CreateInstance(actualType)!;
-        BsonReaderBookmark requestBookmark = default!;
+        BsonReaderBookmark? requestBookmark = null;
         context.Reader.ReadStartDocument();
         var bsonCLassMap = BsonClassMap.LookupClassMap(actualType).AllMemberMaps;
         while (context.Reader.ReadBsonType() != BsonType.EndOfDocument)
