@@ -2,3 +2,7 @@
   href: index.md
 - name: Get started
   href: getting-started.md
+- name: Captures
+  href: captures/toc.yml
+- name: External Services
+  href: external-services.md

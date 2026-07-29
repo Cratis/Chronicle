@@ -1,4 +1,7 @@
-# Declarative Captures
+---
+title: Declarative captures
+description: Fluent C# builder API for defining CDC captures in code — ICapturer, ICaptureBuilder, source configuration, mapping, and append rules.
+---
 
 Declarative captures use fluent C# builder APIs to define CDC behavior in code.
 
@@ -33,7 +36,7 @@ API source options:
 - `OnRoute(route)`
 - `PollEvery(interval)`
 
-`FromApi(api, ...)` references a configured [External Service](../../external-services/index.md) by name. The External Service holds the base URL and authentication, so no authentication is configured on the API source. If no route is configured, the External Service base URL is used directly.
+`FromApi(api, ...)` references a configured [External Service](/chronicle/external-services/) by name. The External Service holds the base URL and authentication, so no authentication is configured on the API source. If no route is configured, the External Service base URL is used directly.
 
 Webhook source options (webhook sources are inbound and configure their own authentication):
 

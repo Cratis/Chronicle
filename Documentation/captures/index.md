@@ -12,16 +12,16 @@ A capture definition describes:
 - **Append rules**: which event to append and when to append it
 - **Scopes**: root, nested objects, and child collections
 
-Chronicle supports three authoring approaches:
+Chronicle supports three authoring approaches. Only the first is language-neutral — the other two are .NET client features, documented alongside the rest of the .NET client:
 
 - **Capture Declaration Language (CDL)** for text-based definitions
-- **Declarative C# API** for fluent definitions in code
-- **Model-bound C# API** for attribute-based definitions
+- **Declarative API** (.NET) for fluent definitions in code
+- **Model-bound API** (.NET) for attribute-based definitions
 
 ## Topics
 
 | Topic | Description |
 | ----- | ----------- |
 | [Capture Declaration Language](capture-declaration-language/index.md) | CDL syntax, semantics, and formal language specification |
-| [Declarative Captures](declarative/index.md) | Fluent C# API (`ICapturer` + `ICaptureBuilder`) |
-| [Model-Bound Captures](model-bound/index.md) | Attribute-based capture declarations |
+| [Declarative Captures](/chronicle/clients/dotnet/captures/declarative/) | .NET client fluent API (`ICapturer` + `ICaptureBuilder`) |
+| [Model-Bound Captures](/chronicle/clients/dotnet/captures/model-bound/) | .NET client attribute-based capture declarations |

@@ -1,4 +1,7 @@
-# Model-Bound Captures
+---
+title: Model-bound captures
+description: Attribute-based capture declarations in the .NET client — source, key, append conditions, and field mappings declared with attributes.
+---
 
 Model-bound captures use attributes to declare source, key, append conditions, and field mappings.
 
@@ -19,8 +22,9 @@ public class InvoiceCapture;
 
 `ApiCapture` references a named API configuration. If `Route` is not set, the configured API base URL is used directly.
 
-> [!NOTE]
-> Authentication is not declared on the capture attribute. It is configured in code where the source is configured, so that secrets never live in the capture declaration. See [Configuring authentication](../capture-declaration-language/index.md#configuring-authentication).
+:::note
+Authentication is not declared on the capture attribute. It is configured in code where the source is configured, so that secrets never live in the capture declaration. See [Configuring authentication](/chronicle/captures/capture-declaration-language/#configuring-authentication).
+:::
 
 ## Append conditions on event types
 
