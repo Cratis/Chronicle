@@ -26,6 +26,10 @@ on:
       - "Source/**/*.cs"
       - "Source/**/*.csproj"
       - "Integration/**"
+      # The benchmarks job builds these, so a change here has to run it. Without this a broken benchmark
+      # project lands green and fails on the next unrelated pull request instead.
+      - "Benchmarks/**/*.cs"
+      - "Benchmarks/**/*.csproj"
       - ".github/workflows/dotnet-build.yml"
       - ".github/workflows/integration.yml"
 
@@ -384,11 +388,17 @@ jobs:
             "${{ github.sha }}" \
             "${{ github.event.head_commit.message || format('Coverage update for {0}', github.head_ref || github.ref_name) }}"
 
-  benchmarks:
+  # Running the benchmarks takes ~13 minutes and sits on the critical path behind dotnet-build, which made it
+  # the single thing deciding how long a pull request takes to go green. It cannot fail a build either
+  # (fail-on-alert is false), so the series is tracked on main by benchmarks.yml instead.
+  #
+  # What still has to hold per pull request is that the benchmark projects BUILD, or a broken one lands green
+  # and breaks main. Building them the way BenchmarkDotNet does - it regenerates and rebuilds with
+  # ArtifactsPath set, which changes which project references apply - is what catches that, and costs ~2
+  # minutes off the critical path rather than ~13 on it.
+  benchmarks-build:
     runs-on: ubuntu-latest
     needs: [dotnet-build]
-    outputs:
-      benchmark-cache-key: ${{ steps.export-benchmark-key.outputs.key }}
 
     steps:
       - name: Checkout code
@@ -405,40 +415,11 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Run Benchmarks
-        working-directory: ./Benchmarks/Chronicle.Benchmarks
+      - name: Build benchmarks the way BenchmarkDotNet does
         run: |
-          dotnet build -c Release /p:TreatWarningsAsErrors=false
-          dotnet run -c Release --no-build -- --filter '*' --exporters json --artifacts BenchmarkDotNet.Artifacts
-
-      - name: Find and Copy Results
-        run: |
-          mkdir -p Benchmarks/results
-          find Benchmarks/Chronicle.Benchmarks -path "*/BenchmarkDotNet.Artifacts/results/*.json" -type f -exec cp {} Benchmarks/results/ \;
-          test -n "$(find Benchmarks/results -maxdepth 1 -name '*.json' -print -quit)" || { echo "No benchmark JSON files were produced"; exit 1; }
-          ls -la Benchmarks/results/
-          python3 Benchmarks/merge-results.py
-
-      - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Cratis Benchmarks
-          tool: 'benchmarkdotnet'
-          output-file-path: Benchmarks/results/combined.json
-          external-data-json-path: Documentation/benchmarks/benchmark-data.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          alert-threshold: '150%'
-          comment-on-alert: true
-          fail-on-alert: false
-          alert-comment-cc-users: '@einari'
-
-      - name: Cache benchmark results
-        uses: actions/cache@v4
-        with:
-          path: Documentation/benchmarks/benchmark-data.json
-          key: benchmark-cache-${{ github.sha }}
-
-      - name: Export benchmark cache key
-        id: export-benchmark-key
-        run: |
-          echo "key=benchmark-cache-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          dotnet build Benchmarks/Chronicle.Benchmarks/Chronicle.Benchmarks.csproj \
+            -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts"
+          dotnet build Benchmarks/Chronicle.Benchmarks.Clustering/Chronicle.Benchmarks.Clustering.csproj \
+            -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts-clustering"
