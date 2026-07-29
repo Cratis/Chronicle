@@ -3,7 +3,6 @@
 
 using System.Runtime.CompilerServices;
 using Cratis.Arc.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Observation;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 
@@ -32,11 +31,8 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// dropped both the tail aggregation and the duplicate-sequence-number detection when spec classes ran in parallel.
 /// </para>
 /// <para>
-/// So a class map a spec depends on is registered here rather than lazily from the spec that needs it. This is not
-/// yet every <see cref="IBsonClassMapFor{T}"/> the server registers: the <c>JobState</c> specs map
-/// <c>JobState.Request</c>, while the server's <c>JobStateClassMap</c> deliberately unmaps it and lets
-/// <c>JobStateSerializer</c> own it, so registering the server's map here fails them. That divergence is a
-/// fidelity gap in those specs, not something to paper over from this file.
+/// So every <see cref="IBsonClassMapFor{T}"/> the server registers is registered here too, discovered the same way
+/// <c>AddCratisMongoDB</c> discovers them, rather than one at a time from whichever spec first needs one.
 /// </para>
 /// </remarks>
 internal static class SpecSerializationSetup
@@ -50,7 +46,28 @@ internal static class SpecSerializationSetup
         new ConventionPacks().Provide();
         ConventionRegistry.Register(Cratis.Arc.MongoDB.ConventionPacks.IgnoreExtraElements, new ConventionPack { new IgnoreExtraElementsConvention(true) }, _ => true);
         BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
-        BsonClassMap.RegisterClassMap<Event>(classMap => new EventClassMap().Configure(classMap));
-        BsonClassMap.RegisterClassMap<ObserverPartitionCounts>(classMap => new ObserverPartitionCountsClassMap().Configure(classMap));
+        RegisterClassMaps();
+    }
+
+    static void RegisterClassMaps()
+    {
+        var classMaps = typeof(EventClassMap).Assembly
+            .GetTypes()
+            .Where(type => type is { IsAbstract: false, IsInterface: false, ContainsGenericParameters: false })
+            .Select(type => (Type: type, Interface: Array.Find(type.GetInterfaces(), _ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IBsonClassMapFor<>))))
+            .Where(_ => _.Interface is not null);
+
+        foreach (var (type, @interface) in classMaps)
+        {
+            var documentType = @interface!.GetGenericArguments()[0];
+            if (BsonClassMap.IsClassMapRegistered(documentType))
+            {
+                continue;
+            }
+
+            var classMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(documentType))!;
+            @interface.GetMethod(nameof(IBsonClassMapFor<object>.Configure))!.Invoke(Activator.CreateInstance(type), [classMap]);
+            BsonClassMap.RegisterClassMap(classMap);
+        }
     }
 }

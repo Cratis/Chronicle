@@ -35,10 +35,16 @@ public class when_deserializing_with_sample_job_request : given.a_job_state_seri
 
     void Because()
     {
-        var bsonDocument = _original.ToBsonDocument();
+        // Round-trip through the serializer in both directions, the way the storage does. Serializing through
+        // the class map instead would write a document shape the silo never produces.
+        var bsonDocument = new BsonDocument();
+        using (var writer = new BsonDocumentWriter(bsonDocument))
+        {
+            _serializer.Serialize(BsonSerializationContext.CreateRoot(writer), default, _original);
+        }
+
         using var reader = new BsonDocumentReader(bsonDocument);
-        var context = BsonDeserializationContext.CreateRoot(reader);
-        _result = _serializer.Deserialize(context, default);
+        _result = _serializer.Deserialize(BsonDeserializationContext.CreateRoot(reader), default);
     }
 
     [Fact] void should_deserialize_job_id() => _result.Id.ShouldEqual(_original.Id);
