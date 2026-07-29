@@ -25,4 +25,22 @@ public interface IReactorMiddlewares : IAsyncDisposable
     /// <param name="event">The actual event that it will be called with.</param>
     /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
     Task AfterInvoke(EventContext eventContext, object @event);
+
+    /// <summary>
+    /// Invoked before the actual invoke, for a known reactor.
+    /// </summary>
+    /// <param name="reactorId">The <see cref="ReactorId"/> of the reactor the event is being observed for.</param>
+    /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
+    /// <param name="event">The actual event that it will be called with.</param>
+    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+    Task BeforeInvoke(ReactorId reactorId, EventContext eventContext, object @event) => BeforeInvoke(eventContext, @event);
+
+    /// <summary>
+    /// Invoked after the actual invoke, for a known reactor.
+    /// </summary>
+    /// <param name="reactorId">The <see cref="ReactorId"/> of the reactor the event was observed for.</param>
+    /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
+    /// <param name="event">The actual event that it will be called with.</param>
+    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+    Task AfterInvoke(ReactorId reactorId, EventContext eventContext, object @event) => AfterInvoke(eventContext, @event);
 }
