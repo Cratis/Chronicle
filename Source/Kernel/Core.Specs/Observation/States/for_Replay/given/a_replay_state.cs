@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Observation.States.for_Replay.given;
 public class a_replay_state : Specification
 {
     protected IObserver _observer;
+    protected IStateMachine<ObserverState> _stateMachine;
     protected ObserverKey _observerKey;
     protected IJobsManager _jobsManager;
     protected ObserverSubscription _subscription;
@@ -30,7 +31,8 @@ public class a_replay_state : Specification
 
     void Establish()
     {
-        _observer = Substitute.For<IObserver>();
+        _observer = Substitute.For<IObserver, IStateMachine<ObserverState>>();
+        _stateMachine = (IStateMachine<ObserverState>)_observer;
         _observerId = Guid.NewGuid().ToString();
         _observerKey = new(_observerId, Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         _jobsManager = Substitute.For<IJobsManager>();
@@ -45,7 +47,7 @@ public class a_replay_state : Specification
             _jobsManager,
             Substitute.For<IStorage>(),
             Substitute.For<ILogger<Replay>>());
-        _state.SetStateMachine(_observer);
+        _state.SetStateMachine(_stateMachine);
 
         _storedState = new ObserverState
         {

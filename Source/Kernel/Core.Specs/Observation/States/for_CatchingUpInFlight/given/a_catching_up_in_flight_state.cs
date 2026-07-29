@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.given;
 public class a_catching_up_in_flight_state : Specification
 {
     protected IObserver _observer;
+    protected IStateMachine<ObserverState> _stateMachine;
     protected CatchingUpInFlight _state;
     protected ObserverState _storedState;
     protected ObserverState _resultingStoredState;
@@ -24,7 +25,8 @@ public class a_catching_up_in_flight_state : Specification
 
     void Establish()
     {
-        _observer = Substitute.For<IObserver>();
+        _observer = Substitute.For<IObserver, IStateMachine<ObserverState>>();
+        _stateMachine = (IStateMachine<ObserverState>)_observer;
         _observerKey = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), EventSequenceId.Log);
 
         _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();
@@ -42,7 +44,7 @@ public class a_catching_up_in_flight_state : Specification
             _failuresState,
             _jobsManager,
             Substitute.For<ILogger<CatchingUpInFlight>>());
-        _state.SetStateMachine(_observer);
+        _state.SetStateMachine(_stateMachine);
 
         _storedState = new ObserverState
         {

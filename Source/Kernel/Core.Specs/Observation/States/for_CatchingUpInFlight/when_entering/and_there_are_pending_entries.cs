@@ -37,5 +37,5 @@ public class and_there_are_pending_entries : given.a_catching_up_in_flight_state
 
     [Fact] void should_mark_first_partition_as_catching_up() => _resultingStoredState.CatchingUpPartitions.ShouldContain(_firstPartition);
     [Fact] void should_mark_second_partition_as_catching_up() => _resultingStoredState.CatchingUpPartitions.ShouldContain(_secondPartition);
-    [Fact] void should_transition_to_routing() => _observer.Received(1).TransitionTo<Routing>();
+    [Fact] void should_transition_to_routing() => _stateMachine.Received(1).TransitionTo<Routing>();
 }

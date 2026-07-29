@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
 using Orleans.Concurrency;
 
@@ -15,7 +14,12 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Defines an observer in the system.
 /// </summary>
-public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
+/// <remarks>
+/// The observer is implemented as a state machine internally, but that is an implementation concern and
+/// deliberately not part of this grain contract - state transitions are driven from within the observer
+/// implementation, never across a grain reference.
+/// </remarks>
+public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
     /// Ensure the observer existence.

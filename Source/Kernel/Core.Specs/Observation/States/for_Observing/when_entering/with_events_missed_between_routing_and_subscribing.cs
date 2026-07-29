@@ -20,5 +20,5 @@ public class with_events_missed_between_routing_and_subscribing : given.an_obser
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
     [Fact] void should_subscribe_to_stream() => _appendedEventsQueues.Received(1).Subscribe(_observerKey, _eventTypes);
-    [Fact] void should_transition_back_to_routing() => _observer.Received(1).TransitionTo<Routing>();
+    [Fact] void should_transition_back_to_routing() => _stateMachine.Received(1).TransitionTo<Routing>();
 }
