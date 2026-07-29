@@ -3,9 +3,13 @@ name: Benchmarks
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+# Benchmarks on pull requests are covered by the `benchmarks` job in
+# dotnet-build.yml, which reuses that workflow's cached build instead of
+# compiling again from scratch. This workflow tracks the series on main,
+# where its cache key also lines up with the one publish.yml restores.
 on:
   workflow_dispatch:
-  pull_request:
+  push:
     branches:
       - main
     paths:
@@ -13,7 +17,9 @@ on:
       - 'Source/**'
 
 permissions:
-  contents: read
+  # `comment-on-alert` posts a commit comment on push events (it posts a PR
+  # comment on pull_request), and that needs contents: write.
+  contents: write
   deployments: write
   pull-requests: write
 

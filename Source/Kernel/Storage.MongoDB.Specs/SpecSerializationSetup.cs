@@ -21,11 +21,19 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// it, reading back any stored type that has no id member fails on the <c>_id</c> the server generated, which is a
 /// failure specs would see and production would not.
 /// </para>
+/// <para>
+/// The same reasoning applies to <see cref="EventClassMap"/>, which is what makes the event's sequence number the
+/// document <c>_id</c>. Any spec that merely renders a <c>Builders&lt;Event&gt;</c> expression — building an index
+/// key, for instance — makes the driver auto-register a default class map for <see cref="Event"/>, and a default
+/// map gives every appended event a generated <c>ObjectId</c> instead. Registering it lazily from a spec base
+/// therefore loses a race against unrelated spec classes running in parallel, silently dropping both the tail
+/// aggregation and the duplicate-sequence-number detection that depend on that mapping.
+/// </para>
 /// </remarks>
 internal static class SpecSerializationSetup
 {
     /// <summary>
-    /// Registers the server's MongoDB serialization conventions and providers.
+    /// Registers the server's MongoDB serialization conventions, providers and class maps.
     /// </summary>
     [ModuleInitializer]
     internal static void Initialize()
@@ -33,5 +41,6 @@ internal static class SpecSerializationSetup
         new ConventionPacks().Provide();
         ConventionRegistry.Register(Cratis.Arc.MongoDB.ConventionPacks.IgnoreExtraElements, new ConventionPack { new IgnoreExtraElementsConvention(true) }, _ => true);
         BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
+        BsonClassMap.RegisterClassMap<Event>(classMap => new EventClassMap().Configure(classMap));
     }
 }

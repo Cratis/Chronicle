@@ -1,7 +1,11 @@
 name: gRPC Contract Compatibility
 
+# Scoped to this workflow by name rather than `github.workflow`. In a called
+# reusable workflow `github.workflow` resolves to the *caller*, so the generic
+# form produced a group identical to the caller's and the two runs contended
+# for the same slot.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: grpc-compatibility-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 on:
@@ -44,10 +48,14 @@ jobs:
         with:
           path: current
 
+      # The `inputs` context is only populated for workflow_call, so on a plain
+      # pull_request `inputs.base-ref` was empty and checkout fell back to the
+      # triggering ref -- making the baseline identical to the current tree and
+      # the comparison below unable to report a breaking change.
       - name: Checkout base code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.base-ref }}
+          ref: ${{ inputs.base-ref || github.event.pull_request.base.ref || 'main' }}
           path: baseline
 
       - name: Setup .NET

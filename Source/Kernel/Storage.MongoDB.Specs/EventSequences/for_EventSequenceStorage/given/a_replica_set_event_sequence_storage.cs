@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -15,16 +14,12 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventSequenceStorage.given;
 
 public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixture fixture) : Specification
 {
-    static readonly object _registrationLock = new();
-    static bool _serializationRegistered;
-
     protected EventSequenceStorage _storage;
     protected EventType _eventType;
 
@@ -33,8 +28,6 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
 
     void Establish()
     {
-        EnsureBsonSerialization();
-
         _eventType = new EventType("some-event", EventTypeGeneration.First);
         _databaseName = $"chronicle_event_sequence_{Guid.NewGuid():N}";
         _client = new MongoClient(fixture.ConnectionString);
@@ -93,23 +86,4 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
         DateTimeOffset.UtcNow,
         new ExpandoObject(),
         EventHash.NotSet);
-
-    static void EnsureBsonSerialization()
-    {
-        lock (_registrationLock)
-        {
-            if (_serializationRegistered)
-            {
-                return;
-            }
-
-            BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
-            if (!BsonClassMap.IsClassMapRegistered(typeof(Event)))
-            {
-                BsonClassMap.RegisterClassMap<Event>(classMap => new EventClassMap().Configure(classMap));
-            }
-
-            _serializationRegistered = true;
-        }
-    }
 }
