@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
 using KernelEventTypes = Cratis.Chronicle.Services.Events.EventTypes;
@@ -31,6 +32,21 @@ public class all_dependencies : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_systemEventSequence);
+        _eventTypesStorage.GetAllDefinitions().Returns([]);
+        _eventTypesStorage.Register(Arg.Any<IEnumerable<Concepts.Events.EventTypeToRegister>>()).Returns([]);
         _subject = new KernelEventTypes(_storage, _grainFactory, _eventTypesCacheClient);
     }
+
+    protected void StoredEventTypes(params Concepts.Events.EventTypeDefinition[] definitions) =>
+        _eventTypesStorage.GetAllDefinitions().Returns(definitions);
+
+    protected static Concepts.Events.EventTypeDefinition StoredEventType(string eventTypeId, params (uint Generation, string Schema)[] generations) =>
+        new(
+            eventTypeId,
+            Concepts.Events.EventTypeOwner.Client,
+            false,
+            generations.Select(_ => new Concepts.Events.EventTypeGenerationDefinition(
+                _.Generation,
+                JsonSchema.FromJsonAsync(_.Schema).GetAwaiter().GetResult())).ToArray(),
+            []);
 }
