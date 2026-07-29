@@ -62,6 +62,13 @@ No issues are currently flagged as potentially obsolete (none have been inactive
 
 <!-- HAND-WRITTEN SECTIONS START -->
 
+> **Check the issue is still open before picking anything up here.** The hand-written sections were written
+> against a much older tree and the repository has churned heavily since — projects were consolidated
+> (`Shared` → `Concepts`, `Grains`/`Grains.Interfaces`/`Services`/`Setup` → `Core`) and a good deal of what is
+> described below has shipped. On 2026-07-29 these were each verified against HEAD and closed as already
+> implemented, while still appearing in the tables below: #579, #784, #896, #962, #963, #1250, #1309, #1343,
+> #1345, #1396, #1536, #1537, #1791, #2290, #3421.
+
 ## 1. Already Implemented in Code
 
 These features exist in the current codebase in a substantially complete form. **All issues in this
@@ -110,7 +117,7 @@ These issues have sufficiently clear requirements to implement directly.
 | # | Issue | Notes |
 |---|-------|-------|
 | [#362](https://github.com/Cratis/Chronicle/issues/362) | Provide a codespaces / devcontainer | Add `.devcontainer/devcontainer.json` with Docker Compose configuration referencing the existing `docker-compose.yml`. |
-| [#482](https://github.com/Cratis/Chronicle/issues/482) | Enable CA1852 (sealed keyword) and apply it | `.editorconfig` currently has `dotnet_diagnostic.CA1852.severity = none`. Enable it, then add `sealed` to all eligible classes. |
+| [#482](https://github.com/Cratis/Chronicle/issues/482) | Enable CA1852 (sealed keyword) and apply it | Already enabled for production source — `AnalysisMode=AllEnabledByDefault` in `Directory.Build.props` turns it on, and the `dotnet_diagnostic.CA1852.severity = none` in `.editorconfig` sits under `[{**/*.Specs/**/*.cs,Integration/**/*.cs}]`, so it applies to specs only. CA1852 also covers only *internal* types and is skipped for assemblies exposing `InternalsVisibleTo`, which these do, so it buys little. The title's actual goal needs sealing *public* types, which removes the ability to subclass and is a breaking change — an API policy decision, not a mechanical sweep. |
 | [#523](https://github.com/Cratis/Chronicle/issues/523) | Optimize iterations of lists with `CollectionMarshal.AsSpan()` | Identify `List<T>` iterations in hot paths (event dispatch, serialization) and use `CollectionMarshal.AsSpan()`. |
 | [#547](https://github.com/Cratis/Chronicle/issues/547) | Proper error message when specifying same property twice in projection definitions | Add duplicate-key checks in `FromBuilder`, `JoinBuilder`, `CompositeKeyBuilder` etc. and throw a descriptive exception. |
 | [#579](https://github.com/Cratis/Chronicle/issues/579) | Add support for enums as values in projections (e.g. `.ToValue()`) | Handle `enum` types in `EventValueProviders.cs` and expression resolvers so enum values are correctly converted rather than failing. |
