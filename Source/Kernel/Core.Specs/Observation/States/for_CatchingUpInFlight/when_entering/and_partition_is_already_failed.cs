@@ -28,5 +28,5 @@ public class and_partition_is_already_failed : given.a_catching_up_in_flight_sta
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
             Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == _partition));
 
-    [Fact] void should_transition_to_routing() => _observer.Received(1).TransitionTo<Routing>();
+    [Fact] void should_transition_to_routing() => _stateMachine.Received(1).TransitionTo<Routing>();
 }

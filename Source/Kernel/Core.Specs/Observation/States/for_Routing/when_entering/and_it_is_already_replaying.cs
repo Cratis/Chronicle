@@ -12,6 +12,6 @@ public class and_it_is_already_replaying : given.a_routing_state
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_only_perform_one_transition() => _observer.Received(1).TransitionTo<IState<ObserverState>>();
-    [Fact] void should_transition_to_replay() => _observer.Received(1).TransitionTo<Replay>();
+    [Fact] void should_only_perform_one_transition() => _stateMachine.Received(1).TransitionTo<IState<ObserverState>>();
+    [Fact] void should_transition_to_replay() => _stateMachine.Received(1).TransitionTo<Replay>();
 }

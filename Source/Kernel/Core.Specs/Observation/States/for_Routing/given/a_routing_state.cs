@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Observation.States.for_Routing.given;
 public class a_routing_state : Specification
 {
     protected IObserver _observer;
+    protected IStateMachine<ObserverState> _stateMachine;
     protected IEventSequence _eventSequence;
     protected Routing _state;
     protected ObserverState _storedState;
@@ -29,7 +30,8 @@ public class a_routing_state : Specification
 
     void Establish()
     {
-        _observer = Substitute.For<IObserver>();
+        _observer = Substitute.For<IObserver, IStateMachine<ObserverState>>();
+        _stateMachine = (IStateMachine<ObserverState>)_observer;
         _eventSequence = Substitute.For<IEventSequence>();
         _observerKey = new(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();
@@ -40,7 +42,7 @@ public class a_routing_state : Specification
             _definitionState,
             _eventSequence,
             Substitute.For<ILogger<Routing>>());
-        _state.SetStateMachine(_observer);
+        _state.SetStateMachine(_stateMachine);
         _storedState = new ObserverState
         {
             RunningState = ObserverRunningState.Unknown,
