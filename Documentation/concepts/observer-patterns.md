@@ -30,7 +30,7 @@ flowchart TD
 
 Idempotency for projections and reducers is handled by Chronicle, but it is worth knowing what "handled" means: a rebuild always starts from a clean read model, and for a read model keyed by event source id Chronicle also refuses any write that does not move that instance's last-handled sequence number forward, so an event redelivered after a crash changes nothing. A projection whose key deliberately collapses several event sources onto one instance — a join, a constant key, a parent hierarchy — is written out of order by design and cannot use that guard; for those Chronicle instead keeps its recovery window down to a single batch.
 
-Building state doesn't have to mean *materializing* it. Projections and reducers also compute state **on demand** — Chronicle replays the relevant events through them when you ask, which is how [reading a single instance](../read-models/getting-single-instance) serves strongly consistent results. That makes them useful beyond query views: validation rules, [aggregate roots in Arc](/arc/backend/chronicle/aggregates/aggregate-root.md), or anything else that needs current state it can trust.
+Building state doesn't have to mean *materializing* it. Projections and reducers also compute state **on demand** — Chronicle replays the relevant events through them when you ask, which is how [reading a single instance](../read-models/getting-single-instance) serves strongly consistent results. That makes them useful beyond query views: validation rules, [aggregate roots in Arc](/arc/backend/chronicle/aggregates/defining-an-aggregate-root.md), or anything else that needs current state it can trust.
 
 ## Choosing
 

@@ -35,4 +35,4 @@ One nuance worth carrying with you: [projections and reducers](./observer-patter
 factories for materialized, queryable views. The state they derive from events can be stored in a
 database for fast queries — or computed on demand, with strong consistency, for anything that must
 trust the current state: validation rules, command handlers, or
-[aggregate roots in Arc](/arc/backend/chronicle/aggregates/aggregate-root.md).
+[aggregate roots in Arc](/arc/backend/chronicle/aggregates/defining-an-aggregate-root.md).
