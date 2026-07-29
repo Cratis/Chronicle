@@ -540,6 +540,11 @@ public class Reducers : IReducers
                 exceptionMessages = reduceResult.ErrorMessages;
                 exceptionStackTrace = reduceResult.StackTrace;
                 state = ObservationState.Failed;
+                _logger.ReducerFailed(
+                    handler.Id,
+                    appendedEvents[0].Context.SequenceNumber,
+                    appendedEvents[^1].Context.SequenceNumber,
+                    string.Join(Environment.NewLine, reduceResult.ErrorMessages));
             }
         }
         catch (Exception ex)
