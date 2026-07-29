@@ -85,6 +85,7 @@ public class EventStoreForTesting : IEventStore
     readonly Lazy<IUnitOfWorkManager> _unitOfWorkManager;
     readonly Lazy<IEventSeeding> _seeding;
     readonly Lazy<IPIIManager> _pii;
+    readonly Lazy<IIdentityManager> _identities;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
@@ -219,6 +220,7 @@ public class EventStoreForTesting : IEventStore
             _artifactActivator,
             NullLogger<EventSeeding>.Instance));
         _pii = new Lazy<IPIIManager>(() => new PIIManager(Name, Namespace, Connection));
+        _identities = new Lazy<IIdentityManager>(() => new IdentityManager(Name, Namespace, Connection));
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -278,6 +280,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IPIIManager PII => _pii.Value;
+
+    /// <inheritdoc/>
+    public IIdentityManager Identities => _identities.Value;
 
     /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.

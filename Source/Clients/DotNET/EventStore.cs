@@ -244,6 +244,7 @@ public class EventStore : IEventStore
             loggerFactory.CreateLogger<EventSeeding>());
 
         PII = new Compliance.GDPR.PIIManager(eventStoreName, @namespace, connection);
+        Identities = new IdentityManager(eventStoreName, @namespace, connection);
 
         if (autoDiscoverAndRegister)
         {
@@ -307,6 +308,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public Compliance.GDPR.IPIIManager PII { get; }
+
+    /// <inheritdoc/>
+    public IIdentityManager Identities { get; }
 
     /// <inheritdoc/>
     public async Task DiscoverAll()
