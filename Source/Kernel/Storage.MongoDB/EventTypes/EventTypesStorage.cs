@@ -159,6 +159,72 @@ public class EventTypesStorage(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Collapses the whole batch into one read and one write: the current documents for every identifier are read in
+    /// a single query, compared in memory to work out which event types actually change anything, and only those are
+    /// written - as a single unordered bulk write. Every event type merges its generations into the stored document,
+    /// leaving generations another silo may have registered untouched, exactly as the single-event-type registration
+    /// does. Migrations are only written when the event type carries them, so a client that does not know about an
+    /// event type's migrations cannot erase them.
+    /// </remarks>
+    public async Task<IEnumerable<EventTypeId>> Register(IEnumerable<EventTypeToRegister> eventTypes)
+    {
+        var all = eventTypes.ToList();
+
+        if (all.Count == 0)
+        {
+            return [];
+        }
+
+        var collection = GetCollection();
+        var ids = all.ConvertAll(_ => _.Definition.Id);
+        using var cursor = await collection.FindAsync(Builders<EventType>.Filter.In(_ => _.Id, ids)).ConfigureAwait(false);
+        var stored = (await cursor.ToListAsync()).ToDictionary(_ => _.Id);
+
+        var writes = new List<WriteModel<EventType>>();
+        var mutated = new List<EventTypeId>();
+
+        foreach (var eventType in all)
+        {
+            var definition = eventType.Definition;
+            var schemas = definition.Generations.ToDictionary(
+                _ => _.Generation.ToString(),
+                _ => BsonDocument.Parse(_.Schema.ToJson()));
+            var migrations = definition.Migrations.Select(_ => new EventTypeMigration(
+                _.FromGeneration,
+                _.ToGeneration,
+                BsonDocument.Parse(_.UpcastJmesPath?.ToJsonString() ?? "{}"),
+                BsonDocument.Parse(_.DowncastJmesPath?.ToJsonString() ?? "{}"))).ToList();
+
+            stored.TryGetValue(definition.Id, out var existing);
+
+            if (!Changes(existing, eventType, schemas, migrations))
+            {
+                continue;
+            }
+
+            logger.Registering(definition.Id, EventTypeGeneration.First, eventStore);
+
+            writes.Add(new UpdateOneModel<EventType>(
+                Builders<EventType>.Filter.Eq(_ => _.Id, definition.Id),
+                BuildUpdate(eventType, schemas, migrations))
+            {
+                IsUpsert = true
+            });
+            mutated.Add(definition.Id);
+        }
+
+        if (writes.Count > 0)
+        {
+            await collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false }).ConfigureAwait(false);
+        }
+
+        mutated.ForEach(Invalidate);
+
+        return mutated;
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions()
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
@@ -252,6 +318,54 @@ public class EventTypesStorage(
                 _schemasByTypeAndGeneration.TryRemove(key, out _);
             }
         }
+    }
+
+    static bool Changes(
+        EventType? existing,
+        EventTypeToRegister eventType,
+        Dictionary<string, BsonDocument> schemas,
+        List<EventTypeMigration> migrations)
+    {
+        if (existing is null)
+        {
+            return true;
+        }
+
+        if (existing.Owner != eventType.Definition.Owner ||
+            existing.Source != eventType.Source ||
+            existing.Tombstone != eventType.Definition.Tombstone)
+        {
+            return true;
+        }
+
+        if (schemas.Any(_ => !existing.Schemas.TryGetValue(_.Key, out var storedSchema) || storedSchema != _.Value))
+        {
+            return true;
+        }
+
+        return migrations.Count > 0 && !migrations.SequenceEqual(existing.Migrations ?? []);
+    }
+
+    static UpdateDefinition<EventType> BuildUpdate(
+        EventTypeToRegister eventType,
+        Dictionary<string, BsonDocument> schemas,
+        List<EventTypeMigration> migrations)
+    {
+        var update = Builders<EventType>.Update
+            .Set(_ => _.Owner, eventType.Definition.Owner)
+            .Set(_ => _.Source, eventType.Source)
+            .Set(_ => _.Tombstone, eventType.Definition.Tombstone);
+
+        update = schemas.Aggregate(
+            update,
+            (current, schema) => current.Set($"{nameof(EventType.Schemas).ToCamelCase()}.{schema.Key}", schema.Value));
+
+        if (migrations.Count > 0)
+        {
+            update = update.Set(_ => _.Migrations, migrations);
+        }
+
+        return update;
     }
 
     bool InvalidateIfMutated(EventTypeId eventTypeId, bool mutated)
