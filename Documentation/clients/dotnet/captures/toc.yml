@@ -1,0 +1,6 @@
+- name: Overview
+  href: index.md
+- name: Declarative Captures
+  href: declarative.md
+- name: Model-Bound Captures
+  href: model-bound.md

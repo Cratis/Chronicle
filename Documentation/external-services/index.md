@@ -38,23 +38,7 @@ External Services are configured per event store. In the **Workbench**, open an 
 
 Secrets (passwords, tokens, client secrets) are write-only from the Workbench — they are never returned by the read model that lists services.
 
-### Registering from code
-
-External Services can also be registered programmatically through the client SDK on `IEventStore`:
-
-```csharp
-// An HTTP service with bearer token authentication and a header
-await eventStore.ExternalServices.Register("CustomersApi", _ => _
-    .Http("https://api.example.com")
-    .WithBearerToken(token)
-    .WithHeader("X-Tenant", "acme"));
-
-// A PostgreSQL database service
-await eventStore.ExternalServices.Register("CustomersDb", _ => _
-    .PostgreSql("db.example.com", "customers", "postgres", password, port: 5432));
-```
-
-The builder also exposes `WithBasicAuth`, `WithOAuth`, `MsSql`, and `WithOption`.
+External Services can also be registered programmatically — see [Registering External Services from code](/chronicle/clients/dotnet/external-services/) in the .NET client docs.
 
 ## Using External Services from captures
 
