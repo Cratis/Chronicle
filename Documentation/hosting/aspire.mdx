@@ -42,7 +42,11 @@ Aspire's `builder.AddMongoDB("mongo")` starts a **standalone** `mongod`, so it d
 - A MongoDB Atlas connection string (`builder.AddConnectionString("...")`) — Atlas clusters are always replica sets.
 - Any self-hosted or cloud MongoDB cluster reached through a connection string.
 
-For local development against the slim image, run MongoDB as a **single-node replica set** container that initializes itself, and hand `WithMongoDB` a connection string carrying `?directConnection=true`:
+For local development against the slim image, `AddCratisChronicleMongoDB()` provisions this for you — a MongoDB container that initializes itself as a single-node replica set, handed back as a connection string carrying `?directConnection=true`:
+
+<ChronicleClientTabs snippet="hosting/aspire/mongo-replica-set-helper" />
+
+If you would rather define the container yourself, the same recipe written out in full is:
 
 <ChronicleClientTabs snippet="hosting/aspire/mongo-replica-set" />
 

@@ -1,0 +1,26 @@
+# Overriding how a type appears in the schema
+
+Chronicle generates a JSON schema for every event and read model, and that schema is what the kernel stores
+against the event type and uses to materialize values back out. Most types map on their own — primitives
+directly, and `ConceptAs<T>` types as their underlying primitive.
+
+A type that serializes to something other than its shape needs to say so, or the generated schema describes
+the CLR structure while the stored JSON holds whatever the converter wrote. Annotate the type with
+`JsonSchemaType` to declare what it is really represented as:
+
+<ChronicleClientTabs snippet="events/schema-representation/basic" />
+
+The schema then describes a string, matching what the converter actually writes.
+
+Two things are preserved through the override:
+
+- **Compliance metadata.** A type marked `[PII]` keeps its compliance metadata after the redirect, so it is
+  still encrypted per subject.
+- **Nullability.** A nullable use of the type is still marked nullable in the schema.
+
+An explicit `JsonSchemaType` always wins over what Chronicle would otherwise infer, including the `ConceptAs<T>`
+handling.
+
+:::note[Client coverage]
+`JsonSchemaType` is currently C#-only.
+:::

@@ -12,6 +12,8 @@
   href: external-event-store-subscriptions.mdx
 - name: OnceOnly
   href: once-only.mdx
+- name: Replay
+  href: replay.mdx
 - name: Filtering by appended event metadata
   href: filtering.mdx
   items:
