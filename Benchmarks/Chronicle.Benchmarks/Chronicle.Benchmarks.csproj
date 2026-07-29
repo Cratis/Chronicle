@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The client is referenced directly rather than picked up through the server: the server reference is
+         dropped when ArtifactsPath is set, which is how BenchmarkDotNet rebuilds this project before running,
+         and every benchmark here uses the client API. -->
+    <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
     <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
     <ProjectReference Include="../../Source/Infrastructure/Infrastructure.csproj" />
     <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" Condition="'$(ArtifactsPath)' == ''" />

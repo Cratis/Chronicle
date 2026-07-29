@@ -26,6 +26,10 @@ on:
       - "Source/**/*.cs"
       - "Source/**/*.csproj"
       - "Integration/**"
+      # The benchmarks job builds these, so a change here has to run it. Without this a broken benchmark
+      # project lands green and fails on the next unrelated pull request instead.
+      - "Benchmarks/**/*.cs"
+      - "Benchmarks/**/*.csproj"
       - ".github/workflows/dotnet-build.yml"
       - ".github/workflows/integration.yml"
 
