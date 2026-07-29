@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
-using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Events.for_EventTypes.when_registering;
 
@@ -12,28 +11,7 @@ public class and_event_type_already_exists_and_gets_new_generation : given.all_d
 {
     Exception _exception;
 
-    void Establish()
-    {
-        _eventTypesStorage.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>())
-            .Returns(callInfo =>
-            {
-                var generation = callInfo.ArgAt<EventTypeGeneration?>(1);
-
-                if (generation is null)
-                {
-                    return true;
-                }
-
-                return generation.Value == 1;
-            });
-
-        _eventTypesStorage.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>())
-            .Returns(Task.FromResult(new Concepts.EventTypes.EventTypeSchema(
-                new Concepts.Events.EventType("some-event", 1),
-                Concepts.Events.EventTypeOwner.Client,
-                Concepts.Events.EventTypeSource.Code,
-                JsonSchema.FromJsonAsync("{}").GetAwaiter().GetResult())));
-    }
+    void Establish() => StoredEventTypes(StoredEventType("some-event", (1, "{}")));
 
     async Task Because() =>
         _exception = await Catch.Exception(async () => await _subject.Register(new RegisterEventTypesRequest
