@@ -384,13 +384,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/screenplay-language@portal:../../../Screenplay/Source/Screenplay/Monaco/screenplay-language::locator=workbench%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@cratis/screenplay-language@portal:../../../Screenplay/Source/Screenplay/Monaco/screenplay-language::locator=workbench%40workspace%3A."
+"@cratis/screenplay-language@npm:^1.6.1":
+  version: 1.6.1
+  resolution: "@cratis/screenplay-language@npm:1.6.1"
   peerDependencies:
     monaco-editor: ">=0.44.0"
+  checksum: 10/e5e1ef9fb0d6d53e1230f4bd1f078d6dd3ebe4cf7f1e25068f898c2d38fc7c9b3bc64ad027bd7f6a848a5778bddb3bbc9b4d6e8454505f62e1d029d0d3dcbdee
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "@cspotcode/source-map-support@npm:^0.8.0":
   version: 0.8.1
@@ -7819,7 +7820,7 @@ __metadata:
     "@cratis/arc.react.mvvm": "npm:^20.62.4"
     "@cratis/arc.vite": "npm:^20.62.4"
     "@cratis/components": "npm:^1.10.2"
-    "@cratis/screenplay-language": "portal:../../../Screenplay/Source/Screenplay/Monaco/screenplay-language"
+    "@cratis/screenplay-language": "npm:^1.6.1"
     "@eslint/eslintrc": "npm:3.3.5"
     "@eslint/js": "npm:10.0.1"
     "@monaco-editor/react": "npm:^4.7.0"
