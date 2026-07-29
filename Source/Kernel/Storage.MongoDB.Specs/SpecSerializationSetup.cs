@@ -3,6 +3,7 @@
 
 using System.Runtime.CompilerServices;
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.Observation;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 
@@ -22,12 +23,20 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// failure specs would see and production would not.
 /// </para>
 /// <para>
-/// The same reasoning applies to <see cref="EventClassMap"/>, which is what makes the event's sequence number the
-/// document <c>_id</c>. Any spec that merely renders a <c>Builders&lt;Event&gt;</c> expression — building an index
-/// key, for instance — makes the driver auto-register a default class map for <see cref="Event"/>, and a default
-/// map gives every appended event a generated <c>ObjectId</c> instead. Registering it lazily from a spec base
-/// therefore loses a race against unrelated spec classes running in parallel, silently dropping both the tail
-/// aggregation and the duplicate-sequence-number detection that depend on that mapping.
+/// The same reasoning applies to every <see cref="IBsonClassMapFor{T}"/>. Take <see cref="EventClassMap"/>, which is
+/// what makes the event's sequence number the document <c>_id</c>: any spec that merely renders a
+/// <c>Builders&lt;Event&gt;</c> expression — building an index key, for instance — makes the driver auto-register a
+/// <em>default</em> class map for <see cref="Event"/>, and a default map gives every appended event a generated
+/// <c>ObjectId</c> instead. A lazy <c>IsClassMapRegistered</c> guard in a spec base then finds one already
+/// registered and skips the real one, so whichever spec touched the type first decides the mapping. That silently
+/// dropped both the tail aggregation and the duplicate-sequence-number detection when spec classes ran in parallel.
+/// </para>
+/// <para>
+/// So a class map a spec depends on is registered here rather than lazily from the spec that needs it. This is not
+/// yet every <see cref="IBsonClassMapFor{T}"/> the server registers: the <c>JobState</c> specs map
+/// <c>JobState.Request</c>, while the server's <c>JobStateClassMap</c> deliberately unmaps it and lets
+/// <c>JobStateSerializer</c> own it, so registering the server's map here fails them. That divergence is a
+/// fidelity gap in those specs, not something to paper over from this file.
 /// </para>
 /// </remarks>
 internal static class SpecSerializationSetup
@@ -42,5 +51,6 @@ internal static class SpecSerializationSetup
         ConventionRegistry.Register(Cratis.Arc.MongoDB.ConventionPacks.IgnoreExtraElements, new ConventionPack { new IgnoreExtraElementsConvention(true) }, _ => true);
         BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
         BsonClassMap.RegisterClassMap<Event>(classMap => new EventClassMap().Configure(classMap));
+        BsonClassMap.RegisterClassMap<ObserverPartitionCounts>(classMap => new ObserverPartitionCountsClassMap().Configure(classMap));
     }
 }
