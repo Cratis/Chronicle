@@ -428,6 +428,20 @@ jobs:
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
+      # Every image variant lands in the same Docker Hub repository, so the overview is updated here only.
+      # The description API needs a token with write scope, which the push credentials do not necessarily
+      # have - never fail a release over an overview that did not update.
+      - name: Update Docker Hub overview
+        if: needs.release.outputs.prerelease != 'true'
+        continue-on-error: true
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: cratis/chronicle
+          readme-filepath: ./Docker/README.md
+          short-description: "Event sourcing engine - stores events as the source of truth and keeps read models up to date from them."
+
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
