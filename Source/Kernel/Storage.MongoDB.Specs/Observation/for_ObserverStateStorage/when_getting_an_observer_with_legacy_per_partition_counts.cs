@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using KernelObserverState = Cratis.Chronicle.Storage.Observation.ObserverState;
 
@@ -27,19 +25,6 @@ public class when_getting_an_observer_with_legacy_per_partition_counts(MongoDBFi
     static readonly EventTypeId _typeB = "b2222222-2222-2222-2222-222222222222";
     const string PartitionOne = "partition-one";
     const string PartitionTwo = "partition-two";
-
-    static when_getting_an_observer_with_legacy_per_partition_counts()
-    {
-        BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
-        if (!BsonClassMap.IsClassMapRegistered(typeof(ObserverPartitionCounts)))
-        {
-            BsonClassMap.RegisterClassMap<ObserverPartitionCounts>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapIdProperty(_ => _.Id);
-            });
-        }
-    }
 
     IMongoClient _client = default!;
     string _databaseName = default!;

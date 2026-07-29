@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverHandledCountsStorage;
@@ -24,19 +22,6 @@ public class when_incrementing_and_removing_counts(MongoDBFixture fixture) : Spe
     static readonly EventTypeId _typeB = "b2222222-2222-2222-2222-222222222222";
     static readonly Key _partitionOne = "partition-one";
     static readonly Key _partitionTwo = "partition-two";
-
-    static when_incrementing_and_removing_counts()
-    {
-        BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
-        if (!BsonClassMap.IsClassMapRegistered(typeof(ObserverPartitionCounts)))
-        {
-            BsonClassMap.RegisterClassMap<ObserverPartitionCounts>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapIdProperty(_ => _.Id);
-            });
-        }
-    }
 
     IMongoClient _client = default!;
     string _databaseName = default!;
