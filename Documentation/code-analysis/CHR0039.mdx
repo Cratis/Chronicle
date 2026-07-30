@@ -1,0 +1,42 @@
+# CHR0039: Assertion result is discarded and can never fail
+
+## Rule Description
+
+The event-sequence assertions in `Cratis.Chronicle.Testing` — `ShouldHaveAppendedEvent<T>(...)` and `ShouldHaveTailSequenceNumber(...)`, in every overload — return a `Task`. They signal failure by throwing an `EventSequenceAssertionException` on that `Task`.
+
+Call one from a `void`-bodied fact and the `Task` is discarded, so the exception is never observed. The assertion becomes a no-op that passes no matter what the system under test does.
+
+Await the assertion and declare the containing member `async Task`, or return the `Task` so the test runner awaits it.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0039/violation" />
+
+The fix:
+
+<ChronicleClientTabs snippet="code-analysis/chr0039/fix" />
+
+## Why This Rule Exists
+
+The compiler already has a rule for a discarded `Task` — CS4014 — but it fires **only inside an `async` method**. A `void`-bodied fact is the natural and dominant shape of a spec, and it is exactly the shape where CS4014 says nothing. A zero-warning build is therefore blind to it.
+
+What makes this a genuine trap rather than ordinary async carelessness is that the *sibling* assertions on the same surface are synchronous and `void`:
+
+- `ShouldBeSuccessful()`
+- `ShouldHaveValidationErrors()`
+- `ShouldHaveConstraintViolation()` / `ShouldNotHaveConstraintViolation()`
+- `ShouldHaveConcurrencyViolations()`
+
+Discarding "the result" of those is exactly how they are meant to be used. Nothing at the call site signals that the event-sequence assertions behave differently, so the two shapes sit side by side in the same file and only one of them works.
+
+The failure mode is the worst one a test suite has: an assertion that appears to test something and tests nothing. The resulting false confidence survives review, CI, and time — and it hides real defects, because the assertion that would have caught a regression silently passes instead.
+
+The rule is scoped to `Task`-returning `Should*` methods on the Cratis testing surfaces, and only where the result is genuinely discarded — a statement on its own line, or the expression body of a `void` member. Awaiting, returning, assigning, or passing the `Task` along all count as observing it and are not flagged.
+
+## Related Rules
+
+- [Writing specs](/chronicle/testing/) — the testing surfaces this rule covers.

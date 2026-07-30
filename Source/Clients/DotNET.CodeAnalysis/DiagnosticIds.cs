@@ -195,4 +195,9 @@ public static class DiagnosticIds
     /// A model-bound [Join] copies a [PII] value from a stream keyed by something other than the read model's own compliance subject.
     /// </summary>
     public const string CrossSubjectPiiJoin = "CHR0038";
+
+    /// <summary>
+    /// A Task-returning testing assertion is discarded rather than awaited, so it can never fail.
+    /// </summary>
+    public const string NonAwaitedAssertion = "CHR0039";
 }

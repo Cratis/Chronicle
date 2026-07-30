@@ -66,3 +66,5 @@
   href: CHR0037.mdx
 - name: CHR0038 - [Join] of a [PII] value crosses the compliance subject
   href: CHR0038.mdx
+- name: CHR0039 - Assertion result is discarded and can never fail
+  href: CHR0039.mdx
