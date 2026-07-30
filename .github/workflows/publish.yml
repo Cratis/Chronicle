@@ -432,6 +432,7 @@ jobs:
       # The description API needs a token with write scope, which the push credentials do not necessarily
       # have - never fail a release over an overview that did not update.
       - name: Update Docker Hub overview
+        id: dockerhub-overview
         if: needs.release.outputs.prerelease != 'true'
         continue-on-error: true
         uses: peter-evans/dockerhub-description@v4
@@ -440,7 +441,20 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: cratis/chronicle
           readme-filepath: ./Docker/README.md
-          short-description: "Event sourcing engine - stores events as the source of truth and keeps read models up to date from them."
+          short-description: "Event sourcing engine - stores events as the source of truth and derives read models from them."
+
+      # continue-on-error above keeps an overview problem from failing a release, but it also reports the step as
+      # successful, so a rejected update is invisible unless someone opens the log. Surface it in the run summary.
+      - name: Report an overview that did not update
+        if: steps.dockerhub-overview.outcome == 'failure'
+        run: |
+          echo "::warning title=Docker Hub overview not updated::The description API rejected the update, so the published overview is stale. The Docker Hub description API needs a token with write or admin scope - a push-only DOCKER_PASSWORD is rejected with Forbidden."
+          {
+            echo "### Docker Hub overview not updated"
+            echo
+            echo "The description API rejected the update, so the overview on \`cratis/chronicle\` is stale."
+            echo "It needs \`DOCKER_PASSWORD\` to be a token with write or admin scope; a push-only token is rejected with \`Forbidden\`."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
