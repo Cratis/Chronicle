@@ -47,4 +47,10 @@ public class GetFromEventSequenceNumberRequest : IEventSequenceRequest
     /// </summary>
     [ProtoMember(7, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the tags to filter by - an event matches when it carries any of them. Empty means no filtering.
+    /// </summary>
+    [ProtoMember(8, IsRequired = true)]
+    public IList<string> Tags { get; set; } = [];
 }

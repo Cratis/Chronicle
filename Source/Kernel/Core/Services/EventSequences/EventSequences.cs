@@ -148,18 +148,21 @@ internal sealed class EventSequences(
     {
         var eventSequence = GetEventSequenceStorage(request);
 
+        var tags = request.Tags.Select(tag => new Tag(tag)).ToArray();
         using var cursor = request.ToEventSequenceNumber is not null
             ? await eventSequence.GetRange(
                 request.FromEventSequenceNumber,
                 request.ToEventSequenceNumber,
                 string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
-                request.EventTypes.ToChronicle())
+                request.EventTypes.ToChronicle(),
+                tags)
             : await eventSequence.GetFromSequenceNumber(
                 request.FromEventSequenceNumber,
                 string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
                 EventStreamType.All,
                 EventStreamId.Default,
-                request.EventTypes.ToChronicle());
+                request.EventTypes.ToChronicle(),
+                tags);
 
         var appendedEvents = new List<AppendedEvent>();
         while (await cursor.MoveNext())
