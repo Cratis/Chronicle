@@ -83,7 +83,7 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
                     />
                 ) : (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                        <p>Loading snapshots...</p>
+                        <p>{snapshots.isPerforming ? 'Loading snapshots...' : 'No snapshots available for this instance.'}</p>
                     </div>
                 )}
             </div>

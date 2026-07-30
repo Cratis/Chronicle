@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { Dropdown } from 'primereact/dropdown';
 import { Allotment } from 'allotment';
-import { Page, ReadModelInstances } from 'Components';
+import { Page, ReadModelInstances, getInstanceKey } from 'Components';
 import { AllReadModelDefinitions, ReadModelDefinition } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelOccurrences, ReadModelInstances as ReadModelInstancesApi } from 'Api/ReadModels';
@@ -143,8 +143,9 @@ const ReadModelsContent = () => {
             if (selectedOccurrence) {
                 newPath += `/${selectedOccurrence}`;
 
-                if (selectedInstance && typeof selectedInstance === 'object' && selectedInstance !== null && 'id' in selectedInstance) {
-                    newPath += `/${selectedInstance.id}`;
+                const instanceKey = getInstanceKey(selectedInstance);
+                if (instanceKey) {
+                    newPath += `/${instanceKey}`;
                 }
             }
         }
@@ -219,7 +220,7 @@ const ReadModelsContent = () => {
             {(selectedReadModel && selectedOccurrence && selectedInstance) && (
                 <TimeMachineDialogWrapper
                     readModel={selectedReadModel}
-                    readModelKey={typeof selectedInstance === 'object' && selectedInstance !== null && 'id' in selectedInstance ? selectedInstance.id as string : ''} />
+                    readModelKey={getInstanceKey(selectedInstance)} />
             )}
 
         </Page>
