@@ -24,7 +24,7 @@ import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, Proj
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { TimeMachineDialog, ReadModelInstances } from 'Components';
+import { TimeMachineDialog, ReadModelInstances, getInstanceKey } from 'Components';
 import { Json } from 'Features';
 import { SaveWithInferredReadModelDialog } from './SaveWithInferredReadModelDialog';
 
@@ -524,7 +524,7 @@ export const Projections = () => {
                 {selectedReadModel && selectedInstance && (
                     <TimeMachineDialogWrapper
                         readModel={selectedReadModel}
-                        readModelKey={typeof selectedInstance === 'object' && 'id' in selectedInstance ? selectedInstance.id as string : ''}
+                        readModelKey={getInstanceKey(selectedInstance)}
                     />
                 )}
             </>

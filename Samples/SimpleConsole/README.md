@@ -7,9 +7,9 @@ It is the C# counterpart to the TypeScript `Samples/Console` sample and covers t
 
 1. Appends domain events (`EmployeeHired`, `EmployeeEmailSet`, `EmployeePromoted`, `EmployeeAddressSet`, `EmployeeMoved`) to a Chronicle event store
 2. Reacts to those events via `HrNotificationReactor` (console notifications)
-3. Seeds 50 employees, each with a deterministically generated career history of promotions and
-   moves, with `EmployeeSeeding` (`ICanSeedEvents`) — a good-sized dataset for exploring read
-   models, projections, and the Workbench
+3. Generates 50 employees on demand (`G` key), each with a deterministically generated career
+   history of promotions and moves — a good-sized dataset for exploring read models, projections,
+   and the Workbench. Nothing is written to the store until you ask for it
 4. Enforces two discoverable `IConstraint` artifacts:
    - `UniqueEmployeeHire` — a unique-event-type constraint; an employee can only be hired once
    - `UniqueEmployeeEmail` — a unique-value constraint backed by a Kernel index; rejects duplicate email addresses
@@ -21,14 +21,16 @@ It is the C# counterpart to the TypeScript `Samples/Console` sample and covers t
 
 ## Keyboard controls
 
-Select an employee with `1`–`9` (direct jump), `←`/`→` (browse one at a time), or `L` (list all 50
+Press `G` first to generate the sample data. Then select an employee with `1`–`9` (direct jump),
+`←`/`→` (browse one at a time), or `L` (list all 50
 with the current selection marked), then:
 
 | Key | Action |
 | --- | --- |
+| `G` | Generate the sample data — 50 employees with career history |
 | `1`-`9` | Jump directly to employee 1-9 |
 | `←` / `→` | Select the previous/next employee |
-| `L` | List all seeded employees |
+| `L` | List all employees |
 | `P` | Promote the selected employee to a new title |
 | `A` | Move the selected employee to a new address |
 | `E` | Set the selected employee's own (unique) email address |
@@ -101,7 +103,7 @@ SimpleConsole/
   Employee.cs                   # Employee events, EmployeeState model-bound projection, EmployeeStateReducer
   Projections.cs                # EmployeeListProjection (declarative) + EmployeeDetails (model-bound)
   Reactors.cs                   # HrNotificationReactor — event-driven side effects
-  EmployeeSeeding.cs            # EmployeeSeeding — ICanSeedEvents artifact
+  EmployeeSampleData.cs         # EmployeeSampleData — on-demand sample data generation (G key)
   Constraints.cs                # UniqueEmployeeHire + UniqueEmployeeEmail constraint artifacts
   Compliance.cs                 # PII ConceptAs types, Customer events/read model/reducer, demo helpers
 ```
