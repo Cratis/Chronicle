@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
@@ -60,6 +61,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServices.ExternalServiceDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public ICapturesStorage Captures { get; } = new Captures.CapturesStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModels.ReadModelDefinitionsStorage(eventStore, database);

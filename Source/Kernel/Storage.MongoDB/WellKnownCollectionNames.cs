@@ -109,6 +109,11 @@ public static class WellKnownCollectionNames
     public const string ExternalServiceDefinitions = "external-services";
 
     /// <summary>
+    /// The collection that holds captures.
+    /// </summary>
+    public const string Captures = "captures";
+
+    /// <summary>
     /// The collection that holds event store subscription definitions.
     /// </summary>
     public const string EventStoreSubscriptionDefinitions = "event-store-subscriptions";

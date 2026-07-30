@@ -199,6 +199,11 @@ public static class WellKnownTableNames
     public const string ExternalServiceDefinitions = "ExternalServiceDefinitions";
 
     /// <summary>
+    /// The table that holds captures.
+    /// </summary>
+    public const string Captures = "Captures";
+
+    /// <summary>
     /// The table that holds encryption keys for compliance handling.
     /// </summary>
     public const string EncryptionKeys = "EncryptionKeys";

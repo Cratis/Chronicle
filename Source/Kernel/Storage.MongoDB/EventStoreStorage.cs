@@ -6,9 +6,11 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
+using Cratis.Chronicle.Storage.MongoDB.Captures;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB.ExternalServices;
@@ -87,6 +89,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public ICapturesStorage Captures { get; } = new CapturesStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions { get; } = new EventStoreSubscriptionDefinitionsStorage(eventStoreDatabase);

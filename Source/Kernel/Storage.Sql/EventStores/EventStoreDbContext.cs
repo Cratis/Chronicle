@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Chronicle.Storage.Sql.EventStores.Captures;
 using Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
@@ -68,6 +69,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the external services DbSet.
     /// </summary>
     public DbSet<ExternalServiceDefinition> ExternalServiceDefinitions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the captures DbSet.
+    /// </summary>
+    public DbSet<Capture> Captures { get; set; }
 
     /// <summary>
     /// Gets or sets the constraints DbSet.

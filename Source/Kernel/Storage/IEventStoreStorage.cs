@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
@@ -71,6 +72,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IExternalServiceDefinitionsStorage"/> for the event store.
     /// </summary>
     IExternalServiceDefinitionsStorage ExternalServices { get; }
+
+    /// <summary>
+    /// Gets the <see cref="ICapturesStorage"/> for the event store.
+    /// </summary>
+    ICapturesStorage Captures { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventStoreSubscriptionDefinitionsStorage"/> for the event store.
