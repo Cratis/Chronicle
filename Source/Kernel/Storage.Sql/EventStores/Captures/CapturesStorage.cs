@@ -52,9 +52,19 @@ public class CapturesStorage(EventStoreName eventStore, IDatabase database) : IC
         await using var scope = await database.EventStore(eventStore);
         var key = id.Value.ToString();
         var capture = await scope.DbContext.Captures.SingleOrDefaultAsync(capture => capture.Id == key);
+        var observation = await scope.DbContext.CaptureObservations.SingleOrDefaultAsync(observation => observation.Id == key);
+        if (observation is not null)
+        {
+            scope.DbContext.CaptureObservations.Remove(observation);
+        }
+
         if (capture is not null)
         {
             scope.DbContext.Captures.Remove(capture);
+        }
+
+        if (capture is not null || observation is not null)
+        {
             await scope.DbContext.SaveChangesAsync();
             await NotifyChange();
         }
@@ -67,6 +77,23 @@ public class CapturesStorage(EventStoreName eventStore, IDatabase database) : IC
         await scope.DbContext.Captures.Upsert(capture.ToSql());
         await scope.DbContext.SaveChangesAsync();
         await NotifyChange();
+    }
+
+    /// <inheritdoc/>
+    public async Task<CaptureObservation> GetObservation(CaptureId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var key = id.Value.ToString();
+        var entry = await scope.DbContext.CaptureObservations.SingleOrDefaultAsync(observation => observation.Id == key);
+        return entry?.ToKernel() ?? CaptureObservation.Empty(id);
+    }
+
+    /// <inheritdoc/>
+    public async Task SaveObservation(CaptureObservation observation)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.CaptureObservations.Upsert(observation.ToSql());
+        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

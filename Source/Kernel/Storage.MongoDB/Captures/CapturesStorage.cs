@@ -18,6 +18,8 @@ public class CapturesStorage(
 {
     IMongoCollection<Capture> Collection => eventStoreDatabase.GetCollection<Capture>(WellKnownCollectionNames.Captures);
 
+    IMongoCollection<CaptureObservation> Observations => eventStoreDatabase.GetCollection<CaptureObservation>(WellKnownCollectionNames.CaptureObservations);
+
     /// <inheritdoc/>
     public async Task<IEnumerable<Concepts.Captures.Capture>> GetAll()
     {
@@ -44,13 +46,31 @@ public class CapturesStorage(
     }
 
     /// <inheritdoc/>
-    public Task Delete(CaptureId id) =>
-        Collection.DeleteOneAsync(capture => capture.Id == id);
+    public async Task Delete(CaptureId id)
+    {
+        await Collection.DeleteOneAsync(capture => capture.Id == id);
+        await Observations.DeleteOneAsync(observation => observation.Id == id);
+    }
 
     /// <inheritdoc/>
     public Task Save(Concepts.Captures.Capture capture) =>
         Collection.ReplaceOneAsync(
             filter: c => c.Id == capture.Id,
             replacement: capture.ToMongoDB(),
+            options: new ReplaceOptions { IsUpsert = true });
+
+    /// <inheritdoc/>
+    public async Task<Concepts.Captures.CaptureObservation> GetObservation(CaptureId id)
+    {
+        using var result = await Observations.FindAsync(observation => observation.Id == id);
+        var observation = await result.FirstOrDefaultAsync();
+        return observation?.ToKernel() ?? Concepts.Captures.CaptureObservation.Empty(id);
+    }
+
+    /// <inheritdoc/>
+    public Task SaveObservation(Concepts.Captures.CaptureObservation observation) =>
+        Observations.ReplaceOneAsync(
+            filter: o => o.Id == observation.Id,
+            replacement: observation.ToMongoDB(),
             options: new ReplaceOptions { IsUpsert = true });
 }

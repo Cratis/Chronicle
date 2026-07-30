@@ -83,6 +83,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
             .AddStorageProviders()
             .AddWebhookObserverHttpClient()
+            .AddExternalServiceHttpClient()
             .ConfigureSerialization();
 
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Users);

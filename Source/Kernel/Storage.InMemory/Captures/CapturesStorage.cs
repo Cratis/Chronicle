@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Captures;
 public sealed class CapturesStorage : ICapturesStorage, IDisposable
 {
     readonly ConcurrentDictionary<CaptureId, Capture> _captures = new();
+    readonly ConcurrentDictionary<CaptureId, CaptureObservation> _observations = new();
     readonly ReplaySubject<IEnumerable<Capture>> _allSubject = new(1);
 
     /// <summary>
@@ -39,6 +40,7 @@ public sealed class CapturesStorage : ICapturesStorage, IDisposable
     public Task Delete(CaptureId id)
     {
         _captures.TryRemove(id, out _);
+        _observations.TryRemove(id, out _);
         _allSubject.OnNext(Snapshot());
         return Task.CompletedTask;
     }
@@ -48,6 +50,17 @@ public sealed class CapturesStorage : ICapturesStorage, IDisposable
     {
         _captures[capture.Id] = capture;
         _allSubject.OnNext(Snapshot());
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<CaptureObservation> GetObservation(CaptureId id) =>
+        Task.FromResult(_observations.TryGetValue(id, out var observation) ? observation : CaptureObservation.Empty(id));
+
+    /// <inheritdoc/>
+    public Task SaveObservation(CaptureObservation observation)
+    {
+        _observations[observation.Id] = observation;
         return Task.CompletedTask;
     }
 

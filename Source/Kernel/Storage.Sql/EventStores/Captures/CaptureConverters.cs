@@ -35,4 +35,26 @@ public static class CaptureConverters
             capture.Name,
             capture.Declaration,
             capture.Status);
+
+    /// <summary>
+    /// Converts a Kernel <see cref="CaptureObservation"/> to a SQL <see cref="CaptureObservationEntry"/>.
+    /// </summary>
+    /// <param name="observation">The Kernel capture observation.</param>
+    /// <returns>The SQL capture observation entry.</returns>
+    public static CaptureObservationEntry ToSql(this CaptureObservation observation) =>
+        new()
+        {
+            Id = observation.Id.Value.ToString(),
+            Items = observation.Items.ToDictionary(item => item.Key, item => item.Content)
+        };
+
+    /// <summary>
+    /// Converts a SQL <see cref="CaptureObservationEntry"/> to a Kernel <see cref="CaptureObservation"/>.
+    /// </summary>
+    /// <param name="entry">The SQL capture observation entry.</param>
+    /// <returns>The Kernel capture observation.</returns>
+    public static CaptureObservation ToKernel(this CaptureObservationEntry entry) =>
+        new(
+            new CaptureId(Guid.Parse(entry.Id)),
+            entry.Items.Select(item => new CaptureObservedItem(item.Key, item.Value)).ToList());
 }

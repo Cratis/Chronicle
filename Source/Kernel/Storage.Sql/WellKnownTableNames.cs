@@ -204,6 +204,11 @@ public static class WellKnownTableNames
     public const string Captures = "Captures";
 
     /// <summary>
+    /// The table that holds capture observations.
+    /// </summary>
+    public const string CaptureObservations = "CaptureObservations";
+
+    /// <summary>
     /// The table that holds encryption keys for compliance handling.
     /// </summary>
     public const string EncryptionKeys = "EncryptionKeys";

@@ -76,6 +76,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<Capture> Captures { get; set; }
 
     /// <summary>
+    /// Gets or sets the capture observations DbSet.
+    /// </summary>
+    public DbSet<CaptureObservationEntry> CaptureObservations { get; set; }
+
+    /// <summary>
     /// Gets or sets the constraints DbSet.
     /// </summary>
     public DbSet<ConstraintDefinition> Constraints { get; set; }

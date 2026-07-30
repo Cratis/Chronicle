@@ -50,4 +50,18 @@ public interface ICapturesStorage
     /// <param name="capture">Capture to save.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(Capture capture);
+
+    /// <summary>
+    /// Get the <see cref="CaptureObservation"/> for a capture - the baseline its next cycle diffs against.
+    /// </summary>
+    /// <param name="id"><see cref="CaptureId"/> to get for.</param>
+    /// <returns>The <see cref="CaptureObservation"/> - empty when the capture has not observed anything yet.</returns>
+    Task<CaptureObservation> GetObservation(CaptureId id);
+
+    /// <summary>
+    /// Save the <see cref="CaptureObservation"/> for a capture.
+    /// </summary>
+    /// <param name="observation">The <see cref="CaptureObservation"/> to save.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SaveObservation(CaptureObservation observation);
 }

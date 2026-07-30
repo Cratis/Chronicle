@@ -33,4 +33,26 @@ public static class CaptureConverters
             capture.Name,
             capture.Declaration,
             capture.Status);
+
+    /// <summary>
+    /// Converts a Kernel <see cref="Concepts.Captures.CaptureObservation"/> to a MongoDB <see cref="CaptureObservation"/>.
+    /// </summary>
+    /// <param name="observation">The Kernel capture observation.</param>
+    /// <returns>The MongoDB capture observation.</returns>
+    public static CaptureObservation ToMongoDB(this Concepts.Captures.CaptureObservation observation) =>
+        new()
+        {
+            Id = observation.Id,
+            Items = observation.Items.Select(item => new CaptureObservationItem { Key = item.Key, Content = item.Content }).ToList()
+        };
+
+    /// <summary>
+    /// Converts a MongoDB <see cref="CaptureObservation"/> to a Kernel <see cref="Concepts.Captures.CaptureObservation"/>.
+    /// </summary>
+    /// <param name="observation">The MongoDB capture observation.</param>
+    /// <returns>The Kernel capture observation.</returns>
+    public static Concepts.Captures.CaptureObservation ToKernel(this CaptureObservation observation) =>
+        new(
+            observation.Id,
+            observation.Items.Select(item => new Concepts.Captures.CaptureObservedItem(item.Key, item.Content)).ToList());
 }
