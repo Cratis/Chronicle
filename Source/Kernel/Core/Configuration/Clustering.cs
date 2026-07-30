@@ -48,4 +48,20 @@ public class Clustering
     /// running multiple nodes on one machine.
     /// </summary>
     public string? AdvertisedIP { get; set; }
+
+    /// <summary>
+    /// Gets how often defunct silo entries are swept out of the cluster membership table when
+    /// using <see cref="ClusteringType.MongoDB"/>. Without the sweep, repeated restarts and failed
+    /// rollouts accumulate dead silo entries forever, and new nodes stall validating against them
+    /// when joining. Set to <see cref="TimeSpan.Zero"/> to disable the sweep.
+    /// </summary>
+    public TimeSpan DefunctSiloCleanupPeriod { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Gets the age at which a defunct membership entry is removed by the sweep. A node never
+    /// reuses a silo identity (address + generation), so a dead entry only has diagnostic value —
+    /// a few hours keeps recent history around while keeping the table small enough for new nodes
+    /// to join quickly.
+    /// </summary>
+    public TimeSpan DefunctSiloExpiration { get; set; } = TimeSpan.FromHours(3);
 }
