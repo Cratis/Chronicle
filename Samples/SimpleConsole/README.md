@@ -7,7 +7,9 @@ It is the C# counterpart to the TypeScript `Samples/Console` sample and covers t
 
 1. Appends domain events (`EmployeeHired`, `EmployeeEmailSet`, `EmployeePromoted`, `EmployeeAddressSet`, `EmployeeMoved`) to a Chronicle event store
 2. Reacts to those events via `HrNotificationReactor` (console notifications)
-3. Seeds initial employee state with `EmployeeSeeding` (`ICanSeedEvents`)
+3. Seeds 50 employees, each with a deterministically generated career history of promotions and
+   moves, with `EmployeeSeeding` (`ICanSeedEvents`) — a good-sized dataset for exploring read
+   models, projections, and the Workbench
 4. Enforces two discoverable `IConstraint` artifacts:
    - `UniqueEmployeeHire` — a unique-event-type constraint; an employee can only be hired once
    - `UniqueEmployeeEmail` — a unique-value constraint backed by a Kernel index; rejects duplicate email addresses
@@ -19,10 +21,14 @@ It is the C# counterpart to the TypeScript `Samples/Console` sample and covers t
 
 ## Keyboard controls
 
-Select an employee with `1`–`3`, then:
+Select an employee with `1`–`9` (direct jump), `←`/`→` (browse one at a time), or `L` (list all 50
+with the current selection marked), then:
 
 | Key | Action |
 | --- | --- |
+| `1`-`9` | Jump directly to employee 1-9 |
+| `←` / `→` | Select the previous/next employee |
+| `L` | List all seeded employees |
 | `P` | Promote the selected employee to a new title |
 | `A` | Move the selected employee to a new address |
 | `E` | Set the selected employee's own (unique) email address |
