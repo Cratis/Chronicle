@@ -27,6 +27,7 @@ public class Encryption : IEncryption
     const int NonceSizeInBytes = 12;
     const int TagSizeInBytes = 16;
     const byte EnvelopeVersion = 1;
+    const int LegacyCiphertextSizeInBytes = KeySize / 8;
 
     static readonly byte[] _envelopeMagic = "CENV"u8.ToArray();
     static readonly RSAEncryptionPadding _keyWrapPadding = RSAEncryptionPadding.OaepSHA256;
@@ -65,6 +66,15 @@ public class Encryption : IEncryption
         {
             CryptographicOperations.ZeroMemory(dataKey);
         }
+    }
+
+    /// <inheritdoc/>
+    public bool IsEncrypted(byte[] bytes)
+    {
+        // A current value is identified by its envelope marker. A legacy value (raw RSA over the whole payload,
+        // see DecryptLegacy) carries no marker of its own, so what identifies it is its length — raw RSA always
+        // produced exactly one modulus-sized block.
+        return TryReadEnvelope(bytes, out _, out _, out _, out _) || bytes.Length == LegacyCiphertextSizeInBytes;
     }
 
     /// <inheritdoc/>
