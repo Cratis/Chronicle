@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -81,6 +82,9 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public IExternalServices ExternalServices => throw new NotSupportedException("ExternalServices is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public ICaptures Captures => throw new NotSupportedException("Captures is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public IEventStoreSubscriptions EventStoreSubscriptions => throw new NotSupportedException("EventStoreSubscriptions is not supported in test scenarios.");

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
@@ -41,6 +42,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="Webhooks"><see cref="IWebhooks"/> instance.</param>
 /// <param name="ExternalServices"><see cref="IExternalServices"/> instance.</param>
+/// <param name="Captures"><see cref="ICaptures"/> instance.</param>
 /// <param name="EventStoreSubscriptions"><see cref="IEventStoreSubscriptions"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="MaterializedReadModels"><see cref="IMaterializedReadModels"/> instance.</param>
@@ -66,6 +68,7 @@ public sealed record Services(
     IProjections Projections,
     IWebhooks Webhooks,
     IExternalServices ExternalServices,
+    ICaptures Captures,
     IEventStoreSubscriptions EventStoreSubscriptions,
     IReadModels ReadModels,
     IMaterializedReadModels MaterializedReadModels,
