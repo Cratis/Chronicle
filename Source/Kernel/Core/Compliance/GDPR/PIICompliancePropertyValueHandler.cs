@@ -50,11 +50,45 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
             return JsonValue.Create(string.Empty);
         }
 
-        var encryptedAsString = value.ToString();
-        var encrypted = Convert.FromBase64String(encryptedAsString);
+        // Only a value this encryption produced can be released. One that carries none of its shape was never
+        // encrypted under this subject — it is resolved in memory at the query edge for display, or it predates
+        // the property being marked [PII]. Releasing it is a no-op, so pass it through: blanking it would be
+        // silent data loss indistinguishable from erasure, and throwing would fail an entire query over a
+        // single property.
+        if (!TryDecodeEncryptedValue(value.ToString(), out var encrypted))
+        {
+            return value;
+        }
+
         var decrypted = _encryption.Decrypt(encrypted, key);
         var decryptedAsString = Encoding.UTF8.GetString(decrypted);
         return JsonValue.Create(decryptedAsString);
+    }
+
+    bool TryDecodeEncryptedValue(string value, out byte[] encrypted)
+    {
+        encrypted = [];
+
+        // Base64 encodes four characters per three bytes, so anything else cannot be a value Apply produced.
+        if (value.Length == 0 || value.Length % 4 != 0)
+        {
+            return false;
+        }
+
+        var buffer = new byte[value.Length / 4 * 3];
+        if (!Convert.TryFromBase64String(value, buffer, out var bytesWritten))
+        {
+            return false;
+        }
+
+        var decoded = buffer[..bytesWritten];
+        if (!_encryption.IsEncrypted(decoded))
+        {
+            return false;
+        }
+
+        encrypted = decoded;
+        return true;
     }
 
     async Task<EncryptionKey> EnsureKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)

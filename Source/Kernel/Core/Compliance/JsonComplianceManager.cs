@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Schemas;
 using Cratis.DependencyInjection;
 using Cratis.Types;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Compliance;
 
@@ -16,8 +17,11 @@ namespace Cratis.Chronicle.Compliance;
 /// Initializes a new instance of the <see cref="JsonComplianceManager"/> class.
 /// </remarks>
 /// <param name="propertyValueHandlers">Instances of <see cref="IJsonCompliancePropertyValueHandler"/>.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [Singleton]
-public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHandler> propertyValueHandlers) : IJsonComplianceManager
+public class JsonComplianceManager(
+    IInstancesOf<IJsonCompliancePropertyValueHandler> propertyValueHandlers,
+    ILogger<JsonComplianceManager> logger) : IJsonComplianceManager
 {
     readonly Dictionary<ComplianceMetadataType, IJsonCompliancePropertyValueHandler> _propertyValueHandlers = propertyValueHandlers.ToDictionary(_ => _.Type, _ => _);
 
@@ -107,7 +111,20 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                         }
                         catch (Exception ex)
                         {
-                            throw new ComplianceMetadataActionFailed(actionName, propertyPath, identifier, ex);
+                            var failure = new ComplianceMetadataActionFailed(actionName, propertyPath, identifier, ex);
+
+                            // Applying has to fail loudly — storing PII that was never protected is never acceptable.
+                            // Releasing must not: a single unreadable property is no reason to fail an entire query,
+                            // so surface it as empty — the shape an erased subject already produces — and keep the
+                            // diagnostic, which names the property, the subject and the likely cause, in the log.
+                            if (actionName != ComplianceMetadataActionFailed.ReleaseAction)
+                            {
+                                throw failure;
+                            }
+
+                            logger.FailedToReleaseProperty(propertyPath, identifier, failure);
+                            json[property] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), propertySchema);
+                            handlerApplied = true;
                         }
                     }
                 }
@@ -176,7 +193,17 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                             }
                             catch (Exception ex)
                             {
-                                throw new ComplianceMetadataActionFailed(actionName, elementPath, identifier, ex);
+                                var failure = new ComplianceMetadataActionFailed(actionName, elementPath, identifier, ex);
+
+                                // Same asymmetry as the property walk above — apply fails, release degrades the
+                                // single element so the rest of the array, and the query, still come back.
+                                if (actionName != ComplianceMetadataActionFailed.ReleaseAction)
+                                {
+                                    throw failure;
+                                }
+
+                                logger.FailedToReleaseProperty(elementPath, identifier, failure);
+                                array[i] = JsonValue.Create(string.Empty);
                             }
                         }
                     }

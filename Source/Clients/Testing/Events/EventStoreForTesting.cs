@@ -356,7 +356,8 @@ public class EventStoreForTesting : IEventStore
         var grainFactory = new InProcessGrainFactory(grain);
         var eventCompliance = new KernelCore::Cratis.Chronicle.Events.EventCompliance(
             new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
+                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>(),
+                NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
 
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(

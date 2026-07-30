@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager.given;
 
@@ -45,6 +46,6 @@ public class a_value_handler_and_a_type_with_a_compliant_list : Specification
 
         _valueHandler = Substitute.For<IJsonCompliancePropertyValueHandler>();
         _valueHandler.Type.Returns(_metadataType);
-        _manager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(_valueHandler));
+        _manager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(_valueHandler), NullLogger<JsonComplianceManager>.Instance);
     }
 }

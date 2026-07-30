@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager.given;
 
@@ -36,6 +37,6 @@ public class a_value_handler_and_a_type_with_a_compliant_member_on_a_nested_obje
 
         _valueHandler = Substitute.For<IJsonCompliancePropertyValueHandler>();
         _valueHandler.Type.Returns(_metadataType);
-        _manager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(_valueHandler));
+        _manager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(_valueHandler), NullLogger<JsonComplianceManager>.Instance);
     }
 }

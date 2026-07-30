@@ -12,6 +12,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -76,7 +77,8 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
         var complianceConverter = new Cratis.Chronicle.Json.ExpandoObjectConverter(typeFormats);
         ComplianceManager = new JsonComplianceManager(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())));
+                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+            NullLogger<JsonComplianceManager>.Instance);
         Compliance = new ReadModelsCompliance(ComplianceManager, complianceConverter);
 
         _databaseName = $"chronicle_child_collection_pii_{Guid.NewGuid():N}";

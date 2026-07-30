@@ -69,7 +69,7 @@ internal static class InProcessEventSequence
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
 
         var eventTypeMigrations = new KernelMigrations::EventTypeMigrations(storage, expandoObjectConverter);
-        var jsonComplianceManager = new KernelCompliance::JsonComplianceManager(new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>());
+        var jsonComplianceManager = new KernelCompliance::JsonComplianceManager(new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>(), NullLogger<KernelCompliance::JsonComplianceManager>.Instance);
         var eventSerializer = new KernelEventSequences::EventSerializer(
             new InMemoryKernelEventTypes(),
             expandoObjectConverter,

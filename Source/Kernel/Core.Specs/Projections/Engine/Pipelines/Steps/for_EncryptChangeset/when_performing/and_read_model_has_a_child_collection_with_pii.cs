@@ -12,6 +12,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_EncryptChangeset.when_performing;
 
@@ -49,7 +50,8 @@ public class and_read_model_has_a_child_collection_with_pii : Specification
         var typeFormats = new TypeFormats();
         var complianceManager = new JsonComplianceManager(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())));
+                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+            NullLogger<JsonComplianceManager>.Instance);
         var compliance = new ReadModelsCompliance(complianceManager, new ExpandoObjectConverter(typeFormats));
         var objectComparer = new ObjectComparer();
         _step = new EncryptChangeset(compliance, objectComparer, "test-store", "test-namespace");

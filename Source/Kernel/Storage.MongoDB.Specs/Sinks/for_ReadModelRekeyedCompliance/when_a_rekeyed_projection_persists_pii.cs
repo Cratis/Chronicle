@@ -16,6 +16,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -73,7 +74,8 @@ public class when_a_rekeyed_projection_persists_pii(MongoDBFixture fixture) : Sp
         var complianceConverter = new Cratis.Chronicle.Json.ExpandoObjectConverter(typeFormats);
         _complianceManager = new JsonComplianceManager(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())));
+                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+            NullLogger<JsonComplianceManager>.Instance);
         _compliance = new ReadModelsCompliance(_complianceManager, complianceConverter);
 
         _databaseName = $"chronicle_rekeyed_pii_{Guid.NewGuid():N}";
