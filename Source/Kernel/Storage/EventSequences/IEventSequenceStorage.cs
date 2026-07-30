@@ -39,8 +39,9 @@ public interface IEventSequenceStorage
     /// </summary>
     /// <param name="lastEventSequenceNumber">Optional last sequence number to count.</param>
     /// <param name="eventTypes">Event types to count for.</param>
+    /// <param name="tags">Optional collection of <see cref="Tag">tags</see> to filter for - an event matches when it carries any of them.</param>
     /// <returns>Total number of events.</returns>
-    Task<EventCount> GetCount(EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null);
+    Task<EventCount> GetCount(EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null, IEnumerable<Tag>? tags = null);
 
     /// <summary>
     /// Append a single event to the event store.
@@ -212,9 +213,10 @@ public interface IEventSequenceStorage
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to filter for.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to filter for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="tags">Optional collection of <see cref="Tag">tags</see> to filter for - an event matches when it carries any of them.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
-    Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
+    Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get events within a specific sequence number range.
@@ -223,9 +225,10 @@ public interface IEventSequenceStorage
     /// <param name="end">End of the range.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="tags">Optional collection of <see cref="Tag">tags</see> to filter for - an event matches when it carries any of them.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
-    Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default);
+    Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get events with a limit starting from a specific sequence number.
@@ -236,6 +239,7 @@ public interface IEventSequenceStorage
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to filter for.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to filter for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
+    /// <param name="tags">Optional collection of <see cref="Tag">tags</see> to filter for - an event matches when it carries any of them.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
     Task<IEventCursor> GetEventsWithLimit(
@@ -245,6 +249,7 @@ public interface IEventSequenceStorage
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default);
 
     /// <summary>

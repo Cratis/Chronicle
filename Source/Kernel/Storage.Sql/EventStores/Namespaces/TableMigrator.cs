@@ -23,7 +23,7 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
     /// <inheritdoc/>
-    public async Task EnsureTableMigrated(string tableName, TContext context, Func<TContext, string, Task> createTableAction)
+    public async Task EnsureTableMigrated(string tableName, TContext context, Func<TContext, string, Task> createTableAction, Func<TContext, string, Task>? upgradeTableAction = null)
     {
         var key = $"{context.Database.GetConnectionString()}:{tableName}";
 
@@ -66,6 +66,10 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
                 else
                 {
                     logger.TableAlreadyExists(tableName);
+                    if (upgradeTableAction is not null)
+                    {
+                        await upgradeTableAction(context, tableName);
+                    }
                 }
 
                 _migratedTables.TryAdd(key, true);
@@ -121,6 +125,38 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+        finally
+        {
+            await connection.CloseAsync();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ColumnExists(TContext context, string tableName, string columnName)
+    {
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+
+            if (context.Database.IsSqlServer())
+            {
+                command.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}'";
+            }
+            else if (context.Database.IsNpgsql())
+            {
+                command.CommandText = $"SELECT COUNT(*) FROM information_schema.columns WHERE table_name = '{tableName}' AND column_name = '{columnName}'";
+            }
+            else
+            {
+                command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{tableName}') WHERE name = '{columnName}'";
+            }
+
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
         }
         finally
         {

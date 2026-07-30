@@ -21,6 +21,7 @@ public class and_child_creation_event_resolver_returns_deferred : given.a_three_
                 Arg.Any<EventSequenceNumber>(),
                 (EventSourceId)SliceKey,
                 Arg.Any<IEnumerable<EventType>>(),
+                Arg.Any<IEnumerable<Tag>?>(),
                 Arg.Any<CancellationToken>())
             .Returns(cursor);
 

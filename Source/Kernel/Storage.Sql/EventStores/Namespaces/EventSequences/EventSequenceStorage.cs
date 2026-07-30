@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
+using System.Linq.Expressions;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -75,7 +76,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<EventCount> GetCount(EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null)
+    public async Task<EventCount> GetCount(EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null, IEnumerable<Tag>? tags = null)
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
@@ -91,6 +92,8 @@ public class EventSequenceStorage(
             var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
+
+        query = ApplyTagsFilter(query, tags);
 
         return await query.CountAsync();
     }
@@ -148,6 +151,7 @@ public class EventSequenceStorage(
                 correlationId,
                 causation,
                 causedByChain,
+                tags,
                 occurred,
                 content,
                 contentHashes,
@@ -266,6 +270,7 @@ public class EventSequenceStorage(
                     eventToAppend.CorrelationId,
                     eventToAppend.Causation,
                     eventToAppend.CausedByChain,
+                    eventToAppend.Tags,
                     truncatedOccurred,
                     eventToAppend.Content,
                     eventToAppend.Hash,
@@ -649,7 +654,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
+    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default)
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
@@ -677,11 +682,13 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
+        query = ApplyTagsFilter(query, tags);
+
         return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
+    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default)
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
@@ -709,6 +716,8 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
+        query = ApplyTagsFilter(query, tags);
+
         return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
@@ -720,6 +729,7 @@ public class EventSequenceStorage(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
@@ -748,9 +758,37 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
+        query = ApplyTagsFilter(query, tags);
+
         query = query.Take(limit);
 
         return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+    }
+
+    /// <summary>
+    /// Narrow a query to events carrying any of the given tags. Tags are stored as a JSON string array,
+    /// so the filter matches on the exact serialized token of each tag (including quotes), which
+    /// translates to provider-native string containment without needing JSON functions.
+    /// </summary>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="tags">The tags to narrow to - null or empty means no narrowing.</param>
+    /// <returns>The narrowed query.</returns>
+    static IQueryable<EventEntry> ApplyTagsFilter(IQueryable<EventEntry> query, IEnumerable<Tag>? tags)
+    {
+        var tokens = tags?.Select(EventEntryConverter.SerializeTagToken).ToArray() ?? [];
+        if (tokens.Length == 0)
+        {
+            return query;
+        }
+
+        var parameter = Expression.Parameter(typeof(EventEntry), "e");
+        var tagsProperty = Expression.Property(parameter, nameof(EventEntry.Tags));
+        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)])!;
+        var body = tokens
+            .Select(token => (Expression)Expression.Call(tagsProperty, containsMethod, Expression.Constant(token)))
+            .Aggregate(Expression.OrElse);
+
+        return query.Where(Expression.Lambda<Func<EventEntry, bool>>(body, parameter));
     }
 
     /// <summary>

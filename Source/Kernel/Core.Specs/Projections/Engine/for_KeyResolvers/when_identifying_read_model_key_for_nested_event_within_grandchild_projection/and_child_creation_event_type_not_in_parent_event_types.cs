@@ -25,6 +25,7 @@ public class and_child_creation_event_type_not_in_parent_event_types : given.a_t
                 Arg.Any<EventSequenceNumber>(),
                 (EventSourceId)SliceKey,
                 Arg.Any<IEnumerable<EventType>>(),
+                Arg.Any<IEnumerable<Tag>?>(),
                 Arg.Any<CancellationToken>())
             .Returns(cursor);
 

@@ -44,6 +44,7 @@ public static class EventEntryConverter
     /// <param name="correlationId">The correlation identifier.</param>
     /// <param name="causation">The causation chain.</param>
     /// <param name="causedByChain">The caused by chain.</param>
+    /// <param name="tags">The tags for the event.</param>
     /// <param name="occurred">When the event occurred.</param>
     /// <param name="content">The event content.</param>
     /// <param name="hash">Optional content hash, computed by the kernel.</param>
@@ -59,6 +60,7 @@ public static class EventEntryConverter
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         ExpandoObject content,
         EventHash? hash = null,
@@ -90,7 +92,8 @@ public static class EventEntryConverter
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
             ContentHashes = contentHashesJson,
             Compensations = new Dictionary<string, string>(),
-            Subject = subject?.Value
+            Subject = subject?.Value,
+            Tags = SerializeTags(tags)
         };
     }
 
@@ -106,6 +109,7 @@ public static class EventEntryConverter
     /// <param name="correlationId">The correlation identifier.</param>
     /// <param name="causation">The causation chain.</param>
     /// <param name="causedByChain">The caused by chain.</param>
+    /// <param name="tags">The tags for the event.</param>
     /// <param name="occurred">When the event occurred.</param>
     /// <param name="content">The event content per generation.</param>
     /// <param name="contentHashes">Optional hash per generation, computed by the kernel.</param>
@@ -121,6 +125,7 @@ public static class EventEntryConverter
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         IDictionary<EventTypeGeneration, EventHash>? contentHashes = null,
@@ -151,9 +156,39 @@ public static class EventEntryConverter
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
             ContentHashes = contentHashesJson,
             Compensations = new Dictionary<string, string>(),
-            Subject = subject?.Value
+            Subject = subject?.Value,
+            Tags = SerializeTags(tags)
         };
     }
+
+    /// <summary>
+    /// Serialize a collection of <see cref="Tag">tags</see> to the JSON array form stored on an <see cref="EventEntry"/>.
+    /// </summary>
+    /// <param name="tags">The tags to serialize.</param>
+    /// <returns>The serialized tags - an empty string when there are none.</returns>
+    public static string SerializeTags(IEnumerable<Tag> tags)
+    {
+        var values = tags.Select(tag => tag.Value).ToArray();
+        return values.Length == 0 ? string.Empty : JsonSerializer.Serialize(values, _jsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Serialize a single <see cref="Tag"/> to the JSON string token it has within the stored tags array.
+    /// Used for building exact containment filters against the stored form.
+    /// </summary>
+    /// <param name="tag">The tag to serialize.</param>
+    /// <returns>The serialized tag token, including its quotes and any escaping.</returns>
+    public static string SerializeTagToken(Tag tag) => JsonSerializer.Serialize(tag.Value, _jsonSerializerOptions);
+
+    /// <summary>
+    /// Get the <see cref="Tag">tags</see> stored on an <see cref="EventEntry"/>.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The tags - empty when none were stored.</returns>
+    public static IEnumerable<Tag> GetTags(EventEntry entry) =>
+        string.IsNullOrEmpty(entry.Tags)
+            ? []
+            : (JsonSerializer.Deserialize<string[]>(entry.Tags, _jsonSerializerOptions) ?? []).Select(value => new Tag(value)).ToArray();
 
     /// <summary>
     /// Update the content for a specific event type generation in an <see cref="EventEntry"/>.
@@ -451,7 +486,7 @@ public static class EventEntryConverter
             new CorrelationId(Guid.Parse(entry.CorrelationId)),
             causation,
             await identityStorage.GetFor(causedBy),
-            [],
+            GetTags(entry),
             GetHashForGeneration(entry, eventType.Generation),
             Subject: GetSubject(entry));
 

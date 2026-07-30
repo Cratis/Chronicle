@@ -68,10 +68,11 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public Task<EventCount> GetCount(
         EventSequenceNumber? lastEventSequenceNumber = null,
-        IEnumerable<EventType>? eventTypes = null)
+        IEnumerable<EventType>? eventTypes = null,
+        IEnumerable<Tag>? tags = null)
     {
         var snapshot = Events;
-        var filtered = Filter(snapshot, null, null, null, null, eventTypes);
+        var filtered = Filter(snapshot, null, null, null, null, eventTypes, tags);
         if (lastEventSequenceNumber is not null)
         {
             filtered = filtered.Where(_ => _.Context.SequenceNumber <= lastEventSequenceNumber);
@@ -380,9 +381,10 @@ public class EventSequenceStorage(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
-        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes)
+        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes, tags)
             .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
             .OrderBy(_ => _.Context.SequenceNumber)
             .ToList();
@@ -396,9 +398,10 @@ public class EventSequenceStorage(
         EventSequenceNumber end,
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
-        var filtered = Filter(Events, eventSourceId, null, null, null, eventTypes)
+        var filtered = Filter(Events, eventSourceId, null, null, null, eventTypes, tags)
             .Where(_ => _.Context.SequenceNumber >= start && _.Context.SequenceNumber <= end)
             .OrderBy(_ => _.Context.SequenceNumber)
             .ToList();
@@ -414,9 +417,10 @@ public class EventSequenceStorage(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
-        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes)
+        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes, tags)
             .Where(_ => _.Context.SequenceNumber >= start)
             .OrderBy(_ => _.Context.SequenceNumber)
             .Take(limit)
@@ -555,6 +559,7 @@ public class EventSequenceStorage(
     /// <param name="eventStreamType">The <see cref="EventStreamType"/> to narrow by, or <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">The <see cref="EventStreamId"/> to narrow by, or its default sentinel.</param>
     /// <param name="eventTypes">The event types to narrow by, or an empty set.</param>
+    /// <param name="tags">The tags to narrow by - an event matches when it carries any of them; null or an empty set means no narrowing.</param>
     /// <returns>The narrowed events.</returns>
     static IEnumerable<AppendedEvent> Filter(
         IEnumerable<AppendedEvent> events,
@@ -562,7 +567,8 @@ public class EventSequenceStorage(
         EventSourceType? eventSourceType,
         EventStreamType? eventStreamType,
         EventStreamId? eventStreamId,
-        IEnumerable<EventType>? eventTypes)
+        IEnumerable<EventType>? eventTypes,
+        IEnumerable<Tag>? tags = null)
     {
         if (eventSourceId?.IsSpecified == true)
         {
@@ -588,6 +594,12 @@ public class EventSequenceStorage(
         if (typeSet?.Count > 0)
         {
             events = events.Where(_ => typeSet.Contains(_.Context.EventType));
+        }
+
+        var tagSet = tags?.ToHashSet();
+        if (tagSet?.Count > 0)
+        {
+            events = events.Where(_ => _.Context.Tags.Any(tagSet.Contains));
         }
 
         return events;

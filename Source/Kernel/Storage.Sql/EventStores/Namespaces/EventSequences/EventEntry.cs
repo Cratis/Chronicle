@@ -80,6 +80,11 @@ public class EventEntry
     public string? Subject { get; set; }
 
     /// <summary>
+    /// Gets or sets the tags for the event, serialized as a JSON array of strings.
+    /// </summary>
+    public string Tags { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the compensations for the event.
     /// </summary>
     [Json]

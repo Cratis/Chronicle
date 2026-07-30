@@ -101,8 +101,8 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public Task SaveState(EventSequenceState state) => inner.SaveState(state);
 
     /// <inheritdoc/>
-    public Task<EventCount> GetCount(EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null) =>
-        inner.GetCount(lastEventSequenceNumber, eventTypes);
+    public Task<EventCount> GetCount(EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<EventType>? eventTypes = null, IEnumerable<Tag>? tags = null) =>
+        inner.GetCount(lastEventSequenceNumber, eventTypes, tags);
 
     /// <inheritdoc/>
     public Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
@@ -170,12 +170,12 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber) => inner.GetEventAt(sequenceNumber);
 
     /// <inheritdoc/>
-    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default) =>
-        inner.GetFromSequenceNumber(sequenceNumber, eventSourceId, eventStreamType, eventStreamId, eventTypes, cancellationToken);
+    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        inner.GetFromSequenceNumber(sequenceNumber, eventSourceId, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
-    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default) =>
-        inner.GetRange(start, end, eventSourceId, eventTypes, cancellationToken);
+    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        inner.GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
     public Task<IEventCursor> GetEventsWithLimit(
@@ -185,8 +185,9 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default) =>
-        inner.GetEventsWithLimit(start, limit, eventSourceId, eventStreamType, eventStreamId, eventTypes, cancellationToken);
+        inner.GetEventsWithLimit(start, limit, eventSourceId, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
     public Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content) =>
