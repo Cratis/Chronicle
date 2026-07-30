@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage;
@@ -38,7 +39,7 @@ public class when_creating_with_different_constraint_definition_types : Specific
         _eventStoreStorage.Constraints.Returns(_constraintsStorage);
         _constraintsStorage.GetDefinitions().Returns([
             new UniqueConstraintDefinition("SomeUniqueConstraint", []),
-            new UniqueEventTypeConstraintDefinition("SomeUniqueEventTypeConstraint", "SomeEventType")
+            new UniqueEventTypeConstraintDefinition("SomeUniqueEventTypeConstraint", [(EventTypeId)"SomeEventType"])
         ]);
 
         _factory = new ConstraintValidationFactory(_storage);

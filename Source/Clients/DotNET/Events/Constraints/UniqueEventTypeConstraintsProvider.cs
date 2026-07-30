@@ -27,7 +27,7 @@ public class UniqueEventTypeConstraintsProvider(IClientArtifactsProvider clientA
                 return new UniqueEventTypeConstraintDefinition(
                     constraintName,
                     et => eventType.GetConstraintMessage() ?? string.Empty,
-                    eventTypes.GetEventTypeFor(eventType).Id,
+                    [eventTypes.GetEventTypeFor(eventType).Id],
                     removedWith);
             }).ToImmutableList();
 }

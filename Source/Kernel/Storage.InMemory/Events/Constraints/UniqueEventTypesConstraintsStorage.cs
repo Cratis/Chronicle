@@ -21,13 +21,14 @@ public class UniqueEventTypesConstraintsStorage(
 {
     /// <inheritdoc/>
     public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(
-        EventTypeId eventTypeId,
+        IEnumerable<EventTypeId> eventTypeIds,
         EventSourceId eventSourceId,
         string scopeKey = "")
     {
+        var coveredEventTypeIds = eventTypeIds.ToHashSet();
         var existing = eventSequenceStorage.Events
             .FirstOrDefault(_ =>
-                _.Context.EventType.Id == eventTypeId &&
+                coveredEventTypeIds.Contains(_.Context.EventType.Id) &&
                 _.Context.EventSourceId == eventSourceId);
 
         if (existing is not null)

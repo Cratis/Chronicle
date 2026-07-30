@@ -33,7 +33,7 @@ internal static class ConstraintConverters
             Contracts.Events.Constraints.ConstraintType.UniqueEventType =>
                 new UniqueEventTypeConstraintDefinition(
                     constraint.Name,
-                    constraint.Definition.Value1!.EventTypeId,
+                    constraint.Definition.Value1!.EventTypeIds.Select(_ => (EventTypeId)_).ToArray(),
                     scope),
 
             _ => null!

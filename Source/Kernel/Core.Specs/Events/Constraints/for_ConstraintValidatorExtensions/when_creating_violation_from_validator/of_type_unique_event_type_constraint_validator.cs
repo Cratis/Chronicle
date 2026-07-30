@@ -12,7 +12,7 @@ public class of_type_unique_event_type_constraint_validator : given.a_constraint
 
     IConstraintValidator _validator;
 
-    void Establish() => _validator = new UniqueEventTypeConstraintValidator(new UniqueEventTypeConstraintDefinition(ConstraintName, _eventType.Id), Substitute.For<IUniqueEventTypesConstraintsStorage>());
+    void Establish() => _validator = new UniqueEventTypeConstraintValidator(new UniqueEventTypeConstraintDefinition(ConstraintName, [_eventType.Id]), Substitute.For<IUniqueEventTypesConstraintsStorage>());
 
     void Because() => _result = _validator.CreateViolation(_context, _sequenceNumber, _message, _details);
 

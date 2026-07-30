@@ -19,14 +19,14 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueEventTypesCo
 public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueEventTypesConstraintsStorage
 {
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventTypeId eventTypeId, EventSourceId eventSourceId, string scopeKey = "")
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(IEnumerable<EventTypeId> eventTypeIds, EventSourceId eventSourceId, string scopeKey = "")
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventTypeIdValue = eventTypeId.Value;
+        var eventTypeIdValues = eventTypeIds.Select(_ => _.Value).ToArray();
         var eventSourceIdValue = eventSourceId.Value;
         var existing = await scope.DbContext.Events
-            .Where(e => e.Type == eventTypeIdValue &&
+            .Where(e => eventTypeIdValues.Contains(e.Type) &&
                        e.EventSourceId == eventSourceIdValue)
             .FirstOrDefaultAsync();
 

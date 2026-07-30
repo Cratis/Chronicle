@@ -10,8 +10,12 @@ namespace Cratis.Chronicle.Contracts.Events.Constraints;
 public class UniqueEventTypeConstraintDefinition
 {
     /// <summary>
-    /// Gets or sets the event type identifier for the unique constraint.
+    /// Gets or sets the event type identifiers the unique constraint covers.
     /// </summary>
-    [ProtoMember(1)]
-    public string EventTypeId { get; set; }
+    /// <remarks>
+    /// At most one event drawn from these types is allowed per event source. Field 1 held the single
+    /// EventTypeId this replaces and is reserved so an older payload is ignored rather than misread.
+    /// </remarks>
+    [ProtoMember(2)]
+    public IList<string> EventTypeIds { get; set; }
 }
