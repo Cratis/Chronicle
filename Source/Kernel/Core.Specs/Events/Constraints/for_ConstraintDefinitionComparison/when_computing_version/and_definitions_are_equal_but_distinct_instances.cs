@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintDefinitionComparison.when_computing_version;
@@ -15,12 +16,12 @@ public class and_definitions_are_equal_but_distinct_instances : Specification
         _first = ConstraintDefinitionComparison.ComputeVersion(
         [
             new UniqueConstraintDefinition("unique-thing", [new UniqueConstraintEventDefinition("some-event", ["Some"])]),
-            new UniqueEventTypeConstraintDefinition("unique-type", "another-event")
+            new UniqueEventTypeConstraintDefinition("unique-type", [(EventTypeId)"another-event"])
         ]);
         _second = ConstraintDefinitionComparison.ComputeVersion(
         [
             new UniqueConstraintDefinition("unique-thing", [new UniqueConstraintEventDefinition("some-event", ["Some"])]),
-            new UniqueEventTypeConstraintDefinition("unique-type", "another-event")
+            new UniqueEventTypeConstraintDefinition("unique-type", [(EventTypeId)"another-event"])
         ]);
     }
 

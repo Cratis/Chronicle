@@ -18,6 +18,7 @@ public class when_releasing : given.a_property_handler
     {
         _input = JsonValue.Create(Convert.ToBase64String(Encoding.UTF8.GetBytes("42")));
         _encryptedBytes = Encoding.UTF8.GetBytes(_decryptedString);
+        _encryption.IsEncrypted(Arg.Any<byte[]>()).Returns(true);
         _encryption.Decrypt(Arg.Any<byte[]>(), _key).Returns(_encryptedBytes);
     }
 

@@ -20,7 +20,7 @@ public class when_converting_to_contract : Specification
         _definition = new UniqueEventTypeConstraintDefinition(
             _constraintName,
             _ => "",
-            _eventType.Id,
+            [_eventType.Id],
             null);
     }
 
@@ -32,5 +32,5 @@ public class when_converting_to_contract : Specification
 
     [Fact] void should_have_correct_name() => _contract.Name.ShouldEqual(_constraintName.Value);
     [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(Contracts.Events.Constraints.ConstraintType.UniqueEventType);
-    [Fact] void should_event_type() => _definitionContract.EventTypeId.ShouldEqual(_eventType.Id.Value);
+    [Fact] void should_event_type() => _definitionContract.EventTypeIds.ShouldContainOnly([_eventType.Id.Value]);
 }

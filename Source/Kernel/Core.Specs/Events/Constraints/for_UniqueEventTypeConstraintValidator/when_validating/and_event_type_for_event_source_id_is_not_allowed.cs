@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
+
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueEventTypeConstraintValidator.when_validating;
 
 public class and_event_type_for_event_source_id_is_not_allowed : given.a_unique_event_type_constraint_validator_with_valid_definition
@@ -9,7 +11,7 @@ public class and_event_type_for_event_source_id_is_not_allowed : given.a_unique_
 
     void Establish()
     {
-        _storage.IsAllowed(_eventType.Id, _context.EventSourceId).Returns((false, 43U));
+        _storage.IsAllowed(Arg.Is<IEnumerable<EventTypeId>>(_ => _.Contains(_eventType.Id)), _context.EventSourceId).Returns((false, 43U));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);

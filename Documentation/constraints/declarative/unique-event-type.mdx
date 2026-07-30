@@ -24,6 +24,16 @@ An optional name can be provided to identify the constraint. When not provided, 
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/constraint-name" />
 
+## Mutually exclusive event types
+
+Declare several event types under the **same constraint name** and they become one constraint: at most one event drawn from that set is allowed per event source. Use it when an event source has more than one terminal outcome and the outcomes exclude each other — cancelled *or* completed, merged *or* erased, approved *or* permanently rejected.
+
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/mutually-exclusive" />
+
+Each event type still cannot occur twice — that is the single-type case of the same rule. What sharing the name adds is that the *first* of them to be appended blocks all of the others.
+
+Because this is enforced at append time it holds under concurrency, which a validator reading prior state cannot guarantee: that check and the append are not atomic, so two competing commands can both observe "no terminal event yet" and both succeed.
+
 ## How constraints are enforced
 
 When a constraint is registered, the Chronicle Kernel creates the indexes required to enforce it. Constraints are evaluated server-side during append, ensuring data integrity regardless of the client.

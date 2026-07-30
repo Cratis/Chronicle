@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -18,7 +19,7 @@ public class and_unique_constraints_are_registered : given.a_rebuild_constraint_
     void Establish()
     {
         _uniqueConstraint = new UniqueConstraintDefinition("SomeUniqueConstraint", [new("SomeEvent", ["SomeProperty"])]);
-        _uniqueEventTypeConstraint = new UniqueEventTypeConstraintDefinition("SomeUniqueEventTypeConstraint", "SomeOtherEvent");
+        _uniqueEventTypeConstraint = new UniqueEventTypeConstraintDefinition("SomeUniqueEventTypeConstraint", [(EventTypeId)"SomeOtherEvent"]);
 
         _constraintsStorage.GetDefinitions().Returns(Task.FromResult<IEnumerable<IConstraintDefinition>>(
             [_uniqueConstraint, _uniqueEventTypeConstraint]));

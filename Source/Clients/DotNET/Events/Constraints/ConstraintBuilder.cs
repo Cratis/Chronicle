@@ -68,7 +68,7 @@ public class ConstraintBuilder(
         AddConstraint(ApplyScope(new UniqueEventTypeConstraintDefinition(
             name ?? eventType.Id.Value,
             messageCallback,
-            eventType.Id,
+            [eventType.Id],
             null)));
 
         return this;
@@ -83,9 +83,63 @@ public class ConstraintBuilder(
     /// <inheritdoc/>
     public IImmutableList<IConstraintDefinition> Build()
     {
-        ThrowIfDuplicateConstraintNames();
+        var constraints = MergeUniqueEventTypeConstraintsSharingName(_constraints);
+        ThrowIfDuplicateConstraintNames(constraints);
 
-        return _constraints.ToImmutableList();
+        return constraints.ToImmutableList();
+    }
+
+    /// <summary>
+    /// Merge unique event type constraints declared under the same name into a single definition.
+    /// </summary>
+    /// <param name="constraints">The constraints to merge.</param>
+    /// <returns>The constraints with same-named unique event type definitions merged.</returns>
+    /// <remarks>
+    /// Declaring <c>Unique&lt;A&gt;(name: x)</c> and <c>Unique&lt;B&gt;(name: x)</c> is how mutual exclusion is
+    /// expressed — the two become one constraint allowing at most one event from {A, B} per event source.
+    /// Merging happens here rather than downstream so that names stay unique across the built set, which
+    /// registration, change detection, and violation message resolution all rely on.
+    /// </remarks>
+    static List<IConstraintDefinition> MergeUniqueEventTypeConstraintsSharingName(IEnumerable<IConstraintDefinition> constraints)
+    {
+        var merged = new List<IConstraintDefinition>();
+        foreach (var constraint in constraints)
+        {
+            if (constraint is not UniqueEventTypeConstraintDefinition uniqueEventType)
+            {
+                merged.Add(constraint);
+                continue;
+            }
+
+            var existingIndex = merged.FindIndex(_ => _ is UniqueEventTypeConstraintDefinition && _.Name == constraint.Name);
+            if (existingIndex < 0)
+            {
+                merged.Add(uniqueEventType);
+                continue;
+            }
+
+            var existing = (UniqueEventTypeConstraintDefinition)merged[existingIndex];
+            merged[existingIndex] = existing with
+            {
+                EventTypeIds = existing.EventTypeIds.Concat(uniqueEventType.EventTypeIds).Distinct().ToArray()
+            };
+        }
+
+        return merged;
+    }
+
+    static void ThrowIfDuplicateConstraintNames(IEnumerable<IConstraintDefinition> constraints)
+    {
+        var violatingConstraints = constraints
+            .GroupBy(_ => _.Name)
+            .Where(_ => _.Count() > 1)
+            .Select(_ => _.Key)
+            .ToArray();
+
+        if (violatingConstraints.Length > 0)
+        {
+            throw new DuplicateConstraintNames(violatingConstraints);
+        }
     }
 
     ConstraintScope? GetScope()
@@ -115,19 +169,5 @@ public class ConstraintBuilder(
             UniqueEventTypeConstraintDefinition uniqueEventType => uniqueEventType with { Scope = scope },
             _ => definition
         };
-    }
-
-    void ThrowIfDuplicateConstraintNames()
-    {
-        var violatingConstraints = _constraints
-            .GroupBy(_ => _.Name)
-            .Where(_ => _.Count() > 1)
-            .Select(_ => _.Key)
-            .ToArray();
-
-        if (violatingConstraints.Length > 0)
-        {
-            throw new DuplicateConstraintNames(violatingConstraints);
-        }
     }
 }

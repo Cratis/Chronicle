@@ -141,7 +141,7 @@ internal sealed class TestingServices(
             grainFactory,
             storage,
             new KernelEventCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
                 new ExpandoObjectConverter(new TypeFormats())),
             jsonSerializerOptions));
 
@@ -184,17 +184,17 @@ internal sealed class TestingServices(
             // object-reference lookups throw NotSupportedException), so no local silo details are needed.
             null!,
             new KernelReadModelsCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
                 new ExpandoObjectConverter(new TypeFormats())),
             new KernelEventCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
                 new ExpandoObjectConverter(new TypeFormats())),
             jsonSerializerOptions));
 
     readonly Lazy<ICompliance> _compliance = new(() =>
         new KernelComplianceService(
             grainFactory,
-            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
             NullLogger<KernelComplianceService>.Instance));
 
     /// <inheritdoc/>

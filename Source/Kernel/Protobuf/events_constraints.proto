@@ -38,7 +38,8 @@ message UniqueConstraintEventDefinition {
    repeated string Properties = 2;
 }
 message UniqueEventTypeConstraintDefinition {
-   string EventTypeId = 1;
+   reserved 1;
+   repeated string EventTypeIds = 2;
 }
 service Constraints {
    rpc Register (RegisterConstraintsRequest) returns (.google.protobuf.Empty);

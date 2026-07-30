@@ -16,6 +16,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -76,7 +77,8 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
             var complianceConverter = new Cratis.Chronicle.Json.ExpandoObjectConverter(typeFormats);
             var complianceManager = new JsonComplianceManager(
                 new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                    new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())));
+                    new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+                NullLogger<JsonComplianceManager>.Instance);
             var compliance = new ReadModelsCompliance(complianceManager, complianceConverter);
             var objectComparer = new ObjectComparer();
 

@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Events.for_EventCompliance.when_releasing_event_content;
 
@@ -51,7 +52,7 @@ public class and_event_has_multiple_pii_properties : Specification
         var encryption = new Encryption();
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var piiHandler = new PIICompliancePropertyValueHandler(keyStorage, encryption);
-        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler));
+        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler), NullLogger<JsonComplianceManager>.Instance);
         _converter = new(new TypeFormats());
     }
 

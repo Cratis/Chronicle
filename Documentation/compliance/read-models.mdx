@@ -59,3 +59,21 @@ Read model queries are transparent to PII encryption. No changes to query code a
 <ChronicleClientTabs snippet="compliance/read-models/querying" />
 
 Chronicle decrypts PII fields automatically before returning results to the caller. When the encryption key has been deleted for a subject, `Name` returns an empty string — the caller receives an `Employee` record with an empty name, never an exception or partial result.
+
+### One property never fails the whole read
+
+Decryption is resolved per property, and a property that cannot be read never fails the read model or the query returning it:
+
+| The stored value | What the caller gets |
+|---|---|
+| Encrypted under this subject | The decrypted value. |
+| Encrypted, but the subject's key was deleted | An empty value — the erasure case above. |
+| Never encrypted under this subject | The value, untouched. |
+| Encrypted under a *different* subject | An empty value for that property, plus an error in the Kernel log naming the property, the subject, and the likely cause. |
+
+The third row matters when a `[PII]`-typed property is resolved in memory at the query edge — for display on a view whose own compliance subject is not that person — or when a property was marked `[PII]` after values had already been stored. Chronicle recognizes the shape of the values it encrypts, so a value it never encrypted is passed through rather than blanked or rejected.
+
+The fourth row is a modeling defect rather than a transient failure: a read model has one compliance subject and all of its PII is released under it. The [CHR0038](../code-analysis/CHR0038) analyzer catches the common cause — a `[Join]` copying a `[PII]` value out of another event source's stream — at build time. When one slips through, the property is degraded rather than the query, so the rest of the result is unaffected.
+
+> [!NOTE]
+> Applying PII behaves the opposite way, and deliberately so: if encryption fails on the way *in*, the operation fails. Storing a value that was meant to be protected, unprotected, is never an acceptable degradation.

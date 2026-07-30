@@ -19,13 +19,16 @@ public class UniqueEventTypeConstraintValidator(
     public IConstraintDefinition Definition => definition;
 
     /// <inheritdoc/>
-    public bool CanValidate(ConstraintValidationContext context) => definition.EventTypeId == context.EventTypeId;
+    public bool CanValidate(ConstraintValidationContext context) => definition.EventTypeIds.Contains(context.EventTypeId);
 
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventTypeId, context.EventSourceId, scopeKey);
+
+        // Every covered event type is checked, not just the one being appended: the constraint allows at most
+        // one event from the set, so an event source that already has a sibling type blocks this one too.
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(definition.EventTypeIds, context.EventSourceId, scopeKey);
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()

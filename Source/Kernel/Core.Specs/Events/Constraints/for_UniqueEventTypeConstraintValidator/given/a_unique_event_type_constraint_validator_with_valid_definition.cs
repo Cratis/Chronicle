@@ -13,5 +13,5 @@ public class a_unique_event_type_constraint_validator_with_valid_definition : a_
 
     void Establish() => _context = new([], EventSourceId.New(), _eventType.Id, new());
 
-    protected override UniqueEventTypeConstraintDefinition Definition => new("SomeConstraint", _eventType.Id);
+    protected override UniqueEventTypeConstraintDefinition Definition => new("SomeConstraint", [_eventType.Id]);
 }

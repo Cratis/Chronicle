@@ -21,18 +21,18 @@ public class and_event_type_for_event_source_id_is_not_allowed_with_scope : Spec
         var eventType = new EventType("SomeEvent", 1);
         var definition = new UniqueEventTypeConstraintDefinition(
             "ScopedConstraint",
-            eventType.Id,
+            [eventType.Id],
             Scope: new ConstraintScope(EventSourceType: "MySourceType"));
 
         _validator = new UniqueEventTypeConstraintValidator(definition, _storage);
         _context = new([], EventSourceId.New(), eventType.Id, new ExpandoObject(), eventSourceType: "MySourceType");
 
-        _storage.IsAllowed(eventType.Id, _context.EventSourceId, "est:MySourceType").Returns((false, 42U));
+        _storage.IsAllowed(Arg.Is<IEnumerable<EventTypeId>>(_ => _.Contains(eventType.Id)), _context.EventSourceId, "est:MySourceType").Returns((false, 42U));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);
 
     [Fact] void should_not_be_valid() => _result.IsValid.ShouldBeFalse();
     [Fact] void should_have_violations() => _result.Violations.ShouldNotBeEmpty();
-    [Fact] void should_pass_scope_key_to_storage() => _storage.Received(1).IsAllowed(Arg.Any<EventTypeId>(), Arg.Any<EventSourceId>(), "est:MySourceType");
+    [Fact] void should_pass_scope_key_to_storage() => _storage.Received(1).IsAllowed(Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSourceId>(), "est:MySourceType");
 }

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity;
 
@@ -59,7 +60,8 @@ public class when_a_reducer_round_trips_pii_through_both_sinks(MongoDBFixture fi
         new ReadModelsCompliance(
             new JsonComplianceManager(
                 new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                    new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption()))),
+                    new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+                NullLogger<JsonComplianceManager>.Instance),
             new Cratis.Chronicle.Json.ExpandoObjectConverter(new TypeFormats()));
 
     [Fact] void should_round_trip_identically_across_sinks() => ParityReport.ShouldEqual(string.Empty);

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_round_tripping;
 
@@ -76,7 +77,7 @@ public class and_state_with_multiple_pii_properties_is_reapplied : Specification
         var encryption = new Encryption();
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var piiHandler = new PIICompliancePropertyValueHandler(keyStorage, encryption);
-        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler));
+        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler), NullLogger<JsonComplianceManager>.Instance);
         _converter = new(new TypeFormats());
         _compliance = new ReadModelsCompliance(_complianceManager, _converter);
 

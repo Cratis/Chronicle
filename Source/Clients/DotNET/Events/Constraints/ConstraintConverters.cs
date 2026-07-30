@@ -35,7 +35,7 @@ internal static class ConstraintConverters
         Type = (Contracts.Events.Constraints.ConstraintType)ConstraintType.UniqueEventType,
         Definition = new(new UniqueEventTypeConstraintDefinitionContract
         {
-            EventTypeId = definition.EventTypeId
+            EventTypeIds = definition.EventTypeIds.Select(_ => _.Value).ToList()
         }),
         Scope = definition.Scope?.ToContract()
     };

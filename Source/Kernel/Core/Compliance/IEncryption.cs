@@ -31,4 +31,17 @@ public interface IEncryption
     /// <param name="key">Key to use.</param>
     /// <returns>Decrypted bytes.</returns>
     byte[] Decrypt(byte[] bytes, EncryptionKey key);
+
+    /// <summary>
+    /// Check whether bytes carry the shape this encryption produces.
+    /// </summary>
+    /// <param name="bytes">Bytes to check.</param>
+    /// <returns>True if the bytes could have been produced by <see cref="Encrypt"/>, false otherwise.</returns>
+    /// <remarks>
+    /// This tells apart a value that was encrypted from one that never was, so that releasing a value which
+    /// was never protected can be a no-op instead of an error. It is a structural check on the format only —
+    /// it says nothing about which subject's key the value belongs to, and a value it accepts can still fail
+    /// to decrypt.
+    /// </remarks>
+    bool IsEncrypted(byte[] bytes);
 }
