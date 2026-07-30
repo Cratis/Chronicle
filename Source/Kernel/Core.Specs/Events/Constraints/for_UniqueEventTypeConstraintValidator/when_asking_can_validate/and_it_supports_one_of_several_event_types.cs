@@ -16,7 +16,7 @@ public class and_it_supports_one_of_several_event_types : given.a_unique_event_t
 
     ConstraintValidationContext _context;
 
-    EventType _erasedEventType = new("PersonErased", 1);
+    readonly EventType _erasedEventType = new("PersonErased", 1);
 
     void Establish() => _context = new([], EventSourceId.New(), _erasedEventType.Id, new());
 
