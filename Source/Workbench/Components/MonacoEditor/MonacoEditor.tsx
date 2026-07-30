@@ -3,7 +3,9 @@
 
 import React, { useRef, useEffect } from 'react';
 import * as monaco from 'monaco-editor';
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+// monaco-editor 0.56 roots its subpath exports at esm/vs ("./*": "./esm/vs/*.js"), so the
+// worker is reached as 'monaco-editor/editor/editor.worker' rather than the full esm/vs path.
+import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 
 self.MonacoEnvironment = {
     getWorker(): Worker {
