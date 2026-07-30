@@ -56,6 +56,9 @@ while (true)
         case ConsoleKey.L:
             WriteEmployeeList(selectedIndex);
             break;
+        case ConsoleKey.G:
+            await GenerateSampleData();
+            break;
         case >= ConsoleKey.D1 and <= ConsoleKey.D9:
         case >= ConsoleKey.NumPad1 and <= ConsoleKey.NumPad9:
             var digit = keyInfo.Key is >= ConsoleKey.NumPad1 and <= ConsoleKey.NumPad9
@@ -102,6 +105,18 @@ while (true)
         case ConsoleKey.Escape:
             Console.WriteLine("Exiting...");
             return;
+    }
+}
+
+async Task GenerateSampleData()
+{
+    Console.WriteLine($"Generating sample data for {EmployeeData.Persons.Length} employees...");
+    var result = await EmployeeSampleData.Generate(store);
+
+    Console.WriteLine($"[sample-data] Created {result.Created}, skipped {result.Skipped}");
+    foreach (var reason in result.Reasons)
+    {
+        Console.WriteLine($"[sample-data] {reason}");
     }
 }
 
@@ -191,7 +206,9 @@ void WriteInstructions()
     Console.WriteLine(
         $"""
 
-        {EmployeeData.Persons.Length} employees are seeded. Use 1-9 to jump, ←/→ to browse, L to list. Then:
+        G = Generate sample data ({EmployeeData.Persons.Length} employees with career history)
+
+        Use 1-9 to jump, ←/→ to browse, L to list. Then:
           P = Promote          A = Move (change address)
           E = Set email        U = Try to take the next employee's email (constraint violation)
           R = Read model       T = Transactional update

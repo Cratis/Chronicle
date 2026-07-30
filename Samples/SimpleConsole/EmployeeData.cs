@@ -32,10 +32,9 @@ public static class EmployeeData
         $"{person.FirstName.ToLowerInvariant()}.{person.LastName.ToLowerInvariant()}@example.com";
 
     /// <summary>
-    /// Builds the seeded employee roster. The first three keep their original names so an
-    /// already-seeded local store stays idempotent (Chronicle only skips a seed entry when its
-    /// content matches exactly); the rest are generated deterministically from name pools so the
-    /// set is stable across runs.
+    /// Builds the employee roster the sample can generate data for. The first three keep the
+    /// original names the sample has always used; the rest are built deterministically from name
+    /// pools so the roster - and the event source ids it maps to - is identical on every run.
     /// </summary>
     /// <param name="count">The number of employees to generate.</param>
     /// <returns>The generated <see cref="Person"/> array.</returns>
