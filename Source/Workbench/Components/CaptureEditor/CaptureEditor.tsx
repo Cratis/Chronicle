@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MonacoEditor, { Monaco, OnMount } from 'Components/MonacoEditor/MonacoEditor';
 import type { editor, Uri } from 'monaco-editor';
 import { registerCaptureDefinitionLanguage, languageId, disposeCaptureDefinitionLanguage } from './index';
+import { registerDynamicCompletions } from './dynamicCompletions';
 import { Button } from 'primereact/button';
 import { CaptureHelpPanel } from './CaptureHelpPanel';
 import Strings from 'Strings';
@@ -22,6 +23,13 @@ export interface CaptureEditorProps {
     onValidationChange?: (hasErrors: boolean) => void;
     errors?: CaptureDeclarationSyntaxError[];
     theme?: string;
+    readOnly?: boolean;
+
+    /** Names of the external services available for completion after the `api` keyword. */
+    externalServiceNames?: string[];
+
+    /** Names of the event types available for completion after the `append` keyword. */
+    eventTypeNames?: string[];
 }
 
 export const CaptureEditor: React.FC<CaptureEditorProps> = ({
@@ -31,16 +39,28 @@ export const CaptureEditor: React.FC<CaptureEditorProps> = ({
     onValidationChange,
     errors,
     theme = 'vs-dark',
+    readOnly = false,
+    externalServiceNames,
+    eventTypeNames,
 }) => {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<Monaco | null>(null);
     const decorationsRef = useRef<string[]>([]);
+    const completionsRef = useRef<{ externalServiceNames: string[]; eventTypeNames: string[] }>({ externalServiceNames: [], eventTypeNames: [] });
+    const dynamicCompletionDisposableRef = useRef<{ dispose(): void } | null>(null);
     const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
+
+    completionsRef.current = {
+        externalServiceNames: externalServiceNames ?? [],
+        eventTypeNames: eventTypeNames ?? [],
+    };
 
     const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
         editorRef.current = editor;
         monacoRef.current = monacoInstance;
         registerCaptureDefinitionLanguage(monacoInstance);
+        dynamicCompletionDisposableRef.current?.dispose();
+        dynamicCompletionDisposableRef.current = registerDynamicCompletions(monacoInstance, completionsRef);
 
         const markerDisposable = monacoInstance.editor.onDidChangeMarkers((resources: readonly Uri[]) => {
             const model = editor.getModel();
@@ -65,6 +85,8 @@ export const CaptureEditor: React.FC<CaptureEditorProps> = ({
 
     useEffect(() => {
         return () => {
+            dynamicCompletionDisposableRef.current?.dispose();
+            dynamicCompletionDisposableRef.current = null;
             disposeCaptureDefinitionLanguage();
         };
     }, []);
@@ -201,6 +223,7 @@ export const CaptureEditor: React.FC<CaptureEditorProps> = ({
                         lineNumbers: 'on',
                         renderLineHighlight: 'all',
                         tabSize: 2,
+                        readOnly,
                         hover: {
                             above: false,
                         },
