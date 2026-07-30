@@ -22,6 +22,7 @@ public class a_simple_api_capture : for_LanguageService.given.a_language_service
 
     void Because() => _result = Compile(Declaration);
 
+    [Fact] void should_have_name() => _result.Name.ShouldEqual(new CaptureName("Customers"));
     [Fact] void should_have_api_source() => _result.Source.Type.ShouldEqual(SourceType.Api);
     [Fact] void should_have_api() => _result.Source.Api.ShouldEqual("CustomersApi");
     [Fact] void should_have_poll() => _result.Source.Poll.ShouldEqual("5m");

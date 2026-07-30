@@ -25,7 +25,8 @@ internal class CaptureDefinitionSyntaxVisitor : ICaptureSyntaxVisitor<CaptureDef
         }
 
         return new CaptureDefinition(
-            CaptureId.New(),
+            CaptureId.NotSet,
+            syntax.Name,
             ConvertSource(syntax.Source),
             syntax.Key,
             ConvertMap(syntax.Map),

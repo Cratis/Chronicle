@@ -105,6 +105,7 @@ public class CaptureBuilder : ICaptureBuilder
 
         return new(
             CaptureId.New(),
+            CaptureName.NotSet,
             _source!,
             _keyProperty!,
             _map,
