@@ -7,6 +7,17 @@
 				"mcp",
 				"start"
 			]
+		},
+		"chronicle": {
+			"type": "stdio",
+			"command": "docker",
+			"args": [
+				"run",
+				"-i",
+				"--rm",
+				"-eCratis__Chronicle__Mcp__ConnectionString=chronicle://host.docker.internal:35000/?disableTls=true",
+				"cratis/chronicle-mcp"
+			]
 		}
 	},
 	"inputs": []
