@@ -45,20 +45,27 @@ while (true)
 
     switch (keyInfo.Key)
     {
-        case ConsoleKey.D1:
-        case ConsoleKey.NumPad1:
-            selectedIndex = 0;
+        case ConsoleKey.LeftArrow:
+            selectedIndex = (selectedIndex - 1 + EmployeeData.Persons.Length) % EmployeeData.Persons.Length;
             WriteSelectedEmployee(selectedIndex, userIndex);
             break;
-        case ConsoleKey.D2:
-        case ConsoleKey.NumPad2:
-            selectedIndex = 1;
+        case ConsoleKey.RightArrow:
+            selectedIndex = (selectedIndex + 1) % EmployeeData.Persons.Length;
             WriteSelectedEmployee(selectedIndex, userIndex);
             break;
-        case ConsoleKey.D3:
-        case ConsoleKey.NumPad3:
-            selectedIndex = 2;
-            WriteSelectedEmployee(selectedIndex, userIndex);
+        case ConsoleKey.L:
+            WriteEmployeeList(selectedIndex);
+            break;
+        case >= ConsoleKey.D1 and <= ConsoleKey.D9:
+        case >= ConsoleKey.NumPad1 and <= ConsoleKey.NumPad9:
+            var digit = keyInfo.Key is >= ConsoleKey.NumPad1 and <= ConsoleKey.NumPad9
+                ? keyInfo.Key - ConsoleKey.NumPad1
+                : keyInfo.Key - ConsoleKey.D1;
+            if (digit < EmployeeData.Persons.Length)
+            {
+                selectedIndex = digit;
+                WriteSelectedEmployee(selectedIndex, userIndex);
+            }
             break;
         case ConsoleKey.I:
             userIndex = (userIndex + 1) % 3;
@@ -182,9 +189,9 @@ void WriteInstructions()
 {
 #pragma warning disable MA0136
     Console.WriteLine(
-        """
+        $"""
 
-        Use 1-3 to select an employee. Then:
+        {EmployeeData.Persons.Length} employees are seeded. Use 1-9 to jump, ←/→ to browse, L to list. Then:
           P = Promote          A = Move (change address)
           E = Set email        U = Try to take the next employee's email (constraint violation)
           R = Read model       T = Transactional update
@@ -200,8 +207,20 @@ void WriteSelectedEmployee(int employeeIndex, int userIndex)
 {
     var person = EmployeeData.Persons[employeeIndex];
     var user = GetUserName(userIndex);
-    Console.WriteLine($"Selected  [{employeeIndex + 1}] {person.FirstName} {person.LastName} ({person.EventSourceId})");
+    Console.WriteLine($"Selected  [{employeeIndex + 1}/{EmployeeData.Persons.Length}] {person.FirstName} {person.LastName} ({person.EventSourceId})");
     Console.WriteLine($"Acting as [{userIndex + 1}] {user}");
+}
+
+void WriteEmployeeList(int selectedIndex)
+{
+    Console.WriteLine();
+    for (var i = 0; i < EmployeeData.Persons.Length; i++)
+    {
+        var person = EmployeeData.Persons[i];
+        var marker = i == selectedIndex ? "*" : " ";
+        Console.WriteLine($"{marker} [{i + 1,2}] {person.FirstName} {person.LastName} ({person.EventSourceId})");
+    }
+    Console.WriteLine();
 }
 
 void WriteSelectedUser(int userIndex)
