@@ -14,7 +14,7 @@ internal static class ConnectedClientConverters
     /// <param name="client">The connected client to convert.</param>
     /// <returns>The converted connected client.</returns>
     public static ConnectedClient ToApi(this Contracts.Clients.ConnectedClient client) =>
-        new(client.SiloAddress, client.ConnectionId, client.Version, client.LastSeen, client.IsRunningWithDebugger, client.ProcessId, client.ProcessPath, client.MachineName, client.ClientType);
+        new(client.ConnectionId, client.SiloAddress, client.ConnectionId, client.Version, client.LastSeen, client.IsRunningWithDebugger, client.ProcessId, client.ProcessPath, client.MachineName, client.ClientType);
 
     /// <summary>
     /// Converts a collection of <see cref="Contracts.Clients.ConnectedClient"/> to a collection of <see cref="ConnectedClient"/>.

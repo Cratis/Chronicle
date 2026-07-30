@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Api.Clients;
 /// <summary>
 /// Represents a client connected to the Chronicle server.
 /// </summary>
+/// <param name="Id">The identity of the connected client - its connection identifier. Named <c>Id</c> so observable-query delta computation matches items by identity rather than whole-payload equality.</param>
 /// <param name="SiloAddress">The address of the server (silo) the client is connected to.</param>
 /// <param name="ConnectionId">The unique connection identifier for the client.</param>
 /// <param name="Version">The version of the client.</param>
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Api.Clients;
 /// <param name="ClientType">The type of the client (for example, .NET).</param>
 [ReadModel]
 public record ConnectedClient(
+    string Id,
     string SiloAddress,
     string ConnectionId,
     string Version,
