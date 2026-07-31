@@ -16,7 +16,7 @@ public sealed class ClusterStorage(EventStoreStorages eventStoreStorages) : IClu
     public Task<IEnumerable<EventStoreName>> GetEventStores() => Task.FromResult(eventStoreStorages.Names);
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => eventStoreStorages.Observe;
+    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => eventStoreStorages.Observe();
 
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory) =>

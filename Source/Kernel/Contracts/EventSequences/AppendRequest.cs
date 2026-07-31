@@ -90,7 +90,7 @@ public class AppendRequest : IEventSequenceRequest
     /// Gets or sets the tags associated with the event.
     /// </summary>
     [ProtoMember(14, IsRequired = true)]
-    public IEnumerable<string> Tags { get; set; } = [];
+    public IEnumerable<string> Tags { get; set; } = new List<string>();
 
     /// <summary>
     /// Gets or sets the optional occurred time. If not set, the server will set it to approximately the time of append.
