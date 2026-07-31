@@ -34,6 +34,8 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
 
     readonly Subject<IEnumerable<EventStoreName>> _changes = new();
 
+    readonly Lock _publishing = new();
+
     /// <summary>
     /// Gets all the <see cref="EventStoreName">event stores</see> currently registered.
     /// </summary>
@@ -51,9 +53,16 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     public ISubject<IEnumerable<EventStoreName>> Observe()
     {
         var subject = new ReplaySubject<IEnumerable<EventStoreName>>(1);
-        subject.OnNext(Names);
+        IDisposable subscription;
 
-        var subscription = _changes.Subscribe(subject.OnNext);
+        // Subscribing and seeding have to happen against a consistent set, or an event store added in between is
+        // missed entirely - which is exactly when stores appear, since every connecting client ensures its own.
+        lock (_publishing)
+        {
+            subscription = _changes.Subscribe(subject.OnNext);
+            subject.OnNext(Names);
+        }
+
         subject.Subscribe(_ => { }, _ => { }, subscription.Dispose);
 
         return subject;
@@ -84,7 +93,7 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
 
         if (ReferenceEquals(storage, created))
         {
-            _changes.OnNext([.. _eventStores.Keys]);
+            Publish();
         }
 
         return storage;
@@ -96,11 +105,19 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     public void Clear()
     {
         _eventStores.Clear();
-        _changes.OnNext([]);
+        Publish();
     }
 
     /// <inheritdoc/>
     public void Dispose() => _changes.Dispose();
+
+    void Publish()
+    {
+        lock (_publishing)
+        {
+            _changes.OnNext([.. _eventStores.Keys]);
+        }
+    }
 
     SinksFactory CreateDefaultSinksFactory(EventStoreName eventStore) =>
         @namespace => new Cratis.Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);

@@ -31,6 +31,8 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
     readonly ConcurrentDictionary<EventTypeId, EventTypeSource> _sources = new();
     readonly Subject<IEnumerable<EventTypeSchema>> _changes = new();
 
+    readonly Lock _publishing = new();
+
     /// <inheritdoc/>
     public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
@@ -48,7 +50,10 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
             static (_, existing, incoming) => Merge(existing, incoming),
             definition);
 
-        _changes.OnNext(Latest());
+        lock (_publishing)
+        {
+            _changes.OnNext(Latest());
+        }
 
         // There is no cache anywhere to evict for an in-memory single-node store, so a registration never asks
         // anyone to invalidate.
@@ -66,9 +71,16 @@ public class EventTypesStorage : IEventTypesStorage, IDisposable
     public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes()
     {
         var subject = new ReplaySubject<IEnumerable<EventTypeSchema>>(1);
-        subject.OnNext(Latest());
+        IDisposable subscription;
 
-        var subscription = _changes.Subscribe(subject.OnNext);
+        // Subscribing and seeding have to happen against a consistent set, so a registration landing in between
+        // is not missed.
+        lock (_publishing)
+        {
+            subscription = _changes.Subscribe(subject.OnNext);
+            subject.OnNext(Latest());
+        }
+
         subject.Subscribe(_ => { }, _ => { }, subscription.Dispose);
 
         return subject;
