@@ -24,7 +24,8 @@ public class and_the_event_cursor_fails : given.all_dependencies
             Arg.Any<EventSourceId?>(),
             Arg.Any<EventStreamType?>(),
             Arg.Any<EventStreamId?>(),
-            Arg.Any<IEnumerable<EventType>?>())
+            Arg.Any<IEnumerable<EventType>?>(),
+            Arg.Any<IEnumerable<Tag>?>())
             .Returns(_cursor);
     }
 

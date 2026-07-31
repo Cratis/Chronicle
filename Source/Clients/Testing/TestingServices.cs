@@ -6,6 +6,7 @@ extern alias KernelCore;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -31,6 +32,9 @@ using Cratis.Traces;
 using Cratis.Types;
 using Microsoft.Extensions.Options;
 using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
+using KernelCaptureLanguageService = KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.LanguageService;
+using KernelCapturesService = KernelCore::Cratis.Chronicle.Services.Captures.Captures;
+using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.CaptureValidator;
 using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
@@ -126,6 +130,13 @@ internal sealed class TestingServices(
 
     readonly Lazy<IExternalServices> _externalServices = new(() =>
         new KernelExternalServicesService(storage));
+
+    readonly Lazy<ICaptures> _captures = new(() =>
+        new KernelCapturesService(
+            grainFactory,
+            storage,
+            new KernelCaptureLanguageService(),
+            new KernelCaptureValidator(storage)));
 
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
         new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
@@ -229,6 +240,9 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IExternalServices ExternalServices => _externalServices.Value;
+
+    /// <inheritdoc/>
+    public ICaptures Captures => _captures.Value;
 
     /// <inheritdoc/>
     public IEventStoreSubscriptions EventStoreSubscriptions => _eventStoreSubscriptions.Value;

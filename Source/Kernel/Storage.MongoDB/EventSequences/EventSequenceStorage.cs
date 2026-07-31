@@ -79,7 +79,8 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<EventCount> GetCount(
         EventSequenceNumber? lastEventSequenceNumber = null,
-        IEnumerable<EventType>? eventTypes = null)
+        IEnumerable<EventType>? eventTypes = null,
+        IEnumerable<Concepts.Events.Tag>? tags = null)
     {
         var filters = new List<FilterDefinition<Event>>();
         if (lastEventSequenceNumber is not null)
@@ -89,6 +90,10 @@ public class EventSequenceStorage(
         if (eventTypes?.Any() ?? false)
         {
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+        if (tags?.Any() ?? false)
+        {
+            filters.Add(Builders<Event>.Filter.AnyIn(e => e.Tags, tags.Select(_ => _.Value).ToArray()));
         }
         if (filters.Count == 0)
         {
@@ -710,6 +715,7 @@ public class EventSequenceStorage(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = null,
+        IEnumerable<Concepts.Events.Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
         logger.GettingFromSequenceNumber(eventSequenceId, sequenceNumber);
@@ -740,6 +746,11 @@ public class EventSequenceStorage(
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
+        if (tags?.Any() == true)
+        {
+            filters.Add(Builders<Event>.Filter.AnyIn(e => e.Tags, tags.Select(_ => _.Value).ToArray()));
+        }
+
         var filter = Builders<Event>.Filter.And([.. filters]);
         var cursor = await collection.Find(filter)
                                      .SortByAscendingSequenceNumber()
@@ -754,6 +765,7 @@ public class EventSequenceStorage(
         EventSequenceNumber end,
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Concepts.Events.Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
         logger.GettingRange(eventSequenceId, start, end);
@@ -774,6 +786,11 @@ public class EventSequenceStorage(
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
+        if (tags?.Any() == true)
+        {
+            filters.Add(Builders<Event>.Filter.AnyIn(e => e.Tags, tags.Select(_ => _.Value).ToArray()));
+        }
+
         var filter = Builders<Event>.Filter.And([.. filters]);
 
         var cursor = await collection.Find(filter)
@@ -791,6 +808,7 @@ public class EventSequenceStorage(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Concepts.Events.Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
         logger.GettingRange(eventSequenceId, start, EventSequenceNumber.Unavailable);
@@ -819,6 +837,11 @@ public class EventSequenceStorage(
         if (eventTypes?.Any() == true)
         {
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+
+        if (tags?.Any() == true)
+        {
+            filters.Add(Builders<Event>.Filter.AnyIn(e => e.Tags, tags.Select(_ => _.Value).ToArray()));
         }
 
         var filter = Builders<Event>.Filter.And([.. filters]);

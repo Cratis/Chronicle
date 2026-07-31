@@ -1,0 +1,65 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Captures;
+import "google/protobuf/empty.proto";
+
+message Capture {
+   string Id = 1;
+   string Name = 2;
+   string Declaration = 3;
+   CaptureStatus Status = 4;
+}
+enum CaptureStatus {
+   Stopped = 0;
+   Started = 1;
+}
+message CaptureValidationMessage {
+   string Message = 1;
+   int32 Line = 2;
+   int32 Column = 3;
+}
+message DeleteCapture {
+   string EventStore = 1;
+   string Id = 2;
+}
+message GetCapturesRequest {
+   string EventStore = 1;
+}
+message IEnumerable_Capture {
+   repeated Capture items = 1;
+}
+message SaveCapture {
+   string EventStore = 1;
+   string Id = 2;
+   string Declaration = 3;
+}
+message SaveCaptureResponse {
+   Capture Capture = 1;
+   repeated CaptureValidationMessage Messages = 2;
+}
+message StartCapture {
+   string EventStore = 1;
+   string Id = 2;
+}
+message StartCaptureResponse {
+   repeated CaptureValidationMessage Messages = 1;
+}
+message StopCapture {
+   string EventStore = 1;
+   string Id = 2;
+}
+message ValidateCaptureDeclaration {
+   string EventStore = 1;
+   string Declaration = 2;
+}
+message ValidateCaptureDeclarationResponse {
+   repeated CaptureValidationMessage Messages = 1;
+}
+service Captures {
+   rpc Delete (DeleteCapture) returns (.google.protobuf.Empty);
+   rpc GetCaptures (GetCapturesRequest) returns (IEnumerable_Capture);
+   rpc ObserveCaptures (GetCapturesRequest) returns (stream IEnumerable_Capture);
+   rpc Save (SaveCapture) returns (SaveCaptureResponse);
+   rpc Start (StartCapture) returns (StartCaptureResponse);
+   rpc Stop (StopCapture) returns (.google.protobuf.Empty);
+   rpc ValidateDeclaration (ValidateCaptureDeclaration) returns (ValidateCaptureDeclarationResponse);
+}

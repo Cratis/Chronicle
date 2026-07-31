@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Page } from 'Components/Common/Page';
-import { CaptureEditor } from 'Components/CaptureEditor';
+import { CaptureEditor, type CaptureDeclarationSyntaxError } from 'Components/CaptureEditor';
 import { Menubar } from 'primereact/menubar';
+import { Tag } from 'primereact/tag';
 import { Tooltip } from 'primereact/tooltip';
 import { useEffect, useMemo, useState } from 'react';
 import type { MenuItem } from 'primereact/menuitem';
@@ -14,158 +15,279 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
-
-interface CaptureDefinition {
-    id: string;
-    name: string;
-    declaration: string;
-}
+import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { AllCaptures, SaveCapture, StartCapture, StopCapture, DeleteCapture, ValidateCaptureDeclaration, CaptureStatus, type Capture, type CaptureValidationMessage } from 'Api/Captures';
+import { GetExternalServices } from 'Api/ExternalServices';
+import { AllEventTypes } from 'Api/EventTypes';
+import { CapturedEventsView } from './CapturedEventsView';
 
 const defaultCaptureDeclaration = `capture CaptureDefinition
   source api
-    url https://example.com/items
+    api MyApi
+    poll 5m
   key id
-  map
   append ItemChanged
     when added`;
 
-const getCaptureName = (declaration: string) => {
-    const match = declaration.match(/^\s*capture\s+([\w.]+)/m);
-    return match ? match[1] : 'CaptureDefinition';
-};
+const toSyntaxErrors = (messages: CaptureValidationMessage[]): CaptureDeclarationSyntaxError[] =>
+    messages.map(message => ({ line: message.line, column: message.column, message: message.message }));
 
-const createCaptureId = () => globalThis.crypto.randomUUID();
+type CaptureView = 'editor' | 'data';
 
 export const Captures = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [captures, setCaptures] = useState<CaptureDefinition[]>([]);
-    const [selectedCapture, setSelectedCapture] = useState<CaptureDefinition | null>(null);
+    const eventStore = params.eventStore!;
+
+    const [capturesResult] = AllCaptures.use({ eventStore });
+    const [externalServicesResult] = GetExternalServices.use({ eventStore });
+    const [eventTypesResult] = AllEventTypes.use({ eventStore });
+    const [saveCommand] = SaveCapture.use();
+    const [startCommand] = StartCapture.use();
+    const [stopCommand] = StopCapture.use();
+    const [deleteCommand] = DeleteCapture.use();
+    const [validateCommand] = ValidateCaptureDeclaration.use();
+    const [showConfirmation] = useConfirmationDialog();
+
+    const [selectedCaptureId, setSelectedCaptureId] = useState<string | null>(null);
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [declarationValue, setDeclarationValue] = useState('');
     const [originalDeclarationValue, setOriginalDeclarationValue] = useState('');
-    const [hasValidationErrors, setHasValidationErrors] = useState(false);
+    const [hasSyntaxErrors, setHasSyntaxErrors] = useState(false);
+    const [serverMessages, setServerMessages] = useState<CaptureDeclarationSyntaxError[]>([]);
+    const [view, setView] = useState<CaptureView>('editor');
+    const [dataRefreshTrigger, setDataRefreshTrigger] = useState(0);
 
-    const storageKey = useMemo(() => `chronicle.workbench.captures.${params.eventStore ?? 'default'}`, [params.eventStore]);
+    const captures = capturesResult.data ?? [];
+    const selectedCapture = captures.find(capture => capture.id === selectedCaptureId) ?? null;
+    const isStarted = selectedCapture?.status === CaptureStatus.started;
+    const externalServiceNames = useMemo(
+        () => (externalServicesResult.data ?? []).map(service => service.name),
+        [externalServicesResult.data]);
+    const eventTypeNames = useMemo(
+        () => (eventTypesResult.data ?? []).map(eventType => eventType.id),
+        [eventTypesResult.data]);
 
     useEffect(() => {
-        const storedCaptures = globalThis.localStorage.getItem(storageKey);
-        if (storedCaptures) {
-            try {
-                const parsed = JSON.parse(storedCaptures) as CaptureDefinition[];
-                setCaptures(Array.isArray(parsed) ? parsed : []);
-            } catch {
-                setCaptures([]);
-            }
-        } else {
-            setCaptures([]);
-        }
-
-        setSelectedCapture(null);
+        setSelectedCaptureId(null);
+        setIsCreatingNew(false);
         setDeclarationValue('');
         setOriginalDeclarationValue('');
-        setHasValidationErrors(false);
-    }, [storageKey]);
+        setHasSyntaxErrors(false);
+        setServerMessages([]);
+        setView('editor');
+    }, [eventStore]);
+
+    useEffect(() => {
+        if (!declarationValue.trim()) {
+            setServerMessages([]);
+            return;
+        }
+
+        const timeout = setTimeout(async () => {
+            validateCommand.eventStore = eventStore;
+            validateCommand.declaration = declarationValue;
+            const result = await validateCommand.execute();
+            if (result.isSuccess) {
+                const messages = (result.response ?? []) as unknown as CaptureValidationMessage[];
+                setServerMessages(toSyntaxErrors(messages));
+            }
+        }, 500);
+
+        return () => clearTimeout(timeout);
+    }, [declarationValue, eventStore]);
 
     const hasUnsavedChanges = useMemo(() => declarationValue !== originalDeclarationValue, [declarationValue, originalDeclarationValue]);
 
     const saveDisabledReason = useMemo(() => {
+        if (isStarted) {
+            return strings.eventStore.general.captures.saveDisabledReasons.started;
+        }
         if (!declarationValue.trim()) {
             return strings.eventStore.general.captures.saveDisabledReasons.emptyContent;
         }
         if (!hasUnsavedChanges) {
             return strings.eventStore.general.captures.saveDisabledReasons.noChanges;
         }
-        if (hasValidationErrors) {
+        if (hasSyntaxErrors) {
             return strings.eventStore.general.captures.saveDisabledReasons.validationErrors;
         }
         return null;
-    }, [declarationValue, hasUnsavedChanges, hasValidationErrors]);
+    }, [isStarted, declarationValue, hasUnsavedChanges, hasSyntaxErrors]);
 
-    const persistCaptures = (nextCaptures: CaptureDefinition[]) => {
-        setCaptures(nextCaptures);
-        globalThis.localStorage.setItem(storageKey, JSON.stringify(nextCaptures));
+    const selectCapture = (capture: Capture | null) => {
+        setSelectedCaptureId(capture?.id ?? null);
+        setIsCreatingNew(false);
+        setDeclarationValue(capture?.declaration ?? '');
+        setOriginalDeclarationValue(capture?.declaration ?? '');
+        setServerMessages([]);
+        setView(capture?.status === CaptureStatus.started ? 'data' : 'editor');
     };
 
     const handleNew = () => {
-        setSelectedCapture(null);
+        setSelectedCaptureId(null);
+        setIsCreatingNew(true);
         setDeclarationValue(defaultCaptureDeclaration);
         setOriginalDeclarationValue('');
+        setServerMessages([]);
+        setView('editor');
     };
 
-    const handleSave = () => {
-        const name = getCaptureName(declarationValue);
-        const existingCapture = selectedCapture
-            ? captures.find(capture => capture.id === selectedCapture.id)
-            : null;
+    const handleSave = async () => {
+        saveCommand.eventStore = eventStore;
+        saveCommand.id = selectedCaptureId ?? '';
+        saveCommand.declaration = declarationValue;
+        const result = await saveCommand.execute();
+        if (!result.isSuccess) return;
 
-        const nextCapture: CaptureDefinition = existingCapture
-            ? { ...existingCapture, name, declaration: declarationValue }
-            : { id: createCaptureId(), name, declaration: declarationValue };
+        const response = result.response;
+        if (response?.messages?.length) {
+            setServerMessages(toSyntaxErrors(response.messages));
+        }
 
-        const nextCaptures = existingCapture
-            ? captures.map(capture => capture.id === nextCapture.id ? nextCapture : capture)
-            : [...captures, nextCapture];
-
-        persistCaptures(nextCaptures);
-        setSelectedCapture(nextCapture);
-        setOriginalDeclarationValue(declarationValue);
+        if (response?.capture) {
+            setSelectedCaptureId(response.capture.id);
+            setIsCreatingNew(false);
+            setOriginalDeclarationValue(declarationValue);
+        }
     };
+
+    const handleStart = async () => {
+        if (!selectedCapture) return;
+        startCommand.eventStore = eventStore;
+        startCommand.captureId = selectedCapture.id;
+        const result = await startCommand.execute();
+        if (!result.isSuccess) return;
+
+        const messages = result.response?.messages ?? [];
+        if (messages.length > 0) {
+            setServerMessages(toSyntaxErrors(messages));
+            setView('editor');
+        } else {
+            setView('data');
+        }
+    };
+
+    const handleStop = async () => {
+        if (!selectedCapture) return;
+        stopCommand.eventStore = eventStore;
+        stopCommand.captureId = selectedCapture.id;
+        await stopCommand.execute();
+    };
+
+    const handleDelete = async () => {
+        if (!selectedCapture) return;
+        const result = await showConfirmation(
+            strings.eventStore.general.captures.dialogs.deleteCapture.title,
+            strings.eventStore.general.captures.dialogs.deleteCapture.message.replace('{name}', selectedCapture.name),
+            DialogButtons.YesNo
+        );
+
+        if (result === DialogResult.Yes) {
+            deleteCommand.eventStore = eventStore;
+            deleteCommand.captureId = selectedCapture.id;
+            await deleteCommand.execute();
+            selectCapture(null);
+        }
+    };
+
+    const menuItems: MenuItem[] = [
+        {
+            label: strings.eventStore.general.captures.actions.new,
+            icon: <faIcons.FaPlus className='mr-2' />,
+            command: handleNew,
+        },
+        {
+            label: strings.eventStore.general.captures.actions.save,
+            icon: <faIcons.FaFloppyDisk className='mr-2' />,
+            disabled: !!saveDisabledReason,
+            command: saveDisabledReason ? undefined : handleSave,
+            template: saveDisabledReason ? (item: MenuItem) => (
+                <div
+                    className="p-menuitem-link p-disabled"
+                    data-pr-tooltip={saveDisabledReason}
+                    data-pr-position="bottom"
+                    style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                >
+                    {item.icon}
+                    <span className="p-menuitem-text">{item.label}</span>
+                </div>
+            ) : undefined,
+        },
+        isStarted
+            ? {
+                label: strings.eventStore.general.captures.actions.stop,
+                icon: <faIcons.FaStop className='mr-2' />,
+                command: handleStop,
+            }
+            : {
+                label: strings.eventStore.general.captures.actions.start,
+                icon: <faIcons.FaPlay className='mr-2' />,
+                disabled: !selectedCapture || hasUnsavedChanges || hasSyntaxErrors,
+                command: handleStart,
+            },
+        {
+            label: strings.eventStore.general.captures.actions.delete,
+            icon: <faIcons.FaTrash className='mr-2' />,
+            disabled: !selectedCapture,
+            command: handleDelete,
+        },
+        {
+            label: view === 'editor'
+                ? strings.eventStore.general.captures.actions.showData
+                : strings.eventStore.general.captures.actions.showEditor,
+            icon: view === 'editor' ? <faIcons.FaTable className='mr-2' /> : <faIcons.FaCode className='mr-2' />,
+            disabled: !selectedCapture,
+            command: () => setView(view === 'editor' ? 'data' : 'editor'),
+        },
+    ];
+
+    if (view === 'data' && selectedCapture) {
+        menuItems.push({
+            label: strings.eventStore.general.captures.actions.refresh,
+            icon: <faIcons.FaArrowsRotate className='mr-2' />,
+            command: () => setDataRefreshTrigger(previous => previous + 1),
+        });
+    }
+
+    const statusBody = (capture: Capture) => (
+        <Tag
+            value={capture.status === CaptureStatus.started
+                ? strings.eventStore.general.captures.status.started
+                : strings.eventStore.general.captures.status.stopped}
+            severity={capture.status === CaptureStatus.started ? 'success' : 'secondary'}
+        />
+    );
+
+    const showEmptyState = !selectedCapture && !isCreatingNew;
 
     return (
-        <Page title={strings.eventStore.general.captures.title} key={storageKey}>
+        <Page title={strings.eventStore.general.captures.title} key={eventStore}>
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="320px">
                     <div className="px-4 py-4 h-full">
                         <DataTable
                             value={captures}
+                            dataKey="id"
                             selectionMode="single"
                             selection={selectedCapture}
                             emptyMessage={strings.eventStore.general.captures.empty}
-                            onSelectionChange={(e) => {
-                                const capture = e.value as CaptureDefinition | null;
-                                setSelectedCapture(capture);
-                                setDeclarationValue(capture?.declaration ?? '');
-                                setOriginalDeclarationValue(capture?.declaration ?? '');
-                            }}
+                            onSelectionChange={(e) => selectCapture(e.value as Capture | null)}
                             pt={{
                                 root: { className: 'rounded-lg overflow-hidden' },
                             }}
                         >
                             <Column field="name" header={strings.eventStore.general.captures.columns.name} />
+                            <Column field="status" header={strings.eventStore.general.captures.columns.status} body={statusBody} />
                         </DataTable>
                     </div>
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">
                     <div className="px-4 py-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Tooltip target="[data-pr-tooltip]" />
-                        <Menubar
-                            model={[
-                                {
-                                    label: strings.eventStore.general.captures.actions.new,
-                                    icon: <faIcons.FaPlus className='mr-2' />,
-                                    command: handleNew,
-                                },
-                                {
-                                    label: strings.eventStore.general.captures.actions.save,
-                                    icon: <faIcons.FaFloppyDisk className='mr-2' />,
-                                    disabled: !!saveDisabledReason,
-                                    command: saveDisabledReason ? undefined : handleSave,
-                                    template: saveDisabledReason ? (item: MenuItem) => (
-                                        <div
-                                            className="p-menuitem-link p-disabled"
-                                            data-pr-tooltip={saveDisabledReason}
-                                            data-pr-position="bottom"
-                                            style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                                        >
-                                            {item.icon}
-                                            <span className="p-menuitem-text">{item.label}</span>
-                                        </div>
-                                    ) : undefined,
-                                },
-                            ]}
-                        />
+                        <Menubar model={menuItems} />
 
                         <div className="pt-4" style={{ flex: 1, minHeight: 0 }}>
-                            {!selectedCapture && !declarationValue ? (
+                            {showEmptyState ? (
                                 <div style={{
                                     height: '100%',
                                     display: 'flex',
@@ -176,12 +298,22 @@ export const Captures = () => {
                                 }}>
                                     {strings.eventStore.general.captures.emptyEditor}
                                 </div>
+                            ) : view === 'data' && selectedCapture ? (
+                                <CapturedEventsView
+                                    eventStore={eventStore}
+                                    captureName={selectedCapture.name}
+                                    refreshTrigger={dataRefreshTrigger}
+                                />
                             ) : (
                                 <CaptureEditor
                                     value={declarationValue}
                                     originalValue={originalDeclarationValue}
                                     onChange={setDeclarationValue}
-                                    onValidationChange={setHasValidationErrors}
+                                    onValidationChange={setHasSyntaxErrors}
+                                    errors={serverMessages}
+                                    readOnly={isStarted}
+                                    externalServiceNames={externalServiceNames}
+                                    eventTypeNames={eventTypeNames}
                                     theme="vs-dark"
                                 />
                             )}

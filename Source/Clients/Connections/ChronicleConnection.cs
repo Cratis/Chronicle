@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
@@ -266,6 +267,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IProjections>(clientFactory),
             callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
             callInvoker.CreateGrpcService<IExternalServices>(clientFactory),
+            callInvoker.CreateGrpcService<ICaptures>(clientFactory),
             callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.ReadModels.IReadModels>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.ReadModels.IMaterializedReadModels>(clientFactory),

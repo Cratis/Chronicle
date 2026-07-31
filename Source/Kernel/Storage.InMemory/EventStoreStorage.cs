@@ -4,9 +4,11 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
+using Cratis.Chronicle.Storage.InMemory.Captures;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 using Cratis.Chronicle.Storage.InMemory.ExternalServices;
@@ -77,6 +79,9 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage();
+
+    /// <inheritdoc/>
+    public ICapturesStorage Captures { get; } = new CapturesStorage();
 
     /// <inheritdoc/>
     public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModelDefinitionsStorage();

@@ -309,16 +309,44 @@
                 "empty": "No captures",
                 "emptyEditor": "No captures. Press New to create one",
                 "columns": {
-                    "name": "Name"
+                    "name": "Name",
+                    "status": "Status"
+                },
+                "status": {
+                    "stopped": "Stopped",
+                    "started": "Started"
                 },
                 "actions": {
                     "new": "New",
-                    "save": "Save"
+                    "save": "Save",
+                    "start": "Start",
+                    "stop": "Stop",
+                    "delete": "Delete",
+                    "showData": "Data",
+                    "showEditor": "Editor",
+                    "refresh": "Refresh"
                 },
                 "saveDisabledReasons": {
                     "emptyContent": "Editor is empty",
                     "noChanges": "No changes to save",
-                    "validationErrors": "Fix validation errors first"
+                    "validationErrors": "Fix validation errors first",
+                    "started": "A started capture can not be changed - stop it first"
+                },
+                "dataView": {
+                    "empty": "No events captured yet",
+                    "columns": {
+                        "sequenceNumber": "Seq",
+                        "eventType": "Event Type",
+                        "eventSourceId": "Event Source",
+                        "occurred": "Occurred",
+                        "content": "Content"
+                    }
+                },
+                "dialogs": {
+                    "deleteCapture": {
+                        "title": "Delete capture",
+                        "message": "Are you sure you want to delete '{name}'?"
+                    }
                 }
             }
         },

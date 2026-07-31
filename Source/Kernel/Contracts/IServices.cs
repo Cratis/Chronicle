@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
@@ -102,6 +103,11 @@ public interface IServices
     /// Gets the <see cref="IExternalServices"/> service.
     /// </summary>
     IExternalServices ExternalServices { get; }
+
+    /// <summary>
+    /// Gets the <see cref="ICaptures"/> service.
+    /// </summary>
+    ICaptures Captures { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventStoreSubscriptions"/> service.

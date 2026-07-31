@@ -19,7 +19,7 @@ public class EventSequenceMigrator(
 {
     /// <inheritdoc/>
     public Task EnsureTableMigrated(string tableName, EventSequenceDbContext context) =>
-        tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
+        tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, UpgradeTable);
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix) =>
@@ -48,7 +48,8 @@ public class EventSequenceMigrator(
                 Content = table.StringColumn(migrationBuilder),
                 ContentHashes = table.StringColumn(migrationBuilder),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
-                Subject = table.StringColumn(migrationBuilder, nullable: true)
+                Subject = table.StringColumn(migrationBuilder, nullable: true),
+                Tags = table.StringColumn(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.SequenceNumber));
 
@@ -76,6 +77,25 @@ public class EventSequenceMigrator(
             name: $"IX_{tableName}_EventStreamType_EventStreamId",
             table: tableName,
             columns: ["EventStreamType", "EventStreamId"]);
+
+        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+    }
+
+    async Task UpgradeTable(EventSequenceDbContext context, string tableName)
+    {
+        if (await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
+        {
+            return;
+        }
+
+        logger.AddingTagsColumn(tableName);
+
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.AddColumn<string>(
+            name: nameof(EventEntry.Tags),
+            table: tableName,
+            nullable: false,
+            defaultValue: string.Empty);
 
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }

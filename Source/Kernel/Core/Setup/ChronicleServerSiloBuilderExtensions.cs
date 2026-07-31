@@ -83,6 +83,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
             .AddStorageProviders()
             .AddWebhookObserverHttpClient()
+            .AddExternalServiceHttpClient()
             .ConfigureSerialization();
 
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Users);
@@ -142,6 +143,11 @@ public static class ChronicleServerSiloBuilderExtensions
                 projections,
                 new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<Cratis.Chronicle.Security.IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>(), sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 new Cratis.Chronicle.Services.ExternalServices.ExternalServices(storage),
+                new Cratis.Chronicle.Services.Captures.Captures(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Captures.Engine.ICaptureValidator>()),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage, sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<Cratis.Chronicle.Projections.IProjectionChangesetMediator>(), sp.GetRequiredService<Orleans.Runtime.ILocalSiloDetails>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<IEventCompliance>(), jsonSerializerOptions),
                 new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelsCompliance>()),

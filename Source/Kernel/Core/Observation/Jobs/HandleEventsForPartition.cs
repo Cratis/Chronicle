@@ -179,7 +179,7 @@ public class HandleEventsForPartition(
                 currentState.EndEventSequenceNumber,
                 _eventSourceId,
                 eventTypesToRead,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             var subscriberContext = new ObserverSubscriberContext(
                 subscriberSelector.Select(subscription, currentState.Partition).ConnectedClient ?? subscription.Arguments);

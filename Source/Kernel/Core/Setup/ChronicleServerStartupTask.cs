@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventTypes;
@@ -73,6 +74,9 @@ internal sealed class ChronicleServerStartupTask(
 
             var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
             await webhooksManager.Ensure();
+
+            var capturesManager = grainFactory.GetGrain<ICapturesManager>(eventStore);
+            await capturesManager.Ensure();
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
             await projectionsServiceClient.Register(eventStore, projectionDefinitions);

@@ -7,6 +7,7 @@ namespace Cratis.Chronicle.Concepts.Captures;
 /// Represents the definition of a capture.
 /// </summary>
 /// <param name="Id">The <see cref="CaptureId"/>.</param>
+/// <param name="Name">The <see cref="CaptureName"/>.</param>
 /// <param name="Source">The source definition.</param>
 /// <param name="KeyProperty">The identity property used for diffing.</param>
 /// <param name="Map">Optional root map definition.</param>
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.Concepts.Captures;
 /// <param name="Children">Child collection scopes.</param>
 public record CaptureDefinition(
     CaptureId Id,
+    CaptureName Name,
     SourceDefinition Source,
     string KeyProperty,
     MapDefinition? Map,
