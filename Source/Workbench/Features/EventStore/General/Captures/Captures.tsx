@@ -16,7 +16,7 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Allotment } from 'allotment';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { AllCaptures, Save, Start, Stop, Delete, ValidateDeclaration, CaptureStatus, type Capture, type CaptureValidationMessage } from 'Api/Captures';
+import { AllCaptures, SaveCapture, StartCapture, StopCapture, DeleteCapture, ValidateCaptureDeclaration, CaptureStatus, type Capture, type CaptureValidationMessage } from 'Api/Captures';
 import { GetExternalServices } from 'Api/ExternalServices';
 import { AllEventTypes } from 'Api/EventTypes';
 import { CapturedEventsView } from './CapturedEventsView';
@@ -41,11 +41,11 @@ export const Captures = () => {
     const [capturesResult] = AllCaptures.use({ eventStore });
     const [externalServicesResult] = GetExternalServices.use({ eventStore });
     const [eventTypesResult] = AllEventTypes.use({ eventStore });
-    const [saveCommand] = Save.use();
-    const [startCommand] = Start.use();
-    const [stopCommand] = Stop.use();
-    const [deleteCommand] = Delete.use();
-    const [validateCommand] = ValidateDeclaration.use();
+    const [saveCommand] = SaveCapture.use();
+    const [startCommand] = StartCapture.use();
+    const [stopCommand] = StopCapture.use();
+    const [deleteCommand] = DeleteCapture.use();
+    const [validateCommand] = ValidateCaptureDeclaration.use();
     const [showConfirmation] = useConfirmationDialog();
 
     const [selectedCaptureId, setSelectedCaptureId] = useState<string | null>(null);

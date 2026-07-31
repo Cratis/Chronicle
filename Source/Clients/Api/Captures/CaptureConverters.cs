@@ -14,13 +14,11 @@ internal static class CaptureConverters
     /// <param name="capture">The contract capture.</param>
     /// <returns>The API capture.</returns>
     public static Capture ToApi(this Contracts.Captures.Capture capture) =>
-        new()
-        {
-            Id = capture.Id,
-            Name = capture.Name,
-            Declaration = capture.Declaration,
-            Status = (CaptureStatus)capture.Status
-        };
+        new(
+            capture.Id,
+            capture.Name,
+            capture.Declaration,
+            (CaptureStatus)capture.Status);
 
     /// <summary>
     /// Converts a collection of contract <see cref="Contracts.Captures.Capture">captures</see> to their API representation.
