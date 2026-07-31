@@ -15,13 +15,13 @@
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.16.7" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.16.6" />
-    <PackageVersion Include="Cratis.Arc" Version="20.66.1" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="20.66.1" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.66.1" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.66.1" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.66.1" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.66.1" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.16.7" />
+    <PackageVersion Include="Cratis.Arc" Version="20.69.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="20.69.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.69.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.69.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.69.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.69.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="1.6.4" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
