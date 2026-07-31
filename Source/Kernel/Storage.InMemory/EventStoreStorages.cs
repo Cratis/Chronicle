@@ -14,16 +14,25 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// Represents the process-wide registry of in-memory <see cref="IEventStoreStorage"/> instances.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Both <see cref="Storage"/> (node-level <see cref="IStorage"/>) and <see cref="ClusterStorage"/>
 /// (<see cref="IClusterStorage"/>) resolve event-store storage through this single registry, so the
 /// same in-memory event log is observed regardless of which entry point is used.
+/// </para>
+/// <para>
+/// The registry fans changes out over an internal subject that is never handed to a caller. Every caller of
+/// <see cref="Observe"/> gets its own subject, because callers complete the subject they are given when their
+/// connection goes away (see <see cref="Reactive.ObservableExtensions.CompletedBy{TResult}"/>) and completing a
+/// shared subject would silently end event-store observation for every other caller in the process.
+/// </para>
 /// </remarks>
 /// <param name="sinkFactories">All discovered <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> for resolving job state types.</param>
 public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
-    readonly ReplaySubject<IEnumerable<EventStoreName>> _namesSubject = new(1);
+
+    readonly Subject<IEnumerable<EventStoreName>> _changes = new();
 
     /// <summary>
     /// Gets all the <see cref="EventStoreName">event stores</see> currently registered.
@@ -31,9 +40,24 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     public IEnumerable<EventStoreName> Names => [.. _eventStores.Keys];
 
     /// <summary>
-    /// Gets an observable stream of the registered <see cref="EventStoreName">event stores</see>.
+    /// Creates an observable stream of the registered <see cref="EventStoreName">event stores</see>, seeded with the
+    /// current set and updated as event stores are added.
     /// </summary>
-    public ISubject<IEnumerable<EventStoreName>> Observe => _namesSubject;
+    /// <returns>A subject dedicated to the caller, which the caller owns and may complete.</returns>
+    /// <remarks>
+    /// Each call returns its own subject - the same semantics the MongoDB implementation provides by handing out a
+    /// fresh <see cref="BehaviorSubject{T}"/> per call. Completing it unsubscribes only that caller.
+    /// </remarks>
+    public ISubject<IEnumerable<EventStoreName>> Observe()
+    {
+        var subject = new ReplaySubject<IEnumerable<EventStoreName>>(1);
+        subject.OnNext(Names);
+
+        var subscription = _changes.Subscribe(subject.OnNext);
+        subject.Subscribe(_ => { }, _ => { }, subscription.Dispose);
+
+        return subject;
+    }
 
     /// <summary>
     /// Determines whether the registry contains a specific <see cref="EventStoreName"/>.
@@ -60,7 +84,7 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
 
         if (ReferenceEquals(storage, created))
         {
-            _namesSubject.OnNext([.. _eventStores.Keys]);
+            _changes.OnNext([.. _eventStores.Keys]);
         }
 
         return storage;
@@ -72,11 +96,11 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     public void Clear()
     {
         _eventStores.Clear();
-        _namesSubject.OnNext([]);
+        _changes.OnNext([]);
     }
 
     /// <inheritdoc/>
-    public void Dispose() => _namesSubject.Dispose();
+    public void Dispose() => _changes.Dispose();
 
     SinksFactory CreateDefaultSinksFactory(EventStoreName eventStore) =>
         @namespace => new Cratis.Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);

@@ -23,7 +23,7 @@ public sealed class Storage(EventStoreStorages eventStoreStorages, ISystemStorag
     public Task<bool> HasEventStore(EventStoreName eventStore) => Task.FromResult(eventStoreStorages.Has(eventStore));
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => eventStoreStorages.Observe;
+    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => eventStoreStorages.Observe();
 
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
