@@ -94,7 +94,7 @@ public class EventContext
     /// Gets or sets the tags associated with the event.
     /// </summary>
     [ProtoMember(14, IsRequired = true)]
-    public IEnumerable<string> Tags { get; set; } = [];
+    public IEnumerable<string> Tags { get; set; } = new List<string>();
 
     /// <summary>
     /// Gets or sets the hash of the event content.
