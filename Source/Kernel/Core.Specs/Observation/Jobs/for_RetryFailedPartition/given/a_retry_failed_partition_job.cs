@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,7 @@ public class a_retry_failed_partition_job : Specification
     protected IChronicleStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
+    protected IEventSequenceStorage _eventSequenceStorage;
     protected IJobStorage _jobStorage;
     protected IJobStepStorage _jobStepStorage;
     protected IJobTypes _jobTypes;
@@ -55,14 +57,24 @@ public class a_retry_failed_partition_job : Specification
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+        _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _jobStorage = Substitute.For<IJobStorage>();
         _jobStepStorage = Substitute.For<IJobStepStorage>();
         _jobTypes = Substitute.For<IJobTypes>();
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
+        _namespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(_eventSequenceStorage);
         _namespaceStorage.Jobs.Returns(_jobStorage);
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
+
+        // Nothing left to handle unless a spec says otherwise - a job that reads no events only tells us the
+        // failure record is stale when the event it failed on is genuinely gone.
+        _eventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(
+                Arg.Any<EventSequenceNumber>(),
+                Arg.Any<IEnumerable<EventType>?>(),
+                Arg.Any<EventSourceId?>())
+            .Returns(EventSequenceNumber.Unavailable);
 
         _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>())
             .Returns(Task.FromResult(Catch<IImmutableList<JobStepState>>.Success(ImmutableList<JobStepState>.Empty)));

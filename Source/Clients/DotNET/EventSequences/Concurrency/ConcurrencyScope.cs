@@ -31,4 +31,16 @@ public record ConcurrencyScope(
     /// Represents a concurrency scope that does not apply any constraints.
     /// </summary>
     public static readonly ConcurrencyScope None = new(EventSequenceNumber.Unavailable);
+
+    /// <summary>
+    /// Gets a value indicating whether the scope narrows an append without saying which sequence number it expects.
+    /// </summary>
+    /// <remarks>
+    /// A scope in this state is a programming error rather than a way to opt out. It is not <see cref="NotSet"/>, so
+    /// the configured <see cref="IConcurrencyScopeStrategy"/> does not get to supply the expected sequence number,
+    /// and it has no sequence number of its own for the kernel to validate against - so the append is checked
+    /// against nothing, which looks exactly like never having asked for a check. Use <see cref="None"/> to append
+    /// without a check, or <see cref="NotSet"/> to let the strategy resolve the expected sequence number.
+    /// </remarks>
+    public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue;
 }

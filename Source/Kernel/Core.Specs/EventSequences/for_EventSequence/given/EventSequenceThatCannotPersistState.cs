@@ -31,6 +31,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+/// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the concurrency validator.</param>
 public class EventSequenceThatCannotPersistState(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
@@ -42,7 +43,8 @@ public class EventSequenceThatCannotPersistState(
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
     IOptions<ChronicleOptions> options,
-    ILogger<EventSequence> logger) : EventSequence(
+    ILogger<EventSequence> logger,
+    ILogger<Concurrency.ConcurrencyValidator> concurrencyValidatorLogger) : EventSequence(
         storage,
         constraintValidatorSetFactory,
         eventTypeMigrations,
@@ -53,7 +55,8 @@ public class EventSequenceThatCannotPersistState(
         eventSerializer,
         eventHashCalculator,
         options,
-        logger)
+        logger,
+        concurrencyValidatorLogger)
 {
     /// <inheritdoc/>
     protected override Task WriteStateAsync() => throw new SimulatedStateWriteError();

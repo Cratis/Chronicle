@@ -112,7 +112,8 @@ internal static class InProcessEventSequence
                 eventSerializer,
                 new KernelEventSequences::EventHashCalculator(),
                 Options.Create(new KernelConfiguration::ChronicleOptions()),
-                NullLogger<KernelEventSequences::EventSequence>.Instance);
+                NullLogger<KernelEventSequences::EventSequence>.Instance,
+                NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance);
         }
 
         var grainStorage = new InMemoryGrainStorage<Storage.EventSequences.EventSequenceState>();

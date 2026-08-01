@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition;
@@ -14,9 +15,10 @@ namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition;
 /// fire immediately when <see cref="IJob{TRequest}.Start"/> is called.
 /// </summary>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
+/// <param name="storage">The <see cref="IStorage"/> used to confirm there is nothing left to handle before clearing a failure.</param>
 /// <param name="logger">The logger.</param>
-public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOptions, ILogger<RetryFailedPartition> logger)
-    : RetryFailedPartition(jsonSerializerOptions, logger), IGrainType
+public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOptions, IStorage storage, ILogger<RetryFailedPartition> logger)
+    : RetryFailedPartition(jsonSerializerOptions, storage, logger), IGrainType
 {
     /// <inheritdoc/>
     public Type GrainType => typeof(IRetryFailedPartition);

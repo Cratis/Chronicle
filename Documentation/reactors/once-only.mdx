@@ -1,15 +1,35 @@
 # OnceOnly
 
-The `OnceOnly` attribute is used to mark reactor methods that should only execute once and never called again,
-for instance during a replay.
+The `OnceOnly` attribute marks a reactor handler that must not run again when its observer is replayed.
 
 There are scenarios where you need side effects to occur only on the initial event processing,
 such as sending notifications, triggering external integrations, or performing non-idempotent operations.
 
 <ChronicleClientTabs snippet="reactors/once-only/basic" />
 
-The `OnceOnly` attribute ensures that the marked method is executed exactly once,
-providing a clean way to separate one-time operations from normal reactor behavior.
+`OnceOnly` gives you a clean way to separate one-time operations from normal reactor behavior.
+
+## What it does and does not guarantee
+
+`OnceOnly` takes the handler out of **replay** — the deliberate re-delivery you trigger by rewinding an
+observer, or that a redaction or revision triggers for you. That is the whole of it.
+
+It is not an exactly-once delivery guarantee. In particular, **recovering a failed partition re-delivers the
+event as an ordinary observation, so a `OnceOnly` handler runs again** — which is the point of a retry: the
+handler failed before its side effect ran, and recovery exists to run it. Keep designing for the handler
+being invoked more than once when it fails partway through.
+
+## Where you put it
+
+`OnceOnly` goes on a handler method or on the reactor class, and the two mean different things:
+
+- **On a method** — that handler is skipped for every event that arrives as part of a replay. The rest of the
+  reactor still replays, which is what you want when only one of its handlers has a non-idempotent side effect.
+- **On the class** — the whole reactor registers as non-replayable, so a replay of its observer never starts
+  and none of its handlers run again. This is strictly coarser: it takes every handler out of replay, not
+  just the one with the side effect.
+
+Reach for the method placement unless the entire reactor exists to do something that must not happen twice.
 
 :::note[Client coverage]
 `OnceOnly` is currently C#-only — Kotlin, Java, Elixir, and TypeScript have no equivalent marker, so a replay or retry always re-runs the full handler in those clients. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
