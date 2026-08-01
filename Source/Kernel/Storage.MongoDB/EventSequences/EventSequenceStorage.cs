@@ -506,7 +506,7 @@ public class EventSequenceStorage(
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
         }
 
-        if (eventSourceType?.IsDefaultOrUnspecified == true)
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceType, eventSourceType));
         }

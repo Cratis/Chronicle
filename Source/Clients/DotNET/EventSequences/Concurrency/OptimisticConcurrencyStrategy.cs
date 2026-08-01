@@ -12,6 +12,12 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 public class OptimisticConcurrencyStrategy(IEventSequence eventSequence) : IConcurrencyScopeStrategy
 {
     /// <inheritdoc/>
+    /// <remarks>
+    /// The expected sequence number is read with the same narrowing the scope declares, because that is what the
+    /// kernel validates the append against. Reading a broader tail than the kernel compares to would report a
+    /// conflict between appends the scope says are independent; reading a narrower one would let a real conflict
+    /// through. The two have to be asked the same question.
+    /// </remarks>
     public async Task<ConcurrencyScope> GetScope(
         EventSourceId eventSourceId,
         EventStreamType? eventStreamType = default,
@@ -19,7 +25,13 @@ public class OptimisticConcurrencyStrategy(IEventSequence eventSequence) : IConc
         EventSourceType? eventSourceType = default,
         IEnumerable<EventType>? eventTypes = default)
     {
-        var tail = await eventSequence.GetTailSequenceNumber(eventSourceId);
+        var tail = await eventSequence.GetTailSequenceNumber(
+            eventSourceId: eventSourceId,
+            eventSourceType: eventSourceType,
+            eventStreamType: eventStreamType,
+            eventStreamId: eventStreamId,
+            filterEventTypes: eventTypes);
+
         return new ConcurrencyScope(
             tail,
             eventSourceId,
