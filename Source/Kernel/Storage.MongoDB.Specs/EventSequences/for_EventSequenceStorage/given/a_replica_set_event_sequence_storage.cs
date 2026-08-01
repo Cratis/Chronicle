@@ -72,9 +72,12 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
 
     protected EventToAppendToStorage EventAt(EventSequenceNumber sequenceNumber) => EventAt(sequenceNumber, _eventType);
 
-    protected EventToAppendToStorage EventAt(EventSequenceNumber sequenceNumber, EventType eventType) => new(
+    protected EventToAppendToStorage EventAt(EventSequenceNumber sequenceNumber, EventType eventType) =>
+        EventAt(sequenceNumber, eventType, EventSourceType.Default);
+
+    protected EventToAppendToStorage EventAt(EventSequenceNumber sequenceNumber, EventType eventType, EventSourceType eventSourceType) => new(
         sequenceNumber,
-        EventSourceType.Default,
+        eventSourceType,
         "some-source",
         EventStreamType.All,
         EventStreamId.Default,
