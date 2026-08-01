@@ -57,8 +57,6 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
             bsonDocument = UpgradeLegacyUniqueEventTypeDefinition(bsonDocument);
         }
 
-        using var reader = new BsonDocumentReader(bsonDocument);
-        var ctx = BsonDeserializationContext.CreateRoot(reader);
         return (IConstraintDefinition)BsonSerializer.Deserialize(bsonDocument, type);
     }
 

@@ -1,15 +1,23 @@
 # OnceOnly
 
-The `OnceOnly` attribute is used to mark reactor methods that should only execute once and never called again,
-for instance during a replay.
+The `OnceOnly` attribute marks a reactor handler that must not run again when its observer is replayed.
 
 There are scenarios where you need side effects to occur only on the initial event processing,
 such as sending notifications, triggering external integrations, or performing non-idempotent operations.
 
 <ChronicleClientTabs snippet="reactors/once-only/basic" />
 
-The `OnceOnly` attribute ensures that the marked method is executed exactly once,
-providing a clean way to separate one-time operations from normal reactor behavior.
+`OnceOnly` gives you a clean way to separate one-time operations from normal reactor behavior.
+
+## What it does and does not guarantee
+
+`OnceOnly` takes the handler out of **replay** — the deliberate re-delivery you trigger by rewinding an
+observer, or that a redaction or revision triggers for you. That is the whole of it.
+
+It is not an exactly-once delivery guarantee. In particular, **recovering a failed partition re-delivers the
+event as an ordinary observation, so a `OnceOnly` handler runs again** — which is the point of a retry: the
+handler failed before its side effect ran, and recovery exists to run it. Keep designing for the handler
+being invoked more than once when it fails partway through.
 
 ## Where you put it
 
