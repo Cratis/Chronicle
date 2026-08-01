@@ -16,6 +16,17 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </remarks>
 public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, ConstraintScope? Scope = default) : IConstraintDefinition
 {
+    /// <summary>
+    /// Gets the <see cref="EventTypeId"/> values the constraint covers.
+    /// </summary>
+    /// <remarks>
+    /// Normalized to an empty sequence when absent. A definition persisted before the constraint covered several
+    /// event types has no value for this at all, and every reader — equality, hashing, validation — would otherwise
+    /// dereference null. Storage upgrades such a definition to its single covered event type on read; this is the
+    /// backstop for anything that reaches the domain without going through that path.
+    /// </remarks>
+    public IEnumerable<EventTypeId> EventTypeIds { get; init; } = EventTypeIds ?? [];
+
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => Equals(other as UniqueEventTypeConstraintDefinition);
 

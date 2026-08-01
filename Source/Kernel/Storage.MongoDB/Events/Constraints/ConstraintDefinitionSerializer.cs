@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
@@ -15,6 +16,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefinition>, IBsonDocumentSerializer
 {
     const string ConstraintTypeElementName = "constraintType";
+
+    /// <summary>
+    /// The element a unique event type constraint definition was persisted with before it covered several event types.
+    /// </summary>
+    const string LegacyUniqueEventTypeElementName = "eventTypeId";
+
+    static readonly string _uniqueEventTypesElementName = nameof(UniqueEventTypeConstraintDefinition.EventTypeIds).ToCamelCase();
 
     /// <inheritdoc/>
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, IConstraintDefinition value)
@@ -44,6 +52,11 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
             _ => throw new UnknownConstraintTypeString(constraintTypeString)
         };
 
+        if (constraintType == ConstraintType.UniqueEventType)
+        {
+            bsonDocument = UpgradeLegacyUniqueEventTypeDefinition(bsonDocument);
+        }
+
         using var reader = new BsonDocumentReader(bsonDocument);
         var ctx = BsonDeserializationContext.CreateRoot(reader);
         return (IConstraintDefinition)BsonSerializer.Deserialize(bsonDocument, type);
@@ -54,6 +67,34 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
     {
         serializationInfo = null!;
         return false;
+    }
+
+    /// <summary>
+    /// Upgrade a unique event type constraint definition persisted before the constraint could cover several event types.
+    /// </summary>
+    /// <param name="document">The <see cref="BsonDocument"/> that was read.</param>
+    /// <returns>The document to deserialize from - the one that was read when there is nothing to upgrade.</returns>
+    /// <remarks>
+    /// The definition used to carry a single event type. Deserializing that document into the current record leaves the
+    /// covered event types absent, which every reader then dereferences — registration compares the stored definition
+    /// with the incoming one and dies before a single constraint is registered. Mapping the single event type onto a
+    /// one-element sequence keeps the constraint's meaning across the upgrade; the next registration persists the new shape.
+    /// <para>
+    /// The upgrade produces a new document rather than editing the one that was read, which is a
+    /// <see cref="RawBsonDocument"/> over the bytes off the wire and rejects every mutation.
+    /// </para>
+    /// </remarks>
+    static BsonDocument UpgradeLegacyUniqueEventTypeDefinition(BsonDocument document)
+    {
+        if (document.Contains(_uniqueEventTypesElementName) ||
+            !document.TryGetValue(LegacyUniqueEventTypeElementName, out var legacyEventType))
+        {
+            return document;
+        }
+
+        var upgraded = new BsonDocument(document.Elements.Where(element => element.Name != LegacyUniqueEventTypeElementName));
+        upgraded.Add(_uniqueEventTypesElementName, new BsonArray { legacyEventType });
+        return upgraded;
     }
 
     string GetConstraintTypeAsString(Type type)
