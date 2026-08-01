@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -14,9 +15,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// Represents a job for retrying a failed partition.
 /// </summary>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
+/// <param name="storage">The <see cref="IStorage"/> used to confirm there is nothing left to handle before clearing a failure.</param>
 /// <param name="logger">The logger.</param>
 public class RetryFailedPartition(
     JsonSerializerOptions jsonSerializerOptions,
+    IStorage storage,
     ILogger<RetryFailedPartition> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartition
 {
     /// <inheritdoc/>
@@ -29,17 +32,24 @@ public class RetryFailedPartition(
         {
             logger.NoEventsWereHandled(nameof(RetryFailedPartition));
 
-            if (!State.HandledAllEvents)
+            if (!State.SucceededWithoutHandlingAnyEvents)
             {
                 // The step ran but the subscriber failed every event — the partition is still
                 // legitimately failed. Do not clear it; the next scheduled retry will try again.
                 return;
             }
 
-            // HandledAllEvents is true but no sequence number was recorded: the step succeeded
-            // but found nothing to process. This means the observer already advanced past the
-            // failed sequence number (the events were processed despite the caller timing out).
-            // The failed partition record is stale — clear it.
+            // The step succeeded having read nothing. Clearing the failure here advances the observer past
+            // the failed event without the handler ever running, so it is only correct when there genuinely
+            // is no event left to handle — otherwise recovery silently discards the missed side effect and
+            // reports the observer healthy. Confirm it against the event sequence before clearing.
+            if (await HasEventsLeftToHandle())
+            {
+                logger.NotClearingFailedPartitionWithEventsLeftToHandle(Request.Key, Request.FromSequenceNumber);
+                return;
+            }
+
+            logger.ClearingFailedPartitionWithNothingLeftToHandle(Request.Key, Request.FromSequenceNumber);
             await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber);
             return;
         }
@@ -93,5 +103,38 @@ public class RetryFailedPartition(
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);
+    }
+
+    /// <summary>
+    /// Check whether the event sequence still holds an event the failed partition has not handled.
+    /// </summary>
+    /// <returns>True when there is at least one event left to handle, false when there is nothing left.</returns>
+    /// <remarks>
+    /// The answer decides whether a step that read nothing is evidence of a stale failure record. When the
+    /// event sequence cannot be reached the honest answer is "assume there is" — leaving the partition failed
+    /// costs another retry, while clearing it loses the work for good.
+    /// </remarks>
+    async Task<bool> HasEventsLeftToHandle()
+    {
+        try
+        {
+            var eventSequenceStorage = storage
+                .GetEventStore(Request.ObserverKey.EventStore)
+                .GetNamespace(Request.ObserverKey.Namespace)
+                .GetEventSequence(Request.ObserverKey.EventSequenceId);
+
+            var eventTypes = Request.EventTypes?.ToArray() ?? [];
+            var nextSequenceNumber = await eventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(
+                Request.FromSequenceNumber,
+                eventTypes.Length == 0 ? null : eventTypes,
+                Request.Key);
+
+            return nextSequenceNumber.IsActualValue;
+        }
+        catch (Exception ex)
+        {
+            logger.FailedCheckingForEventsLeftToHandle(ex, Request.Key, Request.FromSequenceNumber);
+            return true;
+        }
     }
 }

@@ -7,9 +7,10 @@ using Cratis.Chronicle.Concepts.Keys;
 namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition.when_completed;
 
 /// <summary>
-/// When the step succeeded but found no events (HandledAllEvents=true, no actual sequence number),
-/// the observer already advanced its NextEventSequenceNumber past the failed event — the events were
-/// processed despite the caller timing out. The stale failed-partition record must be cleared.
+/// When the step succeeded but found no events (HandledAllEvents=true, no actual sequence number) and the
+/// event sequence confirms there is nothing left to handle, the observer already advanced its
+/// NextEventSequenceNumber past the failed event — the events were processed despite the caller timing out.
+/// The stale failed-partition record must be cleared.
 /// </summary>
 public class and_observer_already_caught_up : given.a_retry_failed_partition_job
 {
