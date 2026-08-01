@@ -16,6 +16,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Api.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Api" />
     </ItemGroup>
 
