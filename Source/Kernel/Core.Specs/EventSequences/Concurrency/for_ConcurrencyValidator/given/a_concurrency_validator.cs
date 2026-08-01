@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.EventSequences;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyValidator.given;
 
@@ -13,6 +14,6 @@ public class a_concurrency_validator : Specification
     void Establish()
     {
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
-        _validator = new ConcurrencyValidator(_eventSequenceStorage);
+        _validator = new ConcurrencyValidator(_eventSequenceStorage, NullLogger<ConcurrencyValidator>.Instance);
     }
 }
