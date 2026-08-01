@@ -11,6 +11,18 @@ such as sending notifications, triggering external integrations, or performing n
 The `OnceOnly` attribute ensures that the marked method is executed exactly once,
 providing a clean way to separate one-time operations from normal reactor behavior.
 
+## Where you put it
+
+`OnceOnly` goes on a handler method or on the reactor class, and the two mean different things:
+
+- **On a method** — that handler is skipped for every event that arrives as part of a replay. The rest of the
+  reactor still replays, which is what you want when only one of its handlers has a non-idempotent side effect.
+- **On the class** — the whole reactor registers as non-replayable, so a replay of its observer never starts
+  and none of its handlers run again. This is strictly coarser: it takes every handler out of replay, not
+  just the one with the side effect.
+
+Reach for the method placement unless the entire reactor exists to do something that must not happen twice.
+
 :::note[Client coverage]
 `OnceOnly` is currently C#-only — Kotlin, Java, Elixir, and TypeScript have no equivalent marker, so a replay or retry always re-runs the full handler in those clients. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
 :::

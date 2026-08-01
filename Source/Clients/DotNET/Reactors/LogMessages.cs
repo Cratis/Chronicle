@@ -21,4 +21,7 @@ internal static partial class LogMessages
 
     [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} returned a value of type {ReturnTypeName} that no side-effect handler could process; the value was discarded.")]
     internal static partial void ReactorReturnValueNotHandled(this ILogger<ReactorInvoker> logger, ReactorId reactorId, string returnTypeName);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping handler {MethodName} in reactor {ReactorId} for {EventTypeName} - it is marked as once only and the event is being replayed.")]
+    internal static partial void ReactorHandlerSkippedForReplay(this ILogger<ReactorInvoker> logger, ReactorId reactorId, string methodName, string eventTypeName);
 }

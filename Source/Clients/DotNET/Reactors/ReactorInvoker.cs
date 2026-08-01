@@ -79,7 +79,12 @@ public class ReactorInvoker(
         {
             var eventType = content.GetType();
 
-            if (_methodsByEventType.TryGetHandlerFor(eventType, eventContext.ObservationState, out var method))
+            var (method, skippedForReplay) = _methodsByEventType.Resolve(eventType, eventContext.ObservationState);
+            if (skippedForReplay is not null)
+            {
+                logger.ReactorHandlerSkippedForReplay(reactorId, skippedForReplay.Name, eventTypeName);
+            }
+            else if (method is not null)
             {
                 await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
@@ -202,7 +207,8 @@ public class ReactorInvoker(
     /// </summary>
     /// <param name="Live">The handlers to run as events happen.</param>
     /// <param name="Replay">The handlers marked with <see cref="ReplayAttribute"/>, which take over during a replay.</param>
-    record HandlerMethods(FrozenDictionary<Type, MethodInfo> Live, FrozenDictionary<Type, MethodInfo> Replay)
+    /// <param name="OnceOnly">The handlers marked with <see cref="OnceOnlyAttribute"/>, which never run for a replayed event.</param>
+    record HandlerMethods(FrozenDictionary<Type, MethodInfo> Live, FrozenDictionary<Type, MethodInfo> Replay, FrozenSet<MethodInfo> OnceOnly)
     {
         /// <summary>
         /// Gets every event type handled, whichever path handles it. An event type handled only by a replay
@@ -215,19 +221,34 @@ public class ReactorInvoker(
         /// </summary>
         /// <param name="eventType">The event <see cref="Type"/> being observed.</param>
         /// <param name="observationState">The <see cref="EventObservationState"/> the event arrives in.</param>
-        /// <param name="method">The resolved handler, when there is one.</param>
-        /// <returns>True if a handler was resolved, false otherwise.</returns>
-        public bool TryGetHandlerFor(Type eventType, EventObservationState observationState, out MethodInfo method)
+        /// <returns>
+        /// The handler to run, or the handler that was deliberately skipped because it is marked
+        /// <see cref="OnceOnlyAttribute"/> and the event is being replayed. Both are absent when the reactor
+        /// has no handler for the event type at all.
+        /// </returns>
+        /// <remarks>
+        /// <see cref="OnceOnlyAttribute"/> on a handler method means that handler is excluded from replay - the
+        /// class-level placement keeps the whole reactor from being replayed, and the method-level placement can
+        /// only be honored here, where the event arrives carrying the state it is observed in.
+        /// </remarks>
+        public (MethodInfo? Method, MethodInfo? SkippedForReplay) Resolve(Type eventType, EventObservationState observationState)
         {
+            var isReplay = observationState.HasFlag(EventObservationState.Replay);
+
             // A replay handler takes over for the duration of the replay, and the live handler does not also run.
             // Without one, the live handler keeps running during replay - which is what every reactor written
             // before this existed relies on.
-            if (observationState.HasFlag(EventObservationState.Replay) && Replay.TryGetValue(eventType, out method!))
+            if (isReplay && Replay.TryGetValue(eventType, out var replayMethod))
             {
-                return true;
+                return OnceOnly.Contains(replayMethod) ? (null, replayMethod) : (replayMethod, null);
             }
 
-            return Live.TryGetValue(eventType, out method!);
+            if (!Live.TryGetValue(eventType, out var method))
+            {
+                return (null, null);
+            }
+
+            return isReplay && OnceOnly.Contains(method) ? (null, method) : (method, null);
         }
     }
 
@@ -243,6 +264,7 @@ public class ReactorInvoker(
         {
             var liveMethodsByEventType = new Dictionary<Type, MethodInfo>();
             var replayMethodsByEventType = new Dictionary<Type, MethodInfo>();
+            var onceOnlyMethods = new HashSet<MethodInfo>();
 
             foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
@@ -261,6 +283,11 @@ public class ReactorInvoker(
                 }
 
                 var methodsByEventType = method.IsDefined(typeof(ReplayAttribute), false) ? replayMethodsByEventType : liveMethodsByEventType;
+                if (method.IsDefined(typeof(OnceOnlyAttribute), false))
+                {
+                    onceOnlyMethods.Add(method);
+                }
+
                 var eventParameterType = method.GetParameters()[0].ParameterType;
                 foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
                 {
@@ -268,7 +295,7 @@ public class ReactorInvoker(
                 }
             }
 
-            return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary());
+            return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet());
         }
     }
 }
