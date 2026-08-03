@@ -20,6 +20,7 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Monads;
+using Cratis.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -1310,12 +1311,17 @@ public class Sink : ISink
             return dict;
         }
 
-        if (value is IDictionary<string, object?> dictionary)
+        // A schema-defined dictionary property (additionalProperties) round-trips as
+        // Dictionary<object, object> (not IDictionary<string, object?>), because its keys and values
+        // are typed by whatever the schema declares. Falling through to the generic IEnumerable branch
+        // below would iterate its KeyValuePair<,> entries as plain elements, serializing the dictionary
+        // as a JSON array of { "Key": ..., "Value": ... } objects instead of a JSON object.
+        if (value.GetType().IsDictionary() && value is IEnumerable dictionaryEntries)
         {
             var result = new Dictionary<string, object?>();
-            foreach (var kvp in dictionary)
+            foreach (var entry in dictionaryEntries.GetKeyValuePairs())
             {
-                result[kvp.Key] = UnwrapForJson(kvp.Value);
+                result[entry.Key] = UnwrapForJson(entry.Value);
             }
 
             return result;

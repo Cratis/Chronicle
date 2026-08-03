@@ -55,9 +55,25 @@ public static class ExpandoObjectExtensions
                 continue;
             }
 
+            if (value is ExpandoObject nested)
+            {
+                cloneAsDictionary.Add(key, nested.Clone());
+                continue;
+            }
+
             var valueType = value.GetType();
+
+            // A dictionary is also an IEnumerable<KeyValuePair<,>>, so it must be cloned key-by-key before
+            // the generic enumerable branch below gets a chance at it - that branch iterates any IEnumerable
+            // into a List<T>, which for a dictionary would silently replace it with a
+            // List<KeyValuePair<TKey, TValue>>, losing the dictionary shape entirely.
+            if (valueType.IsDictionary())
+            {
+                cloneAsDictionary.Add(key, CloneDictionary(value, valueType));
+                continue;
+            }
+
             if (!valueType.IsPrimitive &&
-                valueType != typeof(ExpandoObject) &&
                 valueType != typeof(string) &&
                 valueType != typeof(Guid) &&
                 valueType != typeof(byte[]) &&
@@ -74,7 +90,7 @@ public static class ExpandoObjectExtensions
             }
             else
             {
-                cloneAsDictionary.Add(key, value is ExpandoObject nested ? nested.Clone() : value.Clone());
+                cloneAsDictionary.Add(key, value.Clone());
             }
         }
 
@@ -323,9 +339,45 @@ public static class ExpandoObjectExtensions
         }
     }
 
+    /// <summary>
+    /// Deep clone a dictionary value while preserving its key and value types.
+    /// </summary>
+    /// <param name="value">The dictionary instance to clone.</param>
+    /// <param name="dictionaryType">The runtime <see cref="Type"/> of <paramref name="value"/>.</param>
+    /// <returns>A cloned <see cref="IDictionary"/> with the same key and value types as <paramref name="dictionaryType"/>.</returns>
+    static IDictionary CloneDictionary(object value, Type dictionaryType)
+    {
+        var keyType = dictionaryType.GetKeyType();
+        var valueType = dictionaryType.GetValueType();
+        var clone = (Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType)) as IDictionary)!;
+
+        var keyValuePairType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
+        var keyProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Key))!;
+        var valueProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Value))!;
+
+        foreach (var keyValuePair in (IEnumerable)value)
+        {
+            var entryKey = keyProperty.GetValue(keyValuePair)!;
+            var entryValue = valueProperty.GetValue(keyValuePair);
+            clone[entryKey] = entryValue is ExpandoObject nestedEntry ? nestedEntry.Clone() : entryValue?.Clone();
+        }
+
+        return clone;
+    }
+
     static object GetActualValueFrom(object value, bool camelCaseProperties = false)
     {
         var valueType = value.GetType();
+
+        // A dictionary is also an IEnumerable<KeyValuePair<,>>, so it must be converted key-by-key before
+        // the generic enumerable branch below gets a chance at it - that branch would otherwise iterate
+        // its KeyValuePair<,> entries as plain elements, turning the dictionary into a list of
+        // { Key, Value } objects instead of preserving it as a dictionary.
+        if (valueType.IsDictionary())
+        {
+            return ConvertDictionaryValue(value, camelCaseProperties);
+        }
+
         if (!valueType.IsPrimitive &&
             !valueType.IsEnum &&
             valueType != typeof(string) &&
@@ -357,5 +409,16 @@ public static class ExpandoObjectExtensions
         }
 
         return value;
+    }
+
+    static Dictionary<object, object> ConvertDictionaryValue(object value, bool camelCaseProperties)
+    {
+        var result = new Dictionary<object, object>();
+        foreach (var entry in ((IEnumerable)value).GetKeyValuePairs())
+        {
+            result[entry.Key] = GetActualValueFrom(entry.Value, camelCaseProperties);
+        }
+
+        return result;
     }
 }
