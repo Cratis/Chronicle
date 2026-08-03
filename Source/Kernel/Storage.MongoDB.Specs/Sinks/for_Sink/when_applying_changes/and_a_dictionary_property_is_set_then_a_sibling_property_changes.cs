@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes;
 /// next event's changeset, which serialized as an array of { Key, Value } documents instead of a BSON
 /// document, and could make the following update to a sibling property look like a no-op.
 /// </summary>
+/// <param name="ctx">The <see cref="context"/> for the spec.</param>
 [Collection(MongoDBCollection.Name)]
 public class and_a_dictionary_property_is_set_then_a_sibling_property_changes(context ctx) : IClassFixture<context>
 {
