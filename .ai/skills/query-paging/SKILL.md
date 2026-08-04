@@ -1,6 +1,6 @@
 ---
 name: query-paging
-description: Add server-side paging and sorting to a Cratis read-model query — return IQueryable<T> for one-shot paging, ISubject<IQueryable<T>> for observable + paged results, and consume them from React with useWithPaging. Use when a list query can grow large enough that returning all rows is wasteful, or needs server-side sorting.
+description: Add server-side paging and sorting to a Cratis read-model query — return IQueryable<T> for one-shot paging, ISubject<IEnumerable<T>> for observable + paged results, and consume them from React with useWithPaging. Use when a list query can grow large enough that returning all rows is wasteful, or needs server-side sorting.
 ---
 
 # Query Paging
@@ -28,27 +28,32 @@ public record Project(...)
 }
 ```
 
-### 2. Observable + paged — `ISubject<IQueryable<T>>`
+### 2. Observable + paged — `ISubject<IEnumerable<T>>`
 
-For live updates *and* paging:
+For live updates *and* paging, return what `Observe` returns:
 
 ```csharp
-public static ISubject<IQueryable<Project>> AllProjectsLive(IMongoCollection<Project> collection) =>
-    collection.Observe(_ => _.AsQueryable());
+public static ISubject<IEnumerable<Project>> AllProjectsLive(IMongoCollection<Project> collection) =>
+    collection.Observe(_ => _.Find(p => !p.IsArchived));
 ```
 
-Each emission carries page metadata alongside the data.
+Each emission carries page metadata alongside the data. Sorting and paging are applied **at the source** and re-applied on every change — the storage `Observe` helpers read the ambient query context themselves rather than going through the query renderer.
+
+⚠️ **Do not wrap it as `ISubject<IQueryable<T>>`.** No `Observe` overload returns that shape, and the renderer matches on the outer type, so nothing would page it.
 
 ### 3. What does and doesn't page
 
-| Return type | Paging? |
-|---|---|
-| `T`, `T?`, `IEnumerable<T>`, `List<T>`, `T[]` | No |
-| `IQueryable<T>` | **Yes — auto-paged** |
-| `ISubject<IEnumerable<T>>` | No (full observable set) |
-| `ISubject<IQueryable<T>>` | **Yes — observable + auto-paged** |
+| Return type | Paging? | How |
+|---|---|---|
+| `T`, `T?`, `IEnumerable<T>`, `List<T>`, `T[]` | No | Nothing narrows the result |
+| `IQueryable<T>` | **Yes — auto-paged** | The query renderer applies `OrderBy`/`Skip`/`Take` to the queryable |
+| `Task<IQueryable<T>>` | **Yes — auto-paged** | The result is awaited first, then rendered as the queryable it unwraps to |
+| `ISubject<IEnumerable<T>>` | **Yes — paged and sorted** | Not by the renderer. The storage `Observe()` helpers read the ambient query context themselves and apply sorting and paging at the source, re-applying them on every change |
+| `ISubject<IQueryable<T>>` | **No — not a shipped shape** | No `Observe` overload returns it, and the renderer matches on the outer type, so it never fires |
 
-`Task<IQueryable<T>>` and `Task<ISubject<…>>` are **not** supported — return the queryable/subject directly. Don't `.ToList()` before returning `IQueryable<T>` (defeats skip/take) and don't hard-code `Take(n)` (conflicts with `pageSize`).
+Don't `.ToList()` before returning `IQueryable<T>` (defeats skip/take) and don't hard-code `Take(n)` (conflicts with `pageSize`).
+
+⚠️ **Returning an already-materialized collection as a queryable — `(await …).AsQueryable()` — pages *correctly* and costs everything.** LINQ-to-objects honours `Skip`/`Take`, so the results are right and the whole set was read to produce them. Page the source, not the answer.
 
 ### 4. Frontend hooks
 
@@ -63,18 +68,21 @@ const [result, perform, setSorting, setPage, setPageSize] =
 
 ### 5. Spec the data contract
 
-Paging is the framework's responsibility; the spec covers the data shape:
+Paging is the framework's responsibility; the spec covers the data shape — which rows the query selects, and in what order.
+
+⚠️ **A query method that takes `IMongoCollection<T>` cannot be reached from `ReadModelScenario<T>`.** The scenario materializes read models in memory and exposes no collection, so there is nothing to hand such a method. Spec the projection through the scenario and assert on the materialized instances; if the selection logic itself is worth pinning, keep it in a method that takes what a spec can supply.
 
 ```csharp
-void Because() => _result = Project.ActiveProjects(_scenario.Collection);
+void Because() => _result = _scenario.Instances.Values;
 [Fact] void should_only_include_active() => _result.All(p => !p.IsArchived).ShouldBeTrue();
 ```
 
 ## Quality gate
 
 - [ ] Build is clean.
-- [ ] Query returns `IQueryable<T>` or `ISubject<IQueryable<T>>` (not `Task<…>` of either).
-- [ ] A meaningful default sort is applied where the data has a natural order.
+- [ ] Query returns `IQueryable<T>` (or `Task<IQueryable<T>>`) for one-shot paging, or `ISubject<IEnumerable<T>>` for an observable paged list. Not `ISubject<IQueryable<T>>` - nothing renders it.
+- [ ] A meaningful default sort is applied where the data has a natural order - paging without one is unstable across storage providers, which order differently.
+- [ ] The source is paged, not the answer: no `.ToList()`/`.AsQueryable()` that reads everything first.
 
 ## See also
 
