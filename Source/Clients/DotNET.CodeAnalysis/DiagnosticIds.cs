@@ -197,7 +197,7 @@ public static class DiagnosticIds
     public const string CrossSubjectPiiJoin = "CHR0038";
 
     /// <summary>
-    /// A Task-returning testing assertion is discarded rather than awaited, so it can never fail.
+    /// An awaitable-returning testing assertion is discarded rather than awaited, so it can never fail.
     /// </summary>
     public const string NonAwaitedAssertion = "CHR0039";
 

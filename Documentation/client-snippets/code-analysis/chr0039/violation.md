@@ -11,7 +11,7 @@ public class Chr0039WhenRegisteringAnAuthor
 {
     readonly IEventLog _eventLog = default!;
 
-    // Warning CHR0039: 'ShouldHaveAppendedEvent' returns a Task that is never awaited, so the
+    // Warning CHR0039: 'ShouldHaveAppendedEvent' returns an awaitable that is never awaited, so the
     // assertion can never fail. The fact is 'void', so the compiler's own CS4014 stays silent —
     // this spec passes even though no Chr0039AuthorRegistered carries that name.
     [Fact]
