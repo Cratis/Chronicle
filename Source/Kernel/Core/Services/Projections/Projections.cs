@@ -49,7 +49,7 @@ internal sealed class Projections(
         }
         catch (Exception exception)
         {
-            throw new ProjectionRegistrationFailed(request.EventStore, projections.Select(_ => _.Identifier), exception);
+            throw ProjectionRegistrationFailed.For(request.EventStore, projections.Select(_ => _.Identifier), exception);
         }
     }
 
