@@ -88,6 +88,16 @@ same instance.
 > The same registry is reachable without a scenario, as `Defaults.Instance.ClientArtifactsProvider`. Use that
 > when the spec is not a `ReadModelScenario<TReadModel>` — it is the same process-wide instance.
 
+## Strict event subscription
+
+By default the scenario mirrors the production projection engine, which filters an event source's stream down to the types the projection subscribes to — so seeding an unrelated audit or marker event is silently ignored. When you would rather be told, `WithStrictEventSubscription()` turns that silent skip into an `UnsubscribedEventSeeded` naming the offending event type:
+
+```csharp
+var scenario = new ReadModelScenario<OrderSummary>().WithStrictEventSubscription();
+```
+
+This applies to projection-backed read models. A reducer only invokes the handlers it declares, so an unsubscribed seeded event is inherently a no-op there, exactly as at runtime.
+
 ## Example: reducer
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/reducer-example" />
@@ -124,6 +134,50 @@ If more than one instance materializes and you read `Instance`, it throws `Multi
 
 > [!IMPORTANT]
 > `InstanceForEventSourceId(id)` selects the right instance no matter the seed order, but a `[Join]` **value** is only populated when the joined-in (source) stream is seeded **before** the entity that joins it. The entity pulls the joined value as its own event is processed; a join-source event seeded afterwards resolves the entity's identity but leaves the joined value unset. Seed the source stream first, as the example above does.
+
+## What the harness stands in for
+
+Running in-process is what makes this tier fast enough to use on every build, and the price is that some of what a deployed Chronicle does is stood in for. None of it is a defect — but a spec whose subject lives in a substituted layer passes just as confidently as one whose subject does not, so it is worth knowing which is which before you rely on a green.
+
+These are substituted for every scenario, whatever your read model looks like:
+
+| Layer | What runs instead |
+|-------|-------------------|
+| The read model sink | An in-memory sink. Documents are held as objects and round-tripped through JSON, never through the encoding a real store uses. |
+| Storage and the observer lifecycle | Nothing at all. There are no observers, no partitions, no failed-partition state, and no replay or rewind. |
+| The event context | The sequence number is the event's position in what you seeded, and `Occurred` is a fixed base plus one tick per event. A reducer gets a context built differently again, with no `Occurred`. |
+| The document key mapping | The `_id` ↔ identifier-property mapping a store performs is applied in C# instead. |
+| The read model definition | Identifier, container and display name come straight off the CLR type and there are no indexes, where a deployed Chronicle uses your naming policy and the indexes you declared. |
+| The client read surface | `scenario.ReadModels` is the production client surface; its read side wants a running Chronicle and refuses rather than answering. Read what the scenario materialized through `Instance`, `Instances` or `InstanceForEventSourceId`. |
+
+Three more are substituted only for certain shapes — and because the harness can see which of those shapes your read model has, it tells you.
+
+## Asking what a scenario substituted
+
+`Substitutions` reports the substituted layers your read model's own shape reaches. It is derived from the read model and its projection alone, so you can read it before seeding anything:
+
+```csharp
+var scenario = new ReadModelScenario<OrderSummary>();
+
+foreach (var substitution in scenario.Substitutions)
+{
+    Console.WriteLine($"{substitution.Layer}: {substitution.Shape} — {substitution.Consequence}");
+}
+```
+
+| `Layer` | Reported when |
+|---------|---------------|
+| `Sink` | the document key is not a `Guid`, or the read model carries a class-level `[RemovedWith]` |
+| `JoinKeyResolution` | the read model or one of its child collections carries a `[Join]` |
+| `DeferredKeyHandling` | a child collection takes its parent key from an event property rather than from the event source id |
+
+An empty list means nothing shape-dependent is being stood in for. Anything in the list is a claim your in-process spec cannot settle on its own — cover it against a real kernel and a real store as well.
+
+To make that binding rather than advisory, opt in to strict fidelity. A read model that reaches a substituted layer then raises `ReadModelDependsOnSubstitutedLayer` instead of returning a result, so a suite can turn it on everywhere and have only the shapes that genuinely need a second tier change color:
+
+```csharp
+var scenario = new ReadModelScenario<OrderSummary>().WithStrictFidelity();
+```
 
 ## Notes
 

@@ -55,8 +55,12 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     EventStoreForTesting? _eventStore;
     TReadModel? _instance;
     IReadOnlyDictionary<EventSourceId, TReadModel> _instances = new Dictionary<EventSourceId, TReadModel>();
+    IReadOnlyList<ReadModelSubstitution>? _substitutions;
+    Contracts.Projections.ProjectionDefinition? _projectionDefinition;
+    bool _projectionDefinitionResolved;
     bool _processed;
     bool _strictEventSubscription;
+    bool _strictFidelity;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelScenario{TReadModel}"/> class.
@@ -165,6 +169,28 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public IServiceCollection Services { get; } = new ServiceCollection();
 
     /// <summary>
+    /// Gets the layers this harness substitutes that the read model under test actually depends on.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Running in-process means standing in for the sink, for storage and the observer lifecycle, for the event
+    /// context, for <c>[Join]</c> key resolution and for deferred handling. Most of that applies to every
+    /// scenario alike and is described in the testing documentation. This property reports the part that does
+    /// not: the substituted layers <typeparamref name="TReadModel"/>'s own shape reaches, so a spec asserting
+    /// against behavior that lives in one of them can be recognized as needing a kernel-backed sibling rather
+    /// than reading as full coverage. An empty list means nothing shape-dependent is being stood in for.
+    /// </para>
+    /// <para>
+    /// This is derived from the read model and its projection alone, so it is available before any event is
+    /// seeded. To have it fail a spec rather than inform one, opt in with <see cref="WithStrictFidelity"/>.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<ReadModelSubstitution> Substitutions =>
+        _substitutions ??= SubstitutedLayers.DetectFor(
+            typeof(TReadModel),
+            FindReducerType(typeof(TReadModel)) is null ? ProjectionDefinition() : null);
+
+    /// <summary>
     /// Gets an <see cref="IReadModels"/> instance that returns pre-seeded read model instances for this scenario.
     /// </summary>
     /// <remarks>
@@ -208,6 +234,23 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         _strictEventSubscription = true;
         _processed = false;
+        return this;
+    }
+
+    /// <summary>
+    /// Enables strict fidelity: reading a result for a read model that depends on a substituted layer raises
+    /// <see cref="ReadModelDependsOnSubstitutedLayer"/> instead of reporting it through <see cref="Substitutions"/>.
+    /// </summary>
+    /// <returns>This <see cref="ReadModelScenario{TReadModel}"/> for chaining.</returns>
+    /// <remarks>
+    /// By default a scenario runs whatever shape it is given and reports what it stood in for. Opt in to strict
+    /// mode when a suite wants that report to be binding — a read model reaching a substituted layer then cannot
+    /// claim a green in-process spec, and has to be covered where the layer is real. Because the check reads the
+    /// read model's shape rather than the events, it fires whether or not anything was seeded.
+    /// </remarks>
+    public ReadModelScenario<TReadModel> WithStrictFidelity()
+    {
+        _strictFidelity = true;
         return this;
     }
 
@@ -314,8 +357,24 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
+    Contracts.Projections.ProjectionDefinition? ProjectionDefinition()
+    {
+        if (!_projectionDefinitionResolved)
+        {
+            _projectionDefinition = FindProjectionDefinition(typeof(TReadModel));
+            _projectionDefinitionResolved = true;
+        }
+
+        return _projectionDefinition;
+    }
+
     void EnsureProcessed()
     {
+        if (_strictFidelity && Substitutions.Count > 0)
+        {
+            throw new ReadModelDependsOnSubstitutedLayer(typeof(TReadModel), Substitutions);
+        }
+
         if (!_processed && _collectedEvents.Count > 0)
         {
             (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
@@ -353,7 +412,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             return (reduced, reducerInstances);
         }
 
-        var projectionDefinition = FindProjectionDefinition(readModelType);
+        var projectionDefinition = ProjectionDefinition();
         if (projectionDefinition is not null)
         {
             return await ProjectionReadModelProcessor.Process(

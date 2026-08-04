@@ -5,13 +5,11 @@ extern alias KernelConcepts;
 extern alias KernelCore;
 
 using System.Dynamic;
-using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
@@ -326,7 +324,7 @@ internal static class ProjectionReadModelProcessor
     {
         if (key is null || key.Value is null) return;
 
-        var identifierProperty = FindIdentifierProperty(typeof(TReadModel));
+        var identifierProperty = IdentifierProperty.Find(typeof(TReadModel));
         if (identifierProperty is null) return;
 
         var propertyName = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifierProperty.Name);
@@ -341,39 +339,6 @@ internal static class ProjectionReadModelProcessor
         }
 
         stateDict[propertyName] = key.Value;
-    }
-
-    /// <summary>
-    /// Locates the property a read model uses as its document identifier, following the same
-    /// precedence MongoDB uses to map to `_id`:
-    /// <list type="number">
-    /// <item><description><see cref="KeyAttribute"/> on a property or record positional parameter</description></item>
-    /// <item><description><see cref="SubjectAttribute"/> on a property or record positional parameter</description></item>
-    /// <item><description>A property literally named <c>Id</c> (MongoDB default-id convention)</description></item>
-    /// </list>
-    /// </summary>
-    /// <param name="readModelType">The read model CLR type to inspect.</param>
-    static PropertyInfo? FindIdentifierProperty(Type readModelType)
-    {
-        var properties = readModelType.GetProperties();
-        var primaryCtor = readModelType.GetConstructors().FirstOrDefault();
-        var parameters = primaryCtor?.GetParameters() ?? [];
-
-        return FindByAttribute<KeyAttribute>(properties, parameters)
-            ?? FindByAttribute<SubjectAttribute>(properties, parameters)
-            ?? properties.FirstOrDefault(p => string.Equals(p.Name, "Id", StringComparison.Ordinal));
-    }
-
-    static PropertyInfo? FindByAttribute<TAttribute>(PropertyInfo[] properties, ParameterInfo[] parameters)
-        where TAttribute : Attribute
-    {
-        var taggedProperty = properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(TAttribute)));
-        if (taggedProperty is not null) return taggedProperty;
-
-        var taggedParameter = parameters.FirstOrDefault(p => Attribute.IsDefined(p, typeof(TAttribute)));
-        return taggedParameter is null
-            ? null
-            : properties.FirstOrDefault(p => string.Equals(p.Name, taggedParameter.Name, StringComparison.Ordinal));
     }
 
     /// <summary>
