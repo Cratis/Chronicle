@@ -80,8 +80,12 @@ public interface IProjections
     /// <summary>
     /// Get any failed partitions for a specific projection.
     /// </summary>
-    /// <param name="projectionType">Type of projection.</param>
+    /// <param name="projectionType">Type of projection, or the type of read model it projects to.</param>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    /// <remarks>
+    /// Model-bound projections have no projection type of their own, so their read model type is the only handle a
+    /// caller has for them. Both handles resolve to the same projection.
+    /// </remarks>
     Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor(Type projectionType);
 
     /// <summary>

@@ -84,7 +84,7 @@ public class Projections(
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type projectionType)
     {
-        var handler = _handlersByModelType[projectionType];
+        var handler = GetHandlerForProjectionOrReadModelType(projectionType);
         return handler.GetFailedPartitions();
     }
 
@@ -93,7 +93,7 @@ public class Projections(
         where TProjection : IProjection
     {
         var projectionType = typeof(TProjection);
-        var handler = _handlersByModelType[projectionType];
+        var handler = _handlersByType[projectionType];
         return handler.GetState();
     }
 
@@ -206,6 +206,19 @@ public class Projections(
         var queryResult = result.Value0!;
         return new ProjectionQueryResult([.. queryResult.ReadModelEntries]);
     }
+
+    /// <summary>
+    /// Resolve the <see cref="IProjectionHandler"/> for a type that is either a projection type or a read model type.
+    /// </summary>
+    /// <param name="type">The projection type or read model type to resolve for.</param>
+    /// <returns>The <see cref="IProjectionHandler"/> for the type.</returns>
+    /// <remarks>
+    /// Fluent projections are addressable by their own type, while model-bound projections have no projection type at
+    /// all - their handler is only ever keyed by the read model it projects to. A caller holding either handle has to
+    /// land on the same handler, so the projection type is tried first and the read model type second.
+    /// </remarks>
+    IProjectionHandler GetHandlerForProjectionOrReadModelType(Type type) =>
+        _handlersByType.TryGetValue(type, out var handler) ? handler : _handlersByModelType[type];
 
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
