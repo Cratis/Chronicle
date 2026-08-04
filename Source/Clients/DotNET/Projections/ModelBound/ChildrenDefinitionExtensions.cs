@@ -178,7 +178,11 @@ static class ChildrenDefinitionExtensions
                 All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
                 RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
-                AutoMap = shouldAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Enabled : (Contracts.Projections.AutoMap)AutoMap.Disabled
+                AutoMap = shouldAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Enabled : (Contracts.Projections.AutoMap)AutoMap.Disabled,
+
+                // The child's own exclusions, not the parent's: a child is its own model with its own property
+                // names, and the kernel matches these by bare name.
+                NoAutoMapProperties = [.. NoAutoMapProperties.CollectFrom(childType, namingPolicy)]
             };
             targetChildren[propertyName] = childrenDef;
         }

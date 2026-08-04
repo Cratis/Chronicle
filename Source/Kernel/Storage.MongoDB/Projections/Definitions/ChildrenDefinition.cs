@@ -57,4 +57,9 @@ public class ChildrenDefinition
     /// Gets or sets all the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.
     /// </summary>
     public IDictionary<string, ChildrenDefinition> Nested { get; set; } = new Dictionary<string, ChildrenDefinition>();
+
+    /// <summary>
+    /// Gets or sets the properties on the child that are excluded from auto-mapping.
+    /// </summary>
+    public IList<string> NoAutoMapProperties { get; set; } = [];
 }

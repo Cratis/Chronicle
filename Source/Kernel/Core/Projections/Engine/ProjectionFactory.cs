@@ -419,7 +419,16 @@ public class ProjectionFactory(
                 var nestedSchema = currentReadModelSchema.Properties.TryGetValue(kvp.Key.LastSegment.Value, out var schemaProp)
                     ? schemaProp.ActualSchema ?? currentReadModelSchema
                     : currentReadModelSchema;
-                var mergedProperties = GetMergedFromProperties(fromDefinition, nestedSchema, matchingSchema?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
+
+                // The nested object's own settings, not the parent's. Using the parent's meant a class-level
+                // exclusion on the nested type did nothing at all, while the parent's exclusions leaked into it -
+                // the set is matched by bare property name, so a root exclusion silently blanked an unrelated
+                // property of the same name on the nested object. One argument pair, both directions.
+                var nestedNoAutoMapProperties = (nestedDefinition.NoAutoMapProperties ?? [])
+                    .Select(_ => _.LastSegment.Value)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var nestedAutoMap = nestedDefinition.AutoMap == AutoMap.Inherit ? projection.AutoMap : nestedDefinition.AutoMap;
+                var mergedProperties = GetMergedFromProperties(fromDefinition, nestedSchema, matchingSchema?.Schema, nestedAutoMap, nestedNoAutoMapProperties);
                 var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value));
                 propertyMappers.AddRange(propertyMappersForEveryEventType);
 
