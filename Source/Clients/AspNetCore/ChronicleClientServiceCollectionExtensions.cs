@@ -94,7 +94,19 @@ public static class ChronicleClientServiceCollectionExtensions
                     LazyThreadSafetyMode.ExecutionAndPublication),
                 (ServiceProvider: sp, EventStoreName: options.EventStore));
 
-            return lazyEventStore.Value;
+            try
+            {
+                return lazyEventStore.Value;
+            }
+            catch
+            {
+                // Lazy<T> memoizes a faulting factory as well as a successful one, so without evicting it a
+                // single failure to reach the kernel at first resolution would be permanent for this namespace:
+                // every later resolution replays the same exception for the lifetime of the process, with no way
+                // back. Removing only this instance leaves a concurrent resolution that already succeeded alone.
+                _eventStores.TryRemove(new KeyValuePair<EventStoreNamespaceName, Lazy<IEventStore>>(namespaceName, lazyEventStore));
+                throw;
+            }
         });
 
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Constraints);
