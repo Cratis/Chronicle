@@ -66,4 +66,33 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     /// Gets the declared artifacts that did not register, each carrying the failure that stopped it.
     /// </summary>
     public IEnumerable<ArtifactRegistration> Failures => Artifacts.Where(_ => !_.IsRegistered);
+
+    /// <summary>
+    /// Compare with another <see cref="RegistrationOutcome"/> by value.
+    /// </summary>
+    /// <param name="other">The outcome to compare with.</param>
+    /// <returns>True if the outcomes carry the same artifacts, false otherwise.</returns>
+    /// <remarks>
+    /// The generated record equality would compare <see cref="Artifacts"/> with the list's own equality, which is by
+    /// reference - so two outcomes carrying the same artifacts came out unequal, and a record's headline promise did
+    /// not hold for the one member that matters. It ships a <see cref="NotRun"/> sentinel that invites being compared
+    /// against, so this is not theoretical.
+    /// </remarks>
+    public virtual bool Equals(RegistrationOutcome? other) =>
+        other is not null &&
+        HasRun == other.HasRun &&
+        Artifacts.SequenceEqual(other.Artifacts);
+
+    /// <inheritdoc/>
+    public override int GetHashCode()
+    {
+        var hashCode = default(HashCode);
+        hashCode.Add(HasRun);
+        foreach (var artifact in Artifacts)
+        {
+            hashCode.Add(artifact);
+        }
+
+        return hashCode.ToHashCode();
+    }
 }
