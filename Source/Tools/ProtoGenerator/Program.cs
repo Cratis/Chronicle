@@ -32,6 +32,8 @@ var services = assembly.ExportedTypes
 
 Console.WriteLine($"Found {services.Length} service interfaces");
 
+var contractTypes = assembly.ExportedTypes.ToArray();
+
 var generator = new SchemaGenerator();
 
 // Group services by namespace to handle multiple packages
@@ -60,6 +62,9 @@ foreach (var group in servicesByNamespace)
 
         // Add ISO 8601 format comment to SerializableDateTimeOffset message definitions.
         schema = ProtoSchemaHelper.AddSerializableDateTimeOffsetComment(schema);
+
+        // Declare every field number a contract has retired, so the reservation survives regeneration.
+        schema = ProtoSchemaHelper.DeclareReservedFields(schema, contractTypes);
 
         var fileName = packageName.Replace("Cratis.Chronicle.Contracts.", string.Empty).Replace('.', '_').ToLowerInvariant();
         if (string.IsNullOrEmpty(fileName))

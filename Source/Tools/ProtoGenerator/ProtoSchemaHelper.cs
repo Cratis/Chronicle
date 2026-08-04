@@ -188,6 +188,52 @@ internal static partial class ProtoSchemaHelper
     }
 
     /// <summary>
+    /// Emits a <c>reserved</c> declaration for every field number a contract type has retired.
+    /// </summary>
+    /// <param name="schema">The generated schema.</param>
+    /// <param name="types">The contract types the schema was generated from.</param>
+    /// <returns>The schema with reservations declared.</returns>
+    /// <remarks>
+    /// The schema generator has no notion of a retired field, so a <c>reserved</c> line added to the generated
+    /// file by hand disappears the next time anyone regenerates - silently, and with nothing to notice it by.
+    /// Reading it from the contract instead makes the generated file reproducible, which is the only form a
+    /// reservation can survive in.
+    /// </remarks>
+    public static string DeclareReservedFields(string schema, IEnumerable<Type> types)
+    {
+        foreach (var type in types)
+        {
+            var reserved = Array.Find(
+                type.GetCustomAttributes(inherit: false),
+                _ => string.Equals(_.GetType().Name, "ReservedProtoFieldsAttribute", StringComparison.Ordinal));
+            if (reserved is null)
+            {
+                continue;
+            }
+
+            var numbers = ((IEnumerable<int>)reserved.GetType().GetProperty("FieldNumbers")!.GetValue(reserved)!)
+                .Order()
+                .ToArray();
+            if (numbers.Length == 0)
+            {
+                continue;
+            }
+
+            var declaration = $"message {type.Name} {{";
+            var index = schema.IndexOf(declaration, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                continue;
+            }
+
+            var insertAt = index + declaration.Length;
+            schema = schema[..insertAt] + $"{Environment.NewLine}   reserved {string.Join(", ", numbers)};" + schema[insertAt..];
+        }
+
+        return schema;
+    }
+
+    /// <summary>
     /// Adds an ISO 8601 format comment above each <c>message SerializableDateTimeOffset</c> block
     /// in the proto schema so that consumers know the expected wire format.
     /// </summary>

@@ -7,6 +7,7 @@ namespace Cratis.Chronicle.Contracts.Events.Constraints;
 /// Represents a unique constraint definition.
 /// </summary>
 [ProtoContract]
+[ReservedProtoFields(1)]
 public class UniqueEventTypeConstraintDefinition
 {
     /// <summary>
