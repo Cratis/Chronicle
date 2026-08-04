@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Properties;
 
@@ -180,6 +181,13 @@ public static class JsonSchemaExtensions
     /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to get default value for.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> holding known JSON schema type formats.</param>
     /// <returns>The default value.</returns>
+    /// <remarks>
+    /// The default is what an unset property materializes as when a document is round-tripped through its schema,
+    /// so it must be a value the property itself allows. A property that declares its members - an enum - allows
+    /// only those, and a type default outside that set is a value the read model's own registered schema forbids.
+    /// Writing one leaves a reader with two bad choices: refuse it, and take a whole observable query down rather
+    /// than one row, or round it off to something that reads like a deliberate answer.
+    /// </remarks>
     public static object? GetDefaultValue(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
     {
         if (schemaProperty.IsNullable())
@@ -195,7 +203,8 @@ public static class JsonSchemaExtensions
         {
             try
             {
-                return Activator.CreateInstance(type);
+                var defaultValue = Activator.CreateInstance(type);
+                return IsDeclaredMember(schemaProperty, defaultValue) ? defaultValue : null;
             }
             catch
             {
@@ -207,11 +216,20 @@ public static class JsonSchemaExtensions
     }
 
     /// <summary>
-    /// Get whether or not property format is set to nullable.
+    /// Get whether or not the property is nullable.
     /// </summary>
     /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> to check.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsNullable(this JsonSchemaProperty schemaProperty) => schemaProperty.Format?.EndsWith('?') ?? false;
+    /// <remarks>
+    /// Nullability is expressed two ways and a property carries whichever fits it. A formatted type - a date, a
+    /// decimal - marks it with a trailing <c>?</c> on the format. A type with no format - an enum, a boolean -
+    /// has nowhere to put the marker and declares <c>"null"</c> in its type instead. Testing only the format
+    /// suffix therefore read every nullable enum and every nullable flag as non-nullable, and the round trip
+    /// materialized a type default for a property whose whole point was that it might not have one.
+    /// </remarks>
+    public static bool IsNullable(this JsonSchemaProperty schemaProperty) =>
+        (schemaProperty.Format?.EndsWith('?') ?? false) ||
+        schemaProperty.Type.HasFlag(JsonObjectType.Null);
 
     /// <summary>
     /// Determines whether two schemas are equal once nullability markers are ignored — a trailing <c>?</c>
@@ -260,5 +278,16 @@ public static class JsonSchemaExtensions
 
                 break;
         }
+    }
+
+    static bool IsDeclaredMember(JsonSchemaProperty schemaProperty, object? value)
+    {
+        if (schemaProperty.Enumeration.Count == 0 || value is null)
+        {
+            return true;
+        }
+
+        var asLong = Convert.ToInt64(value, CultureInfo.InvariantCulture);
+        return schemaProperty.Enumeration.Any(member => member is not null && Convert.ToInt64(member, CultureInfo.InvariantCulture) == asLong);
     }
 }
