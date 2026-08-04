@@ -200,4 +200,9 @@ public static class DiagnosticIds
     /// A Task-returning testing assertion is discarded rather than awaited, so it can never fail.
     /// </summary>
     public const string NonAwaitedAssertion = "CHR0039";
+
+    /// <summary>
+    /// One member carries several [SetFromContext] for the same event type, so all but the last are discarded.
+    /// </summary>
+    public const string DuplicateSetFromContextForSameEventType = "CHR0040";
 }

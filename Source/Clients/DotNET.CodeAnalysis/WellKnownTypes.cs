@@ -132,6 +132,14 @@ public static class WellKnownTypes
     /// <remarks>
     /// Matched by full-name string so the analyzer does not need a reference to the Arc assembly.
     /// </remarks>
+    /// <summary>
+    /// The full name of the open generic SetFromContext attribute.
+    /// </summary>
+    public const string SetFromContextAttributeName = "Cratis.Chronicle.Projections.ModelBound.SetFromContextAttribute<TEvent>";
+
+    /// <summary>
+    /// The full name of the ReadModel attribute.
+    /// </summary>
     public const string ReadModelAttributeName = "Cratis.Arc.Queries.ModelBound.ReadModelAttribute";
 
     /// <summary>
