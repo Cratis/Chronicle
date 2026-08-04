@@ -47,6 +47,9 @@ public class UniqueConstraintValidator(
             isAllowed = context.BatchClaims.TryClaim(definition.Name, scopeKey, value, context.EventSourceId);
         }
 
+        // The offending value is deliberately absent from the message. A violation message travels back to whoever
+        // attempted the append, and a value worth constraining for uniqueness is by its nature identifying. Naming
+        // the property is the actionable half - the caller already holds the value it just tried to append.
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()
@@ -55,7 +58,7 @@ public class UniqueConstraintValidator(
                     this.CreateViolation(
                         context,
                         sequenceNumber,
-                        $"Event '{context.EventTypeId}' with value '{pv.Value}' on member '{pv.Property}' violated a unique constraint on sequence number {sequenceNumber}",
+                        $"Event '{context.EventTypeId}' on member '{pv.Property}' violated a unique constraint on sequence number {sequenceNumber}",
                         new() { { WellKnownConstraintDetailKeys.PropertyName, pv.Property }, { WellKnownConstraintDetailKeys.PropertyValue, value } })).ToImmutableList()
             };
     }
