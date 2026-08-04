@@ -15,6 +15,17 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
 {
+    /// <summary>
+    /// The name every projection-builder method gives the type parameter that takes the event.
+    /// </summary>
+    /// <remarks>
+    /// The whole builder API follows it - From, Join, RemovedWith, RemovedWithJoin, ClearWith and
+    /// FromEventProperty all name it TEvent, and every other type parameter names what it actually is
+    /// (TChildModel, TNestedModel, TProperty, TKeyType). Keying on the declared parameter rather than an
+    /// allow-list of method names means a builder method added later is covered without being enumerated here.
+    /// </remarks>
+    const string EventTypeParameterName = "TEvent";
+
     static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.DeclarativeProjectionEventTypeMustHaveAttribute,
         title: "Declarative projection event type must have [EventType] attribute",
@@ -62,9 +73,20 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Check each generic type argument
-        foreach (var typeArgument in genericMethod.TypeArguments)
+        // Only the argument in an event position can be an event. A builder method's other type parameters are
+        // the child read-model type of Children<TChildModel>, the key type of IdentifiedBy<TProperty>, the
+        // join-key property type of On<TProperty> and so on - none of which is, or could be, an event type.
+        // Checking every argument reported correct code at every one of those call sites, and because they are
+        // inferred rather than written the diagnostic pointed at a call with no visible type argument at all.
+        var definition = genericMethod.OriginalDefinition;
+        for (var index = 0; index < definition.TypeParameters.Length && index < genericMethod.TypeArguments.Length; index++)
         {
+            if (definition.TypeParameters[index].Name != EventTypeParameterName)
+            {
+                continue;
+            }
+
+            var typeArgument = genericMethod.TypeArguments[index];
             if (typeArgument.SpecialType == SpecialType.System_Object)
             {
                 continue;

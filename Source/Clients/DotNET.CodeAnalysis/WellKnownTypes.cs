@@ -52,6 +52,11 @@ public static class WellKnownTypes
     public const string OnceOnlyAttributeName = "Cratis.Chronicle.Reactors.OnceOnlyAttribute";
 
     /// <summary>
+    /// The full name of the ReplayAttribute type.
+    /// </summary>
+    public const string ReplayAttributeName = "Cratis.Chronicle.Reactors.ReplayAttribute";
+
+    /// <summary>
     /// The sentinel value representing the default event store.
     /// </summary>
     public const string DefaultEventStoreName = "";
@@ -313,12 +318,18 @@ public static class WellKnownTypes
     }
 
     /// <summary>
-    /// Gets the explicit event store name for a type, or the default event store sentinel when none is defined.
+    /// Gets the event store a type is explicitly pinned to, if it is pinned to one at all.
     /// </summary>
     /// <param name="typeSymbol">The type symbol to get the event store for.</param>
-    /// <returns>The explicit event store name, or <see cref="DefaultEventStoreName"/> when no attribute is defined.</returns>
-    public static string GetEventStoreNameOrDefault(ITypeSymbol typeSymbol) =>
-        GetEventStoreName(typeSymbol) ?? DefaultEventStoreName;
+    /// <returns>The explicit event store name, or <see langword="null"/> when the type names no event store.</returns>
+    /// <remarks>
+    /// Absence of the attribute is not a store. It means unconstrained - whatever the host is configured with -
+    /// so an unattributed type is compatible with any single named store and can never be what makes an artifact
+    /// span two of them. Standing a sentinel in for it and counting that alongside real names reported the
+    /// ordinary shape where a host declares its own event types locally and imports a few from a contracts
+    /// assembly that pins the store name for cross-host routing.
+    /// </remarks>
+    public static string? GetExplicitEventStoreName(ITypeSymbol typeSymbol) => GetEventStoreName(typeSymbol);
 
     /// <summary>
     /// Formats an event store name for diagnostics.

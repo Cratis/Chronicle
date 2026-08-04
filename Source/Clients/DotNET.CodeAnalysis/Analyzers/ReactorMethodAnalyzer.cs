@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -74,17 +76,41 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // What makes a method a handler is that its first parameter is an event type - that is what Chronicle's
+        // own discovery keys on, over public and non-public instance methods alike. Deciding it on the return
+        // type instead meant every private `async Task` helper on a reactor, the commonest shape there is, was
+        // analyzed as a handler: its first parameter was demanded to be an event type and its ordinary value-type
+        // arguments were reported as unresolvable dependencies. A helper returning a string or a domain record
+        // escaped, purely because its return type fell outside the supported set.
+        var isHandler = WellKnownTypes.HasEventTypeAttribute(firstParamType);
+
         // A method whose return type is not a supported reactor return shape is only a handler mistake when
         // its first parameter is unambiguously an event type. Chronicle silently skips such methods at
-        // discovery, so flag them here. For any other first-parameter type the method is treated as an
-        // ordinary helper and ignored.
+        // discovery, so flag them here.
         if (!IsSupportedReturnType(methodSymbol, context.Compilation))
         {
-            if (WellKnownTypes.HasEventTypeAttribute(firstParamType))
+            if (isHandler)
             {
                 context.ReportDiagnostic(Diagnostic.Create(
                     SignatureRule,
                     methodSymbol.Locations.FirstOrDefault(),
+                    methodSymbol.Name));
+            }
+
+            return;
+        }
+
+        if (!isHandler)
+        {
+            // The first parameter is not an event, so Chronicle will never dispatch to this method and its
+            // parameters are nobody's dependencies. It is only worth reporting where the author has said
+            // otherwise: a marker that has no meaning anywhere but on a handler.
+            if (HasHandlerOnlyMarker(methodSymbol))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    EventTypeRule,
+                    firstParam.Locations.FirstOrDefault(),
+                    firstParamType.Name,
                     methodSymbol.Name));
             }
 
@@ -113,18 +139,26 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
                 break;
             }
         }
-
-        // Check if the first parameter type has EventType attribute
-        if (!WellKnownTypes.HasEventTypeAttribute(firstParamType))
-        {
-            var diagnostic = Diagnostic.Create(
-                EventTypeRule,
-                firstParam.Locations.FirstOrDefault(),
-                firstParamType.Name,
-                methodSymbol.Name);
-            context.ReportDiagnostic(diagnostic);
-        }
     }
+
+    /// <summary>
+    /// Whether the method carries a marker that only makes sense on a handler.
+    /// </summary>
+    /// <param name="method">The <see cref="IMethodSymbol"/> to check.</param>
+    /// <returns>True when it does, false otherwise.</returns>
+    /// <remarks>
+    /// The first parameter alone cannot separate "meant to be a handler, forgot the attribute" from "an ordinary
+    /// helper" - both simply have a first parameter that is not an event type, and a reactor is full of the
+    /// latter. A marker whose only meaning is on a handler is the difference: an author who wrote one has said
+    /// what they intended, and Chronicle will nonetheless never dispatch to the method.
+    /// </remarks>
+    static bool HasHandlerOnlyMarker(IMethodSymbol method) =>
+        method.GetAttributes().Any(attribute =>
+        {
+            var name = attribute.AttributeClass?.ToDisplayString();
+            return string.Equals(name, WellKnownTypes.OnceOnlyAttributeName, StringComparison.Ordinal) ||
+                   string.Equals(name, WellKnownTypes.ReplayAttributeName, StringComparison.Ordinal);
+        });
 
     static bool IsSupportedReturnType(IMethodSymbol method, Compilation compilation)
     {

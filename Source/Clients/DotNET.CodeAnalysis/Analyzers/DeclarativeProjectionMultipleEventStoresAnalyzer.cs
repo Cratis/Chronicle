@@ -72,7 +72,10 @@ public class DeclarativeProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyz
                         continue;
                     }
 
-                    var eventStore = WellKnownTypes.GetEventStoreNameOrDefault(typeArgument);
+                    if (WellKnownTypes.GetExplicitEventStoreName(typeArgument) is not { } eventStore)
+                    {
+                        continue;
+                    }
 
                     if (!eventStoreNames.Contains(eventStore))
                     {

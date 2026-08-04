@@ -6,6 +6,15 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ReactorMethodAnalyzer.when_analyzing_reactor_methods;
 
+/// <summary>
+/// A method the author has marked as a handler, whose first parameter is not an event type: Chronicle will never
+/// dispatch to it, and the marker says that was not the intent.
+/// </summary>
+/// <remarks>
+/// The marker is what makes this reportable. Chronicle discovers a handler by its first parameter carrying
+/// <c>[EventType]</c>, so without one there is nothing to separate "meant to be a handler, forgot the attribute"
+/// from an ordinary helper - and a reactor is mostly ordinary helpers.
+/// </remarks>
 public class and_event_parameter_is_missing_event_type_attribute : given.a_reactor_method_analyzer
 {
     const string Usage = """
@@ -15,6 +24,7 @@ public class and_event_parameter_is_missing_event_type_attribute : given.a_react
 
     public class Reactor : Cratis.Chronicle.Reactors.IReactor
     {
+        [Cratis.Chronicle.Reactors.OnceOnly]
         public void On({|#0:MissingEvent @event|})
         {
         }
