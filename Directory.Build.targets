@@ -10,4 +10,22 @@
     <PropertyGroup Condition="'$(Configuration)' == 'Debug' OR '$(EnableDevelopmentSymbol)' == 'true'">
         <DefineConstants>$(DefineConstants);DEVELOPMENT</DefineConstants>
     </PropertyGroup>
+
+    <!--
+        Use only the .globalconfig that sits beside this file.
+
+        The SDK collects .globalconfig from every ancestor directory, and Roslyn resolves two configs that set the
+        same key at the same level by *unsetting* it. So a checkout placed inside another checkout - a git
+        worktree under the repo, a vendored copy, a CI cache - is handed two copies of this repo's own config and
+        silently loses every severity it declares, failing the build with thousands of errors in files nobody
+        touched. Ranking the configs does not help, because the two copies are identical and rank the same.
+
+        Nothing above this directory has anything to say about how this repository is analyzed, so drop it.
+    -->
+    <Target Name="_UseOnlyThisRepositoryGlobalAnalyzerConfig" BeforeTargets="CoreCompile">
+        <ItemGroup>
+            <EditorConfigFiles Remove="@(EditorConfigFiles)"
+                               Condition="'%(Filename)%(Extension)' == '.globalconfig' AND !$([System.String]::Copy('%(FullPath)').StartsWith('$(MSBuildThisFileDirectory)'))" />
+        </ItemGroup>
+    </Target>
 </Project>
