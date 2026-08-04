@@ -3,6 +3,7 @@
 
 using System.Runtime.CompilerServices;
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 
@@ -34,6 +35,13 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// So every <see cref="IBsonClassMapFor{T}"/> the server registers is registered here too, discovered the same way
 /// <c>AddCratisMongoDB</c> discovers them, rather than one at a time from whichever spec first needs one.
 /// </para>
+/// <para>
+/// The same holds for <see cref="ConstraintDefinitionSerializationProvider"/>, which is what decides whether a
+/// constraint definition persisted by an older kernel is upgraded on read. Without it here, a spec would read the
+/// document through the driver's own discriminated-interface path and see an answer the server never produces.
+/// Whether the server itself registers it is a separate question, and one no spec in this assembly can settle - it
+/// is answered by the kernel integration spec that boots a real silo over a real store.
+/// </para>
 /// </remarks>
 internal static class SpecSerializationSetup
 {
@@ -46,6 +54,7 @@ internal static class SpecSerializationSetup
         new ConventionPacks().Provide();
         ConventionRegistry.Register(Cratis.Arc.MongoDB.ConventionPacks.IgnoreExtraElements, new ConventionPack { new IgnoreExtraElementsConvention(true) }, _ => true);
         BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
+        BsonSerializer.RegisterSerializationProvider(new ConstraintDefinitionSerializationProvider());
         RegisterClassMaps();
     }
 
