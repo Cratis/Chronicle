@@ -27,6 +27,11 @@ internal class ModelBoundProjections(
     ILogger<Projections> logger,
     string? currentEventStoreName = null) : IModelBoundProjections
 {
+    readonly Dictionary<Type, Exception> _failures = [];
+
+    /// <inheritdoc/>
+    public IDictionary<Type, Exception> Failures => _failures;
+
     /// <summary>
     /// Discovers all model-bound projections.
     /// </summary>
@@ -46,6 +51,7 @@ internal class ModelBoundProjections(
     /// </remarks>
     public IDictionary<Type, ProjectionDefinition> Discover()
     {
+        _failures.Clear();
         var allCandidateTypes = clientArtifactsProvider.ModelBoundProjections.ToList();
         var typesUsedAsChildrenOrSubObjects = CollectTypesUsedAsChildrenOrSubObjects(allCandidateTypes);
         var rootProjectionTypes = allCandidateTypes.Except(typesUsedAsChildrenOrSubObjects).ToList();
@@ -64,6 +70,7 @@ internal class ModelBoundProjections(
 #pragma warning restore CA1031
             {
                 logger.FailedToCreateModelBoundProjectionDefinition(rootProjectionType, ex);
+                _failures[rootProjectionType] = ex;
             }
         }
 

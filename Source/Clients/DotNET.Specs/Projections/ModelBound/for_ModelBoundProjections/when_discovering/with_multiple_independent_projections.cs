@@ -19,4 +19,5 @@ public class with_multiple_independent_projections : given.a_model_bound_project
     [Fact] void should_include_first_projection() => _result.Keys.ShouldContain(typeof(ParentProjection));
     [Fact] void should_include_second_projection() => _result.Keys.ShouldContain(typeof(ChildProjection));
     [Fact] void should_have_two_projections() => _result.Count.ShouldEqual(2);
+    [Fact] void should_capture_no_failures() => projections.Failures.ShouldBeEmpty();
 }

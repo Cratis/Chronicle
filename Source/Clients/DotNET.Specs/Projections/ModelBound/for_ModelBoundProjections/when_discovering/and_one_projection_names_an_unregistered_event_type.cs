@@ -31,6 +31,8 @@ public class and_one_projection_names_an_unregistered_event_type : given.a_model
     [Fact] void should_still_include_every_projection_that_could_be_built() => _result.Keys.ShouldContainOnly([typeof(ParentProjection), typeof(ChildProjection)]);
     [Fact] void should_report_the_read_model_that_was_lost() => _logger.ReceivedWithAnyArgs(1).Log(LogLevel.Warning, default, default(object)!, default, default!);
     [Fact] void should_report_it_as_a_type_that_is_not_an_event_type() => LoggedException.ShouldBeOfExactType<TypeIsNotAnEventType>();
+    [Fact] void should_capture_only_the_read_model_that_was_lost_as_a_failure() => projections.Failures.Keys.ShouldContainOnly([typeof(ProjectionNamingAnUnregisteredEvent)]);
+    [Fact] void should_capture_the_failure_that_stopped_it() => projections.Failures[typeof(ProjectionNamingAnUnregisteredEvent)].ShouldBeOfExactType<TypeIsNotAnEventType>();
 
     Exception LoggedException => (Exception)_logger.ReceivedCalls()
         .First(call => call.GetMethodInfo().Name == nameof(ILogger.Log))
