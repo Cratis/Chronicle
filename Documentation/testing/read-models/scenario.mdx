@@ -49,7 +49,9 @@ fetches a read model by ID without replaying events through a full projection:
 <ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-instances" />
 
 `scenario.ReadModels` returns an `IReadModels` instance that intercepts `GetInstanceById` for registered
-instances and delegates everything else to the real read model implementation.
+instances and delegates everything else to the real read model implementation. Only what you registered comes
+back from it: the rest of that surface is the production one and wants a running Chronicle, so reading the
+instances the scenario itself materialized means `Instances` or `InstanceForEventSourceId`, not `GetInstances`.
 
 ## Auto-detection
 
