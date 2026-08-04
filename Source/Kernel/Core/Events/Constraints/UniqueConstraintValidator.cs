@@ -50,6 +50,12 @@ public class UniqueConstraintValidator(
         // The offending value is deliberately absent from the message. A violation message travels back to whoever
         // attempted the append, and a value worth constraining for uniqueness is by its nature identifying. Naming
         // the property is the actionable half - the caller already holds the value it just tried to append.
+        //
+        // The details carry it instead, keyed per property, so a WithMessage callback can render it if the
+        // application wants to. This has to be the property's own value rather than the `value` above: that one is
+        // a SHA-256 hash of every constrained property concatenated, computed to keep the value itself out of the
+        // index, so it is neither this property's value nor readable. A callback rendering it produced 64
+        // characters of hex where the documented example promised the name the caller had just tried to use.
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()
@@ -59,7 +65,7 @@ public class UniqueConstraintValidator(
                         context,
                         sequenceNumber,
                         $"Event '{context.EventTypeId}' on member '{pv.Property}' violated a unique constraint on sequence number {sequenceNumber}",
-                        new() { { WellKnownConstraintDetailKeys.PropertyName, pv.Property }, { WellKnownConstraintDetailKeys.PropertyValue, value } })).ToImmutableList()
+                        new() { { WellKnownConstraintDetailKeys.PropertyName, pv.Property }, { WellKnownConstraintDetailKeys.PropertyValue, pv.Value } })).ToImmutableList()
             };
     }
 }
