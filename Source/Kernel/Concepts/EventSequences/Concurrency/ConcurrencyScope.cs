@@ -56,10 +56,13 @@ public record ConcurrencyScope(
     /// </summary>
     /// <returns>true if the scope carries narrowing metadata but no expected sequence number, false if not.</returns>
     /// <remarks>
-    /// This is a programming error on the caller's side rather than a valid way to opt out - a caller that wants no
-    /// concurrency check has <see cref="None"/>, and one that wants the strategy to decide has <see cref="NotSet"/>.
-    /// A scope in this state asks for a check and gets none, which is indistinguishable from having asked for
-    /// nothing. It is skipped, but never silently.
+    /// A scope reaches this state two ways. A caller can build it without resolving an expected sequence number,
+    /// where <see cref="None"/> (append without a check) or <see cref="NotSet"/> (let the strategy decide) is what
+    /// was wanted instead. A strategy can also produce it having resolved the expected tail correctly and found no
+    /// event matching the scope's narrowing - <see cref="EventSequenceNumber"/> has no value meaning "before the
+    /// first event", so an empty answer and a missing answer are the same value here. Either way the scope asks for
+    /// a check and gets none, which is indistinguishable from having asked for nothing. It is skipped, but never
+    /// silently.
     /// </remarks>
     public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue;
 }

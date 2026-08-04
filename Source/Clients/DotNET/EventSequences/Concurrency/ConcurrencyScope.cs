@@ -36,11 +36,14 @@ public record ConcurrencyScope(
     /// Gets a value indicating whether the scope narrows an append without saying which sequence number it expects.
     /// </summary>
     /// <remarks>
-    /// A scope in this state is a programming error rather than a way to opt out. It is not <see cref="NotSet"/>, so
-    /// the configured <see cref="IConcurrencyScopeStrategy"/> does not get to supply the expected sequence number,
-    /// and it has no sequence number of its own for the kernel to validate against - so the append is checked
-    /// against nothing, which looks exactly like never having asked for a check. Use <see cref="None"/> to append
-    /// without a check, or <see cref="NotSet"/> to let the strategy resolve the expected sequence number.
+    /// It is not <see cref="NotSet"/>, so the configured <see cref="IConcurrencyScopeStrategy"/> does not get to
+    /// supply the expected sequence number, and it has no sequence number of its own for the kernel to validate
+    /// against - so the append is checked against nothing, which looks exactly like never having asked for a check.
+    /// Build <see cref="None"/> to append without a check, or <see cref="NotSet"/> to let the strategy resolve the
+    /// expected sequence number. A scope a strategy resolved lands here too:
+    /// <see cref="OptimisticConcurrencyStrategy"/> reads the tail through the scope's own narrowing, and there is
+    /// no tail to read when no event matches that narrowing yet - the first append into a scope always looks
+    /// like this.
     /// </remarks>
     public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue;
 }
