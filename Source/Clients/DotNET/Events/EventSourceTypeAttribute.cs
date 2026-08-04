@@ -7,10 +7,16 @@ namespace Cratis.Chronicle.Events;
 /// Attribute to specify the <see cref="EventSourceType"/> for an event type, command, or observer.
 /// </summary>
 /// <remarks>
-/// When applied to an observer (reactor, reducer, or projection), it filters observed events to only
+/// When applied to an observer (reactor or reducer), it filters observed events to only
 /// those originating from the given event source type. When applied to a command, setting
 /// <paramref name="concurrency"/> to <see langword="true"/> includes this value in the concurrency
 /// scope when appending events.
+/// <para>
+/// A projection is not one of them. It observes every event of the types its definition declares, and cannot
+/// filter on event metadata at all - there is no field for a filter anywhere in a projection's definition, so
+/// no client can express one and no kernel could honour it. Narrow a projection by the event types it declares,
+/// or pair it with a reactor or reducer that owns the filtered subset. See Documentation/projections/filtering.
+/// </para>
 /// </remarks>
 /// <param name="value">The <see cref="EventSourceType"/> value.</param>
 /// <param name="concurrency">
