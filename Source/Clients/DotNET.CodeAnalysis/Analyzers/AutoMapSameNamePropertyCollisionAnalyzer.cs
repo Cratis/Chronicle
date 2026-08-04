@@ -24,13 +24,22 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
     const string ModelBoundNamespace = "Cratis.Chronicle.Projections.ModelBound";
     const string NoAutoMapAttributeName = "Cratis.Chronicle.Projections.NoAutoMapAttribute";
 
+    /// <summary>
+    /// The attributes that subscribe the declaring type to an event whose properties can auto-map onto it.
+    /// </summary>
+    /// <remarks>
+    /// <c>[ChildrenFrom]</c> is deliberately absent: the event it names is subscribed by the child, not by the
+    /// type carrying the attribute - the builder writes it into the child's definition and never into the root's
+    /// - so it cannot auto-map over a root property of the same name. Counting it here reported a collision that
+    /// could not happen, and the reported fix was to fence the root property with <c>[NoAutoMap]</c>, which does
+    /// nothing there because nothing was overwriting it.
+    /// </remarks>
     static readonly HashSet<string> NonAggregateAttributeNames = new(StringComparer.Ordinal)
     {
         "FromEventAttribute",
         "SetFromAttribute",
         "JoinAttribute",
         "SetFromContextAttribute",
-        "ChildrenFromAttribute",
         "AddFromAttribute",
         "SubtractFromAttribute",
         "RemovedWithAttribute",
