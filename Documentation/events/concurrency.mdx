@@ -83,9 +83,38 @@ This strategy gets the current tail sequence number and uses it as the expected 
 
 > **Note**: `[EventStreamType]` on a reactor or reducer scopes which events an *observer* receives (see [Filter by event stream type](filtering/by-event-stream-type)) — it does not set the `EventStreamType` used for concurrency scoping on an *append* call. Set `eventStreamType` explicitly on `Append`/`AppendMany`, or through `ConcurrencyScopeBuilder.WithEventStreamType(...)`, when you need concurrency scoped to a specific stream type.
 
+## The First Append Into a Scope Is Not Checked
+
+A concurrency check needs an expected sequence number to compare against, and the optimistic strategy gets one by reading the tail *through the scope's own narrowing*. When nothing matching that narrowing has been appended yet there is no tail to read, so the strategy reports `EventSequenceNumber.Unavailable` — the same value that means "no expected sequence number was supplied at all". The kernel cannot tell those two apart, so it skips the check, logs a warning, and lets the append through.
+
+```mermaid
+flowchart TD
+    A[Append with a concurrency scope] --> T{"Does any event match the scope's narrowing?"}
+    T -->|yes| E[Expected tail resolved]
+    E --> V{"Has anything matching been appended since?"}
+    V -->|no| K[(Appended)]
+    V -->|yes| R[Concurrency violation]
+    T -->|no| U["Unavailable — nothing to compare against"]
+    U --> S[Check skipped, warning logged]
+    S --> K
+```
+
+This is not limited to narrow scopes — it is every *first* append into a scope:
+
+- The **first event on a new event source** has no tail, so its append is not checked.
+- The **first event carrying a new `EventSourceType`, `EventStreamType`, or `EventStreamId`** is not checked either, even when the event source itself already has plenty of events under a different narrowing.
+
+The second case is the one to watch. It is the append most exposed to a race — it opens a new partition on a stream that other writers are already using — and it is the one the check does not cover.
+
+### Expressing "This Must Not Exist Yet"
+
+A concurrency scope protects a sequence you are *extending*. It cannot express "no event matching this scope may exist yet", because `EventSequenceNumber` has no value meaning *before the first event*.
+
+When two writers must not both create the first event in a scope, enforce that with a [constraint](../constraints/index.md) rather than a concurrency scope. A unique event type constraint permits exactly one event of a given type per event source, and the kernel rejects the second append no matter which client made it.
+
 ## Best Practices
 
-1. **Use specific scoping**: Scope concurrency as narrowly as possible to avoid unnecessary blocking
+1. **Use specific scoping**: Scope concurrency as narrowly as possible to avoid unnecessary blocking — but note that the narrower the scope, the more scopes there are, and [the first append into each one is not checked](#the-first-append-into-a-scope-is-not-checked)
 2. **Event type scoping**: When possible, scope to specific event types to allow concurrent operations on different event types
 3. **Handle violations gracefully**: Always check for concurrency violations and implement appropriate retry or fallback logic
 4. **Use builders for complex scopes**: The `ConcurrencyScopeBuilder` provides a clear, fluent API for complex concurrency requirements
