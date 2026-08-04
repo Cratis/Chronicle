@@ -13,6 +13,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
 using Cratis.Json;
@@ -35,6 +36,17 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// </summary>
 internal static class ProjectionReadModelProcessor
 {
+    /// <summary>
+    /// The options a materialized read model is deserialized with.
+    /// </summary>
+    /// <remarks>
+    /// The same read-model collection semantics the client reader applies, so that what a spec sees and what a
+    /// running system sees are produced by one piece of code rather than by two that happen to agree. Whichever
+    /// way an absent collection is resolved, both tiers inherit the answer.
+    /// </remarks>
+    static readonly JsonSerializerOptions _readModelSerializerOptions =
+        new JsonSerializerOptions(Globals.JsonSerializerOptions).WithDeclaredCollectionsNeverNull();
+
     static readonly IObjectComparer _objectComparer;
     static readonly TypeFormats _typeFormats;
     static readonly KernelProjectionEngine::Expressions.EventValues.EventValueProviderExpressionResolvers _eventValueProviderExpressionResolvers;
@@ -181,7 +193,7 @@ internal static class ProjectionReadModelProcessor
 
         var state = initialState is not null
             ? initialState.AsExpandoObject(false)
-            : CreateInitialStateFromSchema(schema);
+            : CreateInitialStateFromSchema(schema, engineProjection);
 
         // Capture the first non-deferred key resolved for the root projection. In production, MongoDB
         // upserts each read model document with `_id` = this key value, and the BSON deserializer maps
@@ -264,7 +276,7 @@ internal static class ProjectionReadModelProcessor
         // ({ "value": ... }), which the concept-aware deserializer then rejects when it expects the
         // underlying primitive.
         var json = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
-        var primary = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+        var primary = JsonSerializer.Deserialize<TReadModel>(json, _readModelSerializerOptions);
         return (primary, instances);
     }
 
@@ -287,7 +299,7 @@ internal static class ProjectionReadModelProcessor
             }
 
             var json = JsonSerializer.Serialize(document, Globals.JsonSerializerOptions);
-            var instance = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+            var instance = JsonSerializer.Deserialize<TReadModel>(json, _readModelSerializerOptions);
             if (instance is null)
             {
                 continue;
@@ -364,11 +376,35 @@ internal static class ProjectionReadModelProcessor
             : properties.FirstOrDefault(p => string.Equals(p.Name, taggedParameter.Name, StringComparison.Ordinal));
     }
 
-    static ExpandoObject CreateInitialStateFromSchema(JsonSchema schema)
+    /// <summary>
+    /// Builds the initial state the projection starts from, seeding every array-typed schema property with an
+    /// empty collection - except the ones the projection's own children collections live under.
+    /// </summary>
+    /// <param name="schema">The read model <see cref="JsonSchema"/>.</param>
+    /// <param name="projection">The root <see cref="KernelProjectionEngine::IProjection"/> being applied.</param>
+    /// <returns>The initial state.</returns>
+    /// <remarks>
+    /// The seeding matches the live kernel's <c>ProjectionFactory.CreateInitialState</c>. The exclusion is the
+    /// step this harness used to be missing: the live pipeline diffs the initial state into the changeset with
+    /// every children-collection path removed, so an untouched child collection is never written and reads back
+    /// from the store as an absent field. Seeding it here regardless answered "what is an empty child collection"
+    /// with <c>[]</c> - the one answer the running system never gives - at exactly the point the production
+    /// pipeline makes a deliberate exception, and so put the question out of reach of every spec at every tier.
+    /// <para>
+    /// The paths come from the kernel's own <see cref="KernelProjectionEngine::ProjectionExtensions.GetChildrenPropertyPaths"/>
+    /// rather than being re-derived here, so a future exclusion is inherited instead of needing to be noticed.
+    /// </para>
+    /// </remarks>
+    static ExpandoObject CreateInitialStateFromSchema(JsonSchema schema, KernelProjectionEngine::IProjection projection)
     {
         var initialState = new ExpandoObject();
         var dict = (IDictionary<string, object?>)initialState;
-        foreach (var property in schema.Properties.Values.Where(p => p.IsArray))
+        var childrenProperties = KernelProjectionEngine::ProjectionExtensions.GetChildrenPropertyPaths(projection)
+            .Where(_ => !_.IsRoot)
+            .Select(_ => _.Segments.First().Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var property in schema.Properties.Values.Where(p => p.IsArray && !childrenProperties.Contains(p.Name)))
         {
             dict[property.Name] = new List<object>();
         }

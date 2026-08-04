@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
@@ -90,32 +89,11 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
                 // events independently: an unconstrained Features=[] from the root's ModuleCreated
                 // would otherwise erase whatever a FeatureCreated event already pushed onto Features
                 // from its own partition.
-                var childrenPaths = CollectChildrenPropertyPaths(projection).ToArray();
+                var childrenPaths = projection.GetChildrenPropertyPaths().ToArray();
                 context.Changeset.AddPropertiesFrom(projection.InitialModelState, childrenPaths);
             }
         }
 
         return context;
-    }
-
-    /// <summary>
-    /// Walks the projection tree and returns every children-collection path the root projection owns.
-    /// </summary>
-    /// <param name="projection">Root <see cref="IProjection"/> to walk.</param>
-    /// <returns>The set of children property paths.</returns>
-    static IEnumerable<PropertyPath> CollectChildrenPropertyPaths(IProjection projection)
-    {
-        foreach (var child in projection.ChildProjections)
-        {
-            if (!child.ChildrenPropertyPath.IsRoot)
-            {
-                yield return child.ChildrenPropertyPath;
-            }
-
-            foreach (var deeper in CollectChildrenPropertyPaths(child))
-            {
-                yield return deeper;
-            }
-        }
     }
 }
