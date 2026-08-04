@@ -46,7 +46,6 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly TReadModel? _initialState = initialState;
     readonly INamingPolicy _namingPolicy = new CamelCaseNamingPolicy();
     readonly IEventTypes _eventTypes = defaults.EventTypes;
-    readonly IClientArtifactsProvider _clientArtifactsProvider = defaults.ClientArtifactsProvider;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
@@ -174,6 +173,23 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
     public IReadModels ReadModels => EventStore().ReadModels;
+
+    /// <summary>
+    /// Gets the <see cref="IClientArtifactsProvider"/> holding the artifacts Chronicle discovered — the same
+    /// registry this scenario resolves its projection or reducer from.
+    /// </summary>
+    /// <remarks>
+    /// Read this instead of reflecting over your own assemblies when a spec needs to know what Chronicle
+    /// registered — the event types, projections, reducers, reactors and constraints — including the
+    /// classifications the registry draws itself, such as an event type with a property-level
+    /// <c>[Unique]</c> landing in <see cref="IClientArtifactsProvider.UniqueConstraints"/> while one with a
+    /// class-level <c>[Unique]</c> lands in <see cref="IClientArtifactsProvider.UniqueEventTypeConstraints"/>.
+    /// It is read-only: reading it neither triggers nor alters registration, and every read hands out the
+    /// same instance — the one from the <see cref="Defaults"/> the scenario was constructed with, which by
+    /// default is the process-wide <see cref="Defaults.Instance"/>. The same registry is reachable outside a
+    /// scenario as <c>Defaults.Instance.ClientArtifactsProvider</c>.
+    /// </remarks>
+    public IClientArtifactsProvider ClientArtifactsProvider { get; } = defaults.ClientArtifactsProvider;
 
     /// <summary>
     /// Enables strict event subscription: seeding an event the projection does not subscribe to raises
@@ -353,7 +369,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     }
 
     Type? FindReducerType(Type readModelType) =>
-        _clientArtifactsProvider.Reducers.FirstOrDefault(t =>
+        ClientArtifactsProvider.Reducers.FirstOrDefault(t =>
             t.GetInterfaces().Any(i =>
                 i.IsGenericType &&
                 i.GetGenericTypeDefinition() == typeof(IReducerFor<>) &&
@@ -362,7 +378,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     Contracts.Projections.ProjectionDefinition? FindProjectionDefinition(Type readModelType)
     {
         // Try fluent IProjectionFor<TReadModel> projection
-        var projectionType = _clientArtifactsProvider.Projections.FirstOrDefault(t =>
+        var projectionType = ClientArtifactsProvider.Projections.FirstOrDefault(t =>
             t.GetInterfaces().Any(i =>
                 i.IsGenericType &&
                 i.GetGenericTypeDefinition() == typeof(IProjectionFor<>) &&
@@ -381,7 +397,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         }
 
         // Try model-bound projection for a type in clientArtifacts that matches
-        var modelBoundType = _clientArtifactsProvider.ModelBoundProjections
+        var modelBoundType = ClientArtifactsProvider.ModelBoundProjections
             .FirstOrDefault(t => t == readModelType);
 
         if (modelBoundType is not null)

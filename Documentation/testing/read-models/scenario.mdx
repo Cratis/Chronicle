@@ -53,13 +53,38 @@ instances and delegates everything else to the real read model implementation.
 
 ## Auto-detection
 
-`ReadModelScenario<TReadModel>` searches the current application's loaded assemblies for a handler in this order:
+`ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry — the same reflection-based
+discovery Chronicle itself uses, over the project-referenced and package-referenced assemblies, resolved once per
+process — in this order:
 
 1. **Reducer** — a class implementing `IReducerFor<TReadModel>`.
 2. **Fluent projection** — a class implementing `IProjectionFor<TReadModel>`.
 3. **Model-bound projection** — `TReadModel` itself carries `[FromEvent<T>]` or `[Key]` attributes.
 
 If none are found, `NoReadModelHandlerFound` is thrown.
+
+## Asking what Chronicle registered
+
+That registry is not private to the scenario. `scenario.ClientArtifactsProvider` hands out the very
+`IClientArtifactsProvider` the scenario resolved its handler from, so a spec can ask what Chronicle registered
+instead of re-deriving it by reflecting over its own assemblies:
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/registered-artifacts" />
+
+It exposes every artifact kind Chronicle discovers — `EventTypes`, `Projections`, `ModelBoundProjections`,
+`Reactors`, `ReadModelReactors`, `Reducers`, `ReactorMiddlewares`, `ConstraintTypes`, `UniqueConstraints`,
+`UniqueEventTypeConstraints`, `RemoveConstraintEventTypes`, `EventTypeMigrators`, `EventSeeders`, and the
+compliance and additional-event-information providers — including the classifications the registry draws
+itself. An event type with a property-level `[Unique]` lands in `UniqueConstraints`, while one with a
+class-level `[Unique]` lands in `UniqueEventTypeConstraints`; asking the registry gets that distinction right
+without reimplementing it.
+
+The property is read-only: reading it neither triggers nor alters registration, and every read hands out the
+same instance.
+
+> [!NOTE]
+> The same registry is reachable without a scenario, as `Defaults.Instance.ClientArtifactsProvider`. Use that
+> when the spec is not a `ReadModelScenario<TReadModel>` — it is the same process-wide instance.
 
 ## Example: reducer
 
