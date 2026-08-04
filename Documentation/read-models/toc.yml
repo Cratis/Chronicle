@@ -2,6 +2,8 @@
   href: index.md
 - name: Consistency Models
   href: consistency.md
+- name: Empty Child Collections
+  href: empty-child-collections.mdx
 - name: Getting a Single Instance
   href: getting-single-instance.mdx
 - name: Getting a Collection of Instances

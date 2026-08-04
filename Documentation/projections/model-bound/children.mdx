@@ -122,6 +122,13 @@ All projection attributes are fully supported on child types at any nesting leve
 
 This means you can build arbitrarily deep hierarchies with full projection capabilities at every level.
 
+## Collections with no children
+
+Until a child event arrives the collection has no children, and Chronicle stores that as an absent field rather than
+as `[]` — so that a parallel replay cannot erase a child a sibling event already added. How you declare the property
+decides what you read back: non-nullable materializes as an empty collection, nullable stays `null` so you can tell
+"no children yet" apart from "an empty list". See [Empty child collections](/chronicle/read-models/empty-child-collections/).
+
 ## Best Practices
 
 1. **Always use Key attribute** on child types to identify them uniquely

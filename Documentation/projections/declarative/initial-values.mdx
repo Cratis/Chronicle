@@ -37,6 +37,14 @@ Initialize collections so consumers can treat them as empty collections instead 
 
 <ChronicleClientTabs snippet="projections/declarative/initial-values/collections" />
 
+:::caution
+This does not work for a child collection. A children path is applied only by the child add and remove operations, so
+an initial value for it is dropped before it reaches the sink — deliberately, because writing an empty array from the
+root event would erase a child a parallel replay had already added. Declare the property non-nullable instead, and
+Chronicle materializes it as an empty collection on read. See
+[Empty child collections](/chronicle/read-models/empty-child-collections/).
+:::
+
 ## Events That Do Not Cover Every Property
 
 Initial values are useful when events update operational fields but leave configuration fields unchanged.
