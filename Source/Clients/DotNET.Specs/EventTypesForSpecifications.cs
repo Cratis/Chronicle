@@ -69,10 +69,14 @@ public class EventTypesForSpecifications : IEventTypes
     public Type GetClrTypeFor(EventTypeId eventTypeId, EventTypeGeneration generation) => _clrTypesByEventType[eventTypeId];
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Answers a type that is not an event type the way the real <c>EventTypes</c> does, so that a spec measuring
+    /// what a caller does with the miss measures the real failure rather than a dictionary lookup.
+    /// </remarks>
     public EventType GetEventTypeFor(Type clrType)
     {
         EnsureEventType(clrType);
-        return _eventTypes[clrType];
+        return _eventTypes.TryGetValue(clrType, out var eventType) ? eventType : throw new TypeIsNotAnEventType(clrType);
     }
 
     /// <inheritdoc/>

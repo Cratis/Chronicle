@@ -167,7 +167,25 @@ public class EventTypes : IEventTypes
     public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);
 
     /// <inheritdoc/>
-    public EventType GetEventTypeFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key;
+    /// <exception cref="TypeIsNotAnEventType">Thrown when the type is not a registered event type.</exception>
+    /// <remarks>
+    /// Reporting the miss as <see cref="TypeIsNotAnEventType"/> rather than letting the lookup fall out as a LINQ
+    /// exception matters most to the model-bound projection attributes: their generic type argument is
+    /// unconstrained, so nothing at compile time relates it to an event type and this is the first place the
+    /// mistake can be named. The fluent projection builder already answers the same condition the same way.
+    /// </remarks>
+    public EventType GetEventTypeFor(Type clrType)
+    {
+        foreach (var (eventType, type) in _typesByEventType)
+        {
+            if (type == clrType)
+            {
+                return eventType;
+            }
+        }
+
+        throw new TypeIsNotAnEventType(clrType);
+    }
 
     /// <inheritdoc/>
     public JsonSchema GetSchemaFor(EventTypeId eventTypeId) => _schemasByEventType

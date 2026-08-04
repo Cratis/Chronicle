@@ -179,10 +179,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             await chronicleConnection.Reconnect();
         }
 
-        // Diagnostic: call RegisterAll directly so that any exception surfaces instead
-        // of being swallowed by ConnectionLifecycle.Connected's catch block.
-        // If lifecycle.Connected already succeeded, Register() is a no-op (_registered = true).
-        // If it failed, this retries and surfaces the actual error.
+        // Belt and braces: call RegisterAll directly so registration is guaranteed to have been
+        // attempted on this boundary. If lifecycle.Connected already succeeded, Register() is a
+        // no-op (_registered = true); if it failed, this retries and surfaces the actual error.
+        //
+        // This used to say that ConnectionLifecycle.Connected's catch block swallows the failure.
+        // It does not, and has not since 6e5baa25d: it catches per handler, logs, then rolls
+        // IsConnected back to false and rethrows an AggregateException. Reconnect() above therefore
+        // already surfaces a registration failure on its own.
         await eventStore.RegisterAll();
     }
 
