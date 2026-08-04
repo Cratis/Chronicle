@@ -13,6 +13,7 @@ using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Serialization;
@@ -373,6 +374,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         Options.JsonSerializerOptions.Converters.Add(new LineStringJsonConverter());
         Options.JsonSerializerOptions.Converters.Add(new PolygonJsonConverter());
         Options.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
+        Options.JsonSerializerOptions.WithDeclaredCollectionsNeverNull();
     }
 
     record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);
