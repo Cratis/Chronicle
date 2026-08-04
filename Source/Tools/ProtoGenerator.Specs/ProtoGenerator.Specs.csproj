@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Tools.ProtoGenerator.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Tools.ProtoGenerator</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../ProtoGenerator/ProtoGenerator.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="protobuf-net.Reflection" />
+    </ItemGroup>
+</Project>

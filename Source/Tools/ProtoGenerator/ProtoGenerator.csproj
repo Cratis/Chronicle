@@ -6,6 +6,9 @@
         <NoWarn>$(NoWarn);SA1600</NoWarn>
     </PropertyGroup>
     <ItemGroup>
+      <InternalsVisibleTo Include="Cratis.Chronicle.Tools.ProtoGenerator.Specs" />
+    </ItemGroup>
+    <ItemGroup>
       <PackageReference Include="protobuf-net.Grpc" />
       <PackageReference Include="protobuf-net.Grpc.Reflection" />
       <PackageReference Include="protobuf-net.Reflection" />

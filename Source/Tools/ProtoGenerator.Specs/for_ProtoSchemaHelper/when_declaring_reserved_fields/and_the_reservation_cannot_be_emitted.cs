@@ -1,0 +1,36 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_declaring_reserved_fields.stand_ins;
+
+namespace Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_declaring_reserved_fields;
+
+/// <summary>
+/// A type that asks for reserved field numbers and does not get them is the one case that must never pass quietly.
+/// The generated schema is regenerated wholesale, so a reservation that did not happen leaves the retired number
+/// free for reuse again - and the collision only shows up later, on the wire, against data already written.
+/// </summary>
+public class and_the_reservation_cannot_be_emitted : Specification
+{
+    const string SchemaWithoutTheMessage = """
+        syntax = "proto3";
+
+        message SomethingElse {
+           string name = 1;
+        }
+        """;
+
+    [Fact]
+    void should_refuse_when_the_schema_has_no_matching_message() =>
+        Catch.Exception(() => ProtoSchemaHelper.DeclareReservedFields(SchemaWithoutTheMessage, [typeof(TypeWithRetiredFields)]))
+            .ShouldBeOfExactType<InvalidOperationException>();
+
+    [Fact]
+    void should_refuse_when_the_attribute_carries_no_numbers() =>
+        Catch.Exception(() => ProtoSchemaHelper.DeclareReservedFields("message TypeReservingNothing {\n}", [typeof(TypeReservingNothing)]))
+            .ShouldBeOfExactType<InvalidOperationException>();
+
+    [Fact]
+    void should_leave_a_type_that_asked_for_nothing_alone() =>
+        ProtoSchemaHelper.DeclareReservedFields(SchemaWithoutTheMessage, [typeof(TypeWithNoAttribute)]).ShouldEqual(SchemaWithoutTheMessage);
+}
