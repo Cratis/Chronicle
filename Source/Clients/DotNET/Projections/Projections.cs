@@ -11,6 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Projections.ModelBound;
+using Cratis.Chronicle.Registrations;
 using Cratis.Monads;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -49,6 +50,17 @@ public class Projections(
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
     internal IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
+
+    /// <summary>
+    /// Gets the per-artifact outcome of the last <see cref="Discover"/>, covering every declared projection artifact -
+    /// the fluent <see cref="IProjectionFor{TReadModel}"/> implementations and the model-bound read models.
+    /// </summary>
+    /// <remarks>
+    /// An artifact with no failure has a definition and travels in the batch <see cref="Register"/> sends. This is a
+    /// discovery fact rather than a verdict: it is <see cref="IEventStore.RegisterAll"/> that publishes it as an
+    /// outcome, and only once the kernel call carrying these definitions has returned.
+    /// </remarks>
+    internal IImmutableList<ArtifactRegistration> ArtifactRegistrations { get; private set; } = ImmutableList<ArtifactRegistration>.Empty;
 
     /// <inheritdoc/>
     public bool HasFor(ProjectionId projectionId) => Definitions.Any(_ => _.Identifier == projectionId);
@@ -144,11 +156,12 @@ public class Projections(
             kvp => kvp.Key,
             kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
 
-        _definitionsByType = FindAllProjectionDefinitions(
+        var (definitionsByType, failures) = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
             artifactsActivator,
             jsonSerializerOptions);
+        _definitionsByType = definitionsByType;
 
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
@@ -171,6 +184,14 @@ public class Projections(
             ((IEnumerable<ProjectionDefinition>)[
                 .. _definitionsByType.Values.Select(_ => _).ToList(),
                 .. modelBoundDefinitions.Values
+            ]).ToImmutableList();
+
+        ArtifactRegistrations =
+            ((IEnumerable<ArtifactRegistration>)[
+                .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
+                .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
+                .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
+                .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
             ]).ToImmutableList();
 
         return Task.CompletedTask;
@@ -220,13 +241,26 @@ public class Projections(
     IProjectionHandler GetHandlerForProjectionOrReadModelType(Type type) =>
         _handlersByType.TryGetValue(type, out var handler) ? handler : _handlersByModelType[type];
 
-    Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
+    /// <summary>
+    /// Builds a definition for every declared fluent projection, isolating the ones that cannot be built.
+    /// </summary>
+    /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
+    /// <param name="clientArtifacts">The <see cref="IClientArtifactsProvider"/> holding the declared projections.</param>
+    /// <param name="artifactsActivator"><see cref="IClientArtifactsActivator"/> for activating instances of projections.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+    /// <returns>The definitions that could be built, and the failure that stopped each one that could not.</returns>
+    /// <remarks>
+    /// A projection that cannot be built is logged and skipped so that it costs itself and nothing else. The failure is
+    /// returned alongside rather than only logged, so that its read model can be told apart from one never declared.
+    /// </remarks>
+    (Dictionary<Type, ProjectionDefinition> Definitions, Dictionary<Type, Exception> Failures) FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IClientArtifactsActivator artifactsActivator,
         JsonSerializerOptions jsonSerializerOptions)
     {
         var result = new Dictionary<Type, ProjectionDefinition>();
+        var failures = new Dictionary<Type, Exception>();
         foreach (var projectionType in clientArtifacts.Projections)
         {
             var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
@@ -244,12 +278,13 @@ public class Projections(
             if (createProjectionDefinitionResult.TryGetException(out var exception))
             {
                 logger.FailedToCreateProjectionDefinition(projectionType, exception);
+                failures[projectionType] = exception;
                 continue;
             }
             result.Add(projectionType, createProjectionDefinitionResult.AsT0);
         }
 
-        return result;
+        return (result, failures);
     }
 
     static class ProjectionDefinitionCreator<TReadModel>

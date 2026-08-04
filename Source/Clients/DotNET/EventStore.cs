@@ -23,6 +23,7 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
@@ -53,6 +54,7 @@ public class EventStore : IEventStore
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
+    readonly Projections.Projections _projections;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -189,6 +191,7 @@ public class EventStore : IEventStore
             jsonSerializerOptions,
             loggerFactory.CreateLogger<Projections.Projections>());
 
+        _projections = projections;
         Projections = projections;
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
         ExternalServices = new ExternalServices.ExternalServices(this, loggerFactory.CreateLogger<ExternalServices.ExternalServices>());
@@ -313,6 +316,9 @@ public class EventStore : IEventStore
     public IIdentityManager Identities { get; }
 
     /// <inheritdoc/>
+    public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
+
+    /// <inheritdoc/>
     public async Task DiscoverAll()
     {
         _logger.DiscoverAllArtifacts();
@@ -357,6 +363,10 @@ public class EventStore : IEventStore
 
         // Seed events only after all observers are registered
         await Seeding.Register();
+
+        // Everything that could be registered has been, and the kernel calls carrying it have returned - which is the
+        // first moment the outcome is a fact rather than a hope, and the only transition a consumer can observe.
+        Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations);
     }
 
     /// <inheritdoc/>

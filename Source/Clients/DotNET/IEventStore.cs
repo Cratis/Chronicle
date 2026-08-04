@@ -15,6 +15,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
@@ -125,6 +126,24 @@ public interface IEventStore
     /// Gets the <see cref="IIdentityManager"/> for managing identities for the event store.
     /// </summary>
     IIdentityManager Identities { get; }
+
+    /// <summary>
+    /// Gets what became of the declared artifacts the last time <see cref="RegisterAll"/> ran.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is <see cref="RegistrationOutcome.NotRun"/> until <see cref="RegisterAll"/> has completed, and from then on
+    /// reports every declared projection artifact as either registered or failed, carrying the failure that stopped it.
+    /// It is read-only and decides nothing - what a consumer does about a failed artifact is the consumer's call.
+    /// </para>
+    /// <para>
+    /// Registration is wired to the connection lifecycle, so it runs on its own; reading this property never triggers
+    /// it. To block until it has run, use <c>RegistrationWaitExtensions.WaitForRegistration</c>. Do not poll
+    /// <see cref="Connections.IConnectionLifecycle.IsConnected"/> as a substitute - see
+    /// <see cref="RegistrationOutcome"/> for why that races.
+    /// </para>
+    /// </remarks>
+    RegistrationOutcome Registration { get; }
 
     /// <summary>
     /// Discover all artifacts for the event store.
