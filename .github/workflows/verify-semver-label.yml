@@ -1,0 +1,45 @@
+name: Verify Semver Label
+
+# A merged pull request with no major/minor/patch label produces a Publish run that reports success while
+# skipping every publish step, because the release action resolves should-publish to false. That reads as a
+# release having happened when nothing was published. Requiring the label here turns a silent non-release into
+# a visible failure before the merge, where it costs nothing to fix.
+#
+# Triggered on labeled/unlabeled as well as the usual events, so adding the label re-runs the check rather than
+# leaving a red cross behind that only a push would clear.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require exactly one semantic version label
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          count=$(printf '%s' "$LABELS" | jq '[.[] | select(. == "major" or . == "minor" or . == "patch")] | length')
+
+          if [ "$count" -eq 1 ]; then
+            echo "Found one semantic version label."
+            exit 0
+          fi
+
+          if [ "$count" -eq 0 ]; then
+            echo "::error::This pull request has no semantic version label. Add exactly one of major, minor or patch. Without one, merging produces a Publish run that succeeds while skipping every publish step, so no release is cut and nothing is published."
+          else
+            echo "::error::This pull request carries $count semantic version labels. Exactly one of major, minor or patch is required, since the release version cannot be derived from more than one."
+          fi
+
+          exit 1

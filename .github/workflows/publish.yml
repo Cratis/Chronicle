@@ -1,7 +1,11 @@
 name: Publish
 
+# Keyed by the pull request, never by a value that several simultaneously-closing pull requests share.
+# Merging a consolidation closes every pull request whose commits it carries, each of those fires its own
+# pull_request:closed event, and on a shared group cancel-in-progress means the last run to start cancels
+# the rest — including the one that was supposed to cut the release.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -52,6 +56,9 @@ permissions:
 
 jobs:
   release:
+    # A pull request closed without merging has nothing to release. Skipping early also keeps those runs from
+    # doing any work at all, on top of the concurrency key above keeping them out of each other's way.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.release.outputs.version }}
@@ -651,3 +658,18 @@ jobs:
           tags: ${{ steps.docker-tags.outputs.tags }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
+
+  verify-published:
+    # A merged pull request that publishes nothing is the failure mode that silently costs a release: the release
+    # job succeeds, every publish job is skipped for want of should-publish, and the whole run reports green. Fail
+    # instead, so a release that did not happen cannot be mistaken for one that did. workflow_dispatch is excluded
+    # because a manual run may legitimately resolve to no publish.
+    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true'
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - name: Report that nothing was published
+        run: |
+          echo "::error::The release action reported should-publish: false for a merged pull request, so no packages were published and no release was cut. The usual cause is a missing major, minor or patch label - see verify-semver-label."
+          exit 1
