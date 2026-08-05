@@ -14,8 +14,11 @@ concurrency:
 on:
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled]
+    # Scoped to the same base branch Publish releases from. A pull request stacked onto another one's
+    # branch cannot cut a release, so demanding a version label of it would be asking which version a
+    # merge that publishes nothing should carry.
     branches:
-      - "**"
+      - main
 
 permissions:
   contents: read
