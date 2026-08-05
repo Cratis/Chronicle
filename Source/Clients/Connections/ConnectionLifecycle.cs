@@ -15,7 +15,14 @@ namespace Cratis.Chronicle.Connections;
 /// <param name="logger">Logger for logging.</param>
 public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnectionLifecycle
 {
-    readonly Lock _handlers = new();
+    /// <summary>
+    /// Guards the two handler lists.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately an <see cref="object"/> rather than a <c>System.Threading.Lock</c>: this assembly is packed for
+    /// net8.0 as well, and that type is net9.0 and later. The net10.0 build the gate runs would not have noticed.
+    /// </remarks>
+    readonly object _handlers = new();
     Connected _onConnected = Nothing;
     Disconnected _onDisconnected = Nothing;
 
