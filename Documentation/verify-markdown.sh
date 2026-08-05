@@ -21,9 +21,9 @@ fi
 echo "Working directory: $PWD"
 echo ""
 
-# Step 1: Markdown Linting
+# Markdown Linting
 echo "=========================================="
-echo "Step 1: Running markdownlint..."
+echo "Running markdownlint..."
 echo "=========================================="
 echo ""
 
@@ -32,8 +32,8 @@ if ! command -v npx &> /dev/null; then
     exit 1
 fi
 
-npx markdownlint-cli2 "Documentation/**/*.md"
-LINT_EXIT_CODE=$?
+LINT_EXIT_CODE=0
+npx markdownlint-cli2 "Documentation/**/*.md" || LINT_EXIT_CODE=$?
 
 echo ""
 if [ $LINT_EXIT_CODE -eq 0 ]; then
@@ -43,35 +43,22 @@ else
 fi
 echo ""
 
-# Step 2: Link Verification
-echo "=========================================="
-echo "Step 2: Running link verification..."
-echo "=========================================="
-echo ""
-echo "This may take a few minutes to check all links..."
-echo ""
+# Link verification lives in the Documentation repo, not here. These pages are
+# published through the aggregated docs site, where a link may be a site-level
+# route (/chronicle/...), or an extension-less path to a .mdx page. Only the site
+# build knows that routing; a crawler pointed at this folder cannot resolve any
+# of it and reports every such link as broken. Run `npm run check` in the
+# Documentation repo, which must end with 0 errors and 0 broken links.
 
-npx linkinator "Documentation/**/*.md" --markdown --recurse --verbosity error --status-code "403:ok" --skip "^(https?:\\/\\/)?(localhost|127\\.0\\.0\\.1)(:\\d+)?(\\/|$)"
-LINK_EXIT_CODE=$?
-
-echo ""
-if [ $LINK_EXIT_CODE -eq 0 ]; then
-    echo "✓ Link verification passed!"
-else
-    echo "✗ Link verification failed with exit code $LINK_EXIT_CODE"
-fi
-echo ""
-
-# Final summary
 echo "=========================================="
 echo "Summary"
 echo "=========================================="
-if [ $LINT_EXIT_CODE -eq 0 ] && [ $LINK_EXIT_CODE -eq 0 ]; then
+if [ $LINT_EXIT_CODE -eq 0 ]; then
     echo "✓ All checks passed!"
+    echo ""
+    echo "Links are verified by 'npm run check' in the Documentation repo."
     exit 0
 else
-    echo "✗ Some checks failed:"
-    [ $LINT_EXIT_CODE -ne 0 ] && echo "  - Markdown linting"
-    [ $LINK_EXIT_CODE -ne 0 ] && echo "  - Link verification"
+    echo "✗ Markdown linting failed."
     exit 1
 fi
