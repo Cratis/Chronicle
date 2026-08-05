@@ -8,6 +8,8 @@
   href: getting-single-instance.mdx
 - name: Getting a Collection of Instances
   href: getting-collection-instances.mdx
+- name: Querying Read Models
+  href: querying.md
 - name: Materialized Read Models
   href: materialized-pagination.mdx
 - name: Getting Snapshots
