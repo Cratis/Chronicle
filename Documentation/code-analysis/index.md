@@ -42,6 +42,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0037](CHR0037) | Event type migration generations must share one explicit [EventType] id | Warning | The two generations referenced by an EventTypeMigration must carry the same explicit [EventType] id and differ only by generation, or the migration never applies |
 | [CHR0038](CHR0038) | [Join] of a [PII] value crosses the compliance subject | Error | A join — model-bound or fluent — that copies a [PII] value from a stream keyed by something other than the read model's own subject cannot be decrypted and freezes the projection; it also puts that data beyond the owner's erasure |
 | [CHR0039](CHR0039) | Assertion result is discarded and can never fail | Warning | An awaitable-returning `Should*` assertion on a Cratis testing surface whose result is discarded throws on an awaitable nobody observes, so the assertion silently passes regardless of behavior and CS4014 does not fire outside an async method |
+| [CHR0042](CHR0042) | A joined property is also written locally | Warning | A property written by both a local mapping and a join — model-bound or fluent — always ends up with the joined value regardless of arrival order, so a local write can never reset it; a flag latched from both sides silently sticks |
 
 ## Quick Fixes
 
