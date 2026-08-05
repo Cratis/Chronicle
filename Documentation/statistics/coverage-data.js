@@ -1,5 +1,5 @@
 window.COVERAGE_DATA = {
-  "lastUpdate": 1785949880549,
+  "lastUpdate": 1785957731252,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis.Chronicle": [
