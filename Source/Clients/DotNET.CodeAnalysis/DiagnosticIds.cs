@@ -210,4 +210,9 @@ public static class DiagnosticIds
     /// An event-metadata filter attribute is applied to a projection, which cannot filter on event metadata.
     /// </summary>
     public const string InertEventFilterOnProjection = "CHR0041";
+
+    /// <summary>
+    /// A read model property is written by both a local mapping and a join, and the joined value always takes precedence.
+    /// </summary>
+    public const string JoinOverridesLocalWrite = "CHR0042";
 }
