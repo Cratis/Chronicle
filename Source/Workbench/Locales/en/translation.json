@@ -535,6 +535,15 @@
                     "partition": "Partition",
                     "attempts": "Attempts",
                     "lastAttempt": "Last attempt"
+                },
+                "details": {
+                    "observer": "Observer",
+                    "partition": "Partition",
+                    "attempts": "Attempts",
+                    "sequenceNumber": "Sequence number",
+                    "messages": "Messages",
+                    "stackTrace": "Stack trace",
+                    "noStackTrace": "No stack trace available"
                 }
             },
             "identities": {
