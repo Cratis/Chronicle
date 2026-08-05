@@ -53,6 +53,12 @@ on:
       - "Docker/**"
       # Changes to the publish pipeline itself should be exercised by a release.
       - ".github/workflows/publish.yml"
+      # Central package management decides what the published packages depend on, so a version bump here
+      # changes what a consumer restores even though no file under Source changed. Without this the bump
+      # merged and cut nothing, leaving main referencing one version and the published packages another -
+      # a difference nothing reports, because the workflow that would have reported it never ran.
+      - "Directory.Packages.props"
+      - "Directory.Build.props"
 
 
 permissions:
