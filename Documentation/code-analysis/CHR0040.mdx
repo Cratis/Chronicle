@@ -1,0 +1,28 @@
+# CHR0040: Several [SetFromContext] for the same event type on one member
+
+## Rule Description
+
+One read model member carries more than one `[SetFromContext<TEvent>]` for the *same* event type. They write the same property in the projection definition, so only the last declared is kept — the earlier capture is silently discarded, with no build, registration, or runtime signal.
+
+Allowing multiple `[SetFromContext]` on one member is deliberate and load-bearing: a property capturing context from several *different* event types is exactly what the attribute is for, and that use never triggers this rule. Two for the same event type is different — a single value cannot hold two context values under any configuration, naming policy, or event shape.
+
+Keep the capture that was intended, or move the other onto its own property.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0040/violation" />
+
+## Why This Rule Exists
+
+The failure is maximally quiet. The property *is* populated — with the other context value — so nothing is null, nothing throws, and a spec asserting the property has a value stays green. It reads as a projection written wrong, and the natural way to debug it — re-reading the attributes and finding both present and correctly spelled — confirms the wrong conclusion.
+
+This is a warning where the neighboring AutoMap collision rule ([CHR0025](CHR0025)) deliberately only informs, and the difference is the point: that collision has two legitimate resolutions and only the author knows which was meant, while here there is no second reading to defer to.
+
+## Related Rules
+
+- [CHR0025: Explicitly sourced read model property may be overwritten by AutoMap](CHR0025) — the sibling collision that *is* sometimes intended, and is therefore only informational.
+- [CHR0042: A joined property is also written locally](CHR0042) — another shape where two writes to one property silently resolve to one winner.

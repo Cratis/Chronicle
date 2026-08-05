@@ -1,0 +1,28 @@
+# CHR0041: Event filter attribute on a projection has no effect
+
+## Rule Description
+
+An event-metadata filter attribute — `[EventStreamType]`, `[EventSourceType]`, or `[FilterEventsByTag]` — is applied to a projection, where it does nothing. A projection observes *every* event of the types its definition declares; there is no field for a metadata filter anywhere in a projection's definition, so no client can express one and no kernel could honor it.
+
+Filtering observed events on metadata is what reactors and reducers do — see [appended event metadata filters](../events/filtering/). To narrow a projection, narrow the event types it declares, or pair it with a reactor or reducer that owns the filtered subset.
+
+Both projection spellings are covered: a model-bound `[ReadModel]` carrying projection attributes, and a fluent `IProjectionFor<T>`.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0041/violation" />
+
+## Why This Rule Exists
+
+The filter attributes' own documentation used to say a projection could filter, and that is what an IDE tooltip shows at the moment of authoring. A developer who trusts it designs a filtered projection that silently observes everything — no build error, no startup failure, no runtime signal, just a read model carrying values from streams it was never meant to see. The natural way to debug that — re-reading the attribute to confirm it is present and spelled right — confirms the wrong conclusion.
+
+Correcting the documentation helps the reader who reads it; this rule helps the one who does not.
+
+## Related Rules
+
+- [CHR0024: Read model property has no mapping source](CHR0024) — another declaration that looks wired but silently does nothing.
+- [CHR0028: Redundant .AutoMap() call](CHR0028) — another call with no effect, though there the surprise is harmless.
