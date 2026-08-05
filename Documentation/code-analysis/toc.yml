@@ -68,3 +68,5 @@
   href: CHR0038.mdx
 - name: CHR0039 - Assertion result is discarded and can never fail
   href: CHR0039.mdx
+- name: CHR0042 - A joined property is also written locally
+  href: CHR0042.mdx

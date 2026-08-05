@@ -63,7 +63,7 @@ Here's a comprehensive example showing joins at multiple levels:
 When a `Join` and a local mapping — `SetFrom`, or an AutoMapped `FromEvent` property — target the same property, **the joined value wins, regardless of the order the events arrive**. Every time the projection handles one of the read model's own events, Chronicle re-resolves the join against the last stored event of the joined stream and applies the joined properties *after* the local mappings. Only while the joined stream has no matching event yet does a locally written value stay in place.
 
 :::caution
-A local mapping cannot reset or clear a property a join has written — there is no "clear this joined value" operation. A `bool` latch that a local event sets and a joined event clears will silently stick on the joined value, even when the local event is the most recent one. If a property must reflect which fact happened most recently, give each fact its own property (for example, two timestamps) and compare them in the query instead.
+A local mapping cannot reset or clear a property a join has written — there is no "clear this joined value" operation. A `bool` latch that a local event sets and a joined event clears will silently stick on the joined value, even when the local event is the most recent one. If a property must reflect which fact happened most recently, give each fact its own property (for example, two timestamps) and compare them in the query instead. The [CHR0042](../../code-analysis/CHR0042) analyzer warns when a property is written from both sides.
 :::
 
 ## Best Practices

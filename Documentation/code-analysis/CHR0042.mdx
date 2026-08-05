@@ -1,0 +1,30 @@
+# CHR0042: A joined property is also written locally
+
+## Rule Description
+
+A read model property is written by both a local mapping and a join. The joined value always wins — a local write cannot reset the property, in whichever order the events arrive.
+
+A projection re-resolves its joins every time it handles one of the read model's own events and applies the joined properties *after* the local mappings. A property written from both sides therefore always ends up with the joined value once the joined stream has an event to pull from — see [join precedence](../projections/model-bound/joins#join-precedence).
+
+The trap this catches is the latch: a `bool` that a local event sets and a joined event clears. The shape compiles and reads correctly, but re-setting the flag locally is silently overwritten the next time any local event is handled — a permanent, errorless wrong value. If the property must reflect whichever fact happened most recently, give each fact its own property (for example, two timestamps) and compare them instead.
+
+Both spellings are covered: a model-bound member carrying both a local-write attribute (`[SetFrom<T>]`, `[SetValue<T>]`, `[SetFromContext<T>]`, an aggregate) and a `[Join<T>]`, and a fluent `From<T>` block whose `.Set(...)` property is also set explicitly by a sibling `.Join<T>(...)` in the same projection. Collisions caused by AutoMap rather than an explicit mapping are reported by [CHR0025](CHR0025) instead.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0042/violation" />
+
+## Why This Rule Exists
+
+The precedence itself is by design: a joined property is a mirror of the joined stream, and re-applying it is what keeps denormalized values (a name, a price) fresh — and what backfills them when the read model is created after the joined event already happened. When you combine a join with a local write *deliberately* — seed the value locally, let the join keep it fresh — the behavior is exactly what you want; suppress this diagnostic at the site to record that intent.
+
+What the rule exists for is the other reading of the same code: expecting the two writes to merge in stream order. Nothing fails when they don't — the read model just quietly holds the joined value — and on a surface built to catch missing work, a stuck latch means rows are withheld forever with no error and no log line. This rule turns that silent wrong value into a visible decision at compile time.
+
+## Related Rules
+
+- [CHR0025: Explicitly sourced read model property may be overwritten by AutoMap](CHR0025) — the same collision when AutoMap, not an explicit mapping, is what writes on top.
+- [CHR0038: [Join] of a [PII] value crosses the compliance subject](CHR0038) — another way a join that looks right silently is not.
