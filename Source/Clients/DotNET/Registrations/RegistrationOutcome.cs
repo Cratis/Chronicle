@@ -8,8 +8,13 @@ namespace Cratis.Chronicle.Registrations;
 /// <summary>
 /// Represents what became of the client's declared artifacts when <see cref="IEventStore.RegisterAll"/> ran.
 /// </summary>
-/// <param name="HasRun">Whether <see cref="IEventStore.RegisterAll"/> has run to completion at least once.</param>
+/// <param name="HasRun">Whether <see cref="IEventStore.RegisterAll"/> has finished at least once, successfully or not.</param>
 /// <param name="Artifacts">The declared artifacts, each carrying whether it registered and, if not, the failure that stopped it.</param>
+/// <param name="Failure">
+/// The <see cref="Exception"/> that stopped <see cref="IEventStore.RegisterAll"/> itself, or <see langword="null"/>
+/// when it finished. This is not the same as an artifact that failed to build: those are isolated and reported in
+/// <paramref name="Artifacts"/>, and registration carries on. This one ended the run.
+/// </param>
 /// <remarks>
 /// <para>
 /// This exists so that a consumer holding an <see cref="IEventStore"/> can tell three states apart that used to look
@@ -46,21 +51,22 @@ namespace Cratis.Chronicle.Registrations;
 /// <see cref="IEventStore.Registration"/>, which only ever transitions once registration has completed.
 /// </para>
 /// </remarks>
-public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistration> Artifacts)
+public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistration> Artifacts, Exception? Failure = null)
 {
     /// <summary>
-    /// The outcome for an event store whose <see cref="IEventStore.RegisterAll"/> has not completed yet.
+    /// The outcome for an event store whose <see cref="IEventStore.RegisterAll"/> has not finished yet.
     /// </summary>
     /// <remarks>
     /// Registration is wired to the connection lifecycle, so "not yet" and "never" look the same from outside - this
-    /// value covers both. Use <c>RegistrationWaitExtensions.WaitForRegistration</c> to tell them apart with a timeout.
+    /// value covers both. It does not cover "tried and failed": a run that throws still reports itself, carrying its
+    /// <see cref="Failure"/>. Use <c>RegistrationWaitExtensions.WaitForRegistration</c> to wait for whichever arrives.
     /// </remarks>
     public static readonly RegistrationOutcome NotRun = new(false, ImmutableList<ArtifactRegistration>.Empty);
 
     /// <summary>
-    /// Gets a value indicating whether registration has run and every declared artifact registered.
+    /// Gets a value indicating whether registration ran, finished, and every declared artifact registered.
     /// </summary>
-    public bool IsSuccess => HasRun && Artifacts.All(_ => _.IsRegistered);
+    public bool IsSuccess => HasRun && Failure is null && Artifacts.All(_ => _.IsRegistered);
 
     /// <summary>
     /// Gets the declared artifacts that did not register, each carrying the failure that stopped it.
@@ -81,6 +87,7 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     public virtual bool Equals(RegistrationOutcome? other) =>
         other is not null &&
         HasRun == other.HasRun &&
+        Equals(Failure, other.Failure) &&
         Artifacts.SequenceEqual(other.Artifacts);
 
     /// <inheritdoc/>
@@ -88,6 +95,7 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     {
         var hashCode = default(HashCode);
         hashCode.Add(HasRun);
+        hashCode.Add(Failure);
         foreach (var artifact in Artifacts)
         {
             hashCode.Add(artifact);

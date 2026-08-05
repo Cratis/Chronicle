@@ -27,6 +27,11 @@ public static class RegistrationWaitExtensions
     /// succeeded: the returned outcome still has to be asked whether every artifact registered.
     /// </para>
     /// <para>
+    /// A run that failed returns here too, carrying its <see cref="RegistrationOutcome.Failure"/> - the timeout is for
+    /// a registration that never finished, not for one that finished badly. Ask <see cref="RegistrationOutcome"/> what
+    /// happened rather than reading a returned value as success.
+    /// </para>
+    /// <para>
     /// Do not wait on <see cref="Connections.IConnectionLifecycle.IsConnected"/> instead. That flag is set to
     /// <see langword="true"/> before the connected handlers - registration among them - have run, and only rolled back
     /// once they have all finished, so a poll of it can return while registration is still in flight. See
