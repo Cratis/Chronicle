@@ -26,6 +26,7 @@ Events come from different streams but are joined based on common identifiers:
 2. **Join conditions** specify which property links to other streams
 3. **Joined events** update properties when their event source ID matches the join key
 4. Join properties are updated whenever relevant events occur
+5. **Joined values take precedence** — a joined property is applied over any value a `From` block wrote for the same property, in whichever order the events arrived
 
 ## Join scenarios
 
@@ -36,6 +37,10 @@ Join keys are typically set from events that establish relationships — in the 
 ### Joining on the key
 
 Joins match events based on their event source ID and the join property — `.Join<GroupCreated>(j => j.On(m => m.GroupId))` links in group data whenever a `GroupCreated`/`GroupRenamed` event's event source ID matches the read model's `GroupId`.
+
+### Join precedence
+
+When a `From` block and a join write the same property, the joined value wins — regardless of arrival order. Whenever the projection handles a `From` event, Chronicle re-resolves the join against the joined stream's last stored event and applies the joined properties after the `From` mappings. A `From` block therefore cannot reset or clear a property a join has written; there is no "clear this joined value" operation. If a property must reflect which fact happened most recently, give each fact its own property (for example, two timestamps) and compare them, rather than latching a single flag written from both sides.
 
 ### Multiple joins
 
