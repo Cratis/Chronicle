@@ -25,6 +25,12 @@ on:
     paths:
       - "Source/**/*.cs"
       - "Source/**/*.csproj"
+      # Central package management decides what every project in the repository compiles against, so a version
+      # bump here reaches further than any single project file - and reached it without building, because a
+      # change confined to these files matched none of the patterns above. Directory.Build.props for the same
+      # reason: it sets the properties the build runs under.
+      - "Directory.Packages.props"
+      - "Directory.Build.props"
       - "Integration/**"
       # The benchmarks job builds these, so a change here has to run it. Without this a broken benchmark
       # project lands green and fails on the next unrelated pull request instead.
