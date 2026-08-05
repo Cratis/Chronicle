@@ -34,8 +34,14 @@ on:
         - debug
   pull_request:
     types: [closed]
+    # Only a pull request into main releases. On "**" every base branch released, so merging one pull
+    # request into another one's branch - the ordinary way to stack work - cut and published a version
+    # from a branch that was still in review. That is how Cratis.Fundamentals v7.17.0 came to be
+    # published from the head of an open pull request, carrying every unmerged change on that branch
+    # under release notes describing only the one that had just merged. A release must come from the
+    # branch that is released.
     branches:
-      - "**"
+      - main
     paths:
       - "Source/**"
       # Image definitions ship in the published Docker images, so a Docker-only
