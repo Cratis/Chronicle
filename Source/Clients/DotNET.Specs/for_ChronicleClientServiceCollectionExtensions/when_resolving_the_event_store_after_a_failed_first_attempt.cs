@@ -7,14 +7,14 @@ using Microsoft.Extensions.Options;
 namespace Cratis.Chronicle.for_ChronicleClientServiceCollectionExtensions;
 
 /// <summary>
-/// The resolved event store is memoized per namespace so that a blocking connect happens once rather than once per
-/// scope. What memoizes it memoizes a failure just as readily - so a single inability to reach the kernel at the
-/// first resolution used to be permanent for that namespace: every later resolution replayed the same exception
-/// for the lifetime of the process, with nothing short of a restart able to clear it.
+/// Resolving an event store that could not be reached must not poison the registration: the next resolution has to
+/// try again rather than replay the first failure.
 /// </summary>
 /// <remarks>
-/// A kernel that is briefly unreachable while a host is starting is ordinary, and surviving it is the whole point
-/// of resolving on first use rather than at startup.
+/// This layer holds no cache of its own - the client keys its event stores on both name and namespace and evicts a
+/// faulted one, and this registration delegates to it. A second cache here once memoized the failure itself, and
+/// being static it also handed every container in the process the same event store. What is pinned here is that the
+/// registration keeps delegating rather than growing that cache back.
 /// </remarks>
 public class when_resolving_the_event_store_after_a_failed_first_attempt : Specification
 {

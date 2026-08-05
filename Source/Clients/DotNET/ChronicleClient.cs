@@ -50,7 +50,17 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly INamingPolicy _namingPolicy;
     readonly CancellationTokenSource? _ownedConnectionCancellation;
-    readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
+
+    /// <summary>
+    /// The event stores handed out, keyed on the name and namespace that identify one.
+    /// </summary>
+    /// <remarks>
+    /// Lazy&lt;Task&lt;T&gt;&gt; with ExecutionAndPublication so that concurrent callers asking for the same event
+    /// store share one construction rather than each building their own. Constructing one discovers every client
+    /// artifact and connects, so the plain check-then-add this replaced let two callers do all of that twice and
+    /// then handed the loser a store that was no longer the cached one.
+    /// </remarks>
+    readonly ConcurrentDictionary<EventStoreKey, Lazy<Task<IEventStore>>> _eventStores = new();
     int _isDisposed;
 
     /// <summary>
@@ -216,7 +226,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return;
         }
 
-        foreach (var eventStore in _eventStores.Values)
+        foreach (var eventStore in CreatedEventStores())
         {
             eventStore.ReadModelReactors.Dispose();
         }
@@ -239,43 +249,27 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         @namespace ??= _namespaceResolver.Resolve();
         var key = new EventStoreKey(name, @namespace);
-        if (_eventStores.TryGetValue(key, out var eventStore))
+
+        var lazyEventStore = _eventStores.GetOrAdd(
+            key,
+            static (eventStoreKey, client) => new Lazy<Task<IEventStore>>(
+                () => client.CreateEventStore(eventStoreKey),
+                LazyThreadSafetyMode.ExecutionAndPublication),
+            this);
+
+        try
         {
-            return eventStore;
+            return await lazyEventStore.Value;
         }
-
-        var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
-            new InstancesOf<IReactorSideEffectHandler>(Types.Types.Instance, _serviceProvider));
-
-        eventStore = new EventStore(
-            name,
-            @namespace,
-            _connection,
-            _artifactsProvider,
-            _eventTypeMigrators,
-            _correlationIdAccessor,
-            _concurrencyScopeStrategies,
-            CausationManager,
-            _identityProvider,
-            _jsonSchemaGenerator,
-            _namingPolicy,
-            _serviceProvider,
-            reactorSideEffectHandlers,
-            _artifactActivator,
-            Options.AutoDiscoverAndRegister,
-            Options.JsonSerializerOptions,
-            Options.EnableEventTypeGenerationValidation,
-            Microsoft.Extensions.Options.Options.Create(Options),
-            _loggerFactory);
-        _eventStores[key] = eventStore;
-
-        if (Options.AutoDiscoverAndRegister)
+        catch
         {
-            await eventStore.DiscoverAll();
+            // A faulted task is memoized as readily as a completed one, so leaving it in place would make a single
+            // failure to reach the kernel permanent for this event store: every later call replays the same
+            // exception for the lifetime of the client. Removing only this instance leaves a concurrent call that
+            // already succeeded alone.
+            _eventStores.TryRemove(new KeyValuePair<EventStoreKey, Lazy<Task<IEventStore>>>(key, lazyEventStore));
+            throw;
         }
-
-        await _connection.Connect();
-        return eventStore;
     }
 
     /// <inheritdoc/>
@@ -288,7 +282,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public void EvictEventStores()
     {
-        foreach (var eventStore in _eventStores.Values)
+        foreach (var eventStore in CreatedEventStores())
         {
             // Drop the RegisterAll handler the EventStore constructor wired up so the shared
             // connection's OnConnected event no longer fans out into this evicted instance.
@@ -376,6 +370,56 @@ public class ChronicleClient : IChronicleClient, IDisposable
         Options.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
         Options.JsonSerializerOptions.WithDeclaredCollectionsNeverNull();
     }
+
+    async Task<IEventStore> CreateEventStore(EventStoreKey key)
+    {
+        var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
+            new InstancesOf<IReactorSideEffectHandler>(Types.Types.Instance, _serviceProvider));
+
+        var eventStore = new EventStore(
+            key.Name,
+            key.Namespace,
+            _connection,
+            _artifactsProvider,
+            _eventTypeMigrators,
+            _correlationIdAccessor,
+            _concurrencyScopeStrategies,
+            CausationManager,
+            _identityProvider,
+            _jsonSchemaGenerator,
+            _namingPolicy,
+            _serviceProvider,
+            reactorSideEffectHandlers,
+            _artifactActivator,
+            Options.AutoDiscoverAndRegister,
+            Options.JsonSerializerOptions,
+            Options.EnableEventTypeGenerationValidation,
+            Microsoft.Extensions.Options.Options.Create(Options),
+            _loggerFactory);
+
+        if (Options.AutoDiscoverAndRegister)
+        {
+            await eventStore.DiscoverAll();
+        }
+
+        await _connection.Connect();
+        return eventStore;
+    }
+
+    /// <summary>
+    /// The event stores that have actually been created, for the callers that need the instances rather than the
+    /// promise of them.
+    /// </summary>
+    /// <returns>Every event store whose construction has completed successfully.</returns>
+    /// <remarks>
+    /// A cached entry is a promise of an event store rather than one: it may still be under construction, and it may
+    /// have faulted. Reading <c>.Value.Result</c> on either would block or rethrow, in a disposal path that has to
+    /// finish. So only the ones that completed are handed back - the rest have nothing to dispose or detach anyway.
+    /// </remarks>
+    IEnumerable<IEventStore> CreatedEventStores() =>
+        _eventStores.Values
+            .Where(_ => _.IsValueCreated && _.Value.IsCompletedSuccessfully)
+            .Select(_ => _.Value.Result);
 
     record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);
 }
