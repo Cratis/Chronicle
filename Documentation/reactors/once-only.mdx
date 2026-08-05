@@ -32,5 +32,5 @@ being invoked more than once when it fails partway through.
 Reach for the method placement unless the entire reactor exists to do something that must not happen twice.
 
 :::note[Client coverage]
-`OnceOnly` is currently C#-only — Kotlin, Java, Elixir, and TypeScript have no equivalent marker, so a replay or retry always re-runs the full handler in those clients. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
+Elixir and TypeScript have no equivalent marker, so a replay always re-runs the full handler there. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
 :::

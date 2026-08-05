@@ -24,7 +24,7 @@ Create a reducer by implementing `IReducerFor<TReadModel>` with methods for each
 
 <ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" />
 
-Kotlin, Java, and TypeScript handler methods only receive the event and the current state — unlike C# and Elixir, they don't get an `EventContext` parameter, so they can't use an event's metadata (like `Occurred`) when computing the next state.
+TypeScript handler methods only receive the event and the current state — unlike C#, Kotlin, Java, and Elixir, they don't get an `EventContext` parameter, so they can't use an event's metadata (like `Occurred`) when computing the next state.
 
 ## Method Signatures
 
@@ -38,7 +38,7 @@ Reducer methods are discovered by convention and support the following signature
 
 <ChronicleClientTabs snippet="reducers/getting-started/async-signatures" />
 
-These overload tables are specific to C#'s method-overload-based dispatch. Kotlin, Java, and TypeScript each dispatch reducer handlers by matching the first parameter's event type against a fixed 2-parameter (event, current) shape — no context parameter. TypeScript's dispatch does `await` the handler, so an `async` handler works there; Kotlin and Java invoke the handler directly and cannot await it, so a suspend/async handler isn't supported in those two. Elixir dispatches through a single `reduce/3` callback per event, pattern-matched by struct type, which does receive a context map.
+These overload tables are specific to C#'s method-overload-based dispatch. Kotlin, Java, and TypeScript each dispatch reducer handlers by matching the first parameter's event type. Kotlin and Java accept `(event)`, `(event, current)`, and `(event, current, context)`; TypeScript accepts a fixed `(event, current)` shape with no context parameter. TypeScript's dispatch does `await` the handler, so an `async` handler works there; Kotlin and Java invoke the handler directly and cannot await it, so a suspend/async handler isn't supported in those two. Elixir dispatches through a single `reduce/3` callback per event, pattern-matched by struct type, which does receive a context map.
 
 **Key Points:**
 
@@ -60,7 +60,7 @@ You can customize the reducer using the `[Reducer]` attribute:
 - `eventSequence` - The event sequence to observe (defaults to the event log)
 - `isActive` - Whether the reducer actively observes events (defaults to `true`)
 
-Kotlin, Java, and Elixir only support setting a custom `id` — none of them currently support targeting a non-default event sequence or explicitly toggling active/passive from this attribute. TypeScript supports both `id` and the event sequence via the `reducer()` decorator's parameters, shown above.
+Kotlin and Java support all three parameters on `@Reducer`. TypeScript supports `id` and the event sequence via the `reducer()` decorator's parameters, shown above. Elixir only supports setting a custom `id`.
 
 ## Retrieving Reduced State
 

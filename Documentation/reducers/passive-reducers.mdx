@@ -3,7 +3,7 @@
 Passive reducers are registered with the kernel but do not actively observe and materialize events through the sink. This is useful when you want to compute read model state on-demand rather than maintaining it continuously.
 
 :::note[Client coverage]
-Passive reducers are currently C#-only. Kotlin's `@Reducer`, Elixir's `use Chronicle.Reducers.Reducer`, and TypeScript's `reducer()` decorator only support a custom `id` (and, for TypeScript, an event sequence) — none of them expose an `isActive` toggle or a read-model-level passive marker.
+Kotlin and Java expose the `isActive` toggle on `@Reducer` (Option 1 below). The read-model-level `[Passive]` marker (Option 2) is C#-only. Elixir's `use Chronicle.Reducers.Reducer` and TypeScript's `reducer()` decorator have neither.
 :::
 
 ## Understanding Passive vs Active Reducers

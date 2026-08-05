@@ -30,7 +30,7 @@ For side effects that genuinely must never repeat — a physical letter, a payme
 
 <ChronicleClientTabs snippet="tutorial/reacting/once-only" />
 
-Kotlin, Java, Elixir, and TypeScript don't currently have an equivalent to `[OnceOnly]` — replay/redaction exclusion for a specific handler is C#-only for now.
+Elixir and TypeScript don't currently have an equivalent to `[OnceOnly]` — replay/redaction exclusion for a specific handler is available in C#, Kotlin, and Java.
 
 Use it deliberately, though — the same guarantee means a `[OnceOnly]` handler also *won't* run again when you replay on purpose. Idempotent-by-design stays the default; `[OnceOnly]` is for the effects where "again" is worse than "never".
 

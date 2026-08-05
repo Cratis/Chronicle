@@ -8,7 +8,7 @@ Apply `[EventSequence]` directly to your reducer class to pin it to a specific e
 
 <ChronicleClientTabs snippet="reducers/event-sequence/event-sequence-attribute" />
 
-TypeScript reaches the same result through the `reducer()` decorator's event-sequence parameter shown below rather than a separate attribute. Kotlin, Java, and Elixir don't currently support targeting a non-default event sequence for a reducer at all.
+TypeScript reaches the same result through the `reducer()` decorator's event-sequence parameter, and Kotlin and Java through the `eventSequence` parameter on `@Reducer` — all shown under [Using the `[Reducer]` Attribute](#using-the-reducer-attribute) below, rather than as a separate attribute. Elixir doesn't currently support targeting a non-default event sequence for a reducer at all.
 
 ## Using the `[Reducer]` Attribute
 
