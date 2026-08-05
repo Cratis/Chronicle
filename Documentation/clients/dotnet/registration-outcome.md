@@ -26,7 +26,13 @@ var outcome = eventStore.Registration;
 
 if (!outcome.HasRun)
 {
-    // Registration has not completed yet - or has not been triggered at all.
+    // Registration has not finished yet - or has not been triggered at all.
+}
+
+if (outcome.Failure is not null)
+{
+    // Registration ran and did not finish. Whatever registered before it stopped is still in Artifacts.
+    Console.WriteLine($"Registration failed: {outcome.Failure.Message}");
 }
 
 foreach (var failed in outcome.Failures)
@@ -37,12 +43,15 @@ foreach (var failed in outcome.Failures)
 
 | Member | What it answers |
 | --- | --- |
-| `HasRun` | Whether `RegisterAll` has completed at least once |
+| `HasRun` | Whether `RegisterAll` has finished at least once, successfully or not |
 | `Artifacts` | Every declared projection artifact, with `IsRegistered` and the `Failure` that stopped it |
-| `IsSuccess` | Registration has run and every declared artifact registered |
+| `Failure` | What stopped `RegisterAll` itself, or `null` when it finished |
+| `IsSuccess` | Registration ran, finished, and every declared artifact registered |
 | `Failures` | Only the artifacts that did not register |
 
-`RegistrationOutcome.NotRun` is the value before registration has completed.
+`RegistrationOutcome.NotRun` is the value before registration has finished.
+
+There are two kinds of failure here and they are not the same. An artifact in `Failures` could not be built, so it was isolated and skipped and registration carried on without it — the rest of the read side is up. A `Failure` on the outcome itself ended the run, so registration stopped wherever it got to. A run that ends this way still reports itself rather than staying at `NotRun`, so waiting on it returns instead of timing out.
 
 ## Waiting for it
 
@@ -59,7 +68,7 @@ if (!outcome.IsSuccess)
 }
 ```
 
-It waits for registration to have *run*, not to have succeeded — ask the returned outcome about that. If it has not run within the timeout, the wait throws `TaskCanceledException`.
+It waits for registration to have *run*, not to have succeeded — ask the returned outcome about that. A run that failed returns here too, carrying its `Failure`; the timeout is for a registration that never finished, not for one that finished badly. If it has not finished within the timeout, the wait throws `TaskCanceledException`.
 
 ## What it covers
 
