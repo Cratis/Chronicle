@@ -83,18 +83,56 @@ public interface IProjections
     /// <param name="projectionType">Type of projection, or the type of read model it projects to.</param>
     /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
     /// <remarks>
-    /// Model-bound projections have no projection type of their own, so their read model type is the only handle a
-    /// caller has for them. Both handles resolve to the same projection.
+    /// This one accepts either handle. It only ever resolved read model types, so narrowing it to what its parameter
+    /// name says would break every caller it has - and model-bound projections, which have no projection type at all,
+    /// would lose their only handle. Prefer <see cref="GetFailedPartitionsForModel(Type)"/> or
+    /// <see cref="GetFailedPartitionsFor{TProjection}"/>, which each say which handle they take.
     /// </remarks>
     Task<IEnumerable<FailedPartition>> GetFailedPartitionsFor(Type projectionType);
+
+    /// <summary>
+    /// Get any failed partitions for the projection that maintains a specific read model.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model to get for.</typeparam>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsForModel<TReadModel>();
+
+    /// <summary>
+    /// Get any failed partitions for the projection that maintains a specific read model.
+    /// </summary>
+    /// <param name="readModelType">Type of read model to get for.</param>
+    /// <returns>Collection of <see cref="FailedPartition"/>, if any.</returns>
+    Task<IEnumerable<FailedPartition>> GetFailedPartitionsForModel(Type readModelType);
 
     /// <summary>
     /// Get the state of a specific projection.
     /// </summary>
     /// <typeparam name="TProjection">Type of projection get for.</typeparam>
     /// <returns><see cref="ProjectionState"/>.</returns>
+    /// <remarks>
+    /// A model-bound projection has no projection type to name here - use
+    /// <see cref="GetStateForModel{TReadModel}"/> for those.
+    /// </remarks>
     Task<ProjectionState> GetStateFor<TProjection>()
         where TProjection : IProjection;
+
+    /// <summary>
+    /// Get the state of the projection that maintains a specific read model.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model to get for.</typeparam>
+    /// <returns><see cref="ProjectionState"/>.</returns>
+    /// <remarks>
+    /// Model-bound projections are declared on the read model and have no type of their own, so this is the only way
+    /// to ask for their state. Fluent projections answer to it as well, by the model they project to.
+    /// </remarks>
+    Task<ProjectionState> GetStateForModel<TReadModel>();
+
+    /// <summary>
+    /// Get the state of the projection that maintains a specific read model.
+    /// </summary>
+    /// <param name="readModelType">Type of read model to get for.</param>
+    /// <returns><see cref="ProjectionState"/>.</returns>
+    Task<ProjectionState> GetStateForModel(Type readModelType);
 
     /// <summary>
     /// Replay a specific projection.

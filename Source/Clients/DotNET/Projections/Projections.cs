@@ -110,6 +110,18 @@ public class Projections(
     }
 
     /// <inheritdoc/>
+    public Task<ProjectionState> GetStateForModel<TReadModel>() => GetStateForModel(typeof(TReadModel));
+
+    /// <inheritdoc/>
+    public Task<ProjectionState> GetStateForModel(Type readModelType) => _handlersByModelType[readModelType].GetState();
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsForModel<TReadModel>() => GetFailedPartitionsForModel(typeof(TReadModel));
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsForModel(Type readModelType) => _handlersByModelType[readModelType].GetFailedPartitions();
+
+    /// <inheritdoc/>
     public Task<JobId> Replay<TProjection>()
         where TProjection : IProjection
     {
@@ -169,15 +181,33 @@ public class Projections(
 
         _modelBoundHandlers = modelBoundHandlers;
 
+        // The read model index holds one handler per read model, and asking for a projection by the model it maintains
+        // is the only handle a model-bound projection has. So a read model claimed twice leaves the second projection
+        // addressable only if it has a type of its own - and a model-bound one does not. Both are still registered and
+        // both still write to the read model, which is the part worth knowing about; say so rather than resolving it
+        // silently by declaration order.
         _handlersByModelType = new Dictionary<Type, IProjectionHandler>();
+        var claimedBy = new Dictionary<Type, string>();
+
         foreach (var kvp in _handlersByType)
         {
-            _handlersByModelType.TryAdd(kvp.Key.GetReadModelType(), kvp.Value);
+            var readModelType = kvp.Key.GetReadModelType();
+            if (_handlersByModelType.TryAdd(readModelType, kvp.Value))
+            {
+                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
+            }
+            else
+            {
+                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
+            }
         }
 
         foreach (var kvp in _modelBoundHandlers)
         {
-            _handlersByModelType.TryAdd(kvp.Key, kvp.Value);
+            if (!_handlersByModelType.TryAdd(kvp.Key, kvp.Value))
+            {
+                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
+            }
         }
 
         Definitions =

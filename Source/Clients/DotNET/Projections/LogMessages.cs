@@ -12,4 +12,7 @@ internal static partial class LogMessages
 
     [LoggerMessage(LogLevel.Warning, "Failed to create projection definition from the model-bound attributes on read model {ReadModelType} - it will not be registered, and its read model will never update")]
     internal static partial void FailedToCreateModelBoundProjectionDefinition(this ILogger<Projections> logger, Type readModelType, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "More than one projection maintains read model {ReadModelType}; {ShadowedProjection} is not reachable by that read model because {ReachableProjection} claimed it first. Both are still registered, so both write to it")]
+    internal static partial void MoreThanOneProjectionForReadModel(this ILogger<Projections> logger, Type readModelType, string shadowedProjection, string reachableProjection);
 }
