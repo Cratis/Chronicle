@@ -14,6 +14,10 @@ A read model is built by a [projection](/chronicle/concepts/projection/) that ru
 - **Does the projection map the events you appended?** If the read model only handles `BookAdded` but you appended `BookBorrowed`, that event won't change it.
 - **Is the property mapping right?** AutoMap matches by name. A `Title` on the event maps to `Title` on the read model; a mismatch means the value silently doesn't flow.
 
+## My read model's child collection is null
+
+A child collection with no children is stored as an absent field rather than as `[]` — deliberately, so that a parallel replay cannot erase a child a sibling event already added. Chronicle fills that absence in for you when the property is declared non-nullable, and leaves it as `null` when you declared it nullable to keep "no children yet" distinguishable. Two things do not close the gap: [initial values](/chronicle/projections/declarative/initial-values/) are dropped for a children collection, and reading the document with the MongoDB driver instead of through Chronicle bypasses the rule entirely. See [Empty child collections](/chronicle/read-models/empty-child-collections/).
+
 ## My projection isn't picking up a change I made
 
 After you change a projection, the existing read model still reflects the *old* logic. Rebuild it by **replaying** — re-running the projection over historical events. Because events are the source of truth, read models are disposable and safe to rebuild at any time.

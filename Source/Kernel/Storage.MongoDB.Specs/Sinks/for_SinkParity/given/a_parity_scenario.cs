@@ -16,6 +16,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity.given;
@@ -33,6 +34,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
     int _appliedStates;
     IMongoClient _client = default!;
     string _databaseName = default!;
+    string _containerName = default!;
     InMemorySink _inMemorySink = default!;
     Sink _mongoSink = default!;
     ReducerPipeline _inMemoryPipeline = default!;
@@ -67,6 +69,16 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 
     public IReadOnlyList<PropertyDifference> ParityDifferences { get; private set; } = [];
 
+    /// <summary>
+    /// Gets the document the MongoDB sink actually stored, as raw BSON.
+    /// </summary>
+    /// <remarks>
+    /// Reading it back through the sink answers with whatever the schema round-trip makes of the bytes, which is
+    /// precisely what hides a question about the bytes themselves - an absent field and a stored zero come back
+    /// alike. Anything asking what the sink wrote has to look at what is on disk.
+    /// </remarks>
+    public BsonDocument? StoredDocument { get; private set; }
+
     /// <summary>Gets a human-readable description of any divergence, or empty when the sinks match.</summary>
     public string ParityReport { get; private set; } = string.Empty;
 
@@ -79,6 +91,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
         _key = new Key(KeyValue, ArrayIndexers.NoIndexers);
 
         var typeFormats = new TypeFormats();
+        _containerName = $"parity_{Guid.NewGuid():N}";
         var readModel = CreateReadModelDefinition();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
 
@@ -100,6 +113,9 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 
         InMemoryResult = await _inMemorySink.FindOrDefault(_key);
         MongoResult = await _mongoSink.FindOrDefault(_key);
+        StoredDocument = await database.GetCollection<BsonDocument>(_containerName)
+            .Find(Builders<BsonDocument>.Filter.Empty)
+            .FirstOrDefaultAsync();
 
         if (InMemoryResult is not null && MongoResult is not null)
         {
@@ -174,8 +190,8 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
     ReadModelDefinition CreateReadModelDefinition() =>
         new(
             "test-parity-read-model",
+            _containerName,
             "TestParityReadModel",
-            $"parity_{Guid.NewGuid():N}",
             ReadModelOwner.Client,
             ReadModelSource.Code,
             ReadModelObserverType.Reducer,

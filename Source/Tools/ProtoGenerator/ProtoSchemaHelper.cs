@@ -11,6 +11,21 @@ namespace Cratis.Chronicle.Tools.ProtoGenerator;
 /// </summary>
 internal static partial class ProtoSchemaHelper
 {
+    /// <summary>
+    /// The name of the attribute that marks retired proto field numbers.
+    /// </summary>
+    /// <remarks>
+    /// Matched by name because this generator does not reference the contracts assembly - it loads it. Renaming the
+    /// attribute without changing this would stop reserving field numbers, so a specification pins the two together
+    /// against the real attribute type.
+    /// </remarks>
+    internal const string ReservedProtoFieldsAttributeName = "ReservedProtoFieldsAttribute";
+
+    /// <summary>
+    /// The name of the property on that attribute carrying the retired field numbers.
+    /// </summary>
+    internal const string FieldNumbersPropertyName = "FieldNumbers";
+
     [GeneratedRegex(@"^package\s+(?<name>[\w.]+)\s*;", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PackageDeclarationRegex { get; }
 
@@ -185,6 +200,61 @@ internal static partial class ProtoSchemaHelper
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Emits a <c>reserved</c> declaration for every field number a contract type has retired.
+    /// </summary>
+    /// <param name="schema">The generated schema.</param>
+    /// <param name="types">The contract types the schema was generated from.</param>
+    /// <returns>The schema with reservations declared.</returns>
+    /// <remarks>
+    /// The schema generator has no notion of a retired field, so a <c>reserved</c> line added to the generated
+    /// file by hand disappears the next time anyone regenerates - silently, and with nothing to notice it by.
+    /// Reading it from the contract instead makes the generated file reproducible, which is the only form a
+    /// reservation can survive in.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when a type asks for reserved field numbers but none can be emitted for it - the attribute carries no
+    /// numbers, its numbers cannot be read, or no matching message exists in the generated schema. A reservation that
+    /// quietly does not happen frees the number for reuse again, which is what this exists to prevent.
+    /// </exception>
+    public static string DeclareReservedFields(string schema, IEnumerable<Type> types)
+    {
+        foreach (var type in types)
+        {
+            var reserved = Array.Find(
+                type.GetCustomAttributes(inherit: false),
+                _ => string.Equals(_.GetType().Name, ReservedProtoFieldsAttributeName, StringComparison.Ordinal));
+            if (reserved is null)
+            {
+                continue;
+            }
+
+            // Everything below this point is reached only because a type asked for reserved field numbers, so every
+            // way of not producing them is an error rather than a skip. A field number that quietly stops being
+            // reserved is available for reuse again, which is the corruption this whole attribute exists to prevent -
+            // and it would not show up until a new field silently collided with an old one on the wire.
+            var fieldNumbers = reserved.GetType().GetProperty(FieldNumbersPropertyName)?.GetValue(reserved)
+                ?? throw new InvalidOperationException(
+                    $"'{type.FullName}' carries {ReservedProtoFieldsAttributeName} but it has no readable '{FieldNumbersPropertyName}' property. The attribute and this generator have to agree on that name.");
+
+            var numbers = ((IEnumerable<int>)fieldNumbers).Order().ToArray();
+            if (numbers.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"'{type.FullName}' carries {ReservedProtoFieldsAttributeName} without any field numbers. Reserve the numbers that were retired, or drop the attribute.");
+            }
+
+            var declaration = MessageDeclarationRegex.Matches(schema).FirstOrDefault(_ => _.Groups["name"].Value == type.Name)
+                ?? throw new InvalidOperationException(
+                    $"'{type.FullName}' carries {ReservedProtoFieldsAttributeName}, but no 'message {type.Name}' was found in the generated schema, so its retired field numbers would not be reserved.");
+
+            var insertAt = declaration.Index + declaration.Length;
+            schema = schema[..insertAt] + $"{Environment.NewLine}   reserved {string.Join(", ", numbers)};" + schema[insertAt..];
+        }
+
+        return schema;
     }
 
     /// <summary>

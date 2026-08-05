@@ -7,3 +7,11 @@ matches:
 <ChronicleClientTabs snippet="get-started/mongodb/conventions" />
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/MongoDBDefaults.cs#L16-L27)
+
+:::note
+These conventions match how Chronicle names and shapes the stored document, but the driver still builds the instance
+itself — Chronicle's own read behavior does not travel with it. The one that bites is a child collection with no
+children, which is stored as an absent field: read through Chronicle and a non-nullable property comes back empty,
+read it with the driver and it comes back as whatever the driver does with a missing field. See
+[Empty child collections](/chronicle/read-models/empty-child-collections/).
+:::

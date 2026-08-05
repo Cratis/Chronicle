@@ -2,6 +2,8 @@
   href: index.md
 - name: Get started
   href: getting-started.md
+- name: Observing artifact registration
+  href: registration-outcome.md
 - name: Captures
   href: captures/toc.yml
 - name: External Services

@@ -82,14 +82,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     the observer would transition to Disconnected when the subscriber returns
         //     ObserverSubscriberState.Disconnected.
         //
-        //     The `-=` before `+=` is critical: EvictEventStores removes the constructor's
-        //     attachment, but on subsequent boundaries the cache is already empty so it removes
-        //     nothing. Each previous boundary already appended via this code path; without the
-        //     prior subtraction the count grows by one per test and RegisterAll runs once per
-        //     prior boundary on every reconnect — re-running EventTypes.Register,
-        //     Constraints.Register and Seeding.Register N times and corrupting test state.
+        //     Re-attaching unconditionally is safe: the lifecycle subscribes a handler at most
+        //     once, so the count cannot grow per test class the way it would with a plain
+        //     multicast event.
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
-        connection.Lifecycle.OnConnected -= sharedEventStore.RegisterAll;
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
 
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
@@ -179,10 +175,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             await chronicleConnection.Reconnect();
         }
 
-        // Diagnostic: call RegisterAll directly so that any exception surfaces instead
-        // of being swallowed by ConnectionLifecycle.Connected's catch block.
-        // If lifecycle.Connected already succeeded, Register() is a no-op (_registered = true).
-        // If it failed, this retries and surfaces the actual error.
+        // Belt and braces: call RegisterAll directly so registration is guaranteed to have been
+        // attempted on this boundary. If lifecycle.Connected already succeeded, Register() is a
+        // no-op (_registered = true); if it failed, this retries and surfaces the actual error.
+        //
+        // This used to say that ConnectionLifecycle.Connected's catch block swallows the failure.
+        // It does not, and has not since 6e5baa25d: it catches per handler, logs, then rolls
+        // IsConnected back to false and rethrows an AggregateException. Reconnect() above therefore
+        // already surfaces a registration failure on its own.
         await eventStore.RegisterAll();
     }
 

@@ -16,14 +16,81 @@ namespace Cratis.Chronicle.Connections;
 public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnectionLifecycle
 {
     /// <summary>
+    /// Guards the two handler lists.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately an <see cref="object"/> rather than a <c>System.Threading.Lock</c>: this assembly is packed for
+    /// net8.0 as well, and that type is net9.0 and later. The net10.0 build the gate runs would not have noticed.
+    /// </remarks>
+    readonly object _handlers = new();
+    Connected _onConnected = Nothing;
+    Disconnected _onDisconnected = Nothing;
+
+    /// <summary>
     /// Adds or removes event handlers for when the connection is connected.
     /// </summary>
-    public event Connected OnConnected = () => Task.CompletedTask;
+    /// <remarks>
+    /// A handler already subscribed is not subscribed again. These handlers are whole-artifact registrations - the
+    /// event store's <c>RegisterAll</c> is one of them - so running one twice re-registers every event type,
+    /// constraint and seeding on every reconnect. Nothing about a second subscription expresses an intent to do
+    /// that, and a caller who cannot be sure whether it already subscribed cannot express the intent not to, so
+    /// subscribing is idempotent. Removing still removes.
+    /// </remarks>
+    public event Connected OnConnected
+    {
+        add
+        {
+            lock (_handlers)
+            {
+                if (value is null || Array.IndexOf(_onConnected.GetInvocationList(), value) >= 0)
+                {
+                    return;
+                }
+
+                _onConnected += value;
+            }
+        }
+
+        remove
+        {
+            lock (_handlers)
+            {
+                // Removing the last handler leaves nothing to invoke, so fall back to the no-op the field started
+                // as rather than to null - Connected() invokes this without checking.
+                _onConnected = (Connected?)Delegate.Remove(_onConnected, value) ?? Nothing;
+            }
+        }
+    }
 
     /// <summary>
     /// Adds or removes event handlers for when the connection is disconnected.
     /// </summary>
-    public event Disconnected OnDisconnected = () => Task.CompletedTask;
+    /// <remarks>
+    /// A handler already subscribed is not subscribed again, for the same reason as <see cref="OnConnected"/>.
+    /// </remarks>
+    public event Disconnected OnDisconnected
+    {
+        add
+        {
+            lock (_handlers)
+            {
+                if (value is null || Array.IndexOf(_onDisconnected.GetInvocationList(), value) >= 0)
+                {
+                    return;
+                }
+
+                _onDisconnected += value;
+            }
+        }
+
+        remove
+        {
+            lock (_handlers)
+            {
+                _onDisconnected = (Disconnected?)Delegate.Remove(_onDisconnected, value) ?? Nothing;
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public bool IsConnected { get; private set; }
@@ -42,7 +109,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
 
         var exceptions = new ConcurrentBag<Exception>();
 
-        var tasks = OnConnected.GetInvocationList().Select(_ => Task.Run(async () =>
+        var tasks = _onConnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
             try
             {
@@ -71,7 +138,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     {
         IsConnected = false;
         logger.Disconnected();
-        var tasks = OnDisconnected.GetInvocationList().Select(_ => Task.Run(async () =>
+        var tasks = _onDisconnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
             try
             {
@@ -87,4 +154,6 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
 
         ConnectionId = ConnectionId.New();
     }
+
+    static Task Nothing() => Task.CompletedTask;
 }

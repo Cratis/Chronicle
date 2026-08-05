@@ -101,7 +101,10 @@ public class ModelBoundProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyze
                     continue;
                 }
 
-                eventStores.Add(WellKnownTypes.GetEventStoreNameOrDefault(eventType));
+                if (WellKnownTypes.GetExplicitEventStoreName(eventType) is { } eventStore)
+                {
+                    eventStores.Add(eventStore);
+                }
             }
         }
 

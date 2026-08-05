@@ -11,6 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Projections.ModelBound;
+using Cratis.Chronicle.Registrations;
 using Cratis.Monads;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -50,6 +51,17 @@ public class Projections(
     /// </summary>
     internal IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
 
+    /// <summary>
+    /// Gets the per-artifact outcome of the last <see cref="Discover"/>, covering every declared projection artifact -
+    /// the fluent <see cref="IProjectionFor{TReadModel}"/> implementations and the model-bound read models.
+    /// </summary>
+    /// <remarks>
+    /// An artifact with no failure has a definition and travels in the batch <see cref="Register"/> sends. This is a
+    /// discovery fact rather than a verdict: it is <see cref="IEventStore.RegisterAll"/> that publishes it as an
+    /// outcome, and only once the kernel call carrying these definitions has returned.
+    /// </remarks>
+    internal IImmutableList<ArtifactRegistration> ArtifactRegistrations { get; private set; } = ImmutableList<ArtifactRegistration>.Empty;
+
     /// <inheritdoc/>
     public bool HasFor(ProjectionId projectionId) => Definitions.Any(_ => _.Identifier == projectionId);
 
@@ -84,7 +96,7 @@ public class Projections(
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type projectionType)
     {
-        var handler = _handlersByModelType[projectionType];
+        var handler = GetHandlerForProjectionOrReadModelType(projectionType);
         return handler.GetFailedPartitions();
     }
 
@@ -93,9 +105,21 @@ public class Projections(
         where TProjection : IProjection
     {
         var projectionType = typeof(TProjection);
-        var handler = _handlersByModelType[projectionType];
+        var handler = _handlersByType[projectionType];
         return handler.GetState();
     }
+
+    /// <inheritdoc/>
+    public Task<ProjectionState> GetStateForModel<TReadModel>() => GetStateForModel(typeof(TReadModel));
+
+    /// <inheritdoc/>
+    public Task<ProjectionState> GetStateForModel(Type readModelType) => _handlersByModelType[readModelType].GetState();
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsForModel<TReadModel>() => GetFailedPartitionsForModel(typeof(TReadModel));
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsForModel(Type readModelType) => _handlersByModelType[readModelType].GetFailedPartitions();
 
     /// <inheritdoc/>
     public Task<JobId> Replay<TProjection>()
@@ -138,17 +162,18 @@ public class Projections(
     /// <inheritdoc/>
     public Task Discover()
     {
-        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, eventStore.Name?.Value);
+        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         var modelBoundDefinitions = modelBoundProjections.Discover();
         var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
             kvp => kvp.Key,
             kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
 
-        _definitionsByType = FindAllProjectionDefinitions(
+        var (definitionsByType, failures) = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
             artifactsActivator,
             jsonSerializerOptions);
+        _definitionsByType = definitionsByType;
 
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
@@ -156,21 +181,47 @@ public class Projections(
 
         _modelBoundHandlers = modelBoundHandlers;
 
+        // The read model index holds one handler per read model, and asking for a projection by the model it maintains
+        // is the only handle a model-bound projection has. So a read model claimed twice leaves the second projection
+        // addressable only if it has a type of its own - and a model-bound one does not. Both are still registered and
+        // both still write to the read model, which is the part worth knowing about; say so rather than resolving it
+        // silently by declaration order.
         _handlersByModelType = new Dictionary<Type, IProjectionHandler>();
+        var claimedBy = new Dictionary<Type, string>();
+
         foreach (var kvp in _handlersByType)
         {
-            _handlersByModelType.TryAdd(kvp.Key.GetReadModelType(), kvp.Value);
+            var readModelType = kvp.Key.GetReadModelType();
+            if (_handlersByModelType.TryAdd(readModelType, kvp.Value))
+            {
+                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
+            }
+            else
+            {
+                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
+            }
         }
 
         foreach (var kvp in _modelBoundHandlers)
         {
-            _handlersByModelType.TryAdd(kvp.Key, kvp.Value);
+            if (!_handlersByModelType.TryAdd(kvp.Key, kvp.Value))
+            {
+                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
+            }
         }
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
                 .. _definitionsByType.Values.Select(_ => _).ToList(),
                 .. modelBoundDefinitions.Values
+            ]).ToImmutableList();
+
+        ArtifactRegistrations =
+            ((IEnumerable<ArtifactRegistration>)[
+                .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
+                .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
+                .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
+                .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
             ]).ToImmutableList();
 
         return Task.CompletedTask;
@@ -207,13 +258,39 @@ public class Projections(
         return new ProjectionQueryResult([.. queryResult.ReadModelEntries]);
     }
 
-    Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
+    /// <summary>
+    /// Resolve the <see cref="IProjectionHandler"/> for a type that is either a projection type or a read model type.
+    /// </summary>
+    /// <param name="type">The projection type or read model type to resolve for.</param>
+    /// <returns>The <see cref="IProjectionHandler"/> for the type.</returns>
+    /// <remarks>
+    /// Fluent projections are addressable by their own type, while model-bound projections have no projection type at
+    /// all - their handler is only ever keyed by the read model it projects to. A caller holding either handle has to
+    /// land on the same handler, so the projection type is tried first and the read model type second.
+    /// </remarks>
+    IProjectionHandler GetHandlerForProjectionOrReadModelType(Type type) =>
+        _handlersByType.TryGetValue(type, out var handler) ? handler : _handlersByModelType[type];
+
+    /// <summary>
+    /// Builds a definition for every declared fluent projection, isolating the ones that cannot be built.
+    /// </summary>
+    /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
+    /// <param name="clientArtifacts">The <see cref="IClientArtifactsProvider"/> holding the declared projections.</param>
+    /// <param name="artifactsActivator"><see cref="IClientArtifactsActivator"/> for activating instances of projections.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+    /// <returns>The definitions that could be built, and the failure that stopped each one that could not.</returns>
+    /// <remarks>
+    /// A projection that cannot be built is logged and skipped so that it costs itself and nothing else. The failure is
+    /// returned alongside rather than only logged, so that its read model can be told apart from one never declared.
+    /// </remarks>
+    (Dictionary<Type, ProjectionDefinition> Definitions, Dictionary<Type, Exception> Failures) FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IClientArtifactsActivator artifactsActivator,
         JsonSerializerOptions jsonSerializerOptions)
     {
         var result = new Dictionary<Type, ProjectionDefinition>();
+        var failures = new Dictionary<Type, Exception>();
         foreach (var projectionType in clientArtifacts.Projections)
         {
             var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
@@ -231,12 +308,13 @@ public class Projections(
             if (createProjectionDefinitionResult.TryGetException(out var exception))
             {
                 logger.FailedToCreateProjectionDefinition(projectionType, exception);
+                failures[projectionType] = exception;
                 continue;
             }
             result.Add(projectionType, createProjectionDefinitionResult.AsT0);
         }
 
-        return result;
+        return (result, failures);
     }
 
     static class ProjectionDefinitionCreator<TReadModel>

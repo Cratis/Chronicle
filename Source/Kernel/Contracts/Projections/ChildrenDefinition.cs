@@ -70,4 +70,16 @@ public class ChildrenDefinition
     /// </summary>
     [ProtoMember(10, IsRequired = true)]
     public IDictionary<string, ChildrenDefinition> Nested { get; set; } = new Dictionary<string, ChildrenDefinition>();
+
+    /// <summary>
+    /// Gets or sets the properties on the child that are excluded from auto-mapping.
+    /// </summary>
+    /// <remarks>
+    /// The parent's exclusions do not apply here and are not inherited: a child is its own model with its own
+    /// property names, and matching is by bare name. Without this the per-property form of the exclusion had
+    /// nowhere to travel, so it was dropped at the wire and the child projection was built with an empty set -
+    /// silently, leaving a colliding event free to auto-map over a value the author had sourced explicitly.
+    /// </remarks>
+    [ProtoMember(11, IsRequired = true)]
+    public IList<string> NoAutoMapProperties { get; set; } = [];
 }

@@ -38,21 +38,31 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
+        // Every definition is registered, and the batch still fails when any of them does. Attributing the failure to
+        // the definition that produced it is the only thing this wrapping changes - without it the batch reports a
+        // single root cause against every identifier it was asked to register.
         await Task.WhenAll(definitionList.Select(async definition =>
         {
-            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
-            if (readModelDefinition is null)
+            try
             {
-                var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
-                throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
-            }
+                var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+                if (readModelDefinition is null)
+                {
+                    var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
+                    throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
+                }
 
-            await Task.WhenAll(namespaceList.Select(async @namespace =>
+                await Task.WhenAll(namespaceList.Select(async @namespace =>
+                {
+                    var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModelDefinition, eventTypeSchemas);
+                    var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
+                    _projections[key] = projection;
+                }));
+            }
+            catch (Exception exception) when (exception is not ProjectionDefinitionRegistrationFailed)
             {
-                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModelDefinition, eventTypeSchemas);
-                var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
-                _projections[key] = projection;
-            }));
+                throw new ProjectionDefinitionRegistrationFailed(definition.Identifier, exception);
+            }
         }));
     }
 

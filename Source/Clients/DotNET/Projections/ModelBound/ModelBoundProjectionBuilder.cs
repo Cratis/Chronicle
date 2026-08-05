@@ -96,7 +96,7 @@ internal class ModelBoundProjectionBuilder(
 
         var hasNoAutoMap = Attribute.IsDefined(modelType, typeof(NoAutoMapAttribute), inherit: true);
         definition.AutoMap = hasNoAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Disabled : (Contracts.Projections.AutoMap)AutoMap.Enabled;
-        definition.NoAutoMapProperties = CollectNoAutoMapProperties(modelType, primaryConstructor);
+        definition.NoAutoMapProperties = [.. NoAutoMapProperties.CollectFrom(modelType, _namingPolicy)];
 
         if (fromEventSequenceAttr is null)
         {
@@ -107,40 +107,6 @@ internal class ModelBoundProjectionBuilder(
     }
 
     static string ConvertValueToInvariantString(object value) => FromDefinitionExtensions.ConvertValueToInvariantString(value);
-
-    /// <summary>
-    /// Collects the read model property names flagged with a property- or parameter-level
-    /// <see cref="NoAutoMapAttribute"/>. These are excluded from AutoMap by the kernel even when AutoMap is
-    /// enabled, so an unrelated event carrying an identically named property cannot overwrite them.
-    /// </summary>
-    /// <param name="modelType">The read model type.</param>
-    /// <param name="primaryConstructor">The read model's primary constructor, if any (records place the attribute on parameters).</param>
-    /// <returns>The naming-policy-converted property names to exclude from AutoMap.</returns>
-    List<string> CollectNoAutoMapProperties(Type modelType, ConstructorInfo? primaryConstructor)
-    {
-        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        if (primaryConstructor is not null)
-        {
-            foreach (var parameter in primaryConstructor.GetParameters())
-            {
-                if (parameter.IsDefined(typeof(NoAutoMapAttribute), inherit: true))
-                {
-                    names.Add(_namingPolicy.GetPropertyName(new PropertyPath(parameter.Name!)));
-                }
-            }
-        }
-
-        foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            if (Attribute.IsDefined(property, typeof(NoAutoMapAttribute), inherit: true))
-            {
-                names.Add(_namingPolicy.GetPropertyName(new PropertyPath(property.Name)));
-            }
-        }
-
-        return [.. names];
-    }
 
     EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
     {

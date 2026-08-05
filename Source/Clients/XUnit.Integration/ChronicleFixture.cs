@@ -186,6 +186,15 @@ public abstract class ChronicleFixture : IChronicleFixture
             {
                 Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
                 failure = e;
+
+                // Rebuild before retrying. A container instance holds the host port it was built with, so a
+                // bind-time conflict is identical on every attempt - all the retries fail the same way, none of
+                // them says a port is the reason, and the tier is wedged for as long as the retries take.
+                // Rebuilding allocates a fresh port, which is the only thing that can make the retry mean
+                // anything.
+                container = BuildContainer(Network);
+                _container = container;
+
                 await Task.Delay(2000);
             }
 

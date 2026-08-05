@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
@@ -24,8 +23,6 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </remarks>
 internal static class ChronicleClientServiceCollectionExtensions
 {
-    static readonly ConcurrentDictionary<EventStoreNamespaceName, Lazy<IEventStore>> _eventStores = new();
-
     /// <summary>
     /// Add the Chronicle client services to the <see cref="IServiceCollection"/>.
     /// </summary>
@@ -74,23 +71,14 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleClientOptions>>().Value;
-            var namespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
-            var namespaceName = namespaceResolver.Resolve();
+            var namespaceName = sp.GetRequiredService<IEventStoreNamespaceResolver>().Resolve();
 
-            // Lazy<T> with ExecutionAndPublication guarantees the value factory runs at most once per
-            // namespace, without holding a lock shared across unrelated namespaces or requests. A single
-            // process-wide lock here previously serialized every scoped IEventStore resolution - including
-            // cache hits - across the whole app, and held that lock across the blocking GetAwaiter().GetResult()
-            // below. Under concurrent request load that starves the thread pool and can make unrelated
-            // namespaces stall behind a single in-flight GetEventStore() call.
-            var lazyEventStore = _eventStores.GetOrAdd(
-                namespaceName,
-                static (_, arg) => new Lazy<IEventStore>(
-                    () => arg.ServiceProvider.GetRequiredService<IChronicleClient>().GetEventStore(arg.EventStoreName).GetAwaiter().GetResult(),
-                    LazyThreadSafetyMode.ExecutionAndPublication),
-                (ServiceProvider: sp, EventStoreName: options.EventStore));
-
-            return lazyEventStore.Value;
+            // The client keys its own event stores on both the name and the namespace and builds each at most once,
+            // so a second cache here only added a worse key: it left out the event store name, and being static it
+            // was shared by every container in the process - so two containers resolving the same namespace got one
+            // event store built from whichever of them resolved first. Passing the namespace rather than letting the
+            // client resolve it again also stops the two from being able to disagree about which one this is.
+            return sp.GetRequiredService<IChronicleClient>().GetEventStore(options.EventStore, namespaceName).GetAwaiter().GetResult();
         });
 
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Constraints);

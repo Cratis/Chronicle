@@ -29,6 +29,7 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Testing.EventSequences;
@@ -284,6 +285,9 @@ public class EventStoreForTesting : IEventStore
     /// <inheritdoc/>
     public IIdentityManager Identities => _identities.Value;
 
+    /// <inheritdoc/>
+    public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
+
     /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.
     /// </summary>
@@ -303,7 +307,16 @@ public class EventStoreForTesting : IEventStore
     public Task DiscoverAll() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task RegisterAll() => Task.CompletedTask;
+    /// <remarks>
+    /// There is no kernel to register with - the artifacts are already wired to in-process services - so this only
+    /// publishes the outcome discovery arrived at, keeping the same <see cref="RegistrationOutcome.NotRun"/>-until-run
+    /// transition a live event store has.
+    /// </remarks>
+    public Task RegisterAll()
+    {
+        Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations);
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>

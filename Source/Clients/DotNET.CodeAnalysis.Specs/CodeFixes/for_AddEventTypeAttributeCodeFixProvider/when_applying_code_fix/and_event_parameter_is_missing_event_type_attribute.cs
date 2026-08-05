@@ -15,6 +15,7 @@ public class and_event_parameter_is_missing_event_type_attribute : given.an_add_
 
     public class Reactor : Cratis.Chronicle.Reactors.IReactor
     {
+        [Cratis.Chronicle.Reactors.OnceOnly]
         public void On({|#0:MissingEvent @event|})
         {
         }
@@ -29,6 +30,7 @@ public class and_event_parameter_is_missing_event_type_attribute : given.an_add_
 
     public class Reactor : Cratis.Chronicle.Reactors.IReactor
     {
+        [Cratis.Chronicle.Reactors.OnceOnly]
         public void On(MissingEvent @event)
         {
         }

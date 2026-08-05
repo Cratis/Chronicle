@@ -197,7 +197,17 @@ public static class DiagnosticIds
     public const string CrossSubjectPiiJoin = "CHR0038";
 
     /// <summary>
-    /// A Task-returning testing assertion is discarded rather than awaited, so it can never fail.
+    /// An awaitable-returning testing assertion is discarded rather than awaited, so it can never fail.
     /// </summary>
     public const string NonAwaitedAssertion = "CHR0039";
+
+    /// <summary>
+    /// One member carries several [SetFromContext] for the same event type, so all but the last are discarded.
+    /// </summary>
+    public const string DuplicateSetFromContextForSameEventType = "CHR0040";
+
+    /// <summary>
+    /// An event-metadata filter attribute is applied to a projection, which cannot filter on event metadata.
+    /// </summary>
+    public const string InertEventFilterOnProjection = "CHR0041";
 }

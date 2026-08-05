@@ -48,7 +48,9 @@ public class ReactorMultipleEventStoresAnalyzer : DiagnosticAnalyzer
             .Where(m => m.MethodKind == MethodKind.Ordinary && !m.IsStatic)
             .Select(m => m.Parameters.Length > 0 ? m.Parameters[0].Type : null)
             .Where(t => t is not null && WellKnownTypes.HasEventTypeAttribute(t))
-            .Select(t => WellKnownTypes.GetEventStoreNameOrDefault(t!))
+            .Select(t => WellKnownTypes.GetExplicitEventStoreName(t!))
+            .Where(_ => _ is not null)
+            .Select(_ => _!)
             .Distinct()
             .ToList();
 

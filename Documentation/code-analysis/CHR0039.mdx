@@ -2,9 +2,9 @@
 
 ## Rule Description
 
-The event-sequence assertions in `Cratis.Chronicle.Testing` — `ShouldHaveAppendedEvent<T>(...)` and `ShouldHaveTailSequenceNumber(...)`, in every overload — return a `Task`. They signal failure by throwing an `EventSequenceAssertionException` on that `Task`.
+The event-sequence assertions in `Cratis.Chronicle.Testing` — `ShouldHaveAppendedEvent<T>(...)` and `ShouldHaveTailSequenceNumber(...)`, in every overload — return a `Task`. They signal failure by throwing an `EventSequenceAssertionException` on that `Task`. The kernel-backed integration assertions in `Cratis.Chronicle.XUnit.Integration.Events` — `ShouldHaveAppendedEvent<T>(...)`, `ShouldHaveNextSequenceNumber(...)` and `ShouldHaveTailSequenceNumber(...)` — work the same way.
 
-Call one from a `void`-bodied fact and the `Task` is discarded, so the exception is never observed. The assertion becomes a no-op that passes no matter what the system under test does.
+Call one from a `void`-bodied fact and the awaitable is discarded, so the exception is never observed. The assertion becomes a no-op that passes no matter what the system under test does.
 
 Await the assertion and declare the containing member `async Task`, or return the `Task` so the test runner awaits it.
 
@@ -35,7 +35,7 @@ Discarding "the result" of those is exactly how they are meant to be used. Nothi
 
 The failure mode is the worst one a test suite has: an assertion that appears to test something and tests nothing. The resulting false confidence survives review, CI, and time — and it hides real defects, because the assertion that would have caught a regression silently passes instead.
 
-The rule is scoped to `Task`-returning `Should*` methods on the Cratis testing surfaces, and only where the result is genuinely discarded — a statement on its own line, or the expression body of a `void` member. Awaiting, returning, assigning, or passing the `Task` along all count as observing it and are not flagged.
+The rule is scoped to `Should*` methods on the Cratis testing surfaces — namespaces under `Cratis.` containing a `.Testing.` or `.XUnit.` segment — that return `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`, and only where the result is genuinely discarded: a statement on its own line, or the expression body of a `void` member. Awaiting, returning, assigning, or passing the awaitable along all count as observing it and are not flagged, and a `Should*` API outside those namespaces is never flagged.
 
 ## Related Rules
 

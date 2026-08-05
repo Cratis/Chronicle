@@ -14,7 +14,12 @@ public static class WellKnownConstraintDetailKeys
     public const string PropertyName = "PropertyName";
 
     /// <summary>
-    /// The key for the constraint detail for the property value.
+    /// The key for the constraint detail holding the value the offending property carried.
     /// </summary>
+    /// <remarks>
+    /// Constraints are validated after compliance has been applied, so a property marked as PII carries its
+    /// encrypted form here rather than the value the caller appended. Every other property carries the value
+    /// itself.
+    /// </remarks>
     public const string PropertyValue = "PropertyValue";
 }

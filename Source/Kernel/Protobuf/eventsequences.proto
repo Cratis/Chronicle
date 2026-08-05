@@ -170,6 +170,7 @@ message GetFromEventSequenceNumberRequest {
    uint64 ToEventSequenceNumber = 5;
    string EventSourceId = 6;
    repeated EventType EventTypes = 7;
+   repeated string Tags = 8;
 }
 message GetFromEventSequenceNumberResponse {
    repeated AppendedEvent Events = 1;

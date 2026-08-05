@@ -19,6 +19,7 @@ message ChildrenDefinition {
    repeated KeyValuePair_EventType_RemovedWithJoinDefinition RemovedWithJoin = 8;
    AutoMap AutoMap = 9;
    map<string,ChildrenDefinition> Nested = 10;
+   repeated string NoAutoMapProperties = 11;
 }
 message DraftReadModelDefinition {
    string ContainerName = 1;

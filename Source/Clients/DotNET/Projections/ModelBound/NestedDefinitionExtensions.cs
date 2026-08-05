@@ -57,6 +57,7 @@ static class NestedDefinitionExtensions
                 All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
                 RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
+                NoAutoMapProperties = [.. NoAutoMapProperties.CollectFrom(nestedType, namingPolicy)],
                 AutoMap = shouldAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Enabled : (Contracts.Projections.AutoMap)AutoMap.Disabled
             };
 
@@ -111,6 +112,7 @@ static class NestedDefinitionExtensions
                 All = new FromEveryDefinition(),
                 RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
                 RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
+                NoAutoMapProperties = [.. NoAutoMapProperties.CollectFrom(nestedType, namingPolicy)],
                 AutoMap = shouldAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Enabled : (Contracts.Projections.AutoMap)AutoMap.Disabled
             };
 

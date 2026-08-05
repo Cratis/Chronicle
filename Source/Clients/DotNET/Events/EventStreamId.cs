@@ -22,7 +22,12 @@ public record EventStreamId(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// Check whether or not the <see cref="EventStreamId"/> is the default.
     /// </summary>
-    public bool IsDefault => this != Default;
+    /// <remarks>
+    /// The predicate used to be inverted relative to this comment, answering true for everything except the
+    /// default. It survived because nothing consumed it - the kernel has its own copy, which is correct and is
+    /// what the storage tail filters read, and that one has a spec while this one had none.
+    /// </remarks>
+    public bool IsDefault => this == Default;
 
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="EventStreamId"/>.

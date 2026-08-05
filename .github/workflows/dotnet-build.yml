@@ -93,6 +93,19 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
+      # The build above is net10.0 only. The client packages ship net8.0 and net9.0 as well, and that multi-target
+      # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net8.0
+      # passed every check on a pull request and failed while the release was being cut, with the merge already
+      # done. This builds what publish packs, on the frameworks it packs them for. The SDKs are already installed
+      # above for exactly this reason.
+      - name: Build client packages for every shipped framework
+        run: |
+          set -e
+          for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
+            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          done
+          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
       - name: Build and push development Docker image
         run: |
           dotnet publish Source/Kernel/Server/Server.csproj \
@@ -241,6 +254,13 @@ jobs:
         with:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
+          # The next step copies straight out of the restored bin directory, so this job cannot survive a miss.
+          # Left at the default, a miss - including a transient "operation cannot be completed in timeout" on
+          # restore - carried on to fail at `cp: cannot stat`, which reads as a broken build rather than as the
+          # cache problem it is. Fail here instead, where the message names the cause and a re-run fixes it.
+          # The equivalent restores in integration.yml are deliberately left tolerant: those jobs build as part
+          # of `dotnet test`, so a miss there costs time rather than correctness.
+          fail-on-cache-miss: true
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3

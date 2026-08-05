@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Strings;
 using MongoDB.Bson;
-using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
@@ -13,8 +12,32 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// <summary>
 /// Represents a serializer for <see cref="IConstraintDefinition"/>.
 /// </summary>
+/// <remarks>
+/// The serializer exists for one reason: to upgrade a definition persisted by an older kernel on the way in. It
+/// therefore writes exactly what the driver's own discriminated-interface path writes - the concrete type's
+/// document with its <c>_t</c> discriminator - so that putting it on the read path migrates nothing and leaves
+/// every stored document readable by a kernel that does not have it.
+/// <para>
+/// It is put on that path by <see cref="ConstraintDefinitionSerializationProvider"/>. Registering it as a bare
+/// <see cref="IBsonSerializer"/> does not work: the driver resolves every interface to a
+/// <c>DiscriminatedInterfaceSerializer</c> of its own, so the auto-registration in
+/// <see cref="Serialization.CustomSerializers"/> finds one already there and skips this one.
+/// </para>
+/// </remarks>
 public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefinition>, IBsonDocumentSerializer
 {
+    /// <summary>
+    /// The element the driver's discriminated-interface path names the concrete type with.
+    /// </summary>
+    const string DiscriminatorElementName = "_t";
+
+    /// <summary>
+    /// The element an earlier revision of this serializer named the concrete type with.
+    /// </summary>
+    /// <remarks>
+    /// No shipped kernel ever wrote it - this serializer was never on the write path - so this is tolerance for a
+    /// store written by a build that did register it, not a format anything produces.
+    /// </remarks>
     const string ConstraintTypeElementName = "constraintType";
 
     /// <summary>
@@ -29,11 +52,7 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
     {
         var type = value.GetType();
         var actualSerializer = BsonSerializer.SerializerRegistry.GetSerializer(type);
-        var document = value.ToBsonDocument(type, actualSerializer);
-        document.RemoveTypeInfo();
-        document.Add(ConstraintTypeElementName, GetConstraintTypeAsString(type));
-        using var rawDocument = new ByteArrayBuffer(document.ToBson());
-        context.Writer.WriteRawBsonDocument(rawDocument);
+        actualSerializer.Serialize(context, new BsonSerializationArgs { NominalType = type }, value);
     }
 
     /// <inheritdoc/>
@@ -42,17 +61,9 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
         var rawBsonDocument = context.Reader.ReadRawBsonDocument();
         using var rawDocument = new RawBsonDocument(rawBsonDocument);
         var bsonDocument = rawDocument.ToBsonDocument<BsonDocument>();
-        var constraintTypeString = bsonDocument.GetValue(ConstraintTypeElementName).AsString;
-        var constraintType = Enum.Parse<ConstraintType>(constraintTypeString);
+        var type = GetConstraintDefinitionType(bsonDocument);
 
-        var type = constraintType switch
-        {
-            ConstraintType.Unique => typeof(UniqueConstraintDefinition),
-            ConstraintType.UniqueEventType => typeof(UniqueEventTypeConstraintDefinition),
-            _ => throw new UnknownConstraintTypeString(constraintTypeString)
-        };
-
-        if (constraintType == ConstraintType.UniqueEventType)
+        if (type == typeof(UniqueEventTypeConstraintDefinition))
         {
             bsonDocument = UpgradeLegacyUniqueEventTypeDefinition(bsonDocument);
         }
@@ -65,6 +76,38 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
     {
         serializationInfo = null!;
         return false;
+    }
+
+    /// <summary>
+    /// Resolve the concrete definition type a stored document holds.
+    /// </summary>
+    /// <param name="document">The <see cref="BsonDocument"/> that was read.</param>
+    /// <returns>The concrete <see cref="Type"/> to deserialize as.</returns>
+    /// <exception cref="UnknownConstraintTypeString">Thrown when the document names no type this serializer recognizes.</exception>
+    static Type GetConstraintDefinitionType(BsonDocument document)
+    {
+        if (document.TryGetValue(DiscriminatorElementName, out var discriminator))
+        {
+            return BsonSerializer.LookupActualType(typeof(IConstraintDefinition), discriminator);
+        }
+
+        if (!document.TryGetValue(ConstraintTypeElementName, out var constraintType))
+        {
+            throw new UnknownConstraintTypeString($"<no '{DiscriminatorElementName}' or '{ConstraintTypeElementName}' element>");
+        }
+
+        var constraintTypeString = constraintType.AsString;
+        if (!Enum.TryParse<ConstraintType>(constraintTypeString, out var parsed))
+        {
+            throw new UnknownConstraintTypeString(constraintTypeString);
+        }
+
+        return parsed switch
+        {
+            ConstraintType.Unique => typeof(UniqueConstraintDefinition),
+            ConstraintType.UniqueEventType => typeof(UniqueEventTypeConstraintDefinition),
+            _ => throw new UnknownConstraintTypeString(constraintTypeString)
+        };
     }
 
     /// <summary>
@@ -93,13 +136,5 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
         var upgraded = new BsonDocument(document.Elements.Where(element => element.Name != LegacyUniqueEventTypeElementName));
         upgraded.Add(_uniqueEventTypesElementName, new BsonArray { legacyEventType });
         return upgraded;
-    }
-
-    string GetConstraintTypeAsString(Type type)
-    {
-        if (type == typeof(UniqueConstraintDefinition)) return nameof(ConstraintType.Unique);
-        if (type == typeof(UniqueEventTypeConstraintDefinition)) return nameof(ConstraintType.UniqueEventType);
-
-        throw new UnknownConstraintType(type);
     }
 }

@@ -45,4 +45,53 @@
         <PackageReference Include="Cratis.Arc.MongoDB" />
     </ItemGroup>
 
+    <!--
+        The kernel assemblies above ship inside this package, so their own package dependencies have to ship with
+        them. Declared rather than embedded: a nuspec dependency is what survives a version bump, and a consumer
+        that has to rediscover this closure does so by iterating FileNotFoundExceptions across a spec tier where
+        every spec fails at fixture initialization, before a single spec body runs - which reads as "the harness is
+        broken", not "a package is missing".
+
+        Nothing here is hand-maintained: for_the_embedded_kernel_closure walks the embedded projects and fails when
+        one of them takes a dependency this list does not cover, so the next addition is a failing spec here rather
+        than a broken tier for everyone downstream.
+    -->
+    <ItemGroup>
+        <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Cratis.Screenplay" />
+        <PackageReference Include="JsonCons.JmesPath" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+        <PackageReference Include="Microsoft.Orleans.Reminders" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Serialization" />
+        <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+        <!--
+            Embedded rather than declared: the kernel pins a prerelease of it, and NuGet refuses to let a stable
+            package depend on a prerelease (NU5104). It is a leaf instrumentation assembly, so carrying the
+            runtime asset costs a consumer nothing and conflicts with nothing.
+        -->
+        <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" PrivateAssets="all" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+        <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="SharpCompress" />
+        <PackageReference Include="Snappier" />
+    </ItemGroup>
+
+    <!-- Pack the runtime assembly of the embedded, non-declarable dependency into lib/ so it travels with it -->
+    <PropertyGroup>
+        <PrivatePackageRuntimeAssemblyRegex>^OpenTelemetry\.Instrumentation\.GrpcNetClient\.dll$</PrivatePackageRuntimeAssemblyRegex>
+    </PropertyGroup>
+
 </Project>

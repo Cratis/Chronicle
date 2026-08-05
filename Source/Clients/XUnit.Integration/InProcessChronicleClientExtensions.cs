@@ -51,7 +51,10 @@ public static class InProcessChronicleClientExtensions
 
         services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = eventStore);
 
-        services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
+        // A default, not an override: a host that configures its own naming policy gets PascalCase
+        // collection and element names in its specs otherwise, so a spec asserting on stored
+        // documents stops being portable and name-shape defects fall out of the tier's reach.
+        services.TryAddSingleton<INamingPolicy>(new DefaultNamingPolicy());
         services.AddHttpContextAccessor();
         services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
             sp.GetRequiredService<IHttpContextAccessor>(),

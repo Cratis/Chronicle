@@ -44,6 +44,26 @@ public class UniqueConstraintProvider(
             builder.Unique(unique =>
             {
                 unique.WithName(constraint.Key);
+
+                // The message the author wrote, where the name is already read. It used to be dropped here and
+                // nowhere else - the class-level provider reads the same argument off the same attribute - so a
+                // property-level [Unique(message:)] registered, enforced, rejected the append correctly and
+                // surfaced the kernel's default text instead. Having watched the rejection happen, an author has
+                // every reason to look for the loss in their own presentation layer.
+                //
+                // Several properties can share one constraint name, and one constraint carries one message, so
+                // the first supplied wins - the same answer the fluent form gives when it merges same-named
+                // definitions and keeps the first callback. A constraint where nobody supplied one keeps the
+                // empty default, which is what it had before.
+                var message = constraint
+                    .Select(_ => _.Property.GetConstraintMessage())
+                    .FirstOrDefault(_ => _ != ConstraintViolationMessage.NotDefined);
+
+                if (message is not null)
+                {
+                    unique.WithMessage(message);
+                }
+
                 var propertyNames = constraint.Select(_ => _.Property.Name).ToArray();
 
                 foreach (var constrainedProperty in constraint)

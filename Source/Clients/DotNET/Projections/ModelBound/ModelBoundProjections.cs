@@ -5,6 +5,7 @@ using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 
@@ -14,6 +15,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <param name="clientArtifactsProvider">The <see cref="IClientArtifactsProvider"/> to use for discovering client artifacts.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
+/// <param name="logger"><see cref="ILogger{Projections}"/> for logging - the same category the fluent path logs its build failures to.</param>
 /// <param name="currentEventStoreName">
 /// The name of the event store the projections belong to.
 /// Used to detect when event types belong to the same store, which means event-log rather than inbox routing.
@@ -22,26 +24,57 @@ internal class ModelBoundProjections(
     IClientArtifactsProvider clientArtifactsProvider,
     INamingPolicy namingPolicy,
     IEventTypes eventTypes,
+    ILogger<Projections> logger,
     string? currentEventStoreName = null) : IModelBoundProjections
 {
+    readonly Dictionary<Type, Exception> _failures = [];
+
+    /// <inheritdoc/>
+    public IDictionary<Type, Exception> Failures => _failures;
+
     /// <summary>
     /// Discovers all model-bound projections.
     /// </summary>
+    /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
     /// <remarks>
     /// Only types that are not used as children or sub-objects in other projections are considered
     /// as standalone projections. Types referenced via <see cref="ChildrenFromAttribute{TEvent}"/>
     /// are excluded from being treated as independent projections, as they are part of parent
     /// projection definitions.
+    /// <para>
+    /// A read model that cannot be built costs itself and nothing else. Building the whole set in one expression
+    /// meant the first failure abandoned every definition - including the fluent ones, whose assignment in
+    /// <see cref="Projections.Discover"/> comes after this call - and left a client whose read side was silently
+    /// never wired while the write side kept working. The fluent path already isolates and logs per projection;
+    /// this is the same treatment for the model-bound one.
+    /// </para>
     /// </remarks>
-    /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
     public IDictionary<Type, ProjectionDefinition> Discover()
     {
+        _failures.Clear();
         var allCandidateTypes = clientArtifactsProvider.ModelBoundProjections.ToList();
         var typesUsedAsChildrenOrSubObjects = CollectTypesUsedAsChildrenOrSubObjects(allCandidateTypes);
         var rootProjectionTypes = allCandidateTypes.Except(typesUsedAsChildrenOrSubObjects).ToList();
 
         var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes, currentEventStoreName);
-        return rootProjectionTypes.ToDictionary(x => x, builder.Build);
+        var definitions = new Dictionary<Type, ProjectionDefinition>();
+
+        foreach (var rootProjectionType in rootProjectionTypes)
+        {
+            try
+            {
+                definitions.Add(rootProjectionType, builder.Build(rootProjectionType));
+            }
+#pragma warning disable CA1031 // One unbuildable read model must not be able to take the rest of the read side with it.
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                logger.FailedToCreateModelBoundProjectionDefinition(rootProjectionType, ex);
+                _failures[rootProjectionType] = ex;
+            }
+        }
+
+        return definitions;
     }
 
     static HashSet<Type> CollectTypesUsedAsChildrenOrSubObjects(IEnumerable<Type> candidateTypes)

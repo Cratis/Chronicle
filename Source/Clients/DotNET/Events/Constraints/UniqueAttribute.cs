@@ -6,6 +6,12 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <summary>
 /// Attribute to adorn types and properties on event types to indicate uniqueness.
 /// </summary>
+/// <remarks>
+/// An attribute argument is a compile-time constant, so a message written here is fixed in one language. A
+/// consumer that localizes wants the fluent <c>IConstraint</c> form instead, whose
+/// <c>WithMessage(ConstraintViolationMessageProvider)</c> resolves per access and so can follow the current
+/// culture.
+/// </remarks>
 /// <param name="name">Optional name of the constraint to use.</param>
 /// <param name="message">Optional message to use when the unique constraint is violated.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false)]
