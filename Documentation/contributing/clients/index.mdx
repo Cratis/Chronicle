@@ -63,6 +63,19 @@ Track the client SDK issue before using this API from this language.
 
 The default synchronized tab key is `chronicle-client`, so choosing TypeScript in one tab group selects TypeScript in the other tab groups on that page. Use a custom `syncKey` only when tab groups should not follow each other.
 
+### Where "client X doesn't support this" belongs
+
+That unsupported snippet is the **only** place to state that a client does not support a workflow. Do not write it as prose on a shared page — no "this is currently C#-only", no "Kotlin and Java don't have an equivalent yet".
+
+A shared page cannot know when a client gains a capability. It lives in a different repo, on a different release cadence, with no CI that fails when the claim stops being true — so the claim silently rots, and the first person to notice is a reader who believes it. An unsupported snippet, by contrast, sits in the client repo next to the code, and the person adding the capability is already editing that folder.
+
+The rule is about **claims of absence**, not about describing differences. It is fine for a shared page to say that a client expresses the same capability through a different shape, as long as it does not assert that some client cannot do something:
+
+- ❌ "Kotlin, Java, and Elixir don't currently support targeting a non-default event sequence at all."
+- ✅ "TypeScript reaches the same result through the decorator's event-sequence parameter rather than a separate attribute."
+
+When a client does not support a workflow at all, leave the shared prose alone and let the tab carry it.
+
 ### Validation and CI
 
 Each client repo must also keep `Documentation/validate-client-snippets.py` wired into its `Client Snippet Verification` workflow. That workflow compiles the snippets against the client source when either `Documentation/client-snippets/**` or `Source/**` changes, so a client API change cannot silently leave the shared Chronicle docs stale.

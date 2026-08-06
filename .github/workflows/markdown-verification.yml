@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+# Links are verified by 'npm run check' in the Documentation repo, which builds
+# the aggregated site and therefore knows its routing. A crawler pointed at this
+# folder cannot resolve a site-level route (/chronicle/...) or an extension-less
+# path to a .mdx page, and reports every one of them as broken.
 jobs:
   markdown-lint:
     runs-on: ubuntu-latest
@@ -26,19 +30,3 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@v18
         with:
           globs: 'Documentation/**/*.md'
-
-  link-verification:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check links in Documentation
-        uses: JustinBeckwith/linkinator-action@v1
-        with:
-          paths: 'Documentation/**/*.md'
-          markdown: true
-          recurse: true
-          redirects: allow
-          statusCodes: '403:ok'
-          linksToSkip: '^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)'

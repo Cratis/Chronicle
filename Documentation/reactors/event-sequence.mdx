@@ -8,7 +8,7 @@ Apply `[EventSequence]` directly to your reactor class to pin it to a specific e
 
 <ChronicleClientTabs snippet="reactors/event-sequence/event-sequence-attribute" />
 
-TypeScript reaches the same result through the `reactor()` decorator's `eventSequenceId` parameter shown below rather than a separate attribute. Kotlin, Java, and Elixir don't currently support targeting a non-default event sequence at all.
+TypeScript reaches the same result through the `reactor()` decorator's `eventSequenceId` parameter, and Kotlin and Java through the `eventSequence` parameter on `@Reactor` — all shown under [Using the `[Reactor]` Attribute](#using-the-reactor-attribute) below, rather than as a separate attribute. Elixir doesn't currently support targeting a non-default event sequence at all.
 
 ## Using the `[Reactor]` Attribute
 
