@@ -75,16 +75,27 @@ public class ReadModelsCompliance(
             return instance;
         }
 
-        // The subject marker is kernel bookkeeping stamped onto the document to carry the compliance identity — it is
-        // never part of the read model's own schema. The compliance manager walks every property it is handed against
-        // that schema and rejects anything the schema does not declare, so the marker has to come off first. The
-        // ExpandoObject release paths get that for free from their schema round-trip, which only carries
-        // schema-declared properties; this path has no round-trip and has to be explicit about it. Strip on a copy —
-        // the caller keeps the document it passed in, and silently removing a property from it would be a surprise.
-        var withoutSubject = (instance.DeepClone() as JsonObject)!;
-        withoutSubject.Remove(WellKnownProperties.Subject);
+        // Kernel bookkeeping is stamped onto the document by the kernel itself — the identity marker read above,
+        // the sink's last-handled watermark, the projection engine's initialization flag. The compliance manager
+        // walks every property it is handed against the read model schema and rejects anything the schema does not
+        // declare, so any of them left on fails the whole release. The ExpandoObject release paths get that for
+        // free from their schema round-trip, which carries only schema-declared properties; this path has no
+        // round-trip and has to be explicit. The invariant is that the manager receives exactly the schema's
+        // document, so strip the whole set — stripping only the marker this method happens to read leaves the next
+        // property stamped upstream to reintroduce the same failure.
+        //
+        // Which of them come off is decided against the schema's own flattened properties, the same lookup the
+        // compliance walk does: a read model is free to expose a bookkeeping property as its own, and several
+        // declare __lastHandledEventSequenceNumber, in which case it is a property like any other and has to
+        // survive. Strip on a copy — the caller keeps the document it passed in.
+        var declaredByTheSchema = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.Ordinal);
+        var withoutBookkeeping = (instance.DeepClone() as JsonObject)!;
+        foreach (var property in WellKnownProperties.All.Where(_ => !declaredByTheSchema.Contains(_)))
+        {
+            withoutBookkeeping.Remove(property);
+        }
 
-        return await complianceManager.Release(eventStore, eventStoreNamespace, schema, identifier, withoutSubject);
+        return await complianceManager.Release(eventStore, eventStoreNamespace, schema, identifier, withoutBookkeeping);
     }
 
     /// <inheritdoc/>
