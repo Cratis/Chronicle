@@ -46,7 +46,9 @@ public record OrderSummary(OrderId Id, IEnumerable<LineItem> Lines)
 }
 ```
 
-Whether that line runs is not yours to decide. A read model instance is *materialized* by a deserializer, and a document deserializer is free to build the record without running either a constructor or the initializer. The MongoDB driver does exactly that: when the stored document doesn't carry every constructor parameter, it materializes the record uninitialized and assigns only the members the document actually has. A [child collection with no children](../read-models/empty-child-collections) is stored as an absent field, so this is the ordinary case, not an exotic one — and your normalizer never executes.
+Whether that line runs is not yours to decide. A read model instance is *materialized* by a deserializer, and a document deserializer is free to build the record without running either a constructor or the initializer. The MongoDB driver does exactly that, and it is not conditional: for a record with a primary constructor it builds no creator map at all, so it creates the instance uninitialized and assigns the members by reflection. That happens on every document — a complete one just as much as one missing a field. Read a read model through `IMongoCollection<T>` and your normalizer never runs, ever.
+
+That makes the blast radius wider than a `null` collection. Any logic you put in the record body — a default, a clamp, a trim, a validation — is dead on that path, silently.
 
 Chronicle's own reader *does* construct the record, which makes this worse rather than better: the same line can work when you read through `IReadModels` and quietly fail when something reads that document with `IMongoCollection<T>`. And even where the constructor runs, a property declared in the record body gets its stored value assigned after construction, on top of whatever its initializer produced.
 
