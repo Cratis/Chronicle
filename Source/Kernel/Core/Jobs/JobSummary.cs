@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma warning disable SA1649, MA0048
-
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -34,13 +33,31 @@ public record JobSummary(
     JobProgress Progress)
 {
     /// <summary>
+    /// Gets all jobs for the given event store and namespace.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store the job is for.</param>
+    /// <param name="namespace">Namespace within the event store the job is for.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the jobs manager grain with.</param>
+    /// <returns>A collection of jobs.</returns>
+    /// <remarks>
+    /// This reads through the jobs manager grain rather than observing storage. Observing goes through the
+    /// Arc MongoDB reactive collection, which is only available in a host that configured Arc - the kernel
+    /// runs in-process without one in the client integration fixtures.
+    /// </remarks>
+    internal static async Task<IEnumerable<JobSummary>> AllJobs(string eventStore, string @namespace, IGrainFactory grainFactory)
+    {
+        var jobs = await grainFactory.GetJobsManager((EventStoreName)eventStore, (EventStoreNamespaceName)@namespace).GetAllJobs();
+        return ToJobs(jobs);
+    }
+
+    /// <summary>
     /// Observes all jobs for the given event store and namespace.
     /// </summary>
     /// <param name="eventStore">Name of the event store the job is for.</param>
     /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe jobs from.</param>
     /// <returns>An observable subject emitting collections of jobs.</returns>
-    internal static ISubject<IEnumerable<JobSummary>> AllJobs(string eventStore, string @namespace, IStorage storage)
+    internal static ISubject<IEnumerable<JobSummary>> ObserveJobs(string eventStore, string @namespace, IStorage storage)
     {
         var catchOrObserve = storage
             .GetEventStore(eventStore)

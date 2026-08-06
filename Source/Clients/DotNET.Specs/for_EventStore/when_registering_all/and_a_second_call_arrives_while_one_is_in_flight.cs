@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.EventStores;
 
 namespace Cratis.Chronicle.for_EventStore.when_registering_all;
 
@@ -12,15 +13,15 @@ namespace Cratis.Chronicle.for_EventStore.when_registering_all;
 /// </summary>
 public class and_a_second_call_arrives_while_one_is_in_flight : given.an_event_store_with_a_projection_that_cannot_be_built
 {
-    TaskCompletionSource _kernelGate;
+    TaskCompletionSource<CommandResult> _kernelGate;
     Task _first;
     Task _second;
 
     void Establish()
     {
         _clientArtifacts.Projections.Returns([typeof(BuildableProjection)]);
-        _kernelGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _servicesAccessor.Services.EventStores.Ensure(Arg.Any<EnsureEventStore>()).Returns(_ => _kernelGate.Task);
+        _kernelGate = new TaskCompletionSource<CommandResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _servicesAccessor.Services.EventStores.EnsureEventStore(Arg.Any<EnsureEventStoreRequest>()).Returns(_ => _kernelGate.Task);
     }
 
     async Task Because()
@@ -28,11 +29,11 @@ public class and_a_second_call_arrives_while_one_is_in_flight : given.an_event_s
         await _projections.Discover();
         _first = _eventStore.RegisterAll();
         _second = _eventStore.RegisterAll();
-        _kernelGate.SetResult();
+        _kernelGate.SetResult(CommandResult.Success(Guid.NewGuid()));
         await Task.WhenAll(_first, _second);
     }
 
     [Fact] void should_share_the_in_flight_run() => _second.ShouldEqual(_first);
-    [Fact] void should_only_send_one_registration_to_the_kernel() => _servicesAccessor.Services.EventStores.Received(1).Ensure(Arg.Any<EnsureEventStore>());
+    [Fact] void should_only_send_one_registration_to_the_kernel() => _servicesAccessor.Services.EventStores.Received(1).EnsureEventStore(Arg.Any<EnsureEventStoreRequest>());
     [Fact] void should_report_the_shared_run_as_successful() => _eventStore.Registration.IsSuccess.ShouldBeTrue();
 }

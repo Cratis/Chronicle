@@ -19,7 +19,7 @@ public static class QueryResultExtensions
     {
         if (!result.IsSuccess)
         {
-            throw new QueryFailed(result.ValidationResults, result.ExceptionMessages);
+            throw new QueryFailed(result.ValidationResults, result.ExceptionMessages, result.ExceptionStackTrace);
         }
 
         return result.Data;

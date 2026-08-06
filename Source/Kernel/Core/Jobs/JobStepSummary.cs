@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma warning disable SA1649, MA0048
-
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Grpc;

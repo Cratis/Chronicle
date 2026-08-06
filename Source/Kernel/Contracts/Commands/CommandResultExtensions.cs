@@ -15,7 +15,9 @@ public static class CommandResultExtensions
     /// <exception cref="CommandFailed">Thrown when the command did not succeed.</exception>
     public static void EnsureSuccess(this CommandResult result)
     {
-        if (!result.IsSuccess)
+        // A missing result is a failure like any other - the call produced no answer at all - and reporting it
+        // as one keeps the caller from having to distinguish it from a null reference somewhere else entirely.
+        if (result?.IsSuccess != true)
         {
             throw new CommandFailed(result);
         }

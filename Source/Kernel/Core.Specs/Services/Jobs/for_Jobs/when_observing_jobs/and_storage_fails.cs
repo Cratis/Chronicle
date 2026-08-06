@@ -11,7 +11,7 @@ public class and_storage_fails : given.all_dependencies
 {
     QueryResult<IEnumerable<JobSummaryResponse>> _observed;
 
-    void Because() => _service.AllJobs(new AllJobsRequest
+    void Because() => _service.ObserveJobs(new ObserveJobsRequest
     {
         EventStore = "test-store",
         Namespace = "test-namespace"

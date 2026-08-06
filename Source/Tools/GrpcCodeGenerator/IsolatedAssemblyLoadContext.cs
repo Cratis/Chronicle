@@ -41,22 +41,28 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
                     continue;
                 }
 
-                var packageDir = Path.Combine(root, assemblyName.Name.ToLowerInvariant());
-                if (!Directory.Exists(packageDir))
+                // A package does not have to be named after the assembly it ships - Orleans ships
+                // Orleans.Core.Abstractions.dll from Microsoft.Orleans.Core.Abstractions - so probe the
+                // vendor-prefixed package directories too.
+                foreach (var packageName in CandidatePackageNames(assemblyName.Name))
                 {
-                    continue;
-                }
-
-                // Take the latest (alphabetically last) version folder.
-                foreach (var versionDir in Directory.GetDirectories(packageDir).OrderDescending())
-                {
-                    // Probe typical TFM library paths.
-                    foreach (var tfm in new[] { "net10.0", "net9.0", "net8.0", "netstandard2.0" })
+                    var packageDir = Path.Combine(root, packageName);
+                    if (!Directory.Exists(packageDir))
                     {
-                        var candidate = Path.Combine(versionDir, "lib", tfm, $"{assemblyName.Name}.dll");
-                        if (File.Exists(candidate))
+                        continue;
+                    }
+
+                    // Take the latest (alphabetically last) version folder.
+                    foreach (var versionDir in Directory.GetDirectories(packageDir).OrderDescending())
+                    {
+                        // Probe typical TFM library paths.
+                        foreach (var tfm in new[] { "net10.0", "net9.0", "net8.0", "netstandard2.0" })
                         {
-                            return LoadFromAssemblyPath(candidate);
+                            var candidate = Path.Combine(versionDir, "lib", tfm, $"{assemblyName.Name}.dll");
+                            if (File.Exists(candidate))
+                            {
+                                return LoadFromAssemblyPath(candidate);
+                            }
                         }
                     }
                 }
@@ -64,6 +70,13 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
         }
 
         return null;
+    }
+
+    static IEnumerable<string> CandidatePackageNames(string assemblyName)
+    {
+        var lowered = assemblyName.ToLowerInvariant();
+        yield return lowered;
+        yield return $"microsoft.{lowered}";
     }
 
     /// <inheritdoc/>

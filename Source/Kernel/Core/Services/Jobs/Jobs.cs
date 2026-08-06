@@ -39,11 +39,21 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage, ILogger
             command => command.Handle(grainFactory));
 
     /// <inheritdoc/>
-    public IObservable<QueryResult<IEnumerable<JobSummaryResponse>>> AllJobs(AllJobsRequest request, CallContext callContext = default) =>
+    public Task<QueryResult<IEnumerable<JobSummaryResponse>>> AllJobs(AllJobsRequest request, CallContext callContext = default) =>
         QueryExecutor.Execute(
-            () => Chronicle.Jobs.JobSummary.AllJobs(request.EventStore, request.Namespace, storage)
+            async () =>
+            {
+                var jobs = await Chronicle.Jobs.JobSummary.AllJobs(request.EventStore, request.Namespace, grainFactory);
+                return jobs.Select(ToResponse);
+            },
+            exception => logger.FailedToGetJobs(exception, request.EventStore, request.Namespace));
+
+    /// <inheritdoc/>
+    public IObservable<QueryResult<IEnumerable<JobSummaryResponse>>> ObserveJobs(ObserveJobsRequest request, CallContext callContext = default) =>
+        QueryExecutor.Execute(
+            () => Chronicle.Jobs.JobSummary.ObserveJobs(request.EventStore, request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
-                .Select(jobs => (IEnumerable<JobSummaryResponse>)jobs.Select(j => ToResponse(j)).ToList()),
+                .Select(jobs => (IEnumerable<JobSummaryResponse>)jobs.Select(ToResponse).ToList()),
             exception => logger.FailedToObserveJobs(exception, request.EventStore, request.Namespace));
 
     /// <inheritdoc/>
