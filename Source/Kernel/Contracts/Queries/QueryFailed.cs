@@ -10,8 +10,9 @@ namespace Cratis.Chronicle.Contracts.Queries;
 /// </summary>
 /// <param name="validationResults">The validation results for the query.</param>
 /// <param name="exceptionMessages">Any exception messages that occurred.</param>
-public class QueryFailed(IEnumerable<ValidationResult> validationResults, IEnumerable<string> exceptionMessages)
-    : Exception(BuildMessage(validationResults, exceptionMessages))
+/// <param name="exceptionStackTrace">The stack trace captured where the query failed, if any.</param>
+public class QueryFailed(IEnumerable<ValidationResult> validationResults, IEnumerable<string> exceptionMessages, string exceptionStackTrace = "")
+    : Exception(BuildMessage(validationResults, exceptionMessages, exceptionStackTrace))
 {
     /// <summary>
     /// Gets the validation results for the query.
@@ -23,6 +24,18 @@ public class QueryFailed(IEnumerable<ValidationResult> validationResults, IEnume
     /// </summary>
     public IList<string> ExceptionMessages { get; } = [.. exceptionMessages];
 
-    static string BuildMessage(IEnumerable<ValidationResult> validationResults, IEnumerable<string> exceptionMessages) =>
-        $"Query failed: {string.Join(", ", validationResults.Select(_ => _.Message).Concat(exceptionMessages))}";
+    /// <summary>
+    /// Gets the stack trace captured where the query failed.
+    /// </summary>
+    /// <remarks>
+    /// The failure happened on the other side of the wire, so this exception's own stack trace only shows
+    /// the caller. Carrying the originating one is the only way to see where the query actually broke.
+    /// </remarks>
+    public string ExceptionStackTrace { get; } = exceptionStackTrace;
+
+    static string BuildMessage(IEnumerable<ValidationResult> validationResults, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        var message = $"Query failed: {string.Join(", ", validationResults.Select(_ => _.Message).Concat(exceptionMessages))}";
+        return string.IsNullOrEmpty(exceptionStackTrace) ? message : $"{message}{Environment.NewLine}{exceptionStackTrace}";
+    }
 }

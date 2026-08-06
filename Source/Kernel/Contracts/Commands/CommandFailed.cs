@@ -6,17 +6,22 @@ namespace Cratis.Chronicle.Contracts.Commands;
 /// <summary>
 /// The exception that is thrown when a command executed against the kernel did not succeed.
 /// </summary>
-/// <param name="result">The <see cref="CommandResult"/> describing the failure.</param>
-public class CommandFailed(CommandResult result)
+/// <param name="result">The <see cref="CommandResult"/> describing the failure, or null when the call produced no result.</param>
+public class CommandFailed(CommandResult? result)
     : Exception(BuildMessage(result))
 {
     /// <summary>
-    /// Gets the <see cref="CommandResult"/> describing the failure.
+    /// Gets the <see cref="CommandResult"/> describing the failure, or null when the call produced no result.
     /// </summary>
-    public CommandResult Result { get; } = result;
+    public CommandResult? Result { get; } = result;
 
-    static string BuildMessage(CommandResult result)
+    static string BuildMessage(CommandResult? result)
     {
+        if (result is null)
+        {
+            return "Command failed: no result was returned";
+        }
+
         var reasons = result.ValidationResults.Select(_ => _.Message)
             .Concat(result.ExceptionMessages);
         if (!result.IsAuthorized)

@@ -53,11 +53,11 @@ public class Jobs(IEventStore eventStore) : IJobs
     /// <inheritdoc/>
     public async Task<IEnumerable<Job>> GetJobs()
     {
-        var jobs = (await _servicesAccessor.Services.Jobs.AllJobs(new()
+        var jobs = await _servicesAccessor.Services.Jobs.AllJobs(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace
-        }).FirstAsync()).EnsureSuccess();
+        }).EnsureSuccess();
         return (jobs ?? []).ToClient(eventStore);
     }
 }

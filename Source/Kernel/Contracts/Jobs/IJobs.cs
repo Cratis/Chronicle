@@ -41,14 +41,6 @@ public interface IJobs
     [Operation]
     Task<CommandResult> StopJob(StopJobRequest request, CallContext callContext = default);
     /// <summary>
-    /// Executes the AllJobs query.
-    /// </summary>
-    /// <param name = "request">The query request parameters.</param>
-    /// <param name = "callContext">The gRPC call context.</param>
-    /// <returns>The query result.</returns>
-    [Operation]
-    IObservable<QueryResult<IEnumerable<JobSummaryResponse>>> AllJobs(AllJobsRequest request, CallContext callContext = default);
-    /// <summary>
     /// Executes the GetJobSteps query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -56,6 +48,22 @@ public interface IJobs
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<JobStepSummaryResponse>>> GetJobSteps(GetJobStepsRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the AllJobs query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<JobSummaryResponse>>> AllJobs(AllJobsRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the ObserveJobs query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    IObservable<QueryResult<IEnumerable<JobSummaryResponse>>> ObserveJobs(ObserveJobsRequest request, CallContext callContext = default);
 }
 
 /// <summary>
@@ -134,6 +142,74 @@ public class StopJobRequest
 }
 
 /// <summary>
+/// Represents the JobStepSummaryResponse message.
+/// </summary>
+[ProtoContract]
+public class JobStepSummaryResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Type.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Name.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(4)]
+    public JobStepStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the StatusChanges.
+    /// </summary>
+    [ProtoMember(5)]
+    public IEnumerable<JobStepStatusChanged> StatusChanges { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Progress.
+    /// </summary>
+    [ProtoMember(6)]
+    public JobStepProgress Progress { get; set; }
+}
+
+/// <summary>
+/// Represents the GetJobStepsRequest message.
+/// </summary>
+[ProtoContract]
+public class GetJobStepsRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jobId.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid JobId { get; set; }
+}
+
+/// <summary>
 /// Represents the JobSummaryResponse message.
 /// </summary>
 [ProtoContract]
@@ -202,53 +278,10 @@ public class AllJobsRequest
 }
 
 /// <summary>
-/// Represents the JobStepSummaryResponse message.
+/// Represents the ObserveJobsRequest message.
 /// </summary>
 [ProtoContract]
-public class JobStepSummaryResponse
-{
-    /// <summary>
-    /// Gets or sets the Id.
-    /// </summary>
-    [ProtoMember(1)]
-    public Guid Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Type.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Type { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Name.
-    /// </summary>
-    [ProtoMember(3)]
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Status.
-    /// </summary>
-    [ProtoMember(4)]
-    public JobStepStatus Status { get; set; }
-
-    /// <summary>
-    /// Gets or sets the StatusChanges.
-    /// </summary>
-    [ProtoMember(5)]
-    public IEnumerable<JobStepStatusChanged> StatusChanges { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Progress.
-    /// </summary>
-    [ProtoMember(6)]
-    public JobStepProgress Progress { get; set; }
-}
-
-/// <summary>
-/// Represents the GetJobStepsRequest message.
-/// </summary>
-[ProtoContract]
-public class GetJobStepsRequest
+public class ObserveJobsRequest
 {
     /// <summary>
     /// Gets or sets the eventStore.
@@ -261,10 +294,4 @@ public class GetJobStepsRequest
     /// </summary>
     [ProtoMember(2)]
     public string Namespace { get; set; }
-
-    /// <summary>
-    /// Gets or sets the jobId.
-    /// </summary>
-    [ProtoMember(3)]
-    public Guid JobId { get; set; }
 }

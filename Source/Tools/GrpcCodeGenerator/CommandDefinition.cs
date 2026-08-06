@@ -32,8 +32,19 @@ public class CommandDefinition(Type type)
 
     Type? ResolveResponseType()
     {
-        var handle = Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-            .FirstOrDefault(method => method.Name == "Handle");
+        MethodInfo? handle;
+        try
+        {
+            handle = Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .FirstOrDefault(method => method.Name == "Handle");
+        }
+        catch (Exception ex)
+        {
+            // The handler's signature can reference a type this isolated context cannot load. Treating that
+            // as "no response" would quietly drop a value the command actually returns, so say so out loud.
+            Console.WriteLine($"  WARNING: Could not inspect the Handle method of '{Type.FullName}' to determine its response: {ex.Message}");
+            return null;
+        }
 
         if (handle is null)
         {
