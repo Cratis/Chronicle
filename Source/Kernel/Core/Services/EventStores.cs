@@ -28,8 +28,12 @@ internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage, 
             command => command.Handle(grainFactory, storage, eventTypes, reactors));
 
     /// <inheritdoc/>
-    public IObservable<QueryResult<IEnumerable<string>>> AllEventStores(CallContext callContext = default) =>
+    public Task<QueryResult<IEnumerable<string>>> AllEventStores(CallContext callContext = default) =>
+        QueryExecutor.Execute(() => Chronicle.EventStores.EventStoreNames.AllEventStores(storage));
+
+    /// <inheritdoc/>
+    public IObservable<QueryResult<IEnumerable<string>>> ObserveEventStores(CallContext callContext = default) =>
         QueryExecutor.Execute(() =>
-            Chronicle.EventStores.EventStoreNames.AllEventStores(storage)
+            Chronicle.EventStores.EventStoreNames.ObserveEventStores(storage)
                 .CompletedBy(callContext.CancellationToken));
 }
