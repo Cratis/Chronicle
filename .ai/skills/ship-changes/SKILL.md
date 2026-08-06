@@ -174,17 +174,23 @@ instead.
 
 Skip this step entirely if the user said no label or did not provide one.
 
+**Skip it unconditionally when every changed file is documentation** — a docs-only PR carries no version label, so that no release is cut for it. See [pull-requests.md](../../rules/pull-requests.md).
+
 Otherwise use `gh pr edit <number> --add-label "<label>"` with one of:
 
 | Label | When |
 |-------|------|
-| `patch` | bug fixes, docs, refactoring with identical behavior |
+| `patch` | bug fixes, refactoring with identical behavior |
 | `minor` | new features, new slices, non-breaking additions |
 | `major` | breaking changes to public APIs |
 
+If `gh pr edit` fails on the Projects-classic GraphQL deprecation, add the label with the REST API instead: `gh api -X POST repos/<owner>/<repo>/issues/<number>/labels -f "labels[]=<label>"`. Label **before** the PR's first `verify` run where you can — a run that starts before the label lands sees no label and fails, and needs re-running.
+
 ## Step 7 — Wait for CI to pass
 
-Before merging, poll the PR checks with `pull_request_read`:
+**Skip this step entirely for a documentation-only PR** — merge as soon as it is open. Its `verify` will be red for the deliberately absent version label, and that is the expected outcome, not a failure to chase.
+
+Otherwise, before merging, poll the PR checks with `pull_request_read`:
 
 - Use `method: get_check_runs` (and `get_job_logs` on any failure).
 - Merge **only** when all required checks are green. If a check fails, investigate, fix, and push again.
