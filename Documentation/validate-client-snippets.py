@@ -81,6 +81,10 @@ BODY_SNIPPETS = {
     "hosting/configuration/storage/in-memory": """
         ISiloBuilder siloBuilder = default!;
     """,
+    # OrderSummary is declared globally by concepts/designing-read-models/constructor-may-not-run.
+    "testing/read-models/scenario/strict-event-subscription": "",
+    "testing/read-models/scenario/substitutions": "",
+    "testing/read-models/scenario/strict-fidelity": "",
 }
 
 # Declaration-style snippets that need a namespace wrapper with aliases for Kernel-only
