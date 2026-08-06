@@ -792,6 +792,10 @@ internal sealed class ReadModels(
         // leaves the kernel. Sharing this between the one-shot query path and the observable (Watch) path keeps them
         // from diverging: observable queries used to skip the inference entirely and streamed a __subject-less
         // document back as ciphertext.
+        //
+        // The document handed in is never modified. On the observable path it belongs to the changeset the notifier
+        // pushed, not to this call, so stamping bookkeeping onto it would leave an internal marker on an object
+        // this method does not own.
         if (!schema.HasComplianceMetadata())
         {
             return readModel;
@@ -805,8 +809,13 @@ internal sealed class ReadModels(
             return readModel;
         }
 
-        readModel[WellKnownProperties.Subject] = resolvedSubject;
-        var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, readModel);
+        var stamped = (readModel.DeepClone() as JsonObject)!;
+        stamped[WellKnownProperties.Subject] = resolvedSubject;
+
+        // The strip stays even though the compliance manager releases onto a clone that never carried the marker:
+        // an implementation that hands back the instance it was given returns the stamped document, and the marker
+        // must never reach the client.
+        var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, stamped);
         released.Remove(WellKnownProperties.Subject);
         return released;
 
