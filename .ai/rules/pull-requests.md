@@ -30,11 +30,17 @@ Quick reminders:
 - Label the PR according to semantic versioning impact:
   - **major** — breaking changes to public APIs
   - **minor** — new features, new slices, non-breaking additions
-  - **patch** — bug fixes, docs, refactoring with identical behavior
+  - **patch** — bug fixes, refactoring with identical behavior
+
+### Documentation-only pull requests carry no label
+
+**If every changed file is documentation, do not label the PR at all** — not `patch`, not anything. No label means the Publish run skips every publish step, which is exactly right: a docs change should not cut a release. A `verify`-style job that fails because the label is missing is the expected outcome for this kind of PR, not a problem to fix.
 
 ## Quality Gates
 
-Before marking a PR ready for review:
+**A documentation-only pull request skips this section entirely.** Nothing it changes can break a build, a spec or a lint, so there is nothing to wait for: open it and merge it. Do not monitor its checks, do not wait for green, and do not treat a red `verify` from the deliberately absent version label as a failure. Verify the content instead — links resolve, anchors exist, every code example matches real source.
+
+Before marking any other PR ready for review:
 - `dotnet build` — zero errors, zero warnings
 - `dotnet test` — all specs pass
 - `yarn lint` — zero errors

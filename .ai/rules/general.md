@@ -144,7 +144,7 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 | Frontend | test | zero failures when frontend specs/behavior changed |
 | Frontend | build | zero errors |
 
-All gates pass before merging, opening a PR, or marking a slice complete. After pushing to a PR, monitor CI with the GitHub MCP tools (`pull_request_read` → `get_check_runs`, `get_job_logs`); investigate and fix any failure, then push again — the task is not done until CI is green or the only remaining failures are confirmed pre-existing flakes unrelated to the change.
+All gates pass before merging, opening a PR, or marking a slice complete — except for a **documentation-only** pull request, which waits for nothing and carries no version label (see [pull-requests.md](./pull-requests.md)). After pushing to a PR, monitor CI with the GitHub MCP tools (`pull_request_read` → `get_check_runs`, `get_job_logs`); investigate and fix any failure, then push again — the task is not done until CI is green or the only remaining failures are confirmed pre-existing flakes unrelated to the change.
 
 ---
 
