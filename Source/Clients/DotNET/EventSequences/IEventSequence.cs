@@ -171,6 +171,18 @@ public interface IEventSequence
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default);
 
     /// <summary>
+    /// Revise a specific event in the event sequence with new content.
+    /// </summary>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> of the event to revise.</param>
+    /// <param name="event">The event holding the revised content.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    /// <remarks>
+    /// The type of <paramref name="event"/> has to be the same as the original event at the sequence number.
+    /// Its generational information is taken into account when revising.
+    /// </remarks>
+    Task Revise(EventSequenceNumber sequenceNumber, object @event);
+
+    /// <summary>
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>

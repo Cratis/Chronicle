@@ -443,6 +443,31 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task Revise(EventSequenceNumber sequenceNumber, object @event)
+    {
+        var eventClrType = @event.GetType();
+        ThrowIfUnknownEventType(eventTypes, eventClrType);
+
+        var eventType = eventTypes.GetEventTypeFor(eventClrType);
+        var content = await eventSerializer.Serialize(@event);
+        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var identity = identityProvider.GetCurrent();
+
+        await _servicesAccessor.Services.EventSequences.Revise(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = sequenceNumber,
+            EventType = eventType.ToContract(),
+            Content = content.ToJsonString(),
+            CorrelationId = correlationIdAccessor.Current,
+            Causation = causationChain,
+            CausedBy = identity.ToContract()
+        });
+    }
+
+    /// <inheritdoc/>
     public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
     {
         var causationChain = causationManager.GetCurrentChain().ToContract();
