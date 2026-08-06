@@ -150,7 +150,7 @@ static class ChildrenDefinitionExtensions
         var discoveredParentKey = explicitParentKey is null ? DiscoverEventPropertyForParentId(eventType, parentModelType, key, namingPolicy) : null;
         var parentKey = explicitParentKey ?? discoveredParentKey ?? WellKnownExpressions.EventSourceId;
 
-        var childType = GetChildType(memberType);
+        var childType = ResolveConcreteChildType(GetChildType(memberType));
         var identifiedBy = identifiedByProperty?.GetValue(attr) as string;
         if (string.IsNullOrEmpty(identifiedBy))
         {
@@ -199,7 +199,11 @@ static class ChildrenDefinitionExtensions
 
         if (childType is not null)
         {
+            AddDerivedTypeDiscriminatorMapping(childrenDef.From, getOrCreateEventType, eventType, childType);
+
             // For records, process constructor parameters to pick up attributes
+            // (childType is resolved to the concrete DerivedType implementation when unambiguous,
+            // above, so [SetFrom]/[SetValue]/[SetFromContext] declared on it are discovered here too)
             var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .OrderByDescending(c => c.GetParameters().Length)
                 .FirstOrDefault();
@@ -687,6 +691,60 @@ static class ChildrenDefinitionExtensions
             .SelectMany(property => property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>().Select(pair => pair.EventType));
 
         return fromConstructor.Concat(fromProperties);
+    }
+
+    /// <summary>
+    /// Resolves a children collection's declared item type to its single concrete <see cref="DerivedTypeAttribute"/>
+    /// implementation, when it is a <see cref="DerivedTypeAttribute"/> base (an interface or abstract class) with
+    /// exactly one registered implementation. Reflection-based discovery (constructor parameters for
+    /// <c>[SetFrom]</c>/<c>[SetValue]</c>/<c>[SetFromContext]</c>, and the <c>[Key]</c> property for identity)
+    /// finds nothing on an interface or abstract type, so without this resolution a polymorphic children
+    /// collection silently loses those mappings. When the base type has zero or more than one implementation,
+    /// the concrete type for this collection cannot be inferred safely, so the declared type is kept as-is.
+    /// </summary>
+    /// <param name="childType">The declared item type of the children collection.</param>
+    /// <returns>The concrete implementation when unambiguous; otherwise <paramref name="childType"/> unchanged.</returns>
+    static Type? ResolveConcreteChildType(Type? childType)
+    {
+        if (childType is null || (!childType.IsInterface && !childType.IsAbstract))
+        {
+            return childType;
+        }
+
+        var implementations = Types.Types.Instance.All
+            .Where(type => !type.IsAbstract && !type.IsInterface &&
+                           childType.IsAssignableFrom(type) &&
+                           Attribute.IsDefined(type, typeof(DerivedTypeAttribute)))
+            .ToArray();
+
+        return implementations.Length == 1 ? implementations[0] : childType;
+    }
+
+    /// <summary>
+    /// Stamps a constant discriminator mapping for a children collection whose resolved item type is
+    /// adorned with <see cref="DerivedTypeAttribute"/>. AutoMap only ever wires properties that exist by
+    /// name on both the event and the child type, so it can never discover <c>_derivedTypeId</c> — that
+    /// property is a serialization-time artifact added by <see cref="DerivedTypeJsonConverter{T}"/>, not a
+    /// real member on the type. Without this, a newly created child of a polymorphic collection is
+    /// persisted without its discriminator and cannot be resolved back to its concrete type on read.
+    /// </summary>
+    /// <param name="targetFrom">The From dictionary for the children definition to add the mapping to.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <param name="eventType">The event type creating the child.</param>
+    /// <param name="childType">The resolved item type of the children collection.</param>
+    static void AddDerivedTypeDiscriminatorMapping(
+        IDictionary<EventType, FromDefinition> targetFrom,
+        Func<Type, EventType> getOrCreateEventType,
+        Type eventType,
+        Type childType)
+    {
+        var derivedTypeAttribute = childType.GetCustomAttribute<DerivedTypeAttribute>();
+        if (derivedTypeAttribute is null)
+        {
+            return;
+        }
+
+        targetFrom.AddSetValueMapping(getOrCreateEventType, eventType, DerivedTypeJsonConverter<object>.DerivedTypeIdProperty, derivedTypeAttribute.Identifier);
     }
 
     static Type? GetChildType(Type propertyType)
