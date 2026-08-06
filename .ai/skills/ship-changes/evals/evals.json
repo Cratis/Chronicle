@@ -23,6 +23,18 @@
         "PR is labeled patch for a bug fix",
         "CI is verified green before the merge"
       ]
+    },
+    {
+      "id": 3,
+      "prompt": "Ship this fix for the MongoDB sink dropping dictionary updates. There is an open issue for it.",
+      "expected_output": "Search issues to find the real number, reference it as (#N) in the PR bullet without any closing keyword, merge after CI is green, then close the issue with a comment pointing at the PR and verify the state is CLOSED before cleaning up the branch.",
+      "files": [],
+      "assertions": [
+        "Searches GitHub issues for the real number instead of inventing one",
+        "PR body references the issue as (#N) and contains no Closes/Fixes keyword",
+        "Closes the issue after the merge with a comment referencing the PR",
+        "Verifies the issue state is CLOSED rather than assuming the close landed"
+      ]
     }
   ]
 }
