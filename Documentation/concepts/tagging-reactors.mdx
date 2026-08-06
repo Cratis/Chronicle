@@ -5,7 +5,7 @@ Tags provide a way to organize and categorize your reactors for better discovera
 `[Tag]` and `[Tags]` label the reactor itself. They do not filter which appended events the reactor handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
 
 :::note[Client coverage]
-Tagging a reactor with `[Tag]`/`[Tags]` is currently C#-only — none of the other clients' reactor registration mechanisms (Kotlin's `@Reactor`, Elixir's `use Chronicle.Reactors.Reactor`, TypeScript's `reactor()`) expose a way to attach descriptive tags to the reactor itself.
+Kotlin and Java tag a reactor with `@Tag`, which is repeatable and takes any number of tags. Elixir's `use Chronicle.Reactors.Reactor` and TypeScript's `reactor()` expose no way to attach descriptive tags to the reactor itself.
 :::
 
 ## Adding Tags

@@ -37,7 +37,7 @@ an implicit conversion from `EventSourceId`, so mixing the two is painless:
 
 <ChronicleClientTabs snippet="concepts/subject/explicit" />
 
-`Subject` also converts implicitly from `string` and `Guid`. Kotlin, Java, and TypeScript don't currently expose a `subject` append option at all — only C# and Elixir do.
+`Subject` also converts implicitly from `string` and `Guid`. Kotlin and Java pass a subject through `AppendOptions`. TypeScript doesn't currently expose a `subject` append option at all.
 
 ## Implicit subject with `[Subject]`
 
@@ -47,7 +47,7 @@ explicit subject is provided:
 
 <ChronicleClientTabs snippet="concepts/subject/implicit-with-attribute" />
 
-An explicit `subject` argument always takes precedence over a `[Subject]` property. This declarative form is C#-only — Elixir requires passing `subject:` explicitly on every append (shown above); Kotlin, Java, and TypeScript don't support a subject at all yet.
+An explicit `subject` argument always takes precedence over a `[Subject]` property. This declarative form is C#-only — Elixir, Kotlin, and Java pass the subject explicitly on every append (shown above), and TypeScript doesn't support a subject at all yet.
 
 ## Compliance
 

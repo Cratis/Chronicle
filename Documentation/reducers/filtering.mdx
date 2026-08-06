@@ -15,7 +15,7 @@ These attributes correlate directly to the metadata you provide when appending a
 <ChronicleClientTabs snippet="reducers/filtering/metadata-example" />
 
 :::note[Client coverage]
-Observer-level filtering by tag, event source type, or event stream type is currently C#-only. Kotlin's `@Reducer`, Elixir's `use Chronicle.Reducers.Reducer`, and TypeScript's `reducer()` all register a reducer without a way to attach these filters.
+Kotlin and Java attach the same filters with `@FilterEventsByTag`, `@EventSourceType`, and `@EventStreamType` on the reducer class. Elixir's `use Chronicle.Reducers.Reducer` and TypeScript's `reducer()` register a reducer without a way to attach these filters.
 :::
 
 ## Filter by tag
