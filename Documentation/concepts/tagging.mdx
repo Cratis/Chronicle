@@ -3,7 +3,7 @@
 Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. By applying the `[Tag]` or `[Tags]` attribute, you can assign one or more tags that describe the purpose, domain, or context of your artifacts.
 
 :::note[Client coverage]
-Static tags (the `[Tag]`/`[Tags]` attribute, on events, observers, or read models) and reading tags back from `EventContext` are currently C#-only. Dynamic tags supplied at append time are also supported in Elixir (shown below) — Kotlin, Java, and TypeScript don't expose a `tags` append option at all.
+Static tags on **events** or **read models** are currently C#-only. Kotlin and Java tag an **observer** with `@Tag`, supply dynamic tags at append time through `AppendOptions`, and read tags back from `EventContext` — as does Elixir for dynamic tags. TypeScript doesn't expose a `tags` append option at all.
 :::
 
 > **Note**: Both `[Tag]` and `[Tags]` attributes can be used interchangeably. Use whichever feels more natural, or mix them - all tags will be merged together.

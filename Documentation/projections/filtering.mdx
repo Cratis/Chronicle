@@ -17,7 +17,7 @@ This projection receives every `OrderPlaced` and `OrderShipped` event regardless
 <ChronicleClientTabs snippet="projections/filtering/tagging" />
 
 :::note[Client coverage]
-Labeling a projection with `[Tag]`/`[Tags]`, and metadata-based observer filtering with `[FilterEventsByTag]`/`[EventSourceType]`/`[EventStreamType]` on a reactor or reducer, are currently C#-only. Kotlin, Elixir, and TypeScript have no equivalent tag or filter mechanism on their projection, reactor, or reducer registration APIs.
+Labeling a **projection** is currently C#-only. Kotlin and Java have the equivalents for a **reactor or reducer** — `@Tag`, `@FilterEventsByTag`, `@EventSourceType`, and `@EventStreamType` — but nothing on projection registration. Elixir and TypeScript have no tag or filter mechanism on any of the three.
 :::
 
 ## Combining a projection with metadata-based filtering

@@ -15,7 +15,7 @@ These attributes correlate directly to the metadata you provide when appending a
 <ChronicleClientTabs snippet="reactors/filtering/metadata-example" />
 
 :::note[Client coverage]
-Observer-level filtering by tag, event source type, or event stream type is currently C#-only. Kotlin's `@Reactor`, Elixir's `use Chronicle.Reactors.Reactor`, and TypeScript's `reactor()` all register a reactor without a way to attach these filters.
+Kotlin and Java attach the same filters with `@FilterEventsByTag`, `@EventSourceType`, and `@EventStreamType` on the reactor class. Elixir's `use Chronicle.Reactors.Reactor` and TypeScript's `reactor()` register a reactor without a way to attach these filters.
 :::
 
 ## Filter by tag
