@@ -24,6 +24,18 @@ An optional name can be provided to identify the constraint. When not provided, 
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/constraint-name" />
 
+## Releasing a constraint
+
+Left alone the constraint says "at most one, ever". Most lifecycles repeat — a shift is worked and ended, a loan is taken and returned, a subscription is activated and cancelled — and for those, "ever" refuses the second legitimate cycle and there is nothing the caller can do about it.
+
+Call `.RemovedWith<T>()` to name the event that ends a cycle. A covered event then violates the constraint only when it comes **after** the most recent removal event on that event source, so the next cycle is free to start:
+
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/releasing" />
+
+The removal applies to the constraint declared immediately before it, and it is per event source — one employee ending their shift opens their own next cycle and nobody else's. Declaring several event types under one name makes them a single constraint, and a single constraint has one removal event.
+
+The [model-bound form](../model-bound/unique-event-type) expresses the same thing with `[RemoveConstraint]` on the event that ends the cycle.
+
 ## Mutually exclusive event types
 
 Declare several event types under the **same constraint name** and they become one constraint: at most one event drawn from that set is allowed per event source. Use it when an event source has more than one terminal outcome and the outcomes exclude each other — cancelled *or* completed, merged *or* erased, approved *or* permanently rejected.
