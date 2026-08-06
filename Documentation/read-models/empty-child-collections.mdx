@@ -44,6 +44,10 @@ The declaration is the decision point. There is no option to set and nothing to 
 
 The rule is applied when the instance is materialized, not when it is stored, so changing a declaration takes effect for instances that were written long before you changed it. Nothing needs replaying.
 
+:::caution
+A normalizer in the record — `IEnumerable<LineItem> Lines { get; init; } = Lines ?? [];` — looks like the obvious in-language fix, and it is not one. The MongoDB driver materializes a record without running its constructor whenever the stored document omits a member, which is exactly this case, so the normalizer never runs. [Designing read models](../concepts/designing-read-models#the-constructor-may-not-run) explains why the record body is the wrong place for it.
+:::
+
 ## Initial values do not reach a child collection
 
 [Initial values](../projections/declarative/initial-values) look like the place to say "this collection starts empty", and for a children collection they do nothing. The initial state is applied with every children path removed — the same exclusion, for the same replay reason — so an initial `Lines = []` is dropped before it reaches the sink.
