@@ -249,13 +249,20 @@ public class EventStoreSubscriptionsManager(
             var subscribed = await observer.IsSubscribed();
             if (subscribed)
             {
-                // Already subscribed - no need to unsubscribe and re-subscribe
-                // This eliminates the event loss gap that occurs every 60 seconds
-                logger.SubscriptionAlreadyActive(definition.Identifier, namespaceName);
-                return;
+                if (await IsSubscribedToCurrentEventTypes(observer, definition))
+                {
+                    // Already subscribed with the current event types - no need to unsubscribe and re-subscribe
+                    // This eliminates the event loss gap that occurs every 60 seconds
+                    logger.SubscriptionAlreadyActive(definition.Identifier, namespaceName);
+                    return;
+                }
+
+                // Subscribed, but the definition's event types have changed since - re-subscribing overwrites
+                // the observer's event type list in place, so there is no unsubscribe/gap in between.
+                logger.SubscriptionEventTypesChanged(definition.Identifier, namespaceName);
             }
 
-            // Not subscribed yet, subscribe now
+            // Not subscribed yet, or subscribed with a stale event type list - (re)subscribe now
             logger.Subscribing(definition.Identifier, namespaceName);
             await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
                 ObserverType.External,
@@ -268,6 +275,12 @@ public class EventStoreSubscriptionsManager(
             logger.ErrorRefreshingSubscription(ex, definition.Identifier, namespaceName);
             throw;
         }
+    }
+
+    async Task<bool> IsSubscribedToCurrentEventTypes(IObserver observer, EventStoreSubscriptionDefinition definition)
+    {
+        var subscribedEventTypeIds = (await observer.GetEventTypes()).Select(eventType => eventType.Id).ToHashSet();
+        return subscribedEventTypeIds.SetEquals(definition.EventTypes.Select(eventType => eventType.Id));
     }
 
     async Task<bool> CheckSubscriptionForNamespace(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
