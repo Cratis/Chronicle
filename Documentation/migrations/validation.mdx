@@ -3,7 +3,7 @@
 Chronicle enforces rules about how event type generations and their migration chains must be structured. These rules exist to keep your event history consistent and to prevent silent data loss caused by incomplete migration definitions.
 
 :::note[Client coverage]
-These validation rules are enforced by the kernel regardless of client. Elixir has a real `MigrationBuilder.default_value/3` for the "default values for new properties" example below — Kotlin and Java have no migration API at all (see [Event Type Migrations](../concepts/event-type-migrations)). The `EnableEventTypeGenerationValidation` toggle further down is a .NET-hosting-specific configuration option with no equivalent found in the other clients.
+These validation rules are enforced by the kernel regardless of client. Elixir has a real `MigrationBuilder.default_value/3` for the "default values for new properties" example below, and Kotlin/Java have the equivalent `EventTypeMigrationBuilder.defaultValue` (see [Event Type Migrations](../concepts/event-type-migrations)). The `EnableEventTypeGenerationValidation` toggle further down is a .NET-hosting-specific configuration option with no equivalent found in the other clients.
 :::
 
 ## The rules

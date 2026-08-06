@@ -7,7 +7,7 @@ uid: implicit-subscriptions
 Chronicle supports **implicit subscriptions** — automatic routing of events from a source event store's outbox to the correct inbox sequence, driven entirely by `[EventStore]` attributes on event types.
 
 :::note[Client coverage]
-This entire page is C#-only. It depends on the `[EventStore]` attribute (already confirmed absent from Kotlin, Elixir, and TypeScript throughout this docs effort) plus .NET-specific packaging and build mechanics (NuGet packages, `AssemblyInfo.cs`/`GlobalUsings.cs`/`<AssemblyAttribute>` in a `.csproj`) that have no equivalent in the other ecosystems. Use [explicit subscriptions](./explicit-subscriptions) instead for Kotlin, Elixir, or TypeScript — Elixir and TypeScript support them; Kotlin/Java don't have subscription support at all yet.
+This entire page is C#-only. It depends on the `[EventStore]` attribute (already confirmed absent from Kotlin, Elixir, and TypeScript throughout this docs effort) plus .NET-specific packaging and build mechanics (NuGet packages, `AssemblyInfo.cs`/`GlobalUsings.cs`/`<AssemblyAttribute>` in a `.csproj`) that have no equivalent in the other ecosystems. Use [explicit subscriptions](./explicit-subscriptions) instead for Kotlin, Elixir, or TypeScript — all three support them.
 :::
 
 Implicit subscriptions are ideal when:

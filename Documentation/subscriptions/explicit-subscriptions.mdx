@@ -17,7 +17,7 @@ Explicit subscriptions are ideal when:
 - Events come from a legacy or external system
 
 :::note[Client coverage]
-Explicit subscriptions are real in Elixir (`Chronicle.subscribe_to_event_store/3,4`, `Chronicle.unsubscribe_from_event_store/1,2`) and TypeScript (`store.subscriptions.subscribe`/`.unsubscribe`) too — both map closely onto C#'s `Subscriptions` API. Kotlin and Java have no event-store-subscription support at all yet — nothing in the Kotlin SDK source corresponds to this API. The host-builder-specific registration patterns further down this page (ASP.NET Core startup) aren't ported — see each client's own startup/registration conventions for the equivalent.
+Explicit subscriptions are real in Elixir (`Chronicle.subscribe_to_event_store/3,4`, `Chronicle.unsubscribe_from_event_store/1,2`), TypeScript (`store.subscriptions.subscribe`/`.unsubscribe`), and Kotlin/Java (`store.eventStoreSubscriptions.subscribe`) too — all map closely onto C#'s `Subscriptions` API. The host-builder-specific registration patterns further down this page (ASP.NET Core startup) aren't ported — see each client's own startup/registration conventions for the equivalent.
 :::
 
 ## Setting Up an Explicit Subscription
