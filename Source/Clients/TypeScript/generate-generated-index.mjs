@@ -13,13 +13,14 @@ import { parseSync } from '@swc/core';
 
 const generatedModules = [
     'clients',
-    'cratis_chronicle_contracts',
     'events',
     'events_constraints',
     'eventsequences',
+    'eventstores',
     'host',
     'identities',
     'jobs',
+    'namespaces',
     'observation',
     'observation_reactors',
     'observation_reducers',

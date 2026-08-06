@@ -1,14 +1,22 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.Jobs;
-import "google/protobuf/empty.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
-message DeleteJob {
+message AllJobsRequest {
    string EventStore = 1;
    string Namespace = 2;
-   .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
-message GetJobRequest {
+message CommandResult {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+}
+message DateTimeOffset {
+}
+message DeleteJobRequest {
    string EventStore = 1;
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -17,31 +25,6 @@ message GetJobStepsRequest {
    string EventStore = 1;
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-}
-message GetJobsRequest {
-   string EventStore = 1;
-   string Namespace = 2;
-}
-message IEnumerable_Job {
-   repeated Job items = 1;
-}
-message IEnumerable_JobStep {
-   repeated JobStep items = 1;
-}
-message Job {
-   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   string Details = 2;
-   string Type = 3;
-   JobStatus Status = 4;
-   SerializableDateTimeOffset Created = 5;
-   repeated JobStatusChanged StatusChanges = 6;
-   JobProgress Progress = 7;
-}
-enum JobError {
-   ZERO = 0; // proto3 requires a zero value as the first item (it can be named anything)
-   NotFound = 1;
-   TypeIsNotAJobStateType = 2;
-   TypeIsNotAssociatedWithAJobType = 3;
 }
 message JobProgress {
    int32 TotalSteps = 1;
@@ -70,20 +53,12 @@ message JobStatusChanged {
    repeated string ExceptionMessages = 3;
    string ExceptionStackTrace = 4;
 }
-message JobStep {
-   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   string Type = 2;
-   string Name = 3;
-   JobStepStatus Status = 4;
-   repeated JobStepStatusChanged StatusChanges = 5;
-   JobStepProgress Progress = 6;
-}
 message JobStepProgress {
    int32 Percentage = 1;
    string Message = 2;
 }
 enum JobStepStatus {
-   Unknown = 0;
+   JOB_STEP_STATUS_Unknown = 0;
    Scheduled = 1;
    JOB_STEP_STATUS_Running = 2;
    JOB_STEP_STATUS_CompletedSuccessfully = 3;
@@ -98,11 +73,40 @@ message JobStepStatusChanged {
    repeated string ExceptionMessages = 3;
    string ExceptionStackTrace = 4;
 }
-message OneOf_Job_JobError {
-   Job Value0 = 1;
-   JobError Value1 = 2;
+message JobStepSummaryResponse {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string Type = 2;
+   string Name = 3;
+   JobStepStatus Status = 4;
+   repeated JobStepStatusChanged StatusChanges = 5;
+   JobStepProgress Progress = 6;
 }
-message ResumeJob {
+message JobSummaryResponse {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string Details = 2;
+   string Type = 3;
+   JobStatus Status = 4;
+   DateTimeOffset Created = 5;
+   repeated JobStatusChanged StatusChanges = 6;
+   JobProgress Progress = 7;
+}
+message QueryResult_IEnumerable_JobStepSummaryResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated JobStepSummaryResponse Data = 6;
+}
+message QueryResult_IEnumerable_JobSummaryResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated JobSummaryResponse Data = 6;
+}
+message ResumeJobRequest {
    string EventStore = 1;
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -111,17 +115,26 @@ message ResumeJob {
 message SerializableDateTimeOffset {
    string Value = 1;
 }
-message StopJob {
+message StopJobRequest {
    string EventStore = 1;
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   VALIDATION_RESULT_SEVERITY_Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
 service Jobs {
-   rpc Delete (DeleteJob) returns (.google.protobuf.Empty);
-   rpc GetJob (GetJobRequest) returns (OneOf_Job_JobError);
-   rpc GetJobs (GetJobsRequest) returns (IEnumerable_Job);
-   rpc GetJobSteps (GetJobStepsRequest) returns (IEnumerable_JobStep);
-   rpc ObserveJobs (GetJobsRequest) returns (stream IEnumerable_Job);
-   rpc Resume (ResumeJob) returns (.google.protobuf.Empty);
-   rpc Stop (StopJob) returns (.google.protobuf.Empty);
+   rpc AllJobs (AllJobsRequest) returns (stream QueryResult_IEnumerable_JobSummaryResponse);
+   rpc DeleteJob (DeleteJobRequest) returns (CommandResult);
+   rpc GetJobSteps (GetJobStepsRequest) returns (QueryResult_IEnumerable_JobStepSummaryResponse);
+   rpc ResumeJob (ResumeJobRequest) returns (CommandResult);
+   rpc StopJob (StopJobRequest) returns (CommandResult);
 }

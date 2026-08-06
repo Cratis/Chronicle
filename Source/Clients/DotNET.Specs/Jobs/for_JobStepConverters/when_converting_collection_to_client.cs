@@ -5,13 +5,13 @@ namespace Cratis.Chronicle.Jobs.for_JobStepConverters;
 
 public class when_converting_collection_to_client : Specification
 {
-    IEnumerable<Contracts.Jobs.JobStep> _contracts;
+    IEnumerable<Contracts.Jobs.JobStepSummaryResponse> _contracts;
     IEnumerable<JobStep> _result;
 
     void Establish() =>
         _contracts =
         [
-            new Contracts.Jobs.JobStep
+            new Contracts.Jobs.JobStepSummaryResponse
             {
                 Id = Guid.NewGuid(),
                 Type = "StepTypeA",
@@ -19,7 +19,7 @@ public class when_converting_collection_to_client : Specification
                 StatusChanges = [],
                 Progress = new Contracts.Jobs.JobStepProgress()
             },
-            new Contracts.Jobs.JobStep
+            new Contracts.Jobs.JobStepSummaryResponse
             {
                 Id = Guid.NewGuid(),
                 Type = "StepTypeB",

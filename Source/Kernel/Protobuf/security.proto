@@ -3,85 +3,118 @@ package Cratis.Chronicle.Contracts.Security;
 import "google/protobuf/empty.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
-message AddApplication {
-   string Id = 1;
+message AddApplicationRequest {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string ClientId = 2;
    string ClientSecret = 3;
 }
-message AddUser {
-   .bcl.Guid UserId = 1;
+message AddUserRequest {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Username = 2;
    string Email = 3;
    string Password = 4;
 }
-message Application {
-   .bcl.Guid Id = 1;
+message AdminPasswordStatusResponse {
+   bool IsRequired = 1;
+   .bcl.Guid AdminUserId = 2;
+}
+message ApplicationResponse {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string ClientId = 2;
    bool IsActive = 3;
-   SerializableDateTimeOffset CreatedAt = 4;
-   SerializableDateTimeOffset LastModifiedAt = 5;
+   DateTimeOffset CreatedAt = 4;
+   DateTimeOffset LastModifiedAt = 5;
 }
-message ChangeApplicationSecret {
-   .bcl.Guid Id = 1;
+message ChangeApplicationSecretRequest {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string ClientSecret = 2;
 }
-message ChangeUserPassword {
-   .bcl.Guid UserId = 1;
+message ChangeUserPasswordRequest {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string OldPassword = 2;
    string Password = 3;
    string ConfirmedPassword = 4;
 }
-message IList_Application {
-   repeated Application items = 1;
+message CommandResult {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
 }
-message IList_User {
-   repeated User items = 1;
+message DateTimeOffset {
 }
-message InitialAdminPasswordSetupStatus {
-   bool IsRequired = 1;
-   .bcl.Guid AdminUserId = 2;
+message QueryResult_AdminPasswordStatusResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   AdminPasswordStatusResponse Data = 6;
 }
-message RemoveApplication {
-   .bcl.Guid Id = 1;
+message QueryResult_IEnumerable_ApplicationResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated ApplicationResponse Data = 6;
 }
-message RemoveUser {
-   .bcl.Guid UserId = 1;
+message QueryResult_IEnumerable_UserResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated UserResponse Data = 6;
 }
-message RequirePasswordChange {
-   .bcl.Guid UserId = 1;
+message RemoveApplicationRequest {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
-// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
-message SerializableDateTimeOffset {
-   string Value = 1;
+message RemoveUserRequest {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
-message SetInitialAdminPassword {
-   .bcl.Guid UserId = 1;
+message RequirePasswordChangeRequest {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+message SetInitialAdminPasswordRequest {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Password = 2;
    string ConfirmedPassword = 3;
 }
-message User {
-   .bcl.Guid Id = 1;
+message UserResponse {
+   .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Username = 2;
    string Email = 3;
    bool IsActive = 4;
-   SerializableDateTimeOffset CreatedAt = 5;
-   SerializableDateTimeOffset LastModifiedAt = 6;
+   DateTimeOffset CreatedAt = 5;
+   DateTimeOffset LastModifiedAt = 6;
    bool HasLoggedIn = 7;
 }
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
 service Applications {
-   rpc Add (AddApplication) returns (.google.protobuf.Empty);
-   rpc ChangeSecret (ChangeApplicationSecret) returns (.google.protobuf.Empty);
-   rpc GetAll (.google.protobuf.Empty) returns (IList_Application);
-   rpc ObserveAll (.google.protobuf.Empty) returns (stream IList_Application);
-   rpc Remove (RemoveApplication) returns (.google.protobuf.Empty);
+   rpc AddApplication (AddApplicationRequest) returns (CommandResult);
+   rpc AllApplications (.google.protobuf.Empty) returns (stream QueryResult_IEnumerable_ApplicationResponse);
+   rpc ChangeApplicationSecret (ChangeApplicationSecretRequest) returns (CommandResult);
+   rpc RemoveApplication (RemoveApplicationRequest) returns (CommandResult);
 }
 service Users {
-   rpc Add (AddUser) returns (.google.protobuf.Empty);
-   rpc ChangePassword (ChangeUserPassword) returns (.google.protobuf.Empty);
-   rpc GetAll (.google.protobuf.Empty) returns (IList_User);
-   rpc GetInitialAdminPasswordSetupStatus (.google.protobuf.Empty) returns (InitialAdminPasswordSetupStatus);
-   rpc ObserveAll (.google.protobuf.Empty) returns (stream IList_User);
-   rpc Remove (RemoveUser) returns (.google.protobuf.Empty);
-   rpc RequirePasswordChange (.Cratis.Chronicle.Contracts.Security.RequirePasswordChange) returns (.google.protobuf.Empty);
-   rpc SetInitialAdminPassword (.Cratis.Chronicle.Contracts.Security.SetInitialAdminPassword) returns (.google.protobuf.Empty);
+   rpc AddUser (AddUserRequest) returns (CommandResult);
+   rpc AllUsers (.google.protobuf.Empty) returns (stream QueryResult_IEnumerable_UserResponse);
+   rpc ChangeUserPassword (ChangeUserPasswordRequest) returns (CommandResult);
+   rpc GetStatus (.google.protobuf.Empty) returns (QueryResult_AdminPasswordStatusResponse);
+   rpc RemoveUser (RemoveUserRequest) returns (CommandResult);
+   rpc RequirePasswordChange (RequirePasswordChangeRequest) returns (CommandResult);
+   rpc SetInitialAdminPassword (SetInitialAdminPasswordRequest) returns (CommandResult);
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Jobs;
 
 namespace Cratis.Chronicle.Api.Jobs;
@@ -34,7 +35,7 @@ public class JobCommands : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        _jobs.Resume(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
+        _jobs.ResumeJob(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId }).EnsureSuccess();
 
     /// <summary>
     /// Stop a specific job.
@@ -48,7 +49,7 @@ public class JobCommands : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        _jobs.Stop(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
+        _jobs.StopJob(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId }).EnsureSuccess();
 
     /// <summary>
     /// Delete a specific job.
@@ -62,5 +63,5 @@ public class JobCommands : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] Guid jobId) =>
-        _jobs.Delete(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId });
+        _jobs.DeleteJob(new() { EventStore = eventStore, Namespace = @namespace, JobId = jobId }).EnsureSuccess();
 }
