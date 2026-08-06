@@ -28,7 +28,11 @@ public class UniqueEventTypeConstraintValidator(
 
         // Every covered event type is checked, not just the one being appended: the constraint allows at most
         // one event from the set, so an event source that already has a sibling type blocks this one too.
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(definition.EventTypeIds, context.EventSourceId, scopeKey);
+        //
+        // The whole definition goes to storage rather than only its covered event types, because the answer also
+        // depends on the removal event: a covered event that precedes the most recent removal belongs to a closed
+        // cycle and no longer blocks anything.
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(definition, context.EventSourceId, scopeKey);
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()

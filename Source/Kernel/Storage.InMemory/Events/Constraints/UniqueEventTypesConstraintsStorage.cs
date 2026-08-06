@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
 
@@ -21,15 +22,24 @@ public class UniqueEventTypesConstraintsStorage(
 {
     /// <inheritdoc/>
     public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(
-        IEnumerable<EventTypeId> eventTypeIds,
+        UniqueEventTypeConstraintDefinition definition,
         EventSourceId eventSourceId,
         string scopeKey = "")
     {
-        var coveredEventTypeIds = eventTypeIds.ToHashSet();
-        var existing = eventSequenceStorage.Events
-            .FirstOrDefault(_ =>
-                coveredEventTypeIds.Contains(_.Context.EventType.Id) &&
-                _.Context.EventSourceId == eventSourceId);
+        var coveredEventTypeIds = definition.EventTypeIds.ToHashSet();
+        var forEventSource = eventSequenceStorage.Events
+            .Where(_ => _.Context.EventSourceId == eventSourceId)
+            .ToArray();
+
+        var latestRemoval = GetLatestRemoval(definition, forEventSource);
+
+        // Ordered so the sequence number reported back is the covered event that actually holds the cycle, rather
+        // than whichever one the sequence happened to yield first.
+        var existing = forEventSource
+            .Where(_ => coveredEventTypeIds.Contains(_.Context.EventType.Id) &&
+                        (latestRemoval is null || _.Context.SequenceNumber.Value > latestRemoval.Value))
+            .OrderBy(_ => _.Context.SequenceNumber.Value)
+            .FirstOrDefault();
 
         if (existing is not null)
         {
@@ -37,5 +47,20 @@ public class UniqueEventTypesConstraintsStorage(
         }
 
         return Task.FromResult((true, EventSequenceNumber.Unavailable));
+    }
+
+    static EventSequenceNumber? GetLatestRemoval(UniqueEventTypeConstraintDefinition definition, IEnumerable<AppendedEvent> forEventSource)
+    {
+        if (definition.RemovedWith is null)
+        {
+            return null;
+        }
+
+        var removals = forEventSource
+            .Where(_ => _.Context.EventType.Id == definition.RemovedWith)
+            .Select(_ => _.Context.SequenceNumber.Value)
+            .ToArray();
+
+        return removals.Length == 0 ? null : removals.Max();
     }
 }
