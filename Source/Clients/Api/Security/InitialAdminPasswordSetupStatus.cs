@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Authorization;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Chronicle.Api.Security;
@@ -24,7 +25,7 @@ public record InitialAdminPasswordSetupStatus(
     /// <returns>The <see cref="InitialAdminPasswordSetupStatus"/>.</returns>
     public static async Task<InitialAdminPasswordSetupStatus> GetStatus(IUsers users)
     {
-        var status = await users.GetInitialAdminPasswordSetupStatus();
+        var status = await users.GetStatus().EnsureSuccess();
         return new InitialAdminPasswordSetupStatus(status.IsRequired, status.AdminUserId);
     }
 }

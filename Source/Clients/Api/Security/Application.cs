@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Reactive;
 
@@ -30,6 +31,6 @@ public record Application(
     /// <returns>An observable for observing a collection of applications.</returns>
     public static ISubject<IEnumerable<Application>> AllApplications(IApplications applications) =>
         applications.InvokeAndWrapWithTransformSubject(
-            token => applications.ObserveAll(token),
-            response => response.ToApi());
+            token => applications.AllApplications(token),
+            response => response.EnsureSuccess().ToApi());
 }

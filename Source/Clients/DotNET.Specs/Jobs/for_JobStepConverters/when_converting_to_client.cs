@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Jobs.for_JobStepConverters;
 
 public class when_converting_to_client : Specification
 {
-    Contracts.Jobs.JobStep _contract;
+    Contracts.Jobs.JobStepSummaryResponse _contract;
     JobStep _result;
     Guid _stepId;
 
     void Establish()
     {
         _stepId = Guid.NewGuid();
-        _contract = new Contracts.Jobs.JobStep
+        _contract = new Contracts.Jobs.JobStepSummaryResponse
         {
             Id = _stepId,
             Type = "MyJobStepType",

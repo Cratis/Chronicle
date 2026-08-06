@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Authorization;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Chronicle.Api.Security;
@@ -30,5 +31,5 @@ public record SetInitialAdminPassword(
             UserId = UserId,
             Password = Password,
             ConfirmedPassword = ConfirmedPassword
-        });
+        }).EnsureSuccess();
 }

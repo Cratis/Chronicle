@@ -23,12 +23,13 @@ public class and_compiling_the_generated_code : given.a_generated_service_interf
         Directory.CreateDirectory(outputDir);
         _generatedCode = _generator.Generate(_serviceDefinition, outputDir);
 
-        // Ensure protobuf-net.Grpc assemblies appear in AppDomain before enumerating loaded assemblies
-        // for Roslyn references — they may not be loaded yet since no protobuf-net type has been
-        // referenced in this test process up to this point.
+        // Ensure protobuf-net.Grpc and Contracts assemblies appear in AppDomain before enumerating
+        // loaded assemblies for Roslyn references — they may not be loaded yet since no type from
+        // them has been referenced in this test process up to this point.
         _ = typeof(ProtoBuf.ProtoContractAttribute).Assembly;
         _ = typeof(ProtoBuf.Grpc.CallContext).Assembly;
         _ = typeof(ProtoBuf.Grpc.Configuration.ServiceAttribute).Assembly;
+        _ = typeof(Contracts.Commands.CommandResult).Assembly;
 
         var parseOptions = new CSharpParseOptions(LanguageVersion.Latest);
 
@@ -78,4 +79,6 @@ public class and_compiling_the_generated_code : given.a_generated_service_interf
     [Fact] void should_have_service_interface() => _serviceInterface.ShouldNotBeNull();
     [Fact] void should_have_register_product_method() => _serviceInterface.GetMethod("RegisterProduct").ShouldNotBeNull();
     [Fact] void should_have_get_all_method() => _serviceInterface.GetMethod("GetAll").ShouldNotBeNull();
+    [Fact] void should_return_command_result_from_command_method() => _serviceInterface.GetMethod("RegisterProduct")!.ReturnType.ShouldEqual(typeof(Task<Contracts.Commands.CommandResult>));
+    [Fact] void should_wrap_query_return_in_query_result() => _serviceInterface.GetMethod("GetAll")!.ReturnType.GetGenericArguments()[0].GetGenericTypeDefinition().ShouldEqual(typeof(Contracts.Queries.QueryResult<>));
 }

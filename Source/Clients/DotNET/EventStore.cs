@@ -2,11 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.Namespaces;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -380,7 +385,7 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
-        var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
+        var namespaces = (await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).FirstAsync()).EnsureSuccess();
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
     }
 
@@ -391,7 +396,7 @@ public class EventStore : IEventStore
         try
         {
             // Ensure the event store exists before registering artifacts.
-            await _servicesAccessor.Services.EventStores.Ensure(new EnsureEventStore { Name = Name.Value });
+            await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
 
             // We need to register event types and read models first, as they are used by the other artifacts
             await Task.WhenAll(

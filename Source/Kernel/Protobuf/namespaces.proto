@@ -1,0 +1,42 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Namespaces;
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message AllNamespacesRequest {
+   string EventStore = 1;
+}
+message CommandResult {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+}
+message EnsureNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
+message QueryResult_IEnumerable_String {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated string Data = 6;
+}
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
+service Namespaces {
+   rpc AllNamespaces (AllNamespacesRequest) returns (stream QueryResult_IEnumerable_String);
+   rpc EnsureNamespace (EnsureNamespaceRequest) returns (CommandResult);
+}

@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts.Jobs;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Jobs;
@@ -35,6 +36,6 @@ public class JobQueries : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
         _jobs.InvokeAndWrapWithTransformSubject(
-            token => _jobs.ObserveJobs(new() { EventStore = eventStore, Namespace = @namespace }, token),
-            jobs => jobs.ToApi());
+            token => _jobs.AllJobs(new AllJobsRequest { EventStore = eventStore, Namespace = @namespace }, token),
+            jobs => jobs.EnsureSuccess().ToApi());
 }

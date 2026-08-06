@@ -64,28 +64,5 @@ public record ObserverInformation(
         IObservers observers) =>
         observers.InvokeAndWrapWithTransformSubject(
             token => observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }, token),
-            observers => observers.ToApi());
-
-    /// <summary>
-    /// Get all replayable observers for specific event types.
-    /// </summary>
-    /// <param name="eventStore">The event store the observers are for.</param>
-    /// <param name="namespace">The namespace within the event store the observers are for.</param>
-    /// <param name="eventTypeIds">The event type identifiers to get replayable observers for. Comma separated.</param>
-    /// <param name="observers">The observers service to query for replayable observers.</param>
-    /// <returns>Collection of <see cref="ObserverInformation"/> for observers that support replay and observe the given event types.</returns>
-    public static async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(
-        string eventStore,
-        string @namespace,
-        string eventTypeIds,
-        IObservers observers)
-    {
-        var separatedEventTypeIds = eventTypeIds.Split(',').Select(id => id.Trim()).Where(id => !string.IsNullOrEmpty(id)).ToArray();
-        return (await observers.GetReplayableObserversForEventTypes(new()
-        {
-            EventStore = eventStore,
-            Namespace = @namespace,
-            EventTypes = separatedEventTypeIds.Select(id => new Contracts.Events.EventType { Id = id, Generation = 1 }).ToArray()
-        })).ToApi();
-    }
+            observations => observations.ToApi());
 }

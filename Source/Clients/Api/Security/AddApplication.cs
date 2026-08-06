@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Chronicle.Api.Security;
@@ -13,7 +14,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="ClientSecret">The application's client secret.</param>
 [Command]
 public record AddApplication(
-    string Id,
+    Guid Id,
     string ClientId,
     string ClientSecret)
 {
@@ -23,10 +24,10 @@ public record AddApplication(
     /// <param name="applications">The <see cref="IApplications"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IApplications applications) =>
-        applications.Add(new()
+        applications.AddApplication(new()
         {
             Id = Id,
             ClientId = ClientId,
             ClientSecret = ClientSecret
-        });
+        }).EnsureSuccess();
 }
