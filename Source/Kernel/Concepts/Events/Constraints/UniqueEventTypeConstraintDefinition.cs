@@ -8,13 +8,19 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </summary>
 /// <param name="Name">Name of the constraint.</param>
 /// <param name="EventTypeIds">The <see cref="EventTypeId"/> values the constraint covers.</param>
+/// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that releases the constraint.</param>
 /// <param name="Scope">The <see cref="ConstraintScope"/> for the constraint.</param>
 /// <remarks>
 /// The constraint allows at most one event drawn from the covered event types per event source. A single event
 /// type expresses "this event happens at most once"; several express mutual exclusion — an event source that is
 /// terminal through either of two outcomes can have one of them, never both and never twice.
+/// <para>
+/// With a removal event the "at most once" is per cycle rather than forever: a covered event violates the
+/// constraint only when it comes after the most recent removal event on the same event source. Without one the
+/// constraint can only say "forever", which no lifecycle that repeats can express.
+/// </para>
 /// </remarks>
-public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, ConstraintScope? Scope = default) : IConstraintDefinition
+public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, EventTypeId? RemovedWith = default, ConstraintScope? Scope = default) : IConstraintDefinition
 {
     readonly IEnumerable<EventTypeId>? _eventTypeIds = EventTypeIds;
 
@@ -51,10 +57,16 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
     /// The generated record equality would compare the event type ids by reference, and registration decides
     /// whether a constraint changed by comparing the incoming definition to the stored one — so reference
     /// equality would report every re-registration as a change. The collection is therefore compared by content.
+    /// <para>
+    /// The removal event is part of the comparison because it is part of what the constraint means. Leaving it out
+    /// would make adding, changing, or dropping the event that releases the constraint indistinguishable from a
+    /// re-registration of the same definition, so the stored definition would keep enforcing the previous rule.
+    /// </para>
     /// </remarks>
     public virtual bool Equals(UniqueEventTypeConstraintDefinition? other) =>
         other is not null &&
         Name == other.Name &&
+        RemovedWith == other.RemovedWith &&
         Scope == other.Scope &&
         EventTypeIds.SequenceEqual(other.EventTypeIds);
 
@@ -63,6 +75,7 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
     {
         var hashCode = default(HashCode);
         hashCode.Add(Name);
+        hashCode.Add(RemovedWith);
         hashCode.Add(Scope);
         foreach (var eventTypeId in EventTypeIds)
         {
@@ -73,5 +86,11 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A change is always detected — by <see cref="Equals(UniqueEventTypeConstraintDefinition)"/>, which registration
+    /// uses to decide whether the stored definition is superseded — but never requires reindexing, including when the
+    /// removal event changes. This constraint keeps no index: it is enforced by reading the appended events for the
+    /// event source, so the next append answers against the new definition with nothing to rebuild first.
+    /// </remarks>
     public ConstraintChange CompareWith(IConstraintDefinition existing) => ConstraintChange.None;
 }

@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using UniqueEventTypeConstraintDefinitionContract = Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition;
 
-namespace Cratis.Chronicle.Events.Constraints.for_UniqueEventTypeConstraintDefinition;
+namespace Cratis.Chronicle.Events.Constraints.for_UniqueEventTypeConstraintDefinition.when_converting_to_contract;
 
-public class when_converting_to_contract : Specification
+public class without_a_removal_event : Specification
 {
     static ConstraintName _constraintName = "My Constraint";
     UniqueEventTypeConstraintDefinition _definition;
@@ -33,4 +33,5 @@ public class when_converting_to_contract : Specification
     [Fact] void should_have_correct_name() => _contract.Name.ShouldEqual(_constraintName.Value);
     [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(Contracts.Events.Constraints.ConstraintType.UniqueEventType);
     [Fact] void should_event_type() => _definitionContract.EventTypeIds.ShouldContainOnly([_eventType.Id.Value]);
+    [Fact] void should_have_no_removal_event() => _contract.RemovedWith.ShouldBeNull();
 }

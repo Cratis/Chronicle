@@ -34,6 +34,7 @@ internal static class ConstraintConverters
                 new UniqueEventTypeConstraintDefinition(
                     constraint.Name,
                     constraint.Definition.Value1!.EventTypeIds.Select(_ => (EventTypeId)_).ToArray(),
+                    constraint.RemovedWith is null ? null : (EventTypeId)constraint.RemovedWith,
                     scope),
 
             _ => null!
