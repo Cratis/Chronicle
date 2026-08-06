@@ -39,7 +39,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         foreach (var command in serviceDefinition.Commands)
         {
             var requestTypeName = GenerateCommandRequestType(command, requestResponseTypes);
-            interfaceMembers.Add(BuildCommandMethod(command, requestTypeName));
+            var responseTypeName = GenerateCommandResponseType(command, requestResponseTypes);
+            interfaceMembers.Add(BuildCommandMethod(command, requestTypeName, responseTypeName));
         }
 
         foreach (var query in serviceDefinition.Queries)
@@ -88,10 +89,12 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("ProtoBuf.Grpc.Configuration")),
         ];
 
+        // Normalize with an explicit LF end-of-line; Roslyn would otherwise emit CRLF, which makes the
+        // generated contracts churn against the repository's LF-normalized working tree on every run.
         var compilationUnit = SyntaxFactory.CompilationUnit()
             .AddUsings(usings)
             .AddMembers(namespaceDecl)
-            .NormalizeWhitespace();
+            .NormalizeWhitespace(indentation: "    ", eol: "\n");
 
         var code = CopyrightHeader + compilationUnit.ToFullString();
 
@@ -100,7 +103,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         return code;
     }
 
-    static MethodDeclarationSyntax BuildCommandMethod(CommandDefinition command, string? requestTypeName)
+    static MethodDeclarationSyntax BuildCommandMethod(CommandDefinition command, string? requestTypeName, string? responseTypeName)
     {
         var parameters = new List<ParameterSyntax>();
         var paramDocs = new List<(string Name, string Text)>();
@@ -116,8 +119,10 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         parameters.Add(BuildCallContextParameter());
         paramDocs.Add(("callContext", "The gRPC call context."));
 
+        var resultType = responseTypeName is null ? "Task<CommandResult>" : $"Task<CommandResult<{responseTypeName}>>";
+
         return SyntaxFactory.MethodDeclaration(
-                SyntaxFactory.ParseTypeName("Task<CommandResult>"),
+                SyntaxFactory.ParseTypeName(resultType),
                 SyntaxFactory.Identifier(command.Name))
             .AddAttributeLists(
                 SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(
@@ -339,6 +344,37 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
         requestResponseTypes.Add((requestTypeName, properties));
         return requestTypeName;
+    }
+
+    static string? GenerateCommandResponseType(
+        CommandDefinition command,
+        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
+    {
+        if (command.ResponseType is not { } responseType)
+        {
+            return null;
+        }
+
+        // A concept or primitive response travels as its underlying value; only a composite response
+        // needs a generated message type to carry its properties.
+        var unwrapped = TypeHelper.UnwrapConceptType(responseType);
+        if (unwrapped != responseType || unwrapped.IsPrimitive || unwrapped == typeof(string) || unwrapped == typeof(Guid))
+        {
+            return TypeHelper.GetTypeName(unwrapped);
+        }
+
+        var responseTypeName = $"{command.Name}Response";
+        if (!requestResponseTypes.Exists(_ => _.TypeName == responseTypeName))
+        {
+            var properties = responseType.GetProperties()
+                .Where(_ => _.CanRead && _.GetIndexParameters().Length == 0)
+                .Select(_ => (_.Name, TypeHelper.GetTypeName(TypeHelper.UnwrapConceptType(_.PropertyType))))
+                .ToList();
+
+            requestResponseTypes.Add((responseTypeName, properties));
+        }
+
+        return responseTypeName;
     }
 
     static string MapToResponseType(Type type, string responseTypeName)
