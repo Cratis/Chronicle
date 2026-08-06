@@ -14,4 +14,8 @@ itself — Chronicle's own read behavior does not travel with it. The one that b
 children, which is stored as an absent field: read through Chronicle and a non-nullable property comes back empty,
 read it with the driver and it comes back as whatever the driver does with a missing field. See
 [Empty child collections](/chronicle/read-models/empty-child-collections/).
+
+It doesn't travel the other way either: these conventions apply to the reads you make with the driver, never to a
+read model Chronicle hands back or injects into a command. See
+[What a MongoDB convention pack reaches](/chronicle/sinks/#what-a-mongodb-convention-pack-reaches).
 :::

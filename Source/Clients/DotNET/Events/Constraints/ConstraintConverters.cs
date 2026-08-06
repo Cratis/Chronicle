@@ -33,6 +33,7 @@ internal static class ConstraintConverters
     {
         Name = definition.Name,
         Type = (Contracts.Events.Constraints.ConstraintType)ConstraintType.UniqueEventType,
+        RemovedWith = definition.RemovedWith?.Value,
         Definition = new(new UniqueEventTypeConstraintDefinitionContract
         {
             EventTypeIds = definition.EventTypeIds.Select(_ => _.Value).ToList()

@@ -8,7 +8,7 @@ The exact API name depends on the client. .NET exposes `WithInitialValues`, whil
 
 Provide a factory that returns a fresh read model instance with the desired default values. Event mappings then apply on top of that initial state.
 
-Kotlin and Elixir don't have a `WithInitialValues`-style builder call, but they achieve the same result idiomatically: the read model's own constructor/struct default values become its initial state (see [Collections](#collections) below for a working example that doesn't need event context). This particular example also maps an event context property (`Occurred`), which neither client's fluent projection API can access yet.
+Kotlin and Elixir don't have a `WithInitialValues`-style builder call, but they reach the same result idiomatically: as the client builds the projection definition it registers, it reads the read model type's own declared defaults — Kotlin's primary-constructor defaults, Elixir's `defstruct` defaults — and captures them into that definition (see [Collections](#collections) below for a working example that doesn't need event context). That capture is why the defaults reach the stored state: they travel with the registered definition, exactly as `WithInitialValues` values do. Nothing runs the constructor when a document is later read — see [The constructor may not run](../../concepts/designing-read-models#the-constructor-may-not-run). This particular example also maps an event context property (`Occurred`), which neither client's fluent projection API can access yet.
 
 <ChronicleClientTabs snippet="projections/declarative/initial-values/basic" />
 

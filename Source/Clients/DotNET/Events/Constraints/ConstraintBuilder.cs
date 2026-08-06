@@ -75,6 +75,20 @@ public class ConstraintBuilder(
     }
 
     /// <inheritdoc/>
+    public IConstraintBuilder RemovedWith<TRemovalEventType>()
+    {
+        var index = _constraints.FindLastIndex(_ => _ is UniqueEventTypeConstraintDefinition);
+        if (index < 0)
+        {
+            throw new NoUniqueEventTypeConstraintToRemove();
+        }
+
+        var removalEventType = eventTypes.GetEventTypeFor(typeof(TRemovalEventType));
+        _constraints[index] = ((UniqueEventTypeConstraintDefinition)_constraints[index]) with { RemovedWith = removalEventType.Id };
+        return this;
+    }
+
+    /// <inheritdoc/>
     public void AddConstraint(IConstraintDefinition constraint)
     {
         _constraints.Add(constraint);
@@ -99,6 +113,11 @@ public class ConstraintBuilder(
     /// expressed — the two become one constraint allowing at most one event from {A, B} per event source.
     /// Merging happens here rather than downstream so that names stay unique across the built set, which
     /// registration, change detection, and violation message resolution all rely on.
+    /// <para>
+    /// One constraint has one removal event, so the first declared for the name wins. Coalescing rather than
+    /// keeping the first declaration's value means a removal event declared on any of the merged declarations
+    /// survives, instead of being silently dropped because it was not declared on the first one.
+    /// </para>
     /// </remarks>
     static List<IConstraintDefinition> MergeUniqueEventTypeConstraintsSharingName(IEnumerable<IConstraintDefinition> constraints)
     {
@@ -121,7 +140,8 @@ public class ConstraintBuilder(
             var existing = (UniqueEventTypeConstraintDefinition)merged[existingIndex];
             merged[existingIndex] = existing with
             {
-                EventTypeIds = existing.EventTypeIds.Concat(uniqueEventType.EventTypeIds).Distinct().ToArray()
+                EventTypeIds = existing.EventTypeIds.Concat(uniqueEventType.EventTypeIds).Distinct().ToArray(),
+                RemovedWith = existing.RemovedWith ?? uniqueEventType.RemovedWith
             };
         }
 
