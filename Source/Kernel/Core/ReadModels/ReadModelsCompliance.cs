@@ -75,7 +75,16 @@ public class ReadModelsCompliance(
             return instance;
         }
 
-        return await complianceManager.Release(eventStore, eventStoreNamespace, schema, identifier, instance);
+        // The subject marker is kernel bookkeeping stamped onto the document to carry the compliance identity — it is
+        // never part of the read model's own schema. The compliance manager walks every property it is handed against
+        // that schema and rejects anything the schema does not declare, so the marker has to come off first. The
+        // ExpandoObject release paths get that for free from their schema round-trip, which only carries
+        // schema-declared properties; this path has no round-trip and has to be explicit about it. Strip on a copy —
+        // the caller keeps the document it passed in, and silently removing a property from it would be a surprise.
+        var withoutSubject = (instance.DeepClone() as JsonObject)!;
+        withoutSubject.Remove(WellKnownProperties.Subject);
+
+        return await complianceManager.Release(eventStore, eventStoreNamespace, schema, identifier, withoutSubject);
     }
 
     /// <inheritdoc/>
