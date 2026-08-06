@@ -72,13 +72,6 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
         return null;
     }
 
-    static IEnumerable<string> CandidatePackageNames(string assemblyName)
-    {
-        var lowered = assemblyName.ToLowerInvariant();
-        yield return lowered;
-        yield return $"microsoft.{lowered}";
-    }
-
     /// <inheritdoc/>
     protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
     {
@@ -89,5 +82,12 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
         }
 
         return IntPtr.Zero;
+    }
+
+    static IEnumerable<string> CandidatePackageNames(string assemblyName)
+    {
+        var lowered = assemblyName.ToLowerInvariant();
+        yield return lowered;
+        yield return $"microsoft.{lowered}";
     }
 }
