@@ -385,7 +385,7 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
-        var namespaces = (await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).FirstAsync()).EnsureSuccess();
+        var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
     }
 

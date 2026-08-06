@@ -30,7 +30,14 @@ public interface IEventStores
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The query result.</returns>
     [Operation]
-    IObservable<QueryResult<IEnumerable<string>>> AllEventStores(CallContext callContext = default);
+    Task<QueryResult<IEnumerable<string>>> AllEventStores(CallContext callContext = default);
+    /// <summary>
+    /// Executes the ObserveEventStores query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    IObservable<QueryResult<IEnumerable<string>>> ObserveEventStores(CallContext callContext = default);
 }
 
 /// <summary>

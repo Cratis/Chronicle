@@ -24,8 +24,12 @@ internal sealed class Namespaces(IGrainFactory grainFactory, IStorage storage) :
             command => command.Handle(grainFactory));
 
     /// <inheritdoc/>
-    public IObservable<QueryResult<IEnumerable<string>>> AllNamespaces(AllNamespacesRequest request, CallContext callContext = default) =>
+    public Task<QueryResult<IEnumerable<string>>> AllNamespaces(AllNamespacesRequest request, CallContext callContext = default) =>
+        QueryExecutor.Execute(() => Chronicle.Namespaces.NamespaceNames.AllNamespaces(request.EventStore, storage));
+
+    /// <inheritdoc/>
+    public IObservable<QueryResult<IEnumerable<string>>> ObserveNamespaces(ObserveNamespacesRequest request, CallContext callContext = default) =>
         QueryExecutor.Execute(() =>
-            Chronicle.Namespaces.NamespaceNames.AllNamespaces(request.EventStore, storage)
+            Chronicle.Namespaces.NamespaceNames.ObserveNamespaces(request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken));
 }

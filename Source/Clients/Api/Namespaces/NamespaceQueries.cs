@@ -33,6 +33,6 @@ public class NamespaceQueries : ControllerBase
     [HttpGet]
     public ISubject<IEnumerable<string>> AllNamespaces([FromRoute] string eventStore) =>
         _namespaces.InvokeAndWrapWithTransformSubject(
-            token => _namespaces.AllNamespaces(new() { EventStore = eventStore }, token),
+            token => _namespaces.ObserveNamespaces(new() { EventStore = eventStore }, token),
             ns => ns.EnsureSuccess());
 }

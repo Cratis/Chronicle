@@ -31,7 +31,7 @@ public class EventStoreQueries : ControllerBase
     /// </summary>
     /// <returns>A collection of event store names.</returns>
     [HttpGet]
-    public async Task<IEnumerable<string>> GetEventStores() => (await _eventStores.AllEventStores().FirstAsync()).EnsureSuccess();
+    public Task<IEnumerable<string>> GetEventStores() => _eventStores.AllEventStores().EnsureSuccess();
 
     /// <summary>
     /// Observes all event stores registered.
@@ -40,6 +40,6 @@ public class EventStoreQueries : ControllerBase
     [HttpGet("observe")]
     public ISubject<IEnumerable<string>> AllEventStores() =>
         _eventStores.InvokeAndWrapWithTransformSubject(
-            token => _eventStores.AllEventStores(token),
+            token => _eventStores.ObserveEventStores(token),
             es => es.EnsureSuccess());
 }

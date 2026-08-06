@@ -31,7 +31,15 @@ public interface INamespaces
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The query result.</returns>
     [Operation]
-    IObservable<QueryResult<IEnumerable<string>>> AllNamespaces(AllNamespacesRequest request, CallContext callContext = default);
+    Task<QueryResult<IEnumerable<string>>> AllNamespaces(AllNamespacesRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the ObserveNamespaces query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    IObservable<QueryResult<IEnumerable<string>>> ObserveNamespaces(ObserveNamespacesRequest request, CallContext callContext = default);
 }
 
 /// <summary>
@@ -58,6 +66,19 @@ public class EnsureNamespaceRequest
 /// </summary>
 [ProtoContract]
 public class AllNamespacesRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; }
+}
+
+/// <summary>
+/// Represents the ObserveNamespacesRequest message.
+/// </summary>
+[ProtoContract]
+public class ObserveNamespacesRequest
 {
     /// <summary>
     /// Gets or sets the eventStore.
