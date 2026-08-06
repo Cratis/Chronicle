@@ -15,6 +15,23 @@ The default sink. Read model instances are stored as MongoDB documents, one docu
 
 This requires no additional setup — MongoDB is the default when you configure Chronicle.
 
+## What a MongoDB convention pack reaches
+
+Because read model instances land in MongoDB as documents, it's natural to assume that configuring the MongoDB driver configures how Chronicle hands read models back. It doesn't, and the gap is worth knowing before you spend an afternoon on it.
+
+A convention pack — whether you provide one through Arc's [ICanProvideMongoDBConventionPacks](/arc/backend/mongodb/convention-packs/) or call `ConventionRegistry.Register` yourself — is registered in the MongoDB driver's global convention registry. That registry configures the driver's class maps. So a convention pack reaches exactly as far as the driver does, and no further:
+
+| Path a read model takes | Does the convention pack apply |
+| --- | --- |
+| Your own `IMongoCollection<T>` query | Yes — the driver builds the instance from a class map |
+| Chronicle's read model APIs — by key, materialized, snapshots, watching | No |
+| A read model injected into a command's validator, `Provide()`, or `Handle()` | No |
+| The document the sink writes | No |
+
+Chronicle returns a read model as JSON and materializes it with `System.Text.Json`, so no `BsonClassMap` is consulted anywhere on that path. Command-side read model injection is the one that surprises people: it resolves through the same read model API, so a rename, a custom serializer, or an `IgnoreExtraElements` convention that is visibly working in your query code has no effect at all on the instance your command receives. And the sink writes the document from the projected state rather than from a class map of your type, so a convention pack doesn't change what gets stored either.
+
+That is what the convention registration in [Get started](/chronicle/get-started/) is for. It isn't configuring Chronicle — it's telling *your* driver how to map your type onto element names Chronicle has already chosen.
+
 ## SQL Sink
 
 The SQL sink treats the database as a document store. Each read model type gets its own table with two columns:
