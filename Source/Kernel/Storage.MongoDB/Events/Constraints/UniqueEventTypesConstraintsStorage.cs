@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using MongoDB.Driver;
@@ -18,18 +19,37 @@ public class UniqueEventTypesConstraintsStorage(IEventStoreNamespaceDatabase dat
     readonly IMongoCollection<Event> _collection = database.GetEventSequenceCollectionFor(eventSequenceId);
 
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(IEnumerable<EventTypeId> eventTypeIds, EventSourceId eventSourceId, string scopeKey = "")
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(UniqueEventTypeConstraintDefinition definition, EventSourceId eventSourceId, string scopeKey = "")
     {
-        var filter = Builders<Event>.Filter.In(_ => _.Type, eventTypeIds);
-        filter &= Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId);
+        var forEventSource = Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId);
+        var filter = forEventSource & Builders<Event>.Filter.In(_ => _.Type, definition.EventTypeIds);
 
-        using var result = await _collection.FindAsync(filter);
-        var existing = await result.FirstOrDefaultAsync();
+        var latestRemoval = await GetLatestRemoval(definition, forEventSource);
+        if (latestRemoval is not null)
+        {
+            filter &= Builders<Event>.Filter.Gt(_ => _.SequenceNumber, latestRemoval);
+        }
+
+        // Ordered so the sequence number reported back is the covered event that actually holds the cycle, rather
+        // than whichever one the collection happened to yield first.
+        var existing = await _collection.Find(filter).SortBy(_ => _.SequenceNumber).FirstOrDefaultAsync();
         if (existing is not null)
         {
             return (false, existing.SequenceNumber);
         }
 
         return (true, EventSequenceNumber.Unavailable);
+    }
+
+    async Task<EventSequenceNumber?> GetLatestRemoval(UniqueEventTypeConstraintDefinition definition, FilterDefinition<Event> forEventSource)
+    {
+        if (definition.RemovedWith is null)
+        {
+            return null;
+        }
+
+        var filter = forEventSource & Builders<Event>.Filter.Eq(_ => _.Type, definition.RemovedWith);
+        var latest = await _collection.Find(filter).SortByDescending(_ => _.SequenceNumber).FirstOrDefaultAsync();
+        return latest?.SequenceNumber;
     }
 }

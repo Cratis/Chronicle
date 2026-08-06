@@ -55,6 +55,24 @@ public interface IConstraintBuilder
     IConstraintBuilder Unique<TEventType>(ConstraintViolationMessageProvider messageCallback, ConstraintName? name = default);
 
     /// <summary>
+    /// Indicate an event that releases the unique event type constraint most recently declared on this builder.
+    /// </summary>
+    /// <typeparam name="TRemovalEventType">Type of event that releases the constraint.</typeparam>
+    /// <returns>Builder for continuation.</returns>
+    /// <exception cref="NoUniqueEventTypeConstraintToRemove">Thrown when no unique event type constraint has been declared on the builder yet.</exception>
+    /// <remarks>
+    /// Without this the constraint can only say "at most one, forever". Most lifecycles cycle, so declare the event
+    /// that ends a cycle and the covered event types are allowed again for the next one — a covered event only
+    /// violates the constraint when it comes after the most recent removal event on the same event source.
+    /// <para>
+    /// It applies to the <see cref="Unique{TEventType}(ConstraintViolationMessage, ConstraintName)"/> declaration it
+    /// follows, which is why it belongs on the same chain. Declaring several event types under one constraint name
+    /// makes them one constraint, and the first removal event declared for that name is the one it is released with.
+    /// </para>
+    /// </remarks>
+    IConstraintBuilder RemovedWith<TRemovalEventType>();
+
+    /// <summary>
     /// Add a constraint to the builder.
     /// </summary>
     /// <param name="constraint"><see cref="Constraint"/> to add.</param>

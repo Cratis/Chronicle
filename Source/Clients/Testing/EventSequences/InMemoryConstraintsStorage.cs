@@ -59,9 +59,14 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
 
         if (client is ClientConstraints.UniqueEventTypeConstraintDefinition uniqueType)
         {
+            var removedWithForEventType = uniqueType.RemovedWith is not null
+                ? (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId?)(KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)uniqueType.RemovedWith.Value
+                : null;
+
             return new KernelConstraints::UniqueEventTypeConstraintDefinition(
                 (KernelConstraints::ConstraintName)uniqueType.Name.Value,
-                uniqueType.EventTypeIds.Select(_ => (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)_.Value).ToArray());
+                uniqueType.EventTypeIds.Select(_ => (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)_.Value).ToArray(),
+                removedWithForEventType);
         }
 
         return null;

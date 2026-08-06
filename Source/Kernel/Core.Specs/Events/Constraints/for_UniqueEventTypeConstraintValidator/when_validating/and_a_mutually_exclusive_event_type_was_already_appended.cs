@@ -35,7 +35,7 @@ public class and_a_mutually_exclusive_event_type_was_already_appended : Specific
 
         // The person was already merged away — the sibling event type, not the one being appended.
         _storage
-            .IsAllowed(Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSourceId>(), Arg.Any<string>())
+            .IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<string>())
             .Returns((false, (EventSequenceNumber)7U));
     }
 
@@ -45,7 +45,7 @@ public class and_a_mutually_exclusive_event_type_was_already_appended : Specific
     [Fact] void should_have_violations() => _result.Violations.ShouldNotBeEmpty();
     [Fact] async Task should_ask_storage_about_every_covered_event_type() =>
         await _storage.Received(1).IsAllowed(
-            Arg.Is<IEnumerable<EventTypeId>>(_ => _.Contains(_aliasedEventType.Id) && _.Contains(_erasedEventType.Id)),
+            Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.EventTypeIds.Contains(_aliasedEventType.Id) && _.EventTypeIds.Contains(_erasedEventType.Id)),
             Arg.Any<EventSourceId>(),
             Arg.Any<string>());
 }
