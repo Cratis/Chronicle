@@ -58,7 +58,13 @@ Use the declaration instead. Initial values remain the right tool for business d
 
 These rules belong to Chronicle's reader, not to the stored document. They apply wherever Chronicle materializes the read model for you — [reading a single instance](getting-single-instance), [reading a collection](getting-collection-instances), [materialized instances and paging](materialized-pagination), [snapshots](getting-snapshots), [watching a read model](watching-read-models), and [read model reactors](reacting-to-changes) — and to anything layered on those APIs. The [read model testing scenarios](/chronicle/testing/read-models/scenario/) materialize through the same code, so a spec and a running system answer this question identically.
 
-They do **not** apply when something else deserializes the same stored document. If you query the read model's MongoDB collection directly with `IMongoCollection<T>`, as [Get started](/chronicle/get-started/) shows for reporting and ad-hoc reads, the MongoDB driver builds the instance and a child collection with no children arrives as whatever that driver does with a missing field. Configure that on the driver, or read through Chronicle when you want the behavior on this page.
+They do **not** apply when something else deserializes the same stored document. If you query the read model's MongoDB collection directly with `IMongoCollection<T>`, as [Get started](/chronicle/get-started/) shows for reporting and ad-hoc reads, the MongoDB driver builds the instance — and the driver has never heard of this page. Left alone, it hands you `null` for a field the document does not carry.
+
+If you are on [Cratis Arc](/arc/backend/mongodb/convention-packs/), you already have the answer: Arc registers a convention pack that materializes a non-nullable collection on a `[ReadModel]` type as empty, for both an absent field and a stored `null`. It makes the driver agree with this page rather than differ from it. Without Arc, configure the equivalent on the driver yourself, or read through Chronicle.
+
+:::caution
+The driver does not run your record's constructor. A read model with a primary constructor gets no creator map at all, so the driver materializes it uninitialized and assigns members directly — on every document, not only an incomplete one. A normalizer written in the record body (`Lines = Lines ?? []`) therefore never executes on this path, and neither does any other default, clamp or guard you put there. See [The constructor may not run](../concepts/designing-read-models#the-constructor-may-not-run).
+:::
 
 :::note[Client coverage]
 The absent-collection rule is applied by the .NET client's read model reader. Other clients materialize read models with their own runtime's deserialization — check what yours does with a missing field before relying on a non-nullable declaration.
