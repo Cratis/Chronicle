@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Contracts.Observation;
@@ -69,19 +70,31 @@ public record ObserverInformation(
             .GetEventStore(eventStore)
             .GetNamespace(@namespace).Observers
             .ObserveAll()
-            .Subscribe(states =>
+            .SelectMany(async states =>
             {
-                var definitions = storage.GetEventStore(eventStore).Observers.GetAll().GetAwaiter().GetResult();
-                subject.OnNext(Join(definitions, states));
-            });
+                var definitions = await storage.GetEventStore(eventStore).Observers.GetAll();
+                return Join(definitions, states);
+            })
+            .Subscribe(subject.OnNext);
         return subject;
     }
 
+    /// <summary>
+    /// Joins observer definitions with their state.
+    /// </summary>
+    /// <param name="definitions">The observer definitions.</param>
+    /// <param name="states">The observer states.</param>
+    /// <returns>The joined observer information.</returns>
+    /// <remarks>
+    /// Left outer join on purpose: an observer that has been defined but has not run yet has no state,
+    /// and it still belongs in the listing. An inner join would hide it until it first handled an event.
+    /// </remarks>
     private static IEnumerable<ObserverInformation> Join(
         IEnumerable<ObserverDefinition> definitions,
         IEnumerable<ObserverState> states) =>
         from definition in definitions
-        join state in states on definition.Identifier equals state.Identifier
+        join state in states on definition.Identifier equals state.Identifier into stateGroup
+        from state in stateGroup.DefaultIfEmpty(ObserverState.Empty)
         select ToObserverInformation(definition, state);
 
     private static ObserverInformation ToObserverInformation(ObserverDefinition definition, ObserverState state) =>
@@ -96,6 +109,9 @@ public record ObserverInformation(
             state.TailEventSequenceNumber,
             state.HandledEventCount,
             (ObserverRunningState)(int)state.RunningState,
-            false,
+
+            // Subscription state is per-observer and only known by the observer grain, so the listing
+            // reports false rather than activating every grain to ask. Read a single observer to get it.
+            IsSubscribed: false,
             definition.IsReplayable);
 }
