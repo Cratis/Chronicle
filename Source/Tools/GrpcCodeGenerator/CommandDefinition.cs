@@ -20,5 +20,38 @@ public class CommandDefinition(Type type)
     /// <summary>Gets the constructor parameters representing the command properties.</summary>
     public IReadOnlyList<ParameterInfo> Parameters =>
         Type.GetConstructors().FirstOrDefault()?.GetParameters() ?? [];
+
+    /// <summary>
+    /// Gets the type the command's Handle method responds with, or null when the command produces no response.
+    /// </summary>
+    /// <remarks>
+    /// A command that responds with a value needs that value carried across the wire, so the generated
+    /// operation returns <c>CommandResult&lt;TResponse&gt;</c> rather than a bare <c>CommandResult</c>.
+    /// </remarks>
+    public Type? ResponseType => ResolveResponseType();
+
+    Type? ResolveResponseType()
+    {
+        var handle = Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            .FirstOrDefault(method => method.Name == "Handle");
+
+        if (handle is null)
+        {
+            return null;
+        }
+
+        var returnType = handle.ReturnType;
+        if (returnType == typeof(void) || returnType == typeof(Task))
+        {
+            return null;
+        }
+
+        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            returnType = returnType.GetGenericArguments()[0];
+        }
+
+        return returnType == typeof(void) ? null : returnType;
+    }
 }
 
