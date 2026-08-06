@@ -34,6 +34,32 @@ It's tempting to make one `Customer` read model serve every screen. Resist it. T
 
 You rarely write code that *updates* a read model — you declare how events map onto it and let Chronicle do the folding. Start with [model-bound projections](../projections/model-bound/), where attributes on the read model record describe the mapping. When the mapping needs logic the attributes can't express cleanly, step up to the fluent [declarative projection builder](../projections/declarative/) (`IProjectionFor<T>`), and only reach for a [reducer](../reducers/) when the model is genuinely easier to express as code folding over previous state.
 
+## The constructor may not run
+
+Sooner or later you'll want to put a small piece of logic in the read model record itself — a normalizer that turns a `null` collection into an empty one, a computed default, a guard that rejects a value that should never arrive:
+
+```csharp
+// Don't rely on this. It may never execute.
+public record OrderSummary(OrderId Id, IEnumerable<LineItem> Lines)
+{
+    public IEnumerable<LineItem> Lines { get; init; } = Lines ?? [];
+}
+```
+
+Whether that line runs is not yours to decide. A read model instance is *materialized* by a deserializer, and a document deserializer is free to build the record without running either a constructor or the initializer. The MongoDB driver does exactly that, and it is not conditional: for a record with a primary constructor it builds no creator map at all, so it creates the instance uninitialized and assigns the members by reflection. That happens on every document — a complete one just as much as one missing a field. Read a read model through `IMongoCollection<T>` and your normalizer never runs, ever.
+
+That makes the blast radius wider than a `null` collection. Any logic you put in the record body — a default, a clamp, a trim, a validation — is dead on that path, silently.
+
+Chronicle's own reader *does* construct the record, which makes this worse rather than better: the same line can work when you read through `IReadModels` and quietly fail when something reads that document with `IMongoCollection<T>`. And even where the constructor runs, a property declared in the record body gets its stored value assigned after construction, on top of whatever its initializer produced.
+
+So a guard written in a read model record is not a guard. Put the intent somewhere that always runs:
+
+| You want | Where it belongs |
+| --- | --- |
+| A collection that is never `null` | The declaration. A non-nullable collection property materializes as empty — see [Empty child collections](../read-models/empty-child-collections). |
+| A meaningful default before any event assigns the property | The projection — [SetValue](../projections/model-bound/set-value) or [initial values](../projections/declarative/initial-values) — so the default is part of the projected state every reader sees. |
+| A rule that rejects bad data | The write side, before the event is appended. A read model is derived from facts that already happened; refusing them here is too late to help. |
+
 ## Design for eventual consistency
 
 A *materialized* read model updates *after* the event is appended, so what's stored is [eventually consistent](../read-models/consistency.md). Design with that in mind: don't read a stored model back inside a command or reactor to make a decision (use a [constraint](../constraints/) for invariants instead), and prefer [observable queries](../scenarios/real-time-query) so the UI reflects changes the moment the projection catches up.
