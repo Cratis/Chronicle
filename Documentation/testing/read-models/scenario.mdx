@@ -92,9 +92,7 @@ same instance.
 
 By default the scenario mirrors the production projection engine, which filters an event source's stream down to the types the projection subscribes to — so seeding an unrelated audit or marker event is silently ignored. When you would rather be told, `WithStrictEventSubscription()` turns that silent skip into an `UnsubscribedEventSeeded` naming the offending event type:
 
-```csharp
-var scenario = new ReadModelScenario<OrderSummary>().WithStrictEventSubscription();
-```
+<ChronicleClientTabs snippet="testing/read-models/scenario/strict-event-subscription" />
 
 This applies to projection-backed read models. A reducer only invokes the handlers it declares, so an unsubscribed seeded event is inherently a no-op there, exactly as at runtime.
 
@@ -156,14 +154,7 @@ Three more are substituted only for certain shapes — and because the harness c
 
 `Substitutions` reports the substituted layers your read model's own shape reaches. It is derived from the read model and its projection alone, so you can read it before seeding anything:
 
-```csharp
-var scenario = new ReadModelScenario<OrderSummary>();
-
-foreach (var substitution in scenario.Substitutions)
-{
-    Console.WriteLine($"{substitution.Layer}: {substitution.Shape} — {substitution.Consequence}");
-}
-```
+<ChronicleClientTabs snippet="testing/read-models/scenario/substitutions" />
 
 | `Layer` | Reported when |
 |---------|---------------|
@@ -175,9 +166,7 @@ An empty list means nothing shape-dependent is being stood in for. Anything in t
 
 To make that binding rather than advisory, opt in to strict fidelity. A read model that reaches a substituted layer then raises `ReadModelDependsOnSubstitutedLayer` instead of returning a result, so a suite can turn it on everywhere and have only the shapes that genuinely need a second tier change color:
 
-```csharp
-var scenario = new ReadModelScenario<OrderSummary>().WithStrictFidelity();
-```
+<ChronicleClientTabs snippet="testing/read-models/scenario/strict-fidelity" />
 
 ## Notes
 

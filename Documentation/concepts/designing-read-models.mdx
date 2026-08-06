@@ -38,13 +38,7 @@ You rarely write code that *updates* a read model — you declare how events map
 
 Sooner or later you'll want to put a small piece of logic in the read model record itself — a normalizer that turns a `null` collection into an empty one, a computed default, a guard that rejects a value that should never arrive:
 
-```csharp
-// Don't rely on this. It may never execute.
-public record OrderSummary(OrderId Id, IEnumerable<LineItem> Lines)
-{
-    public IEnumerable<LineItem> Lines { get; init; } = Lines ?? [];
-}
-```
+<ChronicleClientTabs snippet="concepts/designing-read-models/constructor-may-not-run" />
 
 Whether that line runs is not yours to decide. A read model instance is *materialized* by a deserializer, and a document deserializer is free to build the record without running either a constructor or the initializer. The MongoDB driver does exactly that, and it is not conditional: for a record with a primary constructor it builds no creator map at all, so it creates the instance uninitialized and assigns the members by reflection. That happens on every document — a complete one just as much as one missing a field. Read a read model through `IMongoCollection<T>` and your normalizer never runs, ever.
 
