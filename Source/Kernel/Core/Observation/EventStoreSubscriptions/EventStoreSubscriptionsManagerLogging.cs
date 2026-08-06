@@ -30,6 +30,9 @@ internal static partial class EventStoreSubscriptionsManagerLogging
     [LoggerMessage(LogLevel.Debug, "Event store subscription '{SubscriptionId}' in namespace '{Namespace}' is already active - skipping unnecessary re-subscription")]
     internal static partial void SubscriptionAlreadyActive(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId, EventStoreNamespaceName @namespace);
 
+    [LoggerMessage(LogLevel.Information, "Event store subscription '{SubscriptionId}' in namespace '{Namespace}' is active but its event types have changed - re-subscribing")]
+    internal static partial void SubscriptionEventTypesChanged(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Error, "Error refreshing event store subscription '{SubscriptionId}' in namespace '{Namespace}'")]
     internal static partial void ErrorRefreshingSubscription(this ILogger<EventStoreSubscriptionsManager> logger, Exception exception, EventStoreSubscriptionId subscriptionId, EventStoreNamespaceName @namespace);
 

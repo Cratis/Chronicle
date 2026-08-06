@@ -8,13 +8,12 @@ using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
 using Orleans.TestKit;
 
-namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager.when_receiving_subscription_reminder;
+namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager.when_source_event_store_is_added;
 
-public class and_subscription_is_already_subscribed : Specification
+public class and_a_subscription_is_already_active_with_the_current_event_types : Specification
 {
     const string TargetEventStore = "Lobby";
     const string SourceEventStore = "StudioAdmin";
-    const string ReminderName = "event-store-subscription-subscribe:StudioAdmin";
 
     TestKitSilo _silo;
     EventStoreSubscriptionsManager _manager;
@@ -47,7 +46,7 @@ public class and_subscription_is_already_subscribed : Specification
                 [eventType]));
     }
 
-    async Task Because() => await _manager.ReceiveReminder(ReminderName, default);
+    async Task Because() => await _manager.SourceEventStoreAdded(new EventStoreName(SourceEventStore));
 
     [Fact] void should_not_unsubscribe() => _observer.DidNotReceive().Unsubscribe();
 
