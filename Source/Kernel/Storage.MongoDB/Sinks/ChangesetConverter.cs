@@ -8,6 +8,8 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -23,12 +25,34 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+/// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
 public class ChangesetConverter(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
-    IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter
+    IExpandoObjectConverter expandoObjectConverter,
+    ILogger<ChangesetConverter> logger) : IChangesetConverter
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChangesetConverter"/> class without a logger.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
+    /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <remarks>
+    /// Retained so a caller written against the previous constructor keeps compiling; it forgoes the diagnostic
+    /// naming a join that matched no documents.
+    /// </remarks>
+    public ChangesetConverter(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IExpandoObjectConverter expandoObjectConverter)
+        : this(readModel, converter, collections, expandoObjectConverter, NullLogger<ChangesetConverter>.Instance)
+    {
+    }
+
     /// <inheritdoc/>
     public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
         Key key,
@@ -302,7 +326,7 @@ public class ChangesetConverter(
         }
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
         var filter = CreateJoinedFilterDefinition(key, joined);
-        await collection.UpdateManyAsync(
+        var result = await collection.UpdateManyAsync(
             filter,
             joinUpdateBuilder,
             new UpdateOptions
@@ -310,6 +334,14 @@ public class ChangesetConverter(
                 IsUpsert = false,
                 ArrayFilters = [.. joinArrayFiltersForDocument]
             });
+
+        // A join that matches nothing is a successful zero-row update — the write is simply lost. That is
+        // legitimate when no root carries the joined value yet (the row-creation-time backfill covers it),
+        // so this is diagnostic rather than a failure; without it a misdeclared join is entirely silent.
+        if (result.IsAcknowledged && result.MatchedCount == 0)
+        {
+            logger.JoinMatchedNoDocuments(readModel.Identifier, joined.OnProperty, joined.Key);
+        }
     }
 
     FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)
@@ -328,8 +360,13 @@ public class ChangesetConverter(
             return Builders<BsonDocument>.Filter.Eq(property, value);
         }
 
+        // The join key is the join source's raw event source id — always a string. The joined-on column is
+        // stored in whatever BSON representation its schema dictates, so a Guid-backed column holds
+        // BinData and a string comparand matches nothing: the UpdateMany reports zero matched, which is
+        // indistinguishable from a successful write. Convert through the schema, exactly as the child
+        // branch above already does for its array-indexer identifier.
         var (prop, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
-        return Builders<BsonDocument>.Filter.Eq(prop, joined.Key);
+        return Builders<BsonDocument>.Filter.Eq(prop, converter.ToBsonValue(joined.Key, joined.OnProperty));
     }
 
     IEnumerable<Change> NormalizeJoinedChanges(IEnumerable<Change> changes)
