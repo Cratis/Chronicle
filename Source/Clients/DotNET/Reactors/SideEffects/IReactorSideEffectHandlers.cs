@@ -16,8 +16,14 @@ public interface IReactorSideEffectHandlers
     /// <param name="reactorContext">The <see cref="ReactorContext"/> for the reactor invocation.</param>
     /// <param name="value">The value returned by the reactor handler method.</param>
     /// <returns><see langword="true"/> if any handler can process the value; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="ReactorSideEffectHandlingRequiresEventStore">Thrown when the implementation does not implement this overload.</exception>
+    /// <remarks>
+    /// There is no default answer. Returning <see langword="false"/> would tell a caller still on the previous
+    /// contract that nothing can handle the value, and every side effect it dispatches would be dropped without
+    /// a trace.
+    /// </remarks>
     [Obsolete("Use the overload that takes the IEventStore, so each handler is asked against the event store the reactor is running under.")]
-    bool CanHandle(ReactorContext reactorContext, object value) => false;
+    bool CanHandle(ReactorContext reactorContext, object value) => throw new ReactorSideEffectHandlingRequiresEventStore(GetType());
 
     /// <summary>
     /// Determines whether any registered handler can process the given return value.
@@ -26,6 +32,12 @@ public interface IReactorSideEffectHandlers
     /// <param name="eventStore">The <see cref="IEventStore"/> the reactor is running under.</param>
     /// <param name="value">The value returned by the reactor handler method.</param>
     /// <returns><see langword="true"/> if any handler can process the value; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// Defaults to the event-store-less overload so an implementation written against the previous contract keeps
+    /// working unchanged. An implementation providing neither raises
+    /// <see cref="ReactorSideEffectHandlingRequiresEventStore"/> rather than quietly answering for it.
+    /// </remarks>
+    /// <exception cref="ReactorSideEffectHandlingRequiresEventStore">Thrown when the implementation provides neither overload.</exception>
     bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
 #pragma warning disable CS0618 // Deliberate: forwards to the previous contract for implementations that still provide it.
