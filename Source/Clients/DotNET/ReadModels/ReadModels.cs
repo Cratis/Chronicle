@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -52,6 +51,12 @@ public class ReadModels(
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly SinkTypeId _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
+    readonly ReadModelReleaser _releaser = new(
+        eventStore,
+        schemaGenerator,
+        (eventStore.Connection as IChronicleServicesAccessor)!,
+        jsonSerializerOptions,
+        logger);
 
     /// <summary>
     /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
@@ -406,56 +411,10 @@ public class ReadModels(
     }
 
     /// <inheritdoc/>
-    public async Task<TReadModel> Release<TReadModel>(TReadModel instance)
-    {
-        var subject = ReadModelSubjectResolver.ResolveFrom(instance);
-        if (subject is null)
-        {
-            return instance;
-        }
-
-        return await ReleaseWithSubject(subject, instance);
-    }
+    public Task<TReadModel> Release<TReadModel>(TReadModel instance) => _releaser.Release(instance);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances)
-    {
-        var result = new List<TReadModel>();
-        foreach (var instance in instances)
-        {
-            result.Add(await Release(instance));
-        }
-
-        return result;
-    }
-
-    async Task<TReadModel> ReleaseWithSubject<TReadModel>(Subject subject, TReadModel instance)
-    {
-        var schema = schemaGenerator.Generate(typeof(TReadModel));
-        if (!schema.HasComplianceMetadata())
-        {
-            return instance;
-        }
-
-        var payload = JsonSerializer.Serialize(instance, jsonSerializerOptions);
-        var request = new ReleaseRequest
-        {
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            Subject = subject.Value,
-            Schema = schema.ToJson(),
-            Payload = payload
-        };
-
-        var response = await _chronicleServicesAccessor.Services.Compliance.Release(request);
-        if (response.HasError)
-        {
-            logger.FailedToRelease(typeof(TReadModel).Name, subject.Value, response.Error);
-            return instance;
-        }
-
-        return JsonSerializer.Deserialize<TReadModel>(response.Payload, jsonSerializerOptions) ?? instance;
-    }
+    public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) => _releaser.Release(instances);
 
     async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> ReleaseSnapshotInstances<TReadModel>(IEnumerable<ReadModelSnapshot<TReadModel>> snapshots)
     {
