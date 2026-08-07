@@ -16,25 +16,11 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     /// <inheritdoc/>
     public async Task Seed(SeedRequest request, CallContext context = default)
     {
-        // Seed global entries to the global grain
-        var globalEntries = new List<SeedingEntry>();
-
-        // Collect all global entries from both ByEventType and ByEventSource
-        foreach (var eventTypeGroup in request.GlobalByEventType)
-        {
-            globalEntries.AddRange(eventTypeGroup.Entries);
-        }
-
-        foreach (var eventSourceGroup in request.GlobalByEventSource)
-        {
-            globalEntries.AddRange(eventSourceGroup.Entries);
-        }
-
-        // Deduplicate global entries (same entry might be in both ByEventType and ByEventSource)
-        globalEntries = globalEntries
-            .GroupBy(e => new { e.EventSourceId, e.EventTypeId, e.Content })
-            .Select(g => g.First())
-            .ToList();
+        // Seed global entries to the global grain. The two groupings describe the same set of entries, so
+        // they are reconciled rather than concatenated.
+        var globalEntries = Reconcile(
+            request.GlobalByEventType.SelectMany(_ => _.Entries),
+            request.GlobalByEventSource.SelectMany(_ => _.Entries));
 
         if (globalEntries.Count > 0)
         {
@@ -53,24 +39,9 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         // Seed namespace-specific entries
         foreach (var namespacedGroup in request.NamespacedEntries)
         {
-            var namespacedEntries = new List<SeedingEntry>();
-
-            // Collect all entries from both ByEventType and ByEventSource
-            foreach (var eventTypeGroup in namespacedGroup.ByEventType)
-            {
-                namespacedEntries.AddRange(eventTypeGroup.Entries);
-            }
-
-            foreach (var eventSourceGroup in namespacedGroup.ByEventSource)
-            {
-                namespacedEntries.AddRange(eventSourceGroup.Entries);
-            }
-
-            // Deduplicate entries
-            namespacedEntries = namespacedEntries
-                .GroupBy(e => new { e.EventSourceId, e.EventTypeId, e.Content })
-                .Select(g => g.First())
-                .ToList();
+            var namespacedEntries = Reconcile(
+                namespacedGroup.ByEventType.SelectMany(_ => _.Entries),
+                namespacedGroup.ByEventSource.SelectMany(_ => _.Entries));
 
             if (namespacedEntries.Count > 0)
             {
@@ -108,6 +79,46 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         return MapToResponse(seeds);
     }
 
+    /// <summary>
+    /// Reconciles the two groupings a client sends - the same entries bucketed by event type and by event
+    /// source - back into the single ordered list the seeders yielded.
+    /// </summary>
+    /// <param name="byEventType">The entries as bucketed by event type.</param>
+    /// <param name="byEventSource">The entries as bucketed by event source.</param>
+    /// <returns>Every entry, once per time it genuinely occurs.</returns>
+    /// <remarks>
+    /// The two groupings hold the same entries, so the reconciliation is a multiset union and not a
+    /// deduplication: an entry occurring twice in each grouping occurs twice in the result. Collapsing on
+    /// value instead would erase a genuine repeat - two events of the same type, on the same event source,
+    /// with the same payload are two facts that really happened, not one fact sent twice - and an
+    /// event-sourced store has no way to express that once it is gone. Taking each grouping's count and
+    /// keeping the larger also copes with a client that fills in only one of them.
+    /// </remarks>
+    static List<SeedingEntry> Reconcile(IEnumerable<SeedingEntry> byEventType, IEnumerable<SeedingEntry> byEventSource)
+    {
+        var reconciled = byEventType.ToList();
+
+        var accountedFor = new Dictionary<SeedingEntry, int>(SeedingEntryIdentity.Comparer);
+        foreach (var entry in reconciled)
+        {
+            accountedFor[entry] = accountedFor.GetValueOrDefault(entry) + 1;
+        }
+
+        foreach (var entry in byEventSource)
+        {
+            var remaining = accountedFor.GetValueOrDefault(entry);
+            if (remaining > 0)
+            {
+                accountedFor[entry] = remaining - 1;
+                continue;
+            }
+
+            reconciled.Add(entry);
+        }
+
+        return reconciled;
+    }
+
     static SeedDataResponse MapToResponse(Storage.Seeding.EventSeeds seeds)
     {
         var response = new SeedDataResponse();
@@ -141,5 +152,29 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Compares two entries on what identifies them: the event source, the event type, the content and the
+    /// set of tags. It matches the comparison the seeding grain makes when it decides whether an entry has
+    /// already been seeded, so the two never disagree about what "the same entry" means.
+    /// </summary>
+    sealed class SeedingEntryIdentity : IEqualityComparer<SeedingEntry>
+    {
+        internal static readonly SeedingEntryIdentity Comparer = new();
+
+        public bool Equals(SeedingEntry? x, SeedingEntry? y) =>
+            ReferenceEquals(x, y) ||
+            (x is not null &&
+             y is not null &&
+             string.Equals(x.EventSourceId, y.EventSourceId, StringComparison.Ordinal) &&
+             string.Equals(x.EventTypeId, y.EventTypeId, StringComparison.Ordinal) &&
+             string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
+             TagsOf(x).SetEquals(TagsOf(y)));
+
+        public int GetHashCode(SeedingEntry obj) =>
+            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count);
+
+        static HashSet<string> TagsOf(SeedingEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
     }
 }

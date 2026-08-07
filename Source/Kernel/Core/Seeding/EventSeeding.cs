@@ -89,17 +89,7 @@ public class EventSeeding(
 
     async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList)
     {
-        var newEntries = new List<(SeedingEntry Entry, SeededEventEntry Seeded)>();
-        foreach (var entry in entriesList)
-        {
-            var tags = entry.Tags?.Select(t => t.Value) ?? [];
-            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
-            if (!IsAlreadySeeded(seededEntry))
-            {
-                newEntries.Add((entry, seededEntry));
-            }
-        }
-
+        var newEntries = GetEntriesStillToSeed(entriesList);
         if (newEntries.Count == 0)
         {
             return SeedingResult.Complete;
@@ -218,64 +208,76 @@ public class EventSeeding(
         return everyBatchAppended ? SeedingResult.Complete : SeedingResult.Incomplete;
     }
 
-    List<SeedableEvent> GetEventsToSeed(List<SeedingEntry> entriesList)
+    List<SeedableEvent> GetEventsToSeed(List<SeedingEntry> entriesList) =>
+        GetEntriesStillToSeed(entriesList).ConvertAll(_ =>
+        {
+            var content = JsonSerializer.Deserialize<JsonObject>(_.Entry.Content)!;
+            return new SeedableEvent(
+                _.Seeded,
+                new EventToAppend(
+                    EventSourceType.Default,
+                    _.Entry.EventSourceId,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    new EventType(_.Entry.EventTypeId, EventTypeGeneration.First),
+                    _.Entry.Tags ?? [],
+                    content));
+        });
+
+    /// <summary>
+    /// Filters the entries down to the ones the seeded tracking does not already account for, WITHOUT
+    /// marking any of them seeded - the caller does that only once the append has succeeded.
+    /// </summary>
+    /// <param name="entriesList">The entries offered for seeding, in order.</param>
+    /// <returns>The entries still to seed, paired with the entry to record for each.</returns>
+    /// <remarks>
+    /// The tracking is consulted by COUNT, not by existence. Two events of the same type, on the same
+    /// event source, with the same payload are two facts that really happened; asking only whether an
+    /// equal entry has been seeded would skip the second one forever as soon as the first had landed -
+    /// which is exactly the state a rejected batch or a chunk boundary between the two leaves behind, so
+    /// an existence check would quietly cancel the retry that is supposed to repair it.
+    /// </remarks>
+    List<(SeedingEntry Entry, SeededEventEntry Seeded)> GetEntriesStillToSeed(List<SeedingEntry> entriesList)
     {
-        var seedableEvents = new List<SeedableEvent>();
+        var stillToSeed = new List<(SeedingEntry Entry, SeededEventEntry Seeded)>();
+        var stillAccountedFor = new Dictionary<SeededEventEntry, int>(SeededEventEntryIdentity.Comparer);
 
         foreach (var entry in entriesList)
         {
             var tags = entry.Tags?.Select(t => t.Value) ?? [];
             var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
 
-            // Determine whether this exact event still needs seeding WITHOUT marking it seeded here -
-            // the caller marks each entry as seeded only after its append has succeeded.
-            var alreadySeeded = IsAlreadySeeded(seededEntry);
-
-            if (!alreadySeeded)
+            if (!stillAccountedFor.TryGetValue(seededEntry, out var remaining))
             {
-                // Prepare for appending
-                var content = JsonSerializer.Deserialize<JsonObject>(entry.Content)!;
-                seedableEvents.Add(new SeedableEvent(
-                    seededEntry,
-                    new EventToAppend(
-                        EventSourceType.Default,
-                        entry.EventSourceId,
-                        EventStreamType.All,
-                        EventStreamId.Default,
-                        new EventType(entry.EventTypeId, EventTypeGeneration.First),
-                        entry.Tags ?? [],
-                        content)));
+                remaining = CountAlreadySeeded(seededEntry);
             }
+
+            if (remaining > 0)
+            {
+                stillAccountedFor[seededEntry] = remaining - 1;
+                continue;
+            }
+
+            stillAccountedFor[seededEntry] = 0;
+            stillToSeed.Add((entry, seededEntry));
         }
 
-        return seedableEvents;
+        return stillToSeed;
     }
 
-    bool IsAlreadySeeded(SeededEventEntry entry)
+    int CountAlreadySeeded(SeededEventEntry entry)
     {
-        var entryTagsSet = new HashSet<string>(entry.Tags ?? []);
+        var byType = state.State.ByEventType.TryGetValue(entry.EventTypeId, out var byTypeEntries)
+            ? byTypeEntries.Count(e => SeededEventEntryIdentity.Comparer.Equals(e, entry))
+            : 0;
 
-        // Check in ByEventType
-        if (state.State.ByEventType.TryGetValue(entry.EventTypeId, out var byTypeEntries) &&
-            byTypeEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
-                                      e.EventTypeId == entry.EventTypeId &&
-                                      e.Content == entry.Content &&
-                                      new HashSet<string>(e.Tags ?? []).SetEquals(entryTagsSet)))
-        {
-            return true;
-        }
+        var bySource = state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var bySourceEntries)
+            ? bySourceEntries.Count(e => SeededEventEntryIdentity.Comparer.Equals(e, entry))
+            : 0;
 
-        // Check in ByEventSource
-        if (state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var bySourceEntries) &&
-            bySourceEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
-                                        e.EventTypeId == entry.EventTypeId &&
-                                        e.Content == entry.Content &&
-                                        new HashSet<string>(e.Tags ?? []).SetEquals(entryTagsSet)))
-        {
-            return true;
-        }
-
-        return false;
+        // The two halves are written together and should agree; taking the larger keeps the guard on the
+        // safe side of a half that was written by an older version or lost a write.
+        return Math.Max(byType, bySource);
     }
 
     void TrackSeededEvent(SeededEventEntry entry)
@@ -305,4 +307,28 @@ public class EventSeeding(
     /// <param name="Seeded">The <see cref="SeededEventEntry"/> to record once the event has been appended.</param>
     /// <param name="ToAppend">The <see cref="EventToAppend"/> to append to the event sequence.</param>
     record SeedableEvent(SeededEventEntry Seeded, EventToAppend ToAppend);
+
+    /// <summary>
+    /// Compares two seeded entries on what identifies them: the event source, the event type, the content
+    /// and the set of tags. The record's own equality cannot be used - it compares the tag sequence by
+    /// reference, so two entries with equal tags never match.
+    /// </summary>
+    sealed class SeededEventEntryIdentity : IEqualityComparer<SeededEventEntry>
+    {
+        internal static readonly SeededEventEntryIdentity Comparer = new();
+
+        public bool Equals(SeededEventEntry? x, SeededEventEntry? y) =>
+            ReferenceEquals(x, y) ||
+            (x is not null &&
+             y is not null &&
+             x.EventSourceId == y.EventSourceId &&
+             x.EventTypeId == y.EventTypeId &&
+             string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
+             TagsOf(x).SetEquals(TagsOf(y)));
+
+        public int GetHashCode(SeededEventEntry obj) =>
+            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count);
+
+        static HashSet<string> TagsOf(SeededEventEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
+    }
 }
