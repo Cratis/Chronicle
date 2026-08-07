@@ -328,6 +328,13 @@ public class ChangesetConverter(
             // carries a [PII] member is stored with that member encrypted at rest, so a full-document match
             // against the plaintext removal state never matches and nothing is pulled — the in-memory sink
             // removes by key, so the two sinks would otherwise silently diverge. The identifier is not PII.
+            //
+            // The value is used unconverted, and unlike the join filter that is not a latent type mismatch. The
+            // key here is the array indexer's identifier, which ResolveKey has already coerced to the type the
+            // child's identified-by property declares (EnsureCorrectTypeForArrayIndexersOnKey, against the same
+            // ITypeFormats this converter would use), and RemoveChild only raises a ChildRemoved once that value
+            // has matched the child in the materialized state. Converting again would produce the same BSON, and
+            // the unconverted call cannot throw because it is given no target type to coerce to.
             var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
             updateBuilder = updateBuilder is not null
                 ? updateBuilder.PullFilter(property, childFilter)
