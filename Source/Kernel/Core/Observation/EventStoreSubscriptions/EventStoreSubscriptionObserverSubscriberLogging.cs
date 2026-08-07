@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
@@ -21,4 +22,7 @@ internal static partial class EventStoreSubscriptionObserverSubscriberLogging
 
     [LoggerMessage(LogLevel.Error, "Error forwarding events from observer '{ObserverKey}' to event store '{TargetEventStore}' inbox sequence '{InboxSequenceId}'")]
     internal static partial void ErrorForwardingEvents(this ILogger<EventStoreSubscriptionObserverSubscriber> logger, Exception exception, ObserverKey observerKey, EventStoreName targetEventStore, EventSequenceId inboxSequenceId);
+
+    [LoggerMessage(LogLevel.Information, "Copied the encryption key for '{Identifier}' from event store '{SourceEventStore}' to event store '{TargetEventStore}' in namespace '{Namespace}' while forwarding events. The subject now holds a key in both event stores, and erasing it reaches only the one it is asked for")]
+    internal static partial void CopiedEncryptionKeyToTargetEventStore(this ILogger<EventStoreSubscriptionObserverSubscriber> logger, EncryptionKeyIdentifier identifier, EventStoreName sourceEventStore, EventStoreName targetEventStore, EventStoreNamespaceName @namespace);
 }

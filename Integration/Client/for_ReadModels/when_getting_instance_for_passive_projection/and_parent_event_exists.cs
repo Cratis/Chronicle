@@ -41,7 +41,10 @@ public class and_parent_event_exists(context context) : Given<context>(context)
 
     [Fact] void should_return_the_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_set_the_application_name() => Context.Result.Name.ShouldEqual("Sample Application");
-    // Declared non-nullable, so an absent field reads back as an empty collection rather than as null.
+
+    /// <summary>
+    /// Declared non-nullable, so an absent field reads back as an empty collection rather than as null.
+    /// </summary>
     [Fact] void should_not_have_event_models_yet() => Context.Result.EventModels.ShouldBeEmpty();
 }
 

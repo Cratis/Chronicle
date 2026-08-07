@@ -58,4 +58,9 @@ subject is encrypted with the same key — and once that key is deleted (for exa
 right-to-erasure request), every PII property across every event for that subject becomes
 unrecoverable in one operation.
 
+That one operation covers one event store and one namespace. A subject whose events are
+forwarded to another event store by a subscription holds a key in that store too, and erasing
+them takes one delete per event store and namespace — see
+[Erasing a subject](./../compliance/erasing-a-subject.md).
+
 Read more about [PII compliance](./../compliance/pii).
