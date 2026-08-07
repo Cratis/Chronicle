@@ -11,11 +11,16 @@ namespace Cratis.Chronicle.Events;
 /// Represents an implementation of <see cref="IEventSerializer"/>.
 /// </summary>
 /// <remarks>
-/// Deliberately not a container service. Every instance is constructed by the <see cref="IEventStore"/> it
-/// belongs to, with that store's own <see cref="IEventTypes"/> — which is scoped, because the registry belongs
-/// to the namespace the resolving scope named. Registering this for the process lifetime would capture one
-/// namespace's registry for every namespace.
+/// Scoped, because it holds the <see cref="IEventTypes"/> of the event store it serializes for and that
+/// registry belongs to the namespace the resolving scope named. Registering it for the process lifetime would
+/// capture one namespace's registry for every namespace, and leaving it to the convention's transient default
+/// would rebuild the <see cref="JsonSerializerOptions"/> and re-activate every
+/// <see cref="ICanProvideAdditionalEventInformation"/> on every resolution while still being refused from the
+/// root provider under scope validation. Most instances are constructed directly by the
+/// <see cref="IEventStore"/> they belong to, but the type is bound by the <c>IFoo -> Foo</c> convention and is
+/// resolved from the container by the integration testing package, so the lifetime it declares is load-bearing.
 /// </remarks>
+[Scoped]
 public class EventSerializer : IEventSerializer
 {
     readonly ICanProvideAdditionalEventInformation[] _additionalEventInformationProviders;
