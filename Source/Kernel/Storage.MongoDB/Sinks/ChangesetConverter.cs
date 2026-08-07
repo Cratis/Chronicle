@@ -328,8 +328,13 @@ public class ChangesetConverter(
             return Builders<BsonDocument>.Filter.Eq(property, value);
         }
 
+        // The join key is the join source's raw event source id — always a string. The joined-on column is
+        // stored in whatever BSON representation its schema dictates, so a Guid-backed column holds
+        // BinData and a string comparand matches nothing: the UpdateMany reports zero matched, which is
+        // indistinguishable from a successful write. Convert through the schema, exactly as the child
+        // branch above already does for its array-indexer identifier.
         var (prop, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
-        return Builders<BsonDocument>.Filter.Eq(prop, joined.Key);
+        return Builders<BsonDocument>.Filter.Eq(prop, converter.ToBsonValue(joined.Key, joined.OnProperty));
     }
 
     IEnumerable<Change> NormalizeJoinedChanges(IEnumerable<Change> changes)
