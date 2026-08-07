@@ -57,14 +57,14 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
-    public async Task Seed(IEnumerable<SeedingEntry> entries)
+    public async Task<SeedingResult> Seed(IEnumerable<SeedingEntry> entries)
     {
         logger.SeedingEvents(_key.EventStore.Value, _key.Namespace.Value);
 
         var entriesList = entries.ToList();
         if (entriesList.Count == 0)
         {
-            return;
+            return SeedingResult.Complete;
         }
 
         state.State ??= new EventSeeds(
@@ -72,90 +72,9 @@ public class EventSeeding(
                 new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
         // For global grains, store the entries and apply to all existing namespaces
-        if (_key.IsGlobal)
-        {
-            var newEntries = new List<(SeedingEntry Entry, SeededEventEntry Seeded)>();
-            foreach (var entry in entriesList)
-            {
-                var tags = entry.Tags?.Select(t => t.Value) ?? [];
-                var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
-                if (!IsAlreadySeeded(seededEntry))
-                {
-                    newEntries.Add((entry, seededEntry));
-                }
-            }
-
-            if (newEntries.Count > 0)
-            {
-                // Dispatch to every namespace grain BEFORE committing the global tracking. Each namespace
-                // grain applies its own idempotency guard, so re-dispatching after a transient failure is
-                // append-idempotent. Committing the tracking first would permanently lose events: a grain
-                // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
-                // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
-                // never receive the events.
-                var entriesToSeed = newEntries.ConvertAll(_ => _.Entry);
-                var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
-                var namespaces = await namespacesGrain.GetAll();
-                foreach (var ns in namespaces)
-                {
-                    logger.ApplyingSeedsToNamespace(ns.Value);
-                    var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
-                    var nsGrain = grainFactory.GetGrain<IEventSeeding>(namespaceKey.ToString());
-                    await nsGrain.Seed(entriesToSeed);
-                }
-
-                // Only now, after every namespace has been seeded, commit the global tracking so a retry
-                // re-dispatches when a namespace dispatch throws.
-                foreach (var (_, seededEntry) in newEntries)
-                {
-                    TrackSeededEvent(seededEntry);
-                }
-
-                await state.WriteStateAsync();
-            }
-        }
-        else
-        {
-            // For namespace-specific grains, append events to the sequence
-            // _eventSequence is guaranteed to be non-null here since we're in the non-global branch
-            if (_eventSequence is null)
-            {
-                throw new InvalidOperationException("Event sequence should be initialized for namespace-specific grains");
-            }
-
-            var seedableEvents = GetEventsToSeed(entriesList);
-            if (seedableEvents.Count > 0)
-            {
-                logger.AppendingSeededEvents(seedableEvents.Count);
-                var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
-
-                // Append in batches to avoid overwhelming the event sequence grain with too many events at once.
-                // Mark each entry as seeded only AFTER its batch has been appended - never before. Tracking an
-                // entry before the append succeeds would dirty the in-memory seeded set; a transient append
-                // failure would then leave it claiming an event was seeded that was not, silently skipping the
-                // event on a same-activation retry until the grain deactivates and reloads clean state.
-                foreach (var batch in seedableEvents.Chunk(SeedingBatchSize))
-                {
-                    await _eventSequence.AppendMany(
-                        batch.Select(_ => _.ToAppend),
-                        CorrelationId.New(),
-                        causation,
-                        Identity.System,
-                        new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
-
-                    foreach (var seedable in batch)
-                    {
-                        TrackSeededEvent(seedable.Seeded);
-                    }
-                }
-
-                await state.WriteStateAsync();
-            }
-            else
-            {
-                logger.AllEventsAlreadySeeded();
-            }
-        }
+        return _key.IsGlobal
+            ? await SeedGlobally(entriesList)
+            : await SeedNamespace(entriesList);
     }
 
     /// <inheritdoc/>
@@ -166,6 +85,137 @@ public class EventSeeding(
             new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
         return Task.FromResult(state.State);
+    }
+
+    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList)
+    {
+        var newEntries = new List<(SeedingEntry Entry, SeededEventEntry Seeded)>();
+        foreach (var entry in entriesList)
+        {
+            var tags = entry.Tags?.Select(t => t.Value) ?? [];
+            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
+            if (!IsAlreadySeeded(seededEntry))
+            {
+                newEntries.Add((entry, seededEntry));
+            }
+        }
+
+        if (newEntries.Count == 0)
+        {
+            return SeedingResult.Complete;
+        }
+
+        // Dispatch to every namespace grain BEFORE committing the global tracking. Each namespace
+        // grain applies its own idempotency guard, so re-dispatching after a transient failure is
+        // append-idempotent. Committing the tracking first would permanently lose events: a grain
+        // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
+        // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
+        // never receive the events.
+        var entriesToSeed = newEntries.ConvertAll(_ => _.Entry);
+        var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
+        var namespaces = await namespacesGrain.GetAll();
+        var everyNamespaceSeeded = true;
+        foreach (var ns in namespaces)
+        {
+            logger.ApplyingSeedsToNamespace(ns.Value);
+            var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
+            var nsGrain = grainFactory.GetGrain<IEventSeeding>(namespaceKey.ToString());
+            var result = await nsGrain.Seed(entriesToSeed);
+            everyNamespaceSeeded &= result.AllEntriesSeeded;
+        }
+
+        // A namespace that declined part of what it was given is the same situation as one that threw:
+        // the entries are still waiting. Committing the tracking here would mean they are never
+        // dispatched again, so hold it back and let the next run re-offer the whole set - the namespace
+        // grains skip whatever already landed.
+        if (!everyNamespaceSeeded)
+        {
+            logger.NamespaceSeedingIncomplete(_key.EventStore.Value);
+            return SeedingResult.Incomplete;
+        }
+
+        // Only now, after every namespace has seeded everything, commit the global tracking so a retry
+        // re-dispatches when a namespace dispatch throws or declines.
+        foreach (var (_, seededEntry) in newEntries)
+        {
+            TrackSeededEvent(seededEntry);
+        }
+
+        await state.WriteStateAsync();
+
+        return SeedingResult.Complete;
+    }
+
+    async Task<SeedingResult> SeedNamespace(List<SeedingEntry> entriesList)
+    {
+        // For namespace-specific grains, append events to the sequence
+        // _eventSequence is guaranteed to be non-null here since we're in the non-global branch
+        if (_eventSequence is null)
+        {
+            throw new InvalidOperationException("Event sequence should be initialized for namespace-specific grains");
+        }
+
+        var seedableEvents = GetEventsToSeed(entriesList);
+        if (seedableEvents.Count == 0)
+        {
+            logger.AllEventsAlreadySeeded();
+            return SeedingResult.Complete;
+        }
+
+        logger.AppendingSeededEvents(seedableEvents.Count);
+        var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
+
+        // Append in batches to avoid overwhelming the event sequence grain with too many events at once.
+        // Mark each entry as seeded only AFTER its batch has been appended - never before, and only when
+        // the append actually succeeded. Appending many validates the whole batch before writing anything
+        // and returns on the first failure, so a rejected batch means not one of its events exists;
+        // recording it anyway is a permanent claim about events that were never written, and the entries
+        // are then skipped on every later run. Leaving a rejected batch unrecorded is what makes offering
+        // it again seed it, which is the only repair there is.
+        var everyBatchAppended = true;
+        var anythingAppended = false;
+        foreach (var batch in seedableEvents.Chunk(SeedingBatchSize))
+        {
+            var result = await _eventSequence.AppendMany(
+                batch.Select(_ => _.ToAppend),
+                CorrelationId.New(),
+                causation,
+                Identity.System,
+                new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+
+            if (!result.IsSuccess)
+            {
+                // Report and move on rather than throw. A rejected batch is usually a constraint violation,
+                // which is deterministic - throwing would take the host down on every start and would also
+                // strand the batches that did append, since their tracking is persisted below. The
+                // remaining batches are unrelated events that share nothing with the rejected one but a
+                // chunk index, so they are still worth appending.
+                logger.SeededEventsRejected(
+                    batch.Length,
+                    _key.EventStore.Value,
+                    _key.Namespace.Value,
+                    string.Join(", ", result.ConstraintViolations.Select(_ => _.Message.Value)),
+                    string.Join(", ", result.Errors.Select(_ => _.Value)),
+                    string.Join(", ", result.ConcurrencyViolations.Select(_ => _.EventSourceId.Value)));
+
+                everyBatchAppended = false;
+                continue;
+            }
+
+            foreach (var seedable in batch)
+            {
+                TrackSeededEvent(seedable.Seeded);
+            }
+
+            anythingAppended = true;
+        }
+
+        if (anythingAppended)
+        {
+            await state.WriteStateAsync();
+        }
+
+        return everyBatchAppended ? SeedingResult.Complete : SeedingResult.Incomplete;
     }
 
     List<SeedableEvent> GetEventsToSeed(List<SeedingEntry> entriesList)
