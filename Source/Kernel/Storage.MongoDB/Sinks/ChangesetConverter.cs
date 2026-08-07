@@ -358,6 +358,7 @@ public class ChangesetConverter(
             return;
         }
 
+        var isRootLevelJoin = key.ArrayIndexers.IsEmpty;
         var target = CreateJoinFilterTarget(key, joined);
 
         // An absent comparand yields BsonNull, and Eq(property, null) matches every document whose column is
@@ -382,9 +383,13 @@ public class ChangesetConverter(
         // A join that matches nothing is a successful zero-row update — the write is simply lost. That is
         // legitimate when no root carries the joined value yet (the row-creation-time backfill covers it),
         // so this is diagnostic rather than a failure; without it a misdeclared join is entirely silent.
-        if (result.IsAcknowledged && result.MatchedCount == 0)
+        // A CHILD join legitimately matches nothing whenever no root holds the child, which is routine, so
+        // only the root-level branch reports it. The key is the join source's event source id, which is the
+        // compliance subject by default — the read model and the joined-on property are the diagnostic
+        // value, so the identifier itself is deliberately left out of the message.
+        if (isRootLevelJoin && result.IsAcknowledged && result.MatchedCount == 0)
         {
-            logger.JoinMatchedNoDocuments(readModel.Identifier, joined.OnProperty, joined.Key);
+            logger.JoinMatchedNoDocuments(readModel.Identifier, joined.OnProperty);
         }
     }
 

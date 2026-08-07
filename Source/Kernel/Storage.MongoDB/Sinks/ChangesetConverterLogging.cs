@@ -9,8 +9,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 internal static partial class ChangesetConverterLogging
 {
-    [LoggerMessage(LogLevel.Debug, "Join for read model '{ReadModel}' on property '{OnProperty}' with key '{Key}' matched no documents")]
-    internal static partial void JoinMatchedNoDocuments(this ILogger<ChangesetConverter> logger, ReadModelIdentifier readModel, PropertyPath onProperty, object key);
+    [LoggerMessage(LogLevel.Debug, "Root-level join for read model '{ReadModel}' on property '{OnProperty}' matched no documents")]
+    internal static partial void JoinMatchedNoDocuments(this ILogger<ChangesetConverter> logger, ReadModelIdentifier readModel, PropertyPath onProperty);
 
     [LoggerMessage(LogLevel.Debug, "Join for read model '{ReadModel}' on property '{OnProperty}' has no value to filter on and was not written")]
     internal static partial void JoinHasNoKey(this ILogger<ChangesetConverter> logger, ReadModelIdentifier readModel, PropertyPath onProperty);
