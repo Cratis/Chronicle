@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -75,7 +74,7 @@ public class when_a_projection_persists_a_polymorphic_child(when_a_projection_pe
 
             var collections = new SinkCollections(readModel, database);
             var mongoDBConverter = new MongoDBConverter(sinkConverter, typeFormats, readModel);
-            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, sinkConverter, NullLogger<ChangesetConverter>.Instance);
+            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, sinkConverter);
             var sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, sinkConverter);
 
             var key = new Key(Identifier, ArrayIndexers.NoIndexers);

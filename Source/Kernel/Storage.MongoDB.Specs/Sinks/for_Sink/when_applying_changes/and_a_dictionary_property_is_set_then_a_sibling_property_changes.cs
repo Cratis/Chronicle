@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -59,7 +58,7 @@ public class and_a_dictionary_property_is_set_then_a_sibling_property_changes(co
             var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
             var collections = new SinkCollections(readModel, _database);
             var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel);
-            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter, NullLogger<ChangesetConverter>.Instance);
+            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
             _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
             _collection = collections.GetCollection();
 

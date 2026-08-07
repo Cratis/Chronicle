@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 
 using context = Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes.and_compliance_changes_nested_property_after_complex_property_is_set.context;
@@ -46,7 +45,7 @@ public class and_compliance_changes_nested_property_after_complex_property_is_se
             var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
             var collections = new SinkCollections(readModel, _database);
             var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel);
-            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter, NullLogger<ChangesetConverter>.Instance);
+            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
             _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
 
             try

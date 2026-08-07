@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -32,6 +33,26 @@ public class ChangesetConverter(
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<ChangesetConverter> logger) : IChangesetConverter
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChangesetConverter"/> class without a logger.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
+    /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <remarks>
+    /// Retained so a caller written against the previous constructor keeps compiling; it forgoes the diagnostic
+    /// naming a join that matched no documents.
+    /// </remarks>
+    public ChangesetConverter(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IExpandoObjectConverter expandoObjectConverter)
+        : this(readModel, converter, collections, expandoObjectConverter, NullLogger<ChangesetConverter>.Instance)
+    {
+    }
+
     /// <inheritdoc/>
     public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
         Key key,

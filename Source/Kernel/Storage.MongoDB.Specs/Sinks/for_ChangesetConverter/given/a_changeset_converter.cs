@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
-using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -47,7 +46,6 @@ public class a_changeset_converter : Specification
             _readModel,
             _mongoDBConverter,
             _sinkCollections,
-            _expandoObjectConverter,
-            NullLogger<ChangesetConverter>.Instance);
+            _expandoObjectConverter);
     }
 }
