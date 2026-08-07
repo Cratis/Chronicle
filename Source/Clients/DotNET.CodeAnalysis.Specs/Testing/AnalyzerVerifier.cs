@@ -23,6 +23,8 @@ public static class AnalyzerVerifier<TAnalyzer>
         var project = TestProject.CreateProject(markedSource.Source);
         var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
 
+        VerifyCompiles(compilation!);
+
         var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new TAnalyzer());
         var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
         var diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync().ConfigureAwait(false);
@@ -34,6 +36,32 @@ public static class AnalyzerVerifier<TAnalyzer>
         {
             VerifyDiagnostic(orderedDiagnostics[i], expected[i], markedSource.Markers, i);
         }
+    }
+
+    /// <summary>
+    /// Assert that the spec's snippet actually compiles before anything is read into the analyzer's silence.
+    /// </summary>
+    /// <param name="compilation">The compilation built from the snippet.</param>
+    /// <exception cref="SpecSourceDoesNotCompile">Thrown when the snippet produces any compiler error.</exception>
+    /// <remarks>
+    /// <see cref="CompilationWithAnalyzers.GetAnalyzerDiagnosticsAsync()"/> returns only analyzer-produced
+    /// diagnostics, so a snippet that does not compile — a misspelled type, a missing using, an attribute that
+    /// binds to nothing — produces zero of them and every negative spec over it passes while measuring nothing.
+    /// A positive spec fails loudly in that state; a negative one is silently green, which is the worse half.
+    /// So the snippet is compiled first and any compiler error fails the spec with the error text attached.
+    /// </remarks>
+    static void VerifyCompiles(Compilation compilation)
+    {
+        var errors = compilation.GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        if (errors.Length == 0)
+        {
+            return;
+        }
+
+        throw new SpecSourceDoesNotCompile(errors);
     }
 
     static void VerifyDiagnostic(Diagnostic diagnostic, ExpectedDiagnostic expected, IReadOnlyDictionary<int, TextSpan> markers, int index)
