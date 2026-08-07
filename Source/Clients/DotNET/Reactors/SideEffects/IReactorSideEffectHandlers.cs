@@ -14,9 +14,10 @@ public interface IReactorSideEffectHandlers
     /// Determines whether any registered handler can process the given return value.
     /// </summary>
     /// <param name="reactorContext">The <see cref="ReactorContext"/> for the reactor invocation.</param>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the reactor is running under.</param>
     /// <param name="value">The value returned by the reactor handler method.</param>
     /// <returns><see langword="true"/> if any handler can process the value; otherwise <see langword="false"/>.</returns>
-    bool CanHandle(ReactorContext reactorContext, object value);
+    bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value);
 
     /// <summary>
     /// Dispatches the return value to all handlers that can process it.

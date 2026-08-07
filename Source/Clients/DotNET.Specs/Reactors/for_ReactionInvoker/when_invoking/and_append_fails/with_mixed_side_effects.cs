@@ -31,6 +31,7 @@ public class with_mixed_side_effects : Specification
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
 
         _failedAppendResult = AppendManyResult.Failed(
             CorrelationId.New(),
@@ -45,7 +46,7 @@ public class with_mixed_side_effects : Specification
         _eventLog.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
             .ReturnsForAnyArgs(_failedAppendResult);
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new MixedSideEffectsResultHandler(eventTypes)]));
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new MixedSideEffectsResultHandler()]));
         var reactor = new ReactorWithMixedSideEffectsReturnType();
 
         _invoker = new ReactorInvoker(

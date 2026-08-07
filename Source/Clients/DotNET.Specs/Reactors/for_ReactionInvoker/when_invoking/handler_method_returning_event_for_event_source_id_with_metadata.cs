@@ -33,6 +33,7 @@ public class handler_method_returning_event_for_event_source_id_with_metadata : 
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
         _eventLog.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
             .ReturnsForAnyArgs(callInfo =>
             {

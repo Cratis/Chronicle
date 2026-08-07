@@ -31,6 +31,7 @@ public class with_constraint_violation : Specification
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
 
         // Create a failed AppendResult with constraint violations
         _failedAppendResult = AppendResult.Failed(
@@ -46,7 +47,7 @@ public class with_constraint_violation : Specification
         _eventLog.Append(default!, default!, default, default, default, default, default, default, default, default)
             .ReturnsForAnyArgs(_failedAppendResult);
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(eventTypes)]));
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler()]));
         var reactor = new ReactorWithSyncEventReturnType(_outboundEvent);
 
         _invoker = new ReactorInvoker(

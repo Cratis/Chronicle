@@ -34,6 +34,7 @@ public class with_multiple_events_and_second_fails : Specification
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
 
         _failedAppendResult = AppendManyResult.Failed(
             CorrelationId.New(),
@@ -48,7 +49,7 @@ public class with_multiple_events_and_second_fails : Specification
         _eventLog.AppendMany(default!, default!, default, default, default, default, default, default, default, default)
             .ReturnsForAnyArgs(_failedAppendResult);
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventsResultHandler(eventTypes)]));
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventsResultHandler()]));
         var reactor = new ReactorWithMultipleEventsReturnType(_firstEvent, _secondEvent);
 
         _invoker = new ReactorInvoker(
