@@ -10,6 +10,18 @@ using context = Cratis.Chronicle.Integration.for_PIIManager.when_erasing_a_subje
 
 namespace Cratis.Chronicle.Integration.for_PIIManager;
 
+/// <summary>
+/// Records what a cross-event-store subscription does to an erasure, end to end against a real silo and a real
+/// MongoDB.
+/// </summary>
+/// <remarks>
+/// Two of the facts below pin behavior that is <b>wrong</b> and is expected to be inverted: the copy left in the
+/// other event store, and the erased PII becoming readable again once an event is forwarded back. They are here
+/// because the defect is real and undocumented, and a measurement of it is worth more than its absence — not
+/// because the outcome is desired. Each is named and documented as pinning today's behavior. When a tombstone
+/// the copy honors lands, those two go red, and going red is the point: invert them, do not adjust them.
+/// </remarks>
+/// <param name="context">The context the facts assert against.</param>
 [Collection(ChronicleCollection.Name)]
 public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_store(context context) : Given<context>(context)
 {
@@ -20,8 +32,12 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         public const string ForwardSubscriptionId = "pii-forwarding-source-to-target";
         public const string BackSubscriptionId = "pii-forwarding-target-to-source";
 
-        public EventSourceId EventSourceId { get; } = "request-23";
-        public Subject Subject { get; } = "person-23";
+        /// <summary>
+        /// Gets the event source the subject's event is appended to. Per run, so this spec and its sibling
+        /// cannot see each other's keys through the kernel collection they share.
+        /// </summary>
+        public EventSourceId EventSourceId { get; } = $"request-{Guid.NewGuid():N}";
+        public Subject Subject { get; } = $"person-{Guid.NewGuid():N}";
         public string SocialSecurityNumber { get; } = "111-22-3333";
 
         public bool SourceHasKeyAfterForwarding { get; private set; }
@@ -73,7 +89,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
             PiiInSourceAfterErasure = await ReadSocialSecurityNumber(sourceEventStore, EventSequenceId.Outbox);
             PiiInTargetAfterErasure = await ReadSocialSecurityNumber(targetEventStore, InboxFrom(SourceEventStoreName));
 
-            // Any later event for the same subject travelling the other way restores the erased key.
+            // Any later event for the same subject traveling the other way restores the erased key.
             await targetEventStore.GetEventSequence(EventSequenceId.Outbox).Append(
                 EventSourceId,
                 new PersonRegistered(Subject, "Jane Doe", SocialSecurityNumber));
@@ -157,8 +173,17 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
     void should_blank_the_pii_in_the_erased_event_store() =>
         Context.PiiInSourceAfterErasure.ShouldEqual(string.Empty);
 
+    /// <summary>
+    /// PINS TODAY'S DEFECT — not the desired outcome.
+    /// </summary>
+    /// <remarks>
+    /// A completed, audited erasure leaves the subject's personal data readable in the other event store. The
+    /// consumer has to know to erase everywhere; nothing at runtime tells them. Invert this fact — the PII in the
+    /// other event store should be blank — the day an erasure reaches every store the platform copied the key
+    /// into. Until then it measures the gap.
+    /// </remarks>
     [Fact]
-    void should_still_expose_the_pii_in_the_other_event_store() =>
+    void should_today_leave_the_pii_readable_in_the_other_event_store() =>
         Context.PiiInTargetAfterErasure.ShouldEqual(Context.SocialSecurityNumber);
 
     [Fact]
@@ -169,7 +194,17 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
     void should_restore_the_original_key_material() =>
         Context.KeyMaterialIsRestoredAfterForwardingBack.ShouldBeTrue();
 
+    /// <summary>
+    /// PINS TODAY'S DEFECT — not the desired outcome, and the worst of the three.
+    /// </summary>
+    /// <remarks>
+    /// The forwarded copy reinstates the pre-erasure key material, so personal data that was crypto-shredded and
+    /// recorded as erased reads in clear again. No consumer can work around it: the copy happens precisely
+    /// because the target holds no key, which is the state an erasure creates. Invert this fact — the PII should
+    /// stay blank — the day the copy honors a tombstone. That is design option 3 in
+    /// <c>DESIGN-imp-23-cross-store-key-erasure.md</c>, and it is blocked on a ruling, not on effort.
+    /// </remarks>
     [Fact]
-    void should_make_the_erased_pii_readable_again() =>
+    void should_today_make_the_erased_pii_readable_again() =>
         Context.PiiInSourceAfterForwardingBack.ShouldEqual(Context.SocialSecurityNumber);
 }

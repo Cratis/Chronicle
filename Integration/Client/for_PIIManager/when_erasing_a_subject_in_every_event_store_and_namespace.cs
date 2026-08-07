@@ -19,8 +19,12 @@ public class when_erasing_a_subject_in_every_event_store_and_namespace(context c
         public const string TargetEventStoreName = "pii-fanout-target";
         public const string SubscriptionId = "pii-fanout-source-to-target";
 
-        public EventSourceId EventSourceId { get; } = "request-23";
-        public Subject Subject { get; } = "person-23";
+        /// <summary>
+        /// Gets the event source the subject's event is appended to. Per run, so this spec and its sibling
+        /// cannot see each other's keys through the kernel collection they share.
+        /// </summary>
+        public EventSourceId EventSourceId { get; } = $"request-{Guid.NewGuid():N}";
+        public Subject Subject { get; } = $"person-{Guid.NewGuid():N}";
         public string SocialSecurityNumber { get; } = "111-22-3333";
 
         public bool SourceHasKeyBeforeErasure { get; private set; }
@@ -64,9 +68,16 @@ public class when_erasing_a_subject_in_every_event_store_and_namespace(context c
             SourceHasKeyBeforeErasure = await keys.HasFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
             TargetHasKeyBeforeErasure = await keys.HasFor(TargetEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
 
-            // The complete erasure a consumer has to write today: every event store, every namespace.
+            // The complete erasure a consumer has to write today: enumerate every event store, then every
+            // namespace within it, and delete in each. The enumeration is the part under specification and runs
+            // unfiltered — the facts below assert that both of this spec's event stores come back from it. The
+            // deletes are then confined to those two: every spec in this collection shares one kernel, so an
+            // unfiltered fan-out would reach into event stores other specs created and delete inside them.
             EnumeratedEventStores = await ChronicleClient.GetEventStores();
-            foreach (var eventStoreName in EnumeratedEventStores)
+            var ownEventStores = EnumeratedEventStores.Where(_ =>
+                _ == new EventStoreName(SourceEventStoreName) || _ == new EventStoreName(TargetEventStoreName));
+
+            foreach (var eventStoreName in ownEventStores)
             {
                 var eventStore = await ChronicleClient.GetEventStore(eventStoreName);
                 foreach (var @namespace in await eventStore.GetNamespaces())
