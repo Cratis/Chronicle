@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -23,11 +24,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+/// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
 public class ChangesetConverter(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
-    IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter
+    IExpandoObjectConverter expandoObjectConverter,
+    ILogger<ChangesetConverter> logger) : IChangesetConverter
 {
     /// <inheritdoc/>
     public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
@@ -302,7 +305,7 @@ public class ChangesetConverter(
         }
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
         var filter = CreateJoinedFilterDefinition(key, joined);
-        await collection.UpdateManyAsync(
+        var result = await collection.UpdateManyAsync(
             filter,
             joinUpdateBuilder,
             new UpdateOptions
@@ -310,6 +313,14 @@ public class ChangesetConverter(
                 IsUpsert = false,
                 ArrayFilters = [.. joinArrayFiltersForDocument]
             });
+
+        // A join that matches nothing is a successful zero-row update — the write is simply lost. That is
+        // legitimate when no root carries the joined value yet (the row-creation-time backfill covers it),
+        // so this is diagnostic rather than a failure; without it a misdeclared join is entirely silent.
+        if (result.IsAcknowledged && result.MatchedCount == 0)
+        {
+            logger.JoinMatchedNoDocuments(readModel.Identifier, joined.OnProperty, joined.Key);
+        }
     }
 
     FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)

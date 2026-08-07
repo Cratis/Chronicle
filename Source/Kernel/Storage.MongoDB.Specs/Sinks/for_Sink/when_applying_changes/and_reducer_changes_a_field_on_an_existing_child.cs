@@ -15,6 +15,7 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -60,7 +61,7 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
             _expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
             var collections = new SinkCollections(readModel, _database);
             _mongoDBConverter = new MongoDBConverter(_expandoObjectConverter, typeFormats, readModel);
-            var changesetConverter = new ChangesetConverter(readModel, _mongoDBConverter, collections, _expandoObjectConverter);
+            var changesetConverter = new ChangesetConverter(readModel, _mongoDBConverter, collections, _expandoObjectConverter, NullLogger<ChangesetConverter>.Instance);
             _sink = new Sink(readModel, _mongoDBConverter, collections, changesetConverter, _expandoObjectConverter);
             _pipeline = new ReducerPipeline(readModel, _sink, _objectComparer, new PassthroughReadModelsCompliance(), "test-store", "test-namespace");
             _collection = collections.GetCollection();

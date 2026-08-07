@@ -96,7 +96,7 @@ public class when_a_rekeyed_projection_persists_pii(MongoDBFixture fixture) : Sp
 
         _collections = new SinkCollections(readModel, database);
         var mongoDBConverter = new MongoDBConverter(sinkConverter, typeFormats, readModel);
-        var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, _collections, sinkConverter);
+        var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, _collections, sinkConverter, NullLogger<ChangesetConverter>.Instance);
         _sink = new Sink(readModel, mongoDBConverter, _collections, changesetConverter, sinkConverter);
 
         _projection = Substitute.For<IProjection>();

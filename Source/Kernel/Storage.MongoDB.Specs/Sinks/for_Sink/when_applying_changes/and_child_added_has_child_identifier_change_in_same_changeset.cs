@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 
 using context = Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes.and_child_added_has_child_identifier_change_in_same_changeset.context;
@@ -44,7 +45,7 @@ public class and_child_added_has_child_identifier_change_in_same_changeset(conte
             var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
             var collections = new SinkCollections(readModel, _database);
             var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel);
-            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
+            var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter, NullLogger<ChangesetConverter>.Instance);
             _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
 
             try
