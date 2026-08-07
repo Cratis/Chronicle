@@ -215,4 +215,10 @@ public static class DiagnosticIds
     /// A read model property is written by both a local mapping and a join, and the joined value always takes precedence.
     /// </summary>
     public const string JoinOverridesLocalWrite = "CHR0042";
+
+    /// <summary>
+    /// A projection redirects its document key away from the event source id and carries a [PII] value onto the
+    /// read model, so the value comes to rest under a compliance subject that is not its owner's.
+    /// </summary>
+    public const string KeyRedirectionPii = "CHR0043";
 }
