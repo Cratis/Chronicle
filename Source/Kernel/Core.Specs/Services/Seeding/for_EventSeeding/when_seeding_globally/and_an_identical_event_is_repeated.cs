@@ -12,10 +12,9 @@ namespace Cratis.Chronicle.Services.Seeding.for_EventSeeding.when_seeding_global
 /// on value turns that history into one the domain's own state machine cannot produce.
 /// </summary>
 /// <remarks>
-/// The client buckets entries by event type before they reach the wire, so the interleaving the seeder
-/// wrote is already gone by the time the service sees them - what the service owes is that every fact
-/// survives and that it does not reorder what it was handed. Restoring the interleaving is a separate
-/// question and is not what this specifies.
+/// The order is half of the claim. The client sends the entries bucketed two ways, and only the
+/// by-event-source bucketing carries the sequence the seeder wrote - so the history the event source ends
+/// up with is submitted, approved, submitted, approved, and not the type-by-type interleaving.
 /// </remarks>
 public class and_an_identical_event_is_repeated : given.an_event_seeding_service
 {
@@ -32,5 +31,5 @@ public class and_an_identical_event_is_repeated : given.an_event_seeding_service
     [Fact] void should_keep_every_fact() => EntriesSeededGlobally.Count().ShouldEqual(4);
     [Fact] void should_keep_both_submissions() => EntriesSeededGlobally.Count(_ => _.EventTypeId.Value == "submitted").ShouldEqual(2);
     [Fact] void should_keep_both_approvals() => EntriesSeededGlobally.Count(_ => _.EventTypeId.Value == "approved").ShouldEqual(2);
-    [Fact] void should_keep_them_in_the_order_they_arrived() => EntriesSeededGlobally.Select(_ => _.EventTypeId.Value).ToArray().ShouldEqual<string[]>(["submitted", "submitted", "approved", "approved"]);
+    [Fact] void should_keep_the_history_the_seeder_wrote() => EntriesSeededGlobally.Select(_ => _.EventTypeId.Value).ToArray().ShouldEqual<string[]>(["submitted", "approved", "submitted", "approved"]);
 }

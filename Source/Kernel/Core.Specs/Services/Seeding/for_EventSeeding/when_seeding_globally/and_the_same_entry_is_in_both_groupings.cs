@@ -23,5 +23,5 @@ public class and_the_same_entry_is_in_both_groupings : given.an_event_seeding_se
 
     [Fact] void should_seed_each_entry_once() => EntriesSeededGlobally.Count().ShouldEqual(3);
     [Fact] void should_have_sent_each_entry_twice_on_the_wire() => _request.GlobalByEventType.Sum(_ => _.Entries.Count).ShouldEqual(_request.GlobalByEventSource.Sum(_ => _.Entries.Count));
-    [Fact] void should_keep_them_in_the_order_they_arrived() => EntriesSeededGlobally.Select(_ => $"{_.EventSourceId}/{_.EventTypeId}").ToArray().ShouldEqual<string[]>(["timesheet-1/submitted", "timesheet-2/submitted", "timesheet-1/approved"]);
+    [Fact] void should_keep_each_event_source_in_the_order_the_seeder_wrote() => EntriesSeededGlobally.Select(_ => $"{_.EventSourceId}/{_.EventTypeId}").ToArray().ShouldEqual<string[]>(["timesheet-1/submitted", "timesheet-1/approved", "timesheet-2/submitted"]);
 }
