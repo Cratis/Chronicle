@@ -216,5 +216,5 @@ design is either a resurrection that still happens or a silent data loss.
 
 **The open question Chronicle must answer, in one line:** *is erasing a subject in an
 `(event store, namespace)` pair a permanent refusal to hold that subject's key there again, or only the
-removal of the key that exists now?* Option 3 is a two-week change once that is decided and unbuildable
-before it.
+removal of the key that exists now?* Option 3 is a contained kernel change once that is decided, and
+unbuildable before it.
