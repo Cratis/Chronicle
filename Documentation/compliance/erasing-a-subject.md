@@ -48,13 +48,15 @@ flowchart LR
     AK -.->|copied when missing| BK
 ```
 
-You never asked for the key to be there, and no client API reports that it is. The kernel logs the copy at information level, naming the identifier, both event stores and the namespace, so it is at least visible in the kernel log:
+You never asked for the key to be there, and no client API reports that it is. The kernel logs the copy at debug level, naming both event stores and the namespace, so it is at least visible in the kernel log:
 
 ```text
-Copied the encryption key for 'person-42' from event store 'Sales' to event store 'Support'
-in namespace 'Default' while forwarding events. The subject now holds a key in both event
+Copied a subject's encryption key from event store 'Sales' to event store 'Support' in
+namespace 'Default' while forwarding events. That subject now holds a key in both event
 stores, and erasing it reaches only the one it is asked for
 ```
+
+The line deliberately does not name the subject. The identifier is the person the key belongs to, and a log entry naming them is unencrypted personal data that survives the very erasure the key deletion performs — so the log tells you *that* a copy happened and *where*, and leaves *who* to the erasure record you keep yourself.
 
 Two consequences follow, and both matter for compliance:
 

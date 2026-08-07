@@ -35,13 +35,15 @@ Erasure in Chronicle is the deletion of an encryption key, and `IEventStore.PII.
 
 ## Observing the copy
 
-Chronicle logs each copy at information level from the forwarding subscriber, naming the encryption key identifier, both event stores and the namespace:
+Chronicle logs each copy at debug level from the forwarding subscriber, naming both event stores and the namespace:
 
 ```text
-Copied the encryption key for 'person-42' from event store 'Sales' to event store 'Support'
-in namespace 'Default' while forwarding events. The subject now holds a key in both event
+Copied a subject's encryption key from event store 'Sales' to event store 'Support' in
+namespace 'Default' while forwarding events. That subject now holds a key in both event
 stores, and erasing it reaches only the one it is asked for
 ```
+
+The subject is deliberately left out. It is the identity the personal data belongs to, and a log entry naming it is unencrypted personal data that outlives the erasure the key deletion performs.
 
 This is the only place the propagation surfaces — there is no client API that reports which event stores hold a key for a subject.
 

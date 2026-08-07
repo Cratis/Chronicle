@@ -7,6 +7,12 @@ that change public API, and picking one without a ruling would be worse than not
 Ask 4 (documentation) and the observability half of ask 2 (a log line) are already implemented on this
 branch and are out of scope here. What follows covers asks 1, 2 and 3.
 
+One correction to what shipped, because it is the same question this note refuses to answer on Chronicle's
+behalf below: the log line first named the subject, at information level. That is a durable, unencrypted
+record that a named person's key was propagated, written by the feature whose purpose is to make that
+person's data unreadable — question 3 under option 3, arrived at by accident rather than by ruling. It now
+records the source store, the target store and the namespace at debug level, and no identifier.
+
 ## What is actually true, measured
 
 Two integration specs in `Integration/Client/for_PIIManager/` run against a real Orleans silo and a real
@@ -138,7 +144,7 @@ or accept it and say so.
 diagnostic — "prove to my auditor that no store holds this key" — and that is a real use, but it is a
 different feature from erasure and should be argued on its own.
 
-## Option 3 — a tombstone the copy honours
+## Option 3 — a tombstone the copy honors
 
 This is the one that cannot be worked around, and the one with the most unanswered questions.
 
@@ -153,7 +159,7 @@ Three concrete hazards:
    a window in which the key is gone and the tombstone is not yet there — the exact window the feature
    exists to close.
 3. **`CompositeEncryptionKeyStorage` back-fills.** Its `TryGetFor` copies the key into every inner store
-   that lacks it. A tombstone honoured only by the subscriber would still be defeated by a composite
+   that lacks it. A tombstone honored only by the subscriber would still be defeated by a composite
    configuration.
 
 **Where it should live.** In the encryption key store, as a *state of the key record* rather than as a
