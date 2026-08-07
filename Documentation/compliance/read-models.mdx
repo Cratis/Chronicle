@@ -77,3 +77,34 @@ The fourth row is a modeling defect rather than a transient failure: a read mode
 
 > [!NOTE]
 > Applying PII behaves the opposite way, and deliberately so: if encryption fails on the way *in*, the operation fails. Storing a value that was meant to be protected, unprotected, is never an acceptable degradation.
+
+## Composing a read model yourself — `[ReleaseUnder]`
+
+Everything above describes a read model Chronicle builds and stores. A query method may instead compose one in memory, from rows it fetched itself — and a row read straight out of a collection still holds ciphertext, because the release only happens on the way through the kernel.
+
+Such a row has no subject of its own to release under. Chronicle resolves one from the instance — a `[Subject]` member, otherwise a property named `Id` — and for a composed row that leaves two outcomes, neither of which is what you meant:
+
+| The composed row… | What happens to the value it lifted |
+|---|---|
+| exposes a subject that is not the value's own | Released under the wrong subject: an empty value, plus an error in the kernel log. |
+| exposes no subject at all | Nothing. The release pass does not run and the ciphertext is returned as read. |
+
+`[ReleaseUnder]` on the property says which subject the value belongs to, so neither outcome is reached by accident:
+
+<ChronicleClientTabs snippet="compliance/read-models/release-under" />
+
+The attribute names a property of the same read model, and its value becomes the subject that one property is released under. Everything the property holds travels with it, including personal values nested inside a value object. Every property *without* the attribute keeps releasing under the read model's own subject exactly as before — including doing nothing when the row resolves none.
+
+Because each property carries its own subject, one row can hold data belonging to more than one person and release all of it — a shape a single-subject read model cannot express:
+
+<ChronicleClientTabs snippet="compliance/read-models/release-under-two-subjects" />
+
+### Rules
+
+- Declare it on a property of the read model itself. A declaration inside a value object or a child element names a property that type does not have, so it is reported as an error rather than ignored — move it up to the read model property that holds the value.
+- The name must match a public instance property of the read model. One that does not fails the read, because falling back to the read model's own subject is one of the two outcomes the declaration exists to avoid.
+- If the named property is empty on a given row, that one value is returned as read and a warning names the read model, the property and the subject property. A single unreadable value never fails a query.
+
+### When this is the wrong fit
+
+`[ReleaseUnder]` is for a value resolved in memory at the query edge. It does not make it acceptable to store one person's personal data on another person's document: a stored read model still holds exactly one subject's data, which is what keeps that person's erasure complete and what [CHR0038](../code-analysis/CHR0038) protects. If the personal value can be resolved from its owner's own read model at render time, prefer that — it needs no declaration at all.
