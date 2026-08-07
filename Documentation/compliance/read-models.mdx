@@ -102,6 +102,7 @@ Because each property carries its own subject, one row can hold data belonging t
 ### Rules
 
 - Declare it on a property of the read model itself. A declaration inside a value object or a child element names a property that type does not have, so it is reported as an error rather than ignored — move it up to the read model property that holds the value.
+- On a positional record, write it without a `[property:]` target. Both placements are read, but only the plain form puts the attribute where `nameof` can see a sibling parameter — `[property: ReleaseUnder(nameof(PersonId))]` does not compile.
 - The name must match a public instance property of the read model. One that does not fails the read, because falling back to the read model's own subject is one of the two outcomes the declaration exists to avoid.
 - If the named property is empty on a given row, that one value is returned as read and a warning names the read model, the property and the subject property. A single unreadable value never fails a query.
 
