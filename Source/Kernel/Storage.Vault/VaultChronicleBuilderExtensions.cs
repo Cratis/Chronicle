@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Compliance;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -18,7 +17,10 @@ public static class VaultChronicleBuilderExtensions
     /// <remarks>
     /// When <see cref="Encryption.Storage"/> is configured and its type is <c>vault</c>,
     /// this method adds a <see cref="Storage.Vault.VaultEncryptionKeyStorage"/> wrapped in a <see cref="CacheEncryptionKeyStorage"/>
-    /// as <see cref="IEncryptionKeyStorage"/>. Because it is registered last, it overrides the default storage registration.
+    /// as <see cref="IEncryptionKeyStorage"/>, taking over from the default storage registration.
+    /// With <see cref="Encryption.MigrateFromDefaultStorage"/> set it becomes the primary of a composite over the
+    /// default storage instead, so keys that only exist there keep being served and are moved into Vault as they
+    /// are read.
     /// If compliance encryption storage is not configured, or the type is not <c>vault</c>, no changes are made.
     /// </remarks>
     /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
@@ -34,10 +36,9 @@ public static class VaultChronicleBuilderExtensions
             return builder;
         }
 
-        builder.Services.AddSingleton<IEncryptionKeyStorage>(_ =>
-            new CacheEncryptionKeyStorage(
+        return builder.WithComplianceEncryptionKeyStorage(
+            options,
+            _ => new CacheEncryptionKeyStorage(
                 new Storage.Vault.VaultEncryptionKeyStorage(complianceStorage.ConnectionDetails)));
-
-        return builder;
     }
 }
