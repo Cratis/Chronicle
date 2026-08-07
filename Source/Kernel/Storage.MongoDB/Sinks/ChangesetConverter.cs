@@ -87,6 +87,39 @@ public class ChangesetConverter(
         return new(updateBuilder!, distinctArrayFilters, hasChanges);
     }
 
+    /// <summary>
+    /// Build the property and comparand the <see cref="Joined"/> change filters its update on.
+    /// </summary>
+    /// <param name="key">The resolved <see cref="Key"/> the change is applied under.</param>
+    /// <param name="joined">The <see cref="Joined"/> change to build the filter for.</param>
+    /// <returns>The <see cref="JoinFilterTarget"/> to filter on.</returns>
+    /// <remarks>
+    /// Internal so the conversion matrix can be specified directly rather than only through a write.
+    /// </remarks>
+    internal JoinFilterTarget CreateJoinFilterTarget(Key key, Joined joined)
+    {
+        // When array indexers are present, the join key (key.Value) is the root document key — not
+        // the child identifier. Use the last array indexer's property path and value to build a filter
+        // that matches ALL root documents containing this child, so UpdateManyAsync updates every
+        // document that has the child (e.g. all groups that contain the user), not just the first one
+        // found during key resolution.
+        if (!key.ArrayIndexers.IsEmpty)
+        {
+            var lastIndexer = key.ArrayIndexers.All.Last();
+            var filterPath = lastIndexer.ArrayProperty + lastIndexer.IdentifierProperty;
+            var (childProperty, _) = converter.ToMongoDBProperty(filterPath, ArrayIndexers.NoIndexers);
+            return new(childProperty, ToFilterValue(lastIndexer.Identifier, filterPath));
+        }
+
+        // The join key is the join source's raw event source id — always a string. The joined-on column is
+        // stored in whatever BSON representation its schema dictates, so a Guid-backed column holds
+        // BinData and a string comparand matches nothing: the UpdateMany reports zero matched, which is
+        // indistinguishable from a successful write. Convert through the schema, exactly as the child
+        // branch above already does for its array-indexer identifier.
+        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
+        return new(property, ToFilterValue(joined.Key, joined.OnProperty));
+    }
+
     static bool TryMergeJoinedChangeIntoChildAdded(IList<Change> changes, Joined joined)
     {
         if (joined.ArrayIndexers.IsEmpty)
@@ -324,10 +357,21 @@ public class ChangesetConverter(
         {
             return;
         }
+
+        var target = CreateJoinFilterTarget(key, joined);
+
+        // An absent comparand yields BsonNull, and Eq(property, null) matches every document whose column is
+        // null OR missing — an UpdateMany would then stamp all of them. The SQL sink refuses the same shape
+        // (Storage.Sql/Sinks/Sink.cs, ApplyJoinedChange), so refuse it here rather than write the collection.
+        if (target.Value is null or BsonNull)
+        {
+            logger.JoinHasNoKey(readModel.Identifier, joined.OnProperty);
+            return;
+        }
+
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
-        var filter = CreateJoinedFilterDefinition(key, joined);
         var result = await collection.UpdateManyAsync(
-            filter,
+            Builders<BsonDocument>.Filter.Eq(target.Property, target.Value),
             joinUpdateBuilder,
             new UpdateOptions
             {
@@ -344,29 +388,23 @@ public class ChangesetConverter(
         }
     }
 
-    FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)
+    BsonValue ToFilterValue(object? value, PropertyPath property)
     {
-        // When array indexers are present, the join key (key.Value) is the root document key — not
-        // the child identifier. Use the last array indexer's property path and value to build a filter
-        // that matches ALL root documents containing this child, so UpdateManyAsync updates every
-        // document that has the child (e.g. all groups that contain the user), not just the first one
-        // found during key resolution.
-        if (!key.ArrayIndexers.IsEmpty)
+        try
         {
-            var lastIndexer = key.ArrayIndexers.All.Last();
-            var filterPath = lastIndexer.ArrayProperty + lastIndexer.IdentifierProperty;
-            var (property, _) = converter.ToMongoDBProperty(filterPath, ArrayIndexers.NoIndexers);
-            var value = converter.ToBsonValue(lastIndexer.Identifier, filterPath);
-            return Builders<BsonDocument>.Filter.Eq(property, value);
+            return converter.ToBsonValue(value, property);
         }
-
-        // The join key is the join source's raw event source id — always a string. The joined-on column is
-        // stored in whatever BSON representation its schema dictates, so a Guid-backed column holds
-        // BinData and a string comparand matches nothing: the UpdateMany reports zero matched, which is
-        // indistinguishable from a successful write. Convert through the schema, exactly as the child
-        // branch above already does for its array-indexer identifier.
-        var (prop, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
-        return Builders<BsonDocument>.Filter.Eq(prop, converter.ToBsonValue(joined.Key, joined.OnProperty));
+        catch (Exception error)
+        {
+            // The comparand is the join source's raw event source id, and the schema of the joined-on column
+            // cannot always represent it — a Guid-formatted column against a key that is not a Guid is the
+            // common shape, and the conversion raises a FormatException. Filtering on the unconverted value
+            // matches nothing, which is exactly what this filter did before the conversion was introduced;
+            // throwing instead would fail the write and freeze the partition permanently. The value is the
+            // compliance subject by default, so the diagnostic names the property and not the value.
+            logger.JoinKeyNotConvertible(error, readModel.Identifier, property);
+            return value.ToBsonValue();
+        }
     }
 
     IEnumerable<Change> NormalizeJoinedChanges(IEnumerable<Change> changes)
