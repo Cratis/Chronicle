@@ -6,10 +6,10 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Log messages for <see cref="ReadModels"/>.
+/// Log messages for <see cref="ReadModelReleaser"/>.
 /// </summary>
-internal static partial class ReadModelsLogMessages
+internal static partial class ReadModelReleaserLogMessages
 {
     [LoggerMessage(LogLevel.Error, "Failed to release compliance for read model '{ReadModelType}' with subject '{Subject}': {Error}")]
-    internal static partial void FailedToRelease(this ILogger<ReadModels> logger, string readModelType, string subject, string error);
+    internal static partial void FailedToRelease(this ILogger logger, string readModelType, string subject, string error);
 }
