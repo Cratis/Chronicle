@@ -33,6 +33,8 @@ public class when_seeding_globally_again_after_a_failed_namespace_dispatch : giv
 
         _firstNamespaceGrain = Substitute.For<IEventSeeding>();
         _secondNamespaceGrain = Substitute.For<IEventSeeding>();
+        _firstNamespaceGrain.Seed(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
+        _secondNamespaceGrain.Seed(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
 
         _grainFactory.GetGrain<IEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", _firstNamespace).ToString()).Returns(_firstNamespaceGrain);
         _grainFactory.GetGrain<IEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", _secondNamespace).ToString()).Returns(_secondNamespaceGrain);

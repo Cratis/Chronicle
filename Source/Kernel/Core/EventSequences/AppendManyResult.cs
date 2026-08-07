@@ -26,12 +26,17 @@ public class AppendManyResult
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
     /// </summary>
-    public bool IsSuccess => !HasConstraintViolations && !HasErrors;
+    public bool IsSuccess => !HasConstraintViolations && !HasConcurrencyViolations && !HasErrors;
 
     /// <summary>
     /// Gets whether or not there are any violations that occurred.
     /// </summary>
     public bool HasConstraintViolations => ConstraintViolations.Any();
+
+    /// <summary>
+    /// Gets whether or not there are any concurrency violations that occurred.
+    /// </summary>
+    public bool HasConcurrencyViolations => ConcurrencyViolations.Any();
 
     /// <summary>
     /// Gets whether or not there are any errors that occurred.
