@@ -12,10 +12,19 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// Implement this interface and register it in the DI container to extend the set of return types
 /// that reactor handler methods can produce. The framework discovers all registered
 /// <see cref="IReactorSideEffectHandler"/> instances and delegates to those whose
-/// <see cref="CanHandle"/> method returns <see langword="true"/>.
+/// <see cref="CanHandle(ReactorContext, IEventStore, object)"/> method returns <see langword="true"/>.
 /// </remarks>
 public interface IReactorSideEffectHandler
 {
+    /// <summary>
+    /// Determines whether this handler can process the given return value.
+    /// </summary>
+    /// <param name="reactorContext">The <see cref="ReactorContext"/> for the reactor invocation.</param>
+    /// <param name="value">The value returned by the reactor handler method.</param>
+    /// <returns><see langword="true"/> if this handler can process the value; otherwise <see langword="false"/>.</returns>
+    [Obsolete("Implement the overload that takes the IEventStore. Anything the event store exposes - the event type registry in particular - belongs to the namespace the current scope resolved, so it cannot be captured.")]
+    bool CanHandle(ReactorContext reactorContext, object value) => false;
+
     /// <summary>
     /// Determines whether this handler can process the given return value.
     /// </summary>
@@ -27,8 +36,17 @@ public interface IReactorSideEffectHandler
     /// The event store is passed per call rather than captured, because everything it exposes — the event type
     /// registry in particular — belongs to the namespace the resolving scope named. A handler that holds one is
     /// answering for whichever namespace happened to build it first.
+    /// <para>
+    /// Defaults to the event-store-less overload so a handler written against the previous contract keeps
+    /// working unchanged; implement this one instead.
+    /// </para>
     /// </remarks>
-    bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value);
+    bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value)
+    {
+#pragma warning disable CS0618 // Deliberate: forwards to the previous contract for handlers that still implement it.
+        return CanHandle(reactorContext, value);
+#pragma warning restore CS0618
+    }
 
     /// <summary>
     /// Processes the return value, typically by appending one or more events to an event sequence.

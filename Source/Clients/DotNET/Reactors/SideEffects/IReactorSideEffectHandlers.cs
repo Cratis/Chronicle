@@ -14,10 +14,24 @@ public interface IReactorSideEffectHandlers
     /// Determines whether any registered handler can process the given return value.
     /// </summary>
     /// <param name="reactorContext">The <see cref="ReactorContext"/> for the reactor invocation.</param>
+    /// <param name="value">The value returned by the reactor handler method.</param>
+    /// <returns><see langword="true"/> if any handler can process the value; otherwise <see langword="false"/>.</returns>
+    [Obsolete("Use the overload that takes the IEventStore, so each handler is asked against the event store the reactor is running under.")]
+    bool CanHandle(ReactorContext reactorContext, object value) => false;
+
+    /// <summary>
+    /// Determines whether any registered handler can process the given return value.
+    /// </summary>
+    /// <param name="reactorContext">The <see cref="ReactorContext"/> for the reactor invocation.</param>
     /// <param name="eventStore">The <see cref="IEventStore"/> the reactor is running under.</param>
     /// <param name="value">The value returned by the reactor handler method.</param>
     /// <returns><see langword="true"/> if any handler can process the value; otherwise <see langword="false"/>.</returns>
-    bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value);
+    bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value)
+    {
+#pragma warning disable CS0618 // Deliberate: forwards to the previous contract for implementations that still provide it.
+        return CanHandle(reactorContext, value);
+#pragma warning restore CS0618
+    }
 
     /// <summary>
     /// Dispatches the return value to all handlers that can process it.
