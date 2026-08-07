@@ -31,10 +31,11 @@ public class handler_method_returning_multiple_events_from_reactor_implementing_
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
         _eventLog.AppendMany(default!, default!, default, default, default, default, default, default, default, default)
             .ReturnsForAnyArgs(AppendManyResult.Success(CorrelationId.New(), [EventSequenceNumber.First, EventSequenceNumber.First.Next()]));
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventsResultHandler(eventTypes)]));
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventsResultHandler()]));
         var reactor = new ReactorWithSubjectProvider(_firstEvent, _secondEvent, _reactorSubject);
 
         _invoker = new ReactorInvoker(

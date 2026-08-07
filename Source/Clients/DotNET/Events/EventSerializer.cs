@@ -10,7 +10,12 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSerializer"/>.
 /// </summary>
-[Singleton]
+/// <remarks>
+/// Deliberately not a container service. Every instance is constructed by the <see cref="IEventStore"/> it
+/// belongs to, with that store's own <see cref="IEventTypes"/> — which is scoped, because the registry belongs
+/// to the namespace the resolving scope named. Registering this for the process lifetime would capture one
+/// namespace's registry for every namespace.
+/// </remarks>
 public class EventSerializer : IEventSerializer
 {
     readonly ICanProvideAdditionalEventInformation[] _additionalEventInformationProviders;

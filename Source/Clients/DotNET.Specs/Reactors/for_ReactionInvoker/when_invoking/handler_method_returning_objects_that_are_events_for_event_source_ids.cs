@@ -28,6 +28,7 @@ public class handler_method_returning_objects_that_are_events_for_event_source_i
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
         _eventLog.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
             .ReturnsForAnyArgs(callInfo =>
             {
@@ -38,8 +39,8 @@ public class handler_method_returning_objects_that_are_events_for_event_source_i
         // All built-in handlers registered, mirroring the real client and testing harness.
         var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
         [
-            new EventResultHandler(eventTypes),
-            new EventsResultHandler(eventTypes),
+            new EventResultHandler(),
+            new EventsResultHandler(),
             new EventForEventSourceIdResultHandler(),
             new EventsForEventSourceIdResultHandler()
         ]));

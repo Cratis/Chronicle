@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 public class EventForEventSourceIdResultHandler : IReactorSideEffectHandler
 {
     /// <inheritdoc/>
-    public bool CanHandle(ReactorContext reactorContext, object value) =>
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
         value is EventForEventSourceId;
 
     /// <inheritdoc/>

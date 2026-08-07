@@ -18,15 +18,14 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// <see cref="EventsResultHandler"/> (all bare events) and <see cref="EventsForEventSourceIdResultHandler"/>
 /// (all <see cref="EventForEventSourceId"/>); this handler covers only the mixed case.
 /// </remarks>
-/// <param name="eventTypes"><see cref="IEventTypes"/> for checking whether the bare values are known event types.</param>
 [Singleton]
-public class MixedSideEffectsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHandler
+public class MixedSideEffectsResultHandler : IReactorSideEffectHandler
 {
     /// <inheritdoc/>
-    public bool CanHandle(ReactorContext reactorContext, object value) =>
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
         value is IEnumerable<object> items &&
         items.Any() &&
-        items.All(item => item is EventForEventSourceId || eventTypes.HasFor(item.GetType())) &&
+        items.All(item => item is EventForEventSourceId || eventStore.EventTypes.HasFor(item.GetType())) &&
         items.Any(item => item is EventForEventSourceId) &&
         items.Any(item => item is not EventForEventSourceId);
 
