@@ -12,6 +12,13 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// <param name="assemblyPath">The path to the assembly to load.</param>
 sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadContext(isCollectible: true)
 {
+    /// <summary>Additional probe paths for NuGet packages that the resolver may not find.</summary>
+    static readonly string[] _nugetProbePaths =
+    [
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages"),
+        Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? string.Empty,
+    ];
+
     readonly AssemblyDependencyResolver _resolver = new(assemblyPath);
 
     /// <inheritdoc/>
@@ -21,6 +28,45 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
         if (resolvedPath != null)
         {
             return LoadFromAssemblyPath(resolvedPath);
+        }
+
+        // Fall back to probing the NuGet package cache for packages whose assembly version
+        // does not match the NuGet package version (common in Arc and other packages).
+        if (assemblyName.Name is not null)
+        {
+            foreach (var root in _nugetProbePaths)
+            {
+                if (string.IsNullOrEmpty(root))
+                {
+                    continue;
+                }
+
+                // A package does not have to be named after the assembly it ships - Orleans ships
+                // Orleans.Core.Abstractions.dll from Microsoft.Orleans.Core.Abstractions - so probe the
+                // vendor-prefixed package directories too.
+                foreach (var packageName in CandidatePackageNames(assemblyName.Name))
+                {
+                    var packageDir = Path.Combine(root, packageName);
+                    if (!Directory.Exists(packageDir))
+                    {
+                        continue;
+                    }
+
+                    // Take the latest (alphabetically last) version folder.
+                    foreach (var versionDir in Directory.GetDirectories(packageDir).OrderDescending())
+                    {
+                        // Probe typical TFM library paths.
+                        foreach (var tfm in new[] { "net10.0", "net9.0", "net8.0", "netstandard2.0" })
+                        {
+                            var candidate = Path.Combine(versionDir, "lib", tfm, $"{assemblyName.Name}.dll");
+                            if (File.Exists(candidate))
+                            {
+                                return LoadFromAssemblyPath(candidate);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         return null;
@@ -36,5 +82,12 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
         }
 
         return IntPtr.Zero;
+    }
+
+    static IEnumerable<string> CandidatePackageNames(string assemblyName)
+    {
+        var lowered = assemblyName.ToLowerInvariant();
+        yield return lowered;
+        yield return $"microsoft.{lowered}";
     }
 }

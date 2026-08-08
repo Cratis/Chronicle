@@ -30,10 +30,39 @@
         </ProjectReference>
     </ItemGroup>
 
-    <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' ">
+    <!-- Generation of the gRPC contracts is conceptually independent of the TypeScript ProxyGenerator below;
+         it reads the built Core assembly for Arc artifacts. It stays gated on DisableProxyGenerator only
+         because the Observation artifacts in Core are not yet a complete replacement for the hand-written
+         Contracts/Observation/IObservers.cs - running generation today would overwrite that contract with one
+         missing ClearObserverQuarantine, GetObserverInformation, GetConnectedClientsForObserver,
+         WaitForCompletion and GetReplayableObserversForEventTypes. Ungate this the moment those are converted;
+         until then the Contracts for the converted services are checked in and can drift. -->
+    <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableProxyGenerator)' != 'true' ">
         <Message Text="Generating gRPC contracts from Arc artifacts" Importance="high" />
         <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
     </Target>
+
+    <PropertyGroup>
+        <!-- ProxyGenerator is disabled for Core because it is an Orleans grain project.
+             Orleans base types cannot be resolved in the ProxyGenerator's isolated assembly
+             load context, causing a hard crash. TypeScript proxy generation runs from the
+             API project instead (or a dedicated thin proxy-generation project). -->
+        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">true</DisableProxyGenerator>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Api</CratisProxiesOutputPath>
+        <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
+        <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true' and $([System.IO.Path]::IsPathRooted('$(OutputPath)'))">
+        <CratisProxiesOutputPath></CratisProxiesOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />

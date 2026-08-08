@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Chronicle.Api.Security;
@@ -18,8 +19,8 @@ public record RemoveUser(Guid UserId)
     /// <param name="users">The <see cref="IUsers"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IUsers users) =>
-        users.Remove(new()
+        users.RemoveUser(new()
         {
             UserId = UserId
-        });
+        }).EnsureSuccess();
 }

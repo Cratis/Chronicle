@@ -22,6 +22,16 @@ internal static partial class JobsLogMessages
     internal static partial void FailedToObserveJobs(this ILogger<Jobs> logger, Exception exception, string eventStore, string @namespace);
 
     /// <summary>
+    /// Logs a failure to get jobs.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger{TCategoryName}"/> to log to.</param>
+    /// <param name="exception">The <see cref="Exception"/> that caused the failure.</param>
+    /// <param name="eventStore">The event store the jobs were requested for.</param>
+    /// <param name="namespace">The namespace the jobs were requested for.</param>
+    [LoggerMessage(LogLevel.Error, "Failed to get jobs for event store {EventStore} and namespace {Namespace}")]
+    internal static partial void FailedToGetJobs(this ILogger<Jobs> logger, Exception exception, string eventStore, string @namespace);
+
+    /// <summary>
     /// Logs a failure to get job steps from storage.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger{TCategoryName}"/> to log to.</param>

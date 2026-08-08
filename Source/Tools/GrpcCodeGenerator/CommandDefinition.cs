@@ -20,5 +20,49 @@ public class CommandDefinition(Type type)
     /// <summary>Gets the constructor parameters representing the command properties.</summary>
     public IReadOnlyList<ParameterInfo> Parameters =>
         Type.GetConstructors().FirstOrDefault()?.GetParameters() ?? [];
+
+    /// <summary>
+    /// Gets the type the command's Handle method responds with, or null when the command produces no response.
+    /// </summary>
+    /// <remarks>
+    /// A command that responds with a value needs that value carried across the wire, so the generated
+    /// operation returns <c>CommandResult&lt;TResponse&gt;</c> rather than a bare <c>CommandResult</c>.
+    /// </remarks>
+    public Type? ResponseType => ResolveResponseType();
+
+    Type? ResolveResponseType()
+    {
+        MethodInfo? handle;
+        try
+        {
+            handle = Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .FirstOrDefault(method => method.Name == "Handle");
+        }
+        catch (Exception ex)
+        {
+            // The handler's signature can reference a type this isolated context cannot load. Treating that
+            // as "no response" would quietly drop a value the command actually returns, so say so out loud.
+            Console.WriteLine($"  WARNING: Could not inspect the Handle method of '{Type.FullName}' to determine its response: {ex.Message}");
+            return null;
+        }
+
+        if (handle is null)
+        {
+            return null;
+        }
+
+        var returnType = handle.ReturnType;
+        if (returnType == typeof(void) || returnType == typeof(Task))
+        {
+            return null;
+        }
+
+        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            returnType = returnType.GetGenericArguments()[0];
+        }
+
+        return returnType == typeof(void) ? null : returnType;
+    }
 }
 

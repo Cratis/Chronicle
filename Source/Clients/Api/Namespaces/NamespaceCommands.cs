@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.Namespaces;
 
 namespace Cratis.Chronicle.Api.Namespaces;
 
@@ -32,5 +33,5 @@ public class NamespaceCommands : ControllerBase
     public Task EnsureNamespace(
         [FromRoute] string eventStore,
         [FromBody] Ensure command) =>
-        _namespaces.Ensure(new() { EventStore = eventStore, Name = command.Namespace });
+        _namespaces.EnsureNamespace(new() { EventStore = eventStore, Namespace = command.Namespace }).EnsureSuccess();
 }

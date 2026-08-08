@@ -67,7 +67,7 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         _eventStore = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));
         SetField("_eventStoreName", new EventStoreName("Testing"));
         SetField("_clientArtifactsProvider", clientArtifacts);
-        SetField("_servicesAccessor", Substitute.For<IChronicleServicesAccessor>());
+        SetField("_servicesAccessor", ServicesAccessorEnsuringTheEventStore());
         SetField("_logger", Substitute.For<ILogger<EventStore>>());
         SetField("_projections", projections);
         SetAutoProperty("Registration", Registrations.RegistrationOutcome.NotRun);
@@ -82,6 +82,21 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         SetAutoProperty("ReadModelReactors", Substitute.For<IReadModelReactors>());
         SetAutoProperty("Subscriptions", Substitute.For<IEventStoreSubscriptions>());
         SetAutoProperty("Seeding", Substitute.For<IEventSeeding>());
+    }
+
+    /// <summary>
+    /// Registration ensures the event store exists before anything else runs, and every command now answers with a
+    /// <see cref="Contracts.Commands.CommandResult"/>. Left unstubbed the call answers with nothing at all, which
+    /// fails registration before it reaches the projections these specifications are about.
+    /// </summary>
+    /// <returns>A <see cref="IChronicleServicesAccessor"/> whose event store command succeeds.</returns>
+    static IChronicleServicesAccessor ServicesAccessorEnsuringTheEventStore()
+    {
+        var servicesAccessor = Substitute.For<IChronicleServicesAccessor>();
+        servicesAccessor.Services.EventStores
+            .EnsureEventStore(Arg.Any<Contracts.EventStores.EnsureEventStoreRequest>())
+            .Returns(Contracts.Commands.CommandResult.Success(Guid.NewGuid()));
+        return servicesAccessor;
     }
 
     static void SetField(EventStore eventStore, string fieldName, object value) =>
