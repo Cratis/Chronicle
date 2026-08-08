@@ -25,9 +25,6 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
 {
     const string JoinMethodName = "Join";
     const string OnMethodName = "On";
-    const string SetMethodName = "Set";
-    const string ToMethodName = "To";
-    const string NoAutoMapMethodName = "NoAutoMap";
     const string ProjectionBuilderInterfaceName = "IProjectionBuilder";
     const string JoinBuilderInterfaceName = "IJoinBuilder";
 
@@ -71,7 +68,13 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (FindPiiSource(builderCallback, eventType, readModelType, AutoMapIsOn(invocation, readModelType)) is not { } source)
+        var source = CrossSubjectPiiJoin.FindPiiReachingTheReadModel(
+            eventType,
+            readModelType,
+            FluentProjectionMappings.GetExplicitMappings(builderCallback),
+            FluentProjectionMappings.AutoMapIsOn(invocation, readModelType));
+
+        if (source is not { } piiSource)
         {
             return;
         }
@@ -79,84 +82,11 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(Diagnostic.Create(
             CrossSubjectPiiJoin.Rule,
             member.Name.GetLocation(),
-            source.TargetName,
+            piiSource.TargetName,
             eventType.Name,
-            source.EventPropertyName,
+            piiSource.EventPropertyName,
             on));
     }
-
-    /// <summary>
-    /// Find a <c>[PII]</c> value on the joined event that ends up on the read model.
-    /// </summary>
-    /// <param name="builderCallback">The join builder callback.</param>
-    /// <param name="eventType">The joined event type.</param>
-    /// <param name="readModelType">The read model being projected.</param>
-    /// <param name="autoMapIsOn">Whether AutoMap can carry unmapped properties across.</param>
-    /// <returns>The offending mapping, or <see langword="null"/> when no PII reaches the read model.</returns>
-    /// <remarks>
-    /// A join fills the read model both explicitly, through <c>.Set(x =&gt; x.P).To(e =&gt; e.Q)</c>, and implicitly
-    /// through AutoMap, which matches identically named properties. The explicit route always applies; the
-    /// implicit one only while AutoMap is on.
-    /// </remarks>
-    static (string TargetName, string EventPropertyName)? FindPiiSource(
-        ExpressionSyntax builderCallback,
-        INamedTypeSymbol eventType,
-        INamedTypeSymbol readModelType,
-        bool autoMapIsOn)
-    {
-        var explicitMapping = GetExplicitMappings(builderCallback)
-            .FirstOrDefault(mapping => CrossSubjectPiiJoin.IsPii(eventType, mapping.EventPropertyName));
-
-        if (explicitMapping.EventPropertyName is not null)
-        {
-            return explicitMapping;
-        }
-
-        if (!autoMapIsOn)
-        {
-            return null;
-        }
-
-        // A positional record surfaces each member twice — once as the property, once as the constructor
-        // parameter — and [NoAutoMap] written without a target lands only on the parameter. Excluding the one
-        // entry that carries it would leave the other behind, so exclude the name outright.
-        var excludedNames = CrossSubjectPiiJoin.GetMembers(readModelType)
-            .Where(member => member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.NoAutoMapAttributeName))
-            .Select(member => member.Name)
-            .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var mappableNames = CrossSubjectPiiJoin.GetMembers(readModelType)
-            .Select(member => member.Name)
-            .Where(name => !excludedNames.Contains(name))
-            .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var autoMapped = CrossSubjectPiiJoin.GetMembers(eventType)
-            .FirstOrDefault(member => mappableNames.Contains(member.Name) && CrossSubjectPiiJoin.IsPii(eventType, member.Name))
-            .Name;
-
-        return autoMapped is null ? null : (autoMapped, autoMapped);
-    }
-
-    /// <summary>
-    /// Determine whether AutoMap is still on for the projection this join belongs to.
-    /// </summary>
-    /// <param name="invocation">The join invocation.</param>
-    /// <param name="readModelType">The read model being projected.</param>
-    /// <returns>True when AutoMap can carry properties across, false when it was turned off.</returns>
-    /// <remarks>
-    /// AutoMap is turned off two ways: <c>[NoAutoMap]</c> on the read model itself, and <c>.NoAutoMap()</c> on the
-    /// builder. The latter applies to a scope, which is not modelled from syntax — any <c>NoAutoMap</c> anywhere in
-    /// the declaring member suppresses the implicit half of the check. The rule is an error, so it errs towards
-    /// missing a case over breaking a correct build.
-    /// </remarks>
-    static bool AutoMapIsOn(InvocationExpressionSyntax invocation, INamedTypeSymbol readModelType) =>
-        !WellKnownTypes.HasAttribute(readModelType, WellKnownTypes.NoAutoMapAttributeName) &&
-        invocation.Ancestors()
-            .OfType<MemberDeclarationSyntax>()
-            .FirstOrDefault()
-            ?.DescendantNodes()
-            .OfType<MemberAccessExpressionSyntax>()
-            .Any(member => member.Name.Identifier.Text == NoAutoMapMethodName) != true;
 
     static bool TryGetOnProperty(SyntaxNodeAnalysisContext context, ExpressionSyntax builderCallback, out string on)
     {
@@ -172,7 +102,7 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
 
         foreach (var invocation in onInvocations)
         {
-            if (TryGetSimpleMemberName(invocation.ArgumentList.Arguments[0].Expression, out on))
+            if (FluentProjectionMappings.TryGetSimpleMemberName(invocation.ArgumentList.Arguments[0].Expression, out on))
             {
                 return true;
             }
@@ -181,46 +111,7 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    static IEnumerable<(string TargetName, string EventPropertyName)> GetExplicitMappings(ExpressionSyntax builderCallback)
-    {
-        foreach (var toInvocation in builderCallback.DescendantNodes().OfType<InvocationExpressionSyntax>())
-        {
-            if (toInvocation.Expression is not MemberAccessExpressionSyntax toMember ||
-                toMember.Name.Identifier.Text != ToMethodName ||
-                toInvocation.ArgumentList.Arguments.Count != 1 ||
-                toMember.Expression is not InvocationExpressionSyntax setInvocation ||
-                setInvocation.Expression is not MemberAccessExpressionSyntax setMember ||
-                setMember.Name.Identifier.Text != SetMethodName ||
-                setInvocation.ArgumentList.Arguments.Count != 1)
-            {
-                continue;
-            }
-
-            if (TryGetSimpleMemberName(setInvocation.ArgumentList.Arguments[0].Expression, out var targetName) &&
-                TryGetSimpleMemberName(toInvocation.ArgumentList.Arguments[0].Expression, out var eventPropertyName))
-            {
-                yield return (targetName, eventPropertyName);
-            }
-        }
-    }
-
     static bool IsJoinBuilderMethod(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation) =>
         context.SemanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol method &&
         method.ContainingType?.OriginalDefinition.Name == JoinBuilderInterfaceName;
-
-    static bool TryGetSimpleMemberName(ExpressionSyntax expression, out string name)
-    {
-        name = string.Empty;
-
-        if (expression is not SimpleLambdaExpressionSyntax lambda ||
-            lambda.Body is not MemberAccessExpressionSyntax memberAccess ||
-            memberAccess.Expression is not IdentifierNameSyntax identifier ||
-            identifier.Identifier.Text != lambda.Parameter.Identifier.Text)
-        {
-            return false;
-        }
-
-        name = memberAccess.Name.Identifier.Text;
-        return true;
-    }
 }

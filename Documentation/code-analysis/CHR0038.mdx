@@ -8,7 +8,9 @@ A join reads `TEvent` from the stream whose event source id is the value of the 
 
 Join a value that is not `[PII]`, or resolve the personal value at the query edge under the subject that owns it. If the joined value is not in fact personal data, remove the `[PII]` marking from the event property (or from its concept type) so the compliance metadata matches reality.
 
-Both spellings are covered: the model-bound `[Join<TEvent>(on: ...)]` attribute, and the fluent `builder.Join<TEvent>(_ => _.On(...))` on an `IProjectionFor<T>`. For the fluent form, a `[PII]` value counts as reaching the read model either through an explicit `.Set(x => x.P).To(e => e.Q)` mapping or through AutoMap matching an identically named read model property.
+Both spellings of the join are covered: the model-bound `[Join<TEvent>(on: ...)]` attribute, and the fluent `builder.Join<TEvent>(_ => _.On(...))` on an `IProjectionFor<T>`. For the fluent form, a `[PII]` value counts as reaching the read model either through an explicit `.Set(x => x.P).To(e => e.Q)` mapping or through AutoMap matching an identically named read model property.
+
+This rule covers the `[Join]` construct only. A projection that redirects its key onto another subject's stream reaches the same defect through a different route; that is [CHR0043](./CHR0043.mdx).
 
 ## Severity
 

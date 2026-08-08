@@ -84,6 +84,58 @@ static class CrossSubjectPiiJoin
     }
 
     /// <summary>
+    /// Find a <c>[PII]</c> value on an event that ends up on a read model.
+    /// </summary>
+    /// <param name="eventType">The event the value comes from.</param>
+    /// <param name="readModelType">The read model the value lands on.</param>
+    /// <param name="explicitMappings">The mappings written out by hand, target property first.</param>
+    /// <param name="autoMapIsOn">Whether AutoMap can carry unmapped properties across.</param>
+    /// <returns>The offending mapping, or <see langword="null"/> when no PII reaches the read model.</returns>
+    /// <remarks>
+    /// An event fills a read model both explicitly — <c>.Set(x =&gt; x.P).To(e =&gt; e.Q)</c> for the fluent
+    /// builders, <c>[SetFrom&lt;TEvent&gt;]</c> for the model-bound ones — and implicitly through AutoMap,
+    /// which matches identically named properties. The explicit route always applies; the implicit one only
+    /// while AutoMap is on.
+    /// </remarks>
+    internal static (string TargetName, string EventPropertyName)? FindPiiReachingTheReadModel(
+        INamedTypeSymbol eventType,
+        INamedTypeSymbol readModelType,
+        IEnumerable<(string TargetName, string EventPropertyName)> explicitMappings,
+        bool autoMapIsOn)
+    {
+        var explicitMapping = explicitMappings.FirstOrDefault(mapping => IsPii(eventType, mapping.EventPropertyName));
+
+        if (explicitMapping.EventPropertyName is not null)
+        {
+            return explicitMapping;
+        }
+
+        if (!autoMapIsOn)
+        {
+            return null;
+        }
+
+        // A positional record surfaces each member twice — once as the property, once as the constructor
+        // parameter — and [NoAutoMap] written without a target lands only on the parameter. Excluding the one
+        // entry that carries it would leave the other behind, so exclude the name outright.
+        var excludedNames = GetMembers(readModelType)
+            .Where(member => member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.NoAutoMapAttributeName))
+            .Select(member => member.Name)
+            .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var mappableNames = GetMembers(readModelType)
+            .Select(member => member.Name)
+            .Where(name => !excludedNames.Contains(name))
+            .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var autoMapped = GetMembers(eventType)
+            .FirstOrDefault(member => mappableNames.Contains(member.Name) && IsPii(eventType, member.Name))
+            .Name;
+
+        return autoMapped is null ? null : (autoMapped, autoMapped);
+    }
+
+    /// <summary>
     /// Enumerate the properties of a type together with the positional record parameters that back them.
     /// </summary>
     /// <param name="typeSymbol">The type to enumerate.</param>

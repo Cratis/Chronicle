@@ -37,7 +37,7 @@ public class a_model_bound_projection_multiple_event_stores_analyzer : Specifica
             "",
             "namespace Cratis.Chronicle.Projections.ModelBound",
             "{",
-            "    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]",
+            "    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = true)]",
             "    public sealed class FromEventAttribute<T> : Attribute",
             "    {",
             "    }",
