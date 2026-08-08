@@ -1,0 +1,23 @@
+# CHR0043: Key redirection carries a [PII] value across the compliance subject
+
+## Rule Description
+
+A projection redirects its key onto another stream and carries a `[PII]` value from that stream onto the read model.
+
+A read model document holds exactly one compliance subject, and Chronicle resolves it from the document key unless the event supplies an explicit `[Subject]`. `UsingKey`, `UsingKeyFromContext`, `UsingParentKey` and `UsingParentKeyFromContext` — and the model-bound `[FromEvery]` and `[ChildrenFrom]` forms — point the projection at a stream keyed by something other than the read model's own subject. A `[PII]` value arriving that way is re-encrypted under an identity that is not its owner's.
+
+Nothing fails at read time. The cost is erasure reach: crypto-shredding the owner's key does not touch a copy resting under a different subject, so the value survives an erasure that reports success.
+
+Mark the owning identity on the event with `[Subject]` so Chronicle stamps the document with it, or keep the personal value off a read model keyed by something else.
+
+## Relationship to CHR0038
+
+`CHR0038` refuses the same defect reached through a `[Join]`. This rule covers the key-redirection route to the same outcome. The storage side does not distinguish them.
+
+## Severity
+
+Ships as a **warning** rather than an error, unlike `CHR0038`, so an existing consumer relying on the shape gets one release to migrate. Promote it by changing `defaultSeverity` in `KeyRedirectionPii.cs`.
+
+## Suppressing
+
+Suppress with `#pragma warning disable CHR0043` around the declaration, or set `dotnet_diagnostic.CHR0043.severity = none` in `.editorconfig`. Suppressing leaves the value outside its owner's erasure — the defect is not decryptability, so nothing at runtime will report it.

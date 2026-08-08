@@ -72,5 +72,7 @@
   href: CHR0040.mdx
 - name: CHR0041 - Event filter attribute on a projection has no effect
   href: CHR0041.mdx
+- name: CHR0043 - Key redirection carries a [PII] value across the compliance subject
+  href: CHR0043.mdx
 - name: CHR0042 - A joined property is also written locally
   href: CHR0042.mdx
