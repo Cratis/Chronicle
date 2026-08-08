@@ -31,6 +31,7 @@ public class handler_method_returning_multiple_events : Specification
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
         _eventLog.AppendMany(default!, default!, default, default, default, default, default, default, default, default)
             .ReturnsForAnyArgs(callInfo =>
             {
@@ -38,7 +39,7 @@ public class handler_method_returning_multiple_events : Specification
                 return AppendManyResult.Success(CorrelationId.New(), [EventSequenceNumber.First, EventSequenceNumber.First.Next()]);
             });
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventsResultHandler(eventTypes)]));
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventsResultHandler()]));
         var reactor = new ReactorWithMultipleEventsReturnType(_firstEvent, _secondEvent);
 
         _invoker = new ReactorInvoker(

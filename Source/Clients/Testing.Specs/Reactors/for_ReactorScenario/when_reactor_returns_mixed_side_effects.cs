@@ -24,6 +24,7 @@ public class when_reactor_returns_mixed_side_effects : Specification
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(Defaults.Instance.EventTypes);
         _eventLog.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
             .ReturnsForAnyArgs(callInfo =>
             {
@@ -31,14 +32,13 @@ public class when_reactor_returns_mixed_side_effects : Specification
                 return AppendManyResult.Success(CorrelationId.New(), [EventSequenceNumber.First, new EventSequenceNumber(1)]);
             });
 
-        var eventTypes = Defaults.Instance.EventTypes;
         var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
         [
-            new EventResultHandler(eventTypes),
-            new EventsResultHandler(eventTypes),
+            new EventResultHandler(),
+            new EventsResultHandler(),
             new EventForEventSourceIdResultHandler(),
             new EventsForEventSourceIdResultHandler(),
-            new MixedSideEffectsResultHandler(eventTypes)
+            new MixedSideEffectsResultHandler()
         ]));
 
         _scenario = new ReactorScenario<MixedReservationReactor>(sideEffectHandlers: sideEffectHandlers, eventStore: _eventStore);

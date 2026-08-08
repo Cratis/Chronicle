@@ -345,6 +345,26 @@ public class Sink(
         var collection = Collection;
 
         var mongoPropertyPath = childPropertyPath.ToMongoDB();
+
+        // Deliberately NOT converted through the schema, unlike the join filter in ChangesetConverter. The two
+        // look like the same defect and are not, because this lookup only ever RESOLVES A KEY and the join write
+        // no longer depends on it having found one:
+        //
+        // - For a root-level join this is asked with the read model's own key property and the join source's raw
+        //   event source id, so on a Guid-keyed model it compares a string against BinData and misses. Making it
+        //   match changes the resolved key from that string to the root's typed _id, and Joined.Key is derived
+        //   from the resolved key - so a join declared on a STRING column (the shadow-column shape a consumer
+        //   adopts precisely because their id is Guid-backed) would start comparing BinData against a string and
+        //   stop matching. A correct fix therefore has to carry the original value through as ResolvedKey.JoinKey
+        //   at the same time; the two changes are not separable.
+        // - The bulk branch above answers the same question by CLR equality over cached state, and the SQL and
+        //   in-memory sinks answer it differently again - SQL only for a JSON column, in-memory by CLR value.
+        //   Converting here alone makes one sink resolve a key the other three do not, which is the divergence
+        //   the framework rules single out as worse than the miss.
+        //
+        // What it would take: JoinKey propagation in KeyResolvers.ForJoin, the same conversion in the bulk
+        // branch, a parity pass over the SQL and in-memory sinks, and specs covering a root-level join on a
+        // string column against a Guid-keyed read model in every one of them.
         var bsonValue = childValue.ToBsonValue();
 
         var filter = Builders<BsonDocument>.Filter.Eq(mongoPropertyPath, bsonValue);

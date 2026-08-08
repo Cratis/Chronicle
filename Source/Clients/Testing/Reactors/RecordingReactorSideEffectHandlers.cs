@@ -23,7 +23,7 @@ sealed class RecordingReactorSideEffectHandlers : IReactorSideEffectHandlers
     public IReadOnlyList<object> Produced => _produced;
 
     /// <inheritdoc/>
-    public bool CanHandle(ReactorContext reactorContext, object value) => true;
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) => true;
 
     /// <inheritdoc/>
     public Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)

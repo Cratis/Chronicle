@@ -28,6 +28,7 @@ public class mixed_bare_event_inherits_reactor_metadata_while_event_for_event_so
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
         _eventLog.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
             .ReturnsForAnyArgs(callInfo =>
             {
@@ -35,7 +36,7 @@ public class mixed_bare_event_inherits_reactor_metadata_while_event_for_event_so
                 return AppendManyResult.Success(CorrelationId.New(), [EventSequenceNumber.First, new EventSequenceNumber(1)]);
             });
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new MixedSideEffectsResultHandler(eventTypes)]));
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new MixedSideEffectsResultHandler()]));
         var reactor = new ReactorWithEventStreamTypeAttributeReturningMixed();
 
         _invoker = new ReactorInvoker(

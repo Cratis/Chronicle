@@ -21,4 +21,7 @@ internal static partial class EventStoreSubscriptionObserverSubscriberLogging
 
     [LoggerMessage(LogLevel.Error, "Error forwarding events from observer '{ObserverKey}' to event store '{TargetEventStore}' inbox sequence '{InboxSequenceId}'")]
     internal static partial void ErrorForwardingEvents(this ILogger<EventStoreSubscriptionObserverSubscriber> logger, Exception exception, ObserverKey observerKey, EventStoreName targetEventStore, EventSequenceId inboxSequenceId);
+
+    [LoggerMessage(LogLevel.Debug, "Copied a subject's encryption key from event store '{SourceEventStore}' to event store '{TargetEventStore}' in namespace '{Namespace}' while forwarding events. That subject now holds a key in both event stores, and erasing it reaches only the one it is asked for")]
+    internal static partial void CopiedEncryptionKeyToTargetEventStore(this ILogger<EventStoreSubscriptionObserverSubscriber> logger, EventStoreName sourceEventStore, EventStoreName targetEventStore, EventStoreNamespaceName @namespace);
 }

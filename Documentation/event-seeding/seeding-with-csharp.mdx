@@ -48,8 +48,14 @@ The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods 
 
 - Seeders are automatically discovered at application startup.
 - Seed batches are sent to the Chronicle Server when the event store connects.
-- The server deduplicates seeded events and applies them once per namespace.
-- Events are appended in a single batch for efficient startup.
+- Every entry is applied once per namespace, and seeding is idempotent across restarts: entries that have
+  already been appended are skipped on the next run.
+- An entry that your seeder yields twice is two events, not one. Two events of the same type, on the same
+  event source, carrying the same payload are two facts, and both are appended.
+- Events are appended in batches of 100. A batch is validated as a whole before anything is written, so a
+  single entry that violates a constraint means none of its batch is appended. The server reports the
+  rejection at `Error` with the violations and leaves those entries unseeded - correct the seed data and the
+  next run appends them.
 
 ## Best practices
 
