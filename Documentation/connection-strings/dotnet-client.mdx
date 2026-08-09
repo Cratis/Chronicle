@@ -27,6 +27,16 @@ Use `ChronicleConnectionStringBuilder` to construct a connection string programm
 
 <ChronicleClientTabs snippet="connection-strings/dotnet-client/fluent-builder" />
 
+## Logging a connection string
+
+A connection string carries the client secret, the API key and the certificate password, so it must never be written to a log or an error message as it stands. `ChronicleConnectionString.Redacted` renders it with every credential masked while keeping the parts that make a log entry useful — scheme, host, port and the non-sensitive options:
+
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/redacting-for-logs" />
+
+`ToString()` still renders the connection string in full, credentials included. Use it to pass the value on, never to report it.
+
+The client uses `Redacted` for its own log messages, so connecting no longer writes the client secret to the log.
+
 ## Authentication validation
 
 You cannot specify both client credentials and API key authentication in the same connection string. Doing so throws an `AmbiguousAuthenticationMode` error.
