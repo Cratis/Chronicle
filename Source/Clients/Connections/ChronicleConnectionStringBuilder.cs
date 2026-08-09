@@ -36,7 +36,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <summary>
     /// The value every credential is replaced by when building a redacted connection string.
     /// </summary>
-    const string RedactedValue = "***";
+    const string RedactedValue = "REDACTED";
 
     /// <summary>
     /// Fragments in an option name that mark its value as a credential.
@@ -318,7 +318,86 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// error message. Use <see cref="BuildRedacted"/> for anything that leaves the process.
     /// </remarks>
     [SuppressMessage("Design", "CA1055:Uri return values should not be strings", Justification = "Returning a Chronicle URL string format")]
-    public string Build() => BuildUrl(redactSecrets: false);
+    public string Build()
+    {
+        var url = $"{Scheme}://";
+
+        if (!string.IsNullOrEmpty(Username))
+        {
+            url += Username;
+            if (!string.IsNullOrEmpty(Password))
+            {
+                url += $":{Password}";
+            }
+            url += "@";
+        }
+
+        url += ContainsKey(ServersKey)
+            ? string.Join(',', ServerAddresses.Select(address => address.ToString()))
+            : $"{Host}:{Port}";
+
+        // Add query parameters if needed
+        var queryParams = new List<string>();
+
+        if (ContainsKey(ApiKeyKey))
+        {
+            queryParams.Add($"apiKey={Uri.EscapeDataString((string)this[ApiKeyKey])}");
+        }
+
+        if (!SkipTlsValidation)
+        {
+            queryParams.Add("skipTlsValidation=false");
+        }
+
+        if (ContainsKey(LoadBalancerKey))
+        {
+            queryParams.Add($"loadBalancer={Uri.EscapeDataString((string)this[LoadBalancerKey])}");
+        }
+
+        if (ContainsKey(SrvNameServerKey))
+        {
+            queryParams.Add($"srvNameServer={Uri.EscapeDataString((string)this[SrvNameServerKey])}");
+        }
+
+        if (ContainsKey(CertificatePathKey))
+        {
+            queryParams.Add($"certificatePath={Uri.EscapeDataString((string)this[CertificatePathKey])}");
+        }
+
+        if (ContainsKey(CertificatePasswordKey))
+        {
+            queryParams.Add($"certificatePassword={Uri.EscapeDataString((string)this[CertificatePasswordKey])}");
+        }
+
+        // Add any other query parameters that aren't our special keys
+        foreach (var key in Keys)
+        {
+            var keyStr = key.ToString();
+            if (keyStr != null &&
+                keyStr != HostKey &&
+                keyStr != PortKey &&
+                keyStr != ServersKey &&
+                keyStr != UsernameKey &&
+                keyStr != PasswordKey &&
+                keyStr != SchemeKey &&
+                keyStr != ApiKeyKey &&
+                keyStr != SkipTlsValidationKey &&
+                keyStr != LoadBalancerKey &&
+                keyStr != SrvNameServerKey &&
+                keyStr != CertificatePathKey &&
+                keyStr != CertificatePasswordKey)
+            {
+                queryParams.Add($"{Uri.EscapeDataString(keyStr)}={Uri.EscapeDataString(this[keyStr]?.ToString() ?? string.Empty)}");
+            }
+        }
+
+        if (queryParams.Count > 0)
+        {
+            url += '?' + string.Join('&', queryParams);
+        }
+
+        return url;
+    }
 
     /// <summary>
     /// Builds a Chronicle connection string from the current settings with every credential replaced by a mask.
@@ -327,10 +406,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <remarks>
     /// Scheme, host, port and every non-sensitive option are preserved so the result stays useful for
     /// diagnostics; the password, the API key, the certificate password and any option whose name looks
-    /// like a credential are replaced by <c>***</c>. The result is not a usable connection string.
+    /// like a credential are replaced by <c>REDACTED</c>. The result is not a usable connection string.
     /// </remarks>
     [SuppressMessage("Design", "CA1055:Uri return values should not be strings", Justification = "Returning a Chronicle URL string format")]
-    public string BuildRedacted() => BuildUrl(redactSecrets: true);
+    public string BuildRedacted() => CreateRedactedCopy().Build();
 
     /// <summary>
     /// Determines whether the value of an option is sensitive and must be masked when redacting.
@@ -344,9 +423,6 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     static bool IsSensitiveKey(string key) =>
         _sensitiveKeyFragments.Any(fragment => key.Contains(fragment, StringComparison.OrdinalIgnoreCase));
-
-    static string FormatValue(string key, string value, bool redactSecrets) =>
-        redactSecrets && IsSensitiveKey(key) ? RedactedValue : Uri.EscapeDataString(value);
 
     static ChronicleServerAddress[] ParseServerAddresses(string authority)
     {
@@ -463,84 +539,29 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         }
     }
 
-    string BuildUrl(bool redactSecrets)
+    /// <summary>
+    /// Creates a copy of the builder holding the same settings, with every credential replaced by a mask.
+    /// </summary>
+    /// <returns>A <see cref="ChronicleConnectionStringBuilder"/> that carries no credential.</returns>
+    /// <remarks>
+    /// Redaction works by masking the values first and rendering afterwards, rather than by rendering
+    /// conditionally. The copy a redacted connection string is built from holds no secret at all, so no
+    /// argument about which branch ran is needed to know that none can reach the result.
+    /// </remarks>
+    ChronicleConnectionStringBuilder CreateRedactedCopy()
     {
-        var url = $"{Scheme}://";
+        var redacted = new ChronicleConnectionStringBuilder();
 
-        if (!string.IsNullOrEmpty(Username))
-        {
-            url += Username;
-            if (!string.IsNullOrEmpty(Password))
-            {
-                url += $":{(redactSecrets ? RedactedValue : Password)}";
-            }
-            url += "@";
-        }
-
-        url += ContainsKey(ServersKey)
-            ? string.Join(',', ServerAddresses.Select(address => address.ToString()))
-            : $"{Host}:{Port}";
-
-        // Add query parameters if needed
-        var queryParams = new List<string>();
-
-        if (ContainsKey(ApiKeyKey))
-        {
-            queryParams.Add($"apiKey={FormatValue(ApiKeyKey, (string)this[ApiKeyKey], redactSecrets)}");
-        }
-
-        if (!SkipTlsValidation)
-        {
-            queryParams.Add("skipTlsValidation=false");
-        }
-
-        if (ContainsKey(LoadBalancerKey))
-        {
-            queryParams.Add($"loadBalancer={Uri.EscapeDataString((string)this[LoadBalancerKey])}");
-        }
-
-        if (ContainsKey(SrvNameServerKey))
-        {
-            queryParams.Add($"srvNameServer={Uri.EscapeDataString((string)this[SrvNameServerKey])}");
-        }
-
-        if (ContainsKey(CertificatePathKey))
-        {
-            queryParams.Add($"certificatePath={Uri.EscapeDataString((string)this[CertificatePathKey])}");
-        }
-
-        if (ContainsKey(CertificatePasswordKey))
-        {
-            queryParams.Add($"certificatePassword={FormatValue(CertificatePasswordKey, (string)this[CertificatePasswordKey], redactSecrets)}");
-        }
-
-        // Add any other query parameters that aren't our special keys
         foreach (var key in Keys)
         {
-            var keyStr = key.ToString();
-            if (keyStr != null &&
-                keyStr != HostKey &&
-                keyStr != PortKey &&
-                keyStr != ServersKey &&
-                keyStr != UsernameKey &&
-                keyStr != PasswordKey &&
-                keyStr != SchemeKey &&
-                keyStr != ApiKeyKey &&
-                keyStr != SkipTlsValidationKey &&
-                keyStr != LoadBalancerKey &&
-                keyStr != SrvNameServerKey &&
-                keyStr != CertificatePathKey &&
-                keyStr != CertificatePasswordKey)
+            if (key.ToString() is not { } name)
             {
-                queryParams.Add($"{Uri.EscapeDataString(keyStr)}={FormatValue(keyStr, this[keyStr]?.ToString() ?? string.Empty, redactSecrets)}");
+                continue;
             }
+
+            redacted[name] = IsSensitiveKey(name) ? RedactedValue : this[name];
         }
 
-        if (queryParams.Count > 0)
-        {
-            url += '?' + string.Join('&', queryParams);
-        }
-
-        return url;
+        return redacted;
     }
 }

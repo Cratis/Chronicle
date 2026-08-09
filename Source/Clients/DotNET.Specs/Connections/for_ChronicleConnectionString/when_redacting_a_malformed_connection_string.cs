@@ -20,6 +20,6 @@ public class when_redacting_a_malformed_connection_string : Specification
     void Because() => _exception = Catch.Exception(() => _result = _connectionString.Redacted);
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
-    [Fact] void should_mask_the_userinfo() => _result.ShouldEqual("chronicle://cratis-studio:***@localhost:35000");
+    [Fact] void should_mask_the_userinfo() => _result.ShouldEqual("chronicle://cratis-studio:REDACTED@localhost:35000");
     [Fact] void should_not_expose_any_part_of_the_password() => _result.Contains("ss", StringComparison.Ordinal).ShouldBeFalse();
 }

@@ -147,7 +147,7 @@ public class ChronicleConnectionString
     /// that. Use this instead everywhere a connection string is written to a log, an error message or
     /// any other diagnostic output: scheme, host, port and the non-sensitive options are preserved, while
     /// the password, the API key, the certificate password and any option whose name looks like a
-    /// credential are replaced by <c>***</c>.
+    /// credential are replaced by <c>REDACTED</c>.
     /// </remarks>
     public string Redacted => _builder.BuildRedacted();
 

@@ -7,7 +7,7 @@ public static class ConnectionStringsRedactingForLogs
     {
         var connectionString = new ChronicleConnectionString("chronicle://clientId:clientSecret@server.example.com:35000");
 
-        // Logs: chronicle://clientId:***@server.example.com:35000
+        // Logs: chronicle://clientId:REDACTED@server.example.com:35000
         logger.LogInformation("Connecting to {RedactedConnectionString}", connectionString.Redacted);
     }
 }

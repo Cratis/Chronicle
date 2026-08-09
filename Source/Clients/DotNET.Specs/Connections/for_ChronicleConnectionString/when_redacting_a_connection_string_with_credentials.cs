@@ -14,7 +14,7 @@ public class when_redacting_a_connection_string_with_credentials : Specification
 
     void Because() => _result = _connectionString.Redacted;
 
-    [Fact] void should_mask_the_password() => _result.ShouldEqual("chronicle+srv://cratis-studio:***@chronicle.studio-production.svc.cluster.local:35000");
+    [Fact] void should_mask_the_password() => _result.ShouldEqual("chronicle+srv://cratis-studio:REDACTED@chronicle.studio-production.svc.cluster.local:35000");
     [Fact] void should_not_expose_the_password() => _result.Contains(Secret, StringComparison.Ordinal).ShouldBeFalse();
     [Fact] void should_leave_the_connection_string_itself_untouched() => _connectionString.ToString().ShouldEqual($"chronicle+srv://cratis-studio:{Secret}@chronicle.studio-production.svc.cluster.local:35000");
 }

@@ -17,6 +17,6 @@ public class when_building_redacted_connection_string_with_an_unmodelled_credent
     void Because() => _url = _builder.BuildRedacted();
 
     [Fact] void should_keep_the_non_sensitive_option() => _url.Contains("auth=ApiKey", StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_mask_the_sensitive_option() => _url.Contains("key=***", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_mask_the_sensitive_option() => _url.Contains("key=REDACTED", StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_not_expose_the_sensitive_option() => _url.Contains("testkey", StringComparison.Ordinal).ShouldBeFalse();
 }
