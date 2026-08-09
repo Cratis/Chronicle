@@ -178,7 +178,9 @@ public class ReadModels(
         var result = await GetInstanceById(readModelType, key, sessionId);
         var instance = (TReadModel)result;
 
-        if (reducers.HasFor(readModelType))
+        // Only an in-process reduce leaves PII encrypted — the Kernel releases whatever it serves from the
+        // materialized store.
+        if (IsReducedInProcess(readModelType))
         {
             return await Release(instance);
         }
@@ -195,10 +197,10 @@ public class ReadModels(
             throw new UnknownReadModel(readModelType);
         }
 
-        if (reducers.HasFor(readModelType))
+        if (IsReducedInProcess(readModelType))
         {
             // An unseeded (never-created) reducer-backed read model has no state yet. Return null — matching
-            // the projection/sink path below that returns default! for a "null" document — rather than
+            // the materialized path below that returns default! for a "null" document — rather than
             // throwing, so a nullable caller guard (state?.…) holds uniformly across both backings. A
             // throwing pre-check from a reactor on a passive reducer read model would otherwise freeze the
             // event-source partition permanently.
@@ -213,7 +215,7 @@ public class ReadModels(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             ReadModelIdentifier = readModelIdentifier,
-            EventSequenceId = EventSequenceId.Log,
+            EventSequenceId = GetEventSequenceIdFor(readModelType),
             ReadModelKey = key,
             SessionId = sessionId?.Value.ToString() ?? string.Empty
         };
@@ -255,7 +257,9 @@ public class ReadModels(
             throw new UnknownReadModel(readModelType);
         }
 
-        if (reducers.HasFor(readModelType))
+        // A bounded replay is a request to apply exactly that many events from the beginning, which the
+        // materialized store cannot answer — reduce it in-process, as for a passive read model.
+        if (reducers.HasFor(readModelType) && (readModelType.IsPassive() || eventCount is not null))
         {
             var reducerInstances = await reducers.GetInstances(readModelType, eventCount);
             return await Release(reducerInstances.Cast<TReadModel>());
@@ -269,7 +273,7 @@ public class ReadModels(
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             ReadModelIdentifier = readModelIdentifier,
-            EventSequenceId = EventSequenceId.Log,
+            EventSequenceId = GetEventSequenceIdFor(readModelType),
             EventCount = eventCountValue.Value
         };
 
@@ -415,6 +419,28 @@ public class ReadModels(
 
     /// <inheritdoc/>
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) => _releaser.Release(instances);
+
+    /// <summary>
+    /// Check whether a read model has to be reduced here rather than read from the Kernel's materialized store.
+    /// </summary>
+    /// <param name="readModelType">The read model type to check.</param>
+    /// <returns>True when the read model is reducer-backed and passive, false otherwise.</returns>
+    /// <remarks>
+    /// A reducer-backed read model that is not passive is observed, so the Kernel already holds its state in a
+    /// sink and serves it with PII released. A passive one has no observer and therefore no sink to read from,
+    /// so its state only exists once this client has folded the events for it.
+    /// </remarks>
+    bool IsReducedInProcess(Type readModelType) => reducers.HasFor(readModelType) && readModelType.IsPassive();
+
+    /// <summary>
+    /// Resolve the <see cref="EventSequenceId"/> a read model is built from.
+    /// </summary>
+    /// <param name="readModelType">The read model type to resolve for.</param>
+    /// <returns>The <see cref="EventSequenceId"/> to ask the Kernel for the read model on.</returns>
+    EventSequenceId GetEventSequenceIdFor(Type readModelType) =>
+        reducers.HasFor(readModelType)
+            ? reducers.GetHandlerForReadModelType(readModelType).EventSequenceId
+            : EventSequenceId.Log;
 
     async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> ReleaseSnapshotInstances<TReadModel>(IEnumerable<ReadModelSnapshot<TReadModel>> snapshots)
     {
