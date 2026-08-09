@@ -37,7 +37,7 @@ foreach (var serviceType in services)
     var service = createClient.MakeGenericMethod(serviceType).Invoke(clientFactory, [callInvoker])!;
     var implementationType = (service.GetType() as TypeInfo)!;
 
-    var typeBuilder = moduleBuilder.DefineType($"{serviceType.Namespace}.{serviceType.Name.Substring(1)}", TypeAttributes.Public | TypeAttributes.Class, implementationType.BaseType);
+    var typeBuilder = moduleBuilder.DefineType($"{serviceType.Namespace}.{serviceType.Name.Substring(1)}", TypeAttributes.Public, implementationType.BaseType);
     typeBuilder.AddInterfaceImplementation(serviceType);
 
     List<FieldBuilder> fields = [];
