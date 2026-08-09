@@ -18,7 +18,7 @@ Warning
 
 A reactor should express intent, not reach into the persistence layer. Injecting `IMongoCollection<T>` ties the reactor to a specific sink (the MongoDB collection backing a read model) and lets it read or write documents directly — outside the projection pipeline that owns that state. The reactor then depends on storage-layer details and can observe or corrupt read-model state that Chronicle is responsible for building.
 
-When a reactor needs current state, it reads it through the read-model abstraction: declare a read-model parameter on the handler (Chronicle materializes it strongly consistent for the event being handled) or call `IReadModels.GetInstanceById`. The read model stays the single source of derived state, and the reactor stays decoupled from where that state is persisted.
+When a reactor needs current state, it reads it through the read-model abstraction: declare a read-model parameter on the handler, or call `IReadModels.GetInstanceById`. Either way Chronicle resolves it from the materialized store, or computes it from the events when the read model is `[Passive]` — mark it passive when the reactor needs the state to be strongly consistent for the event being handled. The read model stays the single source of derived state, and the reactor stays decoupled from where that state is persisted.
 
 ## Related Rules
 

@@ -32,12 +32,15 @@ Each model has distinct performance and consistency characteristics. The right c
 
 The strongest guarantee comes from computing a read model on-demand by replaying events from the event log every time you request it. This is sometimes called an *ad-hoc projection query* because no pre-materialized state is consulted — the result is built fresh from source events on each call.
 
-When you call `GetInstanceById`, Chronicle:
+You opt into this by marking the read model **passive**, which keeps any observer from materializing it and therefore leaves the event log as its only source. `GetInstanceById` then:
 
 1. Locates the projection or reducer registered for the read model type
 2. Retrieves all relevant events for the requested key from the event log
 3. Executes the projection or reducer logic in memory, event by event
 4. Returns the resulting instance that reflects the exact current state
+
+> [!IMPORTANT]
+> `GetInstanceById` only computes on-demand for a passive read model. When the read model *is* materialized — the default for both projections and reducers — Chronicle serves the stored instance from the sink instead, releasing any PII before it leaves the kernel. That read is O(1) and eventually consistent. See [Getting a Single Instance](getting-single-instance).
 
 ```mermaid
 sequenceDiagram
@@ -64,7 +67,7 @@ On-demand computation is the right choice when:
 - The read model is accessed infrequently relative to how often events are appended
 - You are validating a command against current state before appending new events
 
-For a practical guide to working with read model instances using this approach, see [Getting a Single Instance](getting-single-instance) and [Getting a Collection of Instances](getting-collection-instances).
+When those apply, mark the read model passive — see [Passive projections](../projections/declarative/passive). For a practical guide to working with read model instances, see [Getting a Single Instance](getting-single-instance) and [Getting a Collection of Instances](getting-collection-instances).
 
 ### Performance Considerations
 
@@ -149,7 +152,7 @@ Materialized projections are the right choice when:
 
 | Model | Updated | Consistency | Read Cost |
 |---|---|---|---|
-| On-demand computation | At query time | Strong | Proportional to event history length |
+| On-demand computation (passive) | At query time | Strong | Proportional to event history length |
 | Immediate projections | At event append | Strong | O(1) — stored result |
 | Materialized projections | Asynchronously | Eventual | O(1) — stored result |
 

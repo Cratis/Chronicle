@@ -1,17 +1,20 @@
 ---
 title: Getting a Single Instance
-description: Read one read model instance by key when you need the current state now, not after the materialized projection catches up.
+description: Read one read model instance by key, and understand whether the answer comes from the materialized store or from replaying events.
 ---
 
-When you need one read model and correctness matters more than query latency, read it by key from the event store. Chronicle rebuilds the instance from the events that feed that read model, so the result reflects the events that have been appended up to that call.
+When you need one read model and you have its key, ask Chronicle for it by key. You always call the same operation; what differs is where the answer comes from.
 
-Use this path for command-side decisions, read-after-write flows, and diagnostic tools. Use materialized read models when the same data is read frequently by lists, dashboards, or user interfaces that need paging.
+Chronicle knows whether the read model is **materialized** — whether an observer writes its state to a sink. If it is, the kernel reads the stored instance and releases any PII before returning it. If it is not — a passive read model has no observer and therefore no sink — the kernel rebuilds the instance from the events that feed it. You do not choose between the two at the call site; the read model's own definition decides.
 
 ## How it works
 
-When you ask Chronicle for one read model instance, the client sends the read model type and key to the kernel. Chronicle resolves the projection or reducer that owns that read model, replays the relevant events, applies compliance release rules when needed, and returns the current shape for that key.
+The client sends the read model type and key to the kernel. The kernel resolves the read model's definition and takes one of two paths:
 
-This makes the read strongly consistent. The cost is replay: longer histories take longer to rebuild than a materialized lookup.
+- **Materialized read model** — the kernel looks the instance up in the sink by key, releases compliance-protected values, and returns it. The cost is a single storage lookup regardless of how long the event history is. The instance is as current as the observer that wrote it, so it is eventually consistent.
+- **Passive read model** — the kernel replays the relevant events through the projection or reducer that owns the read model and returns the result. The instance reflects every event appended up to that call, so it is strongly consistent. The cost grows with the length of the history.
+
+The materialized path is also the only one that sees the whole picture for a projection that joins across event sources or resolves keys from other events. Replay walks one event source, so it cannot reconstruct state that was built from events belonging to a different key.
 
 ## Read by key
 
@@ -23,29 +26,32 @@ Each client names the operation in its own idiom, but the inputs are the same: t
 
 ## Missing instances
 
-If no events have produced that read model key, clients return their normal "not found" shape: `null`, `nil`, or an empty result depending on the language. Treat that as "no state exists yet," not as a projection failure.
+If no instance exists for that key, clients return their normal "not found" shape: `null`, `nil`, or an empty result depending on the language. Treat that as "no state exists yet," not as a projection failure. For a materialized read model this covers both a key that was never created and one that has been removed — the observer is authoritative, so Chronicle does not fall back to a replay that would resurrect it.
 
 If the read model type itself is unknown, that is a configuration error. Register the projection, reducer, or read model before querying it.
 
-## When to use this
+## Choosing which you get
 
-Use a single-instance replay when:
+Because the read model's definition decides the path, choose when you design the read model rather than when you query it.
+
+Leave the read model materialized — the default — when:
+
+- The same data is read often, or read from lists, dashboards, and user interfaces.
+- The event history for a key can grow long.
+- A brief lag between an append and the read reflecting it is acceptable.
+- The projection joins events across event sources.
+
+Mark the read model passive when:
 
 - A command needs the exact current state before making a decision.
 - You append an event and immediately need to read the state it creates.
-- A debugging or audit tool needs deterministic state from the event log.
-- The event history for that key is short enough that replay cost is acceptable.
-
-Prefer a materialized read model when:
-
-- The same data is read often.
-- The history for each key can grow large.
-- You need paging, sorting, or database-native filtering.
-- Eventual consistency is acceptable.
+- The event history for each key stays short.
+- The read model is queried rarely relative to how often its events are appended.
 
 ## Related topics
 
-- [Getting a Collection of Instances](getting-collection-instances) - Replay all instances for reporting or analysis
+- [Getting a Collection of Instances](getting-collection-instances) - Read or replay every instance of a read model
 - [Getting Snapshots](getting-snapshots) - Inspect how one instance evolved over time
 - [Watching Read Models](watching-read-models) - React to read model changes as they happen
 - [Materialized Read Models](materialized-pagination) - Page through sink-stored read models
+- [Passive projections](../projections/declarative/passive) - Keep a read model out of the sink so it is computed on demand

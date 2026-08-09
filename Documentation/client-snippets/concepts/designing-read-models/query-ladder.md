@@ -5,15 +5,15 @@ public record DesigningReadModelsCustomerListItem(Guid Id, string Name);
 
 public class DesigningReadModelsCustomerListService(IEventStore eventStore)
 {
-    public async Task<IEnumerable<DesigningReadModelsCustomerListItem>> GetAllStronglyConsistent()
+    public async Task<IEnumerable<DesigningReadModelsCustomerListItem>> GetEveryInstance()
     {
-        // Strongly consistent — Chronicle replays the read model's events on demand
+        // Every instance in one call — read from the materialized store
         return await eventStore.ReadModels.GetInstances<DesigningReadModelsCustomerListItem>();
     }
 
-    public async Task<IEnumerable<DesigningReadModelsCustomerListItem>> GetPageEventuallyConsistent()
+    public async Task<IEnumerable<DesigningReadModelsCustomerListItem>> GetPage()
     {
-        // Eventually consistent — a page of materialized instances straight from storage
+        // One page of materialized instances, with paging done by the store
         return await eventStore.ReadModels.Materialized.GetInstances<DesigningReadModelsCustomerListItem>(skip: 0, take: 20);
     }
 }

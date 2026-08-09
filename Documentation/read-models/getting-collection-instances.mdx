@@ -1,55 +1,53 @@
 ---
 title: Getting a Collection of Instances
-description: Replay every instance of a read model for small reports, diagnostics, and exact current-state analysis.
+description: Read every instance of a read model for small reports, diagnostics, and current-state analysis.
 ---
 
-Sometimes you need the exact current state of every instance of a read model: a small report, an integrity check, a back-office export, or a diagnostic script. Chronicle can rebuild the whole collection by replaying the events that feed that read model.
+Sometimes you need every instance of a read model at once: a small report, an integrity check, a back-office export, or a diagnostic script. Chronicle answers this the same way it answers a single-instance read — from the materialized store when the read model has one, and by replaying events when it does not.
 
-This is a strong-consistency operation. It is also proportional to event history, so it is not the default tool for hot list views or large data sets.
+Either way the whole result set comes back in one call, so this is not the tool for hot list views or large data sets. Reach for [materialized paging](materialized-pagination) when the caller needs a window rather than everything.
 
 ## Read all instances
 
-Use collection replay when the result set is small enough to fit comfortably in memory and the caller needs state that includes every event appended so far.
-
 <ChronicleClientTabs snippet="read-models/getting-collection-instances/basic" />
 
-Kotlin currently exposes single-instance read-model lookup only, so collection replay is not shown for that client.
+Kotlin currently exposes single-instance read-model lookup only, so collection reads are not shown for that client.
+
+For a **materialized** read model the kernel pages through the sink until it has read every stored instance, releases compliance-protected values, and returns them. For a **passive** read model it replays the events that feed the read model and returns the state that falls out, which is strongly consistent and proportional to the length of the history.
 
 ## Filter in memory
 
-Replay returns every instance. Apply language-native filtering after the read, and keep that in-memory cost in mind.
+The read returns every instance. Apply language-native filtering afterwards, and keep that in-memory cost in mind.
 
 <ChronicleClientTabs snippet="read-models/getting-collection-instances/filtering" />
 
-For large result sets, query the materialized sink directly or use a product-specific query model instead of replaying everything and filtering afterward.
+For large result sets, page the materialized read model or use a product-specific query model instead of reading everything and filtering afterward.
 
 ## Limit the replay
 
-You can cap the number of events Chronicle processes. This can make diagnostics faster, but it can also return incomplete state if the cap cuts off events that matter.
+You can cap the number of events Chronicle processes. Because a cap only means something to a replay, passing one always replays — even for a materialized read model.
 
 <ChronicleClientTabs snippet="read-models/getting-collection-instances/event-count" />
 
-Use an event-count cap for historical analysis, back-testing, or bounded diagnostics. Do not use it when the reader expects the current truth.
+This can make diagnostics faster, but it can also return incomplete state if the cap cuts off events that matter. Use an event-count cap for historical analysis, back-testing, or bounded diagnostics. Do not use it when the reader expects the current truth.
 
 ## When to use this
 
-Use collection replay when:
+Read the whole collection when:
 
-- You need a strongly consistent report over all current instances.
 - The read model population is small.
 - You are running an administrative or diagnostic task.
 - You are validating data derived from the event log.
 
-Prefer materialized or database-native reads when:
+Prefer paging or a database-native read when:
 
 - The page is user-facing and called frequently.
 - You need server-side filtering, sorting, or paging.
-- The read model has many instances or long histories.
-- Eventual consistency is acceptable.
+- The read model has many instances.
 
 ## Related topics
 
-- [Getting a Single Instance](getting-single-instance) - Replay one read model instance by key
+- [Getting a Single Instance](getting-single-instance) - Read one read model instance by key
 - [Getting Snapshots](getting-snapshots) - Inspect historical state for one instance
 - [Watching Read Models](watching-read-models) - React to read model changes
-- [Materialized Read Models](materialized-pagination) - Read sink-stored projections with paging
+- [Materialized Read Models](materialized-pagination) - Read sink-stored read models with paging

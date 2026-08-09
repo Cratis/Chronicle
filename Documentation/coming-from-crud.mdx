@@ -60,7 +60,7 @@ Now the write and the read-back:
 
 <ChronicleClientTabs snippet="coming-from-crud/write-and-read" />
 
-`GetInstanceById` computes the card from its events on demand, so this read already reflects the append above — `TimesRelocated` included, a fact the CRUD row lost the moment `SaveChanges` ran.
+`GetInstanceById` hands back the card Chronicle derives from those events — `TimesRelocated` included, a fact the CRUD row lost the moment `SaveChanges` ran. Chronicle keeps that card up to date as events land, so a read right after an append can be a beat behind; when a read must reflect the append that preceded it, [consistency](/chronicle/read-models/consistency/) shows how.
 
 ## Not sure it's worth it?
 

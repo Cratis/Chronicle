@@ -65,7 +65,7 @@ public class OrderProcessing(IShippingService shipping) : IReactor
 {
     public async Task OrderPlaced(OrderPlaced @event, EventContext context, Order order, IPricingService pricing)
     {
-        // 'order' is the read model, materialized strongly consistent for this event.
+        // 'order' is the read model, resolved by Chronicle for this event's key.
         // 'pricing' is resolved from the service provider.
         await shipping.Schedule(order, pricing.PriceFor(order));
     }
@@ -75,7 +75,7 @@ public class OrderProcessing(IShippingService shipping) : IReactor
 How each parameter is resolved:
 
 - **`EventContext`** — receives the event context (position independent).
-- **A read model** — a type that has a reducer or a projection (declarative or model-bound). It is materialized on demand from that reducer or projection, making it **strongly consistent** at the point the reactor runs. Read models are resolved directly by Chronicle — they never go through the service provider.
+- **A read model** — a type that has a reducer or a projection (declarative or model-bound). Chronicle resolves it directly — read models never go through the service provider. A **materialized** read model (the default, for projections and reducers alike) is read from its sink, so it is **eventually consistent** — as current as its observer. Mark it **`[Passive]`** when the reactor needs it **strongly consistent**: a passive read model has no sink, so Chronicle computes it on demand from the events at the point the reactor runs.
 - **Any other type** — resolved from the service provider (constructor injection on the reactor itself is still preferred for collaborators used by every method).
 
 ### Resolving the read model key
