@@ -1,0 +1,55 @@
+---
+title: Releasing PII
+description: Decrypt PII in a read model instance you already have, and how Chronicle decides whose encryption key to use.
+---
+
+Most of the time you never think about this. `GetInstanceById`, `GetInstances`, and `GetSnapshotsById` on `IReadModels` already hand you PII decrypted — a projection is decrypted by the kernel before it reaches you, and a reducer-backed instance is decrypted by the client right before it's returned. See [Read models and PII](../compliance/read-models) for how that automatic path works and what it takes to mark a property as PII in the first place.
+
+`IReadModels.Release` is the same decryption, exposed for the cases that skip that path: an instance you built from raw storage, restored from a cache or message payload, or received somewhere that doesn't release automatically. One built-in case exists today — `Watch<TReadModel>()` streams changes to you directly and does not call `Release` first.
+
+<ChronicleClientTabs snippet="read-models/releasing-pii/read-model" />
+
+`RequesterName` is `[PII]`-marked explicitly on the read model — required for a reducer, since Chronicle can't infer PII lineage through arbitrary reducer logic the way it can for a model-bound projection. `CustomerId` carries `[Subject]`: the ticket's own `Id` identifies the ticket, not the person the PII belongs to, so `Release` needs to be told which property to use as the encryption key's owner.
+
+## Release a single instance
+
+<ChronicleClientTabs snippet="read-models/releasing-pii/single-instance" />
+
+## Release a collection
+
+Releasing more than one instance at once resolves the subject for each independently, so a single batch can freely mix data belonging to different people.
+
+<ChronicleClientTabs snippet="read-models/releasing-pii/collection" />
+
+## Release while watching for changes
+
+<ChronicleClientTabs snippet="read-models/releasing-pii/watch" />
+
+Every other read on `IReadModels` releases before returning to you. `Watch` is the exception, because it's a live feed rather than one completed read — release each change yourself as it arrives, the same way you'd release any other instance.
+
+## How the subject is resolved
+
+`Release` looks at the instance you hand it to work out whose encryption key to use, in this order:
+
+| Priority | Mechanism |
+|---|---|
+| 1 | A property decorated with `[Subject]` |
+| 2 | A constructor parameter decorated with `[Subject]` (record shorthand) |
+| 3 | A property named `Id`, case-insensitive |
+
+The first match wins. If none of the three resolve to a value — or the read model has no PII-annotated properties at all — `Release` returns the instance unchanged; there's nothing for it to do.
+
+Add `[Subject]` when the identity that owns the PII differs from the read model's own key, exactly as you would on a command or event property to control which identity an append is encrypted under. When the two already match — a person's own profile, keyed by their own identity — the `Id` fallback handles it and no attribute is needed.
+
+## When release can't recover a value
+
+A property that can't be decrypted — its encryption key was deleted, or it was encrypted under a different subject entirely — degrades on its own; the rest of the instance still comes back intact. What a caller sees for each of those cases is covered in [Read models and PII](../compliance/read-models#one-property-never-fails-the-whole-read).
+
+If the release call itself can't complete — a schema mismatch, for instance — Chronicle logs the failure and returns the instance exactly as you passed it in, still encrypted. If a value you expect to read back stays ciphertext after calling `Release`, check the application logs for that failure before assuming the data is unrecoverable.
+
+## Related topics
+
+- [Read models and PII](../compliance/read-models) - How Chronicle encrypts and decrypts PII automatically, and GDPR erasure
+- [The PII attribute](../compliance/pii) - Marking event and read model properties as PII
+- [Watching Read Models](./watching-read-models) - Subscribing to read model changes
+- [Getting a Single Instance](./getting-single-instance) - The strongly consistent read path that releases for you
