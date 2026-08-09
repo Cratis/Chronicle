@@ -33,6 +33,7 @@ public class and_read_model_is_a_projection_with_pii : given.all_dependencies
 
         _readModelDefinition = _readModelDefinition with
         {
+            Sink = new SinkDefinition(SinkConfigurationId.None, WellKnownSinkTypes.InMemory),
             Schemas = new Dictionary<ReadModelGeneration, JsonSchema> { { (ReadModelGeneration)1, _schema } }
         };
         _readModel.GetDefinition().Returns(_readModelDefinition);

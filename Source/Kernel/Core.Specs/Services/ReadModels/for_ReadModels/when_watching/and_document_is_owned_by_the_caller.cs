@@ -77,6 +77,7 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
                     NullLogger<JsonComplianceManager>.Instance),
                 _expandoObjectConverter),
             _eventCompliance,
+            _materializedReadModels,
             new JsonSerializerOptions());
     }
 

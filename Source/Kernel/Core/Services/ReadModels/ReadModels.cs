@@ -12,7 +12,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
@@ -41,6 +40,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="localSiloDetails">The <see cref="ILocalSiloDetails"/> for pinning the watch subscriber grain to this silo.</param>
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
 /// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
+/// <param name="materializedReadModels">The <see cref="IMaterializedReadModelStore"/> for reading instances that are already materialized.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
@@ -51,6 +51,7 @@ internal sealed class ReadModels(
     ILocalSiloDetails localSiloDetails,
     IReadModelsCompliance complianceHelper,
     IEventCompliance eventCompliance,
+    IMaterializedReadModelStore materializedReadModels,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
     /// <inheritdoc/>
@@ -204,64 +205,21 @@ internal sealed class ReadModels(
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetDefinition();
 
+        // A materialized read model — projection or reducer alike — already has its state written to the sink by
+        // its observer, so read it from there rather than re-projecting or round-tripping to a connected reducer
+        // client. For a projection this is also the only path that reflects joins and custom key resolvers
+        // (UsingKey), because ImmediateProjection replays by EventSourceId alone and misses cross-source events.
+        // A session pins a projection to an in-flight state, and an unspecified key ("*") cannot be looked up by
+        // key at all, so both of those keep replaying.
+        if (materializedReadModels.IsMaterialized(definition) &&
+            string.IsNullOrEmpty(request.SessionId) &&
+            request.ReadModelKey != ReadModelKey.Unspecified.Value)
+        {
+            return await GetMaterializedInstanceByKey(request, definition);
+        }
+
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
-            // When no session is active, try to read from the sink first (the stored projected value).
-            // This correctly handles joins and events with custom key resolvers (UsingKey) because
-            // the projection observer processes all events and stores the result in the sink.
-            // ImmediateProjection only replays events by EventSourceId, which misses cross-source events.
-            // Note: when ReadModelKey is unspecified ("*") we cannot look it up by key in the sink;
-            // fall through to ImmediateProjection which replays all events and returns the last state.
-            if (string.IsNullOrEmpty(request.SessionId) && request.ReadModelKey != ReadModelKey.Unspecified.Value)
-            {
-                var namespaceStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace);
-                var sink = await namespaceStorage.Sinks.GetFor(definition);
-
-                // For passive projections the sink never has data; fall through to immediate projection.
-                if (sink.TypeId != SinkTypeId.None)
-                {
-                    var key = new Key(request.ReadModelKey, ArrayIndexers.NoIndexers);
-                    var storedState = await sink.FindOrDefault(key);
-
-                    if (storedState is not null)
-                    {
-                        var schema = definition.GetSchemaForLatestGeneration();
-                        var released = await complianceHelper.Release(
-                            request.EventStore,
-                            request.Namespace,
-                            schema,
-                            storedState);
-                        var jsonObject = expandoObjectConverter.ToJsonObject(released, schema);
-                        var readModelJson = jsonObject.ToJsonString(jsonSerializerOptions);
-
-                        var lastSeq = EventSequenceNumber.Unavailable;
-                        var stateDict = (IDictionary<string, object?>)released;
-                        if (stateDict.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var seqObj) &&
-                            seqObj is not null)
-                        {
-                            try { lastSeq = (EventSequenceNumber)Convert.ToUInt64(seqObj); }
-                            catch { /* value not convertible to ulong; leave as Unavailable */ }
-                        }
-
-                        return new GetInstanceByKeyResponse
-                        {
-                            ReadModel = readModelJson,
-                            ProjectedEventsCount = 0,
-                            LastHandledEventSequenceNumber = lastSeq
-                        };
-                    }
-
-                    // Document not found in the sink: either it was never created or it was removed.
-                    // Return a null-model response; the projection observer is authoritative for active sinks.
-                    return new GetInstanceByKeyResponse
-                    {
-                        ReadModel = "null",
-                        ProjectedEventsCount = 0,
-                        LastHandledEventSequenceNumber = EventSequenceNumber.Unavailable
-                    };
-                }
-            }
-
             var projectionKey = !string.IsNullOrEmpty(request.SessionId)
                 ? new ImmediateProjectionKey(
                     (ProjectionId)definition.ObserverIdentifier.Value,
@@ -353,6 +311,14 @@ internal sealed class ReadModels(
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetDefinition();
+
+        // Every instance of a materialized read model is already in the sink, so read them from there. An
+        // explicit event count is a request to re-apply exactly that many events from the beginning, which
+        // only the replay path below can answer.
+        if (materializedReadModels.IsMaterialized(definition) && request.EventCount == ulong.MaxValue)
+        {
+            return await GetAllMaterializedInstances(request, definition);
+        }
 
         if (definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
         {
@@ -466,18 +432,7 @@ internal sealed class ReadModels(
                 schema,
                 instance);
 
-            var jsonObject = expandoObjectConverter.ToJsonObject(decrypted, schema);
-
-            // Ensure __lastHandledEventSequenceNumber is included in the JSON output since
-            // ToJsonObject may drop it if it is not mapped by the schema converter.
-            var decryptedDict = (IDictionary<string, object?>)decrypted;
-            if (decryptedDict.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var seqObj) && seqObj is not null)
-            {
-                try { jsonObject[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(Convert.ToUInt64(seqObj)); }
-                catch { /* leave sequence number absent if conversion fails */ }
-            }
-
-            readModels.Add(jsonObject.ToJsonString(jsonSerializerOptions));
+            readModels.Add(SerializeInstance(decrypted, schema));
         }
 
         return new GetAllInstancesResponse
@@ -588,6 +543,80 @@ internal sealed class ReadModels(
         {
             throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
         }
+    }
+
+    static EventSequenceNumber GetLastHandledEventSequenceNumber(ExpandoObject instance)
+    {
+        var values = (IDictionary<string, object?>)instance;
+        if (!values.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var value) || value is null)
+        {
+            return EventSequenceNumber.Unavailable;
+        }
+
+        try
+        {
+            return (EventSequenceNumber)Convert.ToUInt64(value);
+        }
+        catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException)
+        {
+            // The stored value is not a sequence number; report it as unavailable rather than failing the read.
+            return EventSequenceNumber.Unavailable;
+        }
+    }
+
+    async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)
+    {
+        var key = new Key(request.ReadModelKey, ArrayIndexers.NoIndexers);
+        var instance = await materializedReadModels.FindByKey(request.EventStore, request.Namespace, definition, key);
+
+        // Nothing in the sink means the instance was either never created or removed. The observer is
+        // authoritative for a materialized read model, so answer with a null model rather than falling back to
+        // a replay that would resurrect it.
+        if (instance is null)
+        {
+            return new GetInstanceByKeyResponse
+            {
+                ReadModel = "null",
+                ProjectedEventsCount = 0,
+                LastHandledEventSequenceNumber = EventSequenceNumber.Unavailable
+            };
+        }
+
+        var jsonObject = expandoObjectConverter.ToJsonObject(instance, definition.GetSchemaForLatestGeneration());
+
+        return new GetInstanceByKeyResponse
+        {
+            ReadModel = jsonObject.ToJsonString(jsonSerializerOptions),
+            ProjectedEventsCount = 0,
+            LastHandledEventSequenceNumber = GetLastHandledEventSequenceNumber(instance)
+        };
+    }
+
+    async Task<GetAllInstancesResponse> GetAllMaterializedInstances(GetAllInstancesRequest request, Concepts.ReadModels.ReadModelDefinition definition)
+    {
+        var instances = await materializedReadModels.GetAllInstances(request.EventStore, request.Namespace, definition);
+        var schema = definition.GetSchemaForLatestGeneration();
+
+        return new GetAllInstancesResponse
+        {
+            Instances = instances.Select(instance => SerializeInstance(instance, schema)).ToList(),
+            ProcessedEventsCount = 0
+        };
+    }
+
+    string SerializeInstance(ExpandoObject instance, JsonSchema schema)
+    {
+        var jsonObject = expandoObjectConverter.ToJsonObject(instance, schema);
+
+        // ToJsonObject drops the last handled event sequence number when the schema does not describe it, so
+        // put it back — clients mirror it onto the instance to tell how far it has been brought up to date.
+        var lastHandled = GetLastHandledEventSequenceNumber(instance);
+        if (lastHandled != EventSequenceNumber.Unavailable)
+        {
+            jsonObject[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(lastHandled.Value);
+        }
+
+        return jsonObject.ToJsonString(jsonSerializerOptions);
     }
 
     async Task<Concepts.ReadModels.ReadModelDefinition> WaitForReadModelDefinition(IReadModel readModel, CancellationToken cancellationToken)
