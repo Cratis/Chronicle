@@ -203,7 +203,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     async Task ConnectInternal()
     {
-        _logger.Connecting(_connectionString);
+        _logger.Connecting(_connectionString.Redacted);
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
 
