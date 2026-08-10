@@ -54,6 +54,7 @@ public class EventStore : IEventStore
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
+    SingleFlightRegistration? _registerAllFlight;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -339,7 +340,51 @@ public class EventStore : IEventStore
     }
 
     /// <inheritdoc/>
-    public async Task RegisterAll()
+    /// <remarks>
+    /// Runs as a single flight per event store: a call that arrives while a run is in flight - a reconnect firing
+    /// while startup registration is still on the wire, or any operation re-triggering connect after a failed run -
+    /// joins that run instead of sending the kernel a second copy of the same registration. A run that follows a
+    /// failed one waits an exponentially growing, jittered backoff first, so a kernel that is too slow to accept the
+    /// registration sees the retry pressure back off instead of pile up. The flight is created lazily so an instance
+    /// materialized without its constructor - as specification harnesses do - still registers correctly.
+    /// </remarks>
+    public Task RegisterAll()
+    {
+        var flight = LazyInitializer.EnsureInitialized(
+            ref _registerAllFlight,
+            () => new SingleFlightRegistration(RegisterAllCore));
+        return flight.Run();
+    }
+
+    /// <inheritdoc/>
+    public IEventSequence GetEventSequence(EventSequenceId id) =>
+        _sequences.GetOrAdd(
+            id,
+            static (key, state) => new EventSequence(
+                state._eventStoreName,
+                state.Namespace,
+                key,
+                state.Connection,
+                state.EventTypes,
+                state.Constraints,
+                state.EventSerializer,
+                state._correlationIdAccessor,
+                state._concurrencyScopeStrategies,
+                state._causationManager,
+                state.UnitOfWorkManager,
+                state._identityProvider,
+                state._jsonSerializerOptions,
+                state._activitySource),
+            this);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
+    {
+        var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
+        return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
+    }
+
+    async Task RegisterAllCore()
     {
         _logger.RegisterAllArtifacts();
 
@@ -386,34 +431,6 @@ public class EventStore : IEventStore
             Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception);
             throw;
         }
-    }
-
-    /// <inheritdoc/>
-    public IEventSequence GetEventSequence(EventSequenceId id) =>
-        _sequences.GetOrAdd(
-            id,
-            static (key, state) => new EventSequence(
-                state._eventStoreName,
-                state.Namespace,
-                key,
-                state.Connection,
-                state.EventTypes,
-                state.Constraints,
-                state.EventSerializer,
-                state._correlationIdAccessor,
-                state._concurrencyScopeStrategies,
-                state._causationManager,
-                state.UnitOfWorkManager,
-                state._identityProvider,
-                state._jsonSerializerOptions,
-                state._activitySource),
-            this);
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
-    {
-        var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
-        return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
     }
 
     async Task RegisterExternalEventStoreSubscriptionsAsync()
