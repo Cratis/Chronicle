@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
             skipTlsValidation ??= connectionString.SkipTlsValidation;
             var logger = sp.GetService<ILogger<ChronicleConnection>>();
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
-            logger?.LogInformation("Configuring Chronicle connection with connection string: {ConnectionString}", connectionString);
+            logger?.LogInformation("Configuring Chronicle connection with connection string: {RedactedConnectionString}", connectionString.Redacted);
 #pragma warning restore CA1848 // Use the LoggerMessage delegates
             var lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
             var connectionLifecycle = new ConnectionLifecycle(sp.GetRequiredService<ILogger<ConnectionLifecycle>>());

@@ -140,6 +140,18 @@ public class ChronicleConnectionString
     public string? CertificatePassword => _builder.CertificatePassword;
 
     /// <summary>
+    /// Gets a representation of the connection string that is safe to log, with every credential masked.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ToString"/> renders the connection string in full, credentials included — never log
+    /// that. Use this instead everywhere a connection string is written to a log, an error message or
+    /// any other diagnostic output: scheme, host, port and the non-sensitive options are preserved, while
+    /// the password, the API key, the certificate password and any option whose name looks like a
+    /// credential are replaced by <c>REDACTED</c>.
+    /// </remarks>
+    public string Redacted => _builder.BuildRedacted();
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleConnectionString"/>.
     /// </summary>
     /// <param name="connectionString">String connection string to convert from.</param>
@@ -176,5 +188,9 @@ public class ChronicleConnectionString
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The result carries every credential in clear text. Never write it to a log or an error message —
+    /// use <see cref="Redacted"/> for that.
+    /// </remarks>
     public override string ToString() => _builder.Build();
 }

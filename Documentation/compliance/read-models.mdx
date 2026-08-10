@@ -60,6 +60,8 @@ Read model queries are transparent to PII encryption. No changes to query code a
 
 Chronicle decrypts PII fields automatically before returning results to the caller. When the encryption key has been deleted for a subject, `Name` returns an empty string — the caller receives an `Employee` record with an empty name, never an exception or partial result.
 
+That automatic decryption covers `IReadModels`' query methods. For an instance that arrived some other way — built from raw storage, restored from a cache, or delivered through `Watch`, which streams changes without releasing them — call `IReadModels.Release` yourself; see [Releasing PII](../read-models/releasing-pii).
+
 ### One property never fails the whole read
 
 Decryption is resolved per property, and a property that cannot be read never fails the read model or the query returning it:

@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786020483716,
+  "lastUpdate": 1786309554820,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -3088,6 +3088,144 @@
             "value": 319914096.3,
             "unit": "ns",
             "range": "± 94514363.97638564"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "einari@me.com",
+            "name": "Einar Ingebrigtsen",
+            "username": "einari"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a84b342a3d9c555c384a472a27677830c0c12862",
+          "message": "Stop logging Chronicle connection string credentials (#3611)\n\n* Add credential redaction to the Chronicle connection string\n\nA connection string carries the OAuth client secret, the API key and the\ncertificate password. Nothing could render it without them, so every\ndiagnostic use of one was a credential in clear text.\n\nBuildRedacted() masks the modelled credentials, and falls back to the option\nname for the ones the builder does not model - a connection string carries\narbitrary options, and over-redacting a value costs a little diagnostic\ndetail where under-redacting one puts it in the log forever.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Stop logging the client secret when connecting to Chronicle\n\nBoth connection log messages passed the ChronicleConnectionString itself, so\nthe formatter rendered it through ToString() - client secret, API key and\ncertificate password included - at Information level, on every connect and\nevery watchdog reconnect. Pass the redacted rendering instead.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Document redacting a connection string for logs\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Drop the redundant Class flag from the generated client type attributes\n\nTypeAttributes.Class is 0x0, so a Roslynator brought in by the latest\npackage update flags 'Public | Class' as a flag already contained in\nanother (RCS1258) and fails the client snippet verification build.\n\n* Redact by masking the values, not by rendering conditionally\n\nBuildRedacted() threaded a redactSecrets flag through the whole of Build(),\nso which credentials reached the result depended on a runtime branch - and a\nhelper that can return either the mask or the real value is one CodeQL flags\nas clear-text logging at every call site, correctly in the sense that nothing\nabout the shape of the code rules the secret out.\n\nBuild a copy that holds no credential at all and render that instead. The\nguarantee is now structural rather than conditional, and Build() goes back to\nbeing one unconditional renderer.\n\nThe mask is REDACTED rather than ***, because a query parameter value goes\nthrough Uri.EscapeDataString and *** came out as %2A%2A%2A there while the\nuserinfo kept ***. One mask that survives escaping keeps every redacted value\nlooking the same.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>",
+          "timestamp": "2026-08-09T22:50:17+02:00",
+          "tree_id": "0101d88effcd1a53dcf1c8d44000e87d42a70c9d",
+          "url": "https://github.com/Cratis/Chronicle/commit/a84b342a3d9c555c384a472a27677830c0c12862"
+        },
+        "date": 1786309554819,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 9280694.0625,
+            "unit": "ns",
+            "range": "± 727631.4907931613"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 14227116.884375,
+            "unit": "ns",
+            "range": "± 1711902.506874327"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 35693422.13333333,
+            "unit": "ns",
+            "range": "± 4641866.548104395"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 299769641.6,
+            "unit": "ns",
+            "range": "± 59100656.40810139"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 3432630.3,
+            "unit": "ns",
+            "range": "± 224666.72782296396"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 6635668.5,
+            "unit": "ns",
+            "range": "± 385943.6583132598"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 3038420,
+            "unit": "ns",
+            "range": "± 164127.3862469332"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 13019309.333333334,
+            "unit": "ns",
+            "range": "± 2663336.161418607"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 377875536.8,
+            "unit": "ns",
+            "range": "± 47077190.01294978"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 2068751702.4,
+            "unit": "ns",
+            "range": "± 29414312.862283975"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 71533414.8,
+            "unit": "ns",
+            "range": "± 1865276.9547805197"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 249343745.6111111,
+            "unit": "ns",
+            "range": "± 6995850.647528137"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1606296219.7,
+            "unit": "ns",
+            "range": "± 104915670.9565554"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 73356748,
+            "unit": "ns",
+            "range": "± 1352367.3840008306"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 102042402.1,
+            "unit": "ns",
+            "range": "± 8942944.492474692"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 310079146.1,
+            "unit": "ns",
+            "range": "± 50502720.14064715"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 71530967.6,
+            "unit": "ns",
+            "range": "± 1556542.2212823168"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 97183927.6,
+            "unit": "ns",
+            "range": "± 4843281.910762679"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 321075468.6,
+            "unit": "ns",
+            "range": "± 56911198.90594925"
           }
         ]
       }

@@ -7,8 +7,13 @@ namespace Cratis.Chronicle.Connections;
 
 internal static partial class ChronicleConnectionLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Connecting to Chronicle ({ConnectionString})")]
-    internal static partial void Connecting(this ILogger<ChronicleConnection> logger, ChronicleConnectionString connectionString);
+    /// <summary>
+    /// Logs that a connection is being established.
+    /// </summary>
+    /// <param name="logger"><see cref="ILogger"/> to log to.</param>
+    /// <param name="redactedConnectionString">The connection string with its credentials masked - <see cref="ChronicleConnectionString.Redacted"/>, never <see cref="ChronicleConnectionString.ToString"/>.</param>
+    [LoggerMessage(LogLevel.Information, "Connecting to Chronicle ({RedactedConnectionString})")]
+    internal static partial void Connecting(this ILogger<ChronicleConnection> logger, string redactedConnectionString);
 
     [LoggerMessage(LogLevel.Information, "Connected to Chronicle")]
     internal static partial void Connected(this ILogger<ChronicleConnection> logger);
