@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_FluentKeyRedirection
 public class and_the_read_model_resolves_its_subject_from_the_key_attribute : given.a_fluent_key_redirection_pii_analyzer
 {
     const string Usage = """
-    public record AdvisorNamed(string RequestId, [PII] string FullName);
+    public record AdvisorNamed(string RequestKey, [PII] string FullName);
 
     public record RequestSummary(
         string Id,
@@ -23,7 +23,7 @@ public class and_the_read_model_resolves_its_subject_from_the_key_attribute : gi
     {
         public void Define(IProjectionBuilderFor<RequestSummary> builder) => builder
             .From<AdvisorNamed>(_ => _
-                .{|#0:UsingKey|}(e => e.RequestId)
+                .{|#0:UsingKey|}(e => e.RequestKey)
                 .Set(m => m.AdvisorName).To(e => e.FullName));
     }
     """;
@@ -32,7 +32,7 @@ public class and_the_read_model_resolves_its_subject_from_the_key_attribute : gi
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentKeyRedirectionPiiAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "AdvisorName", "AdvisorNamed", "FullName", "RequestId", "Id"));
+        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "AdvisorName", "AdvisorNamed", "FullName", "RequestKey", "Id"));
 
     [Fact] Task should_name_the_client_release_id_fallback() => _result;
 }

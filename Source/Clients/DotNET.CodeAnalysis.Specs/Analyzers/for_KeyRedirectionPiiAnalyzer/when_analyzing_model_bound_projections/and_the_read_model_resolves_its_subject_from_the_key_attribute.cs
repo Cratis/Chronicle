@@ -12,9 +12,9 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_KeyRedirectionPiiAna
 public class and_the_read_model_resolves_its_subject_from_the_key_attribute : given.a_key_redirection_pii_analyzer
 {
     const string Usage = """
-    public record AdvisorNamed(string RequestId, [PII] string FullName);
+    public record AdvisorNamed(string RequestKey, [PII] string FullName);
 
-    {|#0:[FromEvent<AdvisorNamed>(key: "RequestId")]|}
+    {|#0:[FromEvent<AdvisorNamed>(key: "RequestKey")]|}
     public record RequestSummary(
         string Id,
         [Key] string RequestKey,
@@ -25,7 +25,7 @@ public class and_the_read_model_resolves_its_subject_from_the_key_attribute : gi
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.KeyRedirectionPiiAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "FullName", "AdvisorNamed", "FullName", "RequestId", "Id"));
+        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "FullName", "AdvisorNamed", "FullName", "RequestKey", "Id"));
 
     [Fact] Task should_name_the_client_release_id_fallback() => _result;
 }
