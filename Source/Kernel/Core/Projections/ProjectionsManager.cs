@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
+/// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing incoming definitions against the registered ones.</param>
 /// <param name="languageService"><see cref="Generator"/> for generating projection declaration language strings.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
@@ -32,6 +34,7 @@ namespace Cratis.Chronicle.Projections;
 public class ProjectionsManager(
     IProjectionFactory projectionFactory,
     IProjectionsServiceClient projectionsService,
+    IProjectionDefinitionComparer projectionDefinitionComparer,
     ILanguageService languageService,
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
@@ -54,12 +57,29 @@ public class ProjectionsManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions)
     {
-        var definitionsToRegister = definitions.ToList();
-        await projectionsService.Register(_eventStoreName, definitionsToRegister);
+        // Same-version client replicas re-register identical definitions on every startup and reconnect. Handling
+        // only what actually changed makes such a re-registration near-free, and because this grain is non-reentrant
+        // it also collapses a queue of identical registrations: the first request does the work, every queued
+        // duplicate compares equal against the registered state and returns immediately instead of repeating the
+        // per-namespace fan-out. Without this, stacked retries kept the request queue from ever draining.
+        var changedDefinitions = await GetChangedDefinitions(definitions);
+        if (changedDefinitions.Count == 0)
+        {
+            logger.AllDefinitionsUnchanged();
+            return;
+        }
 
-        // Merge new definitions with existing ones, replacing any with the same identifier
+        logger.RegisteringChangedDefinitions(changedDefinitions.Count);
+        await projectionsService.Register(_eventStoreName, changedDefinitions);
+
+        // Subscribe projections immediately so that seeded events appended after registration
+        // are not missed due to the asynchronous timer-based subscription scheduling
+        await SetDefinitionAndSubscribeForProjections(changedDefinitions);
+
+        // Merge into the state only after the engine and the projection grains have accepted the definitions, so an
+        // interrupted registration is retried in full on the next attempt instead of being skipped as unchanged.
         var existingProjections = State.Projections.ToList();
-        foreach (var newDefinition in definitions)
+        foreach (var newDefinition in changedDefinitions)
         {
             var existingIndex = existingProjections.FindIndex(p => p.Identifier == newDefinition.Identifier);
             if (existingIndex >= 0)
@@ -74,10 +94,6 @@ public class ProjectionsManager(
 
         State.Projections = existingProjections;
         await WriteStateAsync();
-
-        // Subscribe projections immediately so that seeded events appended after registration
-        // are not missed due to the asynchronous timer-based subscription scheduling
-        await SetDefinitionAndSubscribeForAllProjections();
     }
 
     /// <inheritdoc/>
@@ -121,6 +137,7 @@ public class ProjectionsManager(
     {
         await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+        var eventTypeSchemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
 
         await Task.WhenAll(State.Projections.Select(async projectionDefinition =>
         {
@@ -134,8 +151,33 @@ public class ProjectionsManager(
                 return;
             }
 
-            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace);
+            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace, eventTypeSchemas);
         }));
+    }
+
+    async Task<IReadOnlyList<ProjectionDefinition>> GetChangedDefinitions(IEnumerable<ProjectionDefinition> definitions)
+    {
+        var changed = new List<ProjectionDefinition>();
+        foreach (var definition in definitions)
+        {
+            var existing = State.Projections.FirstOrDefault(p => p.Identifier == definition.Identifier);
+            if (existing is null)
+            {
+                changed.Add(definition);
+                continue;
+            }
+
+            var compareResult = await projectionDefinitionComparer.Compare(
+                new ProjectionKey(definition.Identifier, _eventStoreName),
+                existing,
+                definition);
+            if (compareResult != ProjectionDefinitionCompareResult.Same)
+            {
+                changed.Add(definition);
+            }
+        }
+
+        return changed;
     }
 
     async Task SetDefinitionAndSubscribeForAllProjections()
@@ -148,6 +190,11 @@ public class ProjectionsManager(
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
 
+        // The event type schemas are the same for every definition and namespace in this pass; fetching them once
+        // here instead of per subscription keeps a registration from fanning out into definitions × namespaces
+        // storage reads.
+        var eventTypeSchemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
+
         await Task.WhenAll(definitions.Select(async definition =>
         {
             var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
@@ -157,11 +204,11 @@ public class ProjectionsManager(
                 return;
             }
 
-            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition);
+            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition, eventTypeSchemas);
         }));
     }
 
-    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         logger.SettingDefinition(definition.Identifier);
         var key = new ProjectionKey(definition.Identifier, _eventStoreName);
@@ -173,10 +220,10 @@ public class ProjectionsManager(
             return;
         }
 
-        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName)));
+        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, eventTypeSchemas)));
     }
 
-    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName)
+    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         if (!definition.IsActive)
         {
@@ -186,8 +233,6 @@ public class ProjectionsManager(
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
 
         logger.Subscribing(definition.Identifier, namespaceName);
-        var eventStoreStorage = storage.GetEventStore(_eventStoreName);
-        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
         var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
 
         logger.SubscribingWithEventTypes(
