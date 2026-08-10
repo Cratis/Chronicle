@@ -406,7 +406,7 @@ public class ChangesetConverter(
         {
             return converter.ToBsonValue(value, property);
         }
-        catch (Exception error)
+        catch (Exception)
         {
             // The comparand is the join source's raw event source id, and the schema of the joined-on column
             // cannot always represent it — a Guid-formatted column against a key that is not a Guid is the
@@ -414,7 +414,7 @@ public class ChangesetConverter(
             // matches nothing, which is exactly what this filter did before the conversion was introduced;
             // throwing instead would fail the write and freeze the partition permanently. The value is the
             // compliance subject by default, so the diagnostic names the property and not the value.
-            logger.JoinKeyNotConvertible(error, readModel.Identifier, property);
+            logger.JoinKeyNotConvertible(readModel.Identifier, property);
             return value.ToBsonValue();
         }
     }
