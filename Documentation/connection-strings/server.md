@@ -116,6 +116,6 @@ You cannot combine client credentials and API key authentication in the same con
 
 ## TLS
 
-The client always connects over TLS, and by default it validates the server certificate. Set `skipTlsValidation=true` to accept a self-signed or otherwise untrusted certificate — only do this for a trusted server on a trusted network, as it removes protection against man-in-the-middle attacks. The built-in development connection string sets it so development works against the server's self-signed certificate.
+The client always connects over TLS, and by default it validates the server certificate. Set `skipTlsValidation=true` to accept a self-signed or otherwise untrusted certificate — only do this for a trusted server on a trusted network, as it removes protection against man-in-the-middle attacks. The built-in development connection string explicitly sets it so development works against the server's self-signed certificate. In the .NET client, this connection-string option and `Tls.SkipCertificateValidation` are explicit opt-ins to the same policy: validation is skipped if either is `true`. `Tls.SkipCertificateValidation` defaults to `false`, and omitting `skipTlsValidation` also resolves to `false`.
 
 See [TLS configuration (client)](../configuration/tls) for certificate setup.
