@@ -374,7 +374,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     async Task<IEventStore> CreateEventStore(EventStoreKey key)
     {
         var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
-            new InstancesOf<IReactorSideEffectHandler>(Types.Types.Instance, _serviceProvider));
+            new EventStoreReactorSideEffectHandlerInstances(_serviceProvider));
 
         var eventStore = new EventStore(
             key.Name,
