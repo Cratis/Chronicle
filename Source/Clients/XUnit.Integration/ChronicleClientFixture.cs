@@ -5,6 +5,7 @@ extern alias KernelCore;
 extern alias KernelConcepts;
 
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -36,6 +37,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     static bool _isInitialized;
     bool _backupPerformed;
     string _name = string.Empty;
+    IServiceScope? _servicesScope;
     IServiceProvider? _services;
 
     /// <summary>
@@ -153,9 +155,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
 
     /// <summary>
-    /// Gets the <see cref="IServiceProvider"/> for resolving services.
+    /// Gets the scenario-scoped <see cref="IServiceProvider"/> for resolving services.
     /// </summary>
-    public IServiceProvider Services => _services ??= EnsureInitialized(() => _servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
+    public IServiceProvider Services => EnsureServicesScope();
 
     /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for resolving grains.
@@ -244,6 +246,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <inheritdoc/>
     public virtual void Dispose()
     {
+        DisposeServicesScope();
     }
 
     /// <inheritdoc/>
@@ -256,13 +259,33 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <inheritdoc/>
     public virtual async Task DisposeAsync()
     {
+        var exceptions = new List<Exception>(4);
+
+        await TryCleanup(OnDisposeAsync, exceptions);
+        await TryCleanup(DisposeServicesScopeAsync, exceptions);
+
         if (!_backupPerformed && IsBackupEnabled)
         {
-            await ChronicleFixture.PerformBackupAsync(_name);
-            _backupPerformed = true;
+            await TryCleanup(
+                async () =>
+                {
+                    await ChronicleFixture.PerformBackupAsync(_name);
+                    _backupPerformed = true;
+                },
+                exceptions);
         }
 
-        await ChronicleFixture.RemoveAllDatabases();
+        await TryCleanup(() => ChronicleFixture.RemoveAllDatabases(), exceptions);
+
+        if (exceptions.Count == 1)
+        {
+            ExceptionDispatchInfo.Capture(exceptions[0]).Throw();
+        }
+
+        if (exceptions.Count > 1)
+        {
+            throw new AggregateException(exceptions);
+        }
     }
 
     /// <summary>
@@ -333,7 +356,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <returns>Awaitable task.</returns>
     protected Task EnsureBuilt()
     {
-        _ = Services.GetRequiredService<IEventStore>();
+        _ = EnsureServicesScope().GetRequiredService<IEventStore>();
         return Task.CompletedTask;
     }
 
@@ -356,6 +379,18 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <returns>Awaitable Task.</returns>
     protected virtual Task OnDisposeAsync() => Task.CompletedTask;
 
+    static async Task TryCleanup(Func<Task> cleanup, List<Exception> exceptions)
+    {
+        try
+        {
+            await cleanup();
+        }
+        catch (Exception exception)
+        {
+            exceptions.Add(exception);
+        }
+    }
+
     T EnsureInitialized<T>(Func<T> getObject)
     {
         if (_webApplicationFactory is null)
@@ -375,6 +410,43 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
             _createClientMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
             _createClientWithOptionsMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
             _isInitialized = true;
+        }
+    }
+
+    IServiceProvider EnsureServicesScope()
+    {
+        InitializeFixture();
+        if (_services is null)
+        {
+            var rootServices = (_servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
+            _servicesScope = rootServices.CreateScope();
+            _services = _servicesScope.ServiceProvider;
+        }
+
+        return _services;
+    }
+
+    void DisposeServicesScope()
+    {
+        var scope = _servicesScope;
+        _servicesScope = null;
+        _services = null;
+        scope?.Dispose();
+    }
+
+    async Task DisposeServicesScopeAsync()
+    {
+        var scope = _servicesScope;
+        _servicesScope = null;
+        _services = null;
+
+        if (scope is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync();
+        }
+        else
+        {
+            scope?.Dispose();
         }
     }
 

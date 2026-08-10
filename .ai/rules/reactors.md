@@ -34,7 +34,7 @@ public Task MethodName(TEvent @event, EventContext context)
 
 - **First parameter** — the event type. This determines which events the method subscribes to.
 - **Second parameter** — `EventContext` (optional). Omit if event metadata is not needed. A reactor method takes no more than two parameters.
-- **Return type** — `Task` or `void`, or a side-effect type (`TEvent`, `ReactorSideEffect`, or a collection of either) returned directly (sync) or wrapped in `Task<...>` (async). Prefer `Task`/async for real side effects, but synchronous returns are fully supported — there is no "always async" requirement.
+- **Return type** — `Task` or `void`, or a side-effect type (`TEvent`, `EventForEventSourceId`, or a collection of either) returned directly (sync) or wrapped in `Task<...>` (async). Prefer `Task`/async for real side effects, but synchronous returns are fully supported — there is no "always async" requirement.
 - **Method name** — can be anything descriptive. The name is for readability, not dispatch.
 
 ## Handling replay differently — `[Replay]`
@@ -147,7 +147,9 @@ public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventCont
 
 ### Cross-stream via `EventForEventSourceId`
 
-To append a side-effect event to a **different** event source, return `EventForEventSourceId(id, @event)` (single or `IEnumerable<EventForEventSourceId>`) — the same cross-stream wrapper a command `Handle()` uses. Reach for `ReactorSideEffect` instead when you also need to set the `EventSequenceId`, stream type, source type, or `Subject`.
+To append a side-effect event to a **different** event source, return `EventForEventSourceId(id, @event)` (single or `IEnumerable<EventForEventSourceId>`) — the same cross-stream wrapper a command `Handle()` uses. It carries the `EventStreamType`, `EventStreamId`, `EventSourceType`, `Subject`, `Occurred`, `Tags` and `Causation` per event.
+
+> There is no return type that selects a different **event sequence**. A returned side effect always goes to the default event log; to reach the outbox or another named sequence, inject `IEventStore` and use `GetEventSequence(...)`.
 
 ```csharp
 public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventContext context) =>
@@ -157,7 +159,6 @@ public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventCont
     ]);
 ```
 
-> **Chronicle version note:** reactor side-effect handling of `EventForEventSourceId` wrappers ships in an upcoming Chronicle release. On earlier versions, target another event source with `ReactorSideEffect { EventSourceId = … }` instead.
 
 ## External event stores (outbox / inbox)
 

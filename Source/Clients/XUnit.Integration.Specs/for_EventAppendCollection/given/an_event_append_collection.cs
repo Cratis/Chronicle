@@ -36,18 +36,4 @@ public class an_event_append_collection : Specification
         };
         return new AppendedEventWithResult(new AppendedEvent(context, @event), result);
     }
-
-    protected void FireEvent(ulong sequenceNumber = 7)
-    {
-        var correlationId = CorrelationId.New();
-        _subject.OnNext(
-        [
-            MakeAppendedEvent(
-                correlationId,
-                EventSourceId.New(),
-                new object(),
-                [],
-                AppendResult.Success(correlationId, new EventSequenceNumber(sequenceNumber)))
-        ]);
-    }
 }

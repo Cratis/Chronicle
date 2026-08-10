@@ -36,7 +36,6 @@ One precise line per load-bearing term, so the same word means the same thing ev
 - **DCB (Dynamic Consistency Boundary)** — enforcing a state-dependent rule **under concurrency** by injecting the read model into `Handle()` and returning `Result<TEvent, ValidationResult>`.
 - **Consistency boundary** — the scope within which an invariant holds atomically (an event source, or the read model a DCB rule inspects).
 - **EventForEventSourceId** — wrapper to append an event to a **specific** (cross-stream) event source from a command `Handle()` (and, from an upcoming Chronicle release, a reactor).
-- **ReactorSideEffect** — a reactor return type giving full control over a side-effect event's target (event source, sequence, stream type, source type, subject).
 
 ## Structure & types
 

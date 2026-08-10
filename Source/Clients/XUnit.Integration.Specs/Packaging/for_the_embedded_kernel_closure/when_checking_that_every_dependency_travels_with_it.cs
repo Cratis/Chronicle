@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.RegularExpressions;
-
 namespace Cratis.Chronicle.XUnit.Integration.Packaging.for_the_embedded_kernel_closure;
 
 /// <summary>
@@ -28,7 +26,7 @@ public class when_checking_that_every_dependency_travels_with_it : Specification
     void Because()
     {
         var package = ProjectFile("Source/Clients/XUnit.Integration/XUnit.Integration.csproj");
-        var (declared, references) = Read(package);
+        var (declared, references) = ProjectFileDependencies.Read(package);
 
         var embedded = ClosureOf(references.Where(_ => _.IsEmbedded).Select(_ => Resolve(package, _.Include)));
         var flowing = ClosureOf(references.Where(_ => !_.IsEmbedded).Select(_ => Resolve(package, _.Include)));
@@ -57,24 +55,6 @@ public class when_checking_that_every_dependency_travels_with_it : Specification
     static FileInfo Resolve(FileInfo from, string include) =>
         new(Path.GetFullPath(Path.Combine(from.DirectoryName!, include.Replace('\\', '/'))));
 
-    static (HashSet<string> Packages, IReadOnlyCollection<(string Include, bool IsEmbedded)> References) Read(FileInfo project)
-    {
-        var content = File.ReadAllText(project.FullName);
-
-        var packages = Regex.Matches(content, "PackageReference\\s+Include=\"([^\"]+)\"")
-            .Select(_ => _.Groups[1].Value)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var references = Regex.Matches(content, "<ProjectReference\\s+Include=\"([^\"]+)\"\\s*(/?)>((?:(?!</ProjectReference>|<ProjectReference).)*)", RegexOptions.Singleline)
-            .Select(_ => (
-                Include: _.Groups[1].Value,
-                IsEmbedded: _.Groups[2].Value.Length == 0 &&
-                            _.Groups[3].Value.Contains("<PrivateAssets>all</PrivateAssets>", StringComparison.OrdinalIgnoreCase)))
-            .ToArray();
-
-        return (packages, references);
-    }
-
     static HashSet<string> ClosureOf(IEnumerable<FileInfo> roots)
     {
         var packages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -89,7 +69,7 @@ public class when_checking_that_every_dependency_travels_with_it : Specification
                 continue;
             }
 
-            var (declared, references) = Read(project);
+            var (declared, references) = ProjectFileDependencies.Read(project);
             packages.UnionWith(declared);
             foreach (var reference in references)
             {
