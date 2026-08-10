@@ -11,11 +11,24 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 /// <param name="inner">The real <see cref="IServiceScope"/>.</param>
 /// <param name="registry">The <see cref="MutableServiceRegistry"/> to fall back to.</param>
-internal sealed class FallbackServiceScope(IServiceScope inner, MutableServiceRegistry registry) : IServiceScope
+internal sealed class FallbackServiceScope(IServiceScope inner, MutableServiceRegistry registry) : IServiceScope, IAsyncDisposable
 {
     /// <inheritdoc/>
     public IServiceProvider ServiceProvider { get; } = new FallbackServiceProvider(inner.ServiceProvider, registry);
 
     /// <inheritdoc/>
     public void Dispose() => inner.Dispose();
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
+    {
+        if (inner is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync();
+        }
+        else
+        {
+            inner.Dispose();
+        }
+    }
 }
