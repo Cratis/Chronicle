@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Seeding;
 using context = Cratis.Chronicle.Integration.for_EventSeeding.when_a_seeded_batch_is_rejected.context;
 
 namespace Cratis.Chronicle.Integration.for_EventSeeding;
@@ -23,6 +24,7 @@ public class when_a_seeded_batch_is_rejected(context context) : Given<context>(c
     {
         public string TheOffice;
         public string TheOtherOffice;
+        public Exception FirstFailure;
         public int EventsAfterTheRejectedRun;
         public IEnumerable<string> EventTypesAfterTheCorrectedRun;
 
@@ -42,13 +44,18 @@ public class when_a_seeded_batch_is_rejected(context context) : Given<context>(c
             // offending pair but the batch it happens to sit in.
             EventStore.Seeding.ForEventSource(TheOffice, [new OfficeOpened("Bergen"), new BadgeIssued("A-1", "First holder")]);
             EventStore.Seeding.ForEventSource(TheOtherOffice, [new BadgeIssued("A-1", "Second holder")]);
-            await EventStore.Seeding.Register();
+            FirstFailure = await Catch.Exception(() => EventStore.Seeding.Register());
 
             EventsAfterTheRejectedRun = (await AllSeededEvents()).Count;
 
-            // The seed data corrected: the badge is claimed once. Everything else is exactly as before.
-            EventStore.Seeding.ForEventSource(TheOffice, [new OfficeOpened("Bergen"), new BadgeIssued("A-1", "First holder")]);
-            await EventStore.Seeding.Register();
+            // A failed register deliberately retains the offered entries so an unchanged process can retry
+            // transient failures. Corrected seed definitions arrive with a new process and therefore a fresh
+            // seeding buffer. It still uses the fixture's real event-store connection, registered event types and
+            // serializer configuration, so the corrected call crosses the same client/kernel boundary without
+            // reconnecting the shared fixture and replaying its retained failed buffer.
+            var correctedSeeding = EventStore.CreateEventSeeding();
+            correctedSeeding.ForEventSource(TheOffice, [new OfficeOpened("Bergen"), new BadgeIssued("A-1", "First holder")]);
+            await correctedSeeding.Register();
 
             EventTypesAfterTheCorrectedRun =
             [
@@ -62,6 +69,7 @@ public class when_a_seeded_batch_is_rejected(context context) : Given<context>(c
             await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
     }
 
+    [Fact] void should_fail_the_rejected_run() => Context.FirstFailure.ShouldNotBeNull();
     [Fact] void should_append_nothing_from_the_rejected_run() => Context.EventsAfterTheRejectedRun.ShouldEqual(0);
     [Fact] void should_append_the_corrected_seed_set() => Context.EventTypesAfterTheCorrectedRun.Count().ShouldEqual(2);
     [Fact] void should_append_the_innocent_entry_that_shared_the_rejected_batch() => Context.EventTypesAfterTheCorrectedRun.ShouldContain(nameof(OfficeOpened));

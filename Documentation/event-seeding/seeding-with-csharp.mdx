@@ -44,6 +44,17 @@ By default, seed data applies to all namespaces in the event store. To target a 
 
 The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods as the global builder. Each namespace receives only its own scoped events in addition to any global events.
 
+## Register corrected seed definitions without reconnecting
+
+When registration fails, Chronicle retains the attempted entries in the event store's default `Seeding` buffer.
+That makes retrying an unchanged idempotent batch safe after a transient failure. If the definitions themselves
+were wrong, create an independent empty buffer so the corrected set is not combined with the retained set:
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/corrected-seed-set" />
+
+The new buffer uses the event store's existing connection, event types, serializer, and client configuration. A
+failure from its `Register()` call still propagates normally.
+
 ## How it runs
 
 - Seeders are automatically discovered at application startup.
@@ -54,8 +65,9 @@ The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods 
   event source, carrying the same payload are two facts, and both are appended.
 - Events are appended in batches of 100. A batch is validated as a whole before anything is written, so a
   single entry that violates a constraint means none of its batch is appended. The server reports the
-  rejection at `Error` with the violations and leaves those entries unseeded - correct the seed data and the
-  next run appends them.
+  rejection at `Error` with the violations, leaves those entries unseeded, and fails registration. The remote
+  client surfaces that failure through its normal transport error. Retry the unchanged buffer for a transient
+  failure; after correcting the definitions, restart the process or use `CreateEventSeeding()` to offer a fresh set.
 
 ## Best practices
 
@@ -64,4 +76,3 @@ The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods 
 - Group seeders by scenario so you can remove or adjust them easily.
 - Use build flags or runtime settings to prevent seeding in production.
 - Use `ForNamespace` when seed data is tenant-specific or environment-specific to avoid polluting other namespaces.
-

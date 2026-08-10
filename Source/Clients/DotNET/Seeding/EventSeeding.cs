@@ -40,6 +40,7 @@ public class EventSeeding(
     readonly IClientArtifactsProvider _clientArtifactsProvider = clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider = serviceProvider;
     readonly IClientArtifactsActivator _artifactActivator = artifactActivator;
+    readonly ILogger<EventSeeding> _logger = logger;
     readonly List<SeedingEntry> _entries = [];
 
     /// <inheritdoc/>
@@ -82,7 +83,7 @@ public class EventSeeding(
             var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
             if (activatedSeederResult.TryGetException(out var exception))
             {
-                logger.FailedToActivateSeeder(seederType, exception);
+                _logger.FailedToActivateSeeder(seederType, exception);
                 continue;
             }
 
@@ -210,6 +211,20 @@ public class EventSeeding(
 
         _entries.Clear();
     }
+
+    /// <summary>
+    /// Creates a new empty seeding buffer with the same event-store dependencies.
+    /// </summary>
+    /// <returns>A new <see cref="IEventSeeding"/> instance.</returns>
+    internal IEventSeeding CreateEmpty() => new EventSeeding(
+        _eventStoreName,
+        _connection,
+        _eventTypes,
+        _eventSerializer,
+        _clientArtifactsProvider,
+        _serviceProvider,
+        _artifactActivator,
+        _logger);
 
     void AddScopedEntry(EventSourceId eventSourceId, EventTypeId eventTypeId, object @event, IEnumerable<Tag> tags, bool isGlobal, EventStoreNamespaceName targetNamespace)
     {
