@@ -19,8 +19,8 @@ public class when_a_namespace_reports_an_incomplete_seeding : given.a_global_eve
 {
     IEnumerable<SeedingEntry> _entries;
     INamespaces _namespaces;
-    IEventSeeding _firstNamespaceGrain;
-    IEventSeeding _secondNamespaceGrain;
+    IResultAwareEventSeeding _firstNamespaceGrain;
+    IResultAwareEventSeeding _secondNamespaceGrain;
 
     void Establish()
     {
@@ -30,13 +30,13 @@ public class when_a_namespace_reports_an_incomplete_seeding : given.a_global_eve
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>(["namespace-1", "namespace-2"]));
         _grainFactory.GetGrain<INamespaces>(Arg.Any<string>()).Returns(_namespaces);
 
-        _firstNamespaceGrain = Substitute.For<IEventSeeding>();
-        _secondNamespaceGrain = Substitute.For<IEventSeeding>();
-        _firstNamespaceGrain.Seed(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Incomplete));
-        _secondNamespaceGrain.Seed(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
+        _firstNamespaceGrain = Substitute.For<IResultAwareEventSeeding>();
+        _secondNamespaceGrain = Substitute.For<IResultAwareEventSeeding>();
+        _firstNamespaceGrain.SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Incomplete));
+        _secondNamespaceGrain.SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
 
-        _grainFactory.GetGrain<IEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", "namespace-1").ToString()).Returns(_firstNamespaceGrain);
-        _grainFactory.GetGrain<IEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", "namespace-2").ToString()).Returns(_secondNamespaceGrain);
+        _grainFactory.GetGrain<IResultAwareEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", "namespace-1").ToString()).Returns(_firstNamespaceGrain);
+        _grainFactory.GetGrain<IResultAwareEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", "namespace-2").ToString()).Returns(_secondNamespaceGrain);
     }
 
     async Task Because()
@@ -45,8 +45,8 @@ public class when_a_namespace_reports_an_incomplete_seeding : given.a_global_eve
         await _grain.Seed(_entries);
     }
 
-    [Fact] void should_still_dispatch_to_every_namespace() => _secondNamespaceGrain.Received(2).Seed(Arg.Any<IEnumerable<SeedingEntry>>());
-    [Fact] void should_dispatch_to_the_namespace_that_declined_again() => _firstNamespaceGrain.Received(2).Seed(Arg.Any<IEnumerable<SeedingEntry>>());
+    [Fact] void should_still_dispatch_to_every_namespace() => _secondNamespaceGrain.Received(2).SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>());
+    [Fact] void should_dispatch_to_the_namespace_that_declined_again() => _firstNamespaceGrain.Received(2).SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>());
     [Fact] void should_not_record_the_entries_as_globally_seeded() => TrackedByEventType.ShouldBeEmpty();
     [Fact] void should_not_persist_a_claim_no_namespace_can_back() => _state.DidNotReceive().WriteStateAsync();
 }

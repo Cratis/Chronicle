@@ -28,7 +28,7 @@ public class EventSeeding(
     [PersistentState(nameof(EventSeeds), WellKnownGrainStorageProviders.EventSeeding)]
     IPersistentState<EventSeeds> state,
     IGrainFactory grainFactory,
-    ILogger<EventSeeding> logger) : Grain, IEventSeeding
+    ILogger<EventSeeding> logger) : Grain, IResultAwareEventSeeding
 {
     /// <summary>
     /// The maximum number of events to append in a single batch during seeding.
@@ -57,7 +57,10 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
-    public async Task<SeedingResult> Seed(IEnumerable<SeedingEntry> entries)
+    public Task Seed(IEnumerable<SeedingEntry> entries) => SeedWithResult(entries);
+
+    /// <inheritdoc/>
+    public async Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries)
     {
         logger.SeedingEvents(_key.EventStore.Value, _key.Namespace.Value);
 
@@ -109,8 +112,8 @@ public class EventSeeding(
         {
             logger.ApplyingSeedsToNamespace(ns.Value);
             var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
-            var nsGrain = grainFactory.GetGrain<IEventSeeding>(namespaceKey.ToString());
-            var result = await nsGrain.Seed(entriesToSeed);
+            var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
+            var result = await nsGrain.SeedWithResult(entriesToSeed);
             everyNamespaceSeeded &= result.AllEntriesSeeded;
         }
 

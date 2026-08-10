@@ -11,8 +11,8 @@ public class when_seeding_globally_again_after_a_failed_namespace_dispatch : giv
 {
     IEnumerable<SeedingEntry> _entries;
     INamespaces _namespaces;
-    IEventSeeding _firstNamespaceGrain;
-    IEventSeeding _secondNamespaceGrain;
+    IResultAwareEventSeeding _firstNamespaceGrain;
+    IResultAwareEventSeeding _secondNamespaceGrain;
     EventStoreNamespaceName _firstNamespace;
     EventStoreNamespaceName _secondNamespace;
     Exception _firstError;
@@ -31,17 +31,17 @@ public class when_seeding_globally_again_after_a_failed_namespace_dispatch : giv
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_firstNamespace, _secondNamespace]));
         _grainFactory.GetGrain<INamespaces>(Arg.Any<string>()).Returns(_namespaces);
 
-        _firstNamespaceGrain = Substitute.For<IEventSeeding>();
-        _secondNamespaceGrain = Substitute.For<IEventSeeding>();
-        _firstNamespaceGrain.Seed(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
-        _secondNamespaceGrain.Seed(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
+        _firstNamespaceGrain = Substitute.For<IResultAwareEventSeeding>();
+        _secondNamespaceGrain = Substitute.For<IResultAwareEventSeeding>();
+        _firstNamespaceGrain.SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
+        _secondNamespaceGrain.SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
 
-        _grainFactory.GetGrain<IEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", _firstNamespace).ToString()).Returns(_firstNamespaceGrain);
-        _grainFactory.GetGrain<IEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", _secondNamespace).ToString()).Returns(_secondNamespaceGrain);
+        _grainFactory.GetGrain<IResultAwareEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", _firstNamespace).ToString()).Returns(_firstNamespaceGrain);
+        _grainFactory.GetGrain<IResultAwareEventSeeding>(EventSeedingKey.ForNamespace("TestEventStore", _secondNamespace).ToString()).Returns(_secondNamespaceGrain);
 
         // Fail the first namespace dispatch to simulate a transient failure, then succeed on the retry.
         _firstNamespaceGrain
-            .When(x => x.Seed(Arg.Any<IEnumerable<SeedingEntry>>()))
+            .When(x => x.SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>()))
             .Do(_ =>
             {
                 _firstNamespaceDispatchCount++;
@@ -59,7 +59,7 @@ public class when_seeding_globally_again_after_a_failed_namespace_dispatch : giv
     }
 
     [Fact] void should_fail_the_first_attempt() => _firstError.ShouldNotBeNull();
-    [Fact] void should_redispatch_to_the_failed_namespace_on_retry() => _firstNamespaceGrain.Received(2).Seed(Arg.Any<IEnumerable<SeedingEntry>>());
-    [Fact] void should_dispatch_to_the_remaining_namespace_on_retry() => _secondNamespaceGrain.Received(1).Seed(Arg.Any<IEnumerable<SeedingEntry>>());
+    [Fact] void should_redispatch_to_the_failed_namespace_on_retry() => _firstNamespaceGrain.Received(2).SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>());
+    [Fact] void should_dispatch_to_the_remaining_namespace_on_retry() => _secondNamespaceGrain.Received(1).SeedWithResult(Arg.Any<IEnumerable<SeedingEntry>>());
     [Fact] void should_commit_the_global_tracking_only_after_the_successful_retry() => _state.Received(1).WriteStateAsync();
 }

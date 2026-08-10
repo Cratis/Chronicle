@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors.SideEffects;
@@ -10,15 +11,38 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// The event is appended to the event log using metadata resolved from the <see cref="ReactorContext"/>.
 /// </summary>
 /// <remarks>
-/// There is deliberately no constructor taking <c>IEventTypes</c>. The one that existed was removed because the
-/// registry belongs to the event store the current scope resolved, and it is not restored for compatibility: the
-/// container picks the greediest constructor it can resolve and honors neither <c>[ActivatorUtilitiesConstructor]</c>
-/// nor <c>[Obsolete]</c>, so a retained one would be selected over the parameterless one and would capture a scoped
-/// service in a process-lifetime type all over again. <c>when_the_container_validates_scopes</c> fails if one is added.
+/// The compatibility constructor retains the previous public surface for callers that create the handler directly.
+/// Chronicle explicitly registers this type once per event-store scope using that constructor before convention
+/// binding runs. Cached event stores use the parameterless constructor and pass their registry through the additive
+/// <c>CanHandle</c> overload instead.
 /// </remarks>
 [Singleton]
 public class EventResultHandler : IReactorSideEffectHandler
 {
+    readonly IEventTypes? _legacyEventTypes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventResultHandler"/> class for the current per-store contract.
+    /// </summary>
+    public EventResultHandler()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventResultHandler"/> class for compatibility with the previous
+    /// event-store-less contract.
+    /// </summary>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> used when the event-store-less <c>CanHandle</c> overload is
+    /// called without a current event store on its <see cref="ReactorContext"/>.</param>
+    public EventResultHandler(IEventTypes eventTypes)
+    {
+        _legacyEventTypes = eventTypes;
+    }
+
+    /// <inheritdoc/>
+    public bool CanHandle(ReactorContext reactorContext, object value) =>
+        EventTypesFor(reactorContext).HasFor(value.GetType());
+
     /// <inheritdoc/>
     public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
         eventStore.EventTypes.HasFor(value.GetType());
@@ -42,4 +66,9 @@ public class EventResultHandler : IReactorSideEffectHandler
 
         return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventSourceId]));
     }
+
+    IEventTypes EventTypesFor(ReactorContext reactorContext) =>
+        reactorContext.EventStore?.EventTypes ??
+        _legacyEventTypes ??
+        throw new ReactorSideEffectHandlingRequiresEventStore(GetType());
 }

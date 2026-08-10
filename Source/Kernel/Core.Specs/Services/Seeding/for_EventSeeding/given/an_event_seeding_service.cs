@@ -3,9 +3,11 @@
 
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Contracts.Seeding;
+using Cratis.Chronicle.Seeding;
 
+using ContractSeedingEntry = Cratis.Chronicle.Contracts.Seeding.SeedingEntry;
 using SeededEntry = Cratis.Chronicle.Seeding.SeedingEntry;
-using SeedingGrain = Cratis.Chronicle.Seeding.IEventSeeding;
+using SeedingGrain = Cratis.Chronicle.Seeding.IResultAwareEventSeeding;
 
 namespace Cratis.Chronicle.Services.Seeding.for_EventSeeding.given;
 
@@ -25,8 +27,8 @@ public class an_event_seeding_service : Specification
         _globalGrain = Substitute.For<SeedingGrain>();
         _namespaceGrain = Substitute.For<SeedingGrain>();
 
-        _globalGrain.Seed(Arg.Any<IEnumerable<SeededEntry>>()).Returns(Task.FromResult(Chronicle.Seeding.SeedingResult.Complete));
-        _namespaceGrain.Seed(Arg.Any<IEnumerable<SeededEntry>>()).Returns(Task.FromResult(Chronicle.Seeding.SeedingResult.Complete));
+        _globalGrain.SeedWithResult(Arg.Any<IEnumerable<SeededEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
+        _namespaceGrain.SeedWithResult(Arg.Any<IEnumerable<SeededEntry>>()).Returns(Task.FromResult(SeedingResult.Complete));
 
         _grainFactory.GetGrain<SeedingGrain>(EventSeedingKey.ForGlobal(TheEventStore).ToString()).Returns(_globalGrain);
         _grainFactory.GetGrain<SeedingGrain>(EventSeedingKey.ForNamespace(TheEventStore, TheNamespace).ToString()).Returns(_namespaceGrain);
@@ -51,8 +53,8 @@ public class an_event_seeding_service : Specification
     /// <param name="eventTypeId">The event type to build for.</param>
     /// <param name="content">The JSON content to build for.</param>
     /// <param name="tags">Optional tags to build for.</param>
-    /// <returns>A <see cref="SeedingEntry"/>.</returns>
-    protected static SeedingEntry AnEntry(string eventSourceId, string eventTypeId, string content, params string[] tags) =>
+    /// <returns>A <see cref="ContractSeedingEntry"/>.</returns>
+    protected static ContractSeedingEntry AnEntry(string eventSourceId, string eventTypeId, string content, params string[] tags) =>
         new()
         {
             EventSourceId = eventSourceId,
@@ -67,7 +69,7 @@ public class an_event_seeding_service : Specification
     /// </summary>
     /// <param name="entries">The entries the seeders yielded, in order.</param>
     /// <returns>A <see cref="SeedRequest"/> for the global scope.</returns>
-    protected static SeedRequest AGlobalRequestFor(params SeedingEntry[] entries) =>
+    protected static SeedRequest AGlobalRequestFor(params ContractSeedingEntry[] entries) =>
         new()
         {
             EventStore = TheEventStore,
@@ -80,7 +82,7 @@ public class an_event_seeding_service : Specification
     /// </summary>
     /// <param name="entries">The entries the seeders yielded, in order.</param>
     /// <returns>A <see cref="SeedRequest"/> for a single namespace.</returns>
-    protected static SeedRequest ANamespacedRequestFor(params SeedingEntry[] entries) =>
+    protected static SeedRequest ANamespacedRequestFor(params ContractSeedingEntry[] entries) =>
         new()
         {
             EventStore = TheEventStore,
@@ -95,14 +97,14 @@ public class an_event_seeding_service : Specification
             ]
         };
 
-    static List<EventTypeSeedEntries> ByEventType(IEnumerable<SeedingEntry> entries) =>
+    static List<EventTypeSeedEntries> ByEventType(IEnumerable<ContractSeedingEntry> entries) =>
         [.. entries.GroupBy(_ => _.EventTypeId).Select(group => new EventTypeSeedEntries { EventTypeId = group.Key, Entries = [.. group] })];
 
-    static List<EventSourceSeedEntries> ByEventSource(IEnumerable<SeedingEntry> entries) =>
+    static List<EventSourceSeedEntries> ByEventSource(IEnumerable<ContractSeedingEntry> entries) =>
         [.. entries.GroupBy(_ => _.EventSourceId).Select(group => new EventSourceSeedEntries { EventSourceId = group.Key, Entries = [.. group] })];
 
     static IEnumerable<SeededEntry> EntriesHandedTo(SeedingGrain grain) =>
         grain.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == nameof(SeedingGrain.Seed))
+            .Where(call => call.GetMethodInfo().Name == nameof(SeedingGrain.SeedWithResult))
             .SelectMany(call => (IEnumerable<SeededEntry>)call.GetArguments()[0]!);
 }

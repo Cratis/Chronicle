@@ -15,6 +15,17 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> handlers) : IReactorSideEffectHandlers
 {
     /// <inheritdoc/>
+    public bool CanHandle(ReactorContext reactorContext, object value)
+    {
+        if (reactorContext.EventStore is not null)
+        {
+            return CanHandle(reactorContext, reactorContext.EventStore, value);
+        }
+
+        return handlers.Any(handler => handler.CanHandle(reactorContext, value));
+    }
+
+    /// <inheritdoc/>
     public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
         handlers.Any(h => h.CanHandle(reactorContext, eventStore, value));
 

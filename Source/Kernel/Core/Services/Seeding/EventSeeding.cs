@@ -1,9 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Contracts.Seeding;
 using ProtoBuf.Grpc;
+
+using EventSeedingResult = Cratis.Chronicle.Seeding.SeedingResult;
+using ResultAwareEventSeeding = Cratis.Chronicle.Seeding.IResultAwareEventSeeding;
 
 namespace Cratis.Chronicle.Services.Seeding;
 
@@ -25,7 +29,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         if (globalEntries.Count > 0)
         {
             var globalKey = EventSeedingKey.ForGlobal(request.EventStore);
-            var globalGrain = grainFactory.GetGrain<Chronicle.Seeding.IEventSeeding>(globalKey.ToString());
+            var globalGrain = grainFactory.GetGrain<ResultAwareEventSeeding>(globalKey.ToString());
 
             var entries = globalEntries.Select(e => new Chronicle.Seeding.SeedingEntry(
                 e.EventSourceId,
@@ -33,7 +37,8 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
                 e.Content,
                 e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray() ?? [])).ToArray();
 
-            await globalGrain.Seed(entries);
+            var result = await globalGrain.SeedWithResult(entries);
+            EnsureComplete(result, request.EventStore, EventStoreNamespaceName.NotSet);
         }
 
         // Seed namespace-specific entries
@@ -46,7 +51,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             if (namespacedEntries.Count > 0)
             {
                 var key = EventSeedingKey.ForNamespace(request.EventStore, namespacedGroup.Namespace);
-                var grain = grainFactory.GetGrain<Chronicle.Seeding.IEventSeeding>(key.ToString());
+                var grain = grainFactory.GetGrain<ResultAwareEventSeeding>(key.ToString());
 
                 var entries = namespacedEntries.Select(e => new Chronicle.Seeding.SeedingEntry(
                     e.EventSourceId,
@@ -54,7 +59,8 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
                     e.Content,
                     e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray() ?? [])).ToArray();
 
-                await grain.Seed(entries);
+                var result = await grain.SeedWithResult(entries);
+                EnsureComplete(result, request.EventStore, namespacedGroup.Namespace);
             }
         }
     }
@@ -77,6 +83,14 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         var seeds = await grain.GetSeededEvents();
 
         return MapToResponse(seeds);
+    }
+
+    static void EnsureComplete(EventSeedingResult result, EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
+    {
+        if (!result.AllEntriesSeeded)
+        {
+            throw new Chronicle.Seeding.EventSeedingIncomplete(eventStore, eventStoreNamespace);
+        }
     }
 
     /// <summary>

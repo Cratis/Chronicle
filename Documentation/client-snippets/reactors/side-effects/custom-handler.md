@@ -11,6 +11,9 @@ public class MyHandler : IReactorSideEffectHandler
     public bool CanHandle(ReactorContext reactorContext, object value) =>
         value is MySpecialResult;
 
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
+        CanHandle(reactorContext, value);
+
     public Task<Result<ReactorSideEffectFailure>> Handle(
         ReactorContext reactorContext,
         IEventStore eventStore,

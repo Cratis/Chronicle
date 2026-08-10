@@ -24,10 +24,11 @@ public class NamespacesReactor(IGrainFactory grainFactory) : Reactor
     /// <param name="event">The event containing the namespace information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
+    /// <exception cref="EventSeedingIncomplete">Thrown when at least one global seed entry was not appended to the namespace.</exception>
     public async Task Added(NamespaceAdded @event, EventContext eventContext)
     {
         var globalKey = EventSeedingKey.ForGlobal(@event.EventStore);
-        var globalGrain = grainFactory.GetGrain<IEventSeeding>(globalKey.ToString());
+        var globalGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(globalKey.ToString());
         var seeds = await globalGrain.GetSeededEvents();
 
         if (seeds.ByEventSource.Count == 0)
@@ -37,16 +38,18 @@ public class NamespacesReactor(IGrainFactory grainFactory) : Reactor
 
         var entries = seeds.ByEventSource
             .SelectMany(kvp => kvp.Value)
-            .GroupBy(e => new { e.EventSourceId, e.EventTypeId, e.Content })
-            .Select(g => g.First())
             .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.Tags?.Select(t => new Tag(t))))
             .ToArray();
 
         if (entries.Length > 0)
         {
             var namespaceKey = EventSeedingKey.ForNamespace(@event.EventStore, @event.Namespace);
-            var nsGrain = grainFactory.GetGrain<IEventSeeding>(namespaceKey.ToString());
-            await nsGrain.Seed(entries);
+            var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
+            var result = await nsGrain.SeedWithResult(entries);
+            if (!result.AllEntriesSeeded)
+            {
+                throw new EventSeedingIncomplete(@event.EventStore, @event.Namespace);
+            }
         }
     }
 }
