@@ -56,7 +56,7 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     public IChronicleClient ChronicleClient { get; }
 
     /// <summary>
-    /// Gets the <see cref="IServiceProvider"/> for resolving services.
+    /// Gets the scenario-scoped <see cref="IServiceProvider"/> for resolving services.
     /// </summary>
     public IServiceProvider Services { get; }
 
