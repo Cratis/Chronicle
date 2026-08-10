@@ -8,6 +8,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
@@ -91,14 +92,21 @@ static class FluentProjectionMappings
         INamedTypeSymbol readModelType,
         FluentProjectionSymbols symbols)
     {
-        var owner = GetReceiverRootSymbol(context.SemanticModel, invocation);
-        if (owner is not null && GetOwningScope(context.SemanticModel, invocation, owner) is { } scope)
+        var owner = GetReceiverRootSymbol(context.SemanticModel, invocation, symbols);
+        if (owner is null)
+        {
+            // A method-result receiver whose forwarding behavior cannot be proven must not suppress this
+            // compliance diagnostic. Its builder state is unknown, so preserve AutoMap's safe upper bound.
+            return true;
+        }
+
+        if (GetOwningScope(context.SemanticModel, invocation, owner) is { } scope)
         {
             var finalOverride = (bool?)null;
             foreach (var candidate in scope.DescendantNodesAndSelf()
                          .OfType<InvocationExpressionSyntax>()
                          .Where(candidate => SymbolEqualityComparer.Default.Equals(
-                             GetReceiverRootSymbol(context.SemanticModel, candidate),
+                             GetReceiverRootSymbol(context.SemanticModel, candidate, symbols),
                              owner))
                          .OrderBy(candidate => candidate.SpanStart)
                          .ThenBy(candidate => candidate.Span.Length))
@@ -398,28 +406,110 @@ static class FluentProjectionMappings
         }
     }
 
-    static ISymbol? GetReceiverRootSymbol(SemanticModel semanticModel, InvocationExpressionSyntax invocation)
+    static ISymbol? GetReceiverRootSymbol(
+        SemanticModel semanticModel,
+        InvocationExpressionSyntax invocation,
+        FluentProjectionSymbols symbols)
     {
         var receiver = (invocation.Expression as MemberAccessExpressionSyntax)?.Expression;
 
         while (receiver is not null)
         {
-            receiver = receiver switch
+            switch (receiver)
             {
-                InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax member } => member.Expression,
-                MemberAccessExpressionSyntax member => member.Expression,
-                ParenthesizedExpressionSyntax parenthesized => parenthesized.Expression,
-                _ => receiver
+                case InvocationExpressionSyntax methodResult:
+                    if (TryResolveForwardedArgument(semanticModel, methodResult, out var forwardedArgument))
+                    {
+                        receiver = forwardedArgument;
+                        continue;
+                    }
+
+                    if (semanticModel.GetSymbolInfo(methodResult).Symbol is IMethodSymbol method &&
+                        IsProjectionScopeBuilderMethod(method, symbols) &&
+                        methodResult.Expression is MemberAccessExpressionSyntax invocationMember)
+                    {
+                        receiver = invocationMember.Expression;
+                        continue;
+                    }
+
+                    return null;
+                case MemberAccessExpressionSyntax memberAccess:
+                    receiver = memberAccess.Expression;
+                    continue;
+                case ParenthesizedExpressionSyntax parenthesized:
+                    receiver = parenthesized.Expression;
+                    continue;
+                default:
+                    return semanticModel.GetSymbolInfo(receiver).Symbol;
+            }
+        }
+
+        return null;
+    }
+
+    static bool IsProjectionScopeBuilderMethod(IMethodSymbol method, FluentProjectionSymbols symbols)
+    {
+        var containingType = method.ContainingType;
+
+        return containingType is not null &&
+               (SymbolEqualityComparer.Default.Equals(containingType.OriginalDefinition, symbols.ProjectionBuilder) ||
+                containingType.AllInterfaces.Any(@interface =>
+                    SymbolEqualityComparer.Default.Equals(@interface.OriginalDefinition, symbols.ProjectionBuilder)));
+    }
+
+    static bool TryResolveForwardedArgument(
+        SemanticModel semanticModel,
+        InvocationExpressionSyntax invocation,
+        out ExpressionSyntax forwardedArgument)
+    {
+        forwardedArgument = null!;
+
+        if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
+            method.DeclaringSyntaxReferences.Length == 0 ||
+            GetReturnedParameterOrdinal(method) is not { } parameterOrdinal ||
+            semanticModel.GetOperation(invocation) is not IInvocationOperation operation)
+        {
+            return false;
+        }
+
+        if (operation.Arguments
+                .FirstOrDefault(argument => argument.Parameter?.Ordinal == parameterOrdinal)
+                ?.Value.Syntax is not ExpressionSyntax argumentExpression)
+        {
+            return false;
+        }
+
+        // The argument is a strict syntax descendant of this invocation, so repeated uses of the same
+        // forwarding method remain bounded by the finite receiver expression rather than by method identity.
+        forwardedArgument = argumentExpression;
+        return true;
+    }
+
+    static int? GetReturnedParameterOrdinal(IMethodSymbol method)
+    {
+        foreach (var syntaxReference in method.DeclaringSyntaxReferences)
+        {
+            var declaration = syntaxReference.GetSyntax();
+            var returnedExpression = declaration switch
+            {
+                MethodDeclarationSyntax { ExpressionBody.Expression: { } expression } => expression,
+                MethodDeclarationSyntax { Body.Statements.Count: 1 } methodDeclaration =>
+                    (methodDeclaration.Body.Statements[0] as ReturnStatementSyntax)?.Expression,
+                LocalFunctionStatementSyntax { ExpressionBody.Expression: { } expression } => expression,
+                LocalFunctionStatementSyntax { Body.Statements.Count: 1 } localFunction =>
+                    (localFunction.Body.Statements[0] as ReturnStatementSyntax)?.Expression,
+                _ => null
             };
 
-            if (receiver is IdentifierNameSyntax)
+            while (returnedExpression is ParenthesizedExpressionSyntax parenthesized)
             {
-                return semanticModel.GetSymbolInfo(receiver).Symbol;
+                returnedExpression = parenthesized.Expression;
             }
 
-            if (receiver is not InvocationExpressionSyntax and not MemberAccessExpressionSyntax and not ParenthesizedExpressionSyntax)
+            if (returnedExpression is IdentifierNameSyntax identifier &&
+                method.Parameters.FirstOrDefault(parameter => parameter.Name == identifier.Identifier.Text) is { } parameter)
             {
-                return semanticModel.GetSymbolInfo(receiver).Symbol;
+                return parameter.Ordinal;
             }
         }
 
