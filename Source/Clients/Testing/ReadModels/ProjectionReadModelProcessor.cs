@@ -190,7 +190,7 @@ internal static class ProjectionReadModelProcessor
             eventTypeSchemas);
 
         var state = initialState is not null
-            ? initialState.AsExpandoObject(false)
+            ? initialState.AsExpandoObject(true)
             : CreateInitialStateFromSchema(schema, engineProjection);
 
         // Capture the first non-deferred key resolved for the root projection. In production, MongoDB
@@ -200,7 +200,7 @@ internal static class ProjectionReadModelProcessor
         // we mirror that mapping ourselves before serializing the state — otherwise identifier
         // properties whose only source is the event-source ID surface as null in _scenario.Instance.
         KernelKey? rootKey = null;
-        var removed = false;
+        var explicitInitialStateIsPresent = initialState is not null;
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
 
@@ -211,7 +211,10 @@ internal static class ProjectionReadModelProcessor
             var (newState, eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents, strictEventSubscription);
             state = newState;
             rootKey ??= eventKey;
-            removed = eventRemoved;
+            if (eventRemoved)
+            {
+                explicitInitialStateIsPresent = false;
+            }
         }
 
         // Retry deferred events once; if still deferred, throw a descriptive exception.
@@ -241,13 +244,17 @@ internal static class ProjectionReadModelProcessor
 
             // Apply to the sink before mutating the threaded state — the sink clones the changeset's
             // InitialState (the same object as `state`), so mutating it first would double an additive change.
-            await inMemorySink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
+            if (changeset.HasChanges)
+            {
+                await inMemorySink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
+            }
+
             if (changeset.Changes.Any(change => change is Removed))
             {
                 state = new ExpandoObject();
-                removed = true;
+                explicitInitialStateIsPresent = false;
             }
-            else
+            else if (changeset.HasChanges)
             {
                 state = ApplyActualChanges(key, changeset.Changes, state);
             }
@@ -259,9 +266,12 @@ internal static class ProjectionReadModelProcessor
         // can be asserted against the intended instance via InstanceForEventSourceId.
         var instances = BuildInstancesFromSink<TReadModel>(inMemorySink);
 
-        // A root-level removal (a class-level [RemovedWith]) deletes the read model document in the real
-        // sink; mirror that here by returning null rather than the stale pre-removal state.
-        if (removed)
+        // An explicit initial state remains materialized through empty changesets until an actual root removal.
+        // Otherwise presence comes from the same per-key sink state that backs Instances: deferred, joined, or
+        // unsubscribed no-ops cannot create an id-only model, while a later constructive event recreates it.
+        var hasPrimary = explicitInitialStateIsPresent ||
+            (rootKey is not null && await inMemorySink.FindOrDefault(rootKey) is not null);
+        if (!hasPrimary)
         {
             return (null, instances);
         }
@@ -513,7 +523,11 @@ internal static class ProjectionReadModelProcessor
         // Apply to the sink BEFORE mutating the threaded state. The sink clones the changeset's InitialState —
         // which is the SAME object as the threaded `state` — so mutating the threaded state first would let the
         // sink re-apply an additive change (e.g. a child add) on top of an already-advanced base, duplicating it.
-        await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
+        if (changeset.HasChanges)
+        {
+            await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
+        }
+
         var updatedState = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
         return (updatedState, key, removed);
     }

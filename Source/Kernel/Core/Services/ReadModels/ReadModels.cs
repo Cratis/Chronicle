@@ -280,6 +280,16 @@ internal sealed class ReadModels(
             var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
             var result = await projection.GetModelInstance();
 
+            if (!result.HasReadModel)
+            {
+                return new GetInstanceByKeyResponse
+                {
+                    ReadModel = "null",
+                    ProjectedEventsCount = (ulong)result.ProjectedEventsCount,
+                    LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber
+                };
+            }
+
             var immediateSchema = definition.GetSchemaForLatestGeneration();
             var releasedReadModel = await ReleaseProjectedReadModel(
                 result.ReadModel,

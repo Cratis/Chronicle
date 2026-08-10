@@ -17,5 +17,10 @@ public record ProjectionResult(JsonObject ReadModel, int ProjectedEventsCount, E
     /// <summary>
     /// Represents an empty <see cref="ProjectionResult"/>.
     /// </summary>
-    public static readonly ProjectionResult Empty = new([], 0, EventSequenceNumber.Unavailable);
+    public static readonly ProjectionResult Empty = new([], 0, EventSequenceNumber.Unavailable) { HasReadModel = false };
+
+    /// <summary>
+    /// Gets a value indicating whether the projection produced a read model.
+    /// </summary>
+    public bool HasReadModel { get; init; } = true;
 }
