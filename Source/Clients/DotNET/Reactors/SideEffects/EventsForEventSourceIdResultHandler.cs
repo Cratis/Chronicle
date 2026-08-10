@@ -26,6 +26,10 @@ public class EventsForEventSourceIdResultHandler : IReactorSideEffectHandler
         value is IEnumerable<object> items && items.Any() && items.All(item => item is EventForEventSourceId);
 
     /// <inheritdoc/>
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
+        value is IEnumerable<object> items && items.Any() && items.All(item => item is EventForEventSourceId);
+
+    /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         var events = ((IEnumerable<object>)value).Cast<EventForEventSourceId>().ToList();

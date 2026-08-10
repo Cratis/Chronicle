@@ -49,7 +49,7 @@ public class ImmediateProjection(
                                     .GetEventSequence(_projectionKey.EventSequenceId);
 
         _projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey.ProjectionId, _projectionKey.EventStore));
-        await _projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+        await _projection.SubscribeDefinitionsChanged(GetSelfGrainReference());
     }
 
     /// <inheritdoc/>
@@ -57,7 +57,7 @@ public class ImmediateProjection(
     {
         if (_projection is not null)
         {
-            await _projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+            await _projection.UnsubscribeDefinitionsChanged(GetSelfGrainReference());
         }
     }
 
@@ -97,6 +97,11 @@ public class ImmediateProjection(
             if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null)
             {
                 logger.UsingCachedModelInstance();
+                if (!HasReadModel(_initialState))
+                {
+                    return ProjectionResult.Empty with { LastHandledEventSequenceNumber = tail };
+                }
+
                 var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _readModelDefinition!.GetSchemaForLatestGeneration());
                 return new(initialStateAsJson, 0, tail);
             }
@@ -121,13 +126,22 @@ public class ImmediateProjection(
             }
 
             _initialState = state;
+            if (!HasReadModel(state))
+            {
+                return ProjectionResult.Empty with
+                {
+                    ProjectedEventsCount = projectedEventsCount,
+                    LastHandledEventSequenceNumber = _lastHandledEventSequenceNumber
+                };
+            }
+
             var jsonObject = expandoObjectConverter.ToJsonObject(state, _readModelDefinition!.GetSchemaForLatestGeneration());
             return new(jsonObject, projectedEventsCount, _lastHandledEventSequenceNumber);
         }
         catch (Exception ex)
         {
             logger.FailedGettingModelInstance(ex);
-            return ProjectionResult.Empty;
+            throw;
         }
     }
 
@@ -147,6 +161,15 @@ public class ImmediateProjection(
         var initialState = _initialState ?? new ExpandoObject();
         var result = await HandleEvents(initialState, eventsToApply);
         _initialState = result.State;
+        if (!HasReadModel(result.State))
+        {
+            return ProjectionResult.Empty with
+            {
+                ProjectedEventsCount = result.ProjectedEventsCount,
+                LastHandledEventSequenceNumber = result.Tail
+            };
+        }
+
         var jsonObject = expandoObjectConverter.ToJsonObject(result.State, _readModelDefinition!.GetSchemaForLatestGeneration());
         return new(jsonObject, result.ProjectedEventsCount, result.Tail);
     }
@@ -157,6 +180,14 @@ public class ImmediateProjection(
         DeactivateOnIdle();
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Gets this grain as a reference that can receive projection definition changes.
+    /// </summary>
+    /// <returns>The observer reference for this grain.</returns>
+    protected virtual INotifyProjectionDefinitionsChanged GetSelfGrainReference() => this.AsReference<INotifyProjectionDefinitionsChanged>();
+
+    static bool HasReadModel(ExpandoObject state) => ((IDictionary<string, object?>)state).Count > 0;
 
     ExpandoObject GetInitialState()
     {

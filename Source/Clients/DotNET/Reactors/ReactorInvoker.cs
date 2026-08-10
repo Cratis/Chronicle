@@ -159,8 +159,11 @@ public class ReactorInvoker(
                 return null;
             }
 
-            var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
-            if (sideEffectHandlers.CanHandle(reactorContext, result))
+            var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
+            {
+                EventStore = eventStore
+            };
+            if (sideEffectHandlers.CanHandle(reactorContext, eventStore, result))
             {
                 var handleResult = await sideEffectHandlers.Handle(reactorContext, eventStore, result);
                 if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
@@ -182,8 +185,11 @@ public class ReactorInvoker(
             return null;
         }
 
-        var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
-        if (sideEffectHandlers.CanHandle(syncReactorContext, returnValue))
+        var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
+        {
+            EventStore = eventStore
+        };
+        if (sideEffectHandlers.CanHandle(syncReactorContext, eventStore, returnValue))
         {
             var handleResult = await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
             if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
@@ -299,4 +305,3 @@ public class ReactorInvoker(
         }
     }
 }
-

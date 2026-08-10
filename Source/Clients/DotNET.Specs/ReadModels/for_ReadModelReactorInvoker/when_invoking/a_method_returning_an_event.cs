@@ -12,7 +12,7 @@ public class a_method_returning_an_event : given.an_invoker
 
     void Establish()
     {
-        _sideEffectHandlers.CanHandle(Arg.Any<ReactorContext>(), Arg.Any<object>()).Returns(true);
+        _sideEffectHandlers.CanHandle(Arg.Any<ReactorContext>(), Arg.Any<IEventStore>(), Arg.Any<object>()).Returns(true);
         _sideEffectHandlers.Handle(Arg.Any<ReactorContext>(), Arg.Any<IEventStore>(), Arg.Any<object>())
             .Returns(Result.Success<ReactorSideEffectFailure>());
     }

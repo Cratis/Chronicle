@@ -29,6 +29,8 @@ public static class ChronicleClientServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services, IChronicleBuilder? chronicleBuilder = null)
     {
+        services.AddEventSerializer();
+        services.AddReactorSideEffectHandlers();
         services.AddHttpContextAccessor();
 
         services.AddSingleton(sp =>

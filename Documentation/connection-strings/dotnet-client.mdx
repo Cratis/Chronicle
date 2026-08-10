@@ -12,8 +12,16 @@ This is equivalent to:
 
 <ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults-equivalent" />
 
+The named development connection string explicitly sets `skipTlsValidation=true` so it can connect to
+Chronicle's generated self-signed development certificate. General connection strings validate server
+certificates by default; use explicit production configuration outside local development.
+
 > [!NOTE]
-> In development, you can use `chronicle://localhost:35000` without credentials. The .NET client automatically attempts the built-in development credentials (`chronicle-dev-client` / `chronicle-dev-secret`).
+> In development, credentials may be omitted because the .NET client automatically attempts the built-in
+> development credentials (`chronicle-dev-client` / `chronicle-dev-secret`). Use
+> `ChronicleConnectionString.Development` or add `?skipTlsValidation=true` explicitly when connecting to
+> Chronicle's self-signed development server; a bare `chronicle://localhost:35000` connection validates its
+> certificate and rejects an untrusted one.
 
 Use explicit configuration for production environments.
 

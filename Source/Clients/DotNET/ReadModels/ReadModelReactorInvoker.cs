@@ -95,8 +95,11 @@ public class ReadModelReactorInvoker(
 
     async Task HandleSideEffect(IEventStore eventStore, object reactor, object result, EventContext changeContext)
     {
-        var context = new ReactorContext(changeContext, reactor, contextValuesBuilder.Build(reactor, changeContext));
-        if (!sideEffectHandlers.CanHandle(context, result))
+        var context = new ReactorContext(changeContext, reactor, contextValuesBuilder.Build(reactor, changeContext))
+        {
+            EventStore = eventStore
+        };
+        if (!sideEffectHandlers.CanHandle(context, eventStore, result))
         {
             logger.ReadModelReactorReturnValueNotHandled(result.GetType().Name);
             return;

@@ -23,6 +23,10 @@ public class EventForEventSourceIdResultHandler : IReactorSideEffectHandler
         value is EventForEventSourceId;
 
     /// <inheritdoc/>
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
+        value is EventForEventSourceId;
+
+    /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         var eventForEventSourceId = (EventForEventSourceId)value;

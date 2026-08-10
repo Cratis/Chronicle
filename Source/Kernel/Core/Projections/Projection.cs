@@ -146,6 +146,7 @@ public class Projection(
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
         var state = initialState;
         Key? lastKey = null;
+        var hasReadModel = ((IDictionary<string, object?>)state).Count > 0;
 
         foreach (var @event in events)
         {
@@ -160,21 +161,33 @@ public class Projection(
             }
 
             var key = (keyResult as ResolvedKey)!.Key;
-            lastKey = key;
+            var operationType = projection.GetOperationTypeFor(@event.Context.EventType);
             var context = new ProjectionEventContext(
                 key,
                 @event,
                 changeset,
-                projection.GetOperationTypeFor(@event.Context.EventType),
+                operationType,
                 false);
 
             await HandleEventFor(projection!, context, eventSequenceStorage);
 
-            state = ApplyActualChanges(key, changeset.Changes, state);
+            var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset);
+            if (changeset.HasBeenRemoved())
+            {
+                state = new ExpandoObject();
+                lastKey = null;
+            }
+            else if (shouldMaterialize && changeset.HasChanges)
+            {
+                state = ApplyActualChanges(key, changeset.Changes, state);
+                lastKey = key;
+            }
+
+            hasReadModel = shouldMaterialize;
         }
 
         // Inject id property into the read model before returning
-        if (lastKey is not null)
+        if (hasReadModel && lastKey is not null)
         {
             var stateDict = (IDictionary<string, object?>)state;
             stateDict[_identifierPropertyName] = lastKey.Value.ToString();
@@ -223,28 +236,44 @@ public class Projection(
         foreach (var (keyValue, (_, eventsForKey)) in eventsByKeyValue)
         {
             var state = new ExpandoObject();
+            var hasReadModel = false;
 
             foreach (var @event in eventsForKey)
             {
                 var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
                 var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
                 var key = (keyResult as ResolvedKey)!.Key;
+                var operationType = projection.GetOperationTypeFor(@event.Context.EventType);
 
                 var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
                 var context = new ProjectionEventContext(
                     key,
                     @event,
                     changeset,
-                    projection.GetOperationTypeFor(@event.Context.EventType),
+                    operationType,
                     false);
 
                 await HandleEventFor(projection!, context, eventSequenceStorage);
 
-                state = ApplyActualChanges(key, changeset.Changes, state);
-                lastSequenceByKeyValue[keyValue] = @event.Context.SequenceNumber;
+                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset);
+                if (changeset.HasBeenRemoved())
+                {
+                    state = new ExpandoObject();
+                    lastSequenceByKeyValue.Remove(keyValue);
+                }
+                else if (shouldMaterialize && changeset.HasChanges)
+                {
+                    state = ApplyActualChanges(key, changeset.Changes, state);
+                    lastSequenceByKeyValue[keyValue] = @event.Context.SequenceNumber;
+                }
+
+                hasReadModel = shouldMaterialize;
             }
 
-            readModelsByKeyValue[keyValue] = state;
+            if (hasReadModel)
+            {
+                readModelsByKeyValue[keyValue] = state;
+            }
         }
 
         // Inject id and metadata properties into each read model before returning
@@ -319,27 +348,42 @@ public class Projection(
         foreach (var (keyValue, (_, eventsForKey)) in eventsByKeyValue)
         {
             var state = new ExpandoObject();
+            var hasReadModel = false;
 
             foreach (var @event in eventsForKey)
             {
                 var keyResolver = projection!.GetKeyResolverFor(@event.Context.EventType);
                 var keyResult = await keyResolver(eventSequenceStorage!, NullSink.Instance, @event);
                 var key = (keyResult as ResolvedKey)!.Key;
+                var operationType = projection.GetOperationTypeFor(@event.Context.EventType);
 
                 var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, state);
                 var context = new ProjectionEventContext(
                     key,
                     @event,
                     changeset,
-                    projection.GetOperationTypeFor(@event.Context.EventType),
+                    operationType,
                     false);
 
                 await HandleEventFor(projection!, context, eventSequenceStorage);
 
-                state = ApplyActualChanges(key, changeset.Changes, state);
+                var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, changeset);
+                if (changeset.HasBeenRemoved())
+                {
+                    state = new ExpandoObject();
+                }
+                else if (shouldMaterialize && changeset.HasChanges)
+                {
+                    state = ApplyActualChanges(key, changeset.Changes, state);
+                }
+
+                hasReadModel = shouldMaterialize;
             }
 
-            readModelsByKeyValue[keyValue] = state;
+            if (hasReadModel)
+            {
+                readModelsByKeyValue[keyValue] = state;
+            }
         }
 
         // Inject id property into each read model before returning
@@ -355,6 +399,37 @@ public class Projection(
         }
 
         return results;
+    }
+
+    static bool ShouldMaterializeReadModel(
+        bool isMaterialized,
+        Key key,
+        Changeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        if (changeset.HasBeenRemoved())
+        {
+            return false;
+        }
+
+        if (isMaterialized)
+        {
+            return true;
+        }
+
+        if (!changeset.HasChanges)
+        {
+            return false;
+        }
+
+        var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
+            change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
+        var hasConstructiveChanges = changeset.Changes.Any(change =>
+            change is ChildAdded or ChildRemoved);
+        var hasJoined = changeset.HasJoined();
+        var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
+        var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
+
+        return !onlyPropertyUpdatesAlongsideJoin && !isRootLevelJoin;
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context, IEventSequenceStorage? eventSequenceStorage = null)

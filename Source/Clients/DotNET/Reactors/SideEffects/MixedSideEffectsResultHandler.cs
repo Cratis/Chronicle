@@ -18,17 +18,42 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// <see cref="EventsResultHandler"/> (all bare events) and <see cref="EventsForEventSourceIdResultHandler"/>
 /// (all <see cref="EventForEventSourceId"/>); this handler covers only the mixed case.
 /// </remarks>
-/// <param name="eventTypes"><see cref="IEventTypes"/> for checking whether the bare values are known event types.</param>
+/// <remarks>
+/// The compatibility constructor retains the previous public surface for callers that create the handler directly.
+/// Chronicle explicitly registers this type once per event-store scope using that constructor before convention
+/// binding runs. Cached event stores use the parameterless constructor and pass their registry through the additive
+/// <c>CanHandle</c> overload instead.
+/// </remarks>
 [Singleton]
-public class MixedSideEffectsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHandler
+public class MixedSideEffectsResultHandler : IReactorSideEffectHandler
 {
+    readonly IEventTypes? _legacyEventTypes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MixedSideEffectsResultHandler"/> class for the current per-store contract.
+    /// </summary>
+    public MixedSideEffectsResultHandler()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MixedSideEffectsResultHandler"/> class for compatibility with the
+    /// previous event-store-less contract.
+    /// </summary>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> used when the event-store-less <c>CanHandle</c> overload is
+    /// called without a current event store on its <see cref="ReactorContext"/>.</param>
+    public MixedSideEffectsResultHandler(IEventTypes eventTypes)
+    {
+        _legacyEventTypes = eventTypes;
+    }
+
     /// <inheritdoc/>
     public bool CanHandle(ReactorContext reactorContext, object value) =>
-        value is IEnumerable<object> items &&
-        items.Any() &&
-        items.All(item => item is EventForEventSourceId || eventTypes.HasFor(item.GetType())) &&
-        items.Any(item => item is EventForEventSourceId) &&
-        items.Any(item => item is not EventForEventSourceId);
+        CanHandle(EventTypesFor(reactorContext), value);
+
+    /// <inheritdoc/>
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
+        CanHandle(eventStore.EventTypes, value);
 
     /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
@@ -58,4 +83,16 @@ public class MixedSideEffectsResultHandler(IEventTypes eventTypes) : IReactorSid
 
         return Result.Success<ReactorSideEffectFailure>();
     }
+
+    static bool CanHandle(IEventTypes eventTypes, object value) =>
+        value is IEnumerable<object> items &&
+        items.Any() &&
+        items.All(item => item is EventForEventSourceId || eventTypes.HasFor(item.GetType())) &&
+        items.Any(item => item is EventForEventSourceId) &&
+        items.Any(item => item is not EventForEventSourceId);
+
+    IEventTypes EventTypesFor(ReactorContext reactorContext) =>
+        reactorContext.EventStore?.EventTypes ??
+        _legacyEventTypes ??
+        throw new ReactorSideEffectHandlingRequiresEventStore(GetType());
 }

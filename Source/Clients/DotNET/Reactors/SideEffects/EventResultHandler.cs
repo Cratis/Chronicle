@@ -10,13 +10,42 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// Handles a single event object returned from a reactor handler method.
 /// The event is appended to the event log using metadata resolved from the <see cref="ReactorContext"/>.
 /// </summary>
-/// <param name="eventTypes"><see cref="IEventTypes"/> for checking whether the value is a known event type.</param>
+/// <remarks>
+/// The compatibility constructor retains the previous public surface for callers that create the handler directly.
+/// Chronicle explicitly registers this type once per event-store scope using that constructor before convention
+/// binding runs. Cached event stores use the parameterless constructor and pass their registry through the additive
+/// <c>CanHandle</c> overload instead.
+/// </remarks>
 [Singleton]
-public class EventResultHandler(IEventTypes eventTypes) : IReactorSideEffectHandler
+public class EventResultHandler : IReactorSideEffectHandler
 {
+    readonly IEventTypes? _legacyEventTypes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventResultHandler"/> class for the current per-store contract.
+    /// </summary>
+    public EventResultHandler()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventResultHandler"/> class for compatibility with the previous
+    /// event-store-less contract.
+    /// </summary>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> used when the event-store-less <c>CanHandle</c> overload is
+    /// called without a current event store on its <see cref="ReactorContext"/>.</param>
+    public EventResultHandler(IEventTypes eventTypes)
+    {
+        _legacyEventTypes = eventTypes;
+    }
+
     /// <inheritdoc/>
     public bool CanHandle(ReactorContext reactorContext, object value) =>
-        eventTypes.HasFor(value.GetType());
+        EventTypesFor(reactorContext).HasFor(value.GetType());
+
+    /// <inheritdoc/>
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
+        eventStore.EventTypes.HasFor(value.GetType());
 
     /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
@@ -37,4 +66,9 @@ public class EventResultHandler(IEventTypes eventTypes) : IReactorSideEffectHand
 
         return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventSourceId]));
     }
+
+    IEventTypes EventTypesFor(ReactorContext reactorContext) =>
+        reactorContext.EventStore?.EventTypes ??
+        _legacyEventTypes ??
+        throw new ReactorSideEffectHandlingRequiresEventStore(GetType());
 }

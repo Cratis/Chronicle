@@ -192,7 +192,7 @@ public static class DiagnosticIds
     public const string MigrationGenerationEventTypeId = "CHR0037";
 
     /// <summary>
-    /// A model-bound [Join] copies a [PII] value from a stream keyed by something other than the read model's own compliance subject.
+    /// A model-bound or fluent [Join] explicitly carries [PII] through a property different from the read model's apparent compliance subject.
     /// </summary>
     public const string CrossSubjectPiiJoin = "CHR0038";
 
@@ -215,4 +215,16 @@ public static class DiagnosticIds
     /// A read model property is written by both a local mapping and a join, and the joined value always takes precedence.
     /// </summary>
     public const string JoinOverridesLocalWrite = "CHR0042";
+
+    /// <summary>
+    /// A projection redirects its resolved document key and carries a [PII] value onto a document whose stored
+    /// compliance subject is not provably the value owner's.
+    /// </summary>
+    public const string KeyRedirectionPii = "CHR0043";
+
+    /// <summary>
+    /// A [Join] carries [PII] while source analysis cannot prove that the joined event's persisted runtime
+    /// subject is the read model document's compliance subject.
+    /// </summary>
+    public const string UnprovableCrossSubjectPiiJoin = "CHR0044";
 }

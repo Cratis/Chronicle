@@ -8,6 +8,8 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -23,12 +25,34 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+/// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
 public class ChangesetConverter(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
-    IExpandoObjectConverter expandoObjectConverter) : IChangesetConverter
+    IExpandoObjectConverter expandoObjectConverter,
+    ILogger<ChangesetConverter> logger) : IChangesetConverter
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChangesetConverter"/> class without a logger.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
+    /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <remarks>
+    /// Retained so a caller written against the previous constructor keeps compiling; it forgoes the diagnostic
+    /// naming a join that matched no documents.
+    /// </remarks>
+    public ChangesetConverter(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IExpandoObjectConverter expandoObjectConverter)
+        : this(readModel, converter, collections, expandoObjectConverter, NullLogger<ChangesetConverter>.Instance)
+    {
+    }
+
     /// <inheritdoc/>
     public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
         Key key,
@@ -61,6 +85,39 @@ public class ChangesetConverter(
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         return new(updateBuilder!, distinctArrayFilters, hasChanges);
+    }
+
+    /// <summary>
+    /// Build the property and comparand the <see cref="Joined"/> change filters its update on.
+    /// </summary>
+    /// <param name="key">The resolved <see cref="Key"/> the change is applied under.</param>
+    /// <param name="joined">The <see cref="Joined"/> change to build the filter for.</param>
+    /// <returns>The <see cref="JoinFilterTarget"/> to filter on.</returns>
+    /// <remarks>
+    /// Internal so the conversion matrix can be specified directly rather than only through a write.
+    /// </remarks>
+    internal JoinFilterTarget CreateJoinFilterTarget(Key key, Joined joined)
+    {
+        // When array indexers are present, the join key (key.Value) is the root document key — not
+        // the child identifier. Use the last array indexer's property path and value to build a filter
+        // that matches ALL root documents containing this child, so UpdateManyAsync updates every
+        // document that has the child (e.g. all groups that contain the user), not just the first one
+        // found during key resolution.
+        if (!key.ArrayIndexers.IsEmpty)
+        {
+            var lastIndexer = key.ArrayIndexers.All.Last();
+            var filterPath = lastIndexer.ArrayProperty + lastIndexer.IdentifierProperty;
+            var (childProperty, _) = converter.ToMongoDBProperty(filterPath, ArrayIndexers.NoIndexers);
+            return new(childProperty, ToFilterValue(lastIndexer.Identifier, filterPath));
+        }
+
+        // The join key is the join source's raw event source id — always a string. The joined-on column is
+        // stored in whatever BSON representation its schema dictates, so a Guid-backed column holds
+        // BinData and a string comparand matches nothing: the UpdateMany reports zero matched, which is
+        // indistinguishable from a successful write. Convert through the schema, exactly as the child
+        // branch above already does for its array-indexer identifier.
+        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
+        return new(property, ToFilterValue(joined.Key, joined.OnProperty));
     }
 
     static bool TryMergeJoinedChangeIntoChildAdded(IList<Change> changes, Joined joined)
@@ -271,6 +328,13 @@ public class ChangesetConverter(
             // carries a [PII] member is stored with that member encrypted at rest, so a full-document match
             // against the plaintext removal state never matches and nothing is pulled — the in-memory sink
             // removes by key, so the two sinks would otherwise silently diverge. The identifier is not PII.
+            //
+            // The value is used unconverted, and unlike the join filter that is not a latent type mismatch. The
+            // key here is the array indexer's identifier, which ResolveKey has already coerced to the type the
+            // child's identified-by property declares (EnsureCorrectTypeForArrayIndexersOnKey, against the same
+            // ITypeFormats this converter would use), and RemoveChild only raises a ChildRemoved once that value
+            // has matched the child in the materialized state. Converting again would produce the same BSON, and
+            // the unconverted call cannot throw because it is given no target type to coerce to.
             var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
             updateBuilder = updateBuilder is not null
                 ? updateBuilder.PullFilter(property, childFilter)
@@ -300,36 +364,59 @@ public class ChangesetConverter(
         {
             return;
         }
+
+        var isRootLevelJoin = key.ArrayIndexers.IsEmpty;
+        var target = CreateJoinFilterTarget(key, joined);
+
+        // An absent comparand yields BsonNull, and Eq(property, null) matches every document whose column is
+        // null OR missing — an UpdateMany would then stamp all of them. The SQL sink refuses the same shape
+        // (Storage.Sql/Sinks/Sink.cs, ApplyJoinedChange), so refuse it here rather than write the collection.
+        if (target.Value is null or BsonNull)
+        {
+            logger.JoinHasNoKey(readModel.Identifier, joined.OnProperty);
+            return;
+        }
+
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
-        var filter = CreateJoinedFilterDefinition(key, joined);
-        await collection.UpdateManyAsync(
-            filter,
+        var result = await collection.UpdateManyAsync(
+            Builders<BsonDocument>.Filter.Eq(target.Property, target.Value),
             joinUpdateBuilder,
             new UpdateOptions
             {
                 IsUpsert = false,
                 ArrayFilters = [.. joinArrayFiltersForDocument]
             });
+
+        // A join that matches nothing is a successful zero-row update — the write is simply lost. That is
+        // legitimate when no root carries the joined value yet (the row-creation-time backfill covers it),
+        // so this is diagnostic rather than a failure; without it a misdeclared join is entirely silent.
+        // A CHILD join legitimately matches nothing whenever no root holds the child, which is routine, so
+        // only the root-level branch reports it. The key is the join source's event source id, which is the
+        // compliance subject by default — the read model and the joined-on property are the diagnostic
+        // value, so the identifier itself is deliberately left out of the message.
+        if (isRootLevelJoin && result.IsAcknowledged && result.MatchedCount == 0)
+        {
+            logger.JoinMatchedNoDocuments(readModel.Identifier, joined.OnProperty);
+        }
     }
 
-    FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)
+    BsonValue ToFilterValue(object? value, PropertyPath property)
     {
-        // When array indexers are present, the join key (key.Value) is the root document key — not
-        // the child identifier. Use the last array indexer's property path and value to build a filter
-        // that matches ALL root documents containing this child, so UpdateManyAsync updates every
-        // document that has the child (e.g. all groups that contain the user), not just the first one
-        // found during key resolution.
-        if (!key.ArrayIndexers.IsEmpty)
+        try
         {
-            var lastIndexer = key.ArrayIndexers.All.Last();
-            var filterPath = lastIndexer.ArrayProperty + lastIndexer.IdentifierProperty;
-            var (property, _) = converter.ToMongoDBProperty(filterPath, ArrayIndexers.NoIndexers);
-            var value = converter.ToBsonValue(lastIndexer.Identifier, filterPath);
-            return Builders<BsonDocument>.Filter.Eq(property, value);
+            return converter.ToBsonValue(value, property);
         }
-
-        var (prop, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
-        return Builders<BsonDocument>.Filter.Eq(prop, joined.Key);
+        catch (Exception error)
+        {
+            // The comparand is the join source's raw event source id, and the schema of the joined-on column
+            // cannot always represent it — a Guid-formatted column against a key that is not a Guid is the
+            // common shape, and the conversion raises a FormatException. Filtering on the unconverted value
+            // matches nothing, which is exactly what this filter did before the conversion was introduced;
+            // throwing instead would fail the write and freeze the partition permanently. The value is the
+            // compliance subject by default, so the diagnostic names the property and not the value.
+            logger.JoinKeyNotConvertible(error, readModel.Identifier, property);
+            return value.ToBsonValue();
+        }
     }
 
     IEnumerable<Change> NormalizeJoinedChanges(IEnumerable<Change> changes)

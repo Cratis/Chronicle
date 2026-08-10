@@ -10,6 +10,7 @@ public class a_cross_subject_pii_join_analyzer : Specification
         return string.Join(Environment.NewLine,
         [
             "using System;",
+            "using System.Collections.Generic;",
             "using Cratis.Chronicle;",
             "using Cratis.Chronicle.Compliance.GDPR;",
             "using Cratis.Chronicle.Events;",

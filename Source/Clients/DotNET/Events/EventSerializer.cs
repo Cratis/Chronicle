@@ -10,6 +10,13 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSerializer"/>.
 /// </summary>
+/// <remarks>
+/// The <see cref="SingletonAttribute"/> is retained as part of the published public metadata. Chronicle's service
+/// registration explicitly overrides that historical convention with one instance per dependency-injection scope,
+/// because this serializer holds the <see cref="IEventTypes"/> registry of the event store for that scope. Event
+/// stores created by <see cref="IChronicleClient"/> own a serializer directly instead of resolving one from the root
+/// provider.
+/// </remarks>
 [Singleton]
 public class EventSerializer : IEventSerializer
 {

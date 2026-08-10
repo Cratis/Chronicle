@@ -119,5 +119,13 @@ public class EventStoreSubscriptionObserverSubscriber(
         // has and otherwise persists the source key as the initial revision, so concurrent forwarded events for
         // the same subject — or a replay — converge on a single revision instead of minting duplicate revisions.
         await encryptionKeyStorage.GetOrAddFor(targetEventStore, _key.Namespace, identifier, sourceKey);
+
+        // The propagation is otherwise invisible: nothing in the API tells an operator that a second event store
+        // now holds this subject's key, and right-to-erasure reaches exactly the one event store it is asked for.
+        // The identifier is deliberately not written. It is the compliance subject, which defaults to the event
+        // source id and is a natural person in the common case, and a log line naming it is unencrypted personal
+        // data that outlives the crypto-shred this whole feature exists to perform. The pair of event stores and
+        // the namespace are what an operator needs to know a copy happened and where to look.
+        logger.CopiedEncryptionKeyToTargetEventStore(_key.EventStore, targetEventStore, _key.Namespace);
     }
 }

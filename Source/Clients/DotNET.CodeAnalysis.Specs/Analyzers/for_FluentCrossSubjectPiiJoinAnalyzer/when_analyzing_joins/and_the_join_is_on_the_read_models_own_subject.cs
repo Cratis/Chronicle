@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
+using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_FluentCrossSubjectPiiJoinAnalyzer.when_analyzing_joins;
 
@@ -20,14 +21,16 @@ public class and_the_join_is_on_the_read_models_own_subject : given.a_fluent_cro
     public class AdvisorSummaryProjection : IProjectionFor<AdvisorSummary>
     {
         public void Define(IProjectionBuilderFor<AdvisorSummary> builder) => builder
-            .Join<AdvisorNamed>(_ => _
+            .{|#0:Join<AdvisorNamed>|}(_ => _
                 .On(m => m.AdvisorId));
     }
     """;
 
     Task _result;
 
-    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentCrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(CreateSource(Usage));
+    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentCrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(
+        CreateSource(Usage),
+        new ExpectedDiagnostic(DiagnosticIds.UnprovableCrossSubjectPiiJoin, DiagnosticSeverity.Warning, "DisplayName", "AdvisorNamed", "AdvisorId"));
 
-    [Fact] Task should_not_report_any_diagnostic() => _result;
+    [Fact] Task should_report_the_unprovable_subject_warning() => _result;
 }

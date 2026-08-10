@@ -22,11 +22,10 @@ public class Tls
     /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
     /// <remarks>
-    /// The client always connects over TLS. This defaults to <see langword="true"/>: the server's
-    /// certificate is not validated, and any certificate, including self-signed ones, is accepted.
-    /// Set this to <see langword="false"/> to require full certificate chain validation instead —
-    /// only do so against a server whose certificate is verifiable (not a self-signed development
-    /// certificate).
+    /// The client always connects over TLS and validates the server certificate by default. Set this
+    /// to <see langword="true"/> only for an explicitly trusted development server whose certificate
+    /// cannot be validated, such as the self-signed certificate used by the built-in Development
+    /// connection string.
     /// </remarks>
-    public bool SkipCertificateValidation { get; set; } = true;
+    public bool SkipCertificateValidation { get; set; }
 }

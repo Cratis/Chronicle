@@ -74,3 +74,7 @@
   href: CHR0041.mdx
 - name: CHR0042 - A joined property is also written locally
   href: CHR0042.mdx
+- name: CHR0043 - Key redirection carries a [PII] value across the compliance subject
+  href: CHR0043.mdx
+- name: CHR0044 - [Join] of a [PII] value cannot prove compliance subject equality
+  href: CHR0044.mdx

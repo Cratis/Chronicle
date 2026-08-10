@@ -39,8 +39,20 @@ public static class ReadModelSubjectResolver
             return null;
         }
 
-        var value = property.GetValue(instance);
-        return value switch
+        return ToSubject(property.GetValue(instance));
+    }
+
+    /// <summary>
+    /// Convert a read model property value to the <see cref="Subject"/> it stands for.
+    /// </summary>
+    /// <param name="value">The property value to convert.</param>
+    /// <returns>The <see cref="Subject"/>, or <see langword="null"/> when the value stands for none.</returns>
+    /// <remarks>
+    /// Shared with the per-property <see cref="Compliance.GDPR.ReleaseUnderAttribute"/> resolution, so a
+    /// declared subject is read from an instance in exactly the same way the read model's own is.
+    /// </remarks>
+    internal static Subject? ToSubject(object? value) =>
+        value switch
         {
             null => null,
             Subject s => s,
@@ -48,7 +60,6 @@ public static class ReadModelSubjectResolver
             Guid g when g != Guid.Empty => g,
             _ => value.ToString() is { } str and not "" ? new Subject(str) : null
         };
-    }
 
     static PropertyInfo? FindSubjectProperty(Type t)
     {

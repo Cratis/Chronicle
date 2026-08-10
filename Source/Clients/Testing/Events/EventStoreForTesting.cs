@@ -92,12 +92,22 @@ public class EventStoreForTesting : IEventStore
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
     /// </summary>
     /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reactor, reducer, and seeder instances.</param>
-#pragma warning disable CA2000 // Dispose objects before losing scope
     public EventStoreForTesting(IServiceProvider? serviceProvider = null)
+        : this(serviceProvider, DefaultClientArtifactsProvider.Default)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reactor, reducer, and seeder instances.</param>
+    /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> to use for artifact discovery.</param>
+#pragma warning disable CA2000 // Dispose objects before losing scope
+    public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider)
     {
         _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        ClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
+        ClientArtifactsProvider = clientArtifactsProvider;
         _namingPolicy = new CamelCaseNamingPolicy();
         JsonSchemaGenerator = new JsonSchemaGenerator(
             new ComplianceMetadataResolver(
@@ -190,7 +200,7 @@ public class EventStoreForTesting : IEventStore
             new CausationManager(),
             new BaseIdentityProvider(),
             new ActivitySource<ReactorsImpl>(),
-            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(_eventTypes), new EventsResultHandler(_eventTypes), new EventForEventSourceIdResultHandler(), new EventsForEventSourceIdResultHandler(), new MixedSideEffectsResultHandler(_eventTypes)])),
+            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(), new EventsResultHandler(), new EventForEventSourceIdResultHandler(), new EventsForEventSourceIdResultHandler(), new MixedSideEffectsResultHandler()])),
             new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
             [
                 new EventSourceIdValuesProvider(),

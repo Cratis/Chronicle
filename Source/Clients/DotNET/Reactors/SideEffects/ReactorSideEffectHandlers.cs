@@ -15,15 +15,26 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> handlers) : IReactorSideEffectHandlers
 {
     /// <inheritdoc/>
-    public bool CanHandle(ReactorContext reactorContext, object value) =>
-        handlers.Any(h => h.CanHandle(reactorContext, value));
+    public bool CanHandle(ReactorContext reactorContext, object value)
+    {
+        if (reactorContext.EventStore is not null)
+        {
+            return CanHandle(reactorContext, reactorContext.EventStore, value);
+        }
+
+        return handlers.Any(handler => handler.CanHandle(reactorContext, value));
+    }
+
+    /// <inheritdoc/>
+    public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
+        handlers.Any(h => h.CanHandle(reactorContext, eventStore, value));
 
     /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         var allFailures = new List<AppendFailure>();
 
-        foreach (var handler in handlers.Where(h => h.CanHandle(reactorContext, value)))
+        foreach (var handler in handlers.Where(h => h.CanHandle(reactorContext, eventStore, value)))
         {
             var result = await handler.Handle(reactorContext, eventStore, value);
             if (!result.IsSuccess && result.TryGetError(out var failure) && failure is not null)

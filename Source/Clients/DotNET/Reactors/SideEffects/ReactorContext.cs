@@ -12,4 +12,16 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// <param name="EventContext">The <see cref="Events.EventContext"/> of the event that triggered the reactor.</param>
 /// <param name="Reactor">The reactor instance that handled the event.</param>
 /// <param name="Values">The <see cref="ReactorContextValues"/> carrying append-metadata resolved for the side-effect.</param>
-public record ReactorContext(EventContext EventContext, object Reactor, ReactorContextValues Values);
+public record ReactorContext(EventContext EventContext, object Reactor, ReactorContextValues Values)
+{
+    /// <summary>
+    /// Gets the <see cref="IEventStore"/> the reactor is running under, when the context was produced by the
+    /// Chronicle invocation pipeline.
+    /// </summary>
+    /// <remarks>
+    /// This lets callers of the previous event-store-less <c>CanHandle</c> contract reach the same per-store path
+    /// as current callers. It is not a constructor parameter so the previous three-parameter constructor and
+    /// deconstruction shape remain binary compatible.
+    /// </remarks>
+    public IEventStore? EventStore { get; init; }
+}

@@ -1,9 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Contracts.Seeding;
 using ProtoBuf.Grpc;
+
+using EventSeedingResult = Cratis.Chronicle.Seeding.SeedingResult;
+using ResultAwareEventSeeding = Cratis.Chronicle.Seeding.IResultAwareEventSeeding;
 
 namespace Cratis.Chronicle.Services.Seeding;
 
@@ -16,30 +20,16 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     /// <inheritdoc/>
     public async Task Seed(SeedRequest request, CallContext context = default)
     {
-        // Seed global entries to the global grain
-        var globalEntries = new List<SeedingEntry>();
-
-        // Collect all global entries from both ByEventType and ByEventSource
-        foreach (var eventTypeGroup in request.GlobalByEventType)
-        {
-            globalEntries.AddRange(eventTypeGroup.Entries);
-        }
-
-        foreach (var eventSourceGroup in request.GlobalByEventSource)
-        {
-            globalEntries.AddRange(eventSourceGroup.Entries);
-        }
-
-        // Deduplicate global entries (same entry might be in both ByEventType and ByEventSource)
-        globalEntries = globalEntries
-            .GroupBy(e => new { e.EventSourceId, e.EventTypeId, e.Content })
-            .Select(g => g.First())
-            .ToList();
+        // Seed global entries to the global grain. The two groupings describe the same set of entries, so
+        // they are reconciled rather than concatenated.
+        var globalEntries = Reconcile(
+            request.GlobalByEventSource.SelectMany(_ => _.Entries),
+            request.GlobalByEventType.SelectMany(_ => _.Entries));
 
         if (globalEntries.Count > 0)
         {
             var globalKey = EventSeedingKey.ForGlobal(request.EventStore);
-            var globalGrain = grainFactory.GetGrain<Chronicle.Seeding.IEventSeeding>(globalKey.ToString());
+            var globalGrain = grainFactory.GetGrain<ResultAwareEventSeeding>(globalKey.ToString());
 
             var entries = globalEntries.Select(e => new Chronicle.Seeding.SeedingEntry(
                 e.EventSourceId,
@@ -47,35 +37,21 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
                 e.Content,
                 e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray() ?? [])).ToArray();
 
-            await globalGrain.Seed(entries);
+            var result = await globalGrain.SeedWithResult(entries);
+            EnsureComplete(result, request.EventStore, EventStoreNamespaceName.NotSet);
         }
 
         // Seed namespace-specific entries
         foreach (var namespacedGroup in request.NamespacedEntries)
         {
-            var namespacedEntries = new List<SeedingEntry>();
-
-            // Collect all entries from both ByEventType and ByEventSource
-            foreach (var eventTypeGroup in namespacedGroup.ByEventType)
-            {
-                namespacedEntries.AddRange(eventTypeGroup.Entries);
-            }
-
-            foreach (var eventSourceGroup in namespacedGroup.ByEventSource)
-            {
-                namespacedEntries.AddRange(eventSourceGroup.Entries);
-            }
-
-            // Deduplicate entries
-            namespacedEntries = namespacedEntries
-                .GroupBy(e => new { e.EventSourceId, e.EventTypeId, e.Content })
-                .Select(g => g.First())
-                .ToList();
+            var namespacedEntries = Reconcile(
+                namespacedGroup.ByEventSource.SelectMany(_ => _.Entries),
+                namespacedGroup.ByEventType.SelectMany(_ => _.Entries));
 
             if (namespacedEntries.Count > 0)
             {
                 var key = EventSeedingKey.ForNamespace(request.EventStore, namespacedGroup.Namespace);
-                var grain = grainFactory.GetGrain<Chronicle.Seeding.IEventSeeding>(key.ToString());
+                var grain = grainFactory.GetGrain<ResultAwareEventSeeding>(key.ToString());
 
                 var entries = namespacedEntries.Select(e => new Chronicle.Seeding.SeedingEntry(
                     e.EventSourceId,
@@ -83,7 +59,8 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
                     e.Content,
                     e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray() ?? [])).ToArray();
 
-                await grain.Seed(entries);
+                var result = await grain.SeedWithResult(entries);
+                EnsureComplete(result, request.EventStore, namespacedGroup.Namespace);
             }
         }
     }
@@ -106,6 +83,62 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         var seeds = await grain.GetSeededEvents();
 
         return MapToResponse(seeds);
+    }
+
+    static void EnsureComplete(EventSeedingResult result, EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
+    {
+        if (!result.AllEntriesSeeded)
+        {
+            throw new Chronicle.Seeding.EventSeedingIncomplete(eventStore, eventStoreNamespace);
+        }
+    }
+
+    /// <summary>
+    /// Reconciles the two groupings a client sends - the same entries bucketed by event type and by event
+    /// source - back into the single ordered list the seeders yielded.
+    /// </summary>
+    /// <param name="byEventSource">The entries as bucketed by event source - the grouping that decides the order.</param>
+    /// <param name="byEventType">The entries as bucketed by event type.</param>
+    /// <returns>Every entry, once per time it genuinely occurs, in the order its event source will see it.</returns>
+    /// <remarks>
+    /// The two groupings hold the same entries, so the reconciliation is a multiset union and not a
+    /// deduplication: an entry occurring twice in each grouping occurs twice in the result. Collapsing on
+    /// value instead would erase a genuine repeat - two events of the same type, on the same event source,
+    /// with the same payload are two facts that really happened, not one fact sent twice - and an
+    /// event-sourced store has no way to express that once it is gone. Taking each grouping's count and
+    /// keeping the larger also copes with a client that fills in only one of them.
+    /// <para>
+    /// The by-event-source grouping leads because it is the only one that carries the order the seeders
+    /// wrote. Both groupings hold the same entries, but bucketing by event type interleaves the streams:
+    /// every entry of the first type, then every entry of the second. Appending in that order gives an
+    /// event source a history it could never have lived through - submitted, submitted, approved, approved
+    /// where the seeder said submitted, approved, submitted, approved. Bucketing by event source keeps each
+    /// stream's entries in the sequence they were yielded, which is the sequence they are appended in.
+    /// </para>
+    /// </remarks>
+    static List<SeedingEntry> Reconcile(IEnumerable<SeedingEntry> byEventSource, IEnumerable<SeedingEntry> byEventType)
+    {
+        var reconciled = byEventSource.ToList();
+
+        var accountedFor = new Dictionary<SeedingEntry, int>(SeedingEntryIdentity.Comparer);
+        foreach (var entry in reconciled)
+        {
+            accountedFor[entry] = accountedFor.GetValueOrDefault(entry) + 1;
+        }
+
+        foreach (var entry in byEventType)
+        {
+            var remaining = accountedFor.GetValueOrDefault(entry);
+            if (remaining > 0)
+            {
+                accountedFor[entry] = remaining - 1;
+                continue;
+            }
+
+            reconciled.Add(entry);
+        }
+
+        return reconciled;
     }
 
     static SeedDataResponse MapToResponse(Storage.Seeding.EventSeeds seeds)
@@ -141,5 +174,29 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Compares two entries on what identifies them: the event source, the event type, the content and the
+    /// set of tags. It matches the comparison the seeding grain makes when it decides whether an entry has
+    /// already been seeded, so the two never disagree about what "the same entry" means.
+    /// </summary>
+    sealed class SeedingEntryIdentity : IEqualityComparer<SeedingEntry>
+    {
+        internal static readonly SeedingEntryIdentity Comparer = new();
+
+        public bool Equals(SeedingEntry? x, SeedingEntry? y) =>
+            ReferenceEquals(x, y) ||
+            (x is not null &&
+             y is not null &&
+             string.Equals(x.EventSourceId, y.EventSourceId, StringComparison.Ordinal) &&
+             string.Equals(x.EventTypeId, y.EventTypeId, StringComparison.Ordinal) &&
+             string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
+             TagsOf(x).SetEquals(TagsOf(y)));
+
+        public int GetHashCode(SeedingEntry obj) =>
+            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count);
+
+        static HashSet<string> TagsOf(SeedingEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
     }
 }

@@ -51,10 +51,10 @@ public class ChronicleConnectionString
     /// The development <see cref="ChronicleConnectionString"/> pointing to localhost configured with the default dev credentials.
     /// </summary>
     /// <remarks>
-    /// TLS certificate validation is skipped by default (see <see cref="ChronicleConnectionStringBuilder.SkipTlsValidation"/>),
-    /// so a development client connects to the self-signed certificate the Chronicle server generates when none is configured.
+    /// This explicitly skips TLS certificate validation so a development client can connect to the
+    /// self-signed certificate the Chronicle server generates when none is configured.
     /// </remarks>
-    public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000");
+    public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000?skipTlsValidation=true");
 
     readonly ChronicleConnectionStringBuilder _builder;
 

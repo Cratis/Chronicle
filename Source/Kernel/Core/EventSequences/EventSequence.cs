@@ -745,12 +745,14 @@ public class EventSequence(
     {
         try
         {
-            var (compliantEventAsExpandoObject, compliantContent, eventSchema) = await MakeEventCompliant(eventSourceId, eventType, content, subject);
-            var schemaValidationResult = ValidateAgainstSchema(eventType, compliantContent, eventSchema, correlationId);
+            var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+            var schemaValidationResult = ValidateAgainstSchema(eventType, content, eventSchema, correlationId);
             if (schemaValidationResult.TryGetError(out var schemaError))
             {
                 return schemaError;
             }
+
+            var (compliantEventAsExpandoObject, compliantContent) = await MakeEventCompliant(eventSourceId, eventSchema, content, subject);
 
             // Constraint validation and index updates must operate on the ORIGINAL, pre-compliance content.
             // PII encryption is non-deterministic (a fresh data key and nonce per value), so hashing the
@@ -795,14 +797,12 @@ public class EventSequence(
         return AppendResult.Failed(correlationId, [ex.Message]);
     }
 
-    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent, EventTypeSchema EventTypeSchema)> MakeEventCompliant(EventSourceId eventSourceId, EventType eventType, JsonObject content, Subject? subject = null)
+    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, EventTypeSchema eventSchema, JsonObject content, Subject? subject = null)
     {
-        var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-
         var complianceIdentifier = subject?.IsSet == true ? subject.Value : eventSourceId.Value;
         var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
         var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
-        return (expandoObject, compliantEvent, eventSchema);
+        return (expandoObject, compliantEvent);
     }
 
     async Task<Result<ConstraintValidationContext, AppendResult>> CheckConstraintViolation(

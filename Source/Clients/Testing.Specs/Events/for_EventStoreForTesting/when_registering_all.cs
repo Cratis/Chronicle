@@ -14,10 +14,17 @@ namespace Cratis.Chronicle.Testing.Events.for_EventStoreForTesting;
 public class when_registering_all : Specification
 {
     EventStoreForTesting _eventStore;
+    IClientArtifactsProvider _clientArtifactsProvider;
     RegistrationOutcome _beforeRegistering;
     RegistrationOutcome _afterRegistering;
 
-    void Establish() => _eventStore = new EventStoreForTesting();
+    void Establish()
+    {
+        _clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
+        _clientArtifactsProvider.EventTypes.Returns([typeof(ModuleCreated)]);
+        _clientArtifactsProvider.ModelBoundProjections.Returns([typeof(SimpleModule)]);
+        _eventStore = new EventStoreForTesting(null, _clientArtifactsProvider);
+    }
 
     async Task Because()
     {

@@ -27,6 +27,8 @@ When a projection or observer reads the event, Chronicle performs the reverse: i
 
 Encryption keys are managed by the `IPIIManager` grain in the Chronicle kernel. Keys are stored and retrieved by event source identifier, so every individual whose data lives in the event store has their own key. Deleting a key is the Chronicle equivalent of GDPR erasure.
 
+A key belongs to one event store and one namespace, and so does the delete — and an event store subscription copies a subject's key into the event store it forwards to. An erasure therefore has to cover every event store and namespace that holds the subject, which is what [Erasing a subject](erasing-a-subject.md) walks through.
+
 ## Marking data as PII
 
 Chronicle supports two complementary approaches for marking data as personally identifiable:
@@ -54,5 +56,6 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the 
 | [Applying PII to ConceptAs types](pii-with-concepts) | How to mark domain value types as PII once and apply everywhere |
 | [Working with compliance from the client](client) | How to annotate events and ConceptAs types in your .NET client code |
 | [Read models and PII](read-models) | How PII encryption affects projections, reducers, and read model queries |
+| [Erasing a subject](erasing-a-subject.md) | What one erasure reaches, and how to erase across every event store |
 | [Compliance in Arc applications](arc.md) | Using read models and queries with compliance in Arc |
 | [Event Redaction](../events/redaction) | Removing event content for GDPR right-to-erasure requests |

@@ -31,6 +31,7 @@ public class with_events_for_multiple_event_source_ids : Specification
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventStore.EventTypes.Returns(eventTypes);
 
         _failedAppendResult = AppendManyResult.Failed(
             CorrelationId.New(),

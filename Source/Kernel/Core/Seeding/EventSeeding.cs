@@ -28,7 +28,7 @@ public class EventSeeding(
     [PersistentState(nameof(EventSeeds), WellKnownGrainStorageProviders.EventSeeding)]
     IPersistentState<EventSeeds> state,
     IGrainFactory grainFactory,
-    ILogger<EventSeeding> logger) : Grain, IEventSeeding
+    ILogger<EventSeeding> logger) : Grain, IResultAwareEventSeeding
 {
     /// <summary>
     /// The maximum number of events to append in a single batch during seeding.
@@ -57,14 +57,17 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
-    public async Task Seed(IEnumerable<SeedingEntry> entries)
+    public Task Seed(IEnumerable<SeedingEntry> entries) => SeedWithResult(entries);
+
+    /// <inheritdoc/>
+    public async Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries)
     {
         logger.SeedingEvents(_key.EventStore.Value, _key.Namespace.Value);
 
         var entriesList = entries.ToList();
         if (entriesList.Count == 0)
         {
-            return;
+            return SeedingResult.Complete;
         }
 
         state.State ??= new EventSeeds(
@@ -72,90 +75,9 @@ public class EventSeeding(
                 new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
         // For global grains, store the entries and apply to all existing namespaces
-        if (_key.IsGlobal)
-        {
-            var newEntries = new List<(SeedingEntry Entry, SeededEventEntry Seeded)>();
-            foreach (var entry in entriesList)
-            {
-                var tags = entry.Tags?.Select(t => t.Value) ?? [];
-                var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
-                if (!IsAlreadySeeded(seededEntry))
-                {
-                    newEntries.Add((entry, seededEntry));
-                }
-            }
-
-            if (newEntries.Count > 0)
-            {
-                // Dispatch to every namespace grain BEFORE committing the global tracking. Each namespace
-                // grain applies its own idempotency guard, so re-dispatching after a transient failure is
-                // append-idempotent. Committing the tracking first would permanently lose events: a grain
-                // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
-                // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
-                // never receive the events.
-                var entriesToSeed = newEntries.ConvertAll(_ => _.Entry);
-                var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
-                var namespaces = await namespacesGrain.GetAll();
-                foreach (var ns in namespaces)
-                {
-                    logger.ApplyingSeedsToNamespace(ns.Value);
-                    var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
-                    var nsGrain = grainFactory.GetGrain<IEventSeeding>(namespaceKey.ToString());
-                    await nsGrain.Seed(entriesToSeed);
-                }
-
-                // Only now, after every namespace has been seeded, commit the global tracking so a retry
-                // re-dispatches when a namespace dispatch throws.
-                foreach (var (_, seededEntry) in newEntries)
-                {
-                    TrackSeededEvent(seededEntry);
-                }
-
-                await state.WriteStateAsync();
-            }
-        }
-        else
-        {
-            // For namespace-specific grains, append events to the sequence
-            // _eventSequence is guaranteed to be non-null here since we're in the non-global branch
-            if (_eventSequence is null)
-            {
-                throw new InvalidOperationException("Event sequence should be initialized for namespace-specific grains");
-            }
-
-            var seedableEvents = GetEventsToSeed(entriesList);
-            if (seedableEvents.Count > 0)
-            {
-                logger.AppendingSeededEvents(seedableEvents.Count);
-                var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
-
-                // Append in batches to avoid overwhelming the event sequence grain with too many events at once.
-                // Mark each entry as seeded only AFTER its batch has been appended - never before. Tracking an
-                // entry before the append succeeds would dirty the in-memory seeded set; a transient append
-                // failure would then leave it claiming an event was seeded that was not, silently skipping the
-                // event on a same-activation retry until the grain deactivates and reloads clean state.
-                foreach (var batch in seedableEvents.Chunk(SeedingBatchSize))
-                {
-                    await _eventSequence.AppendMany(
-                        batch.Select(_ => _.ToAppend),
-                        CorrelationId.New(),
-                        causation,
-                        Identity.System,
-                        new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
-
-                    foreach (var seedable in batch)
-                    {
-                        TrackSeededEvent(seedable.Seeded);
-                    }
-                }
-
-                await state.WriteStateAsync();
-            }
-            else
-            {
-                logger.AllEventsAlreadySeeded();
-            }
-        }
+        return _key.IsGlobal
+            ? await SeedGlobally(entriesList)
+            : await SeedNamespace(entriesList);
     }
 
     /// <inheritdoc/>
@@ -168,64 +90,197 @@ public class EventSeeding(
         return Task.FromResult(state.State);
     }
 
-    List<SeedableEvent> GetEventsToSeed(List<SeedingEntry> entriesList)
+    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList)
     {
-        var seedableEvents = new List<SeedableEvent>();
+        var newEntries = GetEntriesStillToSeed(entriesList);
+        if (newEntries.Count == 0)
+        {
+            return SeedingResult.Complete;
+        }
+
+        // Dispatch to every namespace grain BEFORE committing the global tracking. Each namespace
+        // grain applies its own idempotency guard, so re-dispatching after a transient failure is
+        // append-idempotent. Committing the tracking first would permanently lose events: a grain
+        // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
+        // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
+        // never receive the events.
+        var entriesToSeed = newEntries.ConvertAll(_ => _.Entry);
+        var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
+        var namespaces = await namespacesGrain.GetAll();
+        var everyNamespaceSeeded = true;
+        foreach (var ns in namespaces)
+        {
+            logger.ApplyingSeedsToNamespace(ns.Value);
+            var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
+            var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
+            var result = await nsGrain.SeedWithResult(entriesToSeed);
+            everyNamespaceSeeded &= result.AllEntriesSeeded;
+        }
+
+        // A namespace that declined part of what it was given is the same situation as one that threw:
+        // the entries are still waiting. Committing the tracking here would mean they are never
+        // dispatched again, so hold it back and let the next run re-offer the whole set - the namespace
+        // grains skip whatever already landed.
+        if (!everyNamespaceSeeded)
+        {
+            logger.NamespaceSeedingIncomplete(_key.EventStore.Value);
+            return SeedingResult.Incomplete;
+        }
+
+        // Only now, after every namespace has seeded everything, commit the global tracking so a retry
+        // re-dispatches when a namespace dispatch throws or declines.
+        foreach (var (_, seededEntry) in newEntries)
+        {
+            TrackSeededEvent(seededEntry);
+        }
+
+        await state.WriteStateAsync();
+
+        return SeedingResult.Complete;
+    }
+
+    async Task<SeedingResult> SeedNamespace(List<SeedingEntry> entriesList)
+    {
+        // For namespace-specific grains, append events to the sequence
+        // _eventSequence is guaranteed to be non-null here since we're in the non-global branch
+        if (_eventSequence is null)
+        {
+            throw new InvalidOperationException("Event sequence should be initialized for namespace-specific grains");
+        }
+
+        var seedableEvents = GetEventsToSeed(entriesList);
+        if (seedableEvents.Count == 0)
+        {
+            logger.AllEventsAlreadySeeded();
+            return SeedingResult.Complete;
+        }
+
+        logger.AppendingSeededEvents(seedableEvents.Count);
+        var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
+
+        // Append in batches to avoid overwhelming the event sequence grain with too many events at once.
+        // Mark each entry as seeded only AFTER its batch has been appended - never before, and only when
+        // the append actually succeeded. Appending many validates the whole batch before writing anything
+        // and returns on the first failure, so a rejected batch means not one of its events exists;
+        // recording it anyway is a permanent claim about events that were never written, and the entries
+        // are then skipped on every later run. Leaving a rejected batch unrecorded is what makes offering
+        // it again seed it, which is the only repair there is.
+        var everyBatchAppended = true;
+        var anythingAppended = false;
+        foreach (var batch in seedableEvents.Chunk(SeedingBatchSize))
+        {
+            var result = await _eventSequence.AppendMany(
+                batch.Select(_ => _.ToAppend),
+                CorrelationId.New(),
+                causation,
+                Identity.System,
+                new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+
+            if (!result.IsSuccess)
+            {
+                // Report and move on rather than throw. A rejected batch is usually a constraint violation,
+                // which is deterministic - throwing would take the host down on every start and would also
+                // strand the batches that did append, since their tracking is persisted below. The
+                // remaining batches are unrelated events that share nothing with the rejected one but a
+                // chunk index, so they are still worth appending.
+                logger.SeededEventsRejected(
+                    batch.Length,
+                    _key.EventStore.Value,
+                    _key.Namespace.Value,
+                    string.Join(", ", result.ConstraintViolations.Select(_ => _.Message.Value)),
+                    string.Join(", ", result.Errors.Select(_ => _.Value)),
+                    string.Join(", ", result.ConcurrencyViolations.Select(_ => _.EventSourceId.Value)));
+
+                everyBatchAppended = false;
+                continue;
+            }
+
+            foreach (var seedable in batch)
+            {
+                TrackSeededEvent(seedable.Seeded);
+            }
+
+            anythingAppended = true;
+        }
+
+        if (anythingAppended)
+        {
+            await state.WriteStateAsync();
+        }
+
+        return everyBatchAppended ? SeedingResult.Complete : SeedingResult.Incomplete;
+    }
+
+    List<SeedableEvent> GetEventsToSeed(List<SeedingEntry> entriesList) =>
+        GetEntriesStillToSeed(entriesList).ConvertAll(_ =>
+        {
+            var content = JsonSerializer.Deserialize<JsonObject>(_.Entry.Content)!;
+            return new SeedableEvent(
+                _.Seeded,
+                new EventToAppend(
+                    EventSourceType.Default,
+                    _.Entry.EventSourceId,
+                    EventStreamType.All,
+                    EventStreamId.Default,
+                    new EventType(_.Entry.EventTypeId, EventTypeGeneration.First),
+                    _.Entry.Tags ?? [],
+                    content));
+        });
+
+    /// <summary>
+    /// Filters the entries down to the ones the seeded tracking does not already account for, WITHOUT
+    /// marking any of them seeded - the caller does that only once the append has succeeded.
+    /// </summary>
+    /// <param name="entriesList">The entries offered for seeding, in order.</param>
+    /// <returns>The entries still to seed, paired with the entry to record for each.</returns>
+    /// <remarks>
+    /// The tracking is consulted by COUNT, not by existence. Two events of the same type, on the same
+    /// event source, with the same payload are two facts that really happened; asking only whether an
+    /// equal entry has been seeded would skip the second one forever as soon as the first had landed -
+    /// which is exactly the state a rejected batch or a chunk boundary between the two leaves behind, so
+    /// an existence check would quietly cancel the retry that is supposed to repair it.
+    /// </remarks>
+    List<(SeedingEntry Entry, SeededEventEntry Seeded)> GetEntriesStillToSeed(List<SeedingEntry> entriesList)
+    {
+        var stillToSeed = new List<(SeedingEntry Entry, SeededEventEntry Seeded)>();
+        var stillAccountedFor = new Dictionary<SeededEventEntry, int>(SeededEventEntryIdentity.Comparer);
 
         foreach (var entry in entriesList)
         {
             var tags = entry.Tags?.Select(t => t.Value) ?? [];
             var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
 
-            // Determine whether this exact event still needs seeding WITHOUT marking it seeded here -
-            // the caller marks each entry as seeded only after its append has succeeded.
-            var alreadySeeded = IsAlreadySeeded(seededEntry);
-
-            if (!alreadySeeded)
+            if (!stillAccountedFor.TryGetValue(seededEntry, out var remaining))
             {
-                // Prepare for appending
-                var content = JsonSerializer.Deserialize<JsonObject>(entry.Content)!;
-                seedableEvents.Add(new SeedableEvent(
-                    seededEntry,
-                    new EventToAppend(
-                        EventSourceType.Default,
-                        entry.EventSourceId,
-                        EventStreamType.All,
-                        EventStreamId.Default,
-                        new EventType(entry.EventTypeId, EventTypeGeneration.First),
-                        entry.Tags ?? [],
-                        content)));
+                remaining = CountAlreadySeeded(seededEntry);
             }
+
+            if (remaining > 0)
+            {
+                stillAccountedFor[seededEntry] = remaining - 1;
+                continue;
+            }
+
+            stillAccountedFor[seededEntry] = 0;
+            stillToSeed.Add((entry, seededEntry));
         }
 
-        return seedableEvents;
+        return stillToSeed;
     }
 
-    bool IsAlreadySeeded(SeededEventEntry entry)
+    int CountAlreadySeeded(SeededEventEntry entry)
     {
-        var entryTagsSet = new HashSet<string>(entry.Tags ?? []);
+        var byType = state.State.ByEventType.TryGetValue(entry.EventTypeId, out var byTypeEntries)
+            ? byTypeEntries.Count(e => SeededEventEntryIdentity.Comparer.Equals(e, entry))
+            : 0;
 
-        // Check in ByEventType
-        if (state.State.ByEventType.TryGetValue(entry.EventTypeId, out var byTypeEntries) &&
-            byTypeEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
-                                      e.EventTypeId == entry.EventTypeId &&
-                                      e.Content == entry.Content &&
-                                      new HashSet<string>(e.Tags ?? []).SetEquals(entryTagsSet)))
-        {
-            return true;
-        }
+        var bySource = state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var bySourceEntries)
+            ? bySourceEntries.Count(e => SeededEventEntryIdentity.Comparer.Equals(e, entry))
+            : 0;
 
-        // Check in ByEventSource
-        if (state.State.ByEventSource.TryGetValue(entry.EventSourceId, out var bySourceEntries) &&
-            bySourceEntries.Any(e => e.EventSourceId == entry.EventSourceId &&
-                                        e.EventTypeId == entry.EventTypeId &&
-                                        e.Content == entry.Content &&
-                                        new HashSet<string>(e.Tags ?? []).SetEquals(entryTagsSet)))
-        {
-            return true;
-        }
-
-        return false;
+        // The two halves are written together and should agree; taking the larger keeps the guard on the
+        // safe side of a half that was written by an older version or lost a write.
+        return Math.Max(byType, bySource);
     }
 
     void TrackSeededEvent(SeededEventEntry entry)
@@ -255,4 +310,28 @@ public class EventSeeding(
     /// <param name="Seeded">The <see cref="SeededEventEntry"/> to record once the event has been appended.</param>
     /// <param name="ToAppend">The <see cref="EventToAppend"/> to append to the event sequence.</param>
     record SeedableEvent(SeededEventEntry Seeded, EventToAppend ToAppend);
+
+    /// <summary>
+    /// Compares two seeded entries on what identifies them: the event source, the event type, the content
+    /// and the set of tags. The record's own equality cannot be used - it compares the tag sequence by
+    /// reference, so two entries with equal tags never match.
+    /// </summary>
+    sealed class SeededEventEntryIdentity : IEqualityComparer<SeededEventEntry>
+    {
+        internal static readonly SeededEventEntryIdentity Comparer = new();
+
+        public bool Equals(SeededEventEntry? x, SeededEventEntry? y) =>
+            ReferenceEquals(x, y) ||
+            (x is not null &&
+             y is not null &&
+             x.EventSourceId == y.EventSourceId &&
+             x.EventTypeId == y.EventTypeId &&
+             string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
+             TagsOf(x).SetEquals(TagsOf(y)));
+
+        public int GetHashCode(SeededEventEntry obj) =>
+            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count);
+
+        static HashSet<string> TagsOf(SeededEventEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
+    }
 }

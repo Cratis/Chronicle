@@ -26,28 +26,42 @@ static class CrossSubjectPiiJoin
     internal static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.CrossSubjectPiiJoin,
         title: "[Join] of a [PII] value crosses the compliance subject",
-        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' out of the stream identified by '{3}', which is not this read model's compliance subject. Chronicle releases a read model's PII under its own subject, so the joined value cannot be decrypted and the projection fails with an 'oaep decoding error' that freezes every partition. Resolve the value at the query edge under its owner's own subject instead.",
+        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' through '{3}', which differs from this read model's apparent compliance subject. Chronicle can then release the joined value under the wrong key and freeze the projection with an 'oaep decoding error'. Resolve the value at the query edge under its owner's own subject instead.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A join reads the joined event from the stream whose event source id is the value of the join key, so a [PII] value it copies was encrypted under that stream's subject. A read model stores one compliance subject and releases all of its PII under it, so a value belonging to a different subject cannot be decrypted. Beyond failing to read, materializing another subject's PII into this read model puts that personal data outside the reach of their erasure, which is a compliance defect in its own right. Join a non-PII value, or look the personal value up at the query edge under the subject that owns it.");
+        description: "A join that explicitly selects a key different from the read model's apparent compliance subject can copy PII between subject boundaries. A read model stores one compliance subject and releases all of its PII under it, so the value may not decrypt. This established definite-boundary diagnostic remains an error. Cases where the source shape appears to use the same subject but append metadata prevents proof are reported separately by CHR0044 as a warning.");
 
     /// <summary>
-    /// Resolve the member a read model is keyed — and therefore subjected — by.
+    /// The warning reported when the source shape appears to use the same subject but persisted runtime subject
+    /// metadata prevents a source-level proof.
+    /// </summary>
+    internal static readonly DiagnosticDescriptor UnprovableRule = new(
+        id: DiagnosticIds.UnprovableCrossSubjectPiiJoin,
+        title: "[Join] of a [PII] value cannot prove compliance subject equality",
+        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' through the apparent subject '{3}', but append metadata and historical events can assign another persisted runtime subject. If the runtime subjects differ, Chronicle can release or erase the copy under the wrong key. Keep the value owner-scoped or resolve it at the query edge.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "An omitted join key or a key that names the read model's apparent subject does not prove that every joined event was persisted under that subject. Explicit append metadata can override an event declaration, and historical events retain their stored subject. This conservative expansion is a warning so adding it does not turn previously accepted source into a transitive build break; CHR0038 remains the error for an explicitly different join boundary.");
+
+    static readonly char[] _propertyPathSeparators = ['.'];
+
+    /// <summary>
+    /// Resolve the member that best describes a read model's apparent subject boundary in a diagnostic.
     /// </summary>
     /// <param name="typeSymbol">The read model type.</param>
     /// <returns>The name of the subject member, or <see langword="null"/> when none can be resolved.</returns>
     /// <remarks>
     /// <para>
-    /// At runtime the compliance subject is the resolved document key (see <c>ResolveComplianceIdentifier</c>),
-    /// with <c>ReadModelSubjectResolver</c> preferring an explicit [Subject] and otherwise falling back to 'Id'.
-    /// Neither is reproducible from syntax alone, so this is a deliberate approximation of both: an explicit
-    /// [Subject], then an explicit [Key], then an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
+    /// The kernel stores an explicit persisted event subject when it differs from the event source id and otherwise
+    /// uses the resolved document key. Client release resolves [Subject] and then 'Id' from the materialized model.
+    /// Neither runtime value is reproducible from a type declaration alone. This ordering deliberately preserves
+    /// CHR0038's released source boundary: [Subject], [Key], an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
     /// </para>
     /// <para>
-    /// The approximation is exact for the shapes that matter — a read model keyed by 'Id', by [Key], or by an
-    /// <c>EventSourceId&lt;T&gt;</c> identity. A read model that carries a [Subject] distinct from its key is
-    /// where it can diverge, and there the join is reported rather than skipped.
+    /// The result is an apparent boundary and diagnostic context only. It is not the stored document compliance
+    /// subject and is not proof that a joined event has the same persisted runtime subject.
     /// </para>
     /// </remarks>
     internal static string? GetSubjectMemberName(INamedTypeSymbol typeSymbol)
@@ -67,54 +81,225 @@ static class CrossSubjectPiiJoin
     /// <param name="propertyName">The name of the property on the event.</param>
     /// <returns>True when the value is PII, false otherwise.</returns>
     /// <remarks>
-    /// Mirrors <c>PIIMetadataProvider</c>: [PII] counts whether it sits on the declaring type, the property, the
-    /// positional record's parameter, or the property's own <c>ConceptAs&lt;T&gt;</c> type.
+    /// Mirrors the compliance schema's reach: [PII] counts whether it sits on the declaring type, the property,
+    /// the positional record's parameter, or anywhere inside the property's value-object, collection, array, or
+    /// inherited member graph.
     /// </remarks>
     internal static bool IsPii(INamedTypeSymbol eventType, string propertyName)
     {
-        if (HasPii(eventType))
+        if (HasPiiInTypeHierarchy(eventType))
         {
             return true;
         }
 
-        return GetMembers(eventType).Any(member =>
-            string.Equals(member.Name, propertyName, StringComparison.OrdinalIgnoreCase) &&
-            (member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.PiiAttributeName) ||
-             (member.Type is not null && HasPii(member.Type))));
+        var currentType = eventType;
+        var path = propertyName.Split(_propertyPathSeparators, StringSplitOptions.RemoveEmptyEntries);
+
+        for (var index = 0; index < path.Length; index++)
+        {
+            var members = GetMembers(currentType)
+                .Where(candidate => string.Equals(candidate.Name, path[index], StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (members.Length == 0)
+            {
+                return false;
+            }
+
+            if (members.Any(member => member.Attributes.Any(attribute =>
+                    attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.PiiAttributeName)))
+            {
+                return true;
+            }
+
+            var memberType = members.Select(member => member.Type).FirstOrDefault(type => type is not null);
+
+            if (index == path.Length - 1)
+            {
+                return ContainsPii(memberType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default));
+            }
+
+            if (memberType is not INamedTypeSymbol nestedType)
+            {
+                return false;
+            }
+
+            currentType = nestedType;
+        }
+
+        return false;
     }
 
     /// <summary>
-    /// Enumerate the properties of a type together with the positional record parameters that back them.
+    /// Find a <c>[PII]</c> value on an event that ends up on a read model.
+    /// </summary>
+    /// <param name="eventType">The event the value comes from.</param>
+    /// <param name="readModelType">The read model the value lands on.</param>
+    /// <param name="explicitMappings">The mappings written out by hand, target property first.</param>
+    /// <param name="autoMapIsOn">Whether AutoMap can carry unmapped properties across.</param>
+    /// <returns>The offending mapping, or <see langword="null"/> when no PII reaches the read model.</returns>
+    /// <remarks>
+    /// An event fills a read model both explicitly — <c>.Set(x =&gt; x.P).To(e =&gt; e.Q)</c> for the fluent
+    /// builders, <c>[SetFrom&lt;TEvent&gt;]</c> for the model-bound ones — and implicitly through AutoMap,
+    /// which matches identically named properties. The explicit route always applies; the implicit one only
+    /// while AutoMap is on.
+    /// </remarks>
+    internal static (string TargetName, string EventPropertyName)? FindPiiReachingTheReadModel(
+        INamedTypeSymbol eventType,
+        INamedTypeSymbol readModelType,
+        IEnumerable<(string TargetName, string EventPropertyName)> explicitMappings,
+        bool autoMapIsOn)
+    {
+        var mappings = explicitMappings.ToArray();
+        var explicitMapping = mappings.FirstOrDefault(mapping => IsPii(eventType, mapping.EventPropertyName));
+
+        if (explicitMapping.EventPropertyName is not null)
+        {
+            return explicitMapping;
+        }
+
+        if (!autoMapIsOn)
+        {
+            return null;
+        }
+
+        // A positional record surfaces each member twice — once as the property, once as the constructor
+        // parameter — and [NoAutoMap] written without a target lands only on the parameter. Excluding the one
+        // entry that carries it would leave the other behind, so exclude the name outright.
+        var excludedNames = GetMembers(readModelType)
+            .Where(member => member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.NoAutoMapAttributeName))
+            .Select(member => member.Name)
+            .Concat(mappings.Select(mapping => GetLastPathSegment(mapping.TargetName)))
+            .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var mappableNames = GetMembers(readModelType)
+            .Select(member => member.Name)
+            .Where(name => !excludedNames.Contains(name))
+            .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var autoMapped = GetMembers(eventType)
+            .FirstOrDefault(member => mappableNames.Contains(member.Name) && IsPii(eventType, member.Name))
+            .Name;
+
+        return autoMapped is null ? null : (autoMapped, autoMapped);
+    }
+
+    /// <summary>
+    /// Enumerate the properties of a type and its base types together with the positional record parameters that back them.
     /// </summary>
     /// <param name="typeSymbol">The type to enumerate.</param>
     /// <returns>The name, type, and attributes of every member.</returns>
     /// <remarks>
     /// An attribute written without an explicit target on a positional record lands on the primary constructor's
-    /// parameter rather than on the generated property, so both have to be inspected.
+    /// parameter rather than on the generated property, so both have to be inspected. Reflection-based compliance
+    /// schema generation also sees inherited public properties, so the analyzer walks the same inheritance chain.
     /// </remarks>
     internal static IEnumerable<(string Name, ITypeSymbol? Type, ImmutableArray<AttributeData> Attributes)> GetMembers(INamedTypeSymbol typeSymbol)
     {
-        foreach (var property in typeSymbol.GetMembers().OfType<IPropertySymbol>().Where(property => !property.IsStatic))
+        for (var current = typeSymbol; current is not null && current.SpecialType != SpecialType.System_Object; current = current.BaseType)
         {
-            yield return (property.Name, property.Type, property.GetAttributes());
-        }
+            foreach (var property in current.GetMembers().OfType<IPropertySymbol>().Where(property =>
+                !property.IsStatic && property.DeclaredAccessibility == Accessibility.Public))
+            {
+                yield return (property.Name, property.Type, property.GetAttributes());
+            }
 
-        var primaryConstructor = typeSymbol.InstanceConstructors
-            .OrderByDescending(constructor => constructor.Parameters.Length)
-            .FirstOrDefault();
+            var primaryConstructor = current.InstanceConstructors
+                .OrderByDescending(constructor => constructor.Parameters.Length)
+                .FirstOrDefault();
 
-        if (primaryConstructor is null)
-        {
-            yield break;
-        }
+            if (primaryConstructor is null)
+            {
+                continue;
+            }
 
-        foreach (var parameter in primaryConstructor.Parameters)
-        {
-            yield return (parameter.Name, parameter.Type, parameter.GetAttributes());
+            foreach (var parameter in primaryConstructor.Parameters)
+            {
+                yield return (parameter.Name, parameter.Type, parameter.GetAttributes());
+            }
         }
     }
 
-    static bool HasPii(ITypeSymbol type) => WellKnownTypes.HasAttribute(type, WellKnownTypes.PiiAttributeName);
+    static string GetLastPathSegment(string path)
+    {
+        var segments = path.Split(_propertyPathSeparators, StringSplitOptions.RemoveEmptyEntries);
+        return segments[segments.Length - 1];
+    }
+
+    static bool ContainsPii(ITypeSymbol? type, HashSet<ITypeSymbol> path)
+    {
+        if (type is null)
+        {
+            return false;
+        }
+
+        if (type is IArrayTypeSymbol array)
+        {
+            return ContainsPii(array.ElementType, path);
+        }
+
+        if (type is not INamedTypeSymbol namedType || namedType.TypeKind == TypeKind.Enum)
+        {
+            return false;
+        }
+
+        if (HasPiiInTypeHierarchy(namedType))
+        {
+            return true;
+        }
+
+        // Primitive framework types are leaves. In particular, string implements IEnumerable<char> but is not
+        // a collection-shaped compliance object.
+        if (namedType.SpecialType != SpecialType.None)
+        {
+            return false;
+        }
+
+        var definition = namedType.OriginalDefinition;
+        if (!path.Add(definition))
+        {
+            // A recursive generic can change construction forever (Recursive<T> -> Recursive<List<T>>).
+            // Type arguments alone are not serialized values, so stop this repeated definition. The first
+            // occurrence continues across its remaining public members and will still find T when a real
+            // member such as Value exposes it.
+            return false;
+        }
+
+        try
+        {
+            var enumerable = namedType.AllInterfaces
+                .Concat([namedType])
+                .FirstOrDefault(candidate =>
+                    candidate.IsGenericType &&
+                    candidate.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T);
+
+            if (enumerable is not null)
+            {
+                return ContainsPii(enumerable.TypeArguments[0], path);
+            }
+
+            return GetMembers(namedType).Any(member =>
+                member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.PiiAttributeName) ||
+                ContainsPii(member.Type, path));
+        }
+        finally
+        {
+            path.Remove(definition);
+        }
+    }
+
+    static bool HasPiiInTypeHierarchy(INamedTypeSymbol type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (WellKnownTypes.HasAttribute(current, WellKnownTypes.PiiAttributeName))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     static string? FirstNameWith((string Name, ITypeSymbol? Type, ImmutableArray<AttributeData> Attributes)[] members, string attributeFullName) =>
         members.FirstOrDefault(member => member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == attributeFullName)).Name;

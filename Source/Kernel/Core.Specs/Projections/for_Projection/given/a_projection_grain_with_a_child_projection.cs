@@ -113,6 +113,17 @@ public class a_projection_grain_with_a_child_projection : Specification
     protected Task<ExpandoObject> ProcessTheEvent() =>
         _grain.ProcessForSingleReadModel(EventStoreNamespaceName.Default, new ExpandoObject(), [_event]);
 
+    protected Task<ExpandoObject> ProcessForSingleReadModel(params AppendedEvent[] events) =>
+        _grain.ProcessForSingleReadModel(EventStoreNamespaceName.Default, new ExpandoObject(), events);
+
+    protected Task<IEnumerable<ExpandoObject>> ProcessForMultipleReadModels(params AppendedEvent[] events) =>
+        _grain.Process(EventStoreNamespaceName.Default, events);
+
+    protected void ProjectRootWith(Action<ProjectionEventContext> projector) =>
+        _rootProjection
+            .When(_ => _.OnNext(Arg.Any<ProjectionEventContext>()))
+            .Do(call => projector(call.Arg<ProjectionEventContext>()));
+
     void CaptureContextFrom(EngineProjection projection, Action<ProjectionEventContext> capture) =>
         projection
             .When(_ => _.OnNext(Arg.Any<ProjectionEventContext>()))

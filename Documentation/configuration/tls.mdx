@@ -40,12 +40,18 @@ The client always connects over TLS. By default it validates the server's certif
 
 You can also set it on the client's TLS options as `SkipCertificateValidation = true`.
 
+The two inputs are explicit opt-ins to the same effective policy. Validation is skipped when either
+`SkipCertificateValidation` or `skipTlsValidation` is `true`; otherwise the client validates the
+certificate. `SkipCertificateValidation` defaults to `false` and an omitted connection-string option
+resolves to `false`, so an omitted setting can never turn validation off. The named `Development`
+connection string is the explicit exception: it includes `skipTlsValidation=true`.
+
 > [!WARNING]
 > Skipping validation accepts **any** server certificate, which removes protection against man-in-the-middle attacks. Only use it for a trusted server on a trusted network — never over the public internet. Prefer configuring a proper certificate the client can validate.
 
 ## Development vs production
 
-- **Development**: the server serves TLS with an auto-generated self-signed certificate. The built-in [`Development` connection string](../connection-strings/) sets `skipTlsValidation=true`, so a development client accepts that certificate out of the box — no certificate setup is needed on either side.
+- **Development**: the server serves TLS with an auto-generated self-signed certificate. The built-in [`Development` connection string](../connection-strings/) explicitly sets `skipTlsValidation=true`, so a development client accepts that certificate out of the box — no certificate setup is needed on either side.
 - **Production**: the server uses a real certificate you supply, and the client validates it with the standard TLS rules. Skipping validation is opt-in and off by default.
 
 ## Certificate validation
@@ -65,5 +71,3 @@ The client validates server certificates using the standard TLS rules:
 1. Ensure the server certificate is valid, not expired, and trusted by the client.
 2. If the server uses a self-signed certificate on a trusted network, set `skipTlsValidation=true` in the connection string (or `SkipCertificateValidation` on the client's TLS options).
 3. In development, use the built-in `Development` connection string, which already skips validation for the server's auto-generated certificate.
-
-

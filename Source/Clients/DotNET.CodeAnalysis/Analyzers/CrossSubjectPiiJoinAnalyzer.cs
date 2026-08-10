@@ -11,8 +11,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a model-bound <c>[Join&lt;TEvent&gt;]</c> copying a <c>[PII]</c> value out of a stream
-/// keyed by something other than the read model's own compliance subject.
+/// Analyzer that reports a model-bound <c>[Join&lt;TEvent&gt;]</c> copying a <c>[PII]</c> value whose persisted
+/// runtime subject cannot be proven to be the read model's compliance subject.
 /// </summary>
 /// <remarks>
 /// The fluent equivalent is covered by <see cref="FluentCrossSubjectPiiJoinAnalyzer"/>; both report
@@ -27,7 +27,9 @@ public class CrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
     const string EventPropertyNameParameterName = "eventPropertyName";
 
     /// <inheritdoc/>
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(CrossSubjectPiiJoin.Rule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
+        CrossSubjectPiiJoin.Rule,
+        CrossSubjectPiiJoin.UnprovableRule);
 
     /// <inheritdoc/>
     public override void Initialize(AnalysisContext context)
@@ -58,13 +60,6 @@ public class CrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
 
         var (on, eventPropertyName) = ReadArguments(attribute);
 
-        // Without an explicit 'on' the join keys on the read model's own key, which is also its subject,
-        // so the joined value already belongs to the subject the read model releases under.
-        if (on is null || string.Equals(on, subjectName, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         var sourcePropertyName = eventPropertyName ?? member.Name;
         if (!CrossSubjectPiiJoin.IsPii(eventType, sourcePropertyName))
         {
@@ -72,7 +67,11 @@ public class CrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
         }
 
         var location = attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? member.Locations.FirstOrDefault();
-        context.ReportDiagnostic(Diagnostic.Create(CrossSubjectPiiJoin.Rule, location, member.Name, eventType.Name, sourcePropertyName, on));
+        var joinKey = on ?? subjectName ?? CrossSubjectPiiJoin.IdentifierName;
+        var rule = on is not null && !string.Equals(on, subjectName, StringComparison.OrdinalIgnoreCase)
+            ? CrossSubjectPiiJoin.Rule
+            : CrossSubjectPiiJoin.UnprovableRule;
+        context.ReportDiagnostic(Diagnostic.Create(rule, location, member.Name, eventType.Name, sourcePropertyName, joinKey));
     }
 
     static IEnumerable<(ISymbol Member, AttributeData Attribute)> GetJoinAttributes(INamedTypeSymbol typeSymbol)

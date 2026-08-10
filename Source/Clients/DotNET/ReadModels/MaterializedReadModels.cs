@@ -31,6 +31,8 @@ public class MaterializedReadModels(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<MaterializedReadModels> logger) : IMaterializedReadModels
 {
+    readonly ReadModelReleaser _releaser = new(eventStore, schemaGenerator, chronicleServicesAccessor, jsonSerializerOptions, logger);
+
     /// <inheritdoc/>
     public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(InstanceCountToSkip? skip = null, InstanceCount? take = null)
     {
@@ -154,53 +156,5 @@ public class MaterializedReadModels(
         return (0, coveringPageSize, skipCount, takeCount);
     }
 
-    async Task<IEnumerable<TReadModel>> ReleaseInstances<TReadModel>(IEnumerable<TReadModel> instances)
-    {
-        var result = new List<TReadModel>();
-        foreach (var instance in instances)
-        {
-            var released = await ReleaseInstance(instance);
-            result.Add(released);
-        }
-        return result;
-    }
-
-    async Task<TReadModel> ReleaseInstance<TReadModel>(TReadModel instance)
-    {
-        var subject = ReadModelSubjectResolver.ResolveFrom(instance);
-        if (subject is null)
-        {
-            return instance;
-        }
-
-        return await ReleaseWithSubject(subject, instance);
-    }
-
-    async Task<TReadModel> ReleaseWithSubject<TReadModel>(Subject subject, TReadModel instance)
-    {
-        var schema = schemaGenerator.Generate(typeof(TReadModel));
-        if (!schema.HasComplianceMetadata())
-        {
-            return instance;
-        }
-
-        var payload = JsonSerializer.Serialize(instance, jsonSerializerOptions);
-        var request = new Contracts.Compliance.ReleaseRequest
-        {
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            Subject = subject.Value,
-            Schema = schema.ToJson(),
-            Payload = payload
-        };
-
-        var response = await chronicleServicesAccessor.Services.Compliance.Release(request);
-        if (response.HasError)
-        {
-            logger.FailedToRelease(typeof(TReadModel).Name, subject.Value, response.Error);
-            return instance;
-        }
-
-        return JsonSerializer.Deserialize<TReadModel>(response.Payload, jsonSerializerOptions) ?? instance;
-    }
+    Task<IEnumerable<TReadModel>> ReleaseInstances<TReadModel>(IEnumerable<TReadModel> instances) => _releaser.Release(instances);
 }

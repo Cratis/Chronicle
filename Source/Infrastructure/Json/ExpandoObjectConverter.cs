@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Schemas;
@@ -122,6 +123,14 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
+        // Compliance handlers replace protected scalar values with opaque strings while the registered schema
+        // intentionally remains the schema of the plaintext event. Keep those strings opaque until the
+        // compliance manager releases them instead of coercing ciphertext through the plaintext scalar type.
+        if (value is string compliantValue && schemaProperty.GetComplianceMetadata().Any())
+        {
+            return JsonValue.Create(compliantValue);
+        }
+
         if (schemaProperty.IsDictionary)
         {
             return ConvertUnknownSchemaTypeToJsonValue(value);
@@ -217,7 +226,19 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (typeFormats.IsKnown(schemaProperty.Format!))
         {
-            return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
+            try
+            {
+                return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
+            }
+            catch (Exception ex) when (
+                schemaProperty.GetComplianceMetadata().Any() &&
+                jsonNode.AsValue().TryGetValue<string>(out _) &&
+                ex is FormatException or InvalidCastException or InvalidOperationException or OverflowException)
+            {
+                // An encrypted value (or the empty marker returned after crypto-shredding) deliberately cannot
+                // be parsed as the plaintext formatted type. Keep it opaque for the compliance manager.
+                return jsonNode.GetValue<string>();
+            }
         }
         return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
     }
@@ -241,6 +262,8 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         }
 
         var value = jsonNode.AsValue();
+
+        var isCompliant = schemaProperty.GetComplianceMetadata().Any();
 
         // Nullable enum values are represented as a discriminated union with a null value. We need to get the actual property definition.
         // Other types could also be represented in this manner and it is therefor important to get the actual property definition.
@@ -277,6 +300,17 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                         valueAsString;
 
             case JsonObjectType.Boolean:
+                if (isCompliant && value.TryGetValue<string>(out var booleanAsString))
+                {
+                    if (bool.TryParse(booleanAsString, out var booleanValue))
+                    {
+                        return booleanValue;
+                    }
+                    if (booleanAsString is not null)
+                    {
+                        return booleanAsString;
+                    }
+                }
                 return value.GetValue<bool>();
 
             case JsonObjectType.Integer:
@@ -290,10 +324,40 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                     var index = enumReadSchema.EnumerationNames.IndexOf(enumNameValue);
                     if (index >= 0 && index < enumReadSchema.Enumeration.Count)
                         return TypeConversion.Convert(typeof(int), enumReadSchema.Enumeration.ToArray()[index]!);
+
+                    if (isCompliant)
+                    {
+                        if (int.TryParse(enumNameValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var enumValue))
+                            return enumValue;
+
+                        return enumNameValue;
+                    }
+                }
+                if (isCompliant && value.TryGetValue<string>(out var integerAsString))
+                {
+                    if (int.TryParse(integerAsString, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integerValue))
+                    {
+                        return integerValue;
+                    }
+                    if (integerAsString is not null)
+                    {
+                        return integerAsString;
+                    }
                 }
                 return value.GetValue<int>();
 
             case JsonObjectType.Number:
+                if (isCompliant && value.TryGetValue<string>(out var numberAsString))
+                {
+                    if (double.TryParse(numberAsString, NumberStyles.Float, CultureInfo.InvariantCulture, out var numberValue))
+                    {
+                        return numberValue;
+                    }
+                    if (numberAsString is not null)
+                    {
+                        return numberAsString;
+                    }
+                }
                 return value.GetValue<double>();
         }
 
