@@ -140,6 +140,32 @@ import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react
 | `DialogButtons.Ok` | Ok only |
 | `null` | No buttons (content-only dialog) |
 
+A custom `buttons` ReactNode is not just a different footer — the dialog can no longer tell which of your buttons means confirm and which means dismiss, so it also **removes the close (X), stops `Escape` closing the dialog, and never calls `onConfirm` / `onCancel` / `onClose`** (including the confirm handler `CommandDialog` uses to execute its command). A custom footer must close the dialog itself via `useDialogContext().closeDialog(...)`.
+
+## Initial Focus on Destructive Dialogs
+
+`Dialog` (and `CommandDialog`, which forwards it) focuses the confirm button when the dialog opens. A focused native button fires `click` from the **keydown** of `Enter`, so a key still held from the control that opened the dialog — or the ordinary habit of pressing `Enter` twice — confirms it immediately.
+
+A dialog that collects input is protected for free, because `isValid` / `isCommandFormValid` keeps confirm disabled until the form is complete. A dialog that needs **no** input is not — which is backwards when the action is irreversible. Say where focus should go instead:
+
+```tsx
+import { DialogInitialFocus } from '@cratis/components/Dialogs';
+
+<Dialog title="Delete personal data?" buttons={DialogButtons.YesNo}
+        initialFocus={DialogInitialFocus.Cancel}
+        onConfirm={...} onCancel={...}>
+    This permanently removes the person and every record about them.
+</Dialog>
+```
+
+| `DialogInitialFocus` | Focuses |
+|---|---|
+| `Confirm` (default) | The `Ok` / `Yes` button |
+| `Cancel` | The dismissing button — `Cancel`, or `No` when the set has no `Cancel` |
+| `Content` | The dialog's own title, so nothing is armed |
+
+`Cancel` falls back to `Content` when there is no dismissing button. Use `initialFocus` rather than a custom footer for this — it changes focus and nothing else.
+
 ## Customizing Built-in Buttons
 
 Use `okLabel`/`cancelLabel` to rename the buttons, and `isValid` to disable the confirm button:
@@ -213,7 +239,8 @@ Use `buttons={null}` for dialogs that contain their own internal actions (e.g. a
 |---|---|---|
 | `title` | `string` | Header text (replaces PrimeReact `header`) |
 | `visible` | `boolean` | Controls visibility |
-| `buttons` | `DialogButtons \| ReactNode \| null` | Prefer `DialogButtons` enum; `null` for no footer |
+| `buttons` | `DialogButtons \| ReactNode \| null` | Prefer `DialogButtons` enum; `null` for no footer. Anything but a `DialogButtons` value also drops the close (X), `Escape`, and the confirm/cancel callbacks |
+| `initialFocus` | `DialogInitialFocus` | Where focus lands on open — `Confirm` (default), `Cancel`, `Content` |
 | `isValid` | `boolean` | Disables the confirm button when `false` |
 | `okLabel` | `string` | Override the Ok/Confirm button label |
 | `cancelLabel` | `string` | Override the Cancel button label |
