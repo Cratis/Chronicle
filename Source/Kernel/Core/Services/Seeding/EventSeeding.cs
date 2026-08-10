@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Contracts.Seeding;
 using ProtoBuf.Grpc;
 
-using EventSeedingResult = Cratis.Chronicle.Seeding.SeedingResult;
 using ResultAwareEventSeeding = Cratis.Chronicle.Seeding.IResultAwareEventSeeding;
 
 namespace Cratis.Chronicle.Services.Seeding;
@@ -37,8 +35,14 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
                 e.Content,
                 e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray() ?? [])).ToArray();
 
-            var result = await globalGrain.SeedWithResult(entries);
-            EnsureComplete(result, request.EventStore, EventStoreNamespaceName.NotSet);
+            // The result is deliberately not propagated to the caller. A rejected seed batch is almost always a
+            // deterministic mistake in the seed set - a constraint violation - and this call sits on the client's
+            // connected path: the client seeds inside RegisterAll, which runs from OnConnected, and a failing
+            // handler there rolls the connection back to disconnected. The watchdog reconnects, the same seed set
+            // is rejected again, and a fixable mistake in a developer's seed data becomes a permanent client
+            // outage. The grain logs the rejection at Error with the violated constraints and leaves the batch
+            // unseeded, so a corrected run retries it.
+            await globalGrain.SeedWithResult(entries);
         }
 
         // Seed namespace-specific entries
@@ -59,8 +63,8 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
                     e.Content,
                     e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray() ?? [])).ToArray();
 
-                var result = await grain.SeedWithResult(entries);
-                EnsureComplete(result, request.EventStore, namespacedGroup.Namespace);
+                // Not propagated - see the note on the global branch above.
+                await grain.SeedWithResult(entries);
             }
         }
     }
@@ -83,14 +87,6 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         var seeds = await grain.GetSeededEvents();
 
         return MapToResponse(seeds);
-    }
-
-    static void EnsureComplete(EventSeedingResult result, EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
-    {
-        if (!result.AllEntriesSeeded)
-        {
-            throw new Chronicle.Seeding.EventSeedingIncomplete(eventStore, eventStoreNamespace);
-        }
     }
 
     /// <summary>

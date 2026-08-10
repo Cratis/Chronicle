@@ -69,7 +69,14 @@ public class when_a_seeded_batch_is_rejected(context context) : Given<context>(c
             await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
     }
 
-    [Fact] void should_fail_the_rejected_run() => Context.FirstFailure.ShouldNotBeNull();
+    /// <summary>
+    /// The rejected run must NOT surface as an exception. Seeding happens inside <c>RegisterAll</c>, which the
+    /// client runs from <c>OnConnected</c>; a failing handler there rolls the connection back to disconnected,
+    /// the watchdog reconnects, and the same deterministic seed rejection repeats - a permanent client outage
+    /// caused by a fixable mistake in seed data. The rejection is reported by the kernel grain's Error log, and
+    /// the batch is left unseeded so a corrected run retries it, which the facts below pin.
+    /// </summary>
+    [Fact] void should_not_fail_the_rejected_run() => Context.FirstFailure.ShouldBeNull();
     [Fact] void should_append_nothing_from_the_rejected_run() => Context.EventsAfterTheRejectedRun.ShouldEqual(0);
     [Fact] void should_append_the_corrected_seed_set() => Context.EventTypesAfterTheCorrectedRun.Count().ShouldEqual(2);
     [Fact] void should_append_the_innocent_entry_that_shared_the_rejected_batch() => Context.EventTypesAfterTheCorrectedRun.ShouldContain(nameof(OfficeOpened));

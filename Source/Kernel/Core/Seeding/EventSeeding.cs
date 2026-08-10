@@ -183,13 +183,16 @@ public class EventSeeding(
                 // strand the batches that did append, since their tracking is persisted below. The
                 // remaining batches are unrelated events that share nothing with the rejected one but a
                 // chunk index, so they are still worth appending.
+                // Counts and constraint names only. An event source id is the compliance subject by default, and
+                // a constraint violation message embeds it, so neither belongs in a log line that outlives the
+                // subject's erasure.
                 logger.SeededEventsRejected(
                     batch.Length,
                     _key.EventStore.Value,
                     _key.Namespace.Value,
-                    string.Join(", ", result.ConstraintViolations.Select(_ => _.Message.Value)),
-                    string.Join(", ", result.Errors.Select(_ => _.Value)),
-                    string.Join(", ", result.ConcurrencyViolations.Select(_ => _.EventSourceId.Value)));
+                    string.Join(", ", result.ConstraintViolations.Select(_ => _.ConstraintName.Value).Distinct()),
+                    result.Errors.Count(),
+                    result.ConcurrencyViolations.Count());
 
                 everyBatchAppended = false;
                 continue;

@@ -26,6 +26,12 @@ public class and_the_grain_reports_incomplete_seeding : given.an_event_seeding_s
 
     async Task Because() => _error = await Catch.Exception(() => _service.Seed(_request));
 
-    [Fact] void should_fail_the_external_operation() => _error.ShouldBeOfExactType<EventSeedingIncomplete>();
+    /// <summary>
+    /// Must NOT fail the operation. The client seeds inside <c>RegisterAll</c>, which runs from
+    /// <c>OnConnected</c>, and a failing handler there rolls the connection back to disconnected - so a
+    /// deterministic seed rejection would reconnect, be rejected again, and hold the client offline for good.
+    /// The grain logs the rejection and leaves the batch unseeded for a corrected run.
+    /// </summary>
+    [Fact] void should_not_fail_the_external_operation() => _error.ShouldBeNull();
     [Fact] void should_offer_the_entries_once() => _globalGrain.Received(1).SeedWithResult(Arg.Any<IEnumerable<SeededEntry>>());
 }

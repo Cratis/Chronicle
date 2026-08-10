@@ -4,7 +4,6 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 using Cratis.Chronicle.Events;
-using Microsoft.Extensions.DependencyInjection;
 using KernelCorrelationId = Cratis.Execution.CorrelationId;
 using KernelEventRedactionRequested = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRedactionRequested;
 using KernelEventRevised = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRevised;
@@ -35,7 +34,10 @@ public static class EventSequenceMutationExtensions
     /// <returns>Awaitable task.</returns>
     public static async Task ReviseEvent<TEvent>(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, TEvent revision)
     {
-        var eventSerializer = fixture.Services.GetRequiredService<IEventSerializer>();
+        // Off the event store, never the root provider: IEventSerializer is scoped, so resolving it from the
+        // root either throws under ValidateScopes or hands back a serializer bound to a different event store's
+        // event types than the one being mutated here.
+        var eventSerializer = ((EventStore)fixture.EventStore).EventSerializer;
         var content = await eventSerializer.Serialize(revision!);
         var eventType = fixture.EventStore.EventTypes.GetEventTypeFor(typeof(TEvent));
         var kernelEventType = new KernelEventType(
