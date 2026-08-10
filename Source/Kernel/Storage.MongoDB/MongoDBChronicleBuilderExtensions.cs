@@ -8,8 +8,10 @@ using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Serialization;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Driver;
 using Orleans.Providers.MongoDB.Configuration;
+using Orleans.Providers.MongoDB.Utils;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -38,6 +40,22 @@ public static class MongoDBChronicleBuilderExtensions
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false)
     {
         var settings = GetMongoClientSettings(server);
+
+        builder.ConfigureServices(services =>
+        {
+            var mongoClientDescriptor = services.LastOrDefault(_ => !_.IsKeyedService && _.ServiceType == typeof(IMongoClient));
+            if (mongoClientDescriptor is null || mongoClientDescriptor.Lifetime != ServiceLifetime.Singleton)
+            {
+                // Orleans adds its default client and factory after this callback. Give it a dedicated client
+                // unless an existing singleton IMongoClient is already safe for the default factory to consume.
+                // This also covers Chronicle being configured before Arc adds its scoped resilience proxy.
+                // Construct the Orleans factory from Chronicle's settings so it owns a singleton-safe client while
+                // leaving Arc's IMongoClient registration and lifetime untouched. Never replace a consumer-provided
+                // IMongoClientFactory.
+                services.TryAddSingleton<IMongoClientFactory>(
+                    _ => new DefaultMongoClientFactory(new MongoClient(settings)));
+            }
+        });
 
         builder.SiloBuilder.UseMongoDBClient(_ => settings);
 
