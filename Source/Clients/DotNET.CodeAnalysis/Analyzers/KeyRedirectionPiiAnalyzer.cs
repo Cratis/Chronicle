@@ -89,12 +89,6 @@ public class KeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
         INamedTypeSymbol readModelType,
         string key)
     {
-        // An event that names its own compliance subject keeps it whatever the document is keyed by.
-        if (KeyRedirectionPii.CarriesItsOwnSubject(eventType))
-        {
-            return;
-        }
-
         var source = CrossSubjectPiiJoin.FindPiiReachingTheReadModel(
             eventType,
             readModelType,

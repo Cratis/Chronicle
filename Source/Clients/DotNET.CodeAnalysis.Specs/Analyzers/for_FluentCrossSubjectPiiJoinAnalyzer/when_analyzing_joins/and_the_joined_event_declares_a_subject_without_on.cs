@@ -6,23 +6,22 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_FluentCrossSubjectPiiJoinAnalyzer.when_analyzing_joins;
 
-public class and_the_join_is_on_the_read_models_own_subject : given.a_fluent_cross_subject_pii_join_analyzer
+/// <summary>
+/// Omitting On selects the local key, but a declared subject makes the joined event's stored runtime ownership unknown.
+/// </summary>
+public class and_the_joined_event_declares_a_subject_without_on : given.a_fluent_cross_subject_pii_join_analyzer
 {
     const string Usage = """
-    [PII]
-    public record DisplayName(string Value);
-
-    public record AdvisorNamed(DisplayName DisplayName);
+    public record AdvisorNamed([Subject] string AdvisorId, [PII] string FullName);
 
     public record AdvisorSummary(
-        [Key] Guid AdvisorId,
-        DisplayName DisplayName);
+        [Key] string Id,
+        string FullName);
 
     public class AdvisorSummaryProjection : IProjectionFor<AdvisorSummary>
     {
         public void Define(IProjectionBuilderFor<AdvisorSummary> builder) => builder
-            .{|#0:Join<AdvisorNamed>|}(_ => _
-                .On(m => m.AdvisorId));
+            .{|#0:Join<AdvisorNamed>|}(_ => { });
     }
     """;
 
@@ -30,7 +29,7 @@ public class and_the_join_is_on_the_read_models_own_subject : given.a_fluent_cro
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentCrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "DisplayName", "AdvisorNamed", "AdvisorId"));
+        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "FullName", "AdvisorNamed", "Id"));
 
     [Fact] Task should_report_the_cross_subject_pii_join_diagnostic() => _result;
 }

@@ -6,24 +6,24 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_CrossSubjectPiiJoinAnalyzer.when_analyzing_joins;
 
-public class and_the_join_is_on_the_read_models_own_subject : given.a_cross_subject_pii_join_analyzer
+public class and_the_joined_array_element_contains_pii : given.a_cross_subject_pii_join_analyzer
 {
     const string Usage = """
-    [PII]
-    public record DisplayName(string Value);
+    public record Contact([PII] string Email);
 
-    public record AdvisorNamed(DisplayName DisplayName);
+    public record AdvisorContacts(Contact[] Contacts);
 
-    public record AdvisorSummary(
-        [Key] Guid AdvisorId,
-        {|#0:[Join<AdvisorNamed>(on: "AdvisorId", eventPropertyName: "DisplayName")] DisplayName Name|});
+    public record RequestSummary(
+        [Key] Guid Id,
+        Guid AdvisorId,
+        {|#0:[Join<AdvisorContacts>(on: "AdvisorId")] Contact[] Contacts|});
     """;
 
     Task _result;
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.CrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "Name", "AdvisorNamed", "DisplayName", "AdvisorId"));
+        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "Contacts", "AdvisorContacts", "AdvisorId"));
 
     [Fact] Task should_report_the_cross_subject_pii_join_diagnostic() => _result;
 }

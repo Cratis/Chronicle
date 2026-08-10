@@ -56,12 +56,6 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // An event that names its own compliance subject keeps it whatever the document is keyed by.
-        if (KeyRedirectionPii.CarriesItsOwnSubject(eventType))
-        {
-            return;
-        }
-
         var builderCallback = invocation.ArgumentList.Arguments[0].Expression;
 
         if (FindRedirection(context, builderCallback, eventType, readModelType) is not { } redirection)

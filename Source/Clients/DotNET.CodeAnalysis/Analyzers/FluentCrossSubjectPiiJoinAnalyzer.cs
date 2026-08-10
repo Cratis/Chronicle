@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
 /// Analyzer that reports a fluent <c>builder.Join&lt;TEvent&gt;(_ =&gt; _.On(...))</c> copying a <c>[PII]</c> value
-/// out of a stream keyed by something other than the read model's own compliance subject.
+/// whose persisted runtime subject cannot be proven to be the read model's compliance subject.
 /// </summary>
 /// <remarks>
 /// The model-bound equivalent is covered by <see cref="CrossSubjectPiiJoinAnalyzer"/>; both report
@@ -59,14 +59,8 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
         }
 
         var builderCallback = invocation.ArgumentList.Arguments[0].Expression;
-
-        // A child join has no On() — it keys on the child's identifiedBy, which the parent already scopes,
-        // so there is no separate stream to cross into.
-        if (!TryGetOnProperty(context, builderCallback, out var on) ||
-            string.Equals(on, CrossSubjectPiiJoin.GetSubjectMemberName(readModelType), StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
+        var hasExplicitOn = TryGetOnProperty(context, builderCallback, out var on);
+        var subjectName = CrossSubjectPiiJoin.GetSubjectMemberName(readModelType);
 
         var source = CrossSubjectPiiJoin.FindPiiReachingTheReadModel(
             eventType,
@@ -85,7 +79,7 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
             piiSource.TargetName,
             eventType.Name,
             piiSource.EventPropertyName,
-            on));
+            hasExplicitOn ? on : subjectName ?? CrossSubjectPiiJoin.IdentifierName));
     }
 
     static bool TryGetOnProperty(SyntaxNodeAnalysisContext context, ExpressionSyntax builderCallback, out string on)

@@ -6,7 +6,10 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_FluentCrossSubjectPiiJoinAnalyzer.when_analyzing_joins;
 
-public class and_the_join_is_on_the_read_models_own_subject : given.a_fluent_cross_subject_pii_join_analyzer
+/// <summary>
+/// An omitted On and an absent [Subject] declaration do not prove runtime equality because any append can supply an explicit subject.
+/// </summary>
+public class and_the_join_omits_on_without_a_subject_declaration : given.a_fluent_cross_subject_pii_join_analyzer
 {
     const string Usage = """
     [PII]
@@ -15,14 +18,13 @@ public class and_the_join_is_on_the_read_models_own_subject : given.a_fluent_cro
     public record AdvisorNamed(DisplayName DisplayName);
 
     public record AdvisorSummary(
-        [Key] Guid AdvisorId,
+        [Key] Guid Id,
         DisplayName DisplayName);
 
     public class AdvisorSummaryProjection : IProjectionFor<AdvisorSummary>
     {
         public void Define(IProjectionBuilderFor<AdvisorSummary> builder) => builder
-            .{|#0:Join<AdvisorNamed>|}(_ => _
-                .On(m => m.AdvisorId));
+            .{|#0:Join<AdvisorNamed>|}(_ => { });
     }
     """;
 
@@ -30,7 +32,7 @@ public class and_the_join_is_on_the_read_models_own_subject : given.a_fluent_cro
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentCrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "DisplayName", "AdvisorNamed", "AdvisorId"));
+        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "DisplayName", "AdvisorNamed", "Id"));
 
     [Fact] Task should_report_the_cross_subject_pii_join_diagnostic() => _result;
 }

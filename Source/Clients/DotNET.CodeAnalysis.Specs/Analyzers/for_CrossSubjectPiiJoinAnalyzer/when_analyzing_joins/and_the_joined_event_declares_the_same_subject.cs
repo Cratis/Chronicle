@@ -6,24 +6,24 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_CrossSubjectPiiJoinAnalyzer.when_analyzing_joins;
 
-public class and_the_join_is_on_the_read_models_own_subject : given.a_cross_subject_pii_join_analyzer
+/// <summary>
+/// Even an identically named [Subject] can be null, empty, overridden at append, or differ in historical stored events.
+/// </summary>
+public class and_the_joined_event_declares_the_same_subject : given.a_cross_subject_pii_join_analyzer
 {
     const string Usage = """
-    [PII]
-    public record DisplayName(string Value);
-
-    public record AdvisorNamed(DisplayName DisplayName);
+    public record AdvisorNamed([Subject] Guid AdvisorId, [PII] string FullName);
 
     public record AdvisorSummary(
         [Key] Guid AdvisorId,
-        {|#0:[Join<AdvisorNamed>(on: "AdvisorId", eventPropertyName: "DisplayName")] DisplayName Name|});
+        {|#0:[Join<AdvisorNamed>(on: "AdvisorId")] string FullName|});
     """;
 
     Task _result;
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.CrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "Name", "AdvisorNamed", "DisplayName", "AdvisorId"));
+        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "FullName", "AdvisorNamed", "AdvisorId"));
 
     [Fact] Task should_report_the_cross_subject_pii_join_diagnostic() => _result;
 }

@@ -6,25 +6,24 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_KeyRedirectionPiiAnalyzer.when_analyzing_model_bound_projections;
 
-/// <summary>
-/// A declared subject does not prove the stored EventContext: the append can override it, and the declared value can differ from the redirected document key.
-/// </summary>
-public class and_the_event_names_its_own_subject : given.a_key_redirection_pii_analyzer
+public class and_a_cyclic_nested_value_contains_pii : given.a_key_redirection_pii_analyzer
 {
     const string Usage = """
-    public record AdvisorNamed(string RequestId, [Subject] string AdvisorId, [PII] string FullName);
+    public record Profile(Profile? Parent, [PII] string FullName);
+
+    public record AdvisorNamed(string RequestId, Profile Profile);
 
     {|#0:[FromEvent<AdvisorNamed>(key: "RequestId")]|}
     public record RequestSummary(
         [Key] string Id,
-        string FullName);
+        Profile Profile);
     """;
 
     Task _result;
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.KeyRedirectionPiiAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "FullName", "AdvisorNamed", "RequestId", "Id"));
+        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "Profile", "AdvisorNamed", "RequestId", "Id"));
 
     [Fact] Task should_report_the_key_redirection_pii_diagnostic() => _result;
 }

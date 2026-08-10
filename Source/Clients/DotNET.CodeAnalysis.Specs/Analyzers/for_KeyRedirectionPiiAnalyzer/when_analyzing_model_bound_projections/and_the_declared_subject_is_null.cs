@@ -7,12 +7,15 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_KeyRedirectionPiiAnalyzer.when_analyzing_model_bound_projections;
 
 /// <summary>
-/// A declared subject does not prove the stored EventContext: the append can override it, and the declared value can differ from the redirected document key.
+/// A null [Subject] falls back to the event source id at append time, so the declaration cannot suppress a redirected document key.
 /// </summary>
-public class and_the_event_names_its_own_subject : given.a_key_redirection_pii_analyzer
+public class and_the_declared_subject_is_null : given.a_key_redirection_pii_analyzer
 {
     const string Usage = """
-    public record AdvisorNamed(string RequestId, [Subject] string AdvisorId, [PII] string FullName);
+    public record AdvisorNamed(string RequestId, [PII] string FullName)
+    {
+        [Subject] public string? AdvisorId { get; init; }
+    }
 
     {|#0:[FromEvent<AdvisorNamed>(key: "RequestId")]|}
     public record RequestSummary(
