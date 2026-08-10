@@ -86,8 +86,8 @@ public class and_the_source_subject_is_erased(context context) : Given<context>(
     [Fact] void should_release_the_name_on_the_advisors_own_read_model_before_erasure() => Context.OnOwnStreamBeforeErasure!.FullName.ShouldEqual(Context.Event.FullName);
     [Fact] void should_release_the_name_on_the_redirected_read_model_before_erasure() => Context.OnRequestBeforeErasure!.AdvisorName.ShouldEqual(Context.Event.FullName);
     [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredRedirectedDocument is not null).ShouldBeTrue();
-    [Fact] void should_stamp_the_redirected_document_with_the_redirected_key_as_its_subject() => Context.StoredRedirectedDocument?["__subject"].AsString.ShouldEqual(Context.RequestId);
-    [Fact] void should_not_stamp_the_redirected_document_with_the_advisors_subject() => Context.StoredRedirectedDocument?["__subject"].AsString.ShouldNotEqual(Context.AdvisorId.Value);
+    [Fact] void should_stamp_the_redirected_document_with_the_redirected_key_as_its_subject_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredRedirectedDocument?["__subject"].AsString == Context.RequestId).ShouldBeTrue();
+    [Fact] void should_not_stamp_the_redirected_document_with_the_advisors_subject_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredRedirectedDocument?["__subject"].AsString != Context.AdvisorId.Value).ShouldBeTrue();
     [Fact] void should_blank_the_name_on_the_advisors_own_read_model_after_erasure() => Context.OnOwnStreamAfterErasure!.FullName.ShouldEqual(string.Empty);
     [Fact] void should_leave_the_redirected_copy_readable_after_erasure() => Context.OnRequestAfterErasure!.AdvisorName.ShouldEqual(Context.Event.FullName);
 }

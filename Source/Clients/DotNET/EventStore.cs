@@ -49,7 +49,6 @@ public class EventStore : IEventStore
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IEventSerializer _eventSerializer;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
@@ -118,7 +117,7 @@ public class EventStore : IEventStore
             serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName));
         _correlationIdAccessor = correlationIdAccessor;
 
-        _eventSerializer = new EventSerializer(
+        EventSerializer = new EventSerializer(
             clientArtifactsProvider,
             artifactActivator,
             EventTypes,
@@ -138,7 +137,7 @@ public class EventStore : IEventStore
             connection,
             EventTypes,
             Constraints,
-            _eventSerializer,
+            EventSerializer,
             correlationIdAccessor,
             concurrencyScopeStrategies,
             causationManager,
@@ -156,7 +155,7 @@ public class EventStore : IEventStore
             serviceProvider,
             artifactActivator,
             new ReactorMiddlewaresActivator(clientArtifactsProvider, artifactActivator, loggerFactory.CreateLogger<ReactorMiddlewaresActivator>()),
-            _eventSerializer,
+            EventSerializer,
             causationManager,
             identityProvider,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
@@ -240,7 +239,7 @@ public class EventStore : IEventStore
             eventStoreName,
             connection,
             EventTypes,
-            _eventSerializer,
+            EventSerializer,
             clientArtifactsProvider,
             serviceProvider,
             artifactActivator,
@@ -317,6 +316,11 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
+
+    /// <summary>
+    /// Gets the serializer owned by this event store.
+    /// </summary>
+    internal IEventSerializer EventSerializer { get; }
 
     /// <inheritdoc/>
     public async Task DiscoverAll()
@@ -395,7 +399,7 @@ public class EventStore : IEventStore
                 state.Connection,
                 state.EventTypes,
                 state.Constraints,
-                state._eventSerializer,
+                state.EventSerializer,
                 state._correlationIdAccessor,
                 state._concurrencyScopeStrategies,
                 state._causationManager,

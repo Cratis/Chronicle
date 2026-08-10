@@ -4,6 +4,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Schemas;
@@ -192,17 +193,20 @@ internal class ReadModelReleaser(
 
     string? KeyFor(JsonObject payload, PropertyInfo property)
     {
-        var name = jsonSerializerOptions.PropertyNamingPolicy?.ConvertName(property.Name) ?? property.Name;
+        var name = property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ??
+                   jsonSerializerOptions.PropertyNamingPolicy?.ConvertName(property.Name) ??
+                   property.Name;
         if (payload.ContainsKey(name))
         {
             return name;
         }
 
-        // The naming policy is the same one the schema was generated with, so the converted name is the
-        // normal answer. A property renamed on the wire — or absent from the payload because its value is
-        // null — is matched by name instead of assumed missing.
+        // Match the effective serialized name with the serializer's configured case behavior.
+        var comparison = jsonSerializerOptions.PropertyNameCaseInsensitive
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
         return payload
             .Select(entry => entry.Key)
-            .FirstOrDefault(key => string.Equals(key, property.Name, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(key => string.Equals(key, name, comparison));
     }
 }

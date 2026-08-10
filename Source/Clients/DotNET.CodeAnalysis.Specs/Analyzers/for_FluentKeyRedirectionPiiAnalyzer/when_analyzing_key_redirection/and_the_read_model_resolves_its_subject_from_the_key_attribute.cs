@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_FluentKeyRedirectionPiiAnalyzer.when_analyzing_key_redirection;
 
 /// <summary>
-/// With no [Subject] the read model is subjected by its [Key], not by the conventional identifier.
+/// A [Key] does not control client-side compliance release; without [Subject], release falls back to Id.
 /// </summary>
 public class and_the_read_model_resolves_its_subject_from_the_key_attribute : given.a_fluent_key_redirection_pii_analyzer
 {
@@ -32,7 +32,7 @@ public class and_the_read_model_resolves_its_subject_from_the_key_attribute : gi
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentKeyRedirectionPiiAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "AdvisorName", "AdvisorNamed", "FullName", "RequestId", "RequestKey"));
+        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "AdvisorName", "AdvisorNamed", "FullName", "RequestId", "Id"));
 
-    [Fact] Task should_name_the_subject_resolved_from_the_key_attribute() => _result;
+    [Fact] Task should_name_the_client_release_id_fallback() => _result;
 }

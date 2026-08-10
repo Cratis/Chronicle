@@ -2,17 +2,21 @@
 
 ## Rule Description
 
-A projection redirects its key onto another stream and carries a `[PII]` value from that stream onto the read model.
+A projection redirects the resolved document key and carries a `[PII]` value onto that document.
 
-A read model document holds exactly one compliance subject. `UsingKey`, `UsingKeyFromContext`, `UsingParentKey` and `UsingParentKeyFromContext` — and the model-bound `[FromEvent]` and `[ChildrenFrom]` forms — can redirect a document away from the runtime subject stored with the event. A `[PII]` value arriving that way is re-encrypted under an identity that is not provably its owner's.
+A read model document holds exactly one stored compliance subject. The kernel uses an explicit persisted event subject when it differs from the event source id; otherwise it uses the resolved document key. A root `UsingKey`, `UsingKeyFromContext`, composite key, or constant key changes that document key. In a child scope, `UsingKey` only identifies the child; `UsingParentKey`, `UsingParentKeyFromContext`, a parent composite key, or a constant parent key routes the containing document. The model-bound equivalents are `[FromEvent]` and `[ChildrenFrom]`.
 
-Declaring `[Subject]` on the event is not a suppression. Its runtime value can be null or empty, an explicit subject supplied to the append can override the declared value, and already-stored historical events retain the subject metadata they were appended with. Source syntax therefore cannot prove that a redirected event-property key equals every event's runtime owner. The analyzer does recognize the fluent safe controls that key directly from `EventContext.Subject` or `EventContext.EventSourceId`; those values are the runtime ownership context rather than a declaration about it.
+Declaring `[Subject]` on the event type is not a suppression. Its runtime value can be null or empty, append metadata can override it, and already-stored historical events retain the subject metadata they were appended with. `EventSourceId` selects the stream; it is the default subject only when no different explicit subject was persisted. The analyzer recognizes the fluent controls that key directly from `EventContext.Subject` or `EventContext.EventSourceId`, because either choice stays aligned with the kernel's explicit-subject-or-resolved-key rule.
 
-PII reach is recursive. A mapped event member counts when `[PII]` occurs directly, on its type, in an inherited member, or inside a nested value object, array, or collection element.
+PII reach is recursive. A mapped event member counts when `[PII]` occurs directly, on its type, in an inherited member, or inside a nested value object, array, or collection element. The fluent analyzer follows the real public mapping surface: nested expression paths, Set/To, Add/Subtract, AddChild, SetThisValue, `PropertyPath` Set/To, and the final AutoMap state.
 
-Nothing fails at read time. The cost is erasure reach: crypto-shredding the owner's key does not touch a copy resting under a different subject, so the value survives an erasure that reports success.
+Nothing has to fail at read time. The cost can remain hidden as erasure reach: crypto-shredding the owner's key does not touch a copy resting under a different subject, so the value survives an erasure that reports success.
 
 Keep the personal value on a read model keyed and subjected by its owner, or resolve it at the query edge under the owner-scoped read model. Do not move it onto a request-, case-, tenant-, or other subject's document merely to make a query convenient.
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0043/violation" />
 
 ## Existing Stored Documents
 
@@ -20,7 +24,7 @@ Fixing the projection prevents future wrong-subject materialization; it does not
 
 ## Relationship to CHR0038
 
-`CHR0038` refuses the same defect reached through a `[Join]`. This rule covers the key-redirection route to the same outcome. The storage side does not distinguish them.
+`CHR0038` refuses an explicit different-subject boundary reached through a `[Join]`. [CHR0044](CHR0044) warns when a join's runtime-subject equality is unprovable. This rule covers the key-redirection route.
 
 ## Severity
 

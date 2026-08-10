@@ -30,7 +30,7 @@ public class and_the_join_is_on_the_read_models_own_subject : given.a_fluent_cro
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentCrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "DisplayName", "AdvisorNamed", "AdvisorId"));
+        new ExpectedDiagnostic(DiagnosticIds.UnprovableCrossSubjectPiiJoin, DiagnosticSeverity.Warning, "DisplayName", "AdvisorNamed", "AdvisorId"));
 
-    [Fact] Task should_report_the_cross_subject_pii_join_diagnostic() => _result;
+    [Fact] Task should_report_the_unprovable_subject_warning() => _result;
 }

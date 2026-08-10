@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -22,9 +23,8 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
 {
+    const string AddChildMethodName = "AddChild";
     const string FromMethodName = "From";
-    const string ProjectionBuilderInterfaceName = "IProjectionBuilder";
-    const string ReadModelPropertiesBuilderInterfaceName = "IReadModelPropertiesBuilder";
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(KeyRedirectionPii.Rule);
@@ -34,10 +34,18 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
+        context.RegisterCompilationStartAction(startContext =>
+        {
+            if (FluentProjectionSymbols.TryCreate(startContext.Compilation) is { } symbols)
+            {
+                startContext.RegisterSyntaxNodeAction(
+                    syntaxContext => AnalyzeInvocation(syntaxContext, symbols),
+                    SyntaxKind.InvocationExpression);
+            }
+        });
     }
 
-    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, FluentProjectionSymbols symbols)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
 
@@ -49,27 +57,84 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
         }
 
         if (context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
-            method.ContainingType?.OriginalDefinition.Name != ProjectionBuilderInterfaceName ||
+            !FluentProjectionSymbols.IsMethodOn(method, symbols.ProjectionBuilder) ||
             method.TypeArguments.FirstOrDefault() is not INamedTypeSymbol eventType ||
             method.ContainingType.TypeArguments.FirstOrDefault() is not INamedTypeSymbol readModelType)
         {
             return;
         }
 
-        var builderCallback = invocation.ArgumentList.Arguments[0].Expression;
-
-        if (FindRedirection(context, builderCallback, eventType, readModelType) is not { } redirection)
+        var builderCallbackExpression = invocation.ArgumentList.Arguments[0].Expression;
+        if (!FluentProjectionCallback.TryResolve(context, builderCallbackExpression, out var builderCallback))
         {
             return;
         }
 
-        var source = CrossSubjectPiiJoin.FindPiiReachingTheReadModel(
-            eventType,
-            readModelType,
-            FluentProjectionMappings.GetExplicitMappings(builderCallback),
-            FluentProjectionMappings.AutoMapIsOn(invocation, readModelType));
+        var (isChildScope, documentReadModelType) = FluentProjectionMappings.ResolveStoredDocumentScope(context, invocation, readModelType, symbols);
 
-        if (source is not { } piiSource)
+        var autoMapIsOn = FluentProjectionMappings.AutoMapIsOn(context, invocation, readModelType, symbols);
+        if (FindRedirection(builderCallback, eventType, readModelType, isChildScope, symbols) is { } redirection)
+        {
+            ReportIfPiiReachesRedirectedDocument(
+                context,
+                eventType,
+                readModelType,
+                FluentProjectionMappings.GetExplicitMappings(builderCallback.SemanticModel, builderCallback.Body, symbols, readModelType, eventType),
+                autoMapIsOn,
+                redirection,
+                documentReadModelType);
+        }
+
+        foreach (var addChild in builderCallback.Body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
+        {
+            if (builderCallback.SemanticModel.GetSymbolInfo(addChild).Symbol is not IMethodSymbol addChildMethod ||
+                addChildMethod.Name != AddChildMethodName ||
+                !FluentProjectionSymbols.IsMethodOn(addChildMethod, symbols.ReadModelPropertiesBuilder) ||
+                addChildMethod.ContainingType.TypeArguments.Length < 2 ||
+                !SymbolEqualityComparer.Default.Equals(addChildMethod.ContainingType.TypeArguments[0], readModelType) ||
+                !SymbolEqualityComparer.Default.Equals(addChildMethod.ContainingType.TypeArguments[1], eventType) ||
+                addChild.ArgumentList.Arguments.Count != 2 ||
+                !FluentProjectionCallback.TryResolve(
+                    context.Compilation,
+                    builderCallback.SemanticModel,
+                    addChild.ArgumentList.Arguments[1].Expression,
+                    out var addChildCallback) ||
+                FindAddChildRedirection(addChildCallback, eventType, symbols) is not { } addChildRedirection)
+            {
+                continue;
+            }
+
+            ReportIfPiiReachesRedirectedDocument(
+                context,
+                eventType,
+                readModelType,
+                FluentProjectionMappings.GetAddChildMappings(
+                    builderCallback.SemanticModel,
+                    addChild,
+                    symbols,
+                    eventType,
+                    autoMapIsOn,
+                    addChildCallback),
+                false,
+                addChildRedirection,
+                documentReadModelType);
+        }
+    }
+
+    static void ReportIfPiiReachesRedirectedDocument(
+        SyntaxNodeAnalysisContext context,
+        INamedTypeSymbol eventType,
+        INamedTypeSymbol readModelType,
+        IEnumerable<(string TargetName, string EventPropertyName)> mappings,
+        bool autoMapIsOn,
+        (string Key, Location Location) redirection,
+        INamedTypeSymbol documentReadModelType)
+    {
+        if (CrossSubjectPiiJoin.FindPiiReachingTheReadModel(
+                eventType,
+                readModelType,
+                mappings,
+                autoMapIsOn) is not { } piiSource)
         {
             return;
         }
@@ -81,37 +146,68 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
             eventType.Name,
             piiSource.EventPropertyName,
             redirection.Key,
-            KeyRedirectionPii.SubjectMemberNameOf(readModelType)));
+            KeyRedirectionPii.ClientReleaseSubjectDescriptionOf(documentReadModelType)));
     }
 
     /// <summary>
     /// Find the call inside a <c>From&lt;TEvent&gt;</c> callback that points the document at a key other than
     /// the stream the event was appended to.
     /// </summary>
-    /// <param name="context">The analysis context.</param>
     /// <param name="builderCallback">The <c>From</c> builder callback.</param>
     /// <param name="eventType">The event the block reads.</param>
     /// <param name="readModelType">The read model being projected.</param>
+    /// <param name="isChildScope">Whether the From block fills a child inside a containing document.</param>
+    /// <param name="symbols">The Chronicle builder symbols.</param>
     /// <returns>The redirected key and where it was written, or <see langword="null"/> when nothing redirects.</returns>
     static (string Key, Location Location)? FindRedirection(
-        SyntaxNodeAnalysisContext context,
-        ExpressionSyntax builderCallback,
+        FluentProjectionCallback builderCallback,
         INamedTypeSymbol eventType,
-        INamedTypeSymbol readModelType) =>
-        builderCallback.DescendantNodes()
+        INamedTypeSymbol readModelType,
+        bool isChildScope,
+        FluentProjectionSymbols symbols) =>
+        builderCallback.Body.DescendantNodesAndSelf()
             .OfType<InvocationExpressionSyntax>()
-            .Select(invocation => Describe(context, invocation, eventType, readModelType))
+            .Select(invocation => Describe(builderCallback.SemanticModel, invocation, eventType, readModelType, isChildScope, symbols))
+            .FirstOrDefault(redirection => redirection is not null);
+
+    static (string Key, Location Location)? FindAddChildRedirection(
+        FluentProjectionCallback builderCallback,
+        INamedTypeSymbol eventType,
+        FluentProjectionSymbols symbols) =>
+        builderCallback.Body.DescendantNodesAndSelf()
+            .OfType<InvocationExpressionSyntax>()
+            .Where(invocation =>
+                builderCallback.SemanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol method &&
+                FluentProjectionSymbols.IsMethodOn(method, symbols.AddChildBuilder) &&
+                method.ContainingType.TypeArguments.Length == 2 &&
+                SymbolEqualityComparer.Default.Equals(method.ContainingType.TypeArguments[1], eventType) &&
+                KeyRedirection.Parent.Contains(method.Name))
+            .Select(invocation => DescribeKey(builderCallback.SemanticModel, invocation))
             .FirstOrDefault(redirection => redirection is not null);
 
     static (string Key, Location Location)? Describe(
-        SyntaxNodeAnalysisContext context,
+        SemanticModel semanticModel,
         InvocationExpressionSyntax invocation,
         INamedTypeSymbol eventType,
-        INamedTypeSymbol readModelType)
+        INamedTypeSymbol readModelType,
+        bool isChildScope,
+        FluentProjectionSymbols symbols)
     {
         if (invocation.Expression is not MemberAccessExpressionSyntax member ||
             !KeyRedirection.All.Contains(member.Name.Identifier.Text) ||
-            !IsKeyRedirectionFor(context, invocation, eventType, readModelType))
+            !IsDocumentRedirectionFor(semanticModel, invocation, eventType, readModelType, isChildScope, symbols))
+        {
+            return null;
+        }
+
+        return DescribeKey(semanticModel, invocation);
+    }
+
+    static (string Key, Location Location)? DescribeKey(
+        SemanticModel semanticModel,
+        InvocationExpressionSyntax invocation)
+    {
+        if (invocation.Expression is not MemberAccessExpressionSyntax member)
         {
             return null;
         }
@@ -124,21 +220,21 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
         return member.Name.Identifier.Text switch
         {
             KeyRedirection.UsingKey or KeyRedirection.UsingParentKey =>
-                argument is not null && FluentProjectionMappings.TryGetSimpleMemberName(argument, out var eventProperty)
+                argument is not null && FluentProjectionMappings.TryGetPropertyPath(semanticModel, argument, out var eventProperty)
                     ? (eventProperty, location)
                     : null,
 
             KeyRedirection.UsingKeyFromContext or KeyRedirection.UsingParentKeyFromContext =>
                 argument is not null &&
-                FluentProjectionMappings.TryGetSimpleMemberName(argument, out var contextProperty) &&
+                FluentProjectionMappings.TryGetPropertyPath(semanticModel, argument, out var contextProperty) &&
                 KeyRedirectionPii.ContextMemberRedirects(contextProperty)
                     ? (KeyRedirectionPii.DescribeContextKey(contextProperty), location)
                     : null,
 
             KeyRedirection.UsingConstantKey or KeyRedirection.UsingConstantParentKey =>
-                argument is not null && context.SemanticModel.GetConstantValue(argument).Value is string constant
+                argument is not null && semanticModel.GetConstantValue(argument).Value is string constant
                     ? (KeyRedirectionPii.DescribeConstantKey(constant), location)
-                    : null,
+                    : (KeyRedirectionPii.ConstantKeyDescription, location),
 
             KeyRedirection.UsingCompositeKey or KeyRedirection.UsingParentCompositeKey =>
                 (KeyRedirectionPii.CompositeKeyDescription, location),
@@ -151,27 +247,44 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
     /// Determine whether an invocation is one of the key-redirection calls belonging to this exact
     /// <c>From&lt;TEvent&gt;</c> block.
     /// </summary>
-    /// <param name="context">The analysis context.</param>
+    /// <param name="semanticModel">The semantic model for the invocation.</param>
     /// <param name="invocation">The invocation to check.</param>
     /// <param name="eventType">The event the block reads.</param>
     /// <param name="readModelType">The read model being projected.</param>
+    /// <param name="isChildScope">Whether the From block fills a child inside a containing document.</param>
+    /// <param name="symbols">The Chronicle builder symbols.</param>
     /// <returns>True when the call redirects this block's key, false otherwise.</returns>
     /// <remarks>
     /// Matching the declaring interface together with both of its type arguments is what keeps a nested
     /// builder — an <c>AddChild</c> callback, a sibling block written on the same chain — from being read as
     /// this block's own key.
     /// </remarks>
-    static bool IsKeyRedirectionFor(
-        SyntaxNodeAnalysisContext context,
+    static bool IsDocumentRedirectionFor(
+        SemanticModel semanticModel,
         InvocationExpressionSyntax invocation,
         INamedTypeSymbol eventType,
-        INamedTypeSymbol readModelType) =>
-        context.SemanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol method &&
-        KeyRedirection.All.Contains(method.Name) &&
-        method.ContainingType?.OriginalDefinition.Name == ReadModelPropertiesBuilderInterfaceName &&
-        method.ContainingType.TypeArguments.Length == 3 &&
-        SymbolEqualityComparer.Default.Equals(method.ContainingType.TypeArguments[0], readModelType) &&
-        SymbolEqualityComparer.Default.Equals(method.ContainingType.TypeArguments[1], eventType);
+        INamedTypeSymbol readModelType,
+        bool isChildScope,
+        FluentProjectionSymbols symbols)
+    {
+        if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
+            !KeyRedirection.All.Contains(method.Name))
+        {
+            return false;
+        }
+
+        if (!FluentProjectionSymbols.IsMethodOn(method, symbols.ReadModelPropertiesBuilder) ||
+            method.ContainingType.TypeArguments.Length != 3 ||
+            !SymbolEqualityComparer.Default.Equals(method.ContainingType.TypeArguments[0], readModelType) ||
+            !SymbolEqualityComparer.Default.Equals(method.ContainingType.TypeArguments[1], eventType))
+        {
+            return false;
+        }
+
+        return isChildScope
+            ? KeyRedirection.Parent.Contains(method.Name)
+            : KeyRedirection.Root.Contains(method.Name);
+    }
 
     /// <summary>
     /// The builder methods that decide which document a projected event lands on.
@@ -195,6 +308,18 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
             UsingCompositeKey,
             UsingParentCompositeKey,
             UsingConstantKey,
+            UsingConstantParentKey);
+
+        internal static readonly ImmutableHashSet<string> Root = ImmutableHashSet.Create(
+            UsingKey,
+            UsingKeyFromContext,
+            UsingCompositeKey,
+            UsingConstantKey);
+
+        internal static readonly ImmutableHashSet<string> Parent = ImmutableHashSet.Create(
+            UsingParentKey,
+            UsingParentKeyFromContext,
+            UsingParentCompositeKey,
             UsingConstantParentKey);
     }
 }

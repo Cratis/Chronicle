@@ -27,7 +27,9 @@ public class CrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
     const string EventPropertyNameParameterName = "eventPropertyName";
 
     /// <inheritdoc/>
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(CrossSubjectPiiJoin.Rule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
+        CrossSubjectPiiJoin.Rule,
+        CrossSubjectPiiJoin.UnprovableRule);
 
     /// <inheritdoc/>
     public override void Initialize(AnalysisContext context)
@@ -66,7 +68,10 @@ public class CrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
 
         var location = attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? member.Locations.FirstOrDefault();
         var joinKey = on ?? subjectName ?? CrossSubjectPiiJoin.IdentifierName;
-        context.ReportDiagnostic(Diagnostic.Create(CrossSubjectPiiJoin.Rule, location, member.Name, eventType.Name, sourcePropertyName, joinKey));
+        var rule = on is not null && !string.Equals(on, subjectName, StringComparison.OrdinalIgnoreCase)
+            ? CrossSubjectPiiJoin.Rule
+            : CrossSubjectPiiJoin.UnprovableRule;
+        context.ReportDiagnostic(Diagnostic.Create(rule, location, member.Name, eventType.Name, sourcePropertyName, joinKey));
     }
 
     static IEnumerable<(ISymbol Member, AttributeData Attribute)> GetJoinAttributes(INamedTypeSymbol typeSymbol)

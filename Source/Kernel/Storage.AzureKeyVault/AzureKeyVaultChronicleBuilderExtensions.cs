@@ -5,6 +5,7 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -19,11 +20,8 @@ public static class AzureKeyVaultChronicleBuilderExtensions
     /// <remarks>
     /// When <see cref="Configuration.Encryption.Storage"/> is configured and its type is <c>azure-key-vault</c>,
     /// this method adds a <see cref="Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage"/> wrapped in a
-    /// <see cref="CacheEncryptionKeyStorage"/> as <see cref="IEncryptionKeyStorage"/>, taking over from the
-    /// default storage registration.
-    /// With <see cref="Configuration.Encryption.MigrateFromDefaultStorage"/> set it becomes the primary of a
-    /// composite over the default storage instead, so keys that only exist there keep being served and are moved
-    /// into Azure Key Vault as they are read.
+    /// <see cref="CacheEncryptionKeyStorage"/> as <see cref="IEncryptionKeyStorage"/>. Because it is registered
+    /// last, it overrides the default storage registration.
     /// If compliance encryption storage is not configured, or the type is not <c>azure-key-vault</c>, no changes are made.
     /// Authentication is performed via <see cref="DefaultAzureCredential"/>.
     /// </remarks>
@@ -40,7 +38,7 @@ public static class AzureKeyVaultChronicleBuilderExtensions
             return builder;
         }
 
-        return builder.WithComplianceEncryptionKeyStorage(options, _ =>
+        builder.Services.AddSingleton<IEncryptionKeyStorage>(_ =>
         {
             var secretClient = new SecretClient(
                 new Uri(complianceStorage.ConnectionDetails),
@@ -49,5 +47,7 @@ public static class AzureKeyVaultChronicleBuilderExtensions
             return new CacheEncryptionKeyStorage(
                 new Storage.AzureKeyVault.AzureKeyVaultEncryptionKeyStorage(secretClient));
         });
+
+        return builder;
     }
 }

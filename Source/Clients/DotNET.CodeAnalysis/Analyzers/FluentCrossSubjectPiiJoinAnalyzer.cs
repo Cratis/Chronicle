@@ -17,86 +17,135 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// whose persisted runtime subject cannot be proven to be the read model's compliance subject.
 /// </summary>
 /// <remarks>
-/// The model-bound equivalent is covered by <see cref="CrossSubjectPiiJoinAnalyzer"/>; both report
-/// <see cref="DiagnosticIds.CrossSubjectPiiJoin"/>.
+/// The model-bound equivalent is covered by <see cref="CrossSubjectPiiJoinAnalyzer"/>. An explicitly different
+/// boundary reports <see cref="DiagnosticIds.CrossSubjectPiiJoin"/>; runtime-subject equality that cannot be
+/// proven reports <see cref="DiagnosticIds.UnprovableCrossSubjectPiiJoin"/>.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
 {
     const string JoinMethodName = "Join";
     const string OnMethodName = "On";
-    const string ProjectionBuilderInterfaceName = "IProjectionBuilder";
-    const string JoinBuilderInterfaceName = "IJoinBuilder";
 
     /// <inheritdoc/>
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(CrossSubjectPiiJoin.Rule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
+        CrossSubjectPiiJoin.Rule,
+        CrossSubjectPiiJoin.UnprovableRule);
 
     /// <inheritdoc/>
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
+        context.RegisterCompilationStartAction(startContext =>
+        {
+            if (FluentProjectionSymbols.TryCreate(startContext.Compilation) is { } symbols)
+            {
+                startContext.RegisterSyntaxNodeAction(
+                    syntaxContext => AnalyzeInvocation(syntaxContext, symbols),
+                    SyntaxKind.InvocationExpression);
+            }
+        });
     }
 
-    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, FluentProjectionSymbols symbols)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
 
         if (invocation.Expression is not MemberAccessExpressionSyntax member ||
             member.Name.Identifier.Text != JoinMethodName ||
-            invocation.ArgumentList.Arguments.Count != 1)
+            invocation.ArgumentList.Arguments.Count > 1)
         {
             return;
         }
 
         if (context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
-            method.ContainingType?.OriginalDefinition.Name != ProjectionBuilderInterfaceName ||
+            !FluentProjectionSymbols.IsMethodOn(method, symbols.ProjectionBuilder) ||
             method.TypeArguments.FirstOrDefault() is not INamedTypeSymbol eventType ||
             method.ContainingType.TypeArguments.FirstOrDefault() is not INamedTypeSymbol readModelType)
         {
             return;
         }
 
-        var builderCallback = invocation.ArgumentList.Arguments[0].Expression;
-        var hasExplicitOn = TryGetOnProperty(context, builderCallback, out var on);
-        var subjectName = CrossSubjectPiiJoin.GetSubjectMemberName(readModelType);
+        var builderCallbackExpression = invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression;
+        var builderCallback = default(FluentProjectionCallback);
+        var hasResolvedCallback = builderCallbackExpression is not null &&
+                                  FluentProjectionCallback.TryResolve(context, builderCallbackExpression, out builderCallback);
+        var on = string.Empty;
+        var hasExplicitOn = hasResolvedCallback && TryGetOnProperty(builderCallback, symbols, out on);
+        var (isChildScope, documentReadModelType) = FluentProjectionMappings.ResolveStoredDocumentScope(context, invocation, readModelType, symbols);
+        var subjectName = CrossSubjectPiiJoin.GetSubjectMemberName(documentReadModelType);
+        var apparentSubject = subjectName ?? CrossSubjectPiiJoin.IdentifierName;
 
+        // Root joins require On. A callbackless or On-less root shape is invalid independently of compliance,
+        // so do not turn invalid source into the conservative warning. Child joins validly use IdentifiedBy and
+        // can omit the callback altogether.
+        if (!hasExplicitOn && !isChildScope)
+        {
+            return;
+        }
+
+        var autoMapIsOn = FluentProjectionMappings.AutoMapIsOn(context, invocation, readModelType, symbols);
+        var explicitMappings = GetExplicitMappings(hasResolvedCallback ? builderCallback : null, symbols, readModelType, eventType);
         var source = CrossSubjectPiiJoin.FindPiiReachingTheReadModel(
             eventType,
             readModelType,
-            FluentProjectionMappings.GetExplicitMappings(builderCallback),
-            FluentProjectionMappings.AutoMapIsOn(invocation, readModelType));
+            explicitMappings,
+            autoMapIsOn);
 
         if (source is not { } piiSource)
         {
             return;
         }
 
+        var rule = hasExplicitOn && !string.Equals(on, subjectName, StringComparison.OrdinalIgnoreCase)
+            ? CrossSubjectPiiJoin.Rule
+            : CrossSubjectPiiJoin.UnprovableRule;
+
         context.ReportDiagnostic(Diagnostic.Create(
-            CrossSubjectPiiJoin.Rule,
+            rule,
             member.Name.GetLocation(),
             piiSource.TargetName,
             eventType.Name,
             piiSource.EventPropertyName,
-            hasExplicitOn ? on : subjectName ?? CrossSubjectPiiJoin.IdentifierName));
+            hasExplicitOn ? on : apparentSubject));
     }
 
-    static bool TryGetOnProperty(SyntaxNodeAnalysisContext context, ExpressionSyntax builderCallback, out string on)
+    static IEnumerable<(string TargetName, string EventPropertyName)> GetExplicitMappings(
+        FluentProjectionCallback? builderCallback,
+        FluentProjectionSymbols symbols,
+        INamedTypeSymbol readModelType,
+        INamedTypeSymbol eventType) =>
+        builderCallback is null
+            ? []
+            : FluentProjectionMappings.GetExplicitMappings(
+                builderCallback.Value.SemanticModel,
+                builderCallback.Value.Body,
+                symbols,
+                readModelType,
+                eventType);
+
+    static bool TryGetOnProperty(
+        FluentProjectionCallback builderCallback,
+        FluentProjectionSymbols symbols,
+        out string on)
     {
         on = string.Empty;
 
-        var onInvocations = builderCallback.DescendantNodes()
+        var onInvocations = builderCallback.Body.DescendantNodesAndSelf()
             .OfType<InvocationExpressionSyntax>()
             .Where(invocation =>
                 invocation.Expression is MemberAccessExpressionSyntax member &&
                 member.Name.Identifier.Text == OnMethodName &&
                 invocation.ArgumentList.Arguments.Count == 1 &&
-                IsJoinBuilderMethod(context, invocation));
+                IsJoinBuilderMethod(builderCallback.SemanticModel, invocation, symbols));
 
         foreach (var invocation in onInvocations)
         {
-            if (FluentProjectionMappings.TryGetSimpleMemberName(invocation.ArgumentList.Arguments[0].Expression, out on))
+            if (FluentProjectionMappings.TryGetPropertyPath(
+                builderCallback.SemanticModel,
+                invocation.ArgumentList.Arguments[0].Expression,
+                out on))
             {
                 return true;
             }
@@ -105,7 +154,10 @@ public class FluentCrossSubjectPiiJoinAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    static bool IsJoinBuilderMethod(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation) =>
-        context.SemanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol method &&
-        method.ContainingType?.OriginalDefinition.Name == JoinBuilderInterfaceName;
+    static bool IsJoinBuilderMethod(
+        SemanticModel semanticModel,
+        InvocationExpressionSyntax invocation,
+        FluentProjectionSymbols symbols) =>
+        semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol method &&
+        FluentProjectionSymbols.IsMethodOn(method, symbols.JoinBuilder);
 }

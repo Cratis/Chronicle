@@ -19,23 +19,28 @@ static class KeyRedirectionPii
     internal const string CompositeKeyDescription = "a composite key";
 
     /// <summary>
+    /// The description used when a constant-key call cannot be evaluated by the compiler.
+    /// </summary>
+    internal const string ConstantKeyDescription = "a constant key";
+
+    /// <summary>
     /// The shared descriptor for the diagnostic.
     /// </summary>
     /// <remarks>
     /// The severity is deliberately one line, and deliberately a warning for its first release: unlike
-    /// <see cref="DiagnosticIds.CrossSubjectPiiJoin"/> this shape has no runtime symptom to point a consumer
-    /// at — the value re-encrypts and reads back cleanly — and the analyzer cannot prove the runtime subject
-    /// stored with every historical and future event. Change <c>defaultSeverity</c> below to
+    /// <see cref="DiagnosticIds.CrossSubjectPiiJoin"/> this shape need not produce a runtime symptom — the value
+    /// can re-encrypt and read back cleanly while erasure misses it — and the analyzer cannot prove the runtime
+    /// subject stored with every historical and future event. Change <c>defaultSeverity</c> below to
     /// <see cref="DiagnosticSeverity.Error"/> only through a separately reviewed rollout decision.
     /// </remarks>
     internal static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.KeyRedirectionPii,
         title: "Key redirection carries a [PII] value across the compliance subject",
-        messageFormat: "'{0}' takes the [PII] value '{1}.{2}', but this projection keys the document by '{3}' instead of by the stream '{1}' is appended to. The value's stored runtime subject is not provably the document's subject '{4}'; a [Subject] declaration cannot prove equality because append metadata and historical events decide the EventContext. If those subjects differ, Chronicle re-encrypts the value under the document's subject, so crypto-shredding the owner never reaches this copy. Keep the [PII] value on an owner-scoped read model, or resolve it at the query edge under its owner.",
+        messageFormat: "'{0}' takes the [PII] value '{1}.{2}', but this projection routes the resolved document through '{3}'. The kernel derives the stored document compliance subject from an explicit persisted event subject or, otherwise, from that resolved key; client release later resolves it through '{4}'. Source declarations cannot prove those identities equal every historical and future value owner. Keep the [PII] value on an owner-scoped read model, or resolve it at the query edge under its owner.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "A read model document carries exactly one compliance subject. Redirecting the key can move the document away from the runtime subject stored with an event, so a [PII] value the event carries is re-encrypted under an identity that is not its owner's and falls outside the reach of their erasure - the same defect CHR0038 refuses for a cross-subject [Join], reached through a different construct. Declaring [Subject] on the event is not sufficient static proof: its value can be null or empty, an append can override it, and historical events retain the subject stored when they were appended. Nothing fails at read time, which is what makes the defect invisible without a rule. Keep the personal value on a read model scoped to its owner, or resolve it at the query edge under that owner.");
+        description: "A read model document carries exactly one stored compliance subject. The kernel resolves it from an explicit persisted event subject when one differs from the event source id, otherwise from the resolved document key. Redirecting that key can therefore move PII under an identity that is not its owner's; client release independently resolves [Subject] and then Id from the materialized model. Declaring [Subject] on an event type is not proof of any persisted value because append metadata and historical events decide EventContext. Nothing has to fail at read time, which is what makes the erasure defect invisible without a warning.");
 
     /// <summary>
     /// The simple name of the event context type, used when naming a context-sourced key in the diagnostic.
@@ -43,30 +48,38 @@ static class KeyRedirectionPii
     const string EventContextDisplayName = "EventContext";
 
     /// <summary>
-    /// The <c>EventContext</c> members whose value is the event's own compliance subject, so keying a document
-    /// by one of them is not a redirection at all.
+    /// The <c>EventContext</c> members that keep document routing aligned with the kernel's compliance-identifier
+    /// resolution.
     /// </summary>
     /// <remarks>
-    /// <c>EventContext.Subject</c> is the compliance subject itself, and it defaults to the event source id,
-    /// which is what a projection keys by when nothing redirects it.
+    /// An explicit <c>EventContext.Subject</c> wins in the kernel regardless of the resolved key. Otherwise the
+    /// subject defaults to the event source id, and routing by that id leaves the default document key unchanged.
     /// </remarks>
-    static readonly string[] _contextMembersThatAreTheEventsOwnSubject = ["EventSourceId", "Subject"];
+    static readonly string[] _contextMembersAlignedWithComplianceResolution = ["EventSourceId", "Subject"];
 
     /// <summary>
-    /// Resolve the member a read model is subjected by, for the diagnostic message.
+    /// Resolve the materialized member client-side compliance release will use, for the diagnostic message.
     /// </summary>
     /// <param name="readModelType">The read model type.</param>
-    /// <returns>The name of the subject member, falling back to the conventional identifier.</returns>
-    internal static string SubjectMemberNameOf(INamedTypeSymbol readModelType) =>
-        CrossSubjectPiiJoin.GetSubjectMemberName(readModelType) ?? CrossSubjectPiiJoin.IdentifierName;
+    /// <returns>The [Subject] member, the conventional Id fallback, or an unresolved description.</returns>
+    internal static string ClientReleaseSubjectDescriptionOf(INamedTypeSymbol readModelType)
+    {
+        var members = CrossSubjectPiiJoin.GetMembers(readModelType).ToArray();
+        return members.FirstOrDefault(member => member.Attributes.Any(attribute =>
+                   attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.SubjectAttributeName)).Name
+               ?? members.FirstOrDefault(member =>
+                   string.Equals(member.Name, CrossSubjectPiiJoin.IdentifierName, StringComparison.OrdinalIgnoreCase)).Name
+               ?? "no [Subject] or Id member";
+    }
 
     /// <summary>
-    /// Determine whether keying a document by an <c>EventContext</c> member redirects it away from the event's subject.
+    /// Determine whether keying a document by an <c>EventContext</c> member can redirect it away from the kernel's
+    /// resolved compliance identity.
     /// </summary>
     /// <param name="contextMemberName">The name of the member on <c>EventContext</c>.</param>
-    /// <returns>True when the member is something other than the event's own subject, false otherwise.</returns>
+    /// <returns>True when the member can redirect compliance identity, false otherwise.</returns>
     internal static bool ContextMemberRedirects(string contextMemberName) =>
-        !_contextMembersThatAreTheEventsOwnSubject.Contains(contextMemberName, StringComparer.OrdinalIgnoreCase);
+        !_contextMembersAlignedWithComplianceResolution.Contains(contextMemberName, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Describe a constant key for the diagnostic message.

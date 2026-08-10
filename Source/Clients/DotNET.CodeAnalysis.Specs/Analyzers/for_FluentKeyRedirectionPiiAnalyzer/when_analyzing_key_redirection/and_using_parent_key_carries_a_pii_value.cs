@@ -37,7 +37,7 @@ public class and_using_parent_key_carries_a_pii_value : given.a_fluent_key_redir
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentKeyRedirectionPiiAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "EmailAddress", "ContactAdded", "EmailAddress", "RequestId", "ContactId"));
+        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "EmailAddress", "ContactAdded", "EmailAddress", "RequestId", "Id"));
 
     [Fact] Task should_report_the_key_redirection_pii_diagnostic() => _result;
 }

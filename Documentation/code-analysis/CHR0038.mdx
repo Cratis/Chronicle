@@ -2,19 +2,19 @@
 
 ## Rule Description
 
-A join copies a `[PII]` value whose persisted runtime subject cannot be proven to be the read model's compliance subject.
+A join explicitly selects a property that differs from the read model's apparent compliance subject and copies a `[PII]` value through that boundary.
 
 A join reads `TEvent` through the stream selected by the join key, but every append can supply an explicit runtime subject independently of that stream. The absence of a `[Subject]` declaration therefore does not prove equality. A declaration does not prove it either: its value can be null or empty, an append can override it, and historical events retain the subject stored when they were appended.
 
-For that reason, a `[PII]` join is diagnosed even when `on` names the read model's apparent key/subject or is omitted. Those source shapes establish which stream is read; they do not establish the runtime subject persisted with every historical and future event. Chronicle has no source-level whole-program proof that would make those joins safe.
+`CHR0038` preserves the established definite source boundary as an error: an explicit `on` names a different property from the read model's apparent subject. When `on` names the same apparent subject, or a valid child join omits `On`, source analysis still cannot prove the persisted runtime subjects equal, but that conservative expansion is reported as the warning [CHR0044](CHR0044) instead of widening this released error.
 
 Join a value that is not `[PII]`, or resolve the personal value at the query edge under the subject that owns it. If the joined value is not in fact personal data, remove the `[PII]` marking from the event property (or from its concept type) so the compliance metadata matches reality.
 
-Both spellings of the join are covered: the model-bound `[Join<TEvent>(on: ...)]` attribute, and the fluent `builder.Join<TEvent>(_ => _.On(...))` on an `IProjectionFor<T>`. For the fluent form, a `[PII]` value counts as reaching the read model either through an explicit `.Set(x => x.P).To(e => e.Q)` mapping or through AutoMap matching an identically named read model property.
+Both spellings of the definite boundary are covered: the model-bound `[Join<TEvent>(on: ...)]` attribute, and the fluent `builder.Join<TEvent>(_ => _.On(...))` on an `IProjectionFor<T>`. For the fluent form, a `[PII]` value counts as reaching the read model through the join's Set/To, Add/Subtract, SetThisValue, `PropertyPath`, and AutoMap mappings. AddChild is not a join content mapping: Chronicle builds it as a separate child projection operation, so its own parent-key routing and child mappings are analyzed independently by [CHR0043](./CHR0043).
 
 PII reach is recursive in both forms. A joined member counts when `[PII]` occurs directly, on its type, in an inherited member, or inside a nested value object, array, or collection element.
 
-This rule covers the `[Join]` construct only. A projection that redirects its key onto another subject's stream reaches the same defect through a different route; that is [CHR0043](./CHR0043.mdx).
+This rule covers the `[Join]` construct only. A projection that redirects its key onto another subject's stream reaches the same defect through a different route; that is [CHR0043](./CHR0043).
 
 ## Severity
 
@@ -32,7 +32,7 @@ When a projection does slip through — built dynamically, or from a source the 
 
 The rule is not only about the read failing. Materializing one person's data into a read model subjected to *another* identity puts that data outside the reach of their erasure — crypto-shredding the owner's key does not touch a copy sitting under a different subject. A cross-subject `[PII]` join is an erasure defect regardless of whether it can be decrypted, which is why this is an error rather than a warning.
 
-The pattern has never been supported. This rule turns a runtime freeze into a build failure.
+The explicit different-property pattern has never been supported. This rule turns that established runtime failure boundary into a build failure without promoting the newly conservative same-apparent-subject cases to errors.
 
 ## Existing Stored Documents
 
@@ -42,4 +42,5 @@ Correcting the join only changes future projection work. It does not prove that 
 
 - [CHR0034: [PII] cannot be applied to an `EventSourceId<T>`](CHR0034) — the event source id is the key-lookup identity, not encryptable content.
 - [CHR0035: Read model declares a reserved '_subject' property](CHR0035) — `_subject` is where Chronicle stores the read model's single compliance subject.
-- [CHR0026: [Key] or [Subject] on an `EventSourceId<T>` is redundant](CHR0026) — an `EventSourceId<T>` identity already is both key and subject.
+- [CHR0026: [Key] or [Subject] on an `EventSourceId<T>` is redundant](CHR0026) — an `EventSourceId<T>` identity supplies the key and default subject; explicit persisted append metadata can still select another subject.
+- [CHR0044: [Join] of a [PII] value cannot prove compliance subject equality](CHR0044) — the warning for same-apparent-subject and valid child-join cases.

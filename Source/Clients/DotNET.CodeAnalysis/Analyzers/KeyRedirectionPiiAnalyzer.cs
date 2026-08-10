@@ -53,7 +53,7 @@ public class KeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
 
         foreach (var (member, memberType, attribute) in GetChildrenFromAttributes(typeSymbol))
         {
-            AnalyzeChildrenFrom(context, member, memberType, attribute);
+            AnalyzeChildrenFrom(context, typeSymbol, member, memberType, attribute);
         }
     }
 
@@ -65,10 +65,15 @@ public class KeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        Report(context, attribute, eventType, readModelType, key);
+        Report(context, attribute, eventType, readModelType, readModelType, key);
     }
 
-    static void AnalyzeChildrenFrom(SymbolAnalysisContext context, ISymbol member, ITypeSymbol? memberType, AttributeData attribute)
+    static void AnalyzeChildrenFrom(
+        SymbolAnalysisContext context,
+        INamedTypeSymbol parentReadModelType,
+        ISymbol member,
+        ITypeSymbol? memberType,
+        AttributeData attribute)
     {
         // The child's own key identifies it inside the collection; only the parent key decides which document
         // the collection — and therefore the child's PII — comes to rest on.
@@ -79,7 +84,7 @@ public class KeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        Report(context, attribute, eventType, childModelType, parentKey);
+        Report(context, attribute, eventType, childModelType, parentReadModelType, parentKey);
     }
 
     static void Report(
@@ -87,6 +92,7 @@ public class KeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
         AttributeData attribute,
         INamedTypeSymbol eventType,
         INamedTypeSymbol readModelType,
+        INamedTypeSymbol documentReadModelType,
         string key)
     {
         var source = CrossSubjectPiiJoin.FindPiiReachingTheReadModel(
@@ -113,7 +119,7 @@ public class KeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
             eventType.Name,
             piiSource.EventPropertyName,
             key,
-            KeyRedirectionPii.SubjectMemberNameOf(readModelType)));
+            KeyRedirectionPii.ClientReleaseSubjectDescriptionOf(documentReadModelType)));
     }
 
     /// <summary>

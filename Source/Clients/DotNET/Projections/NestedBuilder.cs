@@ -48,6 +48,8 @@ public class NestedBuilder<TParentReadModel, TNestedReadModel>(
             All = _fromEveryDefinition,
             RemovedWith = _removedWithDefinitions,
             RemovedWithJoin = _removedWithJoinDefinitions,
+            AutoMap = (Contracts.Projections.AutoMap)_autoMap,
+            NoAutoMapProperties = [.. _noAutoMapProperties],
             Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
         };
 }

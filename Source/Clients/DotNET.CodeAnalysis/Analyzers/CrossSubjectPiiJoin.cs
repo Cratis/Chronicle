@@ -26,27 +26,42 @@ static class CrossSubjectPiiJoin
     internal static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.CrossSubjectPiiJoin,
         title: "[Join] of a [PII] value crosses the compliance subject",
-        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' from the runtime subject reached through '{3}', which is not provably this read model's compliance subject. If those subjects differ, Chronicle cannot decrypt the joined value and the projection fails with an 'oaep decoding error' that freezes every partition. Resolve the value at the query edge under its owner's own subject instead.",
+        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' through '{3}', which differs from this read model's apparent compliance subject. Chronicle can then release the joined value under the wrong key and freeze the projection with an 'oaep decoding error'. Resolve the value at the query edge under its owner's own subject instead.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A join reads an event through a stream selected by the join key, but the event's stored runtime subject can differ from that stream whenever an explicit subject was supplied at append. The absence of a [Subject] declaration does not prove equality, and a declaration does not prove it either: its value can be null or empty, an append can override it, and historical events retain the subject stored when they were appended. A read model stores one compliance subject and releases all of its PII under it, so a value belonging to a different subject cannot be decrypted. Beyond failing to read, materializing another subject's PII into this read model puts that personal data outside the reach of their erasure, which is a compliance defect in its own right. Join a non-PII value, or look the personal value up at the query edge under the subject that owns it.");
+        description: "A join that explicitly selects a key different from the read model's apparent compliance subject can copy PII between subject boundaries. A read model stores one compliance subject and releases all of its PII under it, so the value may not decrypt. This established definite-boundary diagnostic remains an error. Cases where the source shape appears to use the same subject but append metadata prevents proof are reported separately by CHR0044 as a warning.");
 
     /// <summary>
-    /// Resolve the member that best describes a read model's apparent subject in a diagnostic.
+    /// The warning reported when the source shape appears to use the same subject but persisted runtime subject
+    /// metadata prevents a source-level proof.
+    /// </summary>
+    internal static readonly DiagnosticDescriptor UnprovableRule = new(
+        id: DiagnosticIds.UnprovableCrossSubjectPiiJoin,
+        title: "[Join] of a [PII] value cannot prove compliance subject equality",
+        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' through the apparent subject '{3}', but append metadata and historical events can assign another persisted runtime subject. If the runtime subjects differ, Chronicle can release or erase the copy under the wrong key. Keep the value owner-scoped or resolve it at the query edge.",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "An omitted join key or a key that names the read model's apparent subject does not prove that every joined event was persisted under that subject. Explicit append metadata can override an event declaration, and historical events retain their stored subject. This conservative expansion is a warning so adding it does not turn previously accepted source into a transitive build break; CHR0038 remains the error for an explicitly different join boundary.");
+
+    static readonly char[] _propertyPathSeparators = ['.'];
+
+    /// <summary>
+    /// Resolve the member that best describes a read model's apparent subject boundary in a diagnostic.
     /// </summary>
     /// <param name="typeSymbol">The read model type.</param>
     /// <returns>The name of the subject member, or <see langword="null"/> when none can be resolved.</returns>
     /// <remarks>
     /// <para>
-    /// At runtime the compliance subject is the resolved document key (see <c>ResolveComplianceIdentifier</c>),
-    /// with <c>ReadModelSubjectResolver</c> preferring an explicit [Subject] and otherwise falling back to 'Id'.
-    /// Neither is reproducible from syntax alone, so this is a deliberate approximation of both: an explicit
-    /// [Subject], then an explicit [Key], then an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
+    /// The kernel stores an explicit persisted event subject when it differs from the event source id and otherwise
+    /// uses the resolved document key. Client release resolves [Subject] and then 'Id' from the materialized model.
+    /// Neither runtime value is reproducible from a type declaration alone. This ordering deliberately preserves
+    /// CHR0038's released source boundary: [Subject], [Key], an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
     /// </para>
     /// <para>
-    /// The value is diagnostic context only. It is not proof that a joined event has the same runtime subject:
-    /// any append can supply an explicit subject, including when the event declares no [Subject] member.
+    /// The result is an apparent boundary and diagnostic context only. It is not the stored document compliance
+    /// subject and is not proof that a joined event has the same persisted runtime subject.
     /// </para>
     /// </remarks>
     internal static string? GetSubjectMemberName(INamedTypeSymbol typeSymbol)
@@ -77,10 +92,42 @@ static class CrossSubjectPiiJoin
             return true;
         }
 
-        return GetMembers(eventType).Any(member =>
-            string.Equals(member.Name, propertyName, StringComparison.OrdinalIgnoreCase) &&
-            (member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.PiiAttributeName) ||
-             ContainsPii(member.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default))));
+        var currentType = eventType;
+        var path = propertyName.Split(_propertyPathSeparators, StringSplitOptions.RemoveEmptyEntries);
+
+        for (var index = 0; index < path.Length; index++)
+        {
+            var members = GetMembers(currentType)
+                .Where(candidate => string.Equals(candidate.Name, path[index], StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (members.Length == 0)
+            {
+                return false;
+            }
+
+            if (members.Any(member => member.Attributes.Any(attribute =>
+                    attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.PiiAttributeName)))
+            {
+                return true;
+            }
+
+            var memberType = members.Select(member => member.Type).FirstOrDefault(type => type is not null);
+
+            if (index == path.Length - 1)
+            {
+                return ContainsPii(memberType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default));
+            }
+
+            if (memberType is not INamedTypeSymbol nestedType)
+            {
+                return false;
+            }
+
+            currentType = nestedType;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -103,7 +150,8 @@ static class CrossSubjectPiiJoin
         IEnumerable<(string TargetName, string EventPropertyName)> explicitMappings,
         bool autoMapIsOn)
     {
-        var explicitMapping = explicitMappings.FirstOrDefault(mapping => IsPii(eventType, mapping.EventPropertyName));
+        var mappings = explicitMappings.ToArray();
+        var explicitMapping = mappings.FirstOrDefault(mapping => IsPii(eventType, mapping.EventPropertyName));
 
         if (explicitMapping.EventPropertyName is not null)
         {
@@ -121,6 +169,7 @@ static class CrossSubjectPiiJoin
         var excludedNames = GetMembers(readModelType)
             .Where(member => member.Attributes.Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.NoAutoMapAttributeName))
             .Select(member => member.Name)
+            .Concat(mappings.Select(mapping => GetLastPathSegment(mapping.TargetName)))
             .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
 
         var mappableNames = GetMembers(readModelType)
@@ -169,6 +218,12 @@ static class CrossSubjectPiiJoin
                 yield return (parameter.Name, parameter.Type, parameter.GetAttributes());
             }
         }
+    }
+
+    static string GetLastPathSegment(string path)
+    {
+        var segments = path.Split(_propertyPathSeparators, StringSplitOptions.RemoveEmptyEntries);
+        return segments[segments.Length - 1];
     }
 
     static bool ContainsPii(ITypeSymbol? type, HashSet<ITypeSymbol> path)

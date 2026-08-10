@@ -27,7 +27,7 @@ public class and_children_from_redirects_the_parent_key : given.a_key_redirectio
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.KeyRedirectionPiiAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "EmailAddress", "ContactAdded", "EmailAddress", "RequestId", "ContactId"));
+        new ExpectedDiagnostic(DiagnosticIds.KeyRedirectionPii, DiagnosticSeverity.Warning, "EmailAddress", "ContactAdded", "EmailAddress", "RequestId", "Id"));
 
     [Fact] Task should_report_the_key_redirection_pii_diagnostic() => _result;
 }

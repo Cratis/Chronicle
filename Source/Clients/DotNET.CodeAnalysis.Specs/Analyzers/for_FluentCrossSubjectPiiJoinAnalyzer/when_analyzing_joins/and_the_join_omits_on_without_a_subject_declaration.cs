@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_FluentCrossSubjectPiiJoinAnalyzer.when_analyzing_joins;
 
 /// <summary>
-/// An omitted On and an absent [Subject] declaration do not prove runtime equality because any append can supply an explicit subject.
+/// A child Join validly omits On and its callback, but IdentifiedBy does not prove persisted runtime-subject equality.
 /// </summary>
 public class and_the_join_omits_on_without_a_subject_declaration : given.a_fluent_cross_subject_pii_join_analyzer
 {
@@ -18,13 +18,17 @@ public class and_the_join_omits_on_without_a_subject_declaration : given.a_fluen
     public record AdvisorNamed(DisplayName DisplayName);
 
     public record AdvisorSummary(
-        [Key] Guid Id,
+        [Key] Guid AdvisorId,
         DisplayName DisplayName);
 
-    public class AdvisorSummaryProjection : IProjectionFor<AdvisorSummary>
+    public record AdvisorBook([Key] Guid Id, IEnumerable<AdvisorSummary> Advisors);
+
+    public class AdvisorBookProjection : IProjectionFor<AdvisorBook>
     {
-        public void Define(IProjectionBuilderFor<AdvisorSummary> builder) => builder
-            .{|#0:Join<AdvisorNamed>|}(_ => { });
+        public void Define(IProjectionBuilderFor<AdvisorBook> builder) => builder
+            .Children(m => m.Advisors, children => children
+                .IdentifiedBy(m => m.AdvisorId)
+                .{|#0:Join<AdvisorNamed>|}());
     }
     """;
 
@@ -32,7 +36,7 @@ public class and_the_join_omits_on_without_a_subject_declaration : given.a_fluen
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.FluentCrossSubjectPiiJoinAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.CrossSubjectPiiJoin, DiagnosticSeverity.Error, "DisplayName", "AdvisorNamed", "Id"));
+        new ExpectedDiagnostic(DiagnosticIds.UnprovableCrossSubjectPiiJoin, DiagnosticSeverity.Warning, "DisplayName", "AdvisorNamed", "Id"));
 
-    [Fact] Task should_report_the_cross_subject_pii_join_diagnostic() => _result;
+    [Fact] Task should_report_the_unprovable_subject_warning() => _result;
 }
