@@ -200,7 +200,15 @@ public class EventStoreForTesting : IEventStore
             new CausationManager(),
             new BaseIdentityProvider(),
             new ActivitySource<ReactorsImpl>(),
-            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(), new EventsResultHandler(), new EventForEventSourceIdResultHandler(), new EventsForEventSourceIdResultHandler(), new MixedSideEffectsResultHandler()])),
+            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
+            [
+                new EventResultHandler(),
+                new EventsResultHandler(),
+                new EventForEventSourceIdResultHandler(),
+                new EventsForEventSourceIdResultHandler(),
+                new MixedSideEffectsResultHandler(),
+                new EventsWithConcurrencyScopesResultHandler()
+            ])),
             new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
             [
                 new EventSourceIdValuesProvider(),

@@ -47,6 +47,14 @@ sealed class RecordingReactorSideEffectHandlers : IReactorSideEffectHandlers
     {
         switch (value)
         {
+            case EventsWithConcurrencyScopes eventsWithConcurrencyScopes:
+                foreach (var @event in eventsWithConcurrencyScopes.Events)
+                {
+                    yield return @event.Event;
+                }
+
+                break;
+
             case EventForEventSourceId forEventSourceId:
                 yield return forEventSourceId.Event;
                 break;

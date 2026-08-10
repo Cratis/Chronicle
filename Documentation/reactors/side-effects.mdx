@@ -50,6 +50,18 @@ You can also **mix** the two in a single `IEnumerable<object>` return — each b
 
 <ChronicleClientTabs snippet="reactors/side-effects/mixed" />
 
+## Add concurrency scopes to returned events
+
+Returning events is convenient, but sometimes the decision is only valid against the exact event-log state the reactor read. Return `EventsWithConcurrencyScopes` to submit an ordered list of `EventForEventSourceId` values and its concurrency scopes through one `AppendMany` call:
+
+<ChronicleClientTabs snippet="reactors/side-effects/with-concurrency-scopes" />
+
+Here the reactor appends only if no later event for the triggering source has appeared since `BookReserved`. Chronicle materializes the events and copies the scope dictionary when you create the result, then submits both together. A failed constraint, concurrency check, or append fails the reactor partition; Chronicle never splits the return into partial appends.
+
+A scope entry with `ConcurrencyScope.NotSet`, or a missing entry for an event source id in the batch, asks the configured concurrency strategy to resolve that source's scope. Use `ConcurrencyScope.None` when you explicitly want no check for a key. Chronicle passes every other scope through unchanged.
+
+The event list preserves the order you supplied to the append operation. That does not impose a global processing order on observers: events targeting different source partitions can be observed independently. The scope dictionary also holds one scope per `EventSourceId` key; it cannot represent multiple independent scopes under the same key.
+
 ## Reactor-Level Metadata Resolution
 
 Set metadata once on the reactor type so every returned event inherits it automatically.
@@ -106,6 +118,8 @@ Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
 | `Task<EventForEventSourceId>` | `EventForEventSourceIdResultHandler` |
 | `IEnumerable<EventForEventSourceId>` | `EventsForEventSourceIdResultHandler` — appends all as one transaction |
 | `Task<IEnumerable<EventForEventSourceId>>` | `EventsForEventSourceIdResultHandler` |
+| `EventsWithConcurrencyScopes` | `EventsWithConcurrencyScopesResultHandler` — appends its ordered events and scopes as one transaction |
+| `Task<EventsWithConcurrencyScopes>` | `EventsWithConcurrencyScopesResultHandler` |
 | `IEnumerable<object>` mixing events and `EventForEventSourceId` | `MixedSideEffectsResultHandler` — bare events use reactor metadata, each `EventForEventSourceId` keeps its own; all appended as one transaction |
 | `void` / `Task` | No side effects appended |
 
