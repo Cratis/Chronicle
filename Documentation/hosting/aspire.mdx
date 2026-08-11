@@ -23,7 +23,7 @@ The development image is ideal for:
 
 ## Production Mode
 
-For production or staging environments, use the configure callback. This switches to the slim image (`cratis/chronicle:latest-development-slim`) — no embedded MongoDB — and lets you wire up an external database resource.
+For production or staging environments, use the configure callback. This switches to the production image (`cratis/chronicle:latest`) — no embedded MongoDB — and lets you wire up an external database resource.
 
 ### MongoDB
 
@@ -34,7 +34,7 @@ The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis
 :::caution[Chronicle needs a MongoDB replica set]
 Chronicle uses MongoDB transactions, and its observers, projections, and observable queries rely on change streams — **both require MongoDB to run as a replica set**, not a standalone `mongod`. Against a standalone server the change-stream watch never opens, so observable read-model queries silently return their empty seed and it looks like a projection bug rather than a storage-topology problem.
 
-Aspire's `builder.AddMongoDB("mongo")` starts a **standalone** `mongod`, so it does not work with the slim image on its own — point `WithMongoDB` at a replica set instead.
+Aspire's `builder.AddMongoDB("mongo")` starts a **standalone** `mongod`, so it does not work with the production image on its own — point `WithMongoDB` at a replica set instead.
 :::
 
 `mongo` can be any `IResourceBuilder<IResourceWithConnectionString>` that resolves to a replica set, including:
@@ -42,7 +42,7 @@ Aspire's `builder.AddMongoDB("mongo")` starts a **standalone** `mongod`, so it d
 - A MongoDB Atlas connection string (`builder.AddConnectionString("...")`) — Atlas clusters are always replica sets.
 - Any self-hosted or cloud MongoDB cluster reached through a connection string.
 
-For local development against the slim image, `AddCratisChronicleMongoDB()` provisions this for you — a MongoDB container that initializes itself as a single-node replica set, handed back as a connection string carrying `?directConnection=true`:
+For local development against the production image, `AddCratisChronicleMongoDB()` provisions this for you — a MongoDB container that initializes itself as a single-node replica set, handed back as a connection string carrying `?directConnection=true`:
 
 <ChronicleClientTabs snippet="hosting/aspire/mongo-replica-set-helper" />
 
@@ -50,7 +50,7 @@ If you would rather define the container yourself, the same recipe written out i
 
 <ChronicleClientTabs snippet="hosting/aspire/mongo-replica-set" />
 
-`directConnection=true` keeps the driver from following the advertised replica-set member host — `localhost:27017`, only reachable inside the container — back out and hanging. This is the same single-node-replica-set recipe Chronicle's own integration tests use. The embedded development image (`AddCratisChronicle()` with no configure callback) bundles a ready replica set, which is why the development path just works; the requirement only surfaces once you move to the slim image with an external database.
+`directConnection=true` keeps the driver from following the advertised replica-set member host — `localhost:27017`, only reachable inside the container — back out and hanging. This is the same single-node-replica-set recipe Chronicle's own integration tests use. The embedded development image (`AddCratisChronicle()` with no configure callback) bundles a ready replica set, which is why the development path just works; the requirement only surfaces once you move to the production image with an external database.
 
 ### PostgreSQL
 
@@ -106,10 +106,10 @@ For development, simplify further by dropping the MongoDB wiring:
 
 ## Docker Images
 
-| Image tag                       | Description                                             |
-|---------------------------------|---------------------------------------------------------|
-| `cratis/chronicle:latest`       | Production image — no embedded MongoDB                  |
-| `cratis/chronicle:latest-development` | Development image — includes embedded MongoDB |
-| `cratis/chronicle:latest-development-slim` | Development slim image — no embedded MongoDB |
+| Image tag                       | Description                                             | Selected by                                    |
+|---------------------------------|---------------------------------------------------------|------------------------------------------------|
+| `cratis/chronicle:latest`       | Production image — no embedded MongoDB                  | `AddCratisChronicle(configure: ...)`           |
+| `cratis/chronicle:latest-development` | Development image — includes embedded MongoDB | `AddCratisChronicle()`                         |
+| `cratis/chronicle:latest-development-slim` | Development slim image — no embedded MongoDB | Not selected by the Aspire integration — run it directly |
 
 See [Production Hosting](./production.md) for guidance on running Chronicle in production environments.
