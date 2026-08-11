@@ -36,4 +36,5 @@ public class and_it_is_declared_nullable : Specification
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
     [Fact] void should_project_the_root() => _scenario.Instance!.GroupName.ShouldEqual("Operations");
     [Fact] void should_leave_the_child_collection_absent() => _scenario.Instance!.Members.ShouldBeNull();
+    [Fact] void should_leave_it_absent_through_the_per_instance_view() => _scenario.InstanceForEventSourceId(_rosterId)!.Members.ShouldBeNull();
 }
