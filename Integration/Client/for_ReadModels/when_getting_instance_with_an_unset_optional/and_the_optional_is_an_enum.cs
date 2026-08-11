@@ -73,6 +73,16 @@ public class and_the_optional_is_an_enum(context context) : Given<context>(conte
     [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredDocument is not null).ShouldBeTrue();
     [Fact] void should_not_store_an_answer_the_read_model_never_gave() => (!Context.DocumentCanBeInspected || !Context.StoredDocument!.Contains(nameof(SignedContract.Outcome))).ShouldBeTrue();
     [Fact] void should_store_the_property_that_was_set() => (!Context.DocumentCanBeInspected || Context.StoredDocument!.Contains(nameof(SignedContract.Signer))).ShouldBeTrue();
+
+    /// <remarks>
+    /// This read model reaches the code under test only because it carries a <see cref="PIIAttribute"/>, which is what
+    /// sends its whole state through the registered schema on the way into the sink. That is a precondition, not a
+    /// subject, and every other assertion here is satisfied identically when it stops holding - so without this one a
+    /// regression in compliance detection would leave the spec green while it quietly stopped exercising anything.
+    /// Reading it back cannot tell the difference either, since the released value is the plaintext either way; only
+    /// the stored bytes can.
+    /// </remarks>
+    [Fact] void should_store_the_pii_property_encrypted() => (!Context.DocumentCanBeInspected || Context.StoredDocument![nameof(SignedContract.Signer)].AsString != "Ada Lovelace").ShouldBeTrue();
 }
 
 [PII]
