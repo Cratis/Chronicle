@@ -20,10 +20,18 @@ All configuration options can be set using environment variables with the prefix
 
 ## Variables
 
+The table below covers the variables most deployments need. It is not the complete option surface — every
+property on Chronicle's options types has an environment-variable form, built by joining the section names
+with `__`. When a setting is missing here, find it on its own configuration page and translate the JSON path
+the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
+`Cratis__Chronicle__Compliance__Encryption__MigrateFromDefaultStorage`).
+
 | Variable | Description |
 | --- | --- |
 | Cratis__Chronicle__Port | The single Chronicle port — gRPC (HTTP/2) and HTTP/1.1 |
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
+| Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
+| Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
 | Cratis__Chronicle__Features__Api | Enable REST API endpoint |
 | Cratis__Chronicle__Features__Workbench | Enable Workbench UI |
 | Cratis__Chronicle__Features__ChangesetStorage | Enable changeset storage |
@@ -39,10 +47,21 @@ All configuration options can be set using environment variables with the prefix
 | Cratis__Chronicle__Events__Queues | Number of event queues |
 | Cratis__Chronicle__Authentication__Authority | External OAuth authority URL |
 | Cratis__Chronicle__Authentication__DefaultAdminUsername | Default admin username |
-| Cratis__Chronicle__Authentication__DefaultAdminPassword | Default admin password |
+| Cratis__Chronicle__Authentication__AdminUser__Username | Bootstrap admin username (falls back to the default admin username when empty) |
+| Cratis__Chronicle__Authentication__AdminUser__Password | Bootstrap admin password, hashed on first startup |
+| Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |
+| Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin | Force a password change on the admin's first login |
 | Cratis__Chronicle__Jobs__MaxParallelSteps | Maximum parallel job steps |
+| Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default) or `MongoDB` |
+| Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
+| Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
+| Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
+| Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
+| Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
 | Cratis__Chronicle__Tls__CertificatePath | TLS certificate path (PFX) |
 | Cratis__Chronicle__Tls__CertificatePassword | TLS certificate password |
+| Cratis__Chronicle__EncryptionCertificate__CertificatePath | Encryption certificate path (PFX) — OAuth keys, webhook credentials, Data Protection keys |
+| Cratis__Chronicle__EncryptionCertificate__CertificatePassword | Encryption certificate password |
 | OTEL_EXPORTER_OTLP_ENDPOINT | OTLP receiver endpoint for telemetry export |
 | OTEL_EXPORTER_OTLP_PROTOCOL | OTLP export protocol (`grpc` or `http/protobuf`) |
 | OTEL_EXPORTER_OTLP_HEADERS | Additional headers for the OTLP exporter |
@@ -132,10 +151,38 @@ Cratis__Chronicle__Authentication__Authority=https://your-oauth-provider.com
 # Default admin username (default: "admin")
 Cratis__Chronicle__Authentication__DefaultAdminUsername=admin
 
-# Default admin password (default: "admin")
-# Should be changed in production
-Cratis__Chronicle__Authentication__DefaultAdminPassword=your-secure-password
+# Bootstrap the initial admin user on first startup. The password is hashed
+# immediately on use and never retained. Supply it from your secret store.
+Cratis__Chronicle__Authentication__AdminUser__Username=admin
+Cratis__Chronicle__Authentication__AdminUser__Password=your-secure-password
+Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin=true
 ```
+
+When `AdminUser__Password` is left empty, the admin user is created without a password and goes through the
+initial password setup flow in the Workbench. See [Authentication](authentication.md) for the full flow.
+
+## Encryption certificate
+
+```bash
+# Required in production - the internal OAuth authority refuses to start without it
+Cratis__Chronicle__EncryptionCertificate__CertificatePath=/certs/encryption-cert.pfx
+Cratis__Chronicle__EncryptionCertificate__CertificatePassword=your-certificate-password
+```
+
+See [Data Protection Key Encryption](../encryption-certificate.md) for generating and mounting the certificate.
+
+## Clustering
+
+```bash
+# Clustering provider - must be MongoDB for every multi-node deployment
+Cratis__Chronicle__Clustering__Type=MongoDB
+
+# Identical on every node so they join the same cluster
+Cratis__Chronicle__Clustering__ClusterId=chronicle
+Cratis__Chronicle__Clustering__ServiceId=chronicle
+```
+
+See [Clustering](clustering.md) for the full set of clustering properties.
 
 ## Open Telemetry
 

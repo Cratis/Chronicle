@@ -20,7 +20,6 @@ services:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
     environment:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
-      - DOTNET_DASHBOARD_OTLP_ENDPOINT_URL=http://chronicle:18889
       - ALLOW_UNSECURED_TRANSPORT=true
       - DOTNET_ENVIRONMENT=Development
     ports:
