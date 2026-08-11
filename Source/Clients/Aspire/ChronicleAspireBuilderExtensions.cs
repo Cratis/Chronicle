@@ -217,6 +217,7 @@ public static class ChronicleAspireBuilderExtensions
     /// <param name="certificatePath">Path on the host to the PKCS#12 certificate file. A relative path resolves against the AppHost directory.</param>
     /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
     /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
     /// <example>
     /// <code>
     /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
@@ -229,16 +230,13 @@ public static class ChronicleAspireBuilderExtensions
         string certificatePath,
         string? certificatePassword = default)
     {
-        builder.ResourceBuilder.WithBindMount(certificatePath, ChronicleContainerImageTags.TlsCertificateContainerPath, isReadOnly: true);
-        builder.ResourceBuilder.WithEnvironment(context =>
-        {
-            context.EnvironmentVariables[ChronicleContainerImageTags.TlsCertificatePathEnvironmentVariable] = ChronicleContainerImageTags.TlsCertificateContainerPath;
-
-            if (!string.IsNullOrEmpty(certificatePassword))
-            {
-                context.EnvironmentVariables[ChronicleContainerImageTags.TlsCertificatePasswordEnvironmentVariable] = certificatePassword;
-            }
-        });
+        ConfigureCertificate(
+            builder,
+            certificatePath,
+            certificatePassword,
+            ChronicleContainerImageTags.TlsCertificateContainerPath,
+            ChronicleContainerImageTags.TlsCertificatePathEnvironmentVariable,
+            ChronicleContainerImageTags.TlsCertificatePasswordEnvironmentVariable);
         return builder;
     }
 
@@ -247,9 +245,12 @@ public static class ChronicleAspireBuilderExtensions
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The production image cannot start without this either. The certificate signs and encrypts the internal
-    /// OAuth authority's keys, and the server throws <c>An encryption certificate is required in production</c>
-    /// at startup when it is missing. The development images fall back to ephemeral keys instead.
+    /// The production image needs this whenever it runs its own OAuth authority, which is the default. The
+    /// certificate signs and encrypts the internal OAuth authority's keys, and the server throws
+    /// <c>An encryption certificate is required in production</c> at startup when it is missing. Turning the
+    /// <c>OAuthAuthority</c> feature off, or pointing <c>Authentication:Authority</c> at an external authority,
+    /// skips that setup entirely and with it the requirement. The development images fall back to ephemeral
+    /// keys instead.
     /// </para>
     /// <para>
     /// Bind-mounts <paramref name="certificatePath"/> read-only into the container at
@@ -271,6 +272,7 @@ public static class ChronicleAspireBuilderExtensions
     /// <param name="certificatePath">Path on the host to the PKCS#12 certificate file. A relative path resolves against the AppHost directory.</param>
     /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
     /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
     /// <example>
     /// <code>
     /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
@@ -283,16 +285,74 @@ public static class ChronicleAspireBuilderExtensions
         string certificatePath,
         string? certificatePassword = default)
     {
-        builder.ResourceBuilder.WithBindMount(certificatePath, ChronicleContainerImageTags.EncryptionCertificateContainerPath, isReadOnly: true);
-        builder.ResourceBuilder.WithEnvironment(context =>
+        ConfigureCertificate(
+            builder,
+            certificatePath,
+            certificatePassword,
+            ChronicleContainerImageTags.EncryptionCertificateContainerPath,
+            ChronicleContainerImageTags.EncryptionCertificatePathEnvironmentVariable,
+            ChronicleContainerImageTags.EncryptionCertificatePasswordEnvironmentVariable);
+        return builder;
+    }
+
+    /// <summary>
+    /// Bind-mounts a certificate file from the host into the container and points the matching Chronicle
+    /// configuration environment variables at the mounted file.
+    /// </summary>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="certificatePath">Path on the host to the certificate file, relative to the AppHost directory or absolute.</param>
+    /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
+    /// <param name="containerPath">Path inside the container to mount the certificate at.</param>
+    /// <param name="pathEnvironmentVariable">Environment variable holding the in-container certificate path.</param>
+    /// <param name="passwordEnvironmentVariable">Environment variable holding the certificate password.</param>
+    /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
+    /// <remarks>
+    /// The existence check fails the AppHost at start rather than at container start: Docker creates a
+    /// <em>directory</em> at a missing bind-mount source, and the Chronicle container then reports that no
+    /// certificate is configured at all — the opposite of what happened. Calling this for the same container
+    /// path more than once replaces the earlier mount instead of adding a second one, so the certificate
+    /// methods are last-call-wins like every other configuration method on the builder; a second mount on the
+    /// same target makes <c>docker run</c> refuse to start the container with a duplicate mount point.
+    /// </remarks>
+    static void ConfigureCertificate(
+        IChronicleAspireBuilder builder,
+        string certificatePath,
+        string? certificatePassword,
+        string containerPath,
+        string pathEnvironmentVariable,
+        string passwordEnvironmentVariable)
+    {
+        var resourceBuilder = builder.ResourceBuilder;
+        var resolvedPath = Path.GetFullPath(certificatePath, resourceBuilder.ApplicationBuilder.AppHostDirectory);
+
+        if (!File.Exists(resolvedPath))
         {
-            context.EnvironmentVariables[ChronicleContainerImageTags.EncryptionCertificatePathEnvironmentVariable] = ChronicleContainerImageTags.EncryptionCertificateContainerPath;
+            throw new CertificateFileDoesNotExist(certificatePath, resolvedPath);
+        }
+
+        var existingMounts = resourceBuilder.Resource.Annotations
+            .OfType<ContainerMountAnnotation>()
+            .Where(_ => _.Target == containerPath)
+            .ToArray();
+
+        foreach (var existingMount in existingMounts)
+        {
+            resourceBuilder.Resource.Annotations.Remove(existingMount);
+        }
+
+        resourceBuilder.WithBindMount(resolvedPath, containerPath, isReadOnly: true);
+        resourceBuilder.WithEnvironment(context =>
+        {
+            context.EnvironmentVariables[pathEnvironmentVariable] = containerPath;
 
             if (!string.IsNullOrEmpty(certificatePassword))
             {
-                context.EnvironmentVariables[ChronicleContainerImageTags.EncryptionCertificatePasswordEnvironmentVariable] = certificatePassword;
+                context.EnvironmentVariables[passwordEnvironmentVariable] = certificatePassword;
+            }
+            else
+            {
+                context.EnvironmentVariables.Remove(passwordEnvironmentVariable);
             }
         });
-        return builder;
     }
 }

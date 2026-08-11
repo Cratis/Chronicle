@@ -15,6 +15,8 @@ public class and_only_an_encryption_certificate_is_configured : given.a_distribu
     Dictionary<string, object> _environment;
     ContainerMountAnnotation _mount;
 
+    void Establish() => CertificateFileIn(CertificatePath);
+
     async Task Because()
     {
         _result = _builder.AddCratisChronicle(configure: chronicle => chronicle.WithEncryptionCertificate(CertificatePath, CertificatePassword));
@@ -22,7 +24,7 @@ public class and_only_an_encryption_certificate_is_configured : given.a_distribu
         _mount = MountsFor(_result.Resource).Single();
     }
 
-    [Fact] void should_mount_the_certificate_from_the_given_host_path() => _mount.Source.ShouldEqual(Path.GetFullPath(CertificatePath));
+    [Fact] void should_mount_the_certificate_from_the_given_host_path() => _mount.Source.ShouldEqual(InAppHostDirectory(CertificatePath));
     [Fact] void should_mount_the_certificate_at_the_encryption_certificate_container_path() => _mount.Target.ShouldEqual(ChronicleContainerImageTags.EncryptionCertificateContainerPath);
     [Fact] void should_mount_the_certificate_as_read_only() => _mount.IsReadOnly.ShouldBeTrue();
     [Fact] void should_mount_the_certificate_as_a_bind_mount() => _mount.Type.ShouldEqual(ContainerMountType.BindMount);

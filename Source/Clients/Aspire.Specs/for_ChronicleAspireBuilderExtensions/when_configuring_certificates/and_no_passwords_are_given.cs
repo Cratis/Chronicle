@@ -14,6 +14,12 @@ public class and_no_passwords_are_given : given.a_distributed_application_builde
     IResourceBuilder<ChronicleResource> _result;
     Dictionary<string, object> _environment;
 
+    void Establish()
+    {
+        CertificateFileIn(TlsCertificatePath);
+        CertificateFileIn(EncryptionCertificatePath);
+    }
+
     async Task Because()
     {
         _result = _builder.AddCratisChronicle(configure: chronicle => chronicle

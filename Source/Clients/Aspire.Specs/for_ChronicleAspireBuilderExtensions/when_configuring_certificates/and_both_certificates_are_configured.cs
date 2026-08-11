@@ -18,6 +18,12 @@ public class and_both_certificates_are_configured : given.a_distributed_applicat
     ContainerMountAnnotation _tlsMount;
     ContainerMountAnnotation _encryptionMount;
 
+    void Establish()
+    {
+        CertificateFileIn(TlsCertificatePath);
+        CertificateFileIn(EncryptionCertificatePath);
+    }
+
     async Task Because()
     {
         _result = _builder.AddCratisChronicle(configure: chronicle => chronicle
@@ -29,8 +35,8 @@ public class and_both_certificates_are_configured : given.a_distributed_applicat
     }
 
     [Fact] void should_mount_one_file_per_certificate() => MountsFor(_result.Resource).Count().ShouldEqual(2);
-    [Fact] void should_mount_the_tls_certificate_from_its_host_path() => _tlsMount.Source.ShouldEqual(Path.GetFullPath(TlsCertificatePath));
-    [Fact] void should_mount_the_encryption_certificate_from_its_host_path() => _encryptionMount.Source.ShouldEqual(Path.GetFullPath(EncryptionCertificatePath));
+    [Fact] void should_mount_the_tls_certificate_from_its_host_path() => _tlsMount.Source.ShouldEqual(InAppHostDirectory(TlsCertificatePath));
+    [Fact] void should_mount_the_encryption_certificate_from_its_host_path() => _encryptionMount.Source.ShouldEqual(InAppHostDirectory(EncryptionCertificatePath));
     [Fact] void should_point_the_tls_certificate_path_at_its_mounted_file() => _environment[ChronicleContainerImageTags.TlsCertificatePathEnvironmentVariable].ShouldEqual(_tlsMount.Target);
     [Fact] void should_point_the_encryption_certificate_path_at_its_mounted_file() => _environment[ChronicleContainerImageTags.EncryptionCertificatePathEnvironmentVariable].ShouldEqual(_encryptionMount.Target);
     [Fact] void should_configure_the_tls_certificate_password() => _environment[ChronicleContainerImageTags.TlsCertificatePasswordEnvironmentVariable].ShouldEqual(TlsCertificatePassword);

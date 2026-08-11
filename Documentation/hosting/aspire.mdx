@@ -29,7 +29,7 @@ For production or staging environments, use the configure callback. This switche
 |------|--------|------------|
 | A database | `WithMongoDB` / `WithPostgreSql` / `WithMsSql` / `WithSqlite` | There is no storage to connect to |
 | A TLS certificate | `WithTlsCertificate` | The server throws `No TLS certificate is configured` and exits |
-| An encryption certificate | `WithEncryptionCertificate` | The server throws `An encryption certificate is required in production` and exits |
+| An encryption certificate | `WithEncryptionCertificate` | The server throws `An encryption certificate is required in production` and exits — unless you turn the `OAuthAuthority` feature off or point `Authentication:Authority` at an external authority, which skips the internal authority that needs it |
 
 :::caution[The production image will not start without certificates]
 The development image generates a self-signed TLS certificate on the fly and falls back to ephemeral OAuth keys. The production image does neither — the production code paths are selected by a compile-time symbol, so no environment variable switches them back. A configure callback that wires up only a database therefore produces a container that starts, throws, and stops. Each storage section below shows **only** the storage wiring; add the two certificate calls from [Certificates](#certificates) to every one of them.
@@ -42,6 +42,8 @@ The development image generates a self-signed TLS certificate on the fly and fal
 <ChronicleClientTabs snippet="hosting/aspire/certificates" />
 
 Each method does two things: it bind-mounts the file read-only into the container (at `/certs/tls.pfx` and `/certs/encryption.pfx` respectively) and points the matching Chronicle setting at that in-container path. You do not add a `WithBindMount` of your own — a host path handed straight to the container names a file the container cannot see, so the mount is part of configuring the certificate rather than a separate step you have to remember. A relative path resolves against the AppHost directory, exactly like every other Aspire bind mount.
+
+Point either method at a file that is not there and the AppHost fails to start with `CertificateFileDoesNotExist`, naming both the path you gave and the absolute path it resolved to. That is deliberate: Docker happily creates a *directory* at a missing bind-mount source, and the Chronicle container would then tell you no certificate is configured — the opposite of the truth — while staying up with a dead process inside. Calling either method twice for the same certificate is last-call-wins, like every other `With…` on the builder, so a base helper's certificate can be overridden per environment.
 
 The two calls are independent, so you can point both at the same `.pfx` if one certificate serves both purposes — they are mounted at different container paths, so nothing collides. They map to configuration like this:
 
