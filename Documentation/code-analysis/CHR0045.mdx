@@ -1,0 +1,31 @@
+# CHR0045: Event stream metadata attribute on an event type has no effect
+
+## Rule Description
+
+`[EventStreamType]` or `[EventSourceType]` is applied to a type marked with `[EventType]`, where it does nothing. An append resolves its event source type and event stream type from the arguments it is given — the appending command's metadata, the reactor's, or the explicit parameters — never from the CLR type of the event being appended. Nothing reads either attribute off an event type, so the value is not transmitted, never reaches the appended event's context, and narrows nothing on the way back out.
+
+There are exactly two placements that work, and both are unaffected by this rule:
+
+- A **command**, where the value tags the events its append produces and, with `concurrency: true`, joins the server-side concurrency scope.
+- An **observer** — a reactor or a reducer — where the value narrows which appended events are dispatched. See [appended event metadata filters](../events/filtering/).
+
+A **projection** is a third placement that does nothing, reported separately as [CHR0041](CHR0041).
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0045/violation" />
+
+## Why This Rule Exists
+
+The attributes' own documentation used to say an event type was a valid placement, and that is what an IDE tooltip shows at the moment of authoring. A developer who trusts it tags the event once at its declaration and expects every append of it to carry that stream identity. What happens instead is that events land under the default source and stream type, observers that filter on those values match nothing, and there is no build error, startup failure, or runtime signal anywhere to say why. The natural way to debug that — re-reading the attribute to confirm it is present and spelled right — confirms the wrong conclusion.
+
+The placement is refused rather than honored, and deliberately so. Both values are persisted in every appended event's context and are load-bearing keys for the concurrency scope and for observer filtering. Letting an event's CLR type contribute them would retroactively change stream identity for every event type already declared, against events already written.
+
+## Related Rules
+
+- [CHR0041: Event filter attribute on a projection has no effect](CHR0041) — the same attributes on the other placement that reads as a filter and is not one.
+- [CHR0024: Read model property has no mapping source](CHR0024) — another declaration that looks wired but silently does nothing.

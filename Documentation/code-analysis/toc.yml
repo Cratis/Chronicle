@@ -78,3 +78,5 @@
   href: CHR0043.mdx
 - name: CHR0044 - [Join] of a [PII] value cannot prove compliance subject equality
   href: CHR0044.mdx
+- name: CHR0045 - Event stream metadata attribute on an event type has no effect
+  href: CHR0045.mdx
