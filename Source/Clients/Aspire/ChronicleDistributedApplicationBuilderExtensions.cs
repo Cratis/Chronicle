@@ -50,7 +50,7 @@ public static class ChronicleDistributedApplicationBuilderExtensions
         var resource = new ChronicleResource(name);
         var imageTag = configure is null
             ? ChronicleContainerImageTags.DevelopmentTag
-            : ChronicleContainerImageTags.DevelopmentSlimTag;
+            : ChronicleContainerImageTags.Tag;
 
         var resourceBuilder = builder
             .AddResource(resource)

@@ -87,4 +87,38 @@ public static class ChronicleContainerImageTags
     /// Chronicle reads this variable directly; the value must be a valid Vault token.
     /// </summary>
     public const string VaultTokenEnvironmentVariable = "VAULT_TOKEN";
+
+    /// <summary>
+    /// Environment variable key for the path to the TLS certificate the Chronicle port is served with.
+    /// Maps to <c>Cratis:Chronicle:Tls:CertificatePath</c> in the Chronicle server configuration.
+    /// </summary>
+    public const string TlsCertificatePathEnvironmentVariable = "Cratis__Chronicle__Tls__CertificatePath";
+
+    /// <summary>
+    /// Environment variable key for the password protecting the TLS certificate.
+    /// Maps to <c>Cratis:Chronicle:Tls:CertificatePassword</c> in the Chronicle server configuration.
+    /// </summary>
+    public const string TlsCertificatePasswordEnvironmentVariable = "Cratis__Chronicle__Tls__CertificatePassword";
+
+    /// <summary>
+    /// Environment variable key for the path to the certificate protecting the Data Protection and OAuth keys.
+    /// Maps to <c>Cratis:Chronicle:EncryptionCertificate:CertificatePath</c> in the Chronicle server configuration.
+    /// </summary>
+    public const string EncryptionCertificatePathEnvironmentVariable = "Cratis__Chronicle__EncryptionCertificate__CertificatePath";
+
+    /// <summary>
+    /// Environment variable key for the password protecting the encryption certificate.
+    /// Maps to <c>Cratis:Chronicle:EncryptionCertificate:CertificatePassword</c> in the Chronicle server configuration.
+    /// </summary>
+    public const string EncryptionCertificatePasswordEnvironmentVariable = "Cratis__Chronicle__EncryptionCertificate__CertificatePassword";
+
+    /// <summary>
+    /// Path inside the Chronicle container that <c>WithTlsCertificate</c> mounts the TLS certificate at.
+    /// </summary>
+    public const string TlsCertificateContainerPath = "/certs/tls.pfx";
+
+    /// <summary>
+    /// Path inside the Chronicle container that <c>WithEncryptionCertificate</c> mounts the encryption certificate at.
+    /// </summary>
+    public const string EncryptionCertificateContainerPath = "/certs/encryption.pfx";
 }

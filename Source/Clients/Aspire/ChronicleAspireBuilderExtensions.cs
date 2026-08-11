@@ -186,4 +186,173 @@ public static class ChronicleAspireBuilderExtensions
         });
         return builder;
     }
+
+    /// <summary>
+    /// Configures the Chronicle resource to serve its port with the TLS certificate at the given path.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The production image cannot start without this. The Chronicle port serves gRPC (HTTP/2) and the
+    /// Workbench, API and OAuth flows (HTTP/1.1) multiplexed through ALPN on a single TLS port, so a
+    /// certificate is mandatory — the server throws <c>No TLS certificate is configured</c> at startup
+    /// without one. Only the development images generate a self-signed certificate instead of throwing,
+    /// which is why the development path works with no certificate at all.
+    /// </para>
+    /// <para>
+    /// Bind-mounts <paramref name="certificatePath"/> read-only into the container at
+    /// <see cref="ChronicleContainerImageTags.TlsCertificateContainerPath"/> and sets the
+    /// <c>Cratis__Chronicle__Tls__CertificatePath</c> container environment variable to that in-container
+    /// path — a path on the host means nothing to the container, so the mount is part of configuring the
+    /// certificate rather than something to remember separately. When a
+    /// <paramref name="certificatePassword"/> is given, <c>Cratis__Chronicle__Tls__CertificatePassword</c>
+    /// is set to it. These map to <c>Cratis:Chronicle:Tls:CertificatePath</c> and
+    /// <c>Cratis:Chronicle:Tls:CertificatePassword</c> in the Chronicle server configuration respectively.
+    /// </para>
+    /// <para>
+    /// The certificate must be a PKCS#12 (<c>.pfx</c>) file carrying its private key, and Chronicle reads it
+    /// as PKCS#12 only when a password is supplied — pass the password the file was protected with.
+    /// </para>
+    /// </remarks>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="certificatePath">Path on the host to the PKCS#12 certificate file. A relative path resolves against the AppHost directory.</param>
+    /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
+    /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
+    /// <example>
+    /// <code>
+    /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
+    ///     .WithMongoDB(mongo)
+    ///     .WithTlsCertificate("certs/chronicle.pfx", "YourPassword"));
+    /// </code>
+    /// </example>
+    public static IChronicleAspireBuilder WithTlsCertificate(
+        this IChronicleAspireBuilder builder,
+        string certificatePath,
+        string? certificatePassword = default)
+    {
+        ConfigureCertificate(
+            builder,
+            certificatePath,
+            certificatePassword,
+            ChronicleContainerImageTags.TlsCertificateContainerPath,
+            ChronicleContainerImageTags.TlsCertificatePathEnvironmentVariable,
+            ChronicleContainerImageTags.TlsCertificatePasswordEnvironmentVariable);
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the Chronicle resource to protect its Data Protection and OAuth keys with the certificate at the given path.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The production image needs this whenever it runs its own OAuth authority, which is the default. The
+    /// certificate signs and encrypts the internal OAuth authority's keys, and the server throws
+    /// <c>An encryption certificate is required in production</c> at startup when it is missing. Turning the
+    /// <c>OAuthAuthority</c> feature off, or pointing <c>Authentication:Authority</c> at an external authority,
+    /// skips that setup entirely and with it the requirement. The development images fall back to ephemeral
+    /// keys instead.
+    /// </para>
+    /// <para>
+    /// Bind-mounts <paramref name="certificatePath"/> read-only into the container at
+    /// <see cref="ChronicleContainerImageTags.EncryptionCertificateContainerPath"/> and sets the
+    /// <c>Cratis__Chronicle__EncryptionCertificate__CertificatePath</c> container environment variable to that
+    /// in-container path. When a <paramref name="certificatePassword"/> is given,
+    /// <c>Cratis__Chronicle__EncryptionCertificate__CertificatePassword</c> is set to it. These map to
+    /// <c>Cratis:Chronicle:EncryptionCertificate:CertificatePath</c> and
+    /// <c>Cratis:Chronicle:EncryptionCertificate:CertificatePassword</c> in the Chronicle server configuration
+    /// respectively.
+    /// </para>
+    /// <para>
+    /// The certificate must be a PKCS#12 (<c>.pfx</c>) file carrying its private key. It may be the same file
+    /// passed to <see cref="WithTlsCertificate"/> — the two are mounted separately, so pointing both at one
+    /// file works.
+    /// </para>
+    /// </remarks>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="certificatePath">Path on the host to the PKCS#12 certificate file. A relative path resolves against the AppHost directory.</param>
+    /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
+    /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
+    /// <example>
+    /// <code>
+    /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
+    ///     .WithMongoDB(mongo)
+    ///     .WithEncryptionCertificate("certs/encryption.pfx", "YourPassword"));
+    /// </code>
+    /// </example>
+    public static IChronicleAspireBuilder WithEncryptionCertificate(
+        this IChronicleAspireBuilder builder,
+        string certificatePath,
+        string? certificatePassword = default)
+    {
+        ConfigureCertificate(
+            builder,
+            certificatePath,
+            certificatePassword,
+            ChronicleContainerImageTags.EncryptionCertificateContainerPath,
+            ChronicleContainerImageTags.EncryptionCertificatePathEnvironmentVariable,
+            ChronicleContainerImageTags.EncryptionCertificatePasswordEnvironmentVariable);
+        return builder;
+    }
+
+    /// <summary>
+    /// Bind-mounts a certificate file from the host into the container and points the matching Chronicle
+    /// configuration environment variables at the mounted file.
+    /// </summary>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="certificatePath">Path on the host to the certificate file, relative to the AppHost directory or absolute.</param>
+    /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
+    /// <param name="containerPath">Path inside the container to mount the certificate at.</param>
+    /// <param name="pathEnvironmentVariable">Environment variable holding the in-container certificate path.</param>
+    /// <param name="passwordEnvironmentVariable">Environment variable holding the certificate password.</param>
+    /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
+    /// <remarks>
+    /// The existence check fails the AppHost at start rather than at container start: Docker creates a
+    /// <em>directory</em> at a missing bind-mount source, and the Chronicle container then reports that no
+    /// certificate is configured at all — the opposite of what happened. Calling this for the same container
+    /// path more than once replaces the earlier mount instead of adding a second one, so the certificate
+    /// methods are last-call-wins like every other configuration method on the builder; a second mount on the
+    /// same target makes <c>docker run</c> refuse to start the container with a duplicate mount point.
+    /// </remarks>
+    static void ConfigureCertificate(
+        IChronicleAspireBuilder builder,
+        string certificatePath,
+        string? certificatePassword,
+        string containerPath,
+        string pathEnvironmentVariable,
+        string passwordEnvironmentVariable)
+    {
+        var resourceBuilder = builder.ResourceBuilder;
+        var resolvedPath = Path.GetFullPath(certificatePath, resourceBuilder.ApplicationBuilder.AppHostDirectory);
+
+        if (!File.Exists(resolvedPath))
+        {
+            throw new CertificateFileDoesNotExist(certificatePath, resolvedPath);
+        }
+
+        var existingMounts = resourceBuilder.Resource.Annotations
+            .OfType<ContainerMountAnnotation>()
+            .Where(_ => _.Target == containerPath)
+            .ToArray();
+
+        foreach (var existingMount in existingMounts)
+        {
+            resourceBuilder.Resource.Annotations.Remove(existingMount);
+        }
+
+        resourceBuilder.WithBindMount(resolvedPath, containerPath, isReadOnly: true);
+        resourceBuilder.WithEnvironment(context =>
+        {
+            context.EnvironmentVariables[pathEnvironmentVariable] = containerPath;
+
+            if (!string.IsNullOrEmpty(certificatePassword))
+            {
+                context.EnvironmentVariables[passwordEnvironmentVariable] = certificatePassword;
+            }
+            else
+            {
+                context.EnvironmentVariables.Remove(passwordEnvironmentVariable);
+            }
+        });
+    }
 }
