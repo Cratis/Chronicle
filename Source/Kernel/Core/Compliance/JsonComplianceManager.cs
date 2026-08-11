@@ -85,6 +85,16 @@ public class JsonComplianceManager(
         Func<IJsonCompliancePropertyValueHandler, string, JsonNode, Task<JsonNode>> action,
         string path = "")
     {
+        // The walk looks every property in the document up in the schema, which presumes the schema declares the
+        // members of what it describes. Some deliberately do not: a geospatial value is a leaf carrying only its
+        // format, a polymorphic base type is kept open, a dictionary holds data rather than declarations. Their
+        // members cannot carry compliance metadata — there is no schema property to hang it on — so there is nothing
+        // to do here, and looking each one up would report schema drift for a document that matches its schema.
+        if (schema.DescribesOpaqueValue())
+        {
+            return;
+        }
+
         var complianceMetadataForContainer = schema.GetComplianceMetadata();
         foreach (var (property, value) in json.ToArray())
         {
