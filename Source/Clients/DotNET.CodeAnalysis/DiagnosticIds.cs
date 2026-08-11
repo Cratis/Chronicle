@@ -227,4 +227,9 @@ public static class DiagnosticIds
     /// subject is the read model document's compliance subject.
     /// </summary>
     public const string UnprovableCrossSubjectPiiJoin = "CHR0044";
+
+    /// <summary>
+    /// An event stream metadata attribute is applied to an event type, where nothing reads it.
+    /// </summary>
+    public const string InertEventFilterOnEventType = "CHR0045";
 }

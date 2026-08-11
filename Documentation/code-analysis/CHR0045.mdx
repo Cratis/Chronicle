@@ -1,0 +1,36 @@
+# CHR0045: Event stream metadata attribute on an event type has no effect
+
+## Rule Description
+
+`[EventStreamType]` or `[EventSourceType]` is applied to a type marked with `[EventType]`, where it does nothing. An append resolves its event source type and event stream type from the arguments it is given — the appending command's metadata, the reactor's, or the explicit parameters — never from the CLR type of the event being appended. Nothing reads either attribute off an event type, so the value is not transmitted, never reaches the appended event's context, and narrows nothing on the way back out.
+
+Three placements work, and none of them is affected by this rule:
+
+- A **command**, where both values tag the events its append produces and, with `concurrency: true`, join the server-side concurrency scope.
+- An **observer** — a reactor or a reducer — where both values narrow which appended events are dispatched. See [appended event metadata filters](../events/filtering/).
+- An **aggregate root**, where `[EventStreamType]` becomes the event stream type of every event that aggregate appends. Without the attribute the aggregate's own type name is used, so deleting it does not error — it silently moves every subsequent append to a different stream type. (`[EventSourceType]` is *not* read off an aggregate root; the event source type is supplied when the aggregate is fetched.)
+
+A type is allowed to be more than one thing. A `[Command]`, reactor, reducer, or aggregate root that *also* carries `[EventType]` is not reported, because the attribute is live on it — it is read off that very type.
+
+A **projection** is a placement that does nothing, reported separately as [CHR0041](CHR0041).
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0045/violation" />
+
+## Why This Rule Exists
+
+The attributes' own documentation used to say an event type was a valid placement, and that is what an IDE tooltip shows at the moment of authoring. A developer who trusts it tags the event once at its declaration and expects every append of it to carry that stream identity. What happens instead is that events land under the default source and stream type, observers that filter on those values match nothing, and there is no build error, startup failure, or runtime signal anywhere to say why. The natural way to debug that — re-reading the attribute to confirm it is present and spelled right — confirms the wrong conclusion.
+
+The placement is refused rather than honored, and deliberately so. Both values are persisted in every appended event's context and are load-bearing keys for the concurrency scope and for observer filtering. Letting an event's CLR type contribute them would retroactively change stream identity for every event type already declared, against events already written.
+
+The same reasoning is why the rule keys on the *role* of the type rather than on the mere presence of `[EventType]`. Where the attribute is read — a command, an observer, an aggregate root — removing it changes real behavior, so a warning that says "move it" there would be advice with nowhere to go, and under warnings-as-errors it would break the build outright.
+
+## Related Rules
+
+- [CHR0041: Event filter attribute on a projection has no effect](CHR0041) — the same attributes on the other placement that reads as a filter and is not one.
+- [CHR0024: Read model property has no mapping source](CHR0024) — another declaration that looks wired but silently does nothing.
