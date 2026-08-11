@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// MongoDB implementation of <see cref="ITokenStorage"/>.
 /// </summary>
 /// <param name="database">MongoDB database.</param>
-public class TokenStorage(IMongoDatabase database) : ITokenStorage
+public class TokenStorage(IDatabase database) : ITokenStorage
 {
     const string CollectionName = WellKnownCollectionNames.Tokens;
     readonly IMongoCollection<Token> _collection = database.GetCollection<Token>(CollectionName);

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Security;
 /// MongoDB implementation of <see cref="IScopeStorage"/>.
 /// </summary>
 /// <param name="database">MongoDB database.</param>
-public class ScopeStorage(IMongoDatabase database) : IScopeStorage
+public class ScopeStorage(IDatabase database) : IScopeStorage
 {
     const string CollectionName = WellKnownCollectionNames.Scopes;
     readonly IMongoCollection<Scope> _collection = database.GetCollection<Scope>(CollectionName);
