@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786421720939,
+  "lastUpdate": 1786447571566,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -3916,6 +3916,144 @@
             "value": 260162128.2,
             "unit": "ns",
             "range": "± 35760610.439462475"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "woksin@users.noreply.github.com",
+            "name": "Sindre Alstad Wilting",
+            "username": "woksin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa94756747bafc1a78546c24e58d2c03a8197155",
+          "message": "Pin the read model shape guards that no spec could falsify (#3668)\n\n* Pin the unset-property guards a mutation could not reach\n\nThe guards that stop an unset read model property being written as a\nschema-forbidden default shipped in 16.16.0, but most of them were not\nfalsifiable. The nullable-enum spec picked a subject both guards suppress,\nso deleting the nullability leg left it green and only a nullable boolean\nin a differently-named file noticed. The member-list check had no subject\nat all: no fixture anywhere declared an enum whose zero is a real member,\nso inverting that check left the entire suite green while silently\ndropping a value the model legitimately projected.\n\nBoth now have subjects that isolate them. A nullable enum declaring a zero\nmember can only be suppressed by nullability, and a non-nullable one\ndeclaring a zero member must still be written - that second case is the\ncontract's stated non-goal and nothing was holding it.\n\nThe schemas these guards read were only ever hand written in specs, so\nnothing checked that the generator emits the shape they expect. A future\nchange to how nullability is rendered would have un-fixed this silently,\nwith every spec passing. The generator specs pin that wire, and the replay\nrecommendation specs pin the operator-visible consequence, which moved for\na non-nullable enum and was covered only for strings.\n\nNo production behavior changes.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Pin the children-path exclusion that nothing could falsify\n\nA root event must not write an empty children collection, because a\nparallel replay would set a populated array back to empty and race a\nsibling partition's already-added child away. The exclusion that prevents\nthis has been in the pipeline for a while, and the in-process harness was\ntaught to apply it too so specs stop disagreeing with the live sink.\n\nNothing could tell whether either still worked. The walk that collects the\nchildren paths had no spec at all, the only spec calling the changeset\nhelper omitted the argument that reaches the exclusion branch, and the\npipeline-step spec asserted merely that some property was added. Removing\nthe exclusion outright left the whole suite green while restoring the\ndefect it exists to prevent.\n\nEach of those now has a spec that dies to it alone, including the nested\ncase, which the recursion needs to be pinned separately from the root\nfilter. The harness assertions are extended to the per-key view, which was\nreading through different serializer options than the one that was pinned.\n\nNo production behavior changes.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Assert the precondition that arms the unset-optional integration spec\n\nThe spec reaches the code it fences only because its read model carries a\nPII value, which is what sends the whole state through the registered\nschema on the way into the sink. Nothing asserted that. Disabling\ncompliance detection left every assertion in the file green: the released\nvalue reads back as plaintext either way, and the unset property is absent\nbecause the round trip never happened at all rather than because the guard\nunder test held.\n\nThe stored document was already being read for the other at-rest\nassertions, so pinning it costs one comparison. Both independent reviewers\nfound this hole separately, which is a fair signal it is easy to miss.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n---------\n\nCo-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>",
+          "timestamp": "2026-08-11T13:11:13+02:00",
+          "tree_id": "033043a2d2fd171cccd9fa72be1be28da48269d7",
+          "url": "https://github.com/Cratis/Chronicle/commit/fa94756747bafc1a78546c24e58d2c03a8197155"
+        },
+        "date": 1786447571565,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 13079674.7984375,
+            "unit": "ns",
+            "range": "± 5256625.34861031"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 21365807.75925926,
+            "unit": "ns",
+            "range": "± 8427750.957386447"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 33169974.509259257,
+            "unit": "ns",
+            "range": "± 8414535.131100398"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 175669106.95,
+            "unit": "ns",
+            "range": "± 46601763.49579618"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 2835187.4444444445,
+            "unit": "ns",
+            "range": "± 267295.8792397065"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 4597630.7,
+            "unit": "ns",
+            "range": "± 426209.34018887166"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 1714871.9444444445,
+            "unit": "ns",
+            "range": "± 104821.54662819939"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 7294437.777777778,
+            "unit": "ns",
+            "range": "± 967788.8561453859"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 240586509.8,
+            "unit": "ns",
+            "range": "± 37545281.137448646"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 1123059714,
+            "unit": "ns",
+            "range": "± 123903178.0295774"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 101588386.8,
+            "unit": "ns",
+            "range": "± 45283480.68668865"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 364529424.1,
+            "unit": "ns",
+            "range": "± 91057437.41946001"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 5367324975,
+            "unit": "ns",
+            "range": "± 1774477720.352506"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 100702833.4,
+            "unit": "ns",
+            "range": "± 43083494.696994975"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 83186380.27777778,
+            "unit": "ns",
+            "range": "± 5422836.466180793"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 240550544.16666666,
+            "unit": "ns",
+            "range": "± 40467232.32458583"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 74704444.25,
+            "unit": "ns",
+            "range": "± 15618751.633643175"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 112460327.05555555,
+            "unit": "ns",
+            "range": "± 36168683.62884395"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 238215758.55555555,
+            "unit": "ns",
+            "range": "± 75177907.51306643"
           }
         ]
       }
