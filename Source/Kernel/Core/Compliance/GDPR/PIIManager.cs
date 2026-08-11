@@ -21,7 +21,17 @@ public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClien
         _ = this.GetPrimaryKey(out var primaryKeyExtension);
         var primaryKey = (PIIManagerKey)primaryKeyExtension!;
 
-        await keyStore.DeleteFor(primaryKey.EventStore, primaryKey.Namespace, identifier);
-        await cacheClient.Evict(primaryKey.EventStore, primaryKey.Namespace, identifier);
+        try
+        {
+            await keyStore.DeleteFor(primaryKey.EventStore, primaryKey.Namespace, identifier);
+        }
+        finally
+        {
+            // The eviction is not conditional on the erase succeeding. A composite key store attempts every store and
+            // then reports a partial failure, so the key can be durably destroyed and the call still throw - and a
+            // throw that skipped the eviction would leave every peer silo serving the erased key from a cache that
+            // has no time-to-live and nothing else to clear it. Evicting is idempotent and cheap, so it always runs.
+            await cacheClient.Evict(primaryKey.EventStore, primaryKey.Namespace, identifier);
+        }
     }
 }

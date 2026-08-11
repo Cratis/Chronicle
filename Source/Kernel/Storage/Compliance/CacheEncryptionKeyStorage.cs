@@ -20,11 +20,23 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// Provisioning a key locally clears its negative entry immediately.
 /// </para>
 /// <para>
-/// Every read releases the lock while it waits on the backing store, so a deletion or an eviction can land in that
-/// window. Each identifier therefore carries a local generation that advances on deletion and on eviction: a read
-/// captures the generation before it releases the lock and only writes to the cache when the generation is unchanged
-/// once it re-acquires it. Without that guard an in-flight read resurrects a key that was just erased, which for a
-/// crypto-shredding key store means a completed right-to-erasure silently comes undone.
+/// Every read releases the lock while it waits on the backing store, so a deletion, an eviction or a save can land in
+/// that window. Each identifier therefore carries a local generation that advances on every mutation: a read captures
+/// the generation before it releases the lock and only writes to the cache when the generation is unchanged once it
+/// re-acquires it. Without that guard an in-flight read resurrects a key that was just erased, which for a
+/// crypto-shredding key store means a completed right-to-erasure silently comes undone, and a read that started before
+/// a rotation writes the superseded key back over the one that was just saved.
+/// </para>
+/// <para>
+/// A deletion advances the generation twice - once before the backing store is asked to erase, and once after the
+/// erase is durable. Only the second one closes the window: a read that misses the cache after the first advance and
+/// reaches the backing store before the erase lands still holds the key, and still sees the generation it captured.
+/// Cached keys have no time-to-live, so an entry written in that window would never be removed again.
+/// </para>
+/// <para>
+/// This makes the decorator self-sufficient for the store it wraps. It says nothing about caches on other silos -
+/// those are reached by the cluster-wide eviction the erasure issues - and nothing about keys a peer store can heal
+/// back into the wrapped store afterwards.
 /// </para>
 /// </remarks>
 /// <param name="actualKeyStore">Actual <see cref="IEncryptionKeyStorage"/>.</param>
@@ -51,40 +63,26 @@ public class CacheEncryptionKeyStorage(
     public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
-        lock (_lock)
+        Invalidate(scope, revision);
+
+        try
         {
-            AdvanceGeneration(scope);
-
-            if (IsLatest(revision))
-            {
-                RemoveAllFor(_keys, scope);
-                RemoveAllFor(_absentKeys, scope);
-            }
-            else
-            {
-                var specific = new Key(scope, revision!);
-                var latest = new Key(scope, EncryptionKeyRevision.Latest);
-                _keys.Remove(specific);
-                _keys.Remove(latest);
-                _absentKeys.Remove(specific);
-                _absentKeys.Remove(latest);
-            }
+            await actualKeyStore.DeleteFor(eventStore, eventStoreNamespace, identifier, revision);
         }
-
-        await actualKeyStore.DeleteFor(eventStore, eventStoreNamespace, identifier, revision);
+        finally
+        {
+            // Invalidating again once the erase has landed is what actually closes the window - the first
+            // invalidation only narrows it, because a read that misses the cache after it can still reach the backing
+            // store while the key is there and then cache what it found. Invalidating in a finally covers a failed
+            // erase too: a backing store that throws may still have removed some revisions, and the cache must not
+            // keep serving what may already be gone.
+            Invalidate(scope, revision);
+        }
     }
 
     /// <inheritdoc/>
-    public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
-        lock (_lock)
-        {
-            AdvanceGeneration(scope);
-            RemoveAllFor(_keys, scope);
-            RemoveAllFor(_absentKeys, scope);
-        }
-    }
+    public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        Invalidate(new KeyScope(eventStore, eventStoreNamespace, identifier), revision: null);
 
     /// <inheritdoc/>
     public async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
@@ -207,6 +205,12 @@ public class CacheEncryptionKeyStorage(
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
         lock (_lock)
         {
+            // A save mutates the cache exactly like a deletion or an eviction does, so it has to move the generation
+            // too - otherwise a read that captured the previous generation writes the key it found before the save
+            // back over the one just written, and the cache serves the superseded key until something evicts it.
+            // The save's own writes happen below under this same lock, so they are not fenced by their own advance.
+            AdvanceGeneration(scope);
+
             var latest = new Key(scope, EncryptionKeyRevision.Latest);
             _keys.Remove(latest);
 
@@ -231,6 +235,28 @@ public class CacheEncryptionKeyStorage(
         foreach (var key in map.Keys.Where(_ => _.Scope == scope).ToList())
         {
             map.Remove(key);
+        }
+    }
+
+    void Invalidate(KeyScope scope, EncryptionKeyRevision? revision)
+    {
+        lock (_lock)
+        {
+            AdvanceGeneration(scope);
+
+            if (IsLatest(revision))
+            {
+                RemoveAllFor(_keys, scope);
+                RemoveAllFor(_absentKeys, scope);
+                return;
+            }
+
+            var specific = new Key(scope, revision!);
+            var latest = new Key(scope, EncryptionKeyRevision.Latest);
+            _keys.Remove(specific);
+            _keys.Remove(latest);
+            _absentKeys.Remove(specific);
+            _absentKeys.Remove(latest);
         }
     }
 
