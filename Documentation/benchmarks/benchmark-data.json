@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786453571551,
+  "lastUpdate": 1786454543157,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -4330,6 +4330,144 @@
             "value": 275097670.3,
             "unit": "ns",
             "range": "± 51070906.84430954"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "woksin@users.noreply.github.com",
+            "name": "Sindre Alstad Wilting",
+            "username": "woksin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8a53d6fc429bb7d9080dcd7fb5c26ea4a7f30b2b",
+          "message": "Diagnose inert stream metadata and a split duplicate context mapping (#3670)\n\n* Report a duplicate context mapping split across parameter and property\n\nThe diagnostic already caught two [SetFromContext] for one event type on a\nmember, but only when both attributes sat on the same symbol. On a\npositional record they need not: one can target the primary constructor\nparameter and the other the generated property, and those are two symbols.\nGrouping them apart meant the analyzer stayed silent while both mappings\nstill reached the builder under the same key, where the property pass runs\nsecond and quietly wins - the exact discard the diagnostic exists to\nreport, reachable through a spelling it could not see.\n\nA positional record's generated property is now paired off against its\nparameter and the parameter carries the union of both symbols' attributes,\nso the pair is judged as the single member a reader sees. Declared\nproperties with no matching parameter keep their own path.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Diagnose stream metadata declared on an event type, which does nothing\n\nBoth attributes documented themselves as applying to an event type, a\ncommand or an observer. Only the last two are read: the sole consumers\ntake the metadata off a reactor, a reducer or a command type, and an\nappend resolves stream metadata from its own parameters. Declaring either\non an event type therefore compiles, reads as deliberate, and has no\neffect anywhere.\n\nThe documentation is corrected and a diagnostic now reports the\nplacement, so the mistake is caught where it is written rather than\ndiscovered by an observer that never sees the events it was meant to\nnarrow.\n\nHonoring the placement instead was deliberately not done. Both values are\npersisted in every appended event's context and key concurrency scopes and\nobserver filtering, so letting an event type contribute them would\nretroactively change stream identity for every event type already\ndeclared, against data already written.\n\nScoped to the two attributes that made the claim. FilterEventsByTag is\nequally inert on an event type but never documented that placement, so\nreporting it would be a new break with nothing behind it.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Stop the diagnostic flagging types that do read stream metadata\n\nNarrowing the documentation to a command or an observer was itself wrong:\nan aggregate root reads the stream type off its own attribute, and falls\nback to its type name when the attribute is absent. Telling an author it\nbelongs elsewhere invites them to delete it, and deleting it does not\nerror - every event that aggregate appends silently lands under a\ndifferent stream type. That is the damage this diagnostic exists to\nprevent, created by the correction. Only the stream type is affected;\nnothing reads the source type off an aggregate root, and its wording is\nleft alone.\n\nThe diagnostic itself flagged the same shape. It keyed only on the event\ntype attribute, so a type that is both a command and an event type, or a\nreactor carrying an event type, was told to move an attribute that is\nlive on it - a warning this repository treats as an error, on a false\nclaim. It now skips a type that is read by any of those roles.\n\nThe specs that were supposed to cover the roles carried them as\ndecoration: the analyzer never looked at either, so both passed only\nbecause the type was not an event type. They now carry both, which left\nthe event-type guard itself unpinned, so a spec whose subject reaches it\nwas added. Every guard now has an input that arrives at it.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n---------\n\nCo-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>",
+          "timestamp": "2026-08-11T15:07:21+02:00",
+          "tree_id": "79283f8aedd8128373891aad202ed01a6d3350d2",
+          "url": "https://github.com/Cratis/Chronicle/commit/8a53d6fc429bb7d9080dcd7fb5c26ea4a7f30b2b"
+        },
+        "date": 1786454543155,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 7955268.7421875,
+            "unit": "ns",
+            "range": "± 297417.4067817051"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 13046522.871875,
+            "unit": "ns",
+            "range": "± 1958840.6560950158"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 36361671.29000001,
+            "unit": "ns",
+            "range": "± 3165901.2359879008"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 303435418.6,
+            "unit": "ns",
+            "range": "± 44494887.068326354"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 2400243,
+            "unit": "ns",
+            "range": "± 331959.01128502795"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 5506646.777777778,
+            "unit": "ns",
+            "range": "± 478635.00761665404"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 2148222.722222222,
+            "unit": "ns",
+            "range": "± 135094.49914853842"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 11038077.9,
+            "unit": "ns",
+            "range": "± 1231023.8916719737"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 344598335.5,
+            "unit": "ns",
+            "range": "± 20119014.289356716"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 2010007278.6,
+            "unit": "ns",
+            "range": "± 58401878.357682206"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 68814250,
+            "unit": "ns",
+            "range": "± 2850721.9038732396"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 251410593.66666666,
+            "unit": "ns",
+            "range": "± 6006796.1388625465"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1522745242.4,
+            "unit": "ns",
+            "range": "± 103733069.95667422"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 69975685.3888889,
+            "unit": "ns",
+            "range": "± 1810678.3702483198"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 94423322,
+            "unit": "ns",
+            "range": "± 6965603.920262131"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 331511918.3333333,
+            "unit": "ns",
+            "range": "± 53652601.32622942"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 69951580.94444445,
+            "unit": "ns",
+            "range": "± 1647412.2350164903"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 91708449.625,
+            "unit": "ns",
+            "range": "± 3792442.244120702"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 329115025.9,
+            "unit": "ns",
+            "range": "± 64610185.75672689"
           }
         ]
       }
