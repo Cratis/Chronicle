@@ -47,7 +47,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0042](CHR0042) | A joined property is also written locally | Warning | A property written by both a local mapping and a join — model-bound or fluent — always ends up with the joined value regardless of arrival order, so a local write can never reset it; a flag latched from both sides silently sticks |
 | [CHR0043](CHR0043) | Key redirection carries a [PII] value across the compliance subject | Warning | A root key or child parent-key redirect carries PII onto a document whose resolved compliance subject is not provably the value owner's |
 | [CHR0044](CHR0044) | [Join] of a [PII] value cannot prove compliance subject equality | Warning | A same-apparent-subject or valid child join carries PII while persisted append metadata prevents source-level proof of subject equality |
-| [CHR0045](CHR0045) | Event stream metadata attribute on an event type has no effect | Warning | An append resolves its event source type and event stream type from the append itself, never from the event's CLR type, so [EventStreamType] and [EventSourceType] on an [EventType] are read by nothing — declare them on the appending command or the observing reactor/reducer |
+| [CHR0045](CHR0045) | Event stream metadata attribute on an event type has no effect | Warning | An append resolves its event source type and event stream type from the append itself, never from the event's CLR type, so [EventStreamType] and [EventSourceType] on an [EventType] are read by nothing — declare them on the appending command, the observing reactor/reducer, or (for [EventStreamType]) the aggregate root whose appends they identify |
 
 ## Quick Fixes
 

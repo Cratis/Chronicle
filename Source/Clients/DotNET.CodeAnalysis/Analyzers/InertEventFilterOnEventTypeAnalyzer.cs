@@ -30,6 +30,22 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// Letting an event's CLR type contribute them would retroactively change stream identity for every event type
 /// already declared, against data already written.
 /// </para>
+/// <para>
+/// Nothing is reported when the type is itself one of the placements that reads the attribute - a command, a
+/// reactor, a reducer or an aggregate root - even though it also carries <c>[EventType]</c>. Such a type is legal
+/// and the attribute on it is live, read off the very symbol the rule would otherwise point away from: telling an
+/// author to "move it to the command that appends the event" when the type <em>is</em> that command is a false
+/// positive, and a false positive breaks every build that treats warnings as errors. The check is therefore on the
+/// role, not on the mere presence of <c>[EventType]</c>.
+/// </para>
+/// <para>
+/// The aggregate root is the deliberately conservative one. Arc reads only the event stream type off it
+/// (<c>AggregateRootExtensions.GetEventStreamType</c>, falling back to the aggregate's type name), while the event
+/// source type is passed to <c>AggregateRootFactory.Get</c> as a parameter and never read from an attribute. The
+/// whole type is skipped regardless, because a type that is both an aggregate root and an event type is already
+/// outside what the rule can advise on, and a false negative there costs nothing that a false positive does not
+/// cost more.
+/// </para>
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class InertEventFilterOnEventTypeAnalyzer : DiagnosticAnalyzer
@@ -47,7 +63,7 @@ public class InertEventFilterOnEventTypeAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Only a command or an observer carries event source type and event stream type: a command contributes them to the append it makes, and a reactor or reducer filters the events it observes on them. Nothing reads either attribute off an event type, so it neither tags what is appended nor narrows what is observed. Move it to the command that appends the event, or to the reactor or reducer that observes it.");
+        description: "A command, an observer and - for the event stream type - an aggregate root carry this metadata: a command contributes it to the append it makes, a reactor or reducer filters the events it observes on it, and an aggregate root's event stream type identifies every event that aggregate appends. Nothing reads either attribute off an event type, so it neither tags what is appended nor narrows what is observed. Move it to the command that appends the event, to the reactor or reducer that observes it, or to the aggregate root whose appends it identifies.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -68,6 +84,11 @@ public class InertEventFilterOnEventTypeAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        if (IsReadByTheType(typeSymbol, context.Compilation))
+        {
+            return;
+        }
+
         foreach (var attribute in typeSymbol.GetAttributes())
         {
             var name = attribute.AttributeClass?.OriginalDefinition.ToDisplayString();
@@ -83,4 +104,10 @@ public class InertEventFilterOnEventTypeAnalyzer : DiagnosticAnalyzer
                 typeSymbol.Name));
         }
     }
+
+    static bool IsReadByTheType(INamedTypeSymbol typeSymbol, Compilation compilation) =>
+        WellKnownTypes.HasAttribute(typeSymbol, WellKnownTypes.CommandAttributeName) ||
+        WellKnownTypes.ImplementsIReactor(typeSymbol, compilation) ||
+        WellKnownTypes.ImplementsIReducer(typeSymbol, compilation) ||
+        WellKnownTypes.ImplementsIAggregateRoot(typeSymbol, compilation);
 }

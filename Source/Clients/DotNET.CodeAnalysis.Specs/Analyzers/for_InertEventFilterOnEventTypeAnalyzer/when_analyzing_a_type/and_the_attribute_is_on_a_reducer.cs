@@ -6,19 +6,18 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_InertEventFilterOnEventTypeAnalyzer.when_analyzing_a_type;
 
 /// <summary>
-/// A reactor's subscription carries these values and the kernel narrows the observed stream by them, so the
-/// attribute is load-bearing here - this is the very reader whose absence for event types makes the event type
-/// placement inert. The reactor also carries <c>[EventType]</c> so that the reactor role is what the spec
-/// measures; without it the type is skipped for having no event type and the interface is scenery. The reducer,
-/// the other observer kind, has its own sibling spec.
+/// The second observer kind, and a separate reader: the client builds a reducer's subscription from the same two
+/// attributes read off the reducer type, so they are live here for the same reason they are live on a reactor and
+/// must be skipped for the same reason. Kept apart from the reactor's spec so that losing one of the two role
+/// checks cannot be absorbed by the other.
 /// </summary>
-public class and_the_attribute_is_on_an_observer : given.an_inert_event_filter_on_event_type_analyzer
+public class and_the_attribute_is_on_a_reducer : given.an_inert_event_filter_on_event_type_analyzer
 {
     const string Usage = """
     [EventStreamType("onboarding")]
     [EventSourceType("account")]
     [Cratis.Chronicle.Events.EventTypeAttribute]
-    public class TheReactor : Cratis.Chronicle.Reactors.IReactor
+    public class TheReducer : Cratis.Chronicle.Reducers.IReducer
     {
     }
     """;

@@ -4,13 +4,15 @@
 namespace Cratis.Chronicle.Events;
 
 /// <summary>
-/// Attribute to specify the <see cref="EventStreamType"/> for a command or observer.
+/// Attribute to specify the <see cref="EventStreamType"/> for a command, an observer or an aggregate root.
 /// </summary>
 /// <remarks>
 /// When applied to an observer (reactor or reducer), it filters observed events to only
 /// those belonging to the given event stream type. When applied to a command, setting
 /// <paramref name="concurrency"/> to <see langword="true"/> includes this value in the concurrency
-/// scope when appending events.
+/// scope when appending events. When applied to an aggregate root, it becomes the event stream type of every
+/// event that aggregate appends; without it the aggregate's own type name is used, so removing the attribute
+/// moves every subsequent append to a different stream type without any signal that it did.
 /// <para>
 /// A projection is not one of them. It observes every event of the types its definition declares, and cannot
 /// filter on event metadata at all - there is no field for a filter anywhere in a projection's definition, so
@@ -20,8 +22,8 @@ namespace Cratis.Chronicle.Events;
 /// <para>
 /// Neither is an event type. An append resolves its <see cref="EventStreamType"/> from the arguments it is given,
 /// never from the CLR type of the event being appended, so the attribute placed on an event type is read by
-/// nothing and reaches no appended event's context. Declare it on the command that appends the event, or on the
-/// reactor or reducer that observes it.
+/// nothing and reaches no appended event's context. Declare it on the command that appends the event, on the
+/// reactor or reducer that observes it, or on the aggregate root whose appends it identifies.
 /// </para>
 /// </remarks>
 /// <param name="value">The <see cref="EventStreamType"/> value.</param>

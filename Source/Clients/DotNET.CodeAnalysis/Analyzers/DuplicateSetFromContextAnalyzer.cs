@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
@@ -63,7 +64,7 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
     {
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
 
-        foreach (var (member, attributes) in GetMembersWithEffectiveAttributes(typeSymbol))
+        foreach (var (member, attributes) in GetMembersWithEffectiveAttributes(typeSymbol, context.CancellationToken))
         {
             AnalyzeMember(context, member, attributes);
         }
@@ -104,16 +105,13 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
             : null;
     }
 
-    static IEnumerable<(ISymbol Member, IEnumerable<AttributeData> Attributes)> GetMembersWithEffectiveAttributes(INamedTypeSymbol typeSymbol)
+    static IEnumerable<(ISymbol Member, IEnumerable<AttributeData> Attributes)> GetMembersWithEffectiveAttributes(INamedTypeSymbol typeSymbol, CancellationToken cancellationToken)
     {
         // For a positional record, attributes without an explicit target land on the constructor parameter
         // rather than the generated property, so the parameters must be inspected too. A child record's
         // parameters are reached the same way - the builder has a third copy of the mapping loop for those, so a
         // check that only looked at root read models would miss them.
-        var primaryConstructor = typeSymbol.InstanceConstructors
-            .OrderByDescending(constructor => constructor.Parameters.Length)
-            .FirstOrDefault();
-        var parameters = primaryConstructor?.Parameters ?? [];
+        var parameters = GetPrimaryConstructorParameters(typeSymbol, cancellationToken);
 
         foreach (var property in typeSymbol.GetMembers().OfType<IPropertySymbol>().Where(property => !property.IsStatic))
         {
@@ -136,4 +134,40 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
 
     static IPropertySymbol? GeneratedPropertyFor(INamedTypeSymbol typeSymbol, IParameterSymbol parameter) =>
         typeSymbol.GetMembers(parameter.Name).OfType<IPropertySymbol>().FirstOrDefault(property => !property.IsStatic);
+
+    /// <summary>
+    /// Gets the parameters of the type's primary constructor - the parameter list written on the type declaration
+    /// itself - or nothing when the type has none.
+    /// </summary>
+    /// <param name="typeSymbol">The type to get the primary constructor parameters of.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> for resolving declaration syntax.</param>
+    /// <returns>The primary constructor's parameters, empty when the type is not positional.</returns>
+    /// <remarks>
+    /// Only the primary constructor generates properties, so only its parameters are the second spelling of a
+    /// member. Taking the constructor with the most parameters instead - a heuristic that happens to agree for a
+    /// type declaring nothing else - pairs a declared property off against a parameter of an ordinary secondary
+    /// constructor that generates nothing, which drops the property from its own path and moves the report onto
+    /// an unrelated, unattributed parameter. The finding survives; the location it points at is wrong.
+    /// </remarks>
+    static ImmutableArray<IParameterSymbol> GetPrimaryConstructorParameters(INamedTypeSymbol typeSymbol, CancellationToken cancellationToken)
+    {
+        var parameterList = typeSymbol.DeclaringSyntaxReferences
+            .Select(reference => reference.GetSyntax(cancellationToken))
+            .OfType<TypeDeclarationSyntax>()
+            .Select(declaration => declaration.ParameterList)
+            .FirstOrDefault(list => list is not null);
+
+        if (parameterList is null)
+        {
+            return [];
+        }
+
+        var names = parameterList.Parameters.Select(parameter => parameter.Identifier.ValueText).ToArray();
+
+        var primaryConstructor = typeSymbol.InstanceConstructors.FirstOrDefault(constructor =>
+            constructor.Parameters.Length == names.Length &&
+            constructor.Parameters.Select(parameter => parameter.Name).SequenceEqual(names, StringComparer.Ordinal));
+
+        return primaryConstructor?.Parameters ?? [];
+    }
 }

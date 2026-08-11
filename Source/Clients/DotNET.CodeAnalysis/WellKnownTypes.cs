@@ -47,6 +47,14 @@ public static class WellKnownTypes
     public const string ReducerAttributeName = "Cratis.Chronicle.Reducers.ReducerAttribute";
 
     /// <summary>
+    /// The full name of the Arc model-bound Command attribute.
+    /// </summary>
+    /// <remarks>
+    /// Matched by full-name string so the analyzer does not need a reference to the Arc assembly.
+    /// </remarks>
+    public const string CommandAttributeName = "Cratis.Arc.Commands.ModelBound.CommandAttribute";
+
+    /// <summary>
     /// The full name of the OnceOnly attribute.
     /// </summary>
     public const string OnceOnlyAttributeName = "Cratis.Chronicle.Reactors.OnceOnlyAttribute";
@@ -75,6 +83,14 @@ public static class WellKnownTypes
     /// The full name of IReducer interface.
     /// </summary>
     public const string IReducerName = "Cratis.Chronicle.Reducers.IReducer";
+
+    /// <summary>
+    /// The full name of the IAggregateRoot interface.
+    /// </summary>
+    /// <remarks>
+    /// Matched by full-name string so the analyzer does not need a reference to the Arc assembly.
+    /// </remarks>
+    public const string IAggregateRootName = "Cratis.Arc.Chronicle.Aggregates.IAggregateRoot";
 
     /// <summary>
     /// The full name of EventContext class.
@@ -289,6 +305,18 @@ public static class WellKnownTypes
     {
         var reducerInterface = compilation.GetTypeByMetadataName(IReducerName);
         return reducerInterface != null && typeSymbol.AllInterfaces.Contains(reducerInterface, SymbolEqualityComparer.Default);
+    }
+
+    /// <summary>
+    /// Check if a type implements IAggregateRoot.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <param name="compilation">The compilation.</param>
+    /// <returns>True if the type implements IAggregateRoot, false otherwise.</returns>
+    public static bool ImplementsIAggregateRoot(ITypeSymbol typeSymbol, Compilation compilation)
+    {
+        var aggregateRootInterface = compilation.GetTypeByMetadataName(IAggregateRootName);
+        return aggregateRootInterface is not null && typeSymbol.AllInterfaces.Contains(aggregateRootInterface, SymbolEqualityComparer.Default);
     }
 
     /// <summary>
