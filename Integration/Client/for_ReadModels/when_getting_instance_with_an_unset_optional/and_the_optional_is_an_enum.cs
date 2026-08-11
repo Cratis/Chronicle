@@ -74,6 +74,9 @@ public class and_the_optional_is_an_enum(context context) : Given<context>(conte
     [Fact] void should_not_store_an_answer_the_read_model_never_gave() => (!Context.DocumentCanBeInspected || !Context.StoredDocument!.Contains(nameof(SignedContract.Outcome))).ShouldBeTrue();
     [Fact] void should_store_the_property_that_was_set() => (!Context.DocumentCanBeInspected || Context.StoredDocument!.Contains(nameof(SignedContract.Signer))).ShouldBeTrue();
 
+    /// <summary>
+    /// Asserts that the value the release path hands back was encrypted at rest.
+    /// </summary>
     /// <remarks>
     /// This read model reaches the code under test only because it carries a <see cref="PIIAttribute"/>, which is what
     /// sends its whole state through the registered schema on the way into the sink. That is a precondition, not a
