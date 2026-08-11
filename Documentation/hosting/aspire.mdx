@@ -12,7 +12,7 @@ dotnet add package Cratis.Chronicle.Aspire
 
 ## Development Mode
 
-For local development, call `AddCratisChronicle()` without arguments. This uses the Chronicle development image (`cratis/chronicle:latest-development`), which bundles MongoDB, so no external database is required.
+For local development, call `AddCratisChronicle()` without arguments. This uses the Chronicle development image (`cratis/chronicle:latest-development`), which bundles MongoDB and generates its own self-signed TLS certificate at startup — so neither an external database nor a certificate is required.
 
 <ChronicleClientTabs snippet="hosting/aspire/dev-mode" />
 
@@ -23,7 +23,34 @@ The development image is ideal for:
 
 ## Production Mode
 
-For production or staging environments, use the configure callback. This switches to the production image (`cratis/chronicle:latest`) — no embedded MongoDB — and lets you wire up an external database resource.
+For production or staging environments, use the configure callback. This switches to the production image (`cratis/chronicle:latest`), which drops both the embedded MongoDB *and* the development conveniences — so it needs three things wired up before it will start:
+
+| What | Method | Without it |
+|------|--------|------------|
+| A database | `WithMongoDB` / `WithPostgreSql` / `WithMsSql` / `WithSqlite` | There is no storage to connect to |
+| A TLS certificate | `WithTlsCertificate` | The server throws `No TLS certificate is configured` and exits |
+| An encryption certificate | `WithEncryptionCertificate` | The server throws `An encryption certificate is required in production` and exits |
+
+:::caution[The production image will not start without certificates]
+The development image generates a self-signed TLS certificate on the fly and falls back to ephemeral OAuth keys. The production image does neither — the production code paths are selected by a compile-time symbol, so no environment variable switches them back. A configure callback that wires up only a database therefore produces a container that starts, throws, and stops. Each storage section below shows **only** the storage wiring; add the two certificate calls from [Certificates](#certificates) to every one of them.
+:::
+
+### Certificates
+
+`WithTlsCertificate` and `WithEncryptionCertificate` each take a path to a PKCS#12 (`.pfx`) file **on your machine** and the password protecting it:
+
+<ChronicleClientTabs snippet="hosting/aspire/certificates" />
+
+Each method does two things: it bind-mounts the file read-only into the container (at `/certs/tls.pfx` and `/certs/encryption.pfx` respectively) and points the matching Chronicle setting at that in-container path. You do not add a `WithBindMount` of your own — a host path handed straight to the container names a file the container cannot see, so the mount is part of configuring the certificate rather than a separate step you have to remember. A relative path resolves against the AppHost directory, exactly like every other Aspire bind mount.
+
+The two calls are independent, so you can point both at the same `.pfx` if one certificate serves both purposes — they are mounted at different container paths, so nothing collides. They map to configuration like this:
+
+| Method | Container environment variable | Chronicle setting |
+|--------|-------------------------------|-------------------|
+| `WithTlsCertificate` | `Cratis__Chronicle__Tls__CertificatePath` / `Cratis__Chronicle__Tls__CertificatePassword` | `Cratis:Chronicle:Tls:CertificatePath` / `Cratis:Chronicle:Tls:CertificatePassword` |
+| `WithEncryptionCertificate` | `Cratis__Chronicle__EncryptionCertificate__CertificatePath` / `Cratis__Chronicle__EncryptionCertificate__CertificatePassword` | `Cratis:Chronicle:EncryptionCertificate:CertificatePath` / `Cratis:Chronicle:EncryptionCertificate:CertificatePassword` |
+
+The password argument is optional, but supply it: Chronicle reads the file as PKCS#12 only when a password is present, and a TLS listener needs the private key inside that PKCS#12 container. [Local Certificate Setup](./local-certificates) shows how to generate a suitable `.pfx` with `dotnet dev-certs` or OpenSSL; [Production Hosting](./production.md) covers what a real deployment should use instead of a self-signed one.
 
 ### MongoDB
 
@@ -45,6 +72,8 @@ Aspire's `builder.AddMongoDB("mongo")` starts a **standalone** `mongod`, so it d
 For local development against the production image, `AddCratisChronicleMongoDB()` provisions this for you — a MongoDB container that initializes itself as a single-node replica set, handed back as a connection string carrying `?directConnection=true`:
 
 <ChronicleClientTabs snippet="hosting/aspire/mongo-replica-set-helper" />
+
+That solves the database half only. Running the production image locally still needs both certificates from [Certificates](#certificates) — if all you want is a Chronicle to develop against, `AddCratisChronicle()` with no configure callback is the shorter road, because the development image brings its own replica set *and* its own certificates.
 
 If you would rather define the container yourself, the same recipe written out in full is:
 
@@ -96,11 +125,11 @@ The `grpc` endpoint is registered automatically when you call `AddCratisChronicl
 
 ## Complete Example
 
-A typical Aspire AppHost `Program.cs` for a production setup with MongoDB:
+A typical Aspire AppHost `Program.cs` for a production setup with MongoDB — database plus both certificates, which is the smallest configuration the production image actually starts on:
 
 <ChronicleClientTabs snippet="hosting/aspire/complete-example" />
 
-For development, simplify further by dropping the MongoDB wiring:
+For development, drop the whole callback. The development image brings its own MongoDB replica set, generates its own TLS certificate, and uses ephemeral OAuth keys, so there is nothing left to wire:
 
 <ChronicleClientTabs snippet="hosting/aspire/complete-example-dev" />
 
@@ -108,8 +137,8 @@ For development, simplify further by dropping the MongoDB wiring:
 
 | Image tag                       | Description                                             | Selected by                                    |
 |---------------------------------|---------------------------------------------------------|------------------------------------------------|
-| `cratis/chronicle:latest`       | Production image — no embedded MongoDB                  | `AddCratisChronicle(configure: ...)`           |
-| `cratis/chronicle:latest-development` | Development image — includes embedded MongoDB | `AddCratisChronicle()`                         |
+| `cratis/chronicle:latest`       | Production image — no embedded MongoDB, no self-generated certificates | `AddCratisChronicle(configure: ...)`           |
+| `cratis/chronicle:latest-development` | Development image — includes embedded MongoDB, generates a TLS certificate and ephemeral OAuth keys | `AddCratisChronicle()`                         |
 | `cratis/chronicle:latest-development-slim` | Development slim image — no embedded MongoDB | Not selected by the Aspire integration — run it directly |
 
 See [Production Hosting](./production.md) for guidance on running Chronicle in production environments.

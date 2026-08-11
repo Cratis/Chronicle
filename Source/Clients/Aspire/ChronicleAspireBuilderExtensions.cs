@@ -186,4 +186,113 @@ public static class ChronicleAspireBuilderExtensions
         });
         return builder;
     }
+
+    /// <summary>
+    /// Configures the Chronicle resource to serve its port with the TLS certificate at the given path.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The production image cannot start without this. The Chronicle port serves gRPC (HTTP/2) and the
+    /// Workbench, API and OAuth flows (HTTP/1.1) multiplexed through ALPN on a single TLS port, so a
+    /// certificate is mandatory — the server throws <c>No TLS certificate is configured</c> at startup
+    /// without one. Only the development images generate a self-signed certificate instead of throwing,
+    /// which is why the development path works with no certificate at all.
+    /// </para>
+    /// <para>
+    /// Bind-mounts <paramref name="certificatePath"/> read-only into the container at
+    /// <see cref="ChronicleContainerImageTags.TlsCertificateContainerPath"/> and sets the
+    /// <c>Cratis__Chronicle__Tls__CertificatePath</c> container environment variable to that in-container
+    /// path — a path on the host means nothing to the container, so the mount is part of configuring the
+    /// certificate rather than something to remember separately. When a
+    /// <paramref name="certificatePassword"/> is given, <c>Cratis__Chronicle__Tls__CertificatePassword</c>
+    /// is set to it. These map to <c>Cratis:Chronicle:Tls:CertificatePath</c> and
+    /// <c>Cratis:Chronicle:Tls:CertificatePassword</c> in the Chronicle server configuration respectively.
+    /// </para>
+    /// <para>
+    /// The certificate must be a PKCS#12 (<c>.pfx</c>) file carrying its private key, and Chronicle reads it
+    /// as PKCS#12 only when a password is supplied — pass the password the file was protected with.
+    /// </para>
+    /// </remarks>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="certificatePath">Path on the host to the PKCS#12 certificate file. A relative path resolves against the AppHost directory.</param>
+    /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
+    /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    /// <example>
+    /// <code>
+    /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
+    ///     .WithMongoDB(mongo)
+    ///     .WithTlsCertificate("certs/chronicle.pfx", "YourPassword"));
+    /// </code>
+    /// </example>
+    public static IChronicleAspireBuilder WithTlsCertificate(
+        this IChronicleAspireBuilder builder,
+        string certificatePath,
+        string? certificatePassword = default)
+    {
+        builder.ResourceBuilder.WithBindMount(certificatePath, ChronicleContainerImageTags.TlsCertificateContainerPath, isReadOnly: true);
+        builder.ResourceBuilder.WithEnvironment(context =>
+        {
+            context.EnvironmentVariables[ChronicleContainerImageTags.TlsCertificatePathEnvironmentVariable] = ChronicleContainerImageTags.TlsCertificateContainerPath;
+
+            if (!string.IsNullOrEmpty(certificatePassword))
+            {
+                context.EnvironmentVariables[ChronicleContainerImageTags.TlsCertificatePasswordEnvironmentVariable] = certificatePassword;
+            }
+        });
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the Chronicle resource to protect its Data Protection and OAuth keys with the certificate at the given path.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The production image cannot start without this either. The certificate signs and encrypts the internal
+    /// OAuth authority's keys, and the server throws <c>An encryption certificate is required in production</c>
+    /// at startup when it is missing. The development images fall back to ephemeral keys instead.
+    /// </para>
+    /// <para>
+    /// Bind-mounts <paramref name="certificatePath"/> read-only into the container at
+    /// <see cref="ChronicleContainerImageTags.EncryptionCertificateContainerPath"/> and sets the
+    /// <c>Cratis__Chronicle__EncryptionCertificate__CertificatePath</c> container environment variable to that
+    /// in-container path. When a <paramref name="certificatePassword"/> is given,
+    /// <c>Cratis__Chronicle__EncryptionCertificate__CertificatePassword</c> is set to it. These map to
+    /// <c>Cratis:Chronicle:EncryptionCertificate:CertificatePath</c> and
+    /// <c>Cratis:Chronicle:EncryptionCertificate:CertificatePassword</c> in the Chronicle server configuration
+    /// respectively.
+    /// </para>
+    /// <para>
+    /// The certificate must be a PKCS#12 (<c>.pfx</c>) file carrying its private key. It may be the same file
+    /// passed to <see cref="WithTlsCertificate"/> — the two are mounted separately, so pointing both at one
+    /// file works.
+    /// </para>
+    /// </remarks>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="certificatePath">Path on the host to the PKCS#12 certificate file. A relative path resolves against the AppHost directory.</param>
+    /// <param name="certificatePassword">Optional password protecting the certificate file.</param>
+    /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    /// <example>
+    /// <code>
+    /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
+    ///     .WithMongoDB(mongo)
+    ///     .WithEncryptionCertificate("certs/encryption.pfx", "YourPassword"));
+    /// </code>
+    /// </example>
+    public static IChronicleAspireBuilder WithEncryptionCertificate(
+        this IChronicleAspireBuilder builder,
+        string certificatePath,
+        string? certificatePassword = default)
+    {
+        builder.ResourceBuilder.WithBindMount(certificatePath, ChronicleContainerImageTags.EncryptionCertificateContainerPath, isReadOnly: true);
+        builder.ResourceBuilder.WithEnvironment(context =>
+        {
+            context.EnvironmentVariables[ChronicleContainerImageTags.EncryptionCertificatePathEnvironmentVariable] = ChronicleContainerImageTags.EncryptionCertificateContainerPath;
+
+            if (!string.IsNullOrEmpty(certificatePassword))
+            {
+                context.EnvironmentVariables[ChronicleContainerImageTags.EncryptionCertificatePasswordEnvironmentVariable] = certificatePassword;
+            }
+        });
+        return builder;
+    }
 }

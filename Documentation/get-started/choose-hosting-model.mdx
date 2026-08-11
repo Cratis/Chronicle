@@ -294,6 +294,15 @@ MongoDB) and the `With*` method you pick sets the kernel's storage type and conn
 resource you hand it — the same two environment variables you saw in the Compose files, now derived from
 your app model instead of hand-written:
 
+<Aside type="caution" title="The production image also wants certificates">
+Passing a configure callback moves you off the development image, and the production image does not
+generate the TLS certificate it serves port 35000 with, nor the certificate that protects its OAuth keys —
+it throws at startup and stops. The snippets below show the storage wiring only, so pair them with
+`WithTlsCertificate(...)` and `WithEncryptionCertificate(...)`; the
+[Aspire integration guide](/chronicle/hosting/aspire/) shows both. If you only wanted a kernel to develop
+against, stay on `AddCratisChronicle()` above — it brings its own database *and* its own certificate.
+</Aside>
+
 <Tabs syncKey="database">
 <TabItem label="MongoDB">
 
