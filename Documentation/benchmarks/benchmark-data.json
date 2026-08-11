@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786454543157,
+  "lastUpdate": 1786458373278,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -4468,6 +4468,144 @@
             "value": 329115025.9,
             "unit": "ns",
             "range": "± 64610185.75672689"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "einari@me.com",
+            "name": "Einar Ingebrigtsen",
+            "username": "einari"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "120734735bc73c934575aa836474281d96fa2dcd",
+          "message": "Merge pull request #3610 from Cratis:feat/materialized-read-models-through-readmodels\n\nSupport materialized read models through IReadModels",
+          "timestamp": "2026-08-11T16:12:40+02:00",
+          "tree_id": "7350511384a67565253bf27831589480e7400388",
+          "url": "https://github.com/Cratis/Chronicle/commit/120734735bc73c934575aa836474281d96fa2dcd"
+        },
+        "date": 1786458373276,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 10862039.40625,
+            "unit": "ns",
+            "range": "± 5334272.385797056"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 13584945.140625,
+            "unit": "ns",
+            "range": "± 6313657.873546085"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 25613241.162962966,
+            "unit": "ns",
+            "range": "± 7122939.599179099"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 177438561.3333333,
+            "unit": "ns",
+            "range": "± 41924847.54298908"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 2318367.5,
+            "unit": "ns",
+            "range": "± 147416.37276181366"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 3530702.777777778,
+            "unit": "ns",
+            "range": "± 113197.65416162317"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 1494498.2222222222,
+            "unit": "ns",
+            "range": "± 214964.0431082474"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 8848141.3,
+            "unit": "ns",
+            "range": "± 1728709.704613357"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 250433702.9,
+            "unit": "ns",
+            "range": "± 40258366.99029793"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 1161075347.2,
+            "unit": "ns",
+            "range": "± 18187443.31622318"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 67279152.75,
+            "unit": "ns",
+            "range": "± 1175062.9894147012"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 395536304.7222222,
+            "unit": "ns",
+            "range": "± 117560240.42606218"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1895125320.6,
+            "unit": "ns",
+            "range": "± 612254776.8403037"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 69522726.2,
+            "unit": "ns",
+            "range": "± 1859167.5851038552"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 84777153.6,
+            "unit": "ns",
+            "range": "± 4991337.711858581"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 251907661,
+            "unit": "ns",
+            "range": "± 45871129.59371761"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 67208189.1,
+            "unit": "ns",
+            "range": "± 1655079.751422165"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 86906220.5,
+            "unit": "ns",
+            "range": "± 9215404.234218473"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 229762002.375,
+            "unit": "ns",
+            "range": "± 9975554.267920397"
           }
         ]
       }
