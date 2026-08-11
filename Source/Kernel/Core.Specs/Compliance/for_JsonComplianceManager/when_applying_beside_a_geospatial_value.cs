@@ -29,5 +29,5 @@ public class when_applying_beside_a_geospatial_value : given.a_value_handler_and
     [Fact] void should_keep_the_geospatial_longitude() => _result["location"]!["locationPoint"]!["coordinates"]![0]!.GetValue<double>().ShouldEqual(Longitude);
     [Fact] void should_keep_the_geospatial_latitude() => _result["location"]!["locationPoint"]!["coordinates"]![1]!.GetValue<double>().ShouldEqual(Latitude);
     [Fact] void should_keep_the_non_compliant_sibling() => _result["location"]!["city"]!.GetValue<string>().ShouldEqual(City);
-    [Fact] void should_not_encrypt_the_geospatial_value() => _valueHandler.DidNotReceive().Apply(string.Empty, string.Empty, Identifier, Arg.Is<JsonNode>(_ => _ is JsonObject));
+    [Fact] void should_encrypt_nothing_but_the_compliant_member() => _valueHandler.Received(1).Apply(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>());
 }

@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 public static class JsonSchemaExtensions
 {
+    static readonly TypeFormats _typeFormats = new();
+
     /// <summary>
     /// Get all actual properties from a schema, including any inherited properties from inherited schemas.
     /// </summary>
@@ -59,38 +61,27 @@ public static class JsonSchemaExtensions
     }
 
     /// <summary>
-    /// Get whether the schema describes an opaque value — an object whose members it deliberately does not declare.
+    /// Get whether the schema describes a geospatial value.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
-    /// <returns>True when the schema describes an opaque value, false when it declares the members of what it describes.</returns>
+    /// <returns>True when the schema describes a geospatial value, false when it does not.</returns>
     /// <remarks>
-    /// Not every JSON object in a document is a container of schema-declared properties. Chronicle emits object
-    /// schemas that declare nothing on purpose, because the value is stored and materialized as one typed value
-    /// rather than as a set of members: a geospatial leaf, whose GeoJSON <c>type</c>/<c>coordinates</c> pair belongs
-    /// to its converter; a polymorphic base type, kept open so a derived payload and its type discriminator round-trip
-    /// intact; and a dictionary, whose members are data rather than declarations. Anything walking a document against
-    /// its schema has to stop at such a value instead of reading its members as properties the schema forgot.
+    /// A geospatial value is an object on the wire — GeoJSON, a <c>type</c> and a <c>coordinates</c> pair — but it is
+    /// not a container of schema-declared members. Chronicle stores and materializes it as one typed value, so the
+    /// schema generator emits it as a leaf carrying only its <c>format</c> and those wire members belong to the type's
+    /// own converter. Anything walking a document against its schema has to stop at such a value rather than read its
+    /// members as properties the schema failed to declare.
     /// <para>
-    /// A schema that declares nothing because its declaration could not be reached — an unresolved <c>$ref</c>, a
-    /// composition that flattened to nothing — is not opaque, it is broken. Calling it opaque would silently skip a
-    /// value the schema does mean to describe, so those shapes are excluded and left to fail where they are used.
+    /// The answer is the presence of a complex format, the same positive signal the storage converters already use to
+    /// decide a value is typed rather than decomposable. Deliberately not the absence of declared properties: a schema
+    /// can declare nothing because its declaration could not be reached — an unresolved <c>$ref</c>, a composition
+    /// that flattened to nothing — and treating that as a typed value would silently skip members the schema does
+    /// mean to describe.
     /// </para>
     /// </remarks>
-    public static bool DescribesOpaqueValue(this JsonSchema schema)
-    {
-        var actual = schema.ActualTypeSchema;
-
-        if (actual.GetFlattenedProperties().Any() ||
-            actual.HasReference ||
-            actual.AllOf.Count > 0 ||
-            actual.AnyOf.Count > 0 ||
-            actual.OneOf.Count > 0)
-        {
-            return false;
-        }
-
-        return actual.Type.HasFlag(JsonObjectType.Object);
-    }
+    public static bool DescribesGeospatialValue(this JsonSchema schema) =>
+        _typeFormats.IsComplexFormat(schema.Format) ||
+        _typeFormats.IsComplexFormat(schema.ActualTypeSchema.Format);
 
     /// <summary>
     /// Gets the schema for a property within the schema hierarchy based on a <see cref="PropertyPath"/>.

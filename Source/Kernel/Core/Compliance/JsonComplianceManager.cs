@@ -85,16 +85,6 @@ public class JsonComplianceManager(
         Func<IJsonCompliancePropertyValueHandler, string, JsonNode, Task<JsonNode>> action,
         string path = "")
     {
-        // The walk looks every property in the document up in the schema, which presumes the schema declares the
-        // members of what it describes. Some deliberately do not: a geospatial value is a leaf carrying only its
-        // format, a polymorphic base type is kept open, a dictionary holds data rather than declarations. Their
-        // members cannot carry compliance metadata — there is no schema property to hang it on — so there is nothing
-        // to do here, and looking each one up would report schema drift for a document that matches its schema.
-        if (schema.DescribesOpaqueValue())
-        {
-            return;
-        }
-
         var complianceMetadataForContainer = schema.GetComplianceMetadata();
         foreach (var (property, value) in json.ToArray())
         {
@@ -139,12 +129,18 @@ public class JsonComplianceManager(
                     }
                 }
 
-                if (!handlerApplied && value is JsonObject jsonObjectValue)
+                if (!handlerApplied && value is JsonObject jsonObjectValue && !propertySchema.DescribesGeospatialValue())
                 {
                     // Only descend when the property was not handled as a whole. A handled container has already
                     // been replaced by its ciphertext, so recursing would mutate the detached original — the work
                     // is thrown away on apply, and on release it would decrypt members that were never separately
                     // encrypted.
+                    //
+                    // A geospatial value is an object on the wire but not a container: the schema emits it as a leaf
+                    // carrying only its format, so its GeoJSON members are the converter's and there is no schema
+                    // property under them for a marker to sit on. Descending would report every one of them as drift
+                    // and fail a document that matches its schema. Only the descent is skipped — a geospatial value
+                    // marked [PII] is still handled as a whole above, like any other container.
                     await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
@@ -184,7 +180,10 @@ public class JsonComplianceManager(
             var elementPath = $"{path}[{i}]";
             switch (element)
             {
-                case JsonObject elementObject:
+                // A geospatial element is a single typed value, not a container of members, so it falls through to
+                // the value branch below — handled as a whole when the element type is marked, left alone when it
+                // is not. Walking into it would report its GeoJSON members as drift, the same as for a property.
+                case JsonObject elementObject when !itemSchema.DescribesGeospatialValue():
                     await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath);
                     break;
 
