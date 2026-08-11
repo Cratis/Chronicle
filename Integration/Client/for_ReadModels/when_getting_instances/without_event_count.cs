@@ -15,7 +15,7 @@ public class without_event_count(context context) : Given<context>(context)
         async Task Because()
         {
             await AppendEvents();
-            Results = await EventStore.ReadModels.GetInstances<SomeReadModel>();
+            Results = await WaitTillInstancesAreVisible(1);
         }
     }
 

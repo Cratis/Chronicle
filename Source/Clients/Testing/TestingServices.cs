@@ -47,6 +47,7 @@ using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities
 using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
 using KernelJsonComplianceManager = KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager;
 using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler;
+using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
 using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
@@ -200,6 +201,11 @@ internal sealed class TestingServices(
             new KernelEventCompliance(
                 new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
                 new ExpandoObjectConverter(new TypeFormats())),
+            new KernelMaterializedReadModelStore(
+                storage,
+                new KernelReadModelsCompliance(
+                    new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+                    new ExpandoObjectConverter(new TypeFormats()))),
             jsonSerializerOptions));
 
     readonly Lazy<ICompliance> _compliance = new(() =>

@@ -58,11 +58,11 @@ So a guard written in a read model record is not a guard. Put the intent somewhe
 
 A *materialized* read model updates *after* the event is appended, so what's stored is [eventually consistent](../read-models/consistency.md). Design with that in mind: don't read a stored model back inside a command or reactor to make a decision (use a [constraint](../constraints/) for invariants instead), and prefer [observable queries](../scenarios/real-time-query) so the UI reflects changes the moment the projection catches up.
 
-Eventual is the default, though — not a law. The `IReadModels` API can also compute a read model on demand by replaying its events, giving you a strongly consistent read that includes an event you appended a millisecond ago:
+Eventual is the default, though — not a law. Mark the read model `[Passive]` and nothing materializes it, so `IReadModels` computes it from its events on every read — a strongly consistent read that includes an event you appended a millisecond ago:
 
 <ChronicleClientTabs snippet="concepts/designing-read-models/strongly-consistent" />
 
-[Deep dive: consistency](./consistency.md) covers when each model is the right call.
+The call site is the same either way; the read model's own declaration decides where the answer comes from. [Deep dive: consistency](./consistency.md) covers when each model is the right call.
 
 ## Query it
 
@@ -70,11 +70,11 @@ When it's time to read, Chronicle gives you a ladder — trade consistency for c
 
 <ChronicleClientTabs snippet="concepts/designing-read-models/query-ladder" />
 
-- **`GetInstances<T>()`** rebuilds every instance from the event log at call time, so the result reflects everything appended so far. You can cap the work with an event count (`GetInstances<T>(eventCount)`), but a capped replay may return incomplete results. Replay cost grows with history — great for [reporting and short histories](../read-models/getting-collection-instances), not necessarily your production list view.
+- **`GetInstances<T>()`** returns every instance in one call — read from the materialized store, or rebuilt from the event log when the read model is `[Passive]`. You can force a bounded replay with an event count (`GetInstances<T>(eventCount)`), but a capped replay may return incomplete results. Good for [reporting and small populations](../read-models/getting-collection-instances), not for your production list view.
 - **`Materialized.GetInstances<T>(skip, take)`** reads what projections have already stored, with paging — cheap and fast, a moment behind. See [Materialized read models](../read-models/materialized-pagination).
 - **Need filtering, sorting, or aggregation?** Go to the sink's native query tools — `IMongoCollection<T>` or your `DbContext` — because a materialized read model is just data in a [database](../sinks/), shaped for exactly this.
 
-Kotlin and Java currently only support the strongly-consistent single-instance lookup shown above — there's no way to get all instances or page through materialized storage from those two clients yet.
+Kotlin and Java currently only support the single-instance lookup shown above — there's no way to get all instances or page through materialized storage from those two clients yet.
 
 ## Keep the read side ignorant of the write side
 

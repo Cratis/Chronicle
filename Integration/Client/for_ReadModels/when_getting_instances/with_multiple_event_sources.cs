@@ -28,7 +28,8 @@ public class with_multiple_event_sources(context context) : Given<context>(conte
             await AppendEvents();
             await EventStore.EventLog.Append(SecondEventSourceId, ThirdEvent);
             await EventStore.EventLog.Append(SecondEventSourceId, FourthEvent);
-            Results = await EventStore.ReadModels.GetInstances<SomeReadModel>();
+
+            Results = await WaitTillInstancesAreVisible(2);
         }
     }
 

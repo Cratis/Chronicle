@@ -23,7 +23,37 @@ public class a_projection_with_events(ChronicleFixture chronicleFixture) : Speci
 
     protected async Task AppendEvents()
     {
+        var handler = EventStore.Projections.GetHandlerFor<SomeProjection>();
+        await handler.WaitTillActive();
+
         await EventStore.EventLog.Append(EventSourceId, FirstEvent);
         await EventStore.EventLog.Append(EventSourceId, SecondEvent);
+    }
+
+    /// <summary>
+    /// Polls the materialized read model until it holds at least <paramref name="expectedCount"/>
+    /// instances, or the default timeout elapses.
+    /// </summary>
+    /// <param name="expectedCount">The minimum number of instances to wait for.</param>
+    /// <returns>The instances once the expected count is reached.</returns>
+    /// <remarks>
+    /// <see cref="SomeReadModel"/> is materialized, so <c>GetInstances</c> now reads the sink instead of
+    /// replaying — a read straight after appending can race the projection engine's catch-up unless
+    /// something polls for the result to appear, the same gap <c>GetInstanceById</c> callers close
+    /// elsewhere in this suite.
+    /// </remarks>
+    protected async Task<IEnumerable<SomeReadModel>> WaitTillInstancesAreVisible(int expectedCount)
+    {
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+        while (true)
+        {
+            var instances = await EventStore.ReadModels.GetInstances<SomeReadModel>();
+            if (instances.Count() >= expectedCount)
+            {
+                return instances;
+            }
+
+            await Task.Delay(50, cts.Token);
+        }
     }
 }

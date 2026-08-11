@@ -7,8 +7,9 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.ReadModels.for_ReadModels;
 
 #pragma warning disable CA2263
-public class when_getting_instance_by_id_and_it_is_a_reducer_with_compliance_data : given.all_dependencies
+public class when_getting_instance_by_id_and_it_is_a_passive_reducer_with_compliance_data : given.all_dependencies
 {
+    [Passive]
     class MyReadModel
     {
         public string Id { get; set; } = string.Empty;
