@@ -8,6 +8,8 @@ Allowing multiple `[SetFromContext]` on one member is deliberate and load-bearin
 
 Keep the capture that was intended, or move the other onto its own property.
 
+Every spelling of "one member" is covered. On a positional record the constructor parameter and the property generated from it are two distinct symbols — `[property:]` is the only way to reach the second — and both write the same key into the same event type's definition. A duplicate split across the two spellings is reported exactly as one placed twice on a single symbol.
+
 ## Severity
 
 Warning

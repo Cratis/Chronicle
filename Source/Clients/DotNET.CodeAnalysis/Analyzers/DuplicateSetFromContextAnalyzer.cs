@@ -28,6 +28,13 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// wrong, so re-reading the attributes and finding both present and correctly spelled confirms the wrong
 /// conclusion.
 /// </para>
+/// <para>
+/// A positional record spells one member twice - the constructor parameter, and the property generated from it,
+/// which <c>[property:]</c> is the only way to reach. They are distinct symbols, and the builder's parameter and
+/// property passes are disjoint per symbol, so a duplicate split across the two spellings reaches the same key of
+/// the same definition from opposite sides with neither symbol carrying both attributes. The property pass runs
+/// second and wins, as quietly as before. The two symbols' attributes are therefore unioned before grouping.
+/// </para>
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
@@ -56,15 +63,15 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
     {
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
 
-        foreach (var member in GetPropertiesAndParameters(typeSymbol))
+        foreach (var (member, attributes) in GetMembersWithEffectiveAttributes(typeSymbol))
         {
-            AnalyzeMember(context, member);
+            AnalyzeMember(context, member, attributes);
         }
     }
 
-    static void AnalyzeMember(SymbolAnalysisContext context, ISymbol member)
+    static void AnalyzeMember(SymbolAnalysisContext context, ISymbol member, IEnumerable<AttributeData> attributes)
     {
-        var duplicated = member.GetAttributes()
+        var duplicated = attributes
             .Select(EventTypeOfSetFromContext)
             .Where(_ => _ is not null)
             .GroupBy(_ => _, SymbolEqualityComparer.Default)
@@ -97,13 +104,8 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
             : null;
     }
 
-    static IEnumerable<ISymbol> GetPropertiesAndParameters(INamedTypeSymbol typeSymbol)
+    static IEnumerable<(ISymbol Member, IEnumerable<AttributeData> Attributes)> GetMembersWithEffectiveAttributes(INamedTypeSymbol typeSymbol)
     {
-        foreach (var property in typeSymbol.GetMembers().OfType<IPropertySymbol>().Where(property => !property.IsStatic))
-        {
-            yield return property;
-        }
-
         // For a positional record, attributes without an explicit target land on the constructor parameter
         // rather than the generated property, so the parameters must be inspected too. A child record's
         // parameters are reached the same way - the builder has a third copy of the mapping loop for those, so a
@@ -111,10 +113,27 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
         var primaryConstructor = typeSymbol.InstanceConstructors
             .OrderByDescending(constructor => constructor.Parameters.Length)
             .FirstOrDefault();
+        var parameters = primaryConstructor?.Parameters ?? [];
 
-        foreach (var parameter in primaryConstructor?.Parameters ?? [])
+        foreach (var property in typeSymbol.GetMembers().OfType<IPropertySymbol>().Where(property => !property.IsStatic))
         {
-            yield return parameter;
+            // A positional record's parameter and the property generated from it are two symbols for one
+            // member, and `[property:]` is the only way to reach the second. Both spellings write the same key
+            // into the same event type's definition, so the member is analyzed once - below, from the parameter,
+            // over the union of both symbols' attributes. Grouping them apart is precisely what let a duplicate
+            // split across the two spellings through.
+            if (!parameters.Any(parameter => string.Equals(parameter.Name, property.Name, StringComparison.Ordinal)))
+            {
+                yield return (property, property.GetAttributes());
+            }
+        }
+
+        foreach (var parameter in parameters)
+        {
+            yield return (parameter, parameter.GetAttributes().Concat(GeneratedPropertyFor(typeSymbol, parameter)?.GetAttributes() ?? []));
         }
     }
+
+    static IPropertySymbol? GeneratedPropertyFor(INamedTypeSymbol typeSymbol, IParameterSymbol parameter) =>
+        typeSymbol.GetMembers(parameter.Name).OfType<IPropertySymbol>().FirstOrDefault(property => !property.IsStatic);
 }
