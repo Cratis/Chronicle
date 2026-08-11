@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 public static class JsonSchemaExtensions
 {
+    static readonly TypeFormats _typeFormats = new();
+
     /// <summary>
     /// Get all actual properties from a schema, including any inherited properties from inherited schemas.
     /// </summary>
@@ -57,6 +59,29 @@ public static class JsonSchemaExtensions
 
         return camelCaseCount > pascalCaseCount ? "id" : "Id";
     }
+
+    /// <summary>
+    /// Get whether the schema describes a geospatial value.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
+    /// <returns>True when the schema describes a geospatial value, false when it does not.</returns>
+    /// <remarks>
+    /// A geospatial value is an object on the wire — GeoJSON, a <c>type</c> and a <c>coordinates</c> pair — but it is
+    /// not a container of schema-declared members. Chronicle stores and materializes it as one typed value, so the
+    /// schema generator emits it as a leaf carrying only its <c>format</c> and those wire members belong to the type's
+    /// own converter. Anything walking a document against its schema has to stop at such a value rather than read its
+    /// members as properties the schema failed to declare.
+    /// <para>
+    /// The answer is the presence of a complex format, the same positive signal the storage converters already use to
+    /// decide a value is typed rather than decomposable. Deliberately not the absence of declared properties: a schema
+    /// can declare nothing because its declaration could not be reached — an unresolved <c>$ref</c>, a composition
+    /// that flattened to nothing — and treating that as a typed value would silently skip members the schema does
+    /// mean to describe.
+    /// </para>
+    /// </remarks>
+    public static bool DescribesGeospatialValue(this JsonSchema schema) =>
+        _typeFormats.IsComplexFormat(schema.Format) ||
+        _typeFormats.IsComplexFormat(schema.ActualTypeSchema.Format);
 
     /// <summary>
     /// Gets the schema for a property within the schema hierarchy based on a <see cref="PropertyPath"/>.

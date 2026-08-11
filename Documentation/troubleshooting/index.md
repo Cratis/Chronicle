@@ -34,6 +34,23 @@ If a reactor throws, the failing event source partition pauses until the problem
 
 [Constraints](/chronicle/constraints/) are enforced as events are appended — a uniqueness constraint, for example, rejects a second event that would violate it. Check which constraint fired and whether the value really is a duplicate within its scope (remember [namespaces](/chronicle/concepts/namespaces/) isolate data per tenant).
 
+## A projection stalls with "the schema does not declare it"
+
+The full message names the property, the subject, and what the schema does declare:
+
+```text
+Could not apply compliance metadata for property 'address.postCode' of 'person-42'
+because the schema does not declare it. The schema declares: 'street', 'city'.
+```
+
+Compliance handling walks the whole document — one `[PII]` marker anywhere switches it on for every value — and looks each property up in the schema to find the classification that applies. This message means the document and its schema have drifted apart: the stored payload carries a property the schema has never heard of. The usual cause is an event type that gained or renamed a property without an [event type migration](/chronicle/concepts/event-type-migrations/), so old events no longer match the shape the schema now describes. Add the migration and replay.
+
+On the write side the append fails outright; on the read side the failing partition pauses and retries, so the read model stops advancing at that event.
+
+A [geospatial](/chronicle/concepts/geospatial/) `Point`, `LineString` or `Polygon` is never the cause — the walk stops at those by design and never reads their GeoJSON members as properties.
+
+Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary both hold members the schema does not declare, and Chronicle would rather fail here than write a value it was told is personal into the store unprotected. Model the data as a value object with declared properties. See [Geospatial values are not looked inside](/chronicle/compliance/pii#geospatial-values-are-not-looked-inside).
+
 ## I can't connect to the Chronicle kernel
 
 - Confirm the kernel is running — if you scaffolded from a template, `docker compose up -d` and check the container is healthy.
