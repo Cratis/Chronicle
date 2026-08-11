@@ -59,6 +59,40 @@ public static class JsonSchemaExtensions
     }
 
     /// <summary>
+    /// Get whether the schema describes an opaque value — an object whose members it deliberately does not declare.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
+    /// <returns>True when the schema describes an opaque value, false when it declares the members of what it describes.</returns>
+    /// <remarks>
+    /// Not every JSON object in a document is a container of schema-declared properties. Chronicle emits object
+    /// schemas that declare nothing on purpose, because the value is stored and materialized as one typed value
+    /// rather than as a set of members: a geospatial leaf, whose GeoJSON <c>type</c>/<c>coordinates</c> pair belongs
+    /// to its converter; a polymorphic base type, kept open so a derived payload and its type discriminator round-trip
+    /// intact; and a dictionary, whose members are data rather than declarations. Anything walking a document against
+    /// its schema has to stop at such a value instead of reading its members as properties the schema forgot.
+    /// <para>
+    /// A schema that declares nothing because its declaration could not be reached — an unresolved <c>$ref</c>, a
+    /// composition that flattened to nothing — is not opaque, it is broken. Calling it opaque would silently skip a
+    /// value the schema does mean to describe, so those shapes are excluded and left to fail where they are used.
+    /// </para>
+    /// </remarks>
+    public static bool DescribesOpaqueValue(this JsonSchema schema)
+    {
+        var actual = schema.ActualTypeSchema;
+
+        if (actual.GetFlattenedProperties().Any() ||
+            actual.HasReference ||
+            actual.AllOf.Count > 0 ||
+            actual.AnyOf.Count > 0 ||
+            actual.OneOf.Count > 0)
+        {
+            return false;
+        }
+
+        return actual.Type.HasFlag(JsonObjectType.Object);
+    }
+
+    /// <summary>
     /// Gets the schema for a property within the schema hierarchy based on a <see cref="PropertyPath"/>.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
