@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786413220288,
+  "lastUpdate": 1786421720939,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -3778,6 +3778,144 @@
             "value": 298238747.6,
             "unit": "ns",
             "range": "± 84999208.26205158"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "einari@me.com",
+            "name": "Einar Ingebrigtsen",
+            "username": "einari"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "93ef919b23113c25b1a83a0ce66a1c7a6d92eb69",
+          "message": "Prevent projection registration storms (#3666)\n\n* Skip registration work for projection definitions that have not changed\n\nEvery client replica re-registers its full definition set on startup and\non every reconnect. The projections manager grain processed the full set\nevery time - engine registration on every silo, SetDefinition on every\nprojection grain and an observer subscription per definition and\nnamespace - even when nothing had changed. Because the grain is\nnon-reentrant, a registration that outlived its caller's timeout kept\nits retries queueing the same workload behind it, and the queue never\ndrained (the production registration storm).\n\nCompare each incoming definition against the registered state with the\nsame comparer the projection grain uses for replay decisions, and only\nprocess the ones that are new or different. An identical re-registration\nreturns immediately, which also collapses a queue of identical requests:\nthe first does the work, the rest compare equal and answer near-free.\nThe state is only merged after the engine and the projection grains have\naccepted the definitions, so an interrupted registration is retried in\nfull instead of being skipped as unchanged. Event type schemas are now\nfetched once per registration pass instead of once per definition and\nnamespace.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Add specs for the projections manager grain registration paths\n\nCover the unchanged fast path, the changed and new definition paths,\na mixed batch where only some definitions changed, and the collapsing\nof an identical registration arriving a second time.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Run RegisterAll as a single flight with backoff between failed runs\n\nA registration request that times out client-side is usually still\nqueued kernel-side, and every path that re-triggered registration - a\nreconnect, or any operation re-running connect after a failed run -\nimmediately sent the kernel another copy of the same registration to\nqueue behind the first. Stacked across replicas this is the feedback\nloop behind the production registration storm.\n\nRegisterAll now runs as a single flight per event store: callers that\narrive while a run is in flight await that same run instead of starting\nanother, and a run that follows a failure waits an exponentially\ngrowing, jittered delay (1s doubling, capped at one minute) before\nhitting the wire, so a kernel that is slow to accept a registration\nsees retry pressure back off instead of pile up. A successful run\nresets the backoff.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Add specs for registration single flight and backoff\n\nCover sharing an in-flight run, invoking again after completion,\nbacking off after a failed run and resetting on success, the backoff\ndelay growth, cap and jitter bounds, and that a second RegisterAll\narriving while one is in flight sends the kernel a single registration.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>",
+          "timestamp": "2026-08-11T06:01:46+02:00",
+          "tree_id": "39ebdb9e91b56a0dc79885456bd95d5f705c0d17",
+          "url": "https://github.com/Cratis/Chronicle/commit/93ef919b23113c25b1a83a0ce66a1c7a6d92eb69"
+        },
+        "date": 1786421720938,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 6839429.453125,
+            "unit": "ns",
+            "range": "± 419455.7659593981"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 9712335.3171875,
+            "unit": "ns",
+            "range": "± 619601.0966089888"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 25381447.999999996,
+            "unit": "ns",
+            "range": "± 6175753.3094263505"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 200098313.55,
+            "unit": "ns",
+            "range": "± 50379182.176441796"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 2626720.125,
+            "unit": "ns",
+            "range": "± 239580.92960354008"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 6115450.777777778,
+            "unit": "ns",
+            "range": "± 232419.22607046616"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 2245371.222222222,
+            "unit": "ns",
+            "range": "± 232675.3647358148"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 8877833.1,
+            "unit": "ns",
+            "range": "± 1573967.2577916996"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 239084793.4,
+            "unit": "ns",
+            "range": "± 38879206.74177311"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 1160265175.25,
+            "unit": "ns",
+            "range": "± 30190485.274321403"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 69398372.3,
+            "unit": "ns",
+            "range": "± 911609.4139730202"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 356173107.7777778,
+            "unit": "ns",
+            "range": "± 125262157.20487435"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1495290705.3333333,
+            "unit": "ns",
+            "range": "± 202428396.28122735"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 70276532.1,
+            "unit": "ns",
+            "range": "± 1548783.4797076096"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 85751410.1111111,
+            "unit": "ns",
+            "range": "± 5659991.117948739"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 262977739.125,
+            "unit": "ns",
+            "range": "± 33252888.99714818"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 70943607.7,
+            "unit": "ns",
+            "range": "± 2533107.546612485"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 86328536,
+            "unit": "ns",
+            "range": "± 4366522.173858676"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 260162128.2,
+            "unit": "ns",
+            "range": "± 35760610.439462475"
           }
         ]
       }
