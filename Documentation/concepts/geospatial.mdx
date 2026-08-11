@@ -27,74 +27,39 @@ Projections and reducers handle geospatial types like any other value type. Auto
 
 <ChronicleClientTabs snippet="concepts/geospatial/projection" />
 
-## JSON Schema
+## JSON schema
 
-When Chronicle generates the JSON schema, geospatial types are annotated with their GeoJSON-compatible formats:
+Chronicle describes a geospatial value as a **leaf**: an object carrying only its format, with no sub-properties.
 
-**Point**: Generates as an object with `longitude` and `latitude` properties, marked with `"format": "point"`
+```json
+{ "type": "object", "format": "point" }
+{ "type": "object", "format": "linestring" }
+{ "type": "object", "format": "polygon" }
+```
+
+The format is the entire description, and that is deliberate. A geospatial value is stored and materialized as a single typed CLR value — `Point`, `LineString`, `Polygon` — so the members you see on the wire belong to the type's own GeoJSON converter, not to your event or read model. Were the schema to flatten them into properties, the sink would treat the coordinates as fields of your model and drop them on the way through.
+
+That format annotation is what every reader keys off: the storage sinks use it to materialize the typed value, and tools like the Workbench use it to recognize a geographic field and display it as one.
+
+On the wire, the value itself is GeoJSON:
 
 ```json
 {
-  "type": "object",
-  "format": "point",
-  "properties": {
-    "longitude": { "type": "number" },
-    "latitude": { "type": "number" }
-  }
+  "pickedUpAt": { "type": "Point", "coordinates": [10.7522, 59.9139] }
 }
 ```
 
-**LineString**: Generates as an array of point objects, marked with `"format": "linestring"`
+Longitude comes first, then latitude — the GeoJSON convention, and the same order the `Point` constructor takes.
 
-```json
-{
-  "type": "array",
-  "format": "linestring",
-  "items": {
-    "type": "object",
-    "properties": {
-      "longitude": { "type": "number" },
-      "latitude": { "type": "number" }
-    }
-  }
-}
-```
+## Geospatial values alongside PII
 
-**Polygon**: Generates as an object with `shell` and `holes`, marked with `"format": "polygon"`
+The two features meet more often than you might expect: a delivery has a customer name and a drop-off point, an incident report has a reporter and a location. As soon as *anything* in an event or read model is marked `[PII]`, Chronicle runs its compliance pass over the whole document — not just the personal values — so the geospatial value gets visited too.
 
-```json
-{
-  "type": "object",
-  "format": "polygon",
-  "properties": {
-    "shell": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "longitude": { "type": "number" },
-          "latitude": { "type": "number" }
-        }
-      }
-    },
-    "holes": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "longitude": { "type": "number" },
-            "latitude": { "type": "number" }
-          }
-        }
-      }
-    }
-  }
-}
-```
+Nothing happens to it. Chronicle stops at a geospatial value rather than descending into its GeoJSON members: those members are the converter's business, and there is no schema property under them for a `[PII]` marker to sit on. The location is written and read back verbatim, in the clear, and stays `2dsphere`-indexable and queryable — which is what you want, because a venue is public data even when the organizer's name is not.
 
-This lets consumers inspect the schema and know the field contains geographic data, and the format annotations make it possible for tools like the Workbench to recognize and properly display geographic values.
+:::caution[Marking a location `[PII]` costs you spatial querying]
+Marking the geospatial property `[PII]` encrypts the whole GeoJSON object into a single ciphertext string. That protects it, but it stops being a geographic value: it cannot be indexed, and spatial queries against the read model no longer work. Reach for it only when the location genuinely identifies a person — a home address, a tracked device — and accept the trade. See [Values Chronicle does not look inside](../compliance/pii#values-chronicle-does-not-look-inside).
+:::
 
 ## Storage
 
