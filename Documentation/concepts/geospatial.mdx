@@ -55,10 +55,12 @@ Longitude comes first, then latitude — the GeoJSON convention, and the same or
 
 The two features meet more often than you might expect: a delivery has a customer name and a drop-off point, an incident report has a reporter and a location. As soon as *anything* in an event or read model is marked `[PII]`, Chronicle runs its compliance pass over the whole document — not just the personal values — so the geospatial value gets visited too.
 
-Nothing happens to it. Chronicle stops at a geospatial value rather than descending into its GeoJSON members: those members are the converter's business, and there is no schema property under them for a `[PII]` marker to sit on. The location is written and read back verbatim, in the clear, and stays `2dsphere`-indexable and queryable — which is what you want, because a venue is public data even when the organizer's name is not.
+Nothing happens to it. Chronicle stops at a geospatial value rather than descending into its GeoJSON members: those members belong to the type's converter, and there is no schema property under them for a `[PII]` marker to sit on. The location is written and read back verbatim, in the clear — which is what you want, because a venue is public data even when the organizer's name is not.
 
-:::caution[Marking a location `[PII]` costs you spatial querying]
-Marking the geospatial property `[PII]` encrypts the whole GeoJSON object into a single ciphertext string. That protects it, but it stops being a geographic value: it cannot be indexed, and spatial queries against the read model no longer work. Reach for it only when the location genuinely identifies a person — a home address, a tracked device — and accept the trade. See [Values Chronicle does not look inside](../compliance/pii#values-chronicle-does-not-look-inside).
+:::caution[Don't mark a geospatial value `[PII]`]
+`[PII]` on a geospatial property encrypts the whole GeoJSON object into a single ciphertext string. It survives an ordinary round trip, so it looks like it works — but once that subject exercises [erasure](../compliance/erasing-a-subject), the released value is empty and can no longer be materialized back into a `Point`, `LineString` or `Polygon`. The read then fails for the entire read model rather than degrading that one property.
+
+Treat a personal location as unsupported for now. Keep the geospatial value out of the person-scoped document, or store the sensitive part as a separate `[PII]` value beside a coarser location.
 :::
 
 ## Storage

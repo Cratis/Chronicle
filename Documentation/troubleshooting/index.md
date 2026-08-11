@@ -47,7 +47,9 @@ Compliance handling walks the whole document — one `[PII]` marker anywhere swi
 
 On the write side the append fails outright; on the read side the failing partition pauses and retries, so the read model stops advancing at that event.
 
-Values Chronicle stores as a single typed value — [geospatial](/chronicle/concepts/geospatial/) `Point`/`LineString`/`Polygon`, polymorphic base types, dictionaries — are never the cause. The walk stops at them by design and never reads their members as properties. See [Values Chronicle does not look inside](/chronicle/compliance/pii#values-chronicle-does-not-look-inside).
+A [geospatial](/chronicle/concepts/geospatial/) `Point`, `LineString` or `Polygon` is never the cause — the walk stops at those by design and never reads their GeoJSON members as properties.
+
+Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary both hold members the schema does not declare, and Chronicle would rather fail here than write a value it was told is personal into the store unprotected. Model the data as a value object with declared properties. See [Geospatial values are not looked inside](/chronicle/compliance/pii#geospatial-values-are-not-looked-inside).
 
 ## I can't connect to the Chronicle kernel
 

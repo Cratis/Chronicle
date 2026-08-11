@@ -40,7 +40,8 @@ The optional `details` parameter lets you record *why* the value is classified a
 | Value object class | Yes | Marks every value the type holds as PII, however deeply nested |
 | Property typed as a value object | Yes | Same effect, scoped to that one property |
 | Collection property | Yes | The collection is encrypted as a whole — see [Collections are encrypted as a whole](#collections-are-encrypted-as-a-whole) |
-| Geospatial, polymorphic, or dictionary property | Yes | Encrypted as a whole; Chronicle never classifies values *inside* one — see [Values Chronicle does not look inside](#values-chronicle-does-not-look-inside) |
+| Geospatial (`Point`, `LineString`, `Polygon`) | **No** | Never classified inside, and marking one encrypts a value that cannot be materialized back after erasure — see [Geospatial values are not looked inside](#geospatial-values-are-not-looked-inside) |
+| Polymorphic base type or dictionary | **No** | Chronicle cannot classify values inside either and fails rather than store them unprotected |
 | `EventSourceId` or `EventSourceId<T>` | **No** | Throws `PIINotSupportedOnEventSourceId` at runtime |
 
 ## Applying to an event property
@@ -90,24 +91,16 @@ Applying `[PII]` to a type that inherits from `EventSourceId` or `EventSourceId<
 
 Event source identifiers are used to look up encryption keys and group events. Encrypting them would make key lookup impossible. If the identifier itself is sensitive, use a non-sensitive surrogate (such as a random `Guid`) as the event source identifier and store the sensitive value in a `[PII]`-marked event property.
 
-### Values Chronicle does not look inside
+### Geospatial values are not looked inside
 
 One `[PII]` marker anywhere turns the compliance pass on for the **whole** document, so every other value in that event or read model is visited too. Most of them are ordinary properties the schema declares, and Chronicle walks straight through them looking for markers.
 
-A few values are not like that. Their schema describes them as a single typed value and says nothing about what is inside, because what is inside belongs to the type's own converter rather than to your model:
+A geospatial value is different. `Point`, `LineString` and `Polygon` are objects on the wire — GeoJSON, a `type` and a `coordinates` pair — but Chronicle stores and materializes each as one typed value, so its schema is a leaf carrying only a `format` and those wire members belong to the type's own converter. The compliance pass stops there and leaves the value exactly as it is: written and read back verbatim, in the clear.
 
-| Value | Why the schema stays closed |
-|---|---|
-| Geospatial (`Point`, `LineString`, `Polygon`) | Described by a `format` alone; the GeoJSON `type`/`coordinates` pair is the converter's, not your model's |
-| A polymorphic base type (`[DerivedType]`) | Kept open so a derived payload and its type discriminator round-trip verbatim |
-| A dictionary | Its members are data — the keys are values you chose at runtime, not properties you declared |
-
-Chronicle stops at these and leaves them exactly as they are. Nothing under them can be classified — there is no schema property for a `[PII]` marker to sit on — so the value is written and read back verbatim, in the clear, and keeps whatever indexing and querying its storage type gives it.
-
-That is usually what you want: a venue location sitting beside a `[PII]` organizer name is public data, and encrypting it would cost you spatial indexing for nothing. When the value genuinely *is* personal, mark the property itself `[PII]` — Chronicle then encrypts it as a whole, exactly like a collection, with the same loss of queryability described below.
+That is normally what you want, because a venue sitting beside a `[PII]` organizer name is public data. Marking the geospatial property `[PII]` is **not** a supported alternative — see [Geospatial values alongside PII](../concepts/geospatial#geospatial-values-alongside-pii) for why.
 
 > [!NOTE]
-> If you need per-value classification inside one of these, model it as a value object with declared properties instead. The marker travels down through anything the schema declares, however deeply nested.
+> Two other shapes have members the schema does not declare: a polymorphic base type, kept open so a derived payload round-trips verbatim, and a dictionary, whose keys are runtime data rather than declared properties. Chronicle cannot classify values inside either — and rather than write values it was told are personal into the store unprotected, it **fails**: applying compliance to a document holding one raises `CompliancePropertyNotFoundInSchema`. Model the data as a value object with declared properties instead; the marker travels down through anything the schema declares, however deeply nested.
 
 ### Collections are encrypted as a whole
 
