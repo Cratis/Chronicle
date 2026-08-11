@@ -15,6 +15,11 @@ public static class CertificateLoader
     /// </summary>
     /// <param name="options">The Chronicle options.</param>
     /// <returns>The loaded certificate or null if no certificate is available.</returns>
+    /// <remarks>
+    /// The configured file is read as PKCS#12 whether or not a password is configured, since the TLS listener
+    /// needs the private key the PKCS#12 container carries.
+    /// </remarks>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">Thrown when the configured file is not a PKCS#12 file or the configured password is wrong.</exception>
     public static X509Certificate2? LoadCertificate(Configuration.ChronicleOptions options)
     {
         return LoadFromTls(options.Tls);
@@ -29,26 +34,13 @@ public static class CertificateLoader
 
         if (!string.IsNullOrEmpty(tls.CertificatePath) && File.Exists(tls.CertificatePath))
         {
-            return LoadCertificateFromPath(tls.CertificatePath, tls.CertificatePassword);
+            // The certificate is always read as PKCS#12, with or without a password. The TLS listener needs the
+            // private key, which only PKCS#12 carries, and X509CertificateLoader.LoadCertificateFromFile reads
+            // DER/PEM only — handing it a password-less .pfx fails with "ASN1 corrupted data" rather than
+            // loading it. LoadPkcs12FromFile takes a nullable password, so it covers both cases.
+            return X509CertificateLoader.LoadPkcs12FromFile(tls.CertificatePath, tls.CertificatePassword);
         }
 
         return null;
-    }
-
-    static X509Certificate2 LoadCertificateFromPath(string path, string? password)
-    {
-        if (string.IsNullOrEmpty(password))
-        {
-#if NET8_0
-            return new X509Certificate2(path);
-#else
-            return X509CertificateLoader.LoadCertificateFromFile(path);
-#endif
-        }
-#if NET8_0
-        return new X509Certificate2(path, password);
-#else
-        return X509CertificateLoader.LoadPkcs12FromFile(path, password);
-#endif
     }
 }
