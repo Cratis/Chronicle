@@ -30,6 +30,7 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
     protected EventStore _eventStore;
     protected IProjections _projections;
     protected IClientArtifactsProvider _clientArtifacts;
+    protected IChronicleServicesAccessor _servicesAccessor;
 
     void Establish()
     {
@@ -64,10 +65,11 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         projections.Discover().GetAwaiter().GetResult();
         _projections = projections;
 
+        _servicesAccessor = Substitute.For<IChronicleServicesAccessor>();
         _eventStore = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));
         SetField("_eventStoreName", new EventStoreName("Testing"));
         SetField("_clientArtifactsProvider", clientArtifacts);
-        SetField("_servicesAccessor", Substitute.For<IChronicleServicesAccessor>());
+        SetField("_servicesAccessor", _servicesAccessor);
         SetField("_logger", Substitute.For<ILogger<EventStore>>());
         SetField("_projections", projections);
         SetAutoProperty("Registration", Registrations.RegistrationOutcome.NotRun);

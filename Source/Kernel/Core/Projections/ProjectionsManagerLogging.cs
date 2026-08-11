@@ -24,4 +24,10 @@ internal static partial class ProjectionsManagerLogging
 
     [LoggerMessage(LogLevel.Warning, "Read model definition '{ReadModel}' not found for projection '{Identifier}'")]
     internal static partial void MissingReadModelDefinitionForProjection(this ILogger<ProjectionsManager> logger, ProjectionId identifier, ReadModelIdentifier readModel);
+
+    [LoggerMessage(LogLevel.Debug, "All projection definitions in the registration are identical to the registered ones - skipping registration work")]
+    internal static partial void AllDefinitionsUnchanged(this ILogger<ProjectionsManager> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Registering {Count} changed projection definitions")]
+    internal static partial void RegisteringChangedDefinitions(this ILogger<ProjectionsManager> logger, int count);
 }
