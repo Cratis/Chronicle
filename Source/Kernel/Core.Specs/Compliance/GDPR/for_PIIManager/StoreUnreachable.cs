@@ -4,6 +4,6 @@
 namespace Cratis.Chronicle.Compliance.GDPR.for_PIIManager;
 
 /// <summary>
-/// The exception that is thrown by a substituted key store standing in for one that cannot be reached.
+/// The exception that is thrown when a substituted key store stands in for one that cannot be reached.
 /// </summary>
 public class StoreUnreachable() : Exception("The encryption key store cannot be reached.");

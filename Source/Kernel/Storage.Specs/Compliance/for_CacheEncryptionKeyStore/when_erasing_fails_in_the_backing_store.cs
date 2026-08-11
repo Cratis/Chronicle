@@ -20,6 +20,7 @@ public class when_erasing_fails_in_the_backing_store : given.a_cache_encryption_
     readonly TaskCompletionSource _erasureStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _releaseErasure = new(TaskCreationOptions.RunContinuationsAsynchronously);
     Exception _error;
+    EncryptionKey? _duringErasure;
     EncryptionKey? _afterFailedErasure;
 
     void Establish()
@@ -38,7 +39,7 @@ public class when_erasing_fails_in_the_backing_store : given.a_cache_encryption_
         var inFlightErasure = _store.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
         await _erasureStarted.Task;
 
-        await _store.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+        _duringErasure = await _store.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
 
         _releaseErasure.SetResult();
         _error = await Catch.Exception(() => inFlightErasure);
@@ -57,6 +58,7 @@ public class when_erasing_fails_in_the_backing_store : given.a_cache_encryption_
     }
 
     [Fact] void should_report_the_failure_to_the_caller() => _error.ShouldBeOfExactType<ErasureFailed>();
+    [Fact] void should_hand_the_racing_read_what_the_backing_store_still_held() => _duringErasure.ShouldEqual(_key);
     [Fact] void should_not_keep_serving_what_may_already_be_gone() => _afterFailedErasure.ShouldBeNull();
     [Fact] void should_read_the_backing_store_again() => _actualStore.Received(2).TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
 }
