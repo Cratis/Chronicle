@@ -6,7 +6,15 @@ Chronicle uses ASP.NET Core Data Protection to securely manage encryption keys f
 
 When Chronicle runs in a clustered environment, all instances need access to the same Data Protection keys to correctly encrypt and decrypt tokens. These keys are stored in MongoDB and shared across all instances using Orleans grains.
 
-In production, an encryption certificate is **required** to protect these keys at rest. In development mode, the certificate is optional for convenience.
+In production, an encryption certificate is **required**. In development builds it is optional for convenience.
+
+One PFX serves three consumers, and they fail in different ways when it is missing — worth knowing, because only one of them is loud:
+
+| Consumer | Without the certificate, in a production build |
+| --- | --- |
+| **OpenIddict** — the internal OAuth authority | **The server refuses to start.** This is the failure a production deployment hits first, before anything else can go wrong. |
+| **Webhook credentials** | Throws `EncryptionCertificateNotConfigured` **lazily**, the first time a webhook secret is encrypted or decrypted — so a server that started fine can still fail here later. |
+| **Data Protection keys** | Nothing fails. Chronicle starts, and the keys are simply written unencrypted. Data Protection never refuses to start and never generates a certificate of its own. |
 
 ## Configuration
 
@@ -138,7 +146,7 @@ In development mode (when Chronicle is built with the `DEVELOPMENT` configuratio
 
 ### Auto-Generated Certificates (Development Only)
 
-When no encryption certificate is configured **and Chronicle is compiled with DEVELOPMENT mode**, Chronicle will automatically generate a self-signed certificate for development purposes. This certificate is:
+When no encryption certificate is configured **and Chronicle is compiled with DEVELOPMENT mode**, the value-encryption subsystem — the one that protects webhook credentials — automatically generates a self-signed certificate the first time it needs one. This certificate is:
 
 - **Location**: Stored in a `certificates` folder in the current working directory
 - **Filename**: `encryption-cert.pfx`
@@ -146,9 +154,9 @@ When no encryption certificate is configured **and Chronicle is compiled with DE
 - **Validity**: 10 years from generation
 - **Reuse**: If the certificate already exists, Chronicle will use it instead of generating a new one
 
-This feature is designed to simplify local development and testing. The certificate is automatically created on first use and persisted for subsequent runs, ensuring encrypted data remains accessible across restarts.
+This feature is designed to simplify local development and testing. The certificate is created lazily on first encrypt or decrypt rather than at startup, and persisted for subsequent runs so encrypted data remains accessible across restarts. Data Protection does not take part in this — it never generates a certificate, so its keys stay unencrypted whenever none is configured.
 
-> **Important**: In **production builds** (without the DEVELOPMENT directive), Chronicle will throw an `EncryptionCertificateNotConfigured` exception if no certificate is configured. Auto-generation only occurs in development mode.
+> **Important**: In **production builds** (without the DEVELOPMENT directive) there is no auto-generation. Two things happen instead: OpenIddict makes the server **refuse to start**, and — if you get past that — the value-encryption subsystem throws `EncryptionCertificateNotConfigured` on first use.
 
 ### Running Without Configuration
 

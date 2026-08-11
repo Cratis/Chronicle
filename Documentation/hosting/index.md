@@ -13,7 +13,7 @@ For day-to-day development, [Docker Compose](docker-compose.md) is the fastest w
 Running the Kernel in production requires two things beyond a basic Docker deployment:
 
 - **[Production](production.md)** — how to deploy the Chronicle Docker image with MongoDB, including port configuration, Docker Compose setup, health checks, and security considerations.
-- **[Data Protection Key Encryption](encryption-certificate.md)** — Chronicle uses ASP.NET Core Data Protection to protect sensitive values at rest. In production you must supply a certificate so that data protection keys are encrypted. Without this, the Kernel will either fail to start or leave keys unprotected.
+- **[Data Protection Key Encryption](encryption-certificate.md)** — Chronicle uses ASP.NET Core Data Protection to protect sensitive values at rest. In production you must supply a certificate so that data protection keys are encrypted. Without one the Kernel refuses to start, because the internal OAuth authority requires the certificate. Turn that authority off — or point Chronicle at an external one — and the Kernel starts happily while writing its data protection keys unencrypted, which is the quieter and more dangerous outcome.
 
 Both steps are required. A production deployment that skips key encryption is not secure.
 

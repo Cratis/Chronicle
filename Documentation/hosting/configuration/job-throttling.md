@@ -4,19 +4,21 @@ Chronicle Server's job system can be configured to limit the number of parallel 
 
 ## Configuration
 
-The maximum number of parallel job steps can be configured using the `MaxParallelSteps` option:
+The maximum number of parallel job steps can be configured using the `MaxParallelSteps` option in `chronicle.json`:
 
 ```json
 {
-  "Cratis": {
-    "Chronicle": {
-      "Jobs": {
-        "MaxParallelSteps": 4
-      }
-    }
+  "Jobs": {
+    "MaxParallelSteps": 4
   }
 }
 ```
+
+> [!IMPORTANT]
+> Do not wrap the section in `Cratis` / `Chronicle` inside `chronicle.json`. Chronicle republishes everything it
+> reads from that file under the `Cratis:Chronicle:` configuration path already, so a nested copy binds to
+> `Cratis:Chronicle:Cratis:Chronicle:Jobs` and is silently ignored. The `Cratis__Chronicle__` prefix belongs on
+> environment variables only.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
