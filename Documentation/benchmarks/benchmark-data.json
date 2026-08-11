@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786474637394,
+  "lastUpdate": 1786484537561,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -4744,6 +4744,144 @@
             "value": 356521035,
             "unit": "ns",
             "range": "± 43585862.3439311"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "woksin@users.noreply.github.com",
+            "name": "Sindre Alstad Wilting",
+            "username": "woksin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cb6f3f6e6b316f6902cca70ccdcd165c2a51540f",
+          "message": "Run the production image in Aspire production mode, and let it be given certificates (#3679)\n\n* Use the production image when Aspire is configured for production\n\nThe production branch selected the development-slim tag, contradicting\nthe method's own documentation. Only the development images are compiled\nwith the DEVELOPMENT symbol, so an AppHost that configured Chronicle for\nproduction was running a development-compiled kernel.\n\nAddCratisChronicle had no specs at all -- the existing Aspire specs cover\nonly the MongoDB builder -- so nothing could have caught this and nothing\ngoes red when it is corrected. The specs added here enumerate the two\nmodes and the naming, and the production tag is pinned from both sides.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Let an Aspire application supply Chronicle's certificates\n\nSelecting the production image is only half an answer: that image refuses\nto start without a TLS certificate, and the OAuth authority refuses\nwithout an encryption certificate. Neither could be configured through\nthe Aspire builder at all, so the corrected production path could not\nboot -- a worse outcome than the wrong image it replaced.\n\nBoth certificates are separate methods rather than one. They configure\nunrelated subsystems, fail independently, and either can legitimately be\npresent without the other; folding them together would take four\npositional strings and make \"TLS only\" inexpressible.\n\nEach mounts the file read-only into the container and points the\nconfiguration at the path inside it. Setting a host path would name a\nfile the container cannot see, and making the consumer remember a\nmatching bind mount is boilerplate the framework can own.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Pin the published image names and configuration keys\n\nEvery assertion compared a tag to the constant it came from, so nothing\nasserted what the constants say. Repointing the production tag at the\ndevelopment image, or at a tag that does not exist, left the whole suite\ngreen while every AppHost pulled the wrong thing.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Read a TLS certificate as PKCS#12 whether or not it carries a password\n\nWithout a password the loader took a path that reads DER and PEM only,\nso a password-less .pfx did not merely lose its private key -- the server\ndied with \"ASN1 corrupted data\" and never started. The password-protected\npath was fine, which is why this survived: the common case worked.\n\nIt is a regression from the X509CertificateLoader migration. The branch\nthis replaced read PKCS#12 correctly on the previous target framework.\n\nTLS needs the private key that only PKCS#12 carries, so reading anything\nelse could never have produced a usable certificate. There is nothing for\nthe password to select between.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n* Fail fast on a missing certificate, and let a later call win\n\nDocker creates a directory when a bind mount's source does not exist, so\na mistyped certificate path produced a container whose kernel reported\nthat no certificate was configured -- the opposite of the truth -- while\nthe process died and the container still read as running. The path is now\nresolved against the app host directory and checked before it is mounted.\n\nConfiguring either certificate twice appended a second mount on the same\ntarget, which Docker refuses outright. Every other method on this builder\nis last-call-wins, so a base helper with an override produced a container\nthat could not start. The later call now replaces the earlier one, down to\nclearing a password the overriding call does not supply.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01UWugkmN6NmoemKeTvSKNDg\n\n---------\n\nCo-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>",
+          "timestamp": "2026-08-11T23:27:05+02:00",
+          "tree_id": "b01d70e5312d2e6c5962f05ca3b69364d50b3999",
+          "url": "https://github.com/Cratis/Chronicle/commit/cb6f3f6e6b316f6902cca70ccdcd165c2a51540f"
+        },
+        "date": 1786484537559,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 8524311.0546875,
+            "unit": "ns",
+            "range": "± 379639.84822221735"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 13248588.50625,
+            "unit": "ns",
+            "range": "± 1403485.3112062209"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 41612538.9,
+            "unit": "ns",
+            "range": "± 4163333.726278469"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 354734566.2,
+            "unit": "ns",
+            "range": "± 82426481.2717062"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 3243817.3,
+            "unit": "ns",
+            "range": "± 448934.3695814691"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 6332209,
+            "unit": "ns",
+            "range": "± 452190.91738998913"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 2645879.4,
+            "unit": "ns",
+            "range": "± 260573.4441121905"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 14513960.5,
+            "unit": "ns",
+            "range": "± 3401031.9177314076"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 385195772.3,
+            "unit": "ns",
+            "range": "± 40817543.68070398"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 2034107208,
+            "unit": "ns",
+            "range": "± 9257204.35246792"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 73304810.9,
+            "unit": "ns",
+            "range": "± 2543828.653701627"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 253816204.16666666,
+            "unit": "ns",
+            "range": "± 25412732.210166708"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1590097062.5,
+            "unit": "ns",
+            "range": "± 116810515.41542773"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 72040579.4,
+            "unit": "ns",
+            "range": "± 1671759.476699471"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 98885477,
+            "unit": "ns",
+            "range": "± 10443330.037438286"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 331528486.9,
+            "unit": "ns",
+            "range": "± 95874627.41094854"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 73928878.3,
+            "unit": "ns",
+            "range": "± 2263915.5951654525"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 94501533.22222222,
+            "unit": "ns",
+            "range": "± 3541020.4601877755"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 315315889.7222222,
+            "unit": "ns",
+            "range": "± 57847083.45583598"
           }
         ]
       }
