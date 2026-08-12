@@ -240,7 +240,7 @@ internal static class ProjectionReadModelProcessor
                 engineProjection.GetOperationTypeFor(@event.Context.EventType),
                 false);
 
-            HandleEventFor(engineProjection, context);
+            await HandleEventFor(engineProjection, context, inMemoryEventSequenceStorage, inMemorySink);
 
             // Apply to the sink before mutating the threaded state — the sink clones the changeset's
             // InitialState (the same object as `state`), so mutating it first would double an additive change.
@@ -514,7 +514,7 @@ internal static class ProjectionReadModelProcessor
             projection.GetOperationTypeFor(@event.Context.EventType),
             false);
 
-        HandleEventFor(projection, context);
+        await HandleEventFor(projection, context, eventSequenceStorage, sink);
 
         // A root-level removal yields a Removed change, which the real sink applies by deleting the
         // document. Mirror that by resetting the threaded state so any subsequent re-create starts clean.
@@ -562,16 +562,61 @@ internal static class ProjectionReadModelProcessor
             new KernelConceptsNs::Events.EventTypeId(clientEventType.Id.Value),
             new KernelConceptsNs::Events.EventTypeGeneration(clientEventType.Generation.Value));
 
-    static void HandleEventFor(KernelProjectionEngine::IProjection projection, KernelProjectionEngine::ProjectionEventContext context)
+    /// <summary>
+    /// Hands an event to a projection and then to each of its child projections, mirroring
+    /// <c>Cratis.Chronicle.Projections.Engine.Pipelines.Steps.HandleEvent.Perform</c>.
+    /// </summary>
+    /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> to hand the event to.</param>
+    /// <param name="context">The <see cref="KernelProjectionEngine::ProjectionEventContext"/> for the event.</param>
+    /// <param name="eventSequenceStorage">Storage used by child key resolvers to look up related events.</param>
+    /// <param name="sink">Sink used by child key resolvers to look up already projected state.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A child owns its own key resolver, which produces the array indexer identifying the child item within its
+    /// collection. Reusing the parent's key here leaves the child's collection without an indexer, and the child's
+    /// Project() subscription silently no-ops — the parent scalars materialize while the child collection stays
+    /// empty. That is only observable when one event type both maps parent fields and feeds a child, because
+    /// ProjectionFactory folds a child's resolver into the root's map only for event types the root does not
+    /// already own.
+    /// </remarks>
+    static async Task HandleEventFor(
+        KernelProjectionEngine::IProjection projection,
+        KernelProjectionEngine::ProjectionEventContext context,
+        InMemoryEventSequenceStorage eventSequenceStorage,
+        InMemorySink sink)
     {
-        if (projection.Accepts(context.Event.Context.EventType))
+        var eventType = context.Event.Context.EventType;
+        if (projection.Accepts(eventType))
         {
             projection.OnNext(context);
         }
 
         foreach (var child in projection.ChildProjections)
         {
-            HandleEventFor(child, context);
+            // A projection registers a key resolver for every event type its whole subtree handles, so a missing
+            // resolver here means neither this child nor any of its descendants project this event.
+            if (!child.HasKeyResolverFor(eventType))
+            {
+                continue;
+            }
+
+            var keyResolver = child.GetKeyResolverFor(eventType);
+            if (!context.TryGetResolvedKey(keyResolver, out var keyResult))
+            {
+                keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
+                context.MemoizeResolvedKey(keyResolver, keyResult);
+            }
+
+            // The harness has no future store to replay a deferred key from, so a deferred or permanently
+            // unresolvable child key skips the child — the same outcome the kernel arrives at for this event.
+            if (keyResult is KernelProjectionEngine::DeferredKey or KernelProjectionEngine::UnresolvableKey)
+            {
+                continue;
+            }
+
+            var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
+            var operationType = child.GetOperationTypeFor(eventType);
+            await HandleEventFor(child, context with { Key = key, OperationType = operationType }, eventSequenceStorage, sink);
         }
     }
 
