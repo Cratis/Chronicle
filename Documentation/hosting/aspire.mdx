@@ -143,4 +143,18 @@ For development, drop the whole callback. The development image brings its own M
 | `cratis/chronicle:latest-development` | Development image — includes embedded MongoDB, generates a TLS certificate and ephemeral OAuth keys | `AddCratisChronicle()`                         |
 | `cratis/chronicle:latest-development-slim` | Development slim image — no embedded MongoDB | Not selected by the Aspire integration — run it directly |
 
+### Pin the image for production
+
+Both tags above float. `AddCratisChronicle` picks the tag for you, so a production deployment tracks whatever `cratis/chronicle:latest` happens to be at pull time — two deployments of the same AppHost can land on different Chronicle versions. Pin an exact version by chaining `WithImageTag` after the call:
+
+```csharp
+var chronicle = builder
+    .AddCratisChronicle(configure: chronicle => chronicle
+        .WithTlsCertificate("certs/chronicle.pfx", "YourPassword")
+        .WithEncryptionCertificate("certs/encryption.pfx", "YourPassword"))
+    .WithImageTag("16.26.0");
+```
+
+`WithImageTag` overrides the tag the integration selected while leaving the image and registry alone, and it does not change which image *class* is used — a `configure` callback still selects the production image. Pin to a released Chronicle version, and treat the upgrade as a deliberate change.
+
 See [Production Hosting](./production.md) for guidance on running Chronicle in production environments.
