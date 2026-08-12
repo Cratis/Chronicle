@@ -32,6 +32,7 @@ Cratis__Chronicle__Health__Tls=false
 | --- | --- | --- | --- |
 | health.port | number | null | Dedicated port for the health endpoint. When not set, the health endpoint is served on the main port. |
 | health.tls | boolean | true | Whether the dedicated health port uses TLS. Only applies when `health.port` is set. |
+| health.exclusive | boolean | false | Whether the dedicated health port serves *only* the health endpoint, answering 404 for everything else. Only applies when `health.port` is set. |
 
 The endpoint path is the shared `healthCheckEndpoint` (default `/health`), so with the configuration above the health endpoint is reachable at `http://<host>:8080/health`.
 
@@ -40,9 +41,28 @@ The endpoint path is the shared `healthCheckEndpoint` (default `/health`), so wi
 - **`health.port` not set** — the health endpoint is served on the main port (35000) over TLS, alongside all other traffic. This is the default.
 - **`health.port` set** — the health endpoint is additionally served on that dedicated HTTP/1.1 port. gRPC is never exposed on it, because gRPC needs HTTP/2 and the dedicated port serves HTTP/1.1 only.
 - **`health.tls` false** — the dedicated port serves the health endpoint in cleartext. The main port still requires TLS regardless of this setting; disabling TLS here only affects the dedicated health port.
+- **`health.exclusive` true** — the dedicated port answers only the health endpoint; every other path returns 404 on that port. Off by default, so enabling it never changes an existing deployment silently.
 - **`health.port` equal to the main port** — treated as not set, since a second listener cannot bind the port the main listener already owns.
 
-The dedicated port is an additional listener on the same application rather than a separate, health-only server. The HTTP/1.1 endpoints (Workbench, REST API, OAuth) are therefore reachable on it too — so treat it as an internal, cluster-local probe port and do not expose it publicly, especially with TLS disabled.
+## Restricting the dedicated port to health only
+
+The dedicated port is an additional listener on the same application rather than a separate, health-only server. By default the other HTTP/1.1 endpoints (Workbench, REST API, OAuth) are therefore reachable on it too, so the default posture is to treat it as an internal, cluster-local probe port and not expose it publicly, especially with TLS disabled.
+
+Set `health.exclusive` to `true` to close that off. The port then serves the health endpoint and nothing else — every other path gets a 404:
+
+```json
+{
+  "health": {
+    "port": 8080,
+    "tls": false,
+    "exclusive": true
+  }
+}
+```
+
+The restriction keys on the local port the connection was accepted on, which a client cannot influence. It is not derived from the `Host` header or any `X-Forwarded-*` header, so a request arriving on the main port cannot dress itself up as a health-port request or vice versa. The main port is never restricted, and the option does nothing unless a dedicated `health.port` is configured and differs from the main port.
+
+It defaults to `false` so that enabling a dedicated health port never silently removes endpoints from an existing deployment; turn it on deliberately when the probe port is reachable from somewhere the Workbench and API should not be.
 
 ## Why a plaintext health port helps in Kubernetes
 

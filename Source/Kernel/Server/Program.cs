@@ -275,6 +275,23 @@ var app = builder.Build();
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
 
+// Opt-in: when the dedicated health port is exclusive, nothing but the health endpoint is answered
+// on it. This is registered first so no later middleware or endpoint - Workbench static files, the
+// REST API, the OAuth flows, the fallback - ever observes such a request. The decision keys on
+// HttpContext.Connection.LocalPort, the port the socket actually accepted the connection on, which
+// no client can influence; Host and the X-Forwarded-* headers are all client-supplied and therefore
+// spoofable. HealthOnlyPortPolicy owns the decision so it can be specified in isolation. (#3604)
+app.Use(async (context, next) =>
+{
+    if (HealthOnlyPortPolicy.ShouldReject(chronicleOptions, context.Connection.LocalPort, context.Request.Path.Value))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next(context);
+});
+
 // The kernel is never directly internet-facing - it always sits behind some reverse proxy (YARP in
 // this repo's Composition, an ingress/load balancer in production). Without this, a proxied request
 // that arrives over HTTPS at the proxy but HTTP between the proxy and the kernel (or vice versa)

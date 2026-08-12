@@ -37,4 +37,18 @@ public class Health
     /// this setting.
     /// </remarks>
     public bool Tls { get; init; } = true;
+
+    /// <summary>
+    /// Gets or inits whether the dedicated health <see cref="Port"/> serves the health endpoint
+    /// exclusively. Defaults to false.
+    /// </summary>
+    /// <remarks>
+    /// The dedicated port is an additional listener on the same application, so by default every
+    /// HTTP/1.1 endpoint - the Workbench, the REST API and the OAuth flows - is reachable on it too.
+    /// Set this to true to answer 404 for everything except the health endpoint on that port, which
+    /// makes it safe to expose the probe port more widely than the main port. Only applies when
+    /// <see cref="Port"/> is set to a port that differs from the main
+    /// <see cref="ChronicleOptions.Port"/>; the main port is never restricted.
+    /// </remarks>
+    public bool Exclusive { get; init; }
 }
