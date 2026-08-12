@@ -23,7 +23,7 @@ public class with_events_and_scopes : Specification
         _firstEvent = new(EventSourceId.New(), new object());
         _secondEvent = new(EventSourceId.New(), new object());
         _firstScopeKey = EventSourceId.New();
-        _secondScopeKey = EventSourceId.New();
+        _secondScopeKey = _secondEvent.EventSourceId;
         _firstScope = new(new(42));
         _secondScope = ConcurrencyScope.NotSet;
         _events = [_firstEvent, _secondEvent];

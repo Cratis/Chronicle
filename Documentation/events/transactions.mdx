@@ -21,6 +21,26 @@ Create a unit of work, append through the transactional event sequence, and comm
 
 <ChronicleClientTabs snippet="events/transactions/basic" />
 
+## Commit an ordered batch with exact concurrency
+
+When a decision reads several streams, capture the exact revision it used and stage the resulting events with that scope. `AddEvents` materializes the events and scopes immediately, preserves cross-stream order, and still waits for the unit of work to commit before sending anything to Chronicle.
+
+<ChronicleClientTabs snippet="events/transactions/ordered-exact-batch" />
+
+A concurrency-scope key can be an independent label when the scope does not narrow by event-source ID. It does not need to match either event target, so one decision-wide stream-, type-, or event-type-scoped revision can protect the entire ordered batch. If a scope does narrow by event-source ID, its key must be that event-source ID.
+
+Every event target and scope label must contain a non-whitespace value; blank labels cannot survive transport and are rejected during enrollment.
+
+Chronicle resolves the configured concurrency strategy for an event target that has no supplied scope or carries `ConcurrencyScope.NotSet`. An independent non-target label has no event target from which to resolve a strategy, so Chronicle rejects `NotSet` and incomplete scopes for those labels. Give an independent label a concrete exact scope or `ConcurrencyScope.None`.
+
+`AddEvents` snapshots the event list, scope collection, and every scope's nested event-type filter before it binds or stages anything in the unit of work. When ordered enrollment first participates in a unit of work, Chronicle also snapshots effective scopes from preceding `AddEvent` calls; later `AddEvent` scopes are snapshotted as they are enrolled. Later mutations to caller-owned collections therefore cannot change the eventual commit, and a lazy collection failure is reported during enrollment.
+
+Dispose the unit of work even when enrollment validation fails, and inspect `IsSuccess` after commit. A completed `Commit` can still report a constraint or concurrency rejection rather than a successful append.
+
+Consecutive `AddEvent` calls keep their existing source-grouped order. Each `AddEvents` call creates an exact-order segment between those legacy segments. Commit flattens the segments in enrollment-call order and sends all of them through one atomic append.
+
+Legacy-only `AddEvent` calls retain their historical event-sequence behavior. Once `AddEvents` participates, every event in the unit of work must name the same event sequence; a mismatch is rejected before the ordered batch is staged.
+
 ## Roll Back
 
 Rollback discards the events staged in the unit of work. Nothing is sent to Chronicle for those staged events.
