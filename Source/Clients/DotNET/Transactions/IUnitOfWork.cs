@@ -61,6 +61,33 @@ public interface IUnitOfWork : IDisposable
         Subject? subject = default);
 
     /// <summary>
+    /// Adds an ordered batch of events and independently labeled concurrency scopes to the <see cref="IUnitOfWork"/>.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> for the events.</param>
+    /// <param name="events">The events to add, in commit order.</param>
+    /// <param name="concurrencyScopes">The concurrency scopes to validate with the batch.</param>
+    /// <remarks>
+    /// Both inputs are materialized before this method returns. Consecutive calls to <see cref="AddEvent"/> retain
+    /// their legacy source-grouped order. Each call to this method forms a globally ordered segment between those
+    /// legacy segments, and commit flattens every segment into one append operation. A concurrency-scope key can be
+    /// an independent label when its scope does not narrow by event-source ID. For event-target labels, a missing or
+    /// <see cref="ConcurrencyScope.NotSet"/> scope retains the configured strategy. An independent non-target label
+    /// must use a concrete exact scope or <see cref="ConcurrencyScope.None"/>.
+    /// </remarks>
+    /// <exception cref="ConcurrencyScopeLabelMustBeSpecified">Thrown when an event target or scope label is unspecified, blank, or whitespace.</exception>
+    /// <exception cref="ConcurrencyScopeEventSourceIdDoesNotMatchLabel">Thrown when a scope narrows by an event source different from its label.</exception>
+    /// <exception cref="DuplicateConcurrencyScopeForEventSourceId">Thrown when more than one scope has the same label in one enrollment.</exception>
+    /// <exception cref="ConflictingConcurrencyScopesForLabel">Thrown when a label already has a different explicit scope in this unit of work.</exception>
+    /// <exception cref="IndependentConcurrencyScopeMustBeExplicit">Thrown when an independent non-target label does not have a concrete exact scope or <see cref="ConcurrencyScope.None"/>.</exception>
+    /// <exception cref="UnitOfWorkCannotSpanEventSequences">Thrown when this unit of work is already bound to another event sequence.</exception>
+    /// <exception cref="UnitOfWorkBatchEnrollmentNotSupported">Thrown when an alternate unit-of-work implementation does not support ordered batch enrollment.</exception>
+    void AddEvents(
+        EventSequenceId eventSequenceId,
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes) =>
+        throw new UnitOfWorkBatchEnrollmentNotSupported(GetType());
+
+    /// <summary>
     /// Get the events that have occurred in the <see cref="IUnitOfWork"/>.
     /// </summary>
     /// <returns>A collection of events.</returns>

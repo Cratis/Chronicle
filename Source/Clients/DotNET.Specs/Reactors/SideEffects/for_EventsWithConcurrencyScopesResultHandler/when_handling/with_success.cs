@@ -26,8 +26,8 @@ public class with_success : Specification
     {
         _firstEvent = new(EventSourceId.New(), new object());
         _secondEvent = new(EventSourceId.New(), new object());
-        _firstScopeKey = EventSourceId.New();
-        _secondScopeKey = EventSourceId.New();
+        _firstScopeKey = _firstEvent.EventSourceId;
+        _secondScopeKey = _secondEvent.EventSourceId;
         _firstScope = new(new(42), EventSourceId: _firstEvent.EventSourceId);
         _secondScope = ConcurrencyScope.NotSet;
 
