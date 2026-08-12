@@ -24,3 +24,5 @@ Feature toggles enable or disable specific Chronicle Server capabilities.
 
 If the API is disabled, the Workbench is also disabled because it depends on the API. The OAuth authority is automatically disabled when an external authority is configured via `authentication.authority`.
 
+Disabling the OAuth authority — either explicitly or by configuring an external authority — also removes the **encryption certificate** startup requirement, because it is the internal authority that needs the certificate to protect its signing and encryption keys. A production deployment that uses an external authority therefore starts without one. See [Data Protection Key Encryption](../encryption-certificate.md).
+

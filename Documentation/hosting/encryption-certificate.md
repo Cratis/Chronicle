@@ -157,6 +157,8 @@ When no encryption certificate is configured **and Chronicle is compiled with DE
 This feature is designed to simplify local development and testing. The certificate is created lazily on first encrypt or decrypt rather than at startup, and persisted for subsequent runs so encrypted data remains accessible across restarts. Data Protection does not take part in this — it never generates a certificate, so its keys stay unencrypted whenever none is configured.
 
 > **Important**: In **production builds** (without the DEVELOPMENT directive) there is no auto-generation. Two things happen instead: OpenIddict makes the server **refuse to start**, and — if you get past that — the value-encryption subsystem throws `EncryptionCertificateNotConfigured` on first use.
+>
+> The refusal to start comes from the **internal OAuth authority**, so it only applies when that authority is running. Turning the `oAuthAuthority` feature off, or configuring an external authority via `authentication.authority` (which disables the internal one automatically), removes the startup requirement — see [Features](configuration/features.md). The value-encryption behavior is independent of that and is unchanged.
 
 ### Running Without Configuration
 
