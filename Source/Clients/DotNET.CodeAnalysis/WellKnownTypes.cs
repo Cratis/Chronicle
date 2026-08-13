@@ -154,6 +154,21 @@ public static class WellKnownTypes
     public const string SetFromContextAttributeName = "Cratis.Chronicle.Projections.ModelBound.SetFromContextAttribute<TEvent>";
 
     /// <summary>
+    /// The full name of the open generic SetValue attribute.
+    /// </summary>
+    public const string SetValueAttributeName = "Cratis.Chronicle.Projections.ModelBound.SetValueAttribute<TEvent>";
+
+    /// <summary>
+    /// The full name of the open generic ClearWith attribute.
+    /// </summary>
+    public const string ClearWithAttributeName = "Cratis.Chronicle.Projections.ModelBound.ClearWithAttribute<TEvent>";
+
+    /// <summary>
+    /// The full name of the Passive attribute, which declares that a read model has no materialized sink.
+    /// </summary>
+    public const string PassiveAttributeName = "Cratis.Chronicle.ReadModels.PassiveAttribute";
+
+    /// <summary>
     /// The full name of the ReadModel attribute.
     /// </summary>
     public const string ReadModelAttributeName = "Cratis.Arc.Queries.ModelBound.ReadModelAttribute";

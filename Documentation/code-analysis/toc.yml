@@ -80,3 +80,7 @@
   href: CHR0044.mdx
 - name: CHR0045 - Event stream metadata attribute on an event type has no effect
   href: CHR0045.mdx
+- name: CHR0046 - Passive read model redirects the document key away from the event's own stream
+  href: CHR0046.mdx
+- name: CHR0047 - A clear declaration is never applied by projection construction
+  href: CHR0047.mdx

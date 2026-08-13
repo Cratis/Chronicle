@@ -195,7 +195,7 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
     {
         if (invocation.Expression is not MemberAccessExpressionSyntax member ||
             !KeyRedirection.All.Contains(member.Name.Identifier.Text) ||
-            !IsDocumentRedirectionFor(semanticModel, invocation, eventType, readModelType, isChildScope, symbols))
+            !KeyRedirection.IsDocumentRedirectionFor(semanticModel, invocation, eventType, readModelType, isChildScope, symbols))
         {
             return null;
         }
@@ -241,85 +241,5 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
 
             _ => null
         };
-    }
-
-    /// <summary>
-    /// Determine whether an invocation is one of the key-redirection calls belonging to this exact
-    /// <c>From&lt;TEvent&gt;</c> block.
-    /// </summary>
-    /// <param name="semanticModel">The semantic model for the invocation.</param>
-    /// <param name="invocation">The invocation to check.</param>
-    /// <param name="eventType">The event the block reads.</param>
-    /// <param name="readModelType">The read model being projected.</param>
-    /// <param name="isChildScope">Whether the From block fills a child inside a containing document.</param>
-    /// <param name="symbols">The Chronicle builder symbols.</param>
-    /// <returns>True when the call redirects this block's key, false otherwise.</returns>
-    /// <remarks>
-    /// Matching the declaring interface together with both of its type arguments is what keeps a nested
-    /// builder — an <c>AddChild</c> callback, a sibling block written on the same chain — from being read as
-    /// this block's own key.
-    /// </remarks>
-    static bool IsDocumentRedirectionFor(
-        SemanticModel semanticModel,
-        InvocationExpressionSyntax invocation,
-        INamedTypeSymbol eventType,
-        INamedTypeSymbol readModelType,
-        bool isChildScope,
-        FluentProjectionSymbols symbols)
-    {
-        if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
-            !KeyRedirection.All.Contains(method.Name))
-        {
-            return false;
-        }
-
-        if (!FluentProjectionSymbols.IsMethodOn(method, symbols.ReadModelPropertiesBuilder) ||
-            method.ContainingType.TypeArguments.Length != 3 ||
-            !SymbolEqualityComparer.Default.Equals(method.ContainingType.TypeArguments[0], readModelType) ||
-            !SymbolEqualityComparer.Default.Equals(method.ContainingType.TypeArguments[1], eventType))
-        {
-            return false;
-        }
-
-        return isChildScope
-            ? KeyRedirection.Parent.Contains(method.Name)
-            : KeyRedirection.Root.Contains(method.Name);
-    }
-
-    /// <summary>
-    /// The builder methods that decide which document a projected event lands on.
-    /// </summary>
-    static class KeyRedirection
-    {
-        internal const string UsingKey = nameof(UsingKey);
-        internal const string UsingKeyFromContext = nameof(UsingKeyFromContext);
-        internal const string UsingParentKey = nameof(UsingParentKey);
-        internal const string UsingParentKeyFromContext = nameof(UsingParentKeyFromContext);
-        internal const string UsingCompositeKey = nameof(UsingCompositeKey);
-        internal const string UsingParentCompositeKey = nameof(UsingParentCompositeKey);
-        internal const string UsingConstantKey = nameof(UsingConstantKey);
-        internal const string UsingConstantParentKey = nameof(UsingConstantParentKey);
-
-        internal static readonly ImmutableHashSet<string> All = ImmutableHashSet.Create(
-            UsingKey,
-            UsingKeyFromContext,
-            UsingParentKey,
-            UsingParentKeyFromContext,
-            UsingCompositeKey,
-            UsingParentCompositeKey,
-            UsingConstantKey,
-            UsingConstantParentKey);
-
-        internal static readonly ImmutableHashSet<string> Root = ImmutableHashSet.Create(
-            UsingKey,
-            UsingKeyFromContext,
-            UsingCompositeKey,
-            UsingConstantKey);
-
-        internal static readonly ImmutableHashSet<string> Parent = ImmutableHashSet.Create(
-            UsingParentKey,
-            UsingParentKeyFromContext,
-            UsingParentCompositeKey,
-            UsingConstantParentKey);
     }
 }

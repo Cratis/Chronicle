@@ -24,6 +24,7 @@ static class FluentProjectionMappings
     const string FromObjectMethodName = "FromObject";
     const string NestedMethodName = "Nested";
     const string NoAutoMapMethodName = "NoAutoMap";
+    const string PassiveMethodName = "Passive";
     const string SetMethodName = "Set";
     const string SetThisValueMethodName = "SetThisValue";
     const string SubtractMethodName = "Subtract";
@@ -146,6 +147,53 @@ static class FluentProjectionMappings
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Determine whether the read model a From invocation persists to is passive.
+    /// </summary>
+    /// <param name="context">The syntax analysis context.</param>
+    /// <param name="invocation">The From invocation.</param>
+    /// <param name="readModelType">The read model that owns the persisted document.</param>
+    /// <param name="symbols">The Chronicle builder symbols.</param>
+    /// <param name="projectionBuilderFor">The <c>IProjectionBuilderFor&lt;&gt;</c> definition that declares <c>Passive</c>.</param>
+    /// <returns>True when the read model is declared passive by attribute or by the builder chain.</returns>
+    /// <remarks>
+    /// Passivity has two sources and either one is enough: a <c>[Passive]</c> attribute on the read model, or a
+    /// <c>Passive()</c> call on the builder in the same Define chain. Unlike AutoMap there is no call that turns
+    /// it back off, so the first one found settles it. A receiver whose forwarding cannot be proven is read as
+    /// not passive: a diagnostic that fires must be able to point at a declaration that made it passive.
+    /// </remarks>
+    internal static bool PassiveIsOn(
+        SyntaxNodeAnalysisContext context,
+        InvocationExpressionSyntax invocation,
+        INamedTypeSymbol readModelType,
+        FluentProjectionSymbols symbols,
+        INamedTypeSymbol projectionBuilderFor)
+    {
+        if (WellKnownTypes.HasAttribute(readModelType, WellKnownTypes.PassiveAttributeName))
+        {
+            return true;
+        }
+
+        var owner = GetReceiverIdentity(context.SemanticModel, invocation, symbols);
+        if (!owner.IsDefault &&
+            GetOwningScope(context.SemanticModel, invocation, owner[0]) is { } scope &&
+            scope.DescendantNodesAndSelf()
+                .OfType<InvocationExpressionSyntax>()
+                .Any(candidate =>
+                    ReceiverIdentitiesEqual(GetReceiverIdentity(context.SemanticModel, candidate, symbols), owner) &&
+                    context.SemanticModel.GetSymbolInfo(candidate).Symbol is IMethodSymbol method &&
+                    method.Name == PassiveMethodName &&
+                    FluentProjectionSymbols.IsMethodOn(method, projectionBuilderFor)))
+        {
+            return true;
+        }
+
+        return GetEnclosingProjectionScope(context, invocation, symbols) is { } parentInvocation &&
+               context.SemanticModel.GetSymbolInfo(parentInvocation).Symbol is IMethodSymbol parentMethod &&
+               parentMethod.ContainingType.TypeArguments.FirstOrDefault() is INamedTypeSymbol parentReadModelType &&
+               PassiveIsOn(context, parentInvocation, parentReadModelType, symbols, projectionBuilderFor);
     }
 
     /// <summary>
