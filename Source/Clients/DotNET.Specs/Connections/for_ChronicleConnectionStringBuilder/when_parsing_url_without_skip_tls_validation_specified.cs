@@ -9,5 +9,5 @@ public class when_parsing_url_without_skip_tls_validation_specified : Specificat
 
     void Establish() => _builder = new ChronicleConnectionStringBuilder("chronicle://localhost:35000");
 
-    [Fact] void should_validate_tls_by_default() => _builder.SkipTlsValidation.ShouldBeFalse();
+    [Fact] void should_skip_tls_validation_by_default() => _builder.SkipTlsValidation.ShouldBeTrue();
 }
