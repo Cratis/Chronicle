@@ -2,8 +2,15 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageVersionOverrideEnabled>false</CentralPackageVersionOverrideEnabled>
+    <!-- Allow pinning vulnerable transitive packages to patched versions via PackageVersion entries below. -->
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Transitive security pins -->
+    <!-- SSH.NET 2025.1.0 (pulled in transitively by Testcontainers) has a high-severity advisory
+         (GHSA-q939-rpr3-3284). Testcontainers 4.13.0 is the latest and still resolves the vulnerable
+         version, so pin to the patched release. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <!-- System -->
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
@@ -28,13 +35,13 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.9.0" />
@@ -43,7 +50,7 @@
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
     <!-- Pin the native SQLite library to a patched build (GHSA-2m69-gcr7-jv3q affects <= 2.1.11 pulled in transitively by EF Core Sqlite). -->
