@@ -62,12 +62,54 @@ public class InMemorySink(
         _isReplaying ? _rewindLastHandledEventSequenceNumbers : _lastHandledEventSequenceNumbers;
 
     /// <summary>
+    /// Gets the value this sink addresses a document by for a given <see cref="Key"/>.
+    /// </summary>
+    /// <param name="key">The <see cref="Key"/> to resolve.</param>
+    /// <returns>The value the document for <paramref name="key"/> is stored under in <see cref="Collection"/>.</returns>
+    /// <remarks>
+    /// Two <see cref="Key"/> instances addressing the same document — a concept and its underlying primitive,
+    /// say — resolve to the same value here. Callers that keep per-document state beside the sink must derive
+    /// it from this rather than from <see cref="Key.Value"/>, or the two disagree on what "the same document" is.
+    /// </remarks>
+    public object GetKeyValue(Key key)
+    {
+        if (key.Value is ExpandoObject expandoKey)
+        {
+            var stringBuilder = new StringBuilder();
+            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key))
+            {
+                if (stringBuilder.Length > 0) stringBuilder.Append('_');
+                stringBuilder.Append(value);
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        if (_keyTargetType is not null)
+        {
+            return TypeConversion.Convert(_keyTargetType, key.Value);
+        }
+
+        if (key.Value.IsConcept())
+        {
+            return key.Value.GetConceptValue();
+        }
+
+        if (!key.Value.GetType().IsAPrimitiveType())
+        {
+            return key.Value.AsExpandoObject(true);
+        }
+
+        return key.Value;
+    }
+
+    /// <summary>
     /// Remove any existing read model by the given key.
     /// </summary>
     /// <param name="key"><see cref="Key"/> for the read model to remove.</param>
     public void RemoveAnyExisting(Key key)
     {
-        var keyValue = GetActualKeyValue(key);
+        var keyValue = GetKeyValue(key);
         lock (_collectionLock)
         {
             Collection.Remove(keyValue);
@@ -78,7 +120,7 @@ public class InMemorySink(
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        var keyValue = GetActualKeyValue(key);
+        var keyValue = GetKeyValue(key);
         lock (_collectionLock)
         {
             if (Collection.TryGetValue(keyValue, out var value)) return Task.FromResult<ExpandoObject?>(value);
@@ -95,7 +137,7 @@ public class InMemorySink(
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
     {
         var state = changeset.InitialState.Clone();
-        var keyValue = GetActualKeyValue(key);
+        var keyValue = GetKeyValue(key);
 
         if (changeset.HasBeenRemoved())
         {
@@ -274,38 +316,6 @@ public class InMemorySink(
 
         return !LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var lastHandled) ||
                lastHandled < eventSequenceNumber.Value;
-    }
-
-    object GetActualKeyValue(Key key)
-    {
-        if (key.Value is ExpandoObject expandoKey)
-        {
-            var stringBuilder = new StringBuilder();
-            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key))
-            {
-                if (stringBuilder.Length > 0) stringBuilder.Append('_');
-                stringBuilder.Append(value);
-            }
-
-            return stringBuilder.ToString();
-        }
-
-        if (_keyTargetType is not null)
-        {
-            return TypeConversion.Convert(_keyTargetType, key.Value);
-        }
-
-        if (key.Value.IsConcept())
-        {
-            return key.Value.GetConceptValue();
-        }
-
-        if (!key.Value.GetType().IsAPrimitiveType())
-        {
-            return key.Value.AsExpandoObject(true);
-        }
-
-        return key.Value;
     }
 
     ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
