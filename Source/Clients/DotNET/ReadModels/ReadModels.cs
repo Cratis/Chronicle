@@ -278,8 +278,9 @@ public class ReadModels(
         };
 
         var response = await _chronicleServicesAccessor.Services.ReadModels.GetAllInstances(request);
+        var instances = response.Instances.Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
 
-        return response.Instances.Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
+        return await Release(instances);
     }
 
     /// <inheritdoc/>
