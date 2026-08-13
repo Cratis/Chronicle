@@ -22,6 +22,7 @@ public static class SequenceQueryDefinitionConverters
             Name = definition.Name,
             Scope = (Contracts.SequenceQueries.SequenceQueryScope)definition.Scope,
             Owner = definition.Owner,
+            Folder = definition.Folder,
             Namespace = definition.Namespace,
             EventSequenceId = definition.EventSequenceId,
             EventSourceId = definition.Filter.EventSourceId,
@@ -43,6 +44,7 @@ public static class SequenceQueryDefinitionConverters
             definition.Name,
             (SequenceQueryScope)definition.Scope,
             definition.Owner,
+            definition.Folder,
             definition.Namespace,
             definition.EventSequenceId,
             new SequenceQueryFilter(

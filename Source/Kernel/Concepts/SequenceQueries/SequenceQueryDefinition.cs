@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Concepts.SequenceQueries;
 /// <param name="Name">The display name the user gave it.</param>
 /// <param name="Scope">Who the query is visible to.</param>
 /// <param name="Owner">The identity that saved it.</param>
+/// <param name="Folder">The folder within the scope the query is filed under.</param>
 /// <param name="Namespace">The namespace the query runs against.</param>
 /// <param name="EventSequenceId">The event sequence the query runs against.</param>
 /// <param name="Filter">The narrowing the user configured.</param>
@@ -21,6 +22,7 @@ public record SequenceQueryDefinition(
     SequenceQueryName Name,
     SequenceQueryScope Scope,
     SequenceQueryOwner Owner,
+    SequenceQueryFolder Folder,
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
     SequenceQueryFilter Filter,

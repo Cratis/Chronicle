@@ -80,4 +80,11 @@ public class SequenceQueryDefinition
     /// </summary>
     [ProtoMember(12)]
     public bool Descending { get; set; }
+
+    /// <summary>
+    /// Gets or sets the folder within the scope the query is filed under. Empty means it sits
+    /// directly under its scope. Nested folders are separated by a forward slash.
+    /// </summary>
+    [ProtoMember(13, IsRequired = true)]
+    public string Folder { get; set; } = string.Empty;
 }

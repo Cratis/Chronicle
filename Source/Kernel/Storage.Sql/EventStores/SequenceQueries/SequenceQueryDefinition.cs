@@ -34,6 +34,12 @@ public class SequenceQueryDefinition
     public string Owner { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the folder within the scope the query is filed under. Empty means it sits
+    /// directly under its scope. Nested folders are separated by a forward slash.
+    /// </summary>
+    public string Folder { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the namespace the query runs against.
     /// </summary>
     public string Namespace { get; set; } = string.Empty;

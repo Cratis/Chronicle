@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Api.SequenceQueries;
 /// <param name="Id">The unique identifier of the query.</param>
 /// <param name="Name">The display name the user gave it.</param>
 /// <param name="Scope">Who the query should be visible to.</param>
+/// <param name="Folder">The folder within the scope to file the query under, or empty to place it directly under its scope.</param>
 /// <param name="Namespace">The namespace the query runs against.</param>
 /// <param name="EventSequenceId">The event sequence the query runs against.</param>
 /// <param name="EventSourceId">The event source to narrow to, or empty for every event source.</param>
@@ -22,8 +23,8 @@ namespace Cratis.Chronicle.Api.SequenceQueries;
 /// <param name="OccurredTo">The exclusive upper bound on when the event occurred.</param>
 /// <param name="Descending">Whether results are ordered newest first.</param>
 /// <remarks>
-/// The workbench saves as the user edits rather than behind a save button, so this command replaces
-/// the whole query every time and is expected to be called often.
+/// Replaces the whole query every time rather than patching it, so the caller always sends the
+/// complete state it wants persisted.
 /// </remarks>
 [Command]
 public record SaveSequenceQuery(
@@ -31,6 +32,7 @@ public record SaveSequenceQuery(
     string Id,
     string Name,
     SequenceQueryScope Scope,
+    string Folder,
     string Namespace,
     string EventSequenceId,
     string EventSourceId,
@@ -59,6 +61,7 @@ public record SaveSequenceQuery(
                 // Ownership follows the principal saving the query, never a value the client supplies,
                 // so a caller cannot plant a query into somebody else's private set.
                 Owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
+                Folder = Folder,
                 Namespace = Namespace,
                 EventSequenceId = EventSequenceId,
                 EventSourceId = EventSourceId,
