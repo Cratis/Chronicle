@@ -5,13 +5,17 @@ using Cratis.Chronicle.Connections;
 
 namespace Cratis.Chronicle.for_TlsCertificateValidationPolicy.when_resolving_the_effective_policy;
 
-public class with_a_connection_string_bypass : Specification
+/// <summary>
+/// The mirror of the connection-string case — an omitted connection-string value must not swallow an
+/// explicit request for validation made through the TLS options.
+/// </summary>
+public class with_only_the_options_requesting_validation : Specification
 {
     bool _result;
 
     void Because() => _result = TlsCertificateValidationPolicy.ShouldSkip(
         new Tls { SkipCertificateValidation = false },
-        new ChronicleConnectionString("chronicle://localhost:35000?skipTlsValidation=true"));
+        new ChronicleConnectionString("chronicle://localhost:35000"));
 
-    [Fact] void should_skip_certificate_validation() => _result.ShouldBeTrue();
+    [Fact] void should_validate_the_certificate() => _result.ShouldBeFalse();
 }

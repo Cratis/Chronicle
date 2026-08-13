@@ -30,36 +30,33 @@ For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/c
 | --- | --- | --- | --- |
 | CertificatePath | string | null | Path to the client certificate (PFX format) if mutual TLS is used |
 | CertificatePassword | string | null | Password for the certificate file |
-| SkipCertificateValidation | boolean | false | When `true`, the client connects over TLS but does not validate the server's certificate |
-
-## Skipping certificate validation
-
-The client always connects over TLS. By default it validates the server's certificate using the standard TLS rules, so a self-signed certificate is rejected. To accept a self-signed (or otherwise untrusted) certificate — for example a Chronicle server on a trusted internal network — skip validation through the connection string:
-
-<ChronicleClientTabs snippet="configuration/tls/connection-string-skip-validation" />
-
-You can also set it on the client's TLS options as `SkipCertificateValidation = true`.
-
-The two inputs are explicit opt-ins to the same effective policy. Validation is skipped when either
-`SkipCertificateValidation` or `skipTlsValidation` is `true`; otherwise the client validates the
-certificate. `SkipCertificateValidation` defaults to `false` and an omitted connection-string option
-resolves to `false`, so an omitted setting can never turn validation off. The named `Development`
-connection string is the explicit exception: it includes `skipTlsValidation=true`.
-
-> [!WARNING]
-> Skipping validation accepts **any** server certificate, which removes protection against man-in-the-middle attacks. Only use it for a trusted server on a trusted network — never over the public internet. Prefer configuring a proper certificate the client can validate.
-
-## Development vs production
-
-- **Development**: the server serves TLS with an auto-generated self-signed certificate. The built-in [`Development` connection string](../connection-strings/) explicitly sets `skipTlsValidation=true`, so a development client accepts that certificate out of the box — no certificate setup is needed on either side.
-- **Production**: the server uses a real certificate you supply, and the client validates it with the standard TLS rules. Skipping validation is opt-in and off by default.
+| SkipCertificateValidation | boolean | true | When `true`, the client connects over TLS but does not validate the server's certificate |
 
 ## Certificate validation
 
-The client validates server certificates using the standard TLS rules:
+The client always connects over TLS, but by default it does **not** validate the server's certificate — any certificate, including a self-signed one, is accepted. That default is deliberate: Chronicle Server generates a self-signed certificate on every start when none is configured, and it is never written to disk or added to a trust store, so there is nothing a client could validate it against. Skipping validation is what lets a development server and client talk to each other with no certificate setup on either side.
 
-- Valid certificates are accepted without extra configuration.
-- A certificate that fails validation — including a self-signed one — is rejected, unless you configure a matching client certificate or set `skipTlsValidation`.
+Once you run against a server whose certificate is verifiable, turn validation on with `skipTlsValidation=false` in the connection string:
+
+```csharp
+var options = ChronicleOptions.FromConnectionString("chronicle://my-server:35000?skipTlsValidation=false");
+```
+
+You can also set it on the client's TLS options as `SkipCertificateValidation = false`. **Either setting alone is enough** — the two combine so that whichever one asks for validation wins, and an omitted second setting can never silently turn validation back off.
+
+To go the other way and skip explicitly:
+
+<ChronicleClientTabs snippet="configuration/tls/connection-string-skip-validation" />
+
+> [!WARNING]
+> The default accepts **any** server certificate, which removes protection against man-in-the-middle attacks. Set `skipTlsValidation=false` for anything reachable beyond a trusted network — and always over the public internet.
+
+## Development vs production
+
+- **Development**: the server serves TLS with an auto-generated self-signed certificate and the client skips validation by default, so a development client connects out of the box — no certificate setup is needed on either side.
+- **Production**: give the server a real certificate and set `skipTlsValidation=false` so the client validates it with the standard TLS rules.
+
+With validation enabled, the standard TLS rules apply: valid certificates are accepted without extra configuration, and a certificate that fails validation — including a self-signed one — is rejected unless you configure a matching client certificate.
 
 ## Troubleshooting
 
@@ -67,7 +64,11 @@ The client validates server certificates using the standard TLS rules:
 
 **Error**: "The remote certificate is invalid"
 
+You only see this once you have opted into validation with `skipTlsValidation=false`.
+
 **Solutions**:
 1. Ensure the server certificate is valid, not expired, and trusted by the client.
-2. If the server uses a self-signed certificate on a trusted network, set `skipTlsValidation=true` in the connection string (or `SkipCertificateValidation` on the client's TLS options).
-3. In development, use the built-in `Development` connection string, which already skips validation for the server's auto-generated certificate.
+2. If the server uses a self-signed certificate on a trusted network, drop `skipTlsValidation=false` from the connection string to fall back to the default of accepting it.
+3. In development no configuration is needed — the client skips validation by default, so the server's auto-generated certificate is accepted as-is.
+
+

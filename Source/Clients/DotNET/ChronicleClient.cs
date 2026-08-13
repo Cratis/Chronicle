@@ -69,8 +69,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <remarks>
     /// This initializes the client with the development connection string
     /// (<see cref="ChronicleConnectionString.Development" />), which includes the default development
-    /// client credentials and explicitly skips certificate validation for the server's generated self-signed
-    /// certificate.
+    /// client credentials.
     /// </remarks>
     public ChronicleClient()
         : this(ChronicleConnectionString.Development)
@@ -137,10 +136,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
         var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
 
-        // The Chronicle server always serves its port over TLS. By default the client validates the
-        // server certificate; validation is skipped only when explicitly requested through the TLS
-        // options or the connection string (skipTlsValidation=true) — for example to accept the
-        // server's self-signed development certificate.
+        // The Chronicle server always serves its port over TLS, generating a self-signed certificate
+        // on every start when none is configured. That certificate is never persisted or trusted, so
+        // the client skips validation by default and a development server and client connect without
+        // any certificate setup. Opt into full validation with skipTlsValidation=false (or
+        // Tls.SkipCertificateValidation = false) against a server whose certificate is verifiable.
         var skipTlsValidation = TlsCertificateValidationPolicy.ShouldSkip(options.Tls, options.ConnectionString);
 
         var tokenProvider = CreateTokenProvider(options, skipTlsValidation);

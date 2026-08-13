@@ -5,13 +5,13 @@ using Cratis.Chronicle.Connections;
 
 namespace Cratis.Chronicle.for_TlsCertificateValidationPolicy.when_resolving_the_effective_policy;
 
-public class with_an_options_bypass_and_explicit_connection_validation : Specification
+public class with_both_inputs_explicitly_skipping : Specification
 {
     bool _result;
 
     void Because() => _result = TlsCertificateValidationPolicy.ShouldSkip(
         new Tls { SkipCertificateValidation = true },
-        new ChronicleConnectionString("chronicle://localhost:35000?skipTlsValidation=false"));
+        new ChronicleConnectionString("chronicle://localhost:35000?skipTlsValidation=true"));
 
-    [Fact] void should_skip_certificate_validation() => _result.ShouldBeTrue();
+    [Fact] void should_skip_validation() => _result.ShouldBeTrue();
 }
