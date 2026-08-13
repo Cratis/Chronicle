@@ -17,6 +17,7 @@ using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
+using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Testing.EventSequences;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
@@ -76,6 +77,9 @@ internal sealed class InMemoryEventStoreStorage(
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public ISequenceQueryStorage SequenceQueries => throw new NotSupportedException();
 
     /// <inheritdoc/>
     public ICapturesStorage Captures => throw new NotSupportedException();
