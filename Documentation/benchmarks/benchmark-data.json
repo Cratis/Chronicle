@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786599622820,
+  "lastUpdate": 1786605532672,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -5296,6 +5296,144 @@
             "value": 302836030.8,
             "unit": "ns",
             "range": "± 46895791.070452906"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "woksin@users.noreply.github.com",
+            "name": "Sindre Alstad Wilting",
+            "username": "woksin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "968e4f8d073acc4e6e384579f127a1cf41b7016b",
+          "message": "Add an opt-in health-only dedicated listener (#3695)\n\n* Add an opt-in health-only dedicated listener\n\nThe dedicated health port was a second Kestrel endpoint on the same\nWebApplication, and every HTTP/1.1 route was mapped app-wide with no port\npredicate - so the Workbench, REST API and OAuth endpoints were reachable\non it too. The Kernel Server is a sealed top-level Program, so a consumer\ncould not add the filter themselves and network policy was the only\nmitigation.\n\nhealth.exclusive short-circuits any path other than the health endpoint\non that port. It keys on the connection's local port rather than a header,\nso nothing a client sends can reach the restricted surface. Default off,\nso existing deployments are unchanged.\n\nThe decision is extracted into HealthOnlyPortPolicy so it can be specced -\nProgram.cs top-level statements are otherwise unreachable from a spec.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Match routing exactly when deciding what the health port serves\n\nThe path check trimmed whitespace from the request path, which routing\ndoes not. \"/health%20\" decodes to \"/health \", so the check trimmed it to\n\"/health\" and admitted it, while routing saw a different path, missed\nMapHealthChecks and fell through to the fallback - serving the Workbench\nentry document with 200 on a port advertised as health-only.\n\nThe request path now gets only the normalization routing itself performs:\ntrailing slash ignored, case-insensitive, nothing else. The configured\nendpoint is operator-supplied rather than attacker-supplied and is still\ntrimmed. An endpoint that is missing or only whitespace now matches\nnothing and the port rejects everything, instead of resolving to \"/\" and\nserving the fallback.\n\nFound by security review before merge.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-08-13T09:01:55+02:00",
+          "tree_id": "02a4c41788faa005f066c37de5d184910be5fe1a",
+          "url": "https://github.com/Cratis/Chronicle/commit/968e4f8d073acc4e6e384579f127a1cf41b7016b"
+        },
+        "date": 1786605532670,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 9184355.3140625,
+            "unit": "ns",
+            "range": "± 765739.994414077"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 14480149.534375,
+            "unit": "ns",
+            "range": "± 2201549.6995169455"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 36629152.36923076,
+            "unit": "ns",
+            "range": "± 5924203.555665074"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 365050692,
+            "unit": "ns",
+            "range": "± 62923062.70735704"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 3763411.3333333335,
+            "unit": "ns",
+            "range": "± 331722.4550154843"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 7142800.5,
+            "unit": "ns",
+            "range": "± 488567.48894526105"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 3286271.375,
+            "unit": "ns",
+            "range": "± 148307.5168694498"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 11281671.5,
+            "unit": "ns",
+            "range": "± 376918.7064701656"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 363906869.5,
+            "unit": "ns",
+            "range": "± 16973791.13386931"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 2060936866,
+            "unit": "ns",
+            "range": "± 52237146.72641896"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 71490922.22222222,
+            "unit": "ns",
+            "range": "± 1483606.7662267163"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 257599468.25,
+            "unit": "ns",
+            "range": "± 9262884.593772113"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1588913235.7,
+            "unit": "ns",
+            "range": "± 109521223.21200475"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 72490607.5,
+            "unit": "ns",
+            "range": "± 2277952.572194955"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 95758521.94444445,
+            "unit": "ns",
+            "range": "± 3536804.9269014015"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 355585334.3333333,
+            "unit": "ns",
+            "range": "± 40742054.08498972"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 70590152.8888889,
+            "unit": "ns",
+            "range": "± 1536122.1298180888"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 99526177.44444445,
+            "unit": "ns",
+            "range": "± 5673736.474953787"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 340873466.6,
+            "unit": "ns",
+            "range": "± 90274038.1672176"
           }
         ]
       }
