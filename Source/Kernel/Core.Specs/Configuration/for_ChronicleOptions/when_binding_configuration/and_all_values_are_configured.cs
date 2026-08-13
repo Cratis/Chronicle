@@ -27,7 +27,10 @@ public class and_all_values_are_configured : Specification
                 ["Cratis:Chronicle:Webhooks:TestTimeoutSeconds"] = "15",
                 ["Cratis:Chronicle:Sql:LiveQueryPollIntervalSeconds"] = "6",
                 ["Cratis:Chronicle:Observers:SubscriptionReadyTimeout"] = "8",
-                ["Cratis:Chronicle:Events:QueueDepletionWaitTimeoutMilliseconds"] = "750"
+                ["Cratis:Chronicle:Events:QueueDepletionWaitTimeoutMilliseconds"] = "750",
+                ["Cratis:Chronicle:Health:Port"] = "8080",
+                ["Cratis:Chronicle:Health:Tls"] = "false",
+                ["Cratis:Chronicle:Health:Exclusive"] = "true"
             })
             .Build()
             .GetSection(ChronicleOptions.SectionPath)
@@ -47,4 +50,7 @@ public class and_all_values_are_configured : Specification
     [Fact] void should_bind_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(6);
     [Fact] void should_bind_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(8);
     [Fact] void should_bind_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(750);
+    [Fact] void should_bind_the_health_port() => _options.Health.Port.ShouldEqual(8080);
+    [Fact] void should_bind_health_tls() => _options.Health.Tls.ShouldBeFalse();
+    [Fact] void should_bind_health_exclusive() => _options.Health.Exclusive.ShouldBeTrue();
 }

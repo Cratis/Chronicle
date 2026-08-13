@@ -32,4 +32,7 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(2);
     [Fact] void should_default_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(5);
     [Fact] void should_default_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(500);
+    [Fact] void should_default_the_health_port_to_not_set() => _options.Health.Port.ShouldBeNull();
+    [Fact] void should_default_health_tls_to_enabled() => _options.Health.Tls.ShouldBeTrue();
+    [Fact] void should_default_health_exclusive_to_disabled() => _options.Health.Exclusive.ShouldBeFalse();
 }
