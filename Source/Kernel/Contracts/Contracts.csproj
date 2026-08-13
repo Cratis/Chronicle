@@ -6,7 +6,13 @@
         <TargetsForTfmSpecificContentInPackage></TargetsForTfmSpecificContentInPackage>
         <AssemblyName>Cratis.Chronicle.Contracts</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Contracts</RootNamespace>
-        <NoWarn>$(NoWarn);CS8618;PBN2008;PBN0022</NoWarn>
+        <!--
+            PBN2013 asks for a [ProtoModel] partial class so protobuf-net generates compile-time serializers.
+            The attribute is protobuf-net 3.3+, and protobuf-net.Grpc 1.2.2 pins the runtime below that — so
+            the analyzer (BuildTools 3.3.8) is advising something this project cannot express yet. Drop this
+            once the runtime moves up and adopt compile-time serializers deliberately, on their own merits.
+        -->
+        <NoWarn>$(NoWarn);CS8618;PBN2008;PBN0022;PBN2013</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />

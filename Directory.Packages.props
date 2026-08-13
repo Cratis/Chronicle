@@ -96,6 +96,12 @@
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
     <PackageVersion Include="Testcontainers" Version="4.13.0" />
+    <!--
+        Testcontainers 4.13.0 brings in SSH.NET 2025.1.0, which GHSA-q939-rpr3-3284 covers. 2026.0.0 is the
+        patched release, so every project referencing Testcontainers also references SSH.NET directly to pull
+        the transitive dependency forward. Remove both once Testcontainers ships a version that does it itself.
+    -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
