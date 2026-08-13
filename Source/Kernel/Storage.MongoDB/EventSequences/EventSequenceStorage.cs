@@ -106,6 +106,78 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<EventCount> GetCountMatching(EventSequenceQueryCriteria criteria)
+    {
+        var collection = _collection;
+        return await collection.CountDocumentsAsync(CreateFilterFor(criteria)).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEventCursor> GetPage(
+        EventSequenceQueryCriteria criteria,
+        int skip,
+        int take,
+        bool descending = false,
+        CancellationToken cancellationToken = default)
+    {
+        var collection = _collection;
+        var find = collection.Find(CreateFilterFor(criteria));
+        var sorted = descending
+            ? find.SortByDescending(_ => _.SequenceNumber)
+            : find.SortBy(_ => _.SequenceNumber);
+
+        var cursor = await sorted
+            .Skip(skip)
+            .Limit(take)
+            .ToCursorAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return new EventCursor(converter, cursor);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria)
+    {
+        var collection = _collection;
+        var unit = resolution switch
+        {
+            HistogramResolution.Minute => "minute",
+            HistogramResolution.Hour => "hour",
+            HistogramResolution.Day => "day",
+            HistogramResolution.Week => "week",
+            HistogramResolution.Month => "month",
+            _ => "hour"
+        };
+
+        var group = new BsonDocument
+        {
+            {
+                "_id", new BsonDocument("$dateTrunc", new BsonDocument
+                {
+                    { "date", "$Occurred" },
+                    { "unit", unit },
+                    { "startOfWeek", "monday" }
+                })
+            },
+            { "count", new BsonDocument("$sum", 1) }
+        };
+
+        var pipeline = PipelineDefinition<Event, BsonDocument>.Create(
+            new BsonDocument("$match", CreateFilterFor(criteria).Render(new(collection.DocumentSerializer, collection.Settings.SerializerRegistry))),
+            new BsonDocument("$group", group),
+            new BsonDocument("$sort", new BsonDocument("_id", 1)));
+
+        var results = await collection.AggregateAsync(pipeline).ConfigureAwait(false);
+        var buckets = await results.ToListAsync().ConfigureAwait(false);
+
+        return buckets
+            .Select(_ => new HistogramBucket(
+                new DateTimeOffset(DateTime.SpecifyKind(_["_id"].ToUniversalTime(), DateTimeKind.Utc)),
+                _["count"].ToInt64()))
+            .ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
@@ -886,6 +958,45 @@ public class EventSequenceStorage(
     {
         var sequenceNumber = Convert.ToUInt64(value.ToDecimal());
         return new EventSequenceNumber(sequenceNumber);
+    }
+
+    /// <summary>
+    /// Build the MongoDB filter for a set of query criteria.
+    /// </summary>
+    /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> to translate.</param>
+    /// <returns>A filter matching every event when the criteria narrows nothing.</returns>
+    static FilterDefinition<Event> CreateFilterFor(EventSequenceQueryCriteria criteria)
+    {
+        var filters = new List<FilterDefinition<Event>>();
+
+        if (criteria.HasEventSourceId)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(_ => _.EventSourceId, criteria.EventSourceId));
+        }
+
+        if (criteria.HasEventTypes)
+        {
+            filters.Add(Builders<Event>.Filter.In(_ => _.Type, criteria.EventTypes!.Select(_ => _.Id).ToArray()));
+        }
+
+        if (criteria.HasTags)
+        {
+            filters.Add(Builders<Event>.Filter.AnyIn(_ => _.Tags, criteria.Tags!.Select(_ => _.Value).ToArray()));
+        }
+
+        if (criteria.OccurredFrom is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Gte(_ => _.Occurred, criteria.OccurredFrom.Value));
+        }
+
+        if (criteria.OccurredTo is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Lt(_ => _.Occurred, criteria.OccurredTo.Value));
+        }
+
+        return filters.Count == 0
+            ? FilterDefinition<Event>.Empty
+            : Builders<Event>.Filter.And([.. filters]);
     }
 
     /// <summary>

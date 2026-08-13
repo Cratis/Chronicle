@@ -765,6 +765,97 @@ public class EventSequenceStorage(
         return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<EventCount> GetCountMatching(EventSequenceQueryCriteria criteria)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        return await ApplyCriteria(scope.DbContext.Events.AsQueryable(), criteria).CountAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEventCursor> GetPage(
+        EventSequenceQueryCriteria criteria,
+        int skip,
+        int take,
+        bool descending = false,
+        CancellationToken cancellationToken = default)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        var query = ApplyCriteria(scope.DbContext.Events.AsQueryable(), criteria);
+        var ordered = descending
+            ? query.OrderByDescending(e => e.SequenceNumber)
+            : query.OrderBy(e => e.SequenceNumber);
+
+        var entries = await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
+
+        // The page is bounded and its order is already decided here, so materialize it rather than
+        // handing it to EventCursor - that cursor re-sorts ascending as it batches.
+        var events = new List<AppendedEvent>(entries.Count);
+        foreach (var entry in entries)
+        {
+            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage));
+        }
+
+        return new MaterializedEventCursor(events);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        // Date truncation differs per provider (and SQLite has no native equivalent at all), so read
+        // the matching timestamps and bucket them with the shared helper every backend uses.
+        var occurrences = await ApplyCriteria(scope.DbContext.Events.AsQueryable(), criteria)
+            .Select(e => e.Occurred)
+            .ToListAsync();
+
+        return
+        [
+            .. occurrences
+                .GroupBy(occurred => HistogramResolutions.Truncate(occurred, resolution))
+                .OrderBy(_ => _.Key)
+                .Select(_ => new HistogramBucket(_.Key, _.LongCount()))
+        ];
+    }
+
+    /// <summary>
+    /// Narrow a query to the events matching a set of criteria.
+    /// </summary>
+    /// <param name="query">The <see cref="IQueryable{T}"/> of <see cref="EventEntry"/> to narrow.</param>
+    /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> to apply.</param>
+    /// <returns>The narrowed query - unchanged when the criteria narrows nothing.</returns>
+    static IQueryable<EventEntry> ApplyCriteria(IQueryable<EventEntry> query, EventSequenceQueryCriteria criteria)
+    {
+        if (criteria.HasEventSourceId)
+        {
+            var eventSourceId = criteria.EventSourceId!.Value;
+            query = query.Where(e => e.EventSourceId == eventSourceId);
+        }
+
+        if (criteria.HasEventTypes)
+        {
+            var eventTypeIds = criteria.EventTypes!.Select(_ => _.Id.Value).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        if (criteria.OccurredFrom is not null)
+        {
+            var from = criteria.OccurredFrom.Value;
+            query = query.Where(e => e.Occurred >= from);
+        }
+
+        if (criteria.OccurredTo is not null)
+        {
+            var to = criteria.OccurredTo.Value;
+            query = query.Where(e => e.Occurred < to);
+        }
+
+        return ApplyTagsFilter(query, criteria.Tags);
+    }
+
     /// <summary>
     /// Narrow a query to events carrying any of the given tags. Tags are stored as a JSON string array,
     /// so the filter matches on the exact serialized token of each tag (including quotes), which

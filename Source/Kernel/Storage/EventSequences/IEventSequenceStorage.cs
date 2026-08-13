@@ -253,6 +253,32 @@ public interface IEventSequenceStorage
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get the number of events matching a set of criteria.
+    /// </summary>
+    /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> narrowing the events counted.</param>
+    /// <returns>Number of matching events.</returns>
+    Task<EventCount> GetCountMatching(EventSequenceQueryCriteria criteria);
+
+    /// <summary>
+    /// Get a page of events matching a set of criteria, ordered by sequence number.
+    /// </summary>
+    /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> narrowing the events returned.</param>
+    /// <param name="skip">Number of matching events to skip before the page starts.</param>
+    /// <param name="take">Maximum number of events in the page.</param>
+    /// <param name="descending">Whether to order from the newest event down rather than from the oldest up.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns><see cref="IEventCursor"/> over the page.</returns>
+    Task<IEventCursor> GetPage(EventSequenceQueryCriteria criteria, int skip, int take, bool descending = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the number of matching events per time bucket, for driving a time range picker.
+    /// </summary>
+    /// <param name="resolution">The <see cref="HistogramResolution"/> defining the bucket size.</param>
+    /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> narrowing the events counted.</param>
+    /// <returns>Buckets that contain at least one event, ordered by time ascending.</returns>
+    Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria);
+
+    /// <summary>
     /// Replace the generational content for an event at a specific sequence number.
     /// Used during event type migration when new generations are added and existing events
     /// need their content updated with the migrated content for all generations.

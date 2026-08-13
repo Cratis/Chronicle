@@ -82,6 +82,37 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public Task<EventCount> GetCountMatching(EventSequenceQueryCriteria criteria) =>
+        Task.FromResult((EventCount)Matching(Events, criteria).Count());
+
+    /// <inheritdoc/>
+    public Task<IEventCursor> GetPage(
+        EventSequenceQueryCriteria criteria,
+        int skip,
+        int take,
+        bool descending = false,
+        CancellationToken cancellationToken = default)
+    {
+        var matching = Matching(Events, criteria);
+        var ordered = descending
+            ? matching.OrderByDescending(_ => _.Context.SequenceNumber.Value)
+            : matching.OrderBy(_ => _.Context.SequenceNumber.Value);
+
+        return Task.FromResult<IEventCursor>(new EventCursor([.. ordered.Skip(skip).Take(take)]));
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria)
+    {
+        var buckets = Matching(Events, criteria)
+            .GroupBy(_ => HistogramResolutions.Truncate(_.Context.Occurred, resolution))
+            .OrderBy(_ => _.Key)
+            .Select(_ => new HistogramBucket(_.Key, _.LongCount()));
+
+        return Task.FromResult<IEnumerable<HistogramBucket>>([.. buckets]);
+    }
+
+    /// <inheritdoc/>
     public Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
@@ -542,6 +573,19 @@ public class EventSequenceStorage(
     /// <param name="content">The content to render.</param>
     /// <returns>The content as a JSON string.</returns>
     static string Serialize(ExpandoObject content) => JsonSerializer.Serialize(content, _serializerOptions);
+
+    /// <summary>
+    /// Narrow events to those matching a set of query criteria.
+    /// </summary>
+    /// <param name="events">The events to narrow.</param>
+    /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> narrowing the events.</param>
+    /// <returns>Matching events - every event when the criteria narrows nothing.</returns>
+    static IEnumerable<AppendedEvent> Matching(IEnumerable<AppendedEvent> events, EventSequenceQueryCriteria criteria) =>
+        events.Where(_ => criteria.Matches(
+            _.Context.EventSourceId,
+            _.Context.EventType.Id,
+            _.Context.Tags.Select(tag => tag.Value),
+            _.Context.Occurred));
 
     /// <summary>
     /// Narrows the events by the supplied criteria, matching how the persistent storage providers build their queries.
