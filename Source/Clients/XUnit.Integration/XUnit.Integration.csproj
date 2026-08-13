@@ -39,6 +39,8 @@
         </PackageReference>
         <PackageReference Include="mongodb.driver" />
         <PackageReference Include="Testcontainers" />
+        <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->
+        <PackageReference Include="SSH.NET" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
