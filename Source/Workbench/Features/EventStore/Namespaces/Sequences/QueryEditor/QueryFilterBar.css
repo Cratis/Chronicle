@@ -1,0 +1,31 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.query-filter-bar__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 4px;
+    background: var(--surface-card);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.query-filter-bar__trigger:hover {
+    background: var(--surface-hover);
+}
+
+.query-filter-bar__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--primary-color);
+    color: var(--primary-color-text);
+    font-size: 0.7rem;
+}

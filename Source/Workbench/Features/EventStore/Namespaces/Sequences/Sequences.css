@@ -1,0 +1,37 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.sequences {
+    display: flex;
+    gap: 1rem;
+    height: 100%;
+    min-height: 0;
+}
+
+.sequences__queries {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+.sequences__tabs {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sequences__tabview {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sequences__add {
+    position: absolute;
+    top: 0.15rem;
+    right: 0;
+}

@@ -3,7 +3,6 @@
 
 import { DefaultLayout } from "../../Layout/Default/DefaultLayout";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { SequencesFuture } from "./Namespaces/Sequences/SequencesFuture";
 import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
 // import * as devIcons from 'react-icons/di';
@@ -111,7 +110,6 @@ export const EventStore = () => {
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />
-                    <Route path={'sequences-future'} element={<SequencesFuture />} />
                     <Route path={'pivot'} element={<Pivot />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />

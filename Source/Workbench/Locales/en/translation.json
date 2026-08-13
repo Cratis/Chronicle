@@ -406,7 +406,10 @@
                     "appendEvent": "Append Event",
                     "redact": "Redact",
                     "revise": "Revise",
-                    "export": "Export"
+                    "export": "Export",
+                    "run": "Run",
+                    "newQuery": "New query",
+                    "deleteQuery": "Delete query"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -424,7 +427,15 @@
                         "placeholder": "Filter by event source id",
                         "help": "Filters the entire sequence on the server."
                     },
-                    "pageScopedNote": "Column filters below apply only to the currently loaded page."
+                    "pageScopedNote": "Column filters below apply only to the currently loaded page.",
+                    "title": "Filters",
+                    "noEventsToPlot": "No events to plot for the current filters.",
+                    "clearRange": "Clear time range",
+                    "groups": {
+                        "eventType": "Event type",
+                        "eventSource": "Event source",
+                        "occurred": "Time range"
+                    }
                 },
                 "dialogs": {
                     "appendEvent": {
@@ -461,6 +472,18 @@
                     "revisionLabel": "Revision {n}",
                     "generationLabel": "Generation {n}",
                     "revisionBy": "Revised by {name} at {occurred}"
+                },
+                "newQuery": "New query",
+                "queryName": "Query name",
+                "savedQueries": "Saved queries",
+                "noSavedQueries": "Nothing saved yet. Queries you build are saved as you go.",
+                "sorting": {
+                    "newestFirst": "Newest first",
+                    "oldestFirst": "Oldest first"
+                },
+                "scope": {
+                    "onlyMe": "Only me",
+                    "everyone": "Everyone"
                 }
             },
             "observers": {
