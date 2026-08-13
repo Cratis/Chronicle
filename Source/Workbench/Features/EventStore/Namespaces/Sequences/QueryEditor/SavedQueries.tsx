@@ -21,6 +21,8 @@ export interface SavedQueriesProps {
     openIds: string[];
     /** Called when the user picks a query to open. */
     onOpen: (query: SequenceQuery) => void;
+    /** Called after a query was deleted, so the list can be re-read. */
+    onDeleted: () => void;
 }
 
 /**
@@ -28,14 +30,18 @@ export interface SavedQueriesProps {
  * @param props The {@link SavedQueriesProps}.
  * @returns The rendered list.
  */
-export const SavedQueries = ({ queries, eventStore, openIds, onOpen }: SavedQueriesProps) => {
+export const SavedQueries = ({ queries, eventStore, openIds, onOpen, onDeleted }: SavedQueriesProps) => {
     const sequenceStrings = strings.eventStore.namespaces.sequences;
 
     const remove = async (query: SequenceQuery) => {
         const command = new DeleteSequenceQuery();
         command.eventStore = eventStore;
         command.id = query.id;
-        await command.execute();
+
+        const result = await command.execute();
+        if (result.isSuccess) {
+            onDeleted();
+        }
     };
 
     return (

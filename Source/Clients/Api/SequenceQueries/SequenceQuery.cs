@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Subjects;
 using Cratis.Arc.Authorization;
 using Cratis.Chronicle.Contracts.SequenceQueries;
-using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.SequenceQueries;
 
@@ -39,22 +37,25 @@ public record SequenceQuery(
     bool Descending)
 {
     /// <summary>
-    /// Observes the saved queries the current identity can see - their own, plus the ones shared with everyone.
+    /// Gets the saved queries the current identity can see - their own, plus the ones shared with everyone.
     /// </summary>
     /// <param name="sequenceQueries"><see cref="ISequenceQueries"/> for working with saved queries.</param>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
-    /// <param name="eventStore">Event store to observe for.</param>
-    /// <returns>Client observable of a collection of <see cref="SequenceQuery"/>.</returns>
-    public static ISubject<IEnumerable<SequenceQuery>> AllSequenceQueries(
+    /// <param name="eventStore">Event store to get for.</param>
+    /// <returns>A collection of <see cref="SequenceQuery"/>.</returns>
+    /// <remarks>
+    /// A snapshot rather than an observable: which queries an identity may see depends on the
+    /// principal executing the call, and the caller re-reads after saving or deleting anyway.
+    /// </remarks>
+    public static async Task<IEnumerable<SequenceQuery>> AllSequenceQueries(
         ISequenceQueries sequenceQueries,
         ICurrentPrincipalAccessor currentPrincipalAccessor,
         string eventStore)
     {
         var owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor);
+        var queries = await sequenceQueries.GetSequenceQueries(new() { EventStore = eventStore, Owner = owner });
 
-        return sequenceQueries.InvokeAndWrapWithTransformSubject(
-            token => sequenceQueries.ObserveSequenceQueries(new() { EventStore = eventStore, Owner = owner }, token),
-            queries => queries.Select(ToApi).ToArray().AsEnumerable());
+        return queries.Select(ToApi).ToArray();
     }
 
     static SequenceQuery ToApi(SequenceQueryDefinition definition) =>

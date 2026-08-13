@@ -39,21 +39,30 @@ public class SequenceQueryStorage(IEventStoreDatabase eventStoreDatabase) : ISeq
     }
 
     /// <inheritdoc/>
-    public Task Save(Concepts.SequenceQueries.SequenceQueryDefinition definition)
+    /// <remarks>
+    /// The driver's result is deliberately awaited and dropped rather than returned as the task's
+    /// value. The interface promises a plain <see cref="Task"/>, and a caller that reflects over
+    /// what it actually got - Arc does, when turning a command handler's return into a response -
+    /// would otherwise surface a MongoDB driver type to the client.
+    /// </remarks>
+    public async Task Save(Concepts.SequenceQueries.SequenceQueryDefinition definition)
     {
         var id = definition.Id.Value;
 
-        return Collection.ReplaceOneAsync(
+        await Collection.ReplaceOneAsync(
             filter: _ => _.Id == id,
             replacement: definition.ToMongoDB(),
             options: new ReplaceOptions { IsUpsert = true });
     }
 
     /// <inheritdoc/>
-    public Task Delete(SequenceQueryId id)
+    /// <remarks>
+    /// Awaited rather than returned for the same reason as <see cref="Save"/>.
+    /// </remarks>
+    public async Task Delete(SequenceQueryId id)
     {
         var value = id.Value;
 
-        return Collection.DeleteOneAsync(_ => _.Id == value);
+        await Collection.DeleteOneAsync(_ => _.Id == value);
     }
 }

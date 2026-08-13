@@ -33,7 +33,7 @@ export const Sequences = () => {
         [eventTypes.data]
     );
 
-    const [savedQueries] = AllSequenceQueries.use({ eventStore });
+    const [savedQueries, refreshSavedQueries] = AllSequenceQueries.use({ eventStore });
     const queriesForNamespace = useMemo(
         () => savedQueries.data.filter(query => query.namespace === namespace),
         [savedQueries.data, namespace]
@@ -49,7 +49,8 @@ export const Sequences = () => {
                     queries={queriesForNamespace}
                     eventStore={eventStore}
                     openIds={open.map(query => query.id)}
-                    onOpen={openSaved} />
+                    onOpen={openSaved}
+                    onDeleted={refreshSavedQueries} />
 
                 <div className='sequences__queries'>
                     <div className='sequences__tabs'>
@@ -64,7 +65,8 @@ export const Sequences = () => {
                                         state={query}
                                         eventStore={eventStore}
                                         eventTypeIds={eventTypeIds}
-                                        onChange={state => update(index, state)} />
+                                        onChange={state => update(index, state)}
+                                        onSaved={refreshSavedQueries} />
                                 </TabPanel>
                             ))}
                         </TabView>

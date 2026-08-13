@@ -18,12 +18,13 @@ export const autoSaveDelayInMilliseconds = 600;
  * @param eventStore The event store the query belongs to.
  * @param isEnabled Whether saving should happen at all.
  */
-export const useQueryAutoSave = (state: SequenceQueryState, eventStore: string, isEnabled: boolean) => {
-    const lastSaved = useRef<SequenceQueryState | undefined>(undefined);
+export const useQueryAutoSave = (state: SequenceQueryState, eventStore: string, onSaved: () => void) => {
+    // Seeded with the state the editor opened on, so simply visiting the page does not write a
+    // query back. Only a real edit differs from this and triggers the first save.
+    const lastSaved = useRef<SequenceQueryState>(state);
 
     useEffect(() => {
-        if (!isEnabled) return;
-        if (lastSaved.current && areSequenceQueryStatesEqual(lastSaved.current, state)) return;
+        if (areSequenceQueryStatesEqual(lastSaved.current, state)) return;
 
         const handle = setTimeout(async () => {
             const command = new SaveSequenceQuery();
@@ -43,9 +44,10 @@ export const useQueryAutoSave = (state: SequenceQueryState, eventStore: string, 
             const result = await command.execute();
             if (result.isSuccess) {
                 lastSaved.current = state;
+                onSaved();
             }
         }, autoSaveDelayInMilliseconds);
 
         return () => clearTimeout(handle);
-    }, [state, eventStore, isEnabled]);
+    }, [state, eventStore, onSaved]);
 };

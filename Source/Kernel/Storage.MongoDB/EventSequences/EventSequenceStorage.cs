@@ -16,6 +16,7 @@ using Cratis.Monads;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
@@ -149,12 +150,19 @@ public class EventSequenceStorage(
             _ => "hour"
         };
 
+        // Element names are camel-cased by the convention pack, so the field is resolved through the
+        // class map rather than spelled out - a name that does not match is not an error here, it
+        // silently buckets every event under null.
+        var occurredElementName = BsonClassMap.LookupClassMap(typeof(Event))
+            .GetMemberMap(nameof(Event.Occurred))
+            .ElementName;
+
         var group = new BsonDocument
         {
             {
                 "_id", new BsonDocument("$dateTrunc", new BsonDocument
                 {
-                    { "date", "$Occurred" },
+                    { "date", $"${occurredElementName}" },
                     { "unit", unit },
                     { "startOfWeek", "monday" }
                 })

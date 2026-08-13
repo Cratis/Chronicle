@@ -14,7 +14,9 @@ import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
 import { EventDetails } from '../EventDetails';
 import { QueryFilterBar } from './QueryFilterBar';
 import { SequenceQueryState } from './SequenceQueryState';
+import { exportFileName, toExportedEvents } from './exportEvents';
 import { toQueryArguments } from './toQueryArguments';
+import { useEventActions } from './useEventActions';
 import { useQueryAutoSave } from './useQueryAutoSave';
 import './QueryEditor.css';
 
@@ -30,6 +32,8 @@ export interface QueryEditorProps {
     eventTypeIds: string[];
     /** Called with the query state whenever the user changes it. */
     onChange: (state: SequenceQueryState) => void;
+    /** Called after the query has been written back, so the saved-query list can be re-read. */
+    onSaved: () => void;
 }
 
 const occurred = (event: AppendedEvent) => event.context.occurred.toLocaleString();
@@ -43,7 +47,7 @@ const occurred = (event: AppendedEvent) => event.context.occurred.toLocaleString
  * @param props The {@link QueryEditorProps}.
  * @returns The rendered editor.
  */
-export const QueryEditor = ({ state, eventStore, eventTypeIds, onChange }: QueryEditorProps) => {
+export const QueryEditor = ({ state, eventStore, eventTypeIds, onChange, onSaved }: QueryEditorProps) => {
     const sequenceStrings = strings.eventStore.namespaces.sequences;
 
     // The arguments the results are currently showing, which only move when the user runs the query.
@@ -51,11 +55,29 @@ export const QueryEditor = ({ state, eventStore, eventTypeIds, onChange }: Query
     const [runCount, setRunCount] = useState(0);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
 
-    useQueryAutoSave(state, eventStore, true);
+    useQueryAutoSave(state, eventStore, onSaved);
 
     const run = () => {
         setRunArguments(toQueryArguments(state, eventStore));
         setRunCount(count => count + 1);
+    };
+
+    const { AppendEventWrapper, RedactEventWrapper, ReviseWrapper, append, redact, revise } =
+        useEventActions(eventStore, state.namespace, state.eventSequenceId, selectedEvent, run);
+
+    const exportEvents = async () => {
+        const result = await new QueryEvents().perform(runArguments);
+        if (!result.hasData || result.data.length === 0) return;
+
+        const blob = new Blob([JSON.stringify(toExportedEvents(result.data), null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = exportFileName(eventStore, state.namespace, new Date());
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const sortOptions = [
@@ -117,6 +139,28 @@ export const QueryEditor = ({ state, eventStore, eventTypeIds, onChange }: Query
                             label={sequenceStrings.actions.run}
                             icon={faIcons.FaPlay}
                             command={run} />
+                        <MenuItem
+                            id='appendEvent'
+                            label={sequenceStrings.actions.appendEvent}
+                            icon={faIcons.FaPlus}
+                            command={append} />
+                        <MenuItem
+                            id='redactEvent'
+                            label={sequenceStrings.actions.redact}
+                            icon={faIcons.FaEraser}
+                            disableOnUnselected
+                            command={redact} />
+                        <MenuItem
+                            id='reviseEvent'
+                            label={sequenceStrings.actions.revise}
+                            icon={faIcons.FaArrowsRotate}
+                            disableOnUnselected
+                            command={revise} />
+                        <MenuItem
+                            id='exportEvents'
+                            label={sequenceStrings.actions.export}
+                            icon={faIcons.FaFileExport}
+                            command={exportEvents} />
                     </DataPage.MenuItems>
 
                     <DataPage.Columns>
@@ -127,6 +171,10 @@ export const QueryEditor = ({ state, eventStore, eventTypeIds, onChange }: Query
                     </DataPage.Columns>
                 </DataPage>
             </div>
+
+            <AppendEventWrapper />
+            <RedactEventWrapper />
+            <ReviseWrapper />
         </div>
     );
 };
