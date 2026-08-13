@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// The exception that is thrown when a <see cref="Compliance.GDPR.ReleaseUnderAttribute"/> is declared below
+/// The exception that is thrown when a <see cref="Compliance.GDPR.SubjectFromAttribute">[SubjectFrom]</see> is declared below
 /// the read model itself — on a member of a value object, a child element, or any other nested type.
 /// </summary>
 /// <remarks>
@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="declaringType">The nested type carrying the declaration.</param>
 /// <param name="propertyName">The name of the nested property carrying the declaration.</param>
 public class ReleaseUnderNotSupportedBelowReadModel(Type readModelType, Type declaringType, string propertyName)
-    : Exception($"[ReleaseUnder] on '{declaringType.Name}.{propertyName}' is nested inside read model '{readModelType.Name}' and cannot be honored. Declare it on the property of '{readModelType.Name}' that holds the value instead — the whole value is released under the declared subject.")
+    : Exception($"[SubjectFrom] on '{declaringType.Name}.{propertyName}' is nested inside read model '{readModelType.Name}' and cannot be honored. Declare it on the property of '{readModelType.Name}' that holds the value instead — the whole value is released under the declared subject.")
 {
     /// <summary>
     /// Gets the read model type being released.

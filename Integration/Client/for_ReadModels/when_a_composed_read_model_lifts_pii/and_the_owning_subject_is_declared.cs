@@ -46,6 +46,6 @@ public class and_the_owning_subject_is_declared(context context) : Given<context
 /// <param name="Comment">The comment lifted off that person's own stored row.</param>
 public record DeclaredDueSubject(
     SubjectIdentifier SubjectId,
-    [ReleaseUnder(nameof(SubjectId))] PostponementComment Comment);
+    [SubjectFrom(nameof(SubjectId))] PostponementComment Comment);
 
 #pragma warning restore SA1402

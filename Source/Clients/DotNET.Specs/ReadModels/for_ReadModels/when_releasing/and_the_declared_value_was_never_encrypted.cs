@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_releasing;
 /// </summary>
 public class and_the_declared_value_was_never_encrypted : given.a_recording_compliance_service
 {
-    record DueSubject(string PersonId, [PII][ReleaseUnder(nameof(PersonId))] string Comment);
+    record DueSubject(string PersonId, [PII][SubjectFrom(nameof(PersonId))] string Comment);
 
     DueSubject _result;
 

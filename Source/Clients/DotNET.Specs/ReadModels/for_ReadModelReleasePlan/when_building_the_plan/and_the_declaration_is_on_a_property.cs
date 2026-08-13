@@ -12,7 +12,7 @@ public class and_the_declaration_is_on_a_property : Specification
         public string SubjectId { get; set; } = string.Empty;
 
         [PII]
-        [ReleaseUnder(nameof(SubjectId))]
+        [SubjectFrom(nameof(SubjectId))]
         public string Comment { get; set; } = string.Empty;
     }
 

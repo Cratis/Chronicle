@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelReleasePlan.when_building_the
 /// </summary>
 public class and_the_declaration_is_on_a_record_parameter : Specification
 {
-    record DueSubject(string SubjectId, [PII][ReleaseUnder(nameof(SubjectId))] string Comment);
+    record DueSubject(string SubjectId, [PII][SubjectFrom(nameof(SubjectId))] string Comment);
 
     ReadModelReleasePlan _result;
 

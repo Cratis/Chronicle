@@ -13,8 +13,8 @@ public class and_two_properties_name_different_subjects : Specification
     record Pairing(
         string FirstPersonId,
         string SecondPersonId,
-        [PII][ReleaseUnder(nameof(FirstPersonId))] string FirstName,
-        [PII][ReleaseUnder(nameof(SecondPersonId))] string SecondName);
+        [PII][SubjectFrom(nameof(FirstPersonId))] string FirstName,
+        [PII][SubjectFrom(nameof(SecondPersonId))] string SecondName);
 
     ReadModelReleasePlan _result;
 

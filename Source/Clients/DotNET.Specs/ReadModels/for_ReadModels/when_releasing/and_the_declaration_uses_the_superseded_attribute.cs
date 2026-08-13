@@ -6,14 +6,15 @@ using Cratis.Chronicle.Compliance.GDPR;
 namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_releasing;
 
 /// <summary>
-/// The other outcome the report names: the composed row does resolve a subject, just not the one the lifted
-/// value belongs to, so the value is released under the wrong key. Declaring the value's own subject splits
-/// the release in two — the declared value under its owner, everything else under the row's own subject,
-/// which must keep working exactly as before.
+/// The compatibility guarantee, asserted where it matters — on the release itself. Every assertion here is
+/// the one and_a_declaration_overrides_the_read_models_own_subject makes with [SubjectFrom]; a read model
+/// still written against the released [ReleaseUnder] must split the release identically.
 /// </summary>
-public class and_a_declaration_overrides_the_read_models_own_subject : given.a_recording_compliance_service
+public class and_the_declaration_uses_the_superseded_attribute : given.a_recording_compliance_service
 {
-    record DueSubject(string Id, string PersonId, [PII] string Advisor, [PII][SubjectFrom(nameof(PersonId))] string Comment);
+#pragma warning disable CS0618 // the superseded attribute is the subject of this specification
+    record DueSubject(string Id, string PersonId, [PII] string Advisor, [PII][ReleaseUnder(nameof(PersonId))] string Comment);
+#pragma warning restore CS0618
 
     DueSubject _result;
 
