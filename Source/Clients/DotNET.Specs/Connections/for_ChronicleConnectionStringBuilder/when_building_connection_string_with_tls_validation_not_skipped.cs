@@ -20,5 +20,5 @@ public class when_building_connection_string_with_tls_validation_not_skipped : S
 
     void Because() => _url = _builder.Build();
 
-    [Fact] void should_omit_the_default_tls_validation_policy() => _url.ShouldEqual("chronicle://localhost:35000");
+    [Fact] void should_include_skip_tls_validation_in_query_string() => _url.ShouldEqual("chronicle://localhost:35000?skipTlsValidation=false");
 }
