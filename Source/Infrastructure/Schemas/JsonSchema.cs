@@ -552,18 +552,7 @@ public class JsonSchema
         var errors = new List<JsonSchemaValidationError>();
         try
         {
-            var node = JsonNode.Parse(json);
-            if (node is not JsonObject obj)
-            {
-                if (Type != JsonObjectType.None && !Type.HasFlag(JsonObjectType.Object))
-                {
-                    errors.Add(new JsonSchemaValidationError(null, JsonSchemaValidationErrorKind.WrongPropertyType, $"Expected object but got {node?.GetType().Name ?? "null"}."));
-                }
-
-                return errors;
-            }
-
-            ValidateRequiredProperties(obj, errors);
+            ValidateContent(JsonNode.Parse(json), errors);
         }
         catch (JsonException ex)
         {
@@ -574,7 +563,7 @@ public class JsonSchema
     }
 
     /// <summary>
-    /// Validates an already-parsed JSON object against this schema (basic required property checks).
+    /// Validates an already-parsed JSON object against this schema (required property and value type checks).
     /// </summary>
     /// <param name="content">The <see cref="JsonObject"/> to validate.</param>
     /// <returns>A list of <see cref="JsonSchemaValidationError"/> describing any validation errors.</returns>
@@ -584,7 +573,7 @@ public class JsonSchema
     public IList<JsonSchemaValidationError> Validate(JsonObject content)
     {
         var errors = new List<JsonSchemaValidationError>();
-        ValidateRequiredProperties(content, errors);
+        ValidateContent(content, errors);
         return errors;
     }
 
@@ -647,6 +636,232 @@ public class JsonSchema
             ? (JsonNode)types[0]
             : new JsonArray([.. types.Select(t => (JsonNode)t)]);
     }
+
+    /// <summary>
+    /// Validates the declared properties of a schema against the values supplied for them.
+    /// </summary>
+    /// <param name="schema">The schema declaring the properties.</param>
+    /// <param name="content">The content holding the values.</param>
+    /// <param name="path">The dotted path to <paramref name="content"/>, or <see langword="null"/> at the root.</param>
+    /// <param name="errors">The list to collect errors into.</param>
+    /// <remarks>
+    /// Only properties the schema declares and the content supplies are considered. A property the schema does not
+    /// declare is left alone - JSON Schema treats an undeclared property as unconstrained unless the schema says
+    /// otherwise, and the append path is the wrong place to invent a rule the schema did not state.
+    /// </remarks>
+    static void ValidatePropertyTypes(JsonSchema schema, JsonObject content, string? path, List<JsonSchemaValidationError> errors)
+    {
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in schema.FlattenedProperties)
+        {
+            if (!visited.Add(property.Name)) continue;
+            if (!content.TryGetPropertyValue(property.Name, out var value)) continue;
+
+            ValidateValue(property, value, CombinePath(path, property.Name), errors);
+        }
+    }
+
+    /// <summary>
+    /// Validates a single value against the schema declared for it, recursing into objects and array items.
+    /// </summary>
+    /// <param name="schema">The schema the value must conform to.</param>
+    /// <param name="value">The value, which is <see langword="null"/> for a JSON null.</param>
+    /// <param name="path">The dotted path identifying the value, or <see langword="null"/> at the root.</param>
+    /// <param name="errors">The list to collect errors into.</param>
+    static void ValidateValue(JsonSchema schema, JsonNode? value, string? path, List<JsonSchemaValidationError> errors)
+    {
+        var effective = Effective(schema);
+        var branches = UnionBranches(effective);
+        if (branches.Count > 0)
+        {
+            ValidateAgainstUnion(effective, branches, value, path, errors);
+            return;
+        }
+
+        if (!KindIsAllowed(effective, value))
+        {
+            errors.Add(Mismatch(effective, value, path));
+            return;
+        }
+
+        ValidateStructure(effective, value, path, errors);
+    }
+
+    /// <summary>
+    /// Validates a value against a union of schemas expressed as <c>anyOf</c> or <c>oneOf</c>.
+    /// </summary>
+    /// <param name="schema">The schema declaring the union.</param>
+    /// <param name="branches">The union branches.</param>
+    /// <param name="value">The value to validate.</param>
+    /// <param name="path">The dotted path identifying the value.</param>
+    /// <param name="errors">The list to collect errors into.</param>
+    /// <remarks>
+    /// A value that matches no branch by kind is a genuine mismatch. When several branches accept the kind - a
+    /// discriminated union of object shapes, for instance - there is no way to know which branch the writer meant, so
+    /// a clean match against any of them is accepted and an unclean one is passed over in silence rather than reported
+    /// against an arbitrarily chosen branch.
+    /// </remarks>
+    static void ValidateAgainstUnion(JsonSchema schema, IReadOnlyList<JsonSchema> branches, JsonNode? value, string? path, List<JsonSchemaValidationError> errors)
+    {
+        var candidates = branches.Select(Effective).Where(branch => KindIsAllowed(branch, value)).ToList();
+        if (candidates.Count == 0)
+        {
+            errors.Add(Mismatch(schema, value, path));
+        }
+        else if (candidates.Count == 1)
+        {
+            ValidateStructure(candidates[0], value, path, errors);
+        }
+
+        // More than one branch accepts this value's kind, so there is no single branch to blame and the value
+        // is accepted. Deliberately without descending into the candidates: the outcome is the same whether a
+        // branch validates or none does, so probing them decides nothing - and because a probe is itself a full
+        // recursive validation, a nested union would branch again at every level. That is exponential work on
+        // the append path for an answer that is fixed in advance.
+    }
+
+    /// <summary>
+    /// Recurses into the members of a value whose kind the schema already accepted.
+    /// </summary>
+    /// <param name="schema">The schema the value conforms to.</param>
+    /// <param name="value">The value to recurse into.</param>
+    /// <param name="path">The dotted path identifying the value.</param>
+    /// <param name="errors">The list to collect errors into.</param>
+    static void ValidateStructure(JsonSchema schema, JsonNode? value, string? path, List<JsonSchemaValidationError> errors)
+    {
+        switch (value)
+        {
+            case JsonObject nested:
+                ValidatePropertyTypes(schema, nested, path, errors);
+                break;
+
+            case JsonArray array when schema.Item is { } itemSchema:
+                for (var index = 0; index < array.Count; index++)
+                {
+                    ValidateValue(itemSchema, array[index], $"{path}[{index}]", errors);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Gets whether the kind of a value is one the schema declares.
+    /// </summary>
+    /// <param name="schema">The schema to check against.</param>
+    /// <param name="value">The value, which is <see langword="null"/> for a JSON null.</param>
+    /// <returns><see langword="true"/> when the kind is allowed; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// A schema with no declared type constrains nothing, so an absent type is never a mismatch. A whole-valued number
+    /// satisfies <c>integer</c>, and any number satisfies <c>number</c> - JSON does not distinguish the two on the wire.
+    /// </remarks>
+    static bool KindIsAllowed(JsonSchema schema, JsonNode? value)
+    {
+        var type = schema.Type;
+        if (type == JsonObjectType.None) return true;
+        if (value is null) return AllowsNull(schema);
+
+        return value.GetValueKind() switch
+        {
+            JsonValueKind.Object => type.HasFlag(JsonObjectType.Object),
+            JsonValueKind.Array => type.HasFlag(JsonObjectType.Array),
+            JsonValueKind.String => type.HasFlag(JsonObjectType.String),
+            JsonValueKind.True or JsonValueKind.False => type.HasFlag(JsonObjectType.Boolean),
+            JsonValueKind.Number => type.HasFlag(JsonObjectType.Number) || (type.HasFlag(JsonObjectType.Integer) && IsWholeNumber(value)),
+            JsonValueKind.Null => AllowsNull(schema),
+            _ => true
+        };
+    }
+
+    /// <summary>
+    /// Gets whether a schema accepts a JSON null.
+    /// </summary>
+    /// <param name="schema">The schema to check.</param>
+    /// <returns><see langword="true"/> when null is allowed; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// This is the schema-level form of <c>JsonSchemaExtensions.IsNullable</c>: nullability is declared either as a
+    /// <c>"null"</c> member of the type, or - for a formatted type that has nowhere else to put the marker - as a
+    /// trailing <c>?</c> on the format.
+    /// </remarks>
+    static bool AllowsNull(JsonSchema schema) =>
+        schema.Type.HasFlag(JsonObjectType.Null) ||
+        (schema.Format?.EndsWith('?') ?? false);
+
+    /// <summary>
+    /// Gets whether a JSON number has no fractional part.
+    /// </summary>
+    /// <param name="value">The value to inspect.</param>
+    /// <returns><see langword="true"/> when the number is whole, or when it cannot be read as one of the numeric types tried.</returns>
+    /// <remarks>
+    /// A number whose representation cannot be read is reported as whole. Refusing to append a payload because a
+    /// number could not be inspected is a worse outcome than letting an exotic one through.
+    /// </remarks>
+    static bool IsWholeNumber(JsonNode value)
+    {
+        if (value is not JsonValue jsonValue) return true;
+        if (jsonValue.TryGetValue<decimal>(out var asDecimal)) return asDecimal == decimal.Truncate(asDecimal);
+        if (jsonValue.TryGetValue<double>(out var asDouble) && double.IsFinite(asDouble)) return asDouble == Math.Truncate(asDouble);
+        return true;
+    }
+
+    /// <summary>
+    /// Resolves a schema to the one that carries its type information, following a <c>$ref</c>.
+    /// </summary>
+    /// <param name="schema">The schema to resolve.</param>
+    /// <returns>The resolved schema, or the original when there is nothing to resolve.</returns>
+    /// <remarks>
+    /// An unresolvable <c>$ref</c> falls back to the referencing node, which declares no type of its own and therefore
+    /// constrains nothing - a reference that cannot be followed must not become a rejection.
+    /// </remarks>
+    static JsonSchema Effective(JsonSchema schema) => schema.HasReference ? schema.Reference ?? schema : schema;
+
+    static IReadOnlyList<JsonSchema> UnionBranches(JsonSchema schema)
+    {
+        var anyOf = schema.AnyOf;
+        var oneOf = schema.OneOf;
+        if (anyOf.Count == 0 && oneOf.Count == 0) return [];
+        return [.. anyOf, .. oneOf];
+    }
+
+    static JsonSchemaValidationError Mismatch(JsonSchema schema, JsonNode? value, string? path)
+    {
+        var expected = DescribeType(schema.Type);
+        var actual = DescribeValue(value);
+        var message = path is null
+            ? $"Expected {expected} but got {actual}."
+            : $"Property '{path}' expected {expected} but got {actual}.";
+
+        return new JsonSchemaValidationError(path, JsonSchemaValidationErrorKind.WrongPropertyType, message);
+    }
+
+    static string DescribeType(JsonObjectType type)
+    {
+        if (type == JsonObjectType.None) return "any";
+
+        var names = new List<string>();
+        if (type.HasFlag(JsonObjectType.Array)) names.Add("array");
+        if (type.HasFlag(JsonObjectType.Boolean)) names.Add("boolean");
+        if (type.HasFlag(JsonObjectType.Integer)) names.Add("integer");
+        if (type.HasFlag(JsonObjectType.Null)) names.Add("null");
+        if (type.HasFlag(JsonObjectType.Number)) names.Add("number");
+        if (type.HasFlag(JsonObjectType.Object)) names.Add("object");
+        if (type.HasFlag(JsonObjectType.String)) names.Add("string");
+
+        return string.Join(" or ", names);
+    }
+
+    static string DescribeValue(JsonNode? value) => value?.GetValueKind() switch
+    {
+        null or JsonValueKind.Null => "null",
+        JsonValueKind.Object => "object",
+        JsonValueKind.Array => "array",
+        JsonValueKind.String => "string",
+        JsonValueKind.True or JsonValueKind.False => "boolean",
+        JsonValueKind.Number => "number",
+        _ => "unknown"
+    };
+
+    static string CombinePath(string? path, string name) => path is null ? name : $"{path}.{name}";
 
     List<JsonSchema> BuildSchemaList(string key)
     {
@@ -753,6 +968,26 @@ public class JsonSchema
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Validates content against this schema, from whichever overload the caller reached.
+    /// </summary>
+    /// <param name="content">The content to validate.</param>
+    /// <param name="errors">The list to collect errors into.</param>
+    /// <remarks>
+    /// Both public overloads funnel through here so they agree. The kind of the root content is checked against the
+    /// schema's own declared type, and required properties are only checked once the content is known to be an object
+    /// the schema accepts - reporting a missing property on content that is not even the right shape says nothing useful.
+    /// </remarks>
+    void ValidateContent(JsonNode? content, List<JsonSchemaValidationError> errors)
+    {
+        if (content is JsonObject rootObject && KindIsAllowed(Effective(this), rootObject))
+        {
+            ValidateRequiredProperties(rootObject, errors);
+        }
+
+        ValidateValue(this, content, null, errors);
     }
 
     /// <summary>
