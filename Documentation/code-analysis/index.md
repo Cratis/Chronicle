@@ -48,6 +48,8 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0043](CHR0043) | Key redirection carries a [PII] value across the compliance subject | Warning | A root key or child parent-key redirect carries PII onto a document whose resolved compliance subject is not provably the value owner's |
 | [CHR0044](CHR0044) | [Join] of a [PII] value cannot prove compliance subject equality | Warning | A same-apparent-subject or valid child join carries PII while persisted append metadata prevents source-level proof of subject equality |
 | [CHR0045](CHR0045) | Event stream metadata attribute on an event type has no effect | Warning | An append resolves its event source type and event stream type from the append itself, never from the event's CLR type, so [EventStreamType] and [EventSourceType] on an [EventType] are read by nothing — declare them on the appending command, the observing reactor/reducer, or (for [EventStreamType]) the aggregate root whose appends they identify |
+| [CHR0046](CHR0046) | Passive read model redirects the document key away from the event's own stream | Warning | A passive read model has no sink, so a read replays one event stream constrained to the requested key; a root key redirection points that replay at a stream the events were never appended to and the read returns a default-initialized model |
+| [CHR0047](CHR0047) | A clear declaration is never applied by projection construction | Warning | A null [SetValue] is dropped where the mappings are built (while still suppressing CHR0024), and a [ClearWith] on a property or parameter is read by nothing - only a class-level [ClearWith] on a nested type is; both leave the stale value standing across replay |
 
 ## Quick Fixes
 

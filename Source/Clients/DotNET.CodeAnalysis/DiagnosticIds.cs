@@ -232,4 +232,14 @@ public static class DiagnosticIds
     /// An event stream metadata attribute is applied to an event type, where nothing reads it.
     /// </summary>
     public const string InertEventFilterOnEventType = "CHR0045";
+
+    /// <summary>
+    /// A passive read model's projection redirects the root document key away from the event's own event source id.
+    /// </summary>
+    public const string PassiveProjectionKeyRedirection = "CHR0046";
+
+    /// <summary>
+    /// A model-bound clear declaration that projection construction never applies.
+    /// </summary>
+    public const string InertClearDeclaration = "CHR0047";
 }

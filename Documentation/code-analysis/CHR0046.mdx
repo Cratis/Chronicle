@@ -1,0 +1,39 @@
+# CHR0046: Passive read model redirects the document key away from the event's own stream
+
+## Rule Description
+
+A read model is **passive** — declared with `[Passive]`, or with `.Passive()` on the projection builder — *and* its projection redirects the **root** document key with `UsingKey`, `UsingKeyFromContext`, `UsingCompositeKey`, `UsingConstantKey`, or model-bound `[FromEvent(key:)]`.
+
+A passive read model has no sink. Nothing writes its documents ahead of a read, so the kernel answers a read by replaying the event sequence with the cursor constrained to `eventSourceId = ReadModelKey` — exactly one physical event stream. A top-level key redirection is routing metadata for a materialized write; it is not a lookup index over the event log, and it cannot make a replay find events that live on another stream.
+
+So if the events were appended to `user-1` and the projection re-keys the document by `Hash`, a passive read by `Hash` replays the `Hash` stream, reaches no events, and returns a **default-initialized** model. Registration succeeds, and a `ReadModelScenario<T>` that appends and reads in one namespace still passes.
+
+Shapes that are **not** reported:
+
+- The same redirection on a read model that keeps its sink — an observer materializes the redirected document, and the read is answered from storage.
+- `UsingKeyFromContext(c => c.EventSourceId)`, which restates the identity the replay already walks.
+- A child or parent key — `UsingParentKey`, or `UsingKey` inside `Children`/`AddChild` — which identifies a child inside a document the replay does reach.
+- A reducer-backed passive read model, which declares no projection and therefore no document key.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0046/violation" />
+
+## Why This Rule Exists
+
+Nothing fails. The projection registers, the read returns an object rather than throwing or returning "not found", and the only symptom is that every field holds its default. A developer reading that model back sees an empty region and an empty name, and the natural first suspicion is the projection's mappings — which are correct. The declaration that actually caused it, `[Passive]`, sits on the read model and looks unrelated to the key.
+
+The documentation now states the limitation where a reader looking up single-instance reads will meet it: replay walks one event source, so it cannot reconstruct state built from events belonging to a different key. That is an explanation after the fact. This rule is the part that catches it before the model ships.
+
+It is a warning rather than an error for its first release. A consumer may knowingly accept a passive read model that only ever answers for the redirected stream — for instance where the redirected key *is* the event source id for every append in practice — and a new error would break those builds outright under warnings-as-errors.
+
+The rule under-reports rather than guessing. `UsingKeyFromContext(c => c.Subject)` is left alone even though a subject can differ from the event source id, on the same reasoning recorded for [CHR0043](CHR0043): source declarations cannot prove what append metadata put in the context.
+
+## Related Rules
+
+- [CHR0043: Key redirection carries a [PII] value across the compliance subject](CHR0043) — the same set of key redirections, read for a compliance defect instead of a reachability one.
+- [CHR0024: Read model property has no mapping source](CHR0024) — another declaration that registers cleanly and leaves the model empty.
