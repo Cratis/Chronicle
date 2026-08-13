@@ -9,6 +9,8 @@
     <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Testcontainers" />
+        <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->
+        <PackageReference Include="SSH.NET" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />

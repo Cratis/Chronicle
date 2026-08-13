@@ -95,10 +95,11 @@ internal static class ProjectionReadModelProcessor
     /// <see cref="UnsubscribedEventSeeded"/> instead.
     /// </param>
     /// <returns>
-    /// A tuple of the primary projected read model (the threaded result exposed as <c>Instance</c>, or
-    /// <see langword="null"/> if the projection did not apply any changes) and a dictionary of every
-    /// materialized instance keyed by its event source id (read per-key from the sink, so a multi-source
-    /// projection such as a join can be asserted against the intended instance deterministically).
+    /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
+    /// <c>Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
+    /// dictionary of every materialized instance keyed by its event source id (read per-key from the sink,
+    /// so a multi-source projection such as a join can be asserted against the intended instance
+    /// deterministically).
     /// </returns>
     /// <exception cref="InvalidOperationException">Thrown when a deferred key cannot be resolved after retrying all events.</exception>
     /// <exception cref="UnsubscribedEventSeeded">Thrown when strict mode is enabled and a seeded event is not subscribed to.</exception>
@@ -189,9 +190,15 @@ internal static class ProjectionReadModelProcessor
             kernelReadModelDefinition,
             eventTypeSchemas);
 
-        var state = initialState is not null
+        // The state every read model instance starts from, produced fresh per instance. The live pipeline
+        // clones the projection's initial model state for each key it has not seen (SetInitialState), so a
+        // second event source starts from an empty model rather than inheriting the first one's values —
+        // which is what a shared, threaded state silently did, carrying one root's children onto the next.
+        ExpandoObject CreateSeedState() => initialState is not null
             ? initialState.AsExpandoObject(true)
             : CreateInitialStateFromSchema(schema, engineProjection);
+
+        var statesByKey = new Dictionary<object, ExpandoObject>();
 
         // Capture the first non-deferred key resolved for the root projection. In production, MongoDB
         // upserts each read model document with `_id` = this key value, and the BSON deserializer maps
@@ -208,8 +215,7 @@ internal static class ProjectionReadModelProcessor
         var deferredEvents = new Queue<KernelAppendedEvent>();
         foreach (var @event in appendedEvents)
         {
-            var (newState, eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents, strictEventSubscription);
-            state = newState;
+            var (eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, statesByKey, CreateSeedState, deferredEvents, strictEventSubscription);
             rootKey ??= eventKey;
             if (eventRemoved)
             {
@@ -220,7 +226,6 @@ internal static class ProjectionReadModelProcessor
         // Retry deferred events once; if still deferred, throw a descriptive exception.
         foreach (var @event in new List<KernelAppendedEvent>(deferredEvents))
         {
-            var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
             var keyResolver = engineProjection.GetKeyResolverFor(@event.Context.EventType);
             var keyResult = await keyResolver(inMemoryEventSequenceStorage, inMemorySink, @event);
 
@@ -233,35 +238,14 @@ internal static class ProjectionReadModelProcessor
 
             var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
             rootKey ??= key;
-            var context = new KernelProjectionEngine::ProjectionEventContext(
-                key,
-                @event,
-                changeset,
-                engineProjection.GetOperationTypeFor(@event.Context.EventType),
-                false);
 
-            await HandleEventFor(engineProjection, context, inMemoryEventSequenceStorage, inMemorySink);
-
-            // Apply to the sink before mutating the threaded state — the sink clones the changeset's
-            // InitialState (the same object as `state`), so mutating it first would double an additive change.
-            if (changeset.HasChanges)
+            if (await ApplyResolvedEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, key, statesByKey, CreateSeedState))
             {
-                await inMemorySink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
-            }
-
-            if (changeset.Changes.Any(change => change is Removed))
-            {
-                state = new ExpandoObject();
                 explicitInitialStateIsPresent = false;
-            }
-            else if (changeset.HasChanges)
-            {
-                state = ApplyActualChanges(key, changeset.Changes, state);
             }
         }
 
-        // Read every materialized instance per-key from the sink. Unlike the single threaded `state`
-        // (which blends events across sources into one object), the sink keeps one document per resolved
+        // Read every materialized instance per-key from the sink, which keeps one document per resolved
         // root key — so a multi-source projection (e.g. a join whose join-source event was seeded first)
         // can be asserted against the intended instance via InstanceForEventSourceId.
         var instances = BuildInstancesFromSink<TReadModel>(inMemorySink);
@@ -275,6 +259,10 @@ internal static class ProjectionReadModelProcessor
         {
             return (null, instances);
         }
+
+        var state = rootKey is not null && statesByKey.TryGetValue(inMemorySink.GetKeyValue(rootKey), out var rootState)
+            ? rootState
+            : CreateSeedState();
 
         InjectIdentifierFromKey<TReadModel>(state, rootKey);
 
@@ -290,7 +278,7 @@ internal static class ProjectionReadModelProcessor
 
     /// <summary>
     /// Deserializes every per-key document held by the in-memory sink into a <typeparamref name="TReadModel"/>,
-    /// keyed by its event source id — the faithful per-instance view the single threaded state cannot provide.
+    /// keyed by its event source id.
     /// </summary>
     /// <typeparam name="TReadModel">The read model type being projected.</typeparam>
     /// <param name="sink">The in-memory sink populated during processing.</param>
@@ -426,13 +414,14 @@ internal static class ProjectionReadModelProcessor
         return schemas;
     }
 
-    static async Task<(ExpandoObject State, KernelKey? Key, bool Removed)> ProcessSingleEvent(
+    static async Task<(KernelKey? Key, bool Removed)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
         InMemoryEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         KernelAppendedEvent @event,
-        ExpandoObject state,
+        Dictionary<object, ExpandoObject> statesByKey,
+        Func<ExpandoObject> createSeedState,
         Queue<KernelAppendedEvent> deferredEvents,
         bool strictEventSubscription)
     {
@@ -451,10 +440,8 @@ internal static class ProjectionReadModelProcessor
                 throw new UnsubscribedEventSeeded(@event.Context.EventType.Id.ToString());
             }
 
-            return (state, null, false);
+            return (null, false);
         }
-
-        var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
 
         KernelProjectionEngine::KeyResolverResult keyResult;
 
@@ -466,7 +453,7 @@ internal static class ProjectionReadModelProcessor
         {
             if (resolvedRootKey is null)
             {
-                return (state, null, false);
+                return (null, false);
             }
 
             keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey);
@@ -481,14 +468,14 @@ internal static class ProjectionReadModelProcessor
             {
                 // Defensive fallback for a nested/child [Join] whose join key can't be force-converted to the
                 // identifier type: skip rather than crash the scenario (root joins are handled above).
-                return (state, null, false);
+                return (null, false);
             }
         }
 
         if (keyResult is KernelProjectionEngine::DeferredKey)
         {
             deferredEvents.Enqueue(@event);
-            return (state, null, false);
+            return (null, false);
         }
 
         var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
@@ -501,12 +488,50 @@ internal static class ProjectionReadModelProcessor
         {
             if (childJoinRootKey is null)
             {
-                return (state, null, false);
+                return (null, false);
             }
 
             key = key with { Value = childJoinRootKey.Value };
         }
 
+        var removed = await ApplyResolvedEvent(projection, eventSequenceStorage, sink, @event, key, statesByKey, createSeedState);
+        return (key, removed);
+    }
+
+    /// <summary>
+    /// Applies an event whose key is resolved to the state of the instance that key addresses, and to the sink.
+    /// </summary>
+    /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> being applied.</param>
+    /// <param name="eventSequenceStorage">Storage used by child key resolvers to look up related events.</param>
+    /// <param name="sink">The <see cref="InMemorySink"/> holding one document per resolved root key.</param>
+    /// <param name="event">The event to apply.</param>
+    /// <param name="key">The resolved <see cref="KernelKey"/> the event projects onto.</param>
+    /// <param name="statesByKey">The state of each instance materialized so far, keyed as the sink keys its documents.</param>
+    /// <param name="createSeedState">Produces the state a not-yet-seen instance starts from.</param>
+    /// <returns>True when the event removed the root instance.</returns>
+    /// <remarks>
+    /// State is held per instance rather than threaded across every seeded event, mirroring the live pipeline's
+    /// <c>SetInitialState</c>: an event only ever sees the state of the instance its own key addresses. The key
+    /// comes from <see cref="InMemorySink.GetKeyValue"/> so that "the same instance" means the same thing here
+    /// as it does to the sink — a concept key and its underlying primitive address one document, not two.
+    /// </remarks>
+    static async Task<bool> ApplyResolvedEvent(
+        KernelProjectionEngine::IProjection projection,
+        InMemoryEventSequenceStorage eventSequenceStorage,
+        InMemorySink sink,
+        KernelAppendedEvent @event,
+        KernelKey key,
+        Dictionary<object, ExpandoObject> statesByKey,
+        Func<ExpandoObject> createSeedState)
+    {
+        var stateKey = sink.GetKeyValue(key);
+        if (!statesByKey.TryGetValue(stateKey, out var state))
+        {
+            state = createSeedState();
+            statesByKey[stateKey] = state;
+        }
+
+        var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
         var context = new KernelProjectionEngine::ProjectionEventContext(
             key,
             @event,
@@ -517,19 +542,19 @@ internal static class ProjectionReadModelProcessor
         await HandleEventFor(projection, context, eventSequenceStorage, sink);
 
         // A root-level removal yields a Removed change, which the real sink applies by deleting the
-        // document. Mirror that by resetting the threaded state so any subsequent re-create starts clean.
+        // document. Mirror that by resetting the instance state so any subsequent re-create starts clean.
         var removed = changeset.Changes.Any(change => change is Removed);
 
-        // Apply to the sink BEFORE mutating the threaded state. The sink clones the changeset's InitialState —
-        // which is the SAME object as the threaded `state` — so mutating the threaded state first would let the
-        // sink re-apply an additive change (e.g. a child add) on top of an already-advanced base, duplicating it.
+        // Apply to the sink BEFORE mutating the instance state. The sink clones the changeset's InitialState —
+        // which is the SAME object as `state` — so mutating the state first would let the sink re-apply an
+        // additive change (e.g. a child add) on top of an already-advanced base, duplicating it.
         if (changeset.HasChanges)
         {
             await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         }
 
-        var updatedState = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
-        return (updatedState, key, removed);
+        statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
+        return removed;
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)

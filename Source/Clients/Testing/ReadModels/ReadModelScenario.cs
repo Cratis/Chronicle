@@ -122,12 +122,13 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// Gets every materialized read model instance, keyed by its event source id.
     /// </summary>
     /// <remarks>
-    /// Unlike <see cref="Instance"/> — which returns a single threaded result and blends events across
-    /// sources into one object — this reads one document per resolved root key from the sink. Use it (or
-    /// <see cref="InstanceForEventSourceId"/>) for multi-source projections, such as a join whose
-    /// join-source event was seeded before the entity under test, to assert against the intended instance
-    /// deterministically. It is populated for projections; reducers are single-instance and expose their
-    /// result through <see cref="Instance"/> only.
+    /// Where <see cref="Instance"/> returns the single instance under test, this reads one document per
+    /// resolved root key from the sink. Use it (or <see cref="InstanceForEventSourceId"/>) for multi-source
+    /// projections, such as a join whose join-source event was seeded before the entity under test, to
+    /// assert against the intended instance deterministically. Each instance carries only what was
+    /// projected onto its own key — seeding a second event source never adds to the first. It is populated
+    /// for projections; reducers are single-instance and expose their result through <see cref="Instance"/>
+    /// only.
     /// </remarks>
     public IReadOnlyDictionary<EventSourceId, TReadModel> Instances
     {
