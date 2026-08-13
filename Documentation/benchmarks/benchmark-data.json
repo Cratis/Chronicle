@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786625451348,
+  "lastUpdate": 1786641022027,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -5848,6 +5848,144 @@
             "value": 346896346.5555556,
             "unit": "ns",
             "range": "± 60711069.044826314"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "woksin@users.noreply.github.com",
+            "name": "Sindre Alstad Wilting",
+            "username": "woksin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "84f4fbd47160be7ac32d450a484f3898b9b49a65",
+          "message": "Say where a value's subject comes from rather than what to do with it (#3706)\n\n[ReleaseUnder] named the action rather than the information: it told the\nrelease pass what to do, when what the declaration actually carries is\nwhere to find the subject. [SubjectFrom] says that, and reads alongside\n[Subject] rather than beside it.\n\n[ReleaseUnder] shipped in v16.20.0 and is public API, so it stays as a\nderived alias with its constructor obsoleted rather than being renamed.\nDeriving rather than matching both names by hand means the compatibility\npath is the new path, so the two cannot drift apart. The deprecation sits\non the constructor because applying the attribute is the only way to\nconsume it - and because marking the type obsolete makes the type\ndiscovery generator emit warnings in generated code no one can suppress.\n\nThe two refusal types keep their names. Renaming them would break catch\nclauses for no benefit, since the ruling was about the declaration; their\nmessages name the new attribute.\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-08-13T18:54:40+02:00",
+          "tree_id": "670cc22490d0afef0ede395a1c23c62521c3fa17",
+          "url": "https://github.com/Cratis/Chronicle/commit/84f4fbd47160be7ac32d450a484f3898b9b49a65"
+        },
+        "date": 1786641022025,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 11284486.621875,
+            "unit": "ns",
+            "range": "± 1381802.9308594202"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 14439590.559375,
+            "unit": "ns",
+            "range": "± 2582172.364214772"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 41598679.56944445,
+            "unit": "ns",
+            "range": "± 3681466.4613845632"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 261117871.4,
+            "unit": "ns",
+            "range": "± 26549287.37748874"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 3899841.4,
+            "unit": "ns",
+            "range": "± 217492.27060963184"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 7712394.1,
+            "unit": "ns",
+            "range": "± 838583.3248463281"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 3112783.4,
+            "unit": "ns",
+            "range": "± 471485.1501015347"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 11690707.166666666,
+            "unit": "ns",
+            "range": "± 678167.6732481061"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 369695774.7,
+            "unit": "ns",
+            "range": "± 27072563.800973933"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 2059899173,
+            "unit": "ns",
+            "range": "± 62459574.60214348"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 74215399,
+            "unit": "ns",
+            "range": "± 3532588.9840643946"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 260020945.83333334,
+            "unit": "ns",
+            "range": "± 5711805.7588866325"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1588847253.3,
+            "unit": "ns",
+            "range": "± 133910731.67357251"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 72440166.3,
+            "unit": "ns",
+            "range": "± 2330148.436526692"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 94609448.3888889,
+            "unit": "ns",
+            "range": "± 3476817.85076165"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 340697070.4,
+            "unit": "ns",
+            "range": "± 63761226.497545965"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 71968734.9,
+            "unit": "ns",
+            "range": "± 2397428.1537763295"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 94038510.875,
+            "unit": "ns",
+            "range": "± 1775821.609717874"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 330396951,
+            "unit": "ns",
+            "range": "± 64036751.16050683"
           }
         ]
       }
