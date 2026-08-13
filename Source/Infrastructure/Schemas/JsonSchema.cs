@@ -707,24 +707,17 @@ public class JsonSchema
         if (candidates.Count == 0)
         {
             errors.Add(Mismatch(schema, value, path));
-            return;
         }
-
-        if (candidates.Count == 1)
+        else if (candidates.Count == 1)
         {
             ValidateStructure(candidates[0], value, path, errors);
-            return;
         }
 
-        foreach (var candidate in candidates)
-        {
-            var probe = new List<JsonSchemaValidationError>();
-            ValidateStructure(candidate, value, path, probe);
-            if (probe.Count == 0)
-            {
-                return;
-            }
-        }
+        // More than one branch accepts this value's kind, so there is no single branch to blame and the value
+        // is accepted. Deliberately without descending into the candidates: the outcome is the same whether a
+        // branch validates or none does, so probing them decides nothing - and because a probe is itself a full
+        // recursive validation, a nested union would branch again at every level. That is exponential work on
+        // the append path for an answer that is fixed in advance.
     }
 
     /// <summary>
