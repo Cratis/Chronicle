@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_releasing;
 /// </summary>
 public class and_no_subject_resolves_but_one_is_declared : given.a_recording_compliance_service
 {
-    record DueSubject(string SubjectId, [PII][ReleaseUnder(nameof(SubjectId))] string Comment);
+    record DueSubject(string SubjectId, [PII][SubjectFrom(nameof(SubjectId))] string Comment);
 
     DueSubject _result;
 

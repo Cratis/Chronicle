@@ -8,7 +8,7 @@ using Cratis.Chronicle.Compliance.GDPR;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Finds <see cref="ReleaseUnderAttribute"/> declarations sitting below a read model's own properties, where
+/// Finds <see cref="SubjectFromAttribute"/> declarations sitting below a read model's own properties, where
 /// they cannot be honored.
 /// </summary>
 /// <remarks>
@@ -55,7 +55,7 @@ internal static class ReadModelReleaseDeclarationScanner
     }
 
     static bool IsDeclared(PropertyInfo property) =>
-        property.IsDefined(typeof(ReleaseUnderAttribute), inherit: false) ||
+        property.IsDefined(typeof(SubjectFromAttribute), inherit: false) ||
         IsDeclaredOnConstructorParameter(property);
 
     static bool IsDeclaredOnConstructorParameter(PropertyInfo property)
@@ -65,7 +65,7 @@ internal static class ReadModelReleaseDeclarationScanner
             .GetParameters()
             .Any(parameter =>
                 string.Equals(parameter.Name, property.Name, StringComparison.OrdinalIgnoreCase) &&
-                parameter.IsDefined(typeof(ReleaseUnderAttribute), inherit: false)) ?? false;
+                parameter.IsDefined(typeof(SubjectFromAttribute), inherit: false)) ?? false;
     }
 
     static Type? Candidate(Type type)

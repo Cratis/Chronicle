@@ -15,12 +15,12 @@ public record ComplianceReadModelsRetentionSubject(
     ComplianceReadModelsPostponementComment Comment);
 
 // The row a query composes in memory. Its identity is not named Id and it carries no [Subject], so
-// it has no compliance subject of its own — [ReleaseUnder] says which subject the lifted comment
+// it has no compliance subject of its own — [SubjectFrom] says which subject the lifted comment
 // belongs to.
 public record ComplianceReadModelsRetentionDueSubject(
     string SubjectId,
     DateTimeOffset DueAt,
-    [ReleaseUnder(nameof(SubjectId))] ComplianceReadModelsPostponementComment Comment);
+    [SubjectFrom(nameof(SubjectId))] ComplianceReadModelsPostponementComment Comment);
 
 public class ComplianceReadModelsRetentionDueService(IEventStore eventStore)
 {

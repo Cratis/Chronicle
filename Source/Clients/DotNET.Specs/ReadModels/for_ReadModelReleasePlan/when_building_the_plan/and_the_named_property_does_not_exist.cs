@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelReleasePlan.when_building_the
 /// </summary>
 public class and_the_named_property_does_not_exist : Specification
 {
-    record DueSubject(string SubjectId, [PII][ReleaseUnder("PersonId")] string Comment);
+    record DueSubject(string SubjectId, [PII][SubjectFrom("PersonId")] string Comment);
 
     Exception _result;
 
@@ -21,4 +21,5 @@ public class and_the_named_property_does_not_exist : Specification
     [Fact] void should_name_the_read_model() => ((ReleaseUnderPropertyNotFound)_result).ReadModelType.ShouldEqual(typeof(DueSubject));
     [Fact] void should_name_the_declaring_property() => ((ReleaseUnderPropertyNotFound)_result).PropertyName.ShouldEqual(nameof(DueSubject.Comment));
     [Fact] void should_name_the_property_it_points_at() => ((ReleaseUnderPropertyNotFound)_result).SubjectPropertyName.ShouldEqual("PersonId");
+    [Fact] void should_name_the_attribute_that_declares_it() => _result.Message.ShouldContain("[SubjectFrom(\"PersonId\")]");
 }

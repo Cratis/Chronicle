@@ -40,6 +40,6 @@ public class and_the_declaration_names_a_missing_property(context context) : Giv
 /// <param name="Comment">The comment lifted off that person's own stored row.</param>
 public record MisdeclaredDueSubject(
     SubjectIdentifier SubjectId,
-    [ReleaseUnder("PersonId")] PostponementComment Comment);
+    [SubjectFrom("PersonId")] PostponementComment Comment);
 
 #pragma warning restore SA1402

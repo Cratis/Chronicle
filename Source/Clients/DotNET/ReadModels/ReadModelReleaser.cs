@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
 /// Runs the compliance release pass over read model instances, honoring any per-property
-/// <see cref="Compliance.GDPR.ReleaseUnderAttribute"/> declarations the read model carries.
+/// <see cref="Compliance.GDPR.SubjectFromAttribute"/> declarations the read model carries.
 /// </summary>
 /// <param name="eventStore">The <see cref="IEventStore"/> the read models belong to.</param>
 /// <param name="schemaGenerator">The <see cref="IJsonSchemaGenerator"/> for describing the payload.</param>
