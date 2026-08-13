@@ -40,20 +40,33 @@ public static class HealthOnlyPortPolicy
     /// <param name="path">The request path.</param>
     /// <returns>True if the path addresses the health check endpoint, false if not.</returns>
     /// <remarks>
-    /// Both values are normalized before comparison so that the configured endpoint may be written
-    /// with or without a leading slash, and so that a probe hitting "/health/" reaches the same
-    /// endpoint as one hitting "/health". The comparison ignores case because ASP.NET Core routing
-    /// matches endpoint paths case-insensitively - matching more strictly here would reject requests
-    /// the health endpoint itself would happily serve on the main port.
+    /// The configured endpoint and the request path are normalized <em>differently</em>, and deliberately so.
+    /// This check only makes the port safe if it agrees with routing about which string a request addresses;
+    /// anything this check forgives that routing does not is a hole, because the request is then admitted and
+    /// falls through to whatever the fallback serves.
+    /// <para>
+    /// So the request path gets only the normalization routing itself performs: a trailing slash is ignored,
+    /// and matching is case-insensitive. It is specifically <em>not</em> whitespace-trimmed - "/health%20"
+    /// decodes to "/health " and is a different route to ASP.NET Core, so trimming it here would admit it onto
+    /// the port while routing sent it to the fallback.
+    /// </para>
+    /// <para>
+    /// The configured endpoint is operator-supplied rather than attacker-supplied, so it is trimmed and may be
+    /// written with or without a leading slash. An endpoint that is missing or only whitespace configures no
+    /// reachable path, so nothing matches it and the port rejects everything - the safe direction for a
+    /// misconfiguration on a port whose whole purpose is to expose one thing.
+    /// </para>
     /// </remarks>
-    public static bool IsHealthCheckEndpoint(string? healthCheckEndpoint, string? path) =>
-        string.Equals(Normalize(healthCheckEndpoint), Normalize(path), StringComparison.OrdinalIgnoreCase);
-
-    static string Normalize(string? value)
+    public static bool IsHealthCheckEndpoint(string? healthCheckEndpoint, string? path)
     {
-        if (string.IsNullOrWhiteSpace(value)) return "/";
-        var trimmed = value.Trim().TrimEnd('/');
-        if (trimmed.Length == 0) return "/";
-        return trimmed.StartsWith('/') ? trimmed : $"/{trimmed}";
+        if (string.IsNullOrWhiteSpace(healthCheckEndpoint)) return false;
+
+        var endpoint = healthCheckEndpoint.Trim().TrimEnd('/');
+        if (!endpoint.StartsWith('/')) endpoint = $"/{endpoint}";
+
+        var requested = (path ?? string.Empty).TrimEnd('/');
+        if (requested.Length == 0) requested = "/";
+
+        return string.Equals(endpoint, requested, StringComparison.OrdinalIgnoreCase);
     }
 }
