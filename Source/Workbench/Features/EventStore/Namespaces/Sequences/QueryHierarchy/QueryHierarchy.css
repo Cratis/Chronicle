@@ -1,0 +1,59 @@
+.query-hierarchy {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    min-height: 0;
+    border-right: 1px solid var(--surface-border);
+    background: var(--surface-card);
+}
+
+.query-hierarchy__content {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 1rem 0.5rem 1rem 0.75rem;
+}
+
+.query-hierarchy__title {
+    margin: 0 0 0.75rem 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-color-secondary);
+}
+
+.query-hierarchy__empty {
+    margin: 0 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+}
+
+.query-hierarchy__tree {
+    margin: 0;
+    padding: 0;
+}
+
+/* A wide grab area over a hairline rule: the visible seam stays 1px while the pointer target is
+   comfortable, which is what makes the edge feel draggable rather than fiddly. */
+.query-hierarchy__resizer {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 7px;
+    height: 100%;
+    cursor: col-resize;
+    touch-action: none;
+    z-index: 1;
+}
+
+.query-hierarchy__resizer:hover::after,
+.query-hierarchy__resizer:active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 3px;
+    width: 1px;
+    height: 100%;
+    background: var(--primary-color);
+}

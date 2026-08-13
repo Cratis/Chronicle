@@ -1,0 +1,102 @@
+.query-tree-node {
+    list-style: none;
+}
+
+.query-tree-node__row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.5rem 0.3rem 0;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-color);
+    user-select: none;
+}
+
+.query-tree-node__row:hover {
+    background: var(--surface-hover);
+}
+
+.query-tree-node__row.is-selected {
+    background: var(--highlight-bg);
+}
+
+.query-tree-node__twisty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 1rem;
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    font-size: 0.7rem;
+}
+
+.query-tree-node__twisty:disabled {
+    cursor: default;
+    visibility: hidden;
+}
+
+.query-tree-node__icon {
+    display: flex;
+    align-items: center;
+    color: var(--text-color-secondary);
+    font-size: 0.85rem;
+}
+
+.query-tree-node__name {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.query-tree-node__rename {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.1rem 0.3rem;
+    font-size: 0.9rem;
+}
+
+/* The row actions stay out of the way until the row is hovered, so the tree reads as names rather
+   than as a column of buttons. Focus keeps them visible for keyboard users. */
+.query-tree-node__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    opacity: 0;
+}
+
+.query-tree-node__row:hover .query-tree-node__actions,
+.query-tree-node__actions:focus-within {
+    opacity: 1;
+}
+
+.query-tree-node__actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: none;
+    border-radius: 3px;
+    background: none;
+    padding: 0;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.query-tree-node__actions button:hover {
+    background: var(--surface-200);
+    color: var(--text-color);
+}
+
+.query-tree-node__children {
+    margin: 0;
+    padding: 0;
+}

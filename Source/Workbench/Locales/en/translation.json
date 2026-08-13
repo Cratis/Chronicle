@@ -410,7 +410,10 @@
                     "export": "Export",
                     "run": "Run",
                     "newQuery": "New query",
-                    "deleteQuery": "Delete query"
+                    "deleteQuery": "Delete query",
+                    "newFolder": "New folder",
+                    "rename": "Rename",
+                    "save": "Save"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -477,7 +480,7 @@
                 "newQuery": "New query",
                 "queryName": "Query name",
                 "savedQueries": "Saved queries",
-                "noSavedQueries": "Nothing saved yet. Queries you build are saved as you go.",
+                "noSavedQueries": "Nothing saved yet. Build a query and save it.",
                 "sorting": {
                     "newestFirst": "Newest first",
                     "oldestFirst": "Oldest first"
