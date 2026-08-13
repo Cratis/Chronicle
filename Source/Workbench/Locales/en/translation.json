@@ -73,7 +73,8 @@
             "groupLabel": "System",
             "users": "Users",
             "applications": "Applications",
-            "connectedClients": "Connected Clients"
+            "connectedClients": "Connected Clients",
+            "developmentTools": "Development Tools"
         }
     },
     "eventStore": {
@@ -690,6 +691,18 @@
                         "message": "Are you sure you want to remove application '{clientId}'? This action cannot be undone."
                     }
                 }
+            },
+            "developmentTools": {
+                "title": "Development Tools",
+                "reset": {
+                    "title": "Reset Chronicle",
+                    "description": "Wipes every event store and re-bootstraps the kernel. Everything in this Chronicle is deleted and cannot be recovered.",
+                    "action": "Reset everything",
+                    "confirmTitle": "Reset Chronicle",
+                    "confirmMessage": "This deletes every event store and all their events. It cannot be undone. Continue?",
+                    "done": "Chronicle was reset."
+                },
+                "unavailable": "This server was not built with development tools, so there is nothing to do here."
             }
         }
     },
