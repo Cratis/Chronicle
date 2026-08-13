@@ -156,7 +156,9 @@ Rules:
 mcp_github_github_search_issues  query="<keywords> repo:<owner>/<repo>"
 ```
 
-(Use the current repository's `<owner>/<repo>`, derived from the `origin` remote.)
+(Use the current repository's `<owner>/<repo>`, derived from the `origin` remote —
+unless `.agents/PROJECT.md` says issues are tracked in a separate repo, in which
+case search *that* one. See "When issues live in a different repository" in step 9.)
 
 If nothing relevant is found, omit the issue reference from affected bullets.
 
@@ -206,26 +208,49 @@ Use `mcp_github_github_merge_pull_request` with:
 
 ## Step 9 — Close the related issues
 
+**The ship is not finished until every issue the PR resolves is verified `CLOSED`.**
+This step is mandatory whenever step 5 found issues — treat a merged PR with an
+issue still open as an incomplete ship, not a loose end to mention in passing.
+
 Referencing an issue with `(#N)` does **not** close it — GitHub only auto-closes
 on a closing keyword, and this repo deliberately keeps those out of the PR body
-(see step 5). Close the issues here, after the merge lands.
+(see step 5). Nothing closes these issues but this step.
 
 For each issue the merged PR **fully resolves**:
 
 ```
-gh issue close <N> --comment "Fixed in #<pr-number>."
-gh issue view <N> --json number,state    # verify it is CLOSED
+gh issue close <N> --repo <owner>/<tracker-repo> --comment "Fixed in <owner>/<repo>#<pr-number>."
+gh issue view <N> --repo <owner>/<tracker-repo> --json number,state    # verify it is CLOSED
 ```
 
-- **Always verify** — re-read the state after closing. A silent no-op leaves the
-  issue open and nobody notices.
+- **Always verify** — re-read the state after closing. `gh issue close` can no-op
+  or fail on permissions and still look like it worked; an unverified close leaves
+  the issue open and nobody notices.
+- **Close every issue in one sweep, then verify them all**, so a long list cannot
+  end with the last few silently skipped. Re-read the list you recorded in step 5
+  and account for each number explicitly.
 - **Only close what the change actually resolves.** If the PR addresses part of
   an issue, leave it open and comment what landed and what remains:
-  `gh issue comment <N> --body "Partly addressed in #<pr-number>: <what landed>. Still open: <what remains>."`
+  `gh issue comment <N> --repo <owner>/<tracker-repo> --body "Partly addressed in #<pr-number>: <what landed>. Still open: <what remains>."`
 - Skip this step entirely when no issue was found — never close an issue you are
   not confident the change resolves.
 - If the PR was merged but an issue close fails, say so explicitly in the final
   report rather than leaving it silently open.
+
+### When issues live in a different repository
+
+Some repositories are private with Issues disabled and track their issues in a
+separate public repo (check `.agents/PROJECT.md`). Two consequences:
+
+- **Every `gh issue` command needs `--repo <owner>/<tracker-repo>`.** Without it
+  `gh` resolves against the current repository and either fails or hits an
+  unrelated object.
+- **A bare `(#N)` in the PR body points at the wrong repo** — issues and pull
+  requests share one number sequence per repository, so `#109` in the code repo
+  links to *its* PR #109. Write the fully qualified `(<owner>/<tracker-repo>#N)`
+  in release-note bullets instead, so the reference resolves for a changelog
+  reader. Auto-closing still does not apply: keywords remain banned from the body
+  (step 5), so this step is the only thing that closes them.
 
 ## Step 10 — Clean up the branch
 
