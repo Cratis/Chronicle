@@ -14,7 +14,7 @@ public class and_the_declared_property_holds_a_value_object : given.a_recording_
 {
     record Postponement([PII] string Comment, string RecordedBy);
 
-    record DueSubject(string PersonId, [ReleaseUnder(nameof(PersonId))] Postponement Postponement);
+    record DueSubject(string PersonId, [SubjectFrom(nameof(PersonId))] Postponement Postponement);
 
     DueSubject _result;
 

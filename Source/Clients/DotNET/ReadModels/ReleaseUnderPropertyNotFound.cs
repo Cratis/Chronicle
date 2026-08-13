@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// The exception that is thrown when a <see cref="Compliance.GDPR.ReleaseUnderAttribute"/> names a property
+/// The exception that is thrown when a <see cref="Compliance.GDPR.SubjectFromAttribute">[SubjectFrom]</see> names a property
 /// that does not exist on the read model.
 /// </summary>
 /// <remarks>
@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="propertyName">The name of the property carrying the declaration.</param>
 /// <param name="subjectPropertyName">The name the declaration points at.</param>
 public class ReleaseUnderPropertyNotFound(Type readModelType, string propertyName, string subjectPropertyName)
-    : Exception($"[ReleaseUnder(\"{subjectPropertyName}\")] on '{readModelType.Name}.{propertyName}' names a property that does not exist on '{readModelType.Name}'. Use nameof() with a public instance property of the read model holding the subject to release under.")
+    : Exception($"[SubjectFrom(\"{subjectPropertyName}\")] on '{readModelType.Name}.{propertyName}' names a property that does not exist on '{readModelType.Name}'. Use nameof() with a public instance property of the read model holding the subject to use.")
 {
     /// <summary>
     /// Gets the read model type carrying the declaration.

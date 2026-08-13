@@ -11,7 +11,7 @@ public class and_an_explicit_serialized_name_differs_from_the_naming_policy : gi
 {
     record DueSubject(
         string PersonId,
-        [property: JsonPropertyName("PrivateNote")][PII][ReleaseUnder(nameof(PersonId))] string Comment);
+        [property: JsonPropertyName("PrivateNote")][PII][SubjectFrom(nameof(PersonId))] string Comment);
 
     DueSubject _result;
 

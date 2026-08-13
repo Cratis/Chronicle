@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelReleasePlan.when_building_the
 /// </summary>
 public class and_the_declaration_sits_inside_a_value_object : Specification
 {
-    record Postponement(string SubjectId, [PII][ReleaseUnder(nameof(SubjectId))] string Comment);
+    record Postponement(string SubjectId, [PII][SubjectFrom(nameof(SubjectId))] string Comment);
 
     record DueSubject(string SubjectId, Postponement Postponement);
 
@@ -23,4 +23,5 @@ public class and_the_declaration_sits_inside_a_value_object : Specification
     [Fact] void should_name_the_read_model() => ((ReleaseUnderNotSupportedBelowReadModel)_result).ReadModelType.ShouldEqual(typeof(DueSubject));
     [Fact] void should_name_the_nested_type() => ((ReleaseUnderNotSupportedBelowReadModel)_result).DeclaringType.ShouldEqual(typeof(Postponement));
     [Fact] void should_name_the_nested_property() => ((ReleaseUnderNotSupportedBelowReadModel)_result).PropertyName.ShouldEqual(nameof(Postponement.Comment));
+    [Fact] void should_name_the_attribute_that_declares_it() => _result.Message.ShouldContain("[SubjectFrom]");
 }

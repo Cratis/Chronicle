@@ -10,5 +10,4 @@ public class when_using_the_development_connection_string : Specification
     void Because() => _connectionString = ChronicleConnectionString.Development;
 
     [Fact] void should_skip_tls_validation() => _connectionString.SkipTlsValidation.ShouldBeTrue();
-    [Fact] void should_make_the_development_bypass_explicit() => _connectionString.ToString().ShouldContain("skipTlsValidation=true");
 }

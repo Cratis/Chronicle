@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_releasing;
 /// </summary>
 public class and_the_declared_subject_property_holds_nothing : given.a_recording_compliance_service
 {
-    record DueSubject(string Id, string PersonId, [PII][ReleaseUnder(nameof(PersonId))] string Comment);
+    record DueSubject(string Id, string PersonId, [PII][SubjectFrom(nameof(PersonId))] string Comment);
 
     DueSubject _result;
 

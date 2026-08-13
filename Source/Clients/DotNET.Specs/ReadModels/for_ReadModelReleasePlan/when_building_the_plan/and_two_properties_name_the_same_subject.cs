@@ -9,8 +9,8 @@ public class and_two_properties_name_the_same_subject : Specification
 {
     record DueSubject(
         string SubjectId,
-        [PII][ReleaseUnder(nameof(SubjectId))] string Comment,
-        [PII][ReleaseUnder(nameof(SubjectId))] string Reason);
+        [PII][SubjectFrom(nameof(SubjectId))] string Comment,
+        [PII][SubjectFrom(nameof(SubjectId))] string Reason);
 
     ReadModelReleasePlan _result;
 

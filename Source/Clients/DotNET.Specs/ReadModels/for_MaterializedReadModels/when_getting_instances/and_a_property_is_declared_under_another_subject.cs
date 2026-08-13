@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.ReadModels.for_MaterializedReadModels.when_getting_in
 /// </summary>
 public class and_a_property_is_declared_under_another_subject : given.a_recording_compliance_service
 {
-    record Assignment(string Id, string PersonId, [PII][ReleaseUnder(nameof(PersonId))] string Name);
+    record Assignment(string Id, string PersonId, [PII][SubjectFrom(nameof(PersonId))] string Name);
 
     IEnumerable<Assignment> _result = [];
 

@@ -49,6 +49,6 @@ public class and_the_declared_property_holds_a_value_object(context context) : G
 /// <param name="Note">The review note lifted off that person's own stored row.</param>
 public record DeclaredNestedRow(
     SubjectIdentifier SubjectId,
-    [ReleaseUnder(nameof(SubjectId))] ReviewNote Note);
+    [SubjectFrom(nameof(SubjectId))] ReviewNote Note);
 
 #pragma warning restore SA1402

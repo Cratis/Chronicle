@@ -64,7 +64,7 @@ public class and_the_declared_value_was_never_encrypted(context context) : Given
 public record ComputedRow(
     string Id,
     SubjectIdentifier SubjectId,
-    [ReleaseUnder(nameof(SubjectId))] PostponementComment Computed,
-    [ReleaseUnder(nameof(SubjectId))] PostponementComment Stored);
+    [SubjectFrom(nameof(SubjectId))] PostponementComment Computed,
+    [SubjectFrom(nameof(SubjectId))] PostponementComment Stored);
 
 #pragma warning restore SA1402

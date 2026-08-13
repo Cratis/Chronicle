@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// The per-property release declarations a read model type carries, resolved once per type.
 /// </summary>
 /// <remarks>
-/// A read model without a single <see cref="ReleaseUnderAttribute"/> yields <see cref="Groups"/> empty and
+/// A read model without a single <see cref="SubjectFromAttribute"/> yields <see cref="Groups"/> empty and
 /// <see cref="HasDeclarations"/> false, which is what keeps the undeclared release path exactly what it was:
 /// one subject, one call, the whole payload.
 /// </remarks>
@@ -60,15 +60,15 @@ internal sealed record ReadModelReleasePlan(IReadOnlyList<ReadModelReleaseGroup>
         return new ReadModelReleasePlan(groups);
     }
 
-    static ReleaseUnderAttribute? FindDeclaration(PropertyInfo property) =>
-        property.GetCustomAttribute<ReleaseUnderAttribute>(inherit: false) ??
+    static SubjectFromAttribute? FindDeclaration(PropertyInfo property) =>
+        property.GetCustomAttributes<SubjectFromAttribute>(inherit: false).FirstOrDefault() ??
         FindDeclarationOnConstructorParameter(property);
 
-    static ReleaseUnderAttribute? FindDeclarationOnConstructorParameter(PropertyInfo property)
+    static SubjectFromAttribute? FindDeclarationOnConstructorParameter(PropertyInfo property)
     {
         // An attribute written without an explicit target on a positional record lands on the primary
         // constructor's parameter, not on the generated property — the same shape [PII] and [Subject] are
-        // both read through, so [ReleaseUnder] has to be read the same way or it silently does nothing on
+        // both read through, so [SubjectFrom] has to be read the same way or it silently does nothing on
         // the most idiomatic way to declare a read model.
         if (property.DeclaringType is null)
         {
@@ -79,7 +79,7 @@ internal sealed record ReadModelReleasePlan(IReadOnlyList<ReadModelReleaseGroup>
         return constructor?
             .GetParameters()
             .FirstOrDefault(parameter => string.Equals(parameter.Name, property.Name, StringComparison.OrdinalIgnoreCase))?
-            .GetCustomAttribute<ReleaseUnderAttribute>(inherit: false);
+            .GetCustomAttributes<SubjectFromAttribute>(inherit: false).FirstOrDefault();
     }
 
     static PropertyInfo ResolveSubjectProperty(Type readModelType, PropertyInfo[] properties, string declaringPropertyName, string subjectPropertyName) =>

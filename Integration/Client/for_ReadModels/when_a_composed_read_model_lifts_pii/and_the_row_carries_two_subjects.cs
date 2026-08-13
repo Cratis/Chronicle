@@ -54,7 +54,7 @@ public class and_the_row_carries_two_subjects(context context) : Given<context>(
 public record MultiSubjectRow(
     SubjectIdentifier FirstPersonId,
     SubjectIdentifier SecondPersonId,
-    [ReleaseUnder(nameof(FirstPersonId))] PostponementComment FirstComment,
-    [ReleaseUnder(nameof(SecondPersonId))] PostponementComment SecondComment);
+    [SubjectFrom(nameof(FirstPersonId))] PostponementComment FirstComment,
+    [SubjectFrom(nameof(SecondPersonId))] PostponementComment SecondComment);
 
 #pragma warning restore SA1402

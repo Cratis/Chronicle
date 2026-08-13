@@ -15,8 +15,8 @@ public class and_two_values_belong_to_different_subjects : given.a_recording_com
         string ContactPointHash,
         string FirstPersonId,
         string SecondPersonId,
-        [PII][ReleaseUnder(nameof(FirstPersonId))] string FirstName,
-        [PII][ReleaseUnder(nameof(SecondPersonId))] string SecondName);
+        [PII][SubjectFrom(nameof(FirstPersonId))] string FirstName,
+        [PII][SubjectFrom(nameof(SecondPersonId))] string SecondName);
 
     Duplicate _result;
 

@@ -10,7 +10,7 @@ public class and_a_declared_property_has_an_explicit_serialized_name : given.a_r
 {
     record DueSubject(
         string PersonId,
-        [property: JsonPropertyName("private_note")][PII][ReleaseUnder(nameof(PersonId))] string Comment);
+        [property: JsonPropertyName("private_note")][PII][SubjectFrom(nameof(PersonId))] string Comment);
 
     DueSubject _result;
 

@@ -13,6 +13,6 @@ public record ComplianceReadModelsDuplicatePair(
     string ContactPointHash,
     string FirstPersonId,
     string SecondPersonId,
-    [ReleaseUnder(nameof(FirstPersonId))] ComplianceReadModelsPersonFullName FirstName,
-    [ReleaseUnder(nameof(SecondPersonId))] ComplianceReadModelsPersonFullName SecondName);
+    [SubjectFrom(nameof(FirstPersonId))] ComplianceReadModelsPersonFullName FirstName,
+    [SubjectFrom(nameof(SecondPersonId))] ComplianceReadModelsPersonFullName SecondName);
 ```
