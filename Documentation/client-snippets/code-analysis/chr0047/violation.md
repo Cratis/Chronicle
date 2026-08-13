@@ -14,8 +14,10 @@ public record Chr0047Slice(
     // Warning CHR0047: a null value is skipped when the set-value mappings are built, so no
     // mapping is emitted for the member at all. The member still counts as explicitly mapped,
     // which also suppresses CHR0024. 'Command' keeps its last value forever, replay included.
+    // The null is written null-forgiving because the attribute parameter is non-nullable - a bare
+    // null raises CS8625, so this is the only form that compiles, and the one this rule must catch.
     [SetFrom<Chr0047SliceCommandSet>(nameof(Chr0047SliceCommandSet.Command))]
-    [SetValue<Chr0047SliceCommandCleared>(null)]
+    [SetValue<Chr0047SliceCommandCleared>(null!)]
     string? Command,
 
     // Warning CHR0047: [ClearWith] is only read from the class-level attributes of a nested
