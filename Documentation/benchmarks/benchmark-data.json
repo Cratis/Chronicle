@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1786607747941,
+  "lastUpdate": 1786617692461,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -5572,6 +5572,144 @@
             "value": 233783194.875,
             "unit": "ns",
             "range": "± 63685867.40380503"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "woksin@users.noreply.github.com",
+            "name": "Sindre Alstad Wilting",
+            "username": "woksin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61d9930eba8ed4fe53f9634572c411b1cbae86ea",
+          "message": "Diagnose passive re-keying and inert clear declarations (#3702)\n\n* Diagnose passive re-keying and inert clear declarations\n\nCHR0046 covers the hazard documented in v16.24.0 but not yet detected: a\npassive read model whose projection redirects the root document key.\nPassive reads have no sink, so the kernel answers by replaying with the\ncursor constrained to the requested key - it walks one event source. A\ntop-level re-key is routing metadata, not a lookup index, so events\nappended on another stream are never seen and the read returns a default\ninitialized model. It registers fine and ReadModelScenario still passes,\nwhich is why nothing catches it today.\n\nCHR0047 covers two declarations that compile and then do nothing. A null\nSetValue is parsed and dropped - every consumer guards on non-null, and\nthe member is registered as mapped before the guard, which also suppresses\nthe no-mapping-source diagnostic. And a property-level ClearWith binds to\nnothing, because the only consumer reads class-level attributes on the\nnested type; the attribute permits three targets and one is read.\n\nBoth are warnings on the precedent already written into KeyRedirectionPii\nand CHR0044: a first-release conservative rule warns rather than breaking\na build transitively.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n* Catch the null-forgiving form the compiler actually allows\n\nA bare null in [SetValue] raises CS8625 - the attribute parameter is\nnon-nullable - so anyone who writes this declaration at all writes null!\nto get past the compiler. The documentation snippet did not compile for\nthat reason, which is what surfaced it.\n\nGetConstantValue already folds through the suppression, so the rule\nreported it correctly; that behavior is now pinned by a spec rather than\nassumed, since a rule that caught only the version nobody can ship would\nbe worth nothing.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-08-13T12:26:32+02:00",
+          "tree_id": "1b5ad73b33533f9b1ddb53430947f475e3482216",
+          "url": "https://github.com/Cratis/Chronicle/commit/61d9930eba8ed4fe53f9634572c411b1cbae86ea"
+        },
+        "date": 1786617692459,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 9225946.70625,
+            "unit": "ns",
+            "range": "± 928098.7863408469"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 12204247.256944444,
+            "unit": "ns",
+            "range": "± 1317388.9873330486"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 37309859.699999996,
+            "unit": "ns",
+            "range": "± 4024956.3730077976"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 356844718,
+            "unit": "ns",
+            "range": "± 46230895.53052892"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 3167158.9,
+            "unit": "ns",
+            "range": "± 511987.67059860815"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 5714197.75,
+            "unit": "ns",
+            "range": "± 303924.38480260654"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 2281573.777777778,
+            "unit": "ns",
+            "range": "± 230074.43326876726"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 11765078.7,
+            "unit": "ns",
+            "range": "± 1561873.4101445859"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 345710995,
+            "unit": "ns",
+            "range": "± 13567841.024078984"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 1983319061,
+            "unit": "ns",
+            "range": "± 38535678.69237407"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 72514932.5,
+            "unit": "ns",
+            "range": "± 2293175.017446396"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 277269350.4,
+            "unit": "ns",
+            "range": "± 30680883.287742343"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1534028624.7,
+            "unit": "ns",
+            "range": "± 112052748.83434051"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 73811064.1,
+            "unit": "ns",
+            "range": "± 1770578.4304413346"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 104486044.6,
+            "unit": "ns",
+            "range": "± 8296098.504031655"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 315981611.6,
+            "unit": "ns",
+            "range": "± 64471023.17260687"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 70836302,
+            "unit": "ns",
+            "range": "± 1733855.6906225085"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 100651224.5,
+            "unit": "ns",
+            "range": "± 10476395.274710065"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 315459379.5,
+            "unit": "ns",
+            "range": "± 57668021.4593817"
           }
         ]
       }
