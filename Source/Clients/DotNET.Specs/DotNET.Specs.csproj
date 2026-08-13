@@ -26,6 +26,8 @@
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Testcontainers" />
+        <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->
+        <PackageReference Include="SSH.NET" />
     </ItemGroup>
 
     <!-- Reuse the exact CoreDNS zone the Composition sample serves, so the +srv integration
