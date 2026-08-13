@@ -71,6 +71,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<ExternalServiceDefinition> ExternalServiceDefinitions { get; set; }
 
     /// <summary>
+    /// Gets or sets the saved event sequence queries DbSet.
+    /// </summary>
+    public DbSet<SequenceQueries.SequenceQueryDefinition> SequenceQueries { get; set; }
+
+    /// <summary>
     /// Gets or sets the captures DbSet.
     /// </summary>
     public DbSet<Capture> Captures { get; set; }

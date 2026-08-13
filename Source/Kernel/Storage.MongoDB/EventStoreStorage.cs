@@ -22,6 +22,7 @@ using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.MongoDB.Seeding;
+using Cratis.Chronicle.Storage.MongoDB.SequenceQueries;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
@@ -31,6 +32,7 @@ using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
+using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -89,6 +91,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public ISequenceQueryStorage SequenceQueries { get; } = new SequenceQueryStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public ICapturesStorage Captures { get; } = new CapturesStorage(eventStoreDatabase);

@@ -17,6 +17,7 @@ using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
+using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 
@@ -61,6 +62,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServices.ExternalServiceDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public ISequenceQueryStorage SequenceQueries { get; } = new SequenceQueries.SequenceQueryStorage(eventStore, database);
 
     /// <inheritdoc/>
     public ICapturesStorage Captures { get; } = new Captures.CapturesStorage(eventStore, database);

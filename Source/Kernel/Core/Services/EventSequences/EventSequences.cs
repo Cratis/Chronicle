@@ -126,6 +126,50 @@ internal sealed class EventSequences(
     }
 
     /// <inheritdoc/>
+    public async Task<QueryEventsResponse> QueryEvents(QueryEventsRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceStorage(request);
+        var criteria = request.Criteria.ToChronicle();
+        var totalCount = await eventSequence.GetCountMatching(criteria);
+
+        var appendedEvents = new List<AppendedEvent>();
+        using (var cursor = await eventSequence.GetPage(criteria, request.Skip, request.Take, request.Descending))
+        {
+            while (await cursor.MoveNext())
+            {
+                appendedEvents.AddRange(cursor.Current);
+            }
+        }
+
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetFor(appendedEvents.Select(_ => _.Context.EventType).Distinct());
+        var schemasByEventType = eventTypeSchemas.ToDictionary(_ => _.Type);
+
+        return new()
+        {
+            Events = await ToContracts(appendedEvents, schemasByEventType),
+            TotalCount = totalCount
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetHistogramResponse> GetHistogram(GetHistogramRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceStorage(request);
+        var buckets = await eventSequence.GetHistogram(
+            (Storage.EventSequences.HistogramResolution)request.Resolution,
+            request.Criteria.ToChronicle());
+
+        return new()
+        {
+            Buckets = [.. buckets.Select(_ => new Contracts.EventSequences.HistogramBucket
+            {
+                Occurred = _.Occurred,
+                Count = _.Count
+            })]
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task Revise(ReviseRequest request, CallContext context = default)
     {
         var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
