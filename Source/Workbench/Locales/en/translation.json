@@ -110,7 +110,20 @@
                     "user": "User"
                 },
                 "generation": "Generation {n}",
-                "latestGeneration": "Latest"
+                "latestGeneration": "Latest",
+                "tabs": {
+                    "schema": "Schema",
+                    "observers": "Observers"
+                },
+                "observers": {
+                    "empty": "No observers consume this event type",
+                    "columns": {
+                        "namespace": "Namespace",
+                        "id": "Observer",
+                        "observerType": "Type",
+                        "state": "State"
+                    }
+                }
             },
             "namespaces": {
                 "title": "Namespaces",
@@ -555,6 +568,10 @@
                     "quarantined": "Quarantined"
                 },
                 "details": {
+                    "tabs": {
+                        "summary": "Summary",
+                        "eventTypes": "Event Types"
+                    },
                     "sequence": "Sequence",
                     "observerType": "Type",
                     "owner": "Owner",
@@ -573,6 +590,13 @@
                             "processId": "PID",
                             "processPath": "Process",
                             "lastSeen": "Last Seen"
+                        }
+                    },
+                    "eventTypes": {
+                        "empty": "This observer does not consume any event types",
+                        "columns": {
+                            "id": "Identifier",
+                            "generation": "Generation"
                         }
                     }
                 }

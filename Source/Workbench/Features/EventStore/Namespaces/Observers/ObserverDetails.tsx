@@ -3,6 +3,7 @@
 
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
+import { TabView, TabPanel } from 'primereact/tabview';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { ObserverOwner } from 'Api/Observation';
 import { ConnectedClient, ConnectedClientsForObserver } from 'Api/Clients';
@@ -10,6 +11,7 @@ import strings from 'Strings';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
 import { getObserverTypeAsText } from './getObserverTypeAsText';
 import { getObserverOwnerAsText } from './getObserverOwnerAsText';
+import { ObserverEventTypes } from './ObserverEventTypes';
 import css from './ObserverDetails.module.css';
 
 /**
@@ -59,33 +61,40 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
     return (
         <div className={css.observerDetails}>
             <h2 className={css.title}>{observer.id}</h2>
-            <dl className={css.properties}>
-                {properties.map(property => (
-                    <div key={property.label} className={css.property}>
-                        <dt className={css.propertyLabel}>{property.label}</dt>
-                        <dd className={css.propertyValue}>{property.value}</dd>
-                    </div>
-                ))}
-            </dl>
+            <TabView className={css.tabs} panelContainerClassName={css.tabPanelContainer}>
+                <TabPanel header={detailStrings.tabs.summary}>
+                    <dl className={css.properties}>
+                        {properties.map(property => (
+                            <div key={property.label} className={css.property}>
+                                <dt className={css.propertyLabel}>{property.label}</dt>
+                                <dd className={css.propertyValue}>{property.value}</dd>
+                            </div>
+                        ))}
+                    </dl>
 
-            {isClientOwned && (
-                <div className={css.connectedClients}>
-                    <h3 className={css.connectedClientsTitle}>{clientStrings.title}</h3>
-                    <DataTable
-                        value={clients.data ?? []}
-                        dataKey='connectionId'
-                        emptyMessage={clientStrings.empty}
-                        size='small'>
-                        <Column field='connectionId' header={clientStrings.columns.connectionId} />
-                        <Column field='clientType' header={clientStrings.columns.clientType} />
-                        <Column field='version' header={clientStrings.columns.version} />
-                        <Column field='machineName' header={clientStrings.columns.machineName} />
-                        <Column field='processId' header={clientStrings.columns.processId} />
-                        <Column field='processPath' header={clientStrings.columns.processPath} />
-                        <Column field='lastSeen' header={clientStrings.columns.lastSeen} body={lastSeenColumn} />
-                    </DataTable>
-                </div>
-            )}
+                    {isClientOwned && (
+                        <div className={css.connectedClients}>
+                            <h3 className={css.connectedClientsTitle}>{clientStrings.title}</h3>
+                            <DataTable
+                                value={clients.data ?? []}
+                                dataKey='connectionId'
+                                emptyMessage={clientStrings.empty}
+                                size='small'>
+                                <Column field='connectionId' header={clientStrings.columns.connectionId} />
+                                <Column field='clientType' header={clientStrings.columns.clientType} />
+                                <Column field='version' header={clientStrings.columns.version} />
+                                <Column field='machineName' header={clientStrings.columns.machineName} />
+                                <Column field='processId' header={clientStrings.columns.processId} />
+                                <Column field='processPath' header={clientStrings.columns.processPath} />
+                                <Column field='lastSeen' header={clientStrings.columns.lastSeen} body={lastSeenColumn} />
+                            </DataTable>
+                        </div>
+                    )}
+                </TabPanel>
+                <TabPanel header={detailStrings.tabs.eventTypes} contentClassName={css.eventTypesPanel}>
+                    <ObserverEventTypes observer={observer} />
+                </TabPanel>
+            </TabView>
         </div>
     );
 };

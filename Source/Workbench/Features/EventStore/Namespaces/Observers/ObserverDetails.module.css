@@ -3,7 +3,7 @@
     display: flex;
     flex-direction: column;
     padding: 20px;
-    overflow: auto;
+    overflow: hidden;
 }
 
 .title {
@@ -11,6 +11,23 @@
     margin-bottom: 12px;
     color: var(--text-color);
     word-break: break-all;
+}
+
+.tabs {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tabPanelContainer {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.eventTypesPanel {
+    height: 100%;
 }
 
 .properties {
