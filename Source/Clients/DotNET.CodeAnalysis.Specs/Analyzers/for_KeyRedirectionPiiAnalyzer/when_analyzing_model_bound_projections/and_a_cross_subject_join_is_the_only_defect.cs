@@ -6,7 +6,7 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_KeyRedirectionPiiAnalyzer.when_analyzing_model_bound_projections;
 
 /// <summary>
-/// A declared control rather than a mutation target: CHR0038 owns the [Join] spelling and this rule must never grow into it.
+/// A declared control rather than a mutation target: joined PII has tracked per-property ownership and this rule must never grow into it.
 /// </summary>
 public class and_a_cross_subject_join_is_the_only_defect : given.a_key_redirection_pii_analyzer
 {

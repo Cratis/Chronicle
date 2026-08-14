@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
@@ -51,6 +52,25 @@ public class EncryptChangeset(
         var currentStateAsDictionary = (IDictionary<string, object?>)currentState;
         currentStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var currentSubjectValue);
         var currentSubject = currentSubjectValue as string;
+        var defaultSubject = currentSubject ?? identifier;
+        currentStateAsDictionary.TryGetValue(WellKnownProperties.Subjects, out var currentSubjectsValue);
+        var currentSubjects = ReadModelSubjects.From(currentSubjectsValue);
+        var updatedSubjects = new Dictionary<string, string>(currentSubjects, StringComparer.Ordinal);
+
+        var eventSubject = context.IsJoin
+            ? SubjectFor(context.Event)
+            : identifier;
+        UpdateSubjectsForChanges(schema, context.Changeset.Changes, eventSubject, defaultSubject, updatedSubjects);
+
+        var subjectsChanged = !SubjectsEqual(currentSubjects, updatedSubjects);
+        if (updatedSubjects.Count > 0)
+        {
+            currentStateAsDictionary[WellKnownProperties.Subjects] = ReadModelSubjects.ToExpandoObject(updatedSubjects);
+        }
+        else
+        {
+            currentStateAsDictionary.Remove(WellKnownProperties.Subjects);
+        }
 
         var encrypted = await readModelsCompliance.Apply(
             eventStore,
@@ -69,6 +89,30 @@ public class EncryptChangeset(
         var propertyDifferences = hasDifferences && differences is not null
             ? differences.Collapse(currentState, encrypted).ToList()
             : [];
+
+        var joinedComplianceProperties = GetJoinedComplianceProperties(schema, context.Changeset.Changes).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        propertyDifferences.RemoveAll(_ =>
+            _.PropertyPath.Segments.FirstOrDefault()?.Value is string rootProperty &&
+            joinedComplianceProperties.Contains(rootProperty));
+        await EncryptJoinedComplianceValues(schema, eventSubject, context.Changeset.Changes);
+
+        if (subjectsChanged)
+        {
+            foreach (var property in currentSubjects.Keys.Concat(updatedSubjects.Keys).Distinct(StringComparer.Ordinal))
+            {
+                currentSubjects.TryGetValue(property, out var currentPropertySubject);
+                updatedSubjects.TryGetValue(property, out var updatedPropertySubject);
+                if (currentPropertySubject == updatedPropertySubject)
+                {
+                    continue;
+                }
+
+                propertyDifferences.Add(new PropertyDifference(
+                    new PropertyPath($"{WellKnownProperties.Subjects}.{property}"),
+                    currentPropertySubject,
+                    updatedPropertySubject));
+            }
+        }
 
         var encryptedStateAsDictionary = (IDictionary<string, object?>)encrypted;
         if (encryptedStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var encryptedSubjectValue) &&
@@ -95,6 +139,142 @@ public class EncryptChangeset(
         return context;
     }
 
+    static void UpdateSubjectsForChanges(
+        JsonSchema schema,
+        IEnumerable<Change> changes,
+        string subject,
+        string defaultSubject,
+        IDictionary<string, string> subjects)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    foreach (var difference in propertiesChanged.Differences)
+                    {
+                        UpdateSubjectForProperty(schema, difference.PropertyPath, subject, defaultSubject, subjects);
+                    }
+                    break;
+
+                case ChildAdded childAdded:
+                    UpdateSubjectForProperty(schema, childAdded.ChildrenProperty, subject, defaultSubject, subjects);
+                    break;
+
+                case NestedCleared nestedCleared:
+                    UpdateSubjectForProperty(schema, nestedCleared.NestedProperty, subject, defaultSubject, subjects);
+                    break;
+
+                case Joined joined:
+                    UpdateSubjectsForChanges(schema, joined.Changes, subject, defaultSubject, subjects);
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    var resolvedSubject = resolvedJoin.Source is AppendedEvent resolvedEvent
+                        ? SubjectFor(resolvedEvent)
+                        : subject;
+                    UpdateSubjectsForChanges(schema, resolvedJoin.Changes, resolvedSubject, defaultSubject, subjects);
+                    break;
+            }
+        }
+    }
+
+    static void UpdateSubjectForProperty(
+        JsonSchema schema,
+        PropertyPath propertyPath,
+        string subject,
+        string defaultSubject,
+        IDictionary<string, string> subjects)
+    {
+        var rootProperty = propertyPath.Segments.FirstOrDefault()?.Value;
+        if (rootProperty is null ||
+            !schema.Properties.TryGetValue(rootProperty, out var propertySchema) ||
+            !propertySchema.HasComplianceMetadata())
+        {
+            return;
+        }
+
+        if (subject == defaultSubject)
+        {
+            subjects.Remove(rootProperty);
+        }
+        else
+        {
+            subjects[rootProperty] = subject;
+        }
+    }
+
+    static string SubjectFor(AppendedEvent @event) =>
+        @event.Context.Subject?.IsSet == true
+            ? @event.Context.Subject.Value
+            : @event.Context.EventSourceId.Value;
+
+    static bool SubjectsEqual(Dictionary<string, string> left, Dictionary<string, string> right) =>
+        left.Count == right.Count && left.All(entry => right.TryGetValue(entry.Key, out var value) && value == entry.Value);
+
+    static IEnumerable<string> GetJoinedComplianceProperties(JsonSchema schema, IEnumerable<Change> changes)
+    {
+        foreach (var change in changes)
+        {
+            if (change is not Joined and not ResolvedJoin)
+            {
+                continue;
+            }
+
+            var nestedChanges = change switch
+            {
+                Joined joined => joined.Changes,
+                ResolvedJoin resolvedJoin => resolvedJoin.Changes,
+                _ => []
+            };
+
+            foreach (var property in GetComplianceProperties(schema, nestedChanges))
+            {
+                yield return property;
+            }
+        }
+    }
+
+    static IEnumerable<string> GetComplianceProperties(JsonSchema schema, IEnumerable<Change> changes)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    foreach (var rootProperty in propertiesChanged.Differences
+                                 .Where(_ => IsComplianceProperty(schema, _.PropertyPath))
+                                 .Select(_ => _.PropertyPath.Segments.First().Value))
+                    {
+                        yield return rootProperty;
+                    }
+                    break;
+
+                case Joined joined:
+                    foreach (var property in GetComplianceProperties(schema, joined.Changes))
+                    {
+                        yield return property;
+                    }
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    foreach (var property in GetComplianceProperties(schema, resolvedJoin.Changes))
+                    {
+                        yield return property;
+                    }
+                    break;
+            }
+        }
+    }
+
+    static bool IsComplianceProperty(JsonSchema schema, PropertyPath propertyPath)
+    {
+        var rootProperty = propertyPath.Segments.FirstOrDefault()?.Value;
+        return rootProperty is not null &&
+               schema.Properties.TryGetValue(rootProperty, out var propertySchema) &&
+               propertySchema.HasComplianceMetadata();
+    }
+
     static void SetSubjectWithoutCompliance(ProjectionEventContext context, string identifier)
     {
         var currentState = context.Changeset.CurrentState;
@@ -114,6 +294,92 @@ public class EncryptChangeset(
                 currentState,
                 [new PropertyDifference(WellKnownProperties.Subject, null, identifier)]));
         }
+    }
+
+    async Task EncryptJoinedComplianceValues(JsonSchema schema, string subject, IEnumerable<Change> changes)
+    {
+        if (changes is not IList<Change> mutableChanges || mutableChanges.IsReadOnly)
+        {
+            return;
+        }
+
+        for (var index = 0; index < mutableChanges.Count; index++)
+        {
+            mutableChanges[index] = mutableChanges[index] switch
+            {
+                Joined joined => joined with { Changes = await EncryptComplianceValues(schema, subject, joined.Changes) },
+                ResolvedJoin resolvedJoin => resolvedJoin with
+                {
+                    Changes = await EncryptComplianceValues(
+                        schema,
+                        resolvedJoin.Source is AppendedEvent resolvedEvent ? SubjectFor(resolvedEvent) : subject,
+                        resolvedJoin.Changes)
+                },
+                _ => mutableChanges[index]
+            };
+        }
+    }
+
+    async Task<Change[]> EncryptComplianceValues(JsonSchema schema, string subject, IEnumerable<Change> changes)
+    {
+        var result = new List<Change>();
+        foreach (var change in changes)
+        {
+            result.Add(change switch
+            {
+                PropertiesChanged<ExpandoObject> propertiesChanged => await EncryptComplianceValues(schema, subject, propertiesChanged),
+                Joined joined => joined with { Changes = await EncryptComplianceValues(schema, subject, joined.Changes) },
+                ResolvedJoin resolvedJoin => resolvedJoin with
+                {
+                    Changes = await EncryptComplianceValues(
+                        schema,
+                        resolvedJoin.Source is AppendedEvent resolvedEvent ? SubjectFor(resolvedEvent) : subject,
+                        resolvedJoin.Changes)
+                },
+                _ => change
+            });
+        }
+
+        return [.. result];
+    }
+
+    async Task<PropertiesChanged<ExpandoObject>> EncryptComplianceValues(
+        JsonSchema schema,
+        string subject,
+        PropertiesChanged<ExpandoObject> propertiesChanged)
+    {
+        var complianceDifferences = propertiesChanged.Differences
+            .Where(_ => IsComplianceProperty(schema, _.PropertyPath))
+            .ToArray();
+        if (complianceDifferences.Length == 0)
+        {
+            return propertiesChanged;
+        }
+
+        var state = new ExpandoObject();
+        foreach (var difference in complianceDifferences)
+        {
+            difference.PropertyPath.SetValue(state, difference.Changed!, ArrayIndexers.NoIndexers);
+        }
+
+        var encryptedState = await readModelsCompliance.Apply(
+            eventStore,
+            eventStoreNamespace,
+            schema,
+            subject,
+            state);
+        return propertiesChanged with
+        {
+            Differences = propertiesChanged.Differences
+                .Select(difference => IsComplianceProperty(schema, difference.PropertyPath)
+                    ? new PropertyDifference(
+                        difference.PropertyPath,
+                        difference.Original,
+                        difference.PropertyPath.GetValue(encryptedState, difference.ArrayIndexers),
+                        difference.ArrayIndexers)
+                    : difference)
+                .ToArray()
+        };
     }
 
     async Task EncryptComplianceForChildren(JsonSchema schema, string identifier, IEnumerable<Change> changes)
@@ -151,6 +417,7 @@ public class EncryptChangeset(
         // under the root document's subject and must not carry its own, so strip it before merging back.
         var encryptedValues = (IDictionary<string, object?>)encryptedChild;
         encryptedValues.Remove(WellKnownProperties.Subject);
+        encryptedValues.Remove(WellKnownProperties.Subjects);
 
         // The MongoDB sink reads the child object directly when building the $push, so overwrite the child
         // in place with its encrypted values rather than replacing the change in the changeset.

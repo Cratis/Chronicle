@@ -39,11 +39,23 @@ public class DecryptInitialState(
             return context;
         }
 
-        context.Changeset.InitialState = await readModelsCompliance.Release(
+        var initialState = (IDictionary<string, object?>)context.Changeset.InitialState;
+        initialState.TryGetValue(WellKnownProperties.Subject, out var storedSubject);
+        initialState.TryGetValue(WellKnownProperties.Subjects, out var storedSubjects);
+
+        var released = await readModelsCompliance.Release(
             eventStore,
             eventStoreNamespace,
             schema,
             context.Changeset.InitialState);
+        var releasedState = (IDictionary<string, object?>)released;
+        releasedState[WellKnownProperties.Subject] = storedSubject;
+        if (storedSubjects is not null)
+        {
+            releasedState[WellKnownProperties.Subjects] = storedSubjects;
+        }
+
+        context.Changeset.InitialState = released;
         return context;
     }
 }

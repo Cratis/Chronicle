@@ -13,4 +13,11 @@ namespace Cratis.Chronicle.Changes;
 /// <param name="OnProperty">The property being joined.</param>
 /// <param name="ArrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
 /// <param name="Changes">Changes applicable for the join change.</param>
-public record ResolvedJoin(object State, object Key, PropertyPath OnProperty, ArrayIndexers ArrayIndexers, IEnumerable<Change> Changes) : Change(State);
+/// <param name="Source">The source object whose values produced the resolved changes.</param>
+public record ResolvedJoin(
+    object State,
+    object Key,
+    PropertyPath OnProperty,
+    ArrayIndexers ArrayIndexers,
+    IEnumerable<Change> Changes,
+    object? Source = null) : Change(State);

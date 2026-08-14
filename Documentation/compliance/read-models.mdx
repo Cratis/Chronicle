@@ -32,11 +32,24 @@ Reducers use arbitrary C# logic to compute state. The kernel cannot infer which 
 
 The `[PII]` attribute on `Name` tells the kernel to encrypt that property before storage and decrypt it on retrieval.
 
-## The `_subject` field
+## Stored subjects
 
-Every managed read model document written by Chronicle contains a reserved `_subject` field. This field stores the compliance identifier (the `Subject` or `EventSourceId`) that was used as the encryption key reference for that document. Chronicle uses `_subject` to look up the correct key when decrypting on retrieval.
+Every managed read model document written by Chronicle contains a reserved `__subject` field. It stores the default compliance identifier used for PII on that document. Existing single-subject documents need no other metadata and remain compatible.
 
-> **Do not** declare a property named `_subject` in your read model records. Chronicle reserves this name for internal use.
+A projection can compose PII from events belonging to different subjects. Chronicle derives that ownership from the events that populate each property and stores only the exceptions to the default in a reserved `__subjects` object:
+
+```json
+{
+  "__subject": "employee-42",
+  "__subjects": {
+    "advisorName": "advisor-17"
+  }
+}
+```
+
+In this example, `advisorName` is encrypted, released, and erased under `advisor-17`; every other PII property falls back to `employee-42`. The map is maintained automatically as projection events replace values. No read model attributes or manual migration are required. Rows written before this capability have no `__subjects` field and continue using `__subject` for every property.
+
+> **Do not** declare properties named `__subject` or `__subjects` in your read model records. Chronicle reserves both names for internal use.
 
 ## GDPR erasure
 
@@ -71,44 +84,15 @@ Decryption is resolved per property, and a property that cannot be read never fa
 | Encrypted under this subject | The decrypted value. |
 | Encrypted, but the subject's key was deleted | An empty value — the erasure case above. |
 | Never encrypted under this subject | The value, untouched. |
-| Encrypted under a *different* subject | An empty value for that property, plus an error in the Kernel log naming the property, the subject, and the likely cause. |
+| Encrypted under a *different* subject and missing ownership metadata | An empty value for that property, plus an error in the Kernel log naming the property, the subject, and the likely cause. |
 
 The third row matters when a `[PII]`-typed property is resolved in memory at the query edge — for display on a view whose own compliance subject is not that person — or when a property was marked `[PII]` after values had already been stored. Chronicle recognizes the shape of the values it encrypts, so a value it never encrypted is passed through rather than blanked or rejected.
 
-The fourth row is a modeling defect rather than a transient failure: a read model has one compliance subject and all of its PII is released under it. The [CHR0038](../code-analysis/CHR0038) analyzer catches the common cause — a `[Join]` copying a `[PII]` value out of another event source's stream — at build time. When one slips through, the property is degraded rather than the query, so the rest of the result is unaffected.
+The fourth row can occur for legacy data that was written before per-property ownership was tracked, or for data written outside Chronicle's managed projection sinks. New projection writes keep the ownership map with the ciphertext, so joined PII releases under the subject of the event it came from.
 
 > [!NOTE]
 > Applying PII behaves the opposite way, and deliberately so: if encryption fails on the way *in*, the operation fails. Storing a value that was meant to be protected, unprotected, is never an acceptable degradation.
 
-## Composing a read model yourself — `[SubjectFrom]`
+## Composing read models outside Chronicle
 
-Everything above describes a read model Chronicle builds and stores. A query method may instead compose one in memory, from rows it fetched itself — and a row read straight out of a collection still holds ciphertext, because the release only happens on the way through the kernel.
-
-Such a row has no subject of its own to release under. Chronicle resolves one from the instance — a `[Subject]` member, otherwise a property named `Id` — and for a composed row that leaves two outcomes, neither of which is what you meant:
-
-| The composed row… | What happens to the value it lifted |
-|---|---|
-| exposes a subject that is not the value's own | Released under the wrong subject: an empty value, plus an error in the kernel log. |
-| exposes no subject at all | Nothing. The release pass does not run and the ciphertext is returned as read. |
-
-`[SubjectFrom]` on the property says where to find the subject the value belongs to, so neither outcome is reached by accident:
-
-<ChronicleClientTabs snippet="compliance/read-models/subject-from" />
-
-The attribute names a property of the same read model, and its value becomes the subject that one property is released under. Everything the property holds travels with it, including personal values nested inside a value object. Every property *without* the attribute keeps releasing under the read model's own subject exactly as before — including doing nothing when the row resolves none.
-
-Because each property carries its own subject, one row can hold data belonging to more than one person and release all of it — a shape a single-subject read model cannot express:
-
-<ChronicleClientTabs snippet="compliance/read-models/subject-from-two-subjects" />
-
-### Rules
-
-- Declare it on a property of the read model itself. A declaration inside a value object or a child element names a property that type does not have, so it is reported as an error rather than ignored — move it up to the read model property that holds the value.
-- On a positional record, write it without a `[property:]` target. Both placements are read, but only the plain form puts the attribute where `nameof` can see a sibling parameter — `[property: SubjectFrom(nameof(PersonId))]` does not compile.
-- The name must match a public instance property of the read model. One that does not fails the read, because falling back to the read model's own subject is one of the two outcomes the declaration exists to avoid.
-- If the named property is empty on a given row, that one value is returned as read and a warning names the read model, the property and the subject property. A single unreadable value never fails a query.
-- `[ReleaseUnder]` was the name this shipped under first. It still compiles and behaves identically — it is now an alias of `[SubjectFrom]` — but it is deprecated and will be removed; rename it when you next touch the read model.
-
-### When this is the wrong fit
-
-`[SubjectFrom]` is for a value resolved in memory at the query edge. It does not make it acceptable to store one person's personal data on another person's document: a stored read model still holds exactly one subject's data, which is what keeps that person's erasure complete and what [CHR0038](../code-analysis/CHR0038) protects. If the personal value can be resolved from its owner's own read model at render time, prefer that — it needs no declaration at all.
+Per-property ownership is storage metadata maintained by Chronicle's projection pipeline. If application code manually constructs an object from raw ciphertext, `IReadModels.Release` can only resolve the object's own `[Subject]` member or `Id` and cannot infer where each copied value originated. Prefer querying managed read models through Chronicle so their stored ownership metadata is honored before composition.

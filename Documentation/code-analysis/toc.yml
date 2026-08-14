@@ -58,14 +58,12 @@
   href: CHR0032.mdx
 - name: CHR0034 - [PII] cannot be applied to an EventSourceId
   href: CHR0034.mdx
-- name: CHR0035 - Read model declares a reserved '_subject' property
+- name: CHR0035 - Read model declares a reserved compliance subject property
   href: CHR0035.mdx
 - name: CHR0036 - Reducer must not have mutable state
   href: CHR0036.mdx
 - name: CHR0037 - Event type migration generations must share one explicit [EventType] id
   href: CHR0037.mdx
-- name: CHR0038 - [Join] of a [PII] value crosses the compliance subject
-  href: CHR0038.mdx
 - name: CHR0039 - Assertion result is discarded and can never fail
   href: CHR0039.mdx
 - name: CHR0040 - Several [SetFromContext] for the same event type on one member
@@ -76,8 +74,6 @@
   href: CHR0042.mdx
 - name: CHR0043 - Key redirection carries a [PII] value across the compliance subject
   href: CHR0043.mdx
-- name: CHR0044 - [Join] of a [PII] value cannot prove compliance subject equality
-  href: CHR0044.mdx
 - name: CHR0045 - Event stream metadata attribute on an event type has no effect
   href: CHR0045.mdx
 - name: CHR0046 - Passive read model redirects the document key away from the event's own stream

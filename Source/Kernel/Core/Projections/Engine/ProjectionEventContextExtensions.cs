@@ -7,7 +7,9 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Reflection;
 using Microsoft.Extensions.Logging;
@@ -60,13 +62,17 @@ public static class ProjectionEventContextExtensions
     /// <param name="joinEventType">Type of event to be joined.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="eventCompliance">Optional compliance handler for releasing a stored join event before projecting it.</param>
+    /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
         IEventSequenceStorage eventSequenceStorage,
         EventType joinEventType,
         PropertyPath onModelProperty,
-        ILogger logger)
+        ILogger logger,
+        IEventCompliance? eventCompliance = null,
+        JsonSchema? joinEventSchema = null)
     {
         // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the
         // synchronous Rx Subject pipeline. HandleEvent.Perform commits the changeset immediately
@@ -99,6 +105,15 @@ public static class ProjectionEventContextExtensions
                         {
                             if (!maybeLastEvent.HasValue) return;
                             var lastEvent = (AppendedEvent)maybeLastEvent;
+                            if (eventCompliance is not null &&
+                                joinEventSchema?.HasComplianceMetadata() == true &&
+                                lastEvent.Context.Subject?.IsSet == true)
+                            {
+#pragma warning disable CA2007
+                                lastEvent = Task.Run(() => eventCompliance.Release(lastEvent, joinEventSchema)).GetAwaiter().GetResult();
+#pragma warning restore CA2007
+                            }
+
                             var changeset = context.Changeset.ResolvedJoin(
                                 onModelProperty,
                                 context.Key.Value,

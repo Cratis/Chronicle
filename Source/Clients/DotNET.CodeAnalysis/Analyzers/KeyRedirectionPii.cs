@@ -28,7 +28,7 @@ static class KeyRedirectionPii
     /// </summary>
     /// <remarks>
     /// The severity is deliberately one line, and deliberately a warning for its first release: unlike
-    /// <see cref="DiagnosticIds.CrossSubjectPiiJoin"/> this shape need not produce a runtime symptom — the value
+    /// Unlike a joined value with tracked per-property ownership, this shape need not produce a runtime symptom — the value
     /// can re-encrypt and read back cleanly while erasure misses it — and the analyzer cannot prove the runtime
     /// subject stored with every historical and future event. Change <c>defaultSeverity</c> below to
     /// <see cref="DiagnosticSeverity.Error"/> only through a separately reviewed rollout decision.

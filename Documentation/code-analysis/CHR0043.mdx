@@ -22,13 +22,9 @@ Keep the personal value on a read model keyed and subjected by its owner, or res
 
 Fixing the projection prevents future wrong-subject materialization; it does not remove or re-encrypt copies already stored under the wrong subject. Before claiming erasure coverage, replace the affected read-model storage by dropping and rebuilding the projection into a clean container, rebuilding into a new container and switching readers, or performing an audited migration that proves the owner of every personal value and rewrites or removes each wrong-subject document. Replaying corrected code over the existing container is not sufficient evidence that stale copies are gone.
 
-## Relationship to CHR0038
-
-`CHR0038` refuses an explicit different-subject boundary reached through a `[Join]`. [CHR0044](CHR0044) warns when a join's runtime-subject equality is unprovable. This rule covers the key-redirection route.
-
 ## Severity
 
-The default severity is **warning**, unlike `CHR0038`. This is a rollout signal, not a compatibility guarantee or an erasure grace period: repositories that treat warnings as errors can fail immediately, and affected persisted read models still require the cleanup above. Any later promotion to error is a separate compatibility decision; suppressing or retaining warning severity does not make the storage shape safe.
+The default severity is **warning**. This is a rollout signal, not a compatibility guarantee or an erasure grace period: repositories that treat warnings as errors can fail immediately, and affected persisted read models still require the cleanup above. Any later promotion to error is a separate compatibility decision; suppressing or retaining warning severity does not make the storage shape safe.
 
 ## Suppressing
 

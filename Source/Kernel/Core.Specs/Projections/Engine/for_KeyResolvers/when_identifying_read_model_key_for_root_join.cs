@@ -17,6 +17,7 @@ public class when_identifying_read_model_key_for_root_join : Specification
 {
     AppendedEvent _joinedEvent;
     Key _result;
+    object _joinKey;
     IProjection _projection;
     IEventSequenceStorage _storage;
     ISink _sink;
@@ -69,14 +70,20 @@ public class when_identifying_read_model_key_for_root_join : Specification
             _keyResolvers.FromEventSourceId,
             "id",
             "groupId")(_storage, _sink, _joinedEvent);
-        _result = (keyResult as ResolvedKey).Key;
+        var resolvedKey = keyResult as ResolvedKey;
+        _result = resolvedKey.Key;
+        _joinKey = resolvedKey.JoinKey;
     }
 
     [Fact]
-    void should_query_using_the_read_model_identifier() =>
-        _queriedPropertyPath.ShouldEqual((PropertyPath)"id");
+    void should_query_using_the_join_property() =>
+        _queriedPropertyPath.ShouldEqual((PropertyPath)"groupId");
 
     [Fact]
     void should_resolve_to_the_root_read_model_key() =>
         _result.ShouldEqual(new Key(UserId, ArrayIndexers.NoIndexers));
+
+    [Fact]
+    void should_preserve_the_joined_events_key() =>
+        _joinKey.ShouldEqual(GroupId);
 }

@@ -87,6 +87,14 @@ public static class ProjectedColumns
                 IsJson: false,
                 IsArray: false,
                 IsNullable: true));
+
+            columns.Add(new ProjectedColumn(
+                WellKnownProperties.Subjects,
+                typeof(string),
+                IsKey: false,
+                IsJson: true,
+                IsArray: false,
+                IsNullable: true));
         }
 
         return columns;

@@ -19,7 +19,7 @@ public class and_read_model_has_reserved_subject_parameter : given.a_reserved_su
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ReservedSubjectPropertyAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.ReservedSubjectProperty, DiagnosticSeverity.Error, "Customer"));
+        new ExpectedDiagnostic(DiagnosticIds.ReservedSubjectProperty, DiagnosticSeverity.Error, "Customer", "_subject"));
 
     [Fact] Task should_report_the_diagnostic() => _result;
 }

@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
@@ -35,6 +36,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="keyResolvers"><see cref="IKeyResolvers"/> for resolving <see cref="Key"/>.</param>
 /// <param name="storage"><see cref="IEventStoreNamespaceStorage"/> for accessing underlying storage for the specific namespace.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventCompliance">Optional <see cref="IEventCompliance"/> for releasing stored join events before projecting them.</param>
 [Singleton]
 public class ProjectionFactory(
     IReadModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
@@ -43,7 +45,8 @@ public class ProjectionFactory(
     IExpandoObjectConverter expandoObjectConverter,
     IKeyResolvers keyResolvers,
     IStorage storage,
-    ILogger<ProjectionFactory> logger) : IProjectionFactory
+    ILogger<ProjectionFactory> logger,
+    IEventCompliance? eventCompliance = null) : IProjectionFactory
 {
     static readonly string[] _aggregateExpressions =
     [
@@ -729,10 +732,11 @@ public class ProjectionFactory(
 
         foreach (var (joinEventType, joinDefinition) in joinExpressions)
         {
-            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == joinEventType)?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
+            var joinEventSchema = eventTypeSchemas.FirstOrDefault(ets => ets.Type == joinEventType)?.Schema;
+            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, joinEventSchema, projection.AutoMap, projection.NoAutoMapProperties);
             var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
             fromObservable
-                .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On, logger)
+                .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On, logger, eventCompliance, joinEventSchema)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,

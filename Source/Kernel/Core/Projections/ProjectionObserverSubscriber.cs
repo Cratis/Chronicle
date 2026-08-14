@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -179,6 +180,11 @@ public class ProjectionObserverSubscriber(
                 if (stateDict.TryGetValue(WellKnownProperties.Subject, out var subjectValue) && subjectValue is string subject)
                 {
                     model[WellKnownProperties.Subject] = JsonValue.Create(subject);
+                }
+
+                if (stateDict.TryGetValue(WellKnownProperties.Subjects, out var subjectsValue))
+                {
+                    model[WellKnownProperties.Subjects] = JsonSerializer.SerializeToNode(subjectsValue);
                 }
 
                 var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
