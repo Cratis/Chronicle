@@ -91,9 +91,10 @@ public interface IReadModels
     /// Release (decrypt) PII-annotated properties in a read model instance by deriving the subject from the instance itself.
     /// </summary>
     /// <remarks>
-    /// The subject is resolved by looking for a property or constructor parameter decorated with <see cref="SubjectAttribute"/>,
-    /// falling back to a property named <c>Id</c>. If no subject can be derived, or the read model has no compliance-annotated
-    /// properties, the original instance is returned unchanged.
+    /// The subject is resolved by looking for a property or constructor parameter decorated with <see cref="SubjectAttribute"/> that has a value,
+    /// falling back to a property named <c>Id</c> when the decorated value is null or otherwise not set. If no subject can be derived,
+    /// or the read model has no compliance-annotated properties, the original instance is returned unchanged.
+    /// A warning is logged when compliance metadata exists but no subject can be resolved.
     /// If decryption fails (e.g. the encryption key has been permanently deleted), the original instance is returned and
     /// the failure is logged.
     /// </remarks>

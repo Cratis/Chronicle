@@ -9,7 +9,7 @@ Most of the time you never think about this. `GetInstanceById`, `GetInstances`, 
 
 <ChronicleClientTabs snippet="read-models/releasing-pii/read-model" />
 
-`RequesterName` is `[PII]`-marked explicitly on the read model — required for a reducer, since Chronicle can't infer PII lineage through arbitrary reducer logic the way it can for a model-bound projection. `CustomerId` carries `[Subject]`: the ticket's own `Id` identifies the ticket, not the person the PII belongs to, so `Release` needs to be told which property to use as the encryption key's owner.
+`RequesterName` is `[PII]`-marked explicitly on the read model — required for a reducer, since Chronicle can't infer PII lineage through arbitrary reducer logic the way it can for a model-bound projection. `CustomerId` carries `[Subject]`: the ticket's own `Id` identifies the ticket, not the person the PII belongs to, so `Release` needs to be told which property to use as the encryption key's owner. A property having the `Subject` type does not select it by itself; the attribute is what declares the role.
 
 ## Release a single instance
 
@@ -37,9 +37,13 @@ Every other read on `IReadModels` releases before returning to you. `Watch` is t
 | 2 | A constructor parameter decorated with `[Subject]` (record shorthand) |
 | 3 | A property named `Id`, case-insensitive |
 
-The first match wins. If none of the three resolve to a value — or the read model has no PII-annotated properties at all — `Release` returns the instance unchanged; there's nothing for it to do.
+The first match **with a value** wins. If an attributed property is `null`, empty or `Subject.NotSet`, `Release` continues to the `Id` fallback. This lets older rows and partially populated instances remain releasable while a newly projected `[Subject]` property is introduced.
 
-Add `[Subject]` when the identity that owns the PII differs from the read model's own key, exactly as you would on a command or event property to control which identity an append is encrypted under. When the two already match — a person's own profile, keyed by their own identity — the `Id` fallback handles it and no attribute is needed.
+If none of the three resolve to a value, `Release` returns the instance unchanged and logs a warning when the model has PII metadata. If the read model has no PII-annotated properties, it returns the instance unchanged without a warning because there is nothing to release.
+
+Add `[Subject]` when the identity that manual `Release` should use differs from the read model's own key, exactly as you would on a command or event property to control which identity an append is encrypted under. When the two already match — a person's own profile, keyed by their own identity — the `Id` fallback handles it and no attribute is needed.
+
+This attribute affects only subject discovery from the object passed to `Release`; it does not assign ownership to a managed projection document. Chronicle's projection pipeline derives ownership from the event that supplied each PII value and persists that information in its reserved `__subject` and `__subjects` fields. An explicit subject supplied while appending an event therefore controls the values originating from that event, regardless of whether the read model exposes a `Subject` property.
 
 ## When release can't recover a value
 
