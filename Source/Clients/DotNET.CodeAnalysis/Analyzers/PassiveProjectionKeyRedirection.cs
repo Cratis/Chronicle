@@ -32,7 +32,7 @@ static class PassiveProjectionKeyRedirection
     /// </summary>
     /// <remarks>
     /// The severity is deliberately a warning for its first release, on the same reasoning recorded for
-    /// <see cref="DiagnosticIds.KeyRedirectionPii"/> and <see cref="DiagnosticIds.UnprovableCrossSubjectPiiJoin"/>:
+    /// <see cref="DiagnosticIds.KeyRedirectionPii"/>:
     /// the shape need not fail, a consumer may knowingly accept a read that only ever answers for the redirected
     /// stream, and a new error would break existing builds. Change <c>defaultSeverity</c> below to
     /// <see cref="DiagnosticSeverity.Error"/> only through a separately reviewed rollout decision.

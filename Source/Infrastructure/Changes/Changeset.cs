@@ -95,7 +95,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     {
         var workingState = CurrentState.Clone()!;
         var childChangeset = new Changeset<TSource, TTarget>(comparer, incoming, workingState, this);
-        var resolvedJoin = new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes);
+        var resolvedJoin = new ResolvedJoin(workingState, key, onProperty, arrayIndexers, childChangeset.Changes, incoming);
         _resolvedJoinChangesets.Add(new(resolvedJoin, childChangeset));
         Add(resolvedJoin);
         CurrentState = workingState;

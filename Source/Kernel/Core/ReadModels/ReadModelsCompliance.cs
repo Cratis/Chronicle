@@ -35,8 +35,21 @@ public class ReadModelsCompliance(
             return instance;
         }
 
+        var instanceAsDictionary = (IDictionary<string, object?>)instance;
+        var defaultSubject = instanceAsDictionary.TryGetValue(WellKnownProperties.Subject, out var storedSubject) &&
+                             storedSubject?.ToString() is { Length: > 0 } storedSubjectValue
+            ? storedSubjectValue
+            : identifier;
+        var subjects = instanceAsDictionary.TryGetValue(WellKnownProperties.Subjects, out var storedSubjects)
+            ? ReadModelSubjects.From(storedSubjects)
+            : [];
+
         var json = expandoObjectConverter.ToJsonObject(instance, schema);
-        var applied = await complianceManager.Apply(eventStore, eventStoreNamespace, schema, identifier, json);
+        var applied = await HandleBySubject(
+            json,
+            defaultSubject,
+            subjects,
+            (subject, slice) => complianceManager.Apply(eventStore, eventStoreNamespace, schema, subject, slice));
         var result = expandoObjectConverter.ToExpandoObject(applied, schema);
         var resultAsDictionary = (IDictionary<string, object?>)result;
 
@@ -54,7 +67,7 @@ public class ReadModelsCompliance(
             }
         }
 
-        resultAsDictionary[WellKnownProperties.Subject] = identifier;
+        resultAsDictionary[WellKnownProperties.Subject] = defaultSubject;
         return result;
     }
 
@@ -70,7 +83,9 @@ public class ReadModelsCompliance(
             return instance;
         }
 
-        if (instance[WellKnownProperties.Subject]?.GetValue<string>() is not string identifier)
+        var identifier = instance[WellKnownProperties.Subject]?.GetValue<string>();
+        var subjects = ReadModelSubjects.From(instance[WellKnownProperties.Subjects]);
+        if (identifier is null && subjects.Count == 0)
         {
             return instance;
         }
@@ -95,7 +110,11 @@ public class ReadModelsCompliance(
             withoutBookkeeping.Remove(property);
         }
 
-        return await complianceManager.Release(eventStore, eventStoreNamespace, schema, identifier, withoutBookkeeping);
+        return await HandleBySubject(
+            withoutBookkeeping,
+            identifier,
+            subjects,
+            (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice));
     }
 
     /// <inheritdoc/>
@@ -111,19 +130,23 @@ public class ReadModelsCompliance(
         }
 
         var dict = (IDictionary<string, object?>)instance;
-        if (!dict.TryGetValue(WellKnownProperties.Subject, out var subjectObj) || subjectObj is null)
-        {
-            return instance;
-        }
-
-        var identifier = subjectObj.ToString();
-        if (string.IsNullOrEmpty(identifier))
+        var identifier = dict.TryGetValue(WellKnownProperties.Subject, out var subjectObj)
+            ? subjectObj?.ToString()
+            : null;
+        var subjects = dict.TryGetValue(WellKnownProperties.Subjects, out var subjectsObj)
+            ? ReadModelSubjects.From(subjectsObj)
+            : [];
+        if (string.IsNullOrEmpty(identifier) && subjects.Count == 0)
         {
             return instance;
         }
 
         var json = expandoObjectConverter.ToJsonObject(instance, schema);
-        var released = await complianceManager.Release(eventStore, eventStoreNamespace, schema, identifier, json);
+        var released = await HandleBySubject(
+            json,
+            identifier,
+            subjects,
+            (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice));
         return expandoObjectConverter.ToExpandoObject(released, schema);
     }
 
@@ -138,6 +161,47 @@ public class ReadModelsCompliance(
         foreach (var instance in instances)
         {
             result.Add(await Release(eventStore, eventStoreNamespace, schema, instance));
+        }
+
+        return result;
+    }
+
+    static async Task<JsonObject> HandleBySubject(
+        JsonObject json,
+        string? defaultSubject,
+        Dictionary<string, string> subjects,
+        Func<string, JsonObject, Task<JsonObject>> action)
+    {
+        if (subjects.Count == 0)
+        {
+            return string.IsNullOrEmpty(defaultSubject)
+                ? json
+                : await action(defaultSubject, json);
+        }
+
+        var result = (json.DeepClone() as JsonObject)!;
+        var groups = json
+            .Select(property => new
+            {
+                property.Key,
+                Subject = subjects.TryGetValue(property.Key, out var subject) ? subject : defaultSubject
+            })
+            .Where(_ => !string.IsNullOrEmpty(_.Subject))
+            .GroupBy(_ => _.Subject!, StringComparer.Ordinal);
+
+        foreach (var group in groups)
+        {
+            var slice = new JsonObject();
+            foreach (var property in group)
+            {
+                slice[property.Key] = json[property.Key]?.DeepClone();
+            }
+
+            var handled = await action(group.Key, slice);
+            foreach (var (property, value) in handled)
+            {
+                result[property] = value?.DeepClone();
+            }
         }
 
         return result;

@@ -97,10 +97,10 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
             if (!projection.HasParent)
             {
-                var rootKeyResult = await sink.TryFindRootKeyByChildValue(identifiedByProperty, key.Value!);
+                var rootKeyResult = await sink.TryFindRootKeyByChildValue(joinOnProperty, key.Value!);
                 if (rootKeyResult.TryGetValue(out var rootKey))
                 {
-                    return KeyResolverResult.Resolved(rootKey);
+                    return KeyResolverResult.Resolved(rootKey, key.Value);
                 }
 
                 return KeyResolverResult.Resolved(key with { ArrayIndexers = ArrayIndexers.NoIndexers });

@@ -868,6 +868,13 @@ public class Sink : ISink
             ((IDictionary<string, object?>)result)[WellKnownProperties.Subject] = subjectValue;
         }
 
+        if (entity.TryGetValue(WellKnownProperties.Subjects, out var subjects) &&
+            subjects is string { Length: > 0 } subjectsValue &&
+            JsonSerializer.Deserialize<ExpandoObject>(subjectsValue, ReadModelDbContext.JsonSerializerOptions) is { } subjectsDocument)
+        {
+            ((IDictionary<string, object?>)result)[WellKnownProperties.Subjects] = subjectsDocument;
+        }
+
         return result;
     }
 

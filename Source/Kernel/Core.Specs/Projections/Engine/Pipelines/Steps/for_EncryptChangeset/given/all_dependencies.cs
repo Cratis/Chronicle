@@ -40,7 +40,7 @@ public class all_dependencies : Specification
         _projection.TargetReadModelSchema.Returns(_schema);
 
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
-            .Returns(_ => new JsonObject());
+            .Returns(_ => new JsonObject { ["name"] = "value" });
         _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>())
             .Returns(_ => new ExpandoObject());
 

@@ -177,7 +177,7 @@ public static class DiagnosticIds
     public const string PiiOnEventSourceId = "CHR0034";
 
     /// <summary>
-    /// A read model declares a property named '_subject', which Chronicle reserves as an internal field.
+    /// A read model declares a property whose name Chronicle reserves for compliance subject tracking.
     /// </summary>
     public const string ReservedSubjectProperty = "CHR0035";
 
@@ -190,11 +190,6 @@ public static class DiagnosticIds
     /// The event type generations referenced by an event type migration must share one explicit [EventType] id.
     /// </summary>
     public const string MigrationGenerationEventTypeId = "CHR0037";
-
-    /// <summary>
-    /// A model-bound or fluent [Join] explicitly carries [PII] through a property different from the read model's apparent compliance subject.
-    /// </summary>
-    public const string CrossSubjectPiiJoin = "CHR0038";
 
     /// <summary>
     /// An awaitable-returning testing assertion is discarded rather than awaited, so it can never fail.
@@ -221,12 +216,6 @@ public static class DiagnosticIds
     /// compliance subject is not provably the value owner's.
     /// </summary>
     public const string KeyRedirectionPii = "CHR0043";
-
-    /// <summary>
-    /// A [Join] carries [PII] while source analysis cannot prove that the joined event's persisted runtime
-    /// subject is the read model document's compliance subject.
-    /// </summary>
-    public const string UnprovableCrossSubjectPiiJoin = "CHR0044";
 
     /// <summary>
     /// An event stream metadata attribute is applied to an event type, where nothing reads it.

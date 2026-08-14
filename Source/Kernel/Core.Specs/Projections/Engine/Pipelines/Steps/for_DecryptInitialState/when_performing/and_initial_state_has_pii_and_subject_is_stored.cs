@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
@@ -11,6 +12,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_DecryptInitial
 public class and_initial_state_has_pii_and_subject_is_stored : given.all_dependencies
 {
     const string StoredSubject = "stored-subject";
+    const string OtherSubject = "other-subject";
     ProjectionEventContext _context;
     ProjectionEventContext _result;
 
@@ -26,11 +28,20 @@ public class and_initial_state_has_pii_and_subject_is_stored : given.all_depende
 
         dynamic state = new ExpandoObject();
         state.name = "encrypted-name";
-        ((IDictionary<string, object?>)(ExpandoObject)state)[WellKnownProperties.Subject] = StoredSubject;
+        var storedState = (IDictionary<string, object?>)(ExpandoObject)state;
+        storedState[WellKnownProperties.Subject] = StoredSubject;
+        storedState[WellKnownProperties.Subjects] = ReadModelSubjects.ToExpandoObject(new Dictionary<string, string>
+        {
+            ["name"] = OtherSubject
+        });
+        _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
+            .Returns(_ => new JsonObject { ["name"] = "encrypted-name" });
         _context = CreateContext(state);
     }
 
     async Task Because() => _result = await _step.Perform(_projection, _context);
 
-    [Fact] void should_call_compliance_manager_release() => _complianceManager.Received(1).Release(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), StoredSubject, Arg.Any<JsonObject>());
+    [Fact] void should_call_compliance_manager_release() => _complianceManager.Received(1).Release(EventStore, EventStoreNamespace, Arg.Any<JsonSchema>(), OtherSubject, Arg.Any<JsonObject>());
+    [Fact] void should_preserve_the_default_subject_in_the_released_state() => ((IDictionary<string, object?>)_context.Changeset.InitialState)[WellKnownProperties.Subject].ShouldEqual(StoredSubject);
+    [Fact] void should_preserve_the_property_subjects_in_the_released_state() => ReadModelSubjects.From(((IDictionary<string, object?>)_context.Changeset.InitialState)[WellKnownProperties.Subjects])["name"].ShouldEqual(OtherSubject);
 }

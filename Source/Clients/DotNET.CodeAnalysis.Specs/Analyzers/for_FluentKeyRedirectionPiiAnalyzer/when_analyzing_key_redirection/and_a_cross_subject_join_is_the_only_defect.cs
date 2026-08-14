@@ -6,7 +6,7 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_FluentKeyRedirectionPiiAnalyzer.when_analyzing_key_redirection;
 
 /// <summary>
-/// CHR0038 owns the [Join] spelling; this rule must not double-report it.
+/// Joined PII has tracked per-property ownership; this key-redirection rule must not report it.
 /// </summary>
 public class and_a_cross_subject_join_is_the_only_defect : given.a_fluent_key_redirection_pii_analyzer
 {

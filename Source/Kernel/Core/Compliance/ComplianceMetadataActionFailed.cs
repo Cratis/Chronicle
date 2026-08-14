@@ -36,7 +36,7 @@ public class ComplianceMetadataActionFailed(string action, string propertyPath, 
 
     static string SubjectMismatchHint(string action, string identifier, Exception error) =>
         action == ReleaseAction && IsCryptographic(error)
-            ? $" The stored value could not be decrypted with the encryption key for subject '{identifier}', so it was encrypted under a different subject. A read model has one compliance subject and all of its [PII] is released under it, so a value belonging to another subject cannot be read back. The usual cause is a projection join copying a [PII] value out of another event source's stream — see CHR0038."
+            ? $" The stored value could not be decrypted with the encryption key for subject '{identifier}', so it was encrypted under a different subject or its ownership metadata is missing."
             : string.Empty;
 
     static bool IsCryptographic(Exception? error)

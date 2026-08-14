@@ -1,8 +1,8 @@
-# CHR0035: Read model declares a reserved '_subject' property
+# CHR0035: Read model declares a reserved compliance subject property
 
 ## Rule Description
 
-A read model — a record or class marked with `[ReadModel]` — declares a property or record parameter named exactly `_subject`. Chronicle reserves the `_subject` field in the MongoDB document backing a read model for internal compliance-subject tracking, so a same-named property silently collides with it.
+A read model — a record or class marked with `[ReadModel]` — declares a property or record parameter named `_subject`, `__subject`, or `__subjects`. Chronicle reserves these fields in stored read model documents for internal compliance-subject tracking, so a same-named property silently collides with them.
 
 Rename the property.
 
@@ -16,9 +16,9 @@ Error
 
 ## Why This Rule Exists
 
-Every managed read-model document carries an internal `_subject` field that Chronicle uses to track the compliance subject the document belongs to — the identity its `[PII]` values are encrypted under and erased by. That field is infrastructure, not part of your model.
+Every managed read-model document carries an internal `__subject` field that Chronicle uses as the default identity its `[PII]` values are encrypted under and erased by. A document composed from several subjects can also carry `__subjects`, which maps individual properties to their owners. These fields are infrastructure, not part of your model. `_subject` remains reserved for compatibility with earlier stored shapes.
 
-A read-model property named `_subject` maps to the same document field, so your value and Chronicle's internal tracking value fight over one slot. The projected value can overwrite the tracking value or read back as Chronicle's, and after a right-to-erasure key deletion the behavior is undefined. Because the collision is by name in the persisted document, nothing surfaces at compile time without this rule — it just misbehaves at runtime.
+A read-model property with any reserved name maps to the same document field, so your value and Chronicle's internal tracking value fight over one slot. The projected value can overwrite the tracking value or read back as Chronicle's, and after a right-to-erasure key deletion the behavior is undefined. Because the collision is by name in the persisted document, nothing surfaces at compile time without this rule — it just misbehaves at runtime.
 
 Rename the property to anything else (for example `Subject`, without the leading underscore, if you genuinely need to expose the subject).
 

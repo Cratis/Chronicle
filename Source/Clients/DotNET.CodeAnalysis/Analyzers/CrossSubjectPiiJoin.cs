@@ -10,8 +10,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// The rule and shared reasoning behind <see cref="DiagnosticIds.CrossSubjectPiiJoin"/>, which is reported from
-/// both the model-bound and the fluent join analyzer.
+/// Shared projection-symbol analysis used by diagnostics that need to trace PII through projection mappings.
 /// </summary>
 static class CrossSubjectPiiJoin
 {
@@ -19,31 +18,6 @@ static class CrossSubjectPiiJoin
     /// The conventional name of a read model's identifier, used as the last fallback when resolving its subject.
     /// </summary>
     internal const string IdentifierName = "Id";
-
-    /// <summary>
-    /// The shared descriptor for the diagnostic.
-    /// </summary>
-    internal static readonly DiagnosticDescriptor Rule = new(
-        id: DiagnosticIds.CrossSubjectPiiJoin,
-        title: "[Join] of a [PII] value crosses the compliance subject",
-        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' through '{3}', which differs from this read model's apparent compliance subject. Chronicle can then release the joined value under the wrong key and freeze the projection with an 'oaep decoding error'. Resolve the value at the query edge under its owner's own subject instead.",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        description: "A join that explicitly selects a key different from the read model's apparent compliance subject can copy PII between subject boundaries. A read model stores one compliance subject and releases all of its PII under it, so the value may not decrypt. This established definite-boundary diagnostic remains an error. Cases where the source shape appears to use the same subject but append metadata prevents proof are reported separately by CHR0044 as a warning.");
-
-    /// <summary>
-    /// The warning reported when the source shape appears to use the same subject but persisted runtime subject
-    /// metadata prevents a source-level proof.
-    /// </summary>
-    internal static readonly DiagnosticDescriptor UnprovableRule = new(
-        id: DiagnosticIds.UnprovableCrossSubjectPiiJoin,
-        title: "[Join] of a [PII] value cannot prove compliance subject equality",
-        messageFormat: "The join with '{1}' on '{0}' copies the [PII] value '{1}.{2}' through the apparent subject '{3}', but append metadata and historical events can assign another persisted runtime subject. If the runtime subjects differ, Chronicle can release or erase the copy under the wrong key. Keep the value owner-scoped or resolve it at the query edge.",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        description: "An omitted join key or a key that names the read model's apparent subject does not prove that every joined event was persisted under that subject. Explicit append metadata can override an event declaration, and historical events retain their stored subject. This conservative expansion is a warning so adding it does not turn previously accepted source into a transitive build break; CHR0038 remains the error for an explicitly different join boundary.");
 
     static readonly char[] _propertyPathSeparators = ['.'];
 
@@ -56,8 +30,8 @@ static class CrossSubjectPiiJoin
     /// <para>
     /// The kernel stores an explicit persisted event subject when it differs from the event source id and otherwise
     /// uses the resolved document key. Client release resolves [Subject] and then 'Id' from the materialized model.
-    /// Neither runtime value is reproducible from a type declaration alone. This ordering deliberately preserves
-    /// CHR0038's released source boundary: [Subject], [Key], an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
+    /// Neither runtime value is reproducible from a type declaration alone. The source boundary ordering is
+    /// [Subject], [Key], an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
     /// </para>
     /// <para>
     /// The result is an apparent boundary and diagnostic context only. It is not the stored document compliance

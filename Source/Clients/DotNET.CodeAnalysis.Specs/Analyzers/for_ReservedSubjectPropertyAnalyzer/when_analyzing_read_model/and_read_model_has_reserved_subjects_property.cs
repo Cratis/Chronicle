@@ -6,23 +6,20 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ReservedSubjectPropertyAnalyzer.when_analyzing_read_model;
 
-public class and_read_model_has_reserved_subject_property : given.a_reserved_subject_property_analyzer
+public class and_read_model_has_reserved_subjects_property : given.a_reserved_subject_property_analyzer
 {
     const string Usage = """
     [ReadModel]
-    public class Customer
-    {
-        public Guid Id { get; init; }
-
-        public string {|#0:_subject|} { get; init; }
-    }
+    public record Customer(
+        Guid Id,
+        {|#0:string __subjects|});
     """;
 
     Task _result;
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ReservedSubjectPropertyAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.ReservedSubjectProperty, DiagnosticSeverity.Error, "Customer", "_subject"));
+        new ExpectedDiagnostic(DiagnosticIds.ReservedSubjectProperty, DiagnosticSeverity.Error, "Customer", "__subjects"));
 
     [Fact] Task should_report_the_diagnostic() => _result;
 }
