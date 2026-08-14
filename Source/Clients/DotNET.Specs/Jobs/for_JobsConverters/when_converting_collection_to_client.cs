@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Jobs.for_JobsConverters;
 
 public class when_converting_collection_to_client : Specification
 {
-    IEnumerable<Contracts.Jobs.Job> _contracts;
+    IEnumerable<Contracts.Jobs.JobSummaryResponse> _contracts;
     IEnumerable<Job> _result;
     IEventStore _eventStore;
 
@@ -14,7 +14,7 @@ public class when_converting_collection_to_client : Specification
         _eventStore = Substitute.For<IEventStore>();
         _contracts =
         [
-            new Contracts.Jobs.Job
+            new Contracts.Jobs.JobSummaryResponse
             {
                 Id = Guid.NewGuid(),
                 Type = "TypeA",
@@ -22,7 +22,7 @@ public class when_converting_collection_to_client : Specification
                 StatusChanges = [],
                 Progress = new Contracts.Jobs.JobProgress()
             },
-            new Contracts.Jobs.Job
+            new Contracts.Jobs.JobSummaryResponse
             {
                 Id = Guid.NewGuid(),
                 Type = "TypeB",

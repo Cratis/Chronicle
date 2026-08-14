@@ -4,13 +4,13 @@
 namespace Cratis.Chronicle.Contracts.Jobs;
 
 /// <summary>
-/// Represents the progress of a step.
+/// Represents the progress of a job step.
 /// </summary>
 [ProtoContract]
 public class JobStepProgress
 {
     /// <summary>
-    /// Gets or sets the percentage of the step.
+    /// Gets or sets the percentage completion of the step.
     /// </summary>
     [ProtoMember(1)]
     public int Percentage { get; set; }
@@ -19,5 +19,5 @@ public class JobStepProgress
     /// Gets or sets the current message associated with the progress.
     /// </summary>
     [ProtoMember(2)]
-    public string Message { get; set; }
+    public string Message { get; set; } = string.Empty;
 }

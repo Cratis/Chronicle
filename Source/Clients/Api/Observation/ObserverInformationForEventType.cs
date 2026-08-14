@@ -4,7 +4,9 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Observation;
@@ -33,7 +35,7 @@ public record ObserverInformationForEventType(
         IObservers observers,
         INamespaces namespaces)
     {
-        var namespaceNames = await namespaces.GetNamespaces(new() { EventStore = eventStore });
+        var namespaceNames = await namespaces.AllNamespaces(new() { EventStore = eventStore }).EnsureSuccess();
         var results = new List<ObserverInformationForEventType>();
 
         foreach (var @namespace in namespaceNames)
@@ -66,7 +68,7 @@ public record ObserverInformationForEventType(
         namespaces.InvokeAndWrapWithTransformSubject(
             token => namespaces
                 .ObserveNamespaces(new() { EventStore = eventStore }, token)
-                .Select(namespaceNames => ObserverInformationForEventTypeFilter.ObserveForAllNamespaces(eventStore, eventTypeId, observers, namespaceNames))
+                .Select(namespaceNames => ObserverInformationForEventTypeFilter.ObserveForAllNamespaces(eventStore, eventTypeId, observers, namespaceNames.EnsureSuccess()))
                 .Switch(),
             results => results);
 }

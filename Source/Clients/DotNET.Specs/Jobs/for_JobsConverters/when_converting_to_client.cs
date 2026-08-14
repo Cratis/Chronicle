@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Jobs.for_JobsConverters;
 
 public class when_converting_to_client : Specification
 {
-    Contracts.Jobs.Job _contract;
+    Contracts.Jobs.JobSummaryResponse _contract;
     Job _result;
     Guid _jobId;
     IEventStore _eventStore;
@@ -16,7 +16,7 @@ public class when_converting_to_client : Specification
         _jobId = Guid.NewGuid();
         _created = DateTimeOffset.UtcNow;
         _eventStore = Substitute.For<IEventStore>();
-        _contract = new Contracts.Jobs.Job
+        _contract = new Contracts.Jobs.JobSummaryResponse
         {
             Id = _jobId,
             Details = "Some details",

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Authorization;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Chronicle.Api.Security;
@@ -27,12 +28,10 @@ public record ChangePasswordForUser(
     /// <param name="users">The <see cref="IUsers"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IUsers users) =>
-        users.ChangePassword(new()
+        users.ChangeUserPassword(new()
         {
             UserId = UserId,
-            OldPassword = oldPassword,
             Password = Password,
             ConfirmedPassword = ConfirmedPassword
-        });
+        }).EnsureSuccess();
 }
-

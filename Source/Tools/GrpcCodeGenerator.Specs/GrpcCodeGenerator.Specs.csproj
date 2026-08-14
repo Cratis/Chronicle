@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../GrpcCodeGenerator/GrpcCodeGenerator.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>

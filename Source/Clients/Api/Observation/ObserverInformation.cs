@@ -64,7 +64,7 @@ public record ObserverInformation(
         IObservers observers) =>
         observers.InvokeAndWrapWithTransformSubject(
             token => observers.ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace }, token),
-            observers => observers.ToApi());
+            observations => observations.ToApi());
 
     /// <summary>
     /// Get all replayable observers for specific event types.

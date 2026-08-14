@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
-using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.Namespaces;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -17,27 +18,18 @@ namespace Cratis.Chronicle.Services;
 internal sealed class Namespaces(IGrainFactory grainFactory, IStorage storage) : INamespaces
 {
     /// <inheritdoc/>
-    public async Task Ensure(EnsureNamespace command)
-    {
-        var namespaces = grainFactory.GetGrain<Chronicle.Namespaces.INamespaces>(command.EventStore);
-        await namespaces.Ensure(command.Name);
-    }
+    public Task<CommandResult> EnsureNamespace(EnsureNamespaceRequest request, CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            new Chronicle.Namespaces.EnsureNamespace(request.EventStore, request.Namespace),
+            command => command.Handle(grainFactory));
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<string>> GetNamespaces(GetNamespacesRequest request)
-    {
-        var eventStore = storage.GetEventStore(request.EventStore);
-        var namespaces = await eventStore.Namespaces.GetAll();
-        return namespaces.Select(_ => _.Name.Value).ToArray();
-    }
+    public Task<QueryResult<IEnumerable<string>>> AllNamespaces(AllNamespacesRequest request, CallContext callContext = default) =>
+        QueryExecutor.Execute(() => Chronicle.Namespaces.NamespaceNames.AllNamespaces(request.EventStore, storage));
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<string>> ObserveNamespaces(GetNamespacesRequest request, CallContext context = default)
-    {
-        var eventStore = storage.GetEventStore(request.EventStore);
-        return eventStore.Namespaces
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .Select(_ => _.Select(_ => _.Name.Value).ToArray());
-    }
+    public IObservable<QueryResult<IEnumerable<string>>> ObserveNamespaces(ObserveNamespacesRequest request, CallContext callContext = default) =>
+        QueryExecutor.Execute(() =>
+            Chronicle.Namespaces.NamespaceNames.ObserveNamespaces(request.EventStore, storage)
+                .CompletedBy(callContext.CancellationToken));
 }

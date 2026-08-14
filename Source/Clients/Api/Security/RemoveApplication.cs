@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Chronicle.Api.Security;
@@ -18,8 +19,8 @@ public record RemoveApplication(Guid Id)
     /// <param name="applications">The <see cref="IApplications"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IApplications applications) =>
-        applications.Remove(new()
+        applications.RemoveApplication(new()
         {
-            Id = Id,
-        });
+            Id = Id
+        }).EnsureSuccess();
 }
