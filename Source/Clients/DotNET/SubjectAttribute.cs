@@ -4,13 +4,12 @@
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Marks a property or record parameter as the <see cref="Subject"/> of an event — the identity used to
-/// key per-subject compliance material such as PII encryption keys.
+/// Marks a property or record parameter as the <see cref="Subject"/> used for compliance operations.
 /// </summary>
 /// <remarks>
-/// When this attribute is present on a property or record constructor parameter of an event type,
-/// Chronicle will automatically derive the subject from that value when the caller does not supply
-/// an explicit <see cref="Subject"/> to <c>IEventSequence.Append</c>.
+/// On an event type, Chronicle derives the append subject from this value when the caller does not supply
+/// an explicit <see cref="Subject"/>. On a read model, <see cref="ReadModels.IReadModels.Release{TReadModel}(TReadModel)"/>
+/// uses this value to select the encryption key for an instance that needs manual release.
 ///
 /// <code>
 /// [EventType]
@@ -22,7 +21,8 @@ namespace Cratis.Chronicle;
 ///
 /// Appending without an explicit subject automatically uses the <c>Customer</c> property as the
 /// subject, so PII fields are encrypted under the customer's key rather than the order's key.
+/// A read model's attribute does not override the ownership metadata maintained by Chronicle's projection
+/// pipeline; managed projection reads use the provenance of each projected value.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = false)]
 public sealed class SubjectAttribute : Attribute;
-

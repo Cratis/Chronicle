@@ -37,8 +37,20 @@ internal class ReadModelReleaser(
             return instance;
         }
 
+        var schema = schemaGenerator.Generate(typeof(TReadModel));
+        if (!schema.HasComplianceMetadata())
+        {
+            return instance;
+        }
+
         var subject = ReadModelSubjectResolver.ResolveFrom(instance);
-        return subject is null ? instance : await ReleaseWhole(subject, instance);
+        if (subject is null)
+        {
+            logger.NoSubjectForRelease(typeof(TReadModel).Name);
+            return instance;
+        }
+
+        return await ReleaseWhole(subject, instance, schema);
     }
 
     /// <summary>
@@ -58,14 +70,8 @@ internal class ReadModelReleaser(
         return result;
     }
 
-    async Task<TReadModel> ReleaseWhole<TReadModel>(Subject subject, TReadModel instance)
+    async Task<TReadModel> ReleaseWhole<TReadModel>(Subject subject, TReadModel instance, JsonSchema schema)
     {
-        var schema = schemaGenerator.Generate(typeof(TReadModel));
-        if (!schema.HasComplianceMetadata())
-        {
-            return instance;
-        }
-
         var payload = JsonSerializer.Serialize(instance, jsonSerializerOptions);
         var released = await ReleasePayload<TReadModel>(subject, schema.ToJson(), payload);
 
