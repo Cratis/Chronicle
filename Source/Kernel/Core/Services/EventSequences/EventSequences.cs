@@ -38,6 +38,16 @@ internal sealed class EventSequences(
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
+    public async Task<GetEventSequencesResponse> GetEventSequences(GetEventSequencesRequest request, CallContext context = default)
+    {
+        var eventSequences = await grainFactory
+            .GetEventSequences(request.EventStore, request.Namespace)
+            .GetEventSequences();
+
+        return new() { EventSequenceIds = [.. eventSequences.Select(_ => _.Value)] };
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendResponse> Append(AppendRequest request, CallContext context = default)
     {
         var eventSequence = GetEventSequenceGrain(request);
@@ -122,6 +132,51 @@ internal sealed class EventSequences(
         return new()
         {
             HasEvents = await eventSequence.HasEventsFor(request.EventSourceId)
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<QueryEventsResponse> QueryEvents(QueryEventsRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceStorage(request);
+        var criteria = request.Criteria.ToChronicle();
+        var totalCount = await eventSequence.GetCountMatching(criteria);
+
+        var appendedEvents = new List<AppendedEvent>();
+        var sort = new EventSequenceQuerySort((Storage.EventSequences.EventSequenceQuerySortBy)request.SortBy, request.Descending);
+        using (var cursor = await eventSequence.GetPage(criteria, request.Skip, request.Take, sort))
+        {
+            while (await cursor.MoveNext())
+            {
+                appendedEvents.AddRange(cursor.Current);
+            }
+        }
+
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetFor(appendedEvents.Select(_ => _.Context.EventType).Distinct());
+        var schemasByEventType = eventTypeSchemas.ToDictionary(_ => _.Type);
+
+        return new()
+        {
+            Events = await ToContracts(appendedEvents, schemasByEventType),
+            TotalCount = totalCount
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<GetHistogramResponse> GetHistogram(GetHistogramRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceStorage(request);
+        var buckets = await eventSequence.GetHistogram(
+            (Storage.EventSequences.HistogramResolution)request.Resolution,
+            request.Criteria.ToChronicle());
+
+        return new()
+        {
+            Buckets = [.. buckets.Select(_ => new Contracts.EventSequences.HistogramBucket
+            {
+                Occurred = _.Occurred,
+                Count = _.Count
+            })]
         };
     }
 

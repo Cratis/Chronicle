@@ -199,6 +199,16 @@ public static class WellKnownTableNames
     public const string ExternalServiceDefinitions = "ExternalServiceDefinitions";
 
     /// <summary>
+    /// The table that holds saved event sequence queries.
+    /// </summary>
+    public const string SequenceQueries = "SequenceQueries";
+
+    /// <summary>
+    /// The table that holds the folders saved event sequence queries are filed into.
+    /// </summary>
+    public const string SequenceQueryFolders = "SequenceQueryFolders";
+
+    /// <summary>
     /// The table that holds captures.
     /// </summary>
     public const string Captures = "Captures";

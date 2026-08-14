@@ -19,6 +19,15 @@ public interface IEventSequences
     Task<AppendResponse> Append(AppendRequest request, CallContext context = default);
 
     /// <summary>
+    /// Get the event sequences a namespace has.
+    /// </summary>
+    /// <param name="request">The <see cref="GetEventSequencesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetEventSequencesResponse"/>.</returns>
+    [Operation]
+    Task<GetEventSequencesResponse> GetEventSequences(GetEventSequencesRequest request, CallContext context = default);
+
+    /// <summary>
     /// Append many events to an event sequence.
     /// </summary>
     /// <param name="request">The <see cref="AppendManyRequest"/> with all the details and events.</param>
@@ -62,6 +71,24 @@ public interface IEventSequences
     /// <returns>True if it has, false if not.</returns>
     [Operation]
     Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(GetFromEventSequenceNumberRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Query a page of events out of an event sequence, narrowed by a set of criteria.
+    /// </summary>
+    /// <param name="request">The <see cref="QueryEventsRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The page of matching events together with the total number of matches.</returns>
+    [Operation]
+    Task<QueryEventsResponse> QueryEvents(QueryEventsRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get the number of events per time bucket in an event sequence, for driving a time range picker.
+    /// </summary>
+    /// <param name="request">The <see cref="GetHistogramRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The buckets containing at least one matching event, ordered by time ascending.</returns>
+    [Operation]
+    Task<GetHistogramResponse> GetHistogram(GetHistogramRequest request, CallContext context = default);
 
     /// <summary>
     /// Revise an event in an event sequence.

@@ -1,276 +1,189 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
-import strings from 'Strings';
-import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
-import { type EventStoreAndNamespaceParams } from 'Shared';
+import { useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
-import { EventDetails } from './EventDetails';
-import { AppendedEvent } from 'Api/Events';
-import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
-import { MultiSelect } from 'primereact/multiselect';
-import { DataTableFilterMeta } from 'primereact/datatable';
-import { FilterMatchMode } from 'primereact/api';
-import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { AppendEventDialog } from './Add/AppendEventDialog';
-import { useState, useCallback } from 'react';
+import { Allotment } from 'allotment';
+import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
+import { TabPanel, TabView } from 'primereact/tabview';
+import { Button } from 'primereact/button';
+import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
-import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
-import { ReviseDialog, ReviseDialogProps } from './ReviseDialog';
-import { GetReplayableObserversForEventTypes } from 'Api/Observation';
-import { ObserverType } from 'Api/Observation/ObserverType';
-import * as faIcons from 'react-icons/fa6';
+import { type EventStoreAndNamespaceParams } from 'Shared';
+import { AllEventSequences } from 'Api/EventSequences/AllEventSequences';
+import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
+import { AllQueryFolders } from 'Api/SequenceQueries/AllQueryFolders';
+import { AllSequenceQueries } from 'Api/SequenceQueries/AllSequenceQueries';
+import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
+import { getDistinctEventTypeOptions } from './getDistinctEventTypeOptions';
+import { QueryEditor } from './QueryEditor/QueryEditor';
+import { SaveQueryDialog, SaveQueryDialogResponse } from './QueryEditor/SaveQueryDialog';
+import { SequenceQueryState } from './QueryEditor/SequenceQueryState';
+import { OpenQuery, hasUnsavedChanges } from './QueryEditor/OpenQuery';
+import { saveSequenceQuery } from './QueryEditor/saveSequenceQuery';
+import { useOpenQueries } from './QueryEditor/useOpenQueries';
+import { QueryHierarchy } from './QueryHierarchy/QueryHierarchy';
+import { foldersInScope } from './QueryHierarchy/buildQueryTree';
+import { useHierarchyWidth, minimumHierarchyWidth } from './QueryHierarchy/useHierarchyWidth';
+import { useQueryHierarchyActions } from './QueryHierarchy/useQueryHierarchyActions';
+import { QueryTabHeader } from './QueryTabHeader';
+import './Sequences.css';
 
-import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
-
-const occurred = (event: AppendedEvent) => {
-    return event.context.occurred.toLocaleString();
-};
-
-// Delay in milliseconds to wait before refreshing data after adding an event
-// This allows the backend to process and persist the event before re-querying
-const REFRESH_DELAY_MS = 200;
-
-type Lambda<T> = (target: T) => unknown;
-
-function GetPathFor<T>(lambda: Lambda<T>): string {
-    const handler = new PropertyPathResolverProxyHandler();
-    const proxy = new Proxy({}, handler);
-    lambda(proxy);
-    return handler.path;
-}
-
+/**
+ * The event sequence workspace: a hierarchy of the queries the user has saved on the left, and the
+ * ones they currently have open as tabs on the right.
+ * @returns The rendered page.
+ */
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AppendEventWrapper, showAppendEvent] = useDialog(AppendEventDialog);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
-    const [showConfirmation] = useConfirmationDialog();
-    const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
-    const [ReviseWrapper, showRevise] = useDialog<ReviseDialogProps>(ReviseDialog);
+    const eventStore = params.eventStore!;
+    const namespace = params.namespace!;
+    const sequenceStrings = strings.eventStore.namespaces.sequences;
 
-    const queryArgs: AppendedEventsParameters = {
-        eventStore: params.eventStore!,
-        namespace: params.namespace!,
-        eventSequenceId: 'event-log'
-    };
+    const [eventTypes] = AllEventTypes.use({ eventStore });
+    const eventTypeIds = useMemo(
+        () => getDistinctEventTypeOptions(eventTypes.data).map(option => option.value),
+        [eventTypes.data]
+    );
 
-    const handleRedactEvent = async () => {
-        if (selectedEvent) {
-            const confirmResult = await showConfirmation(
-                strings.eventStore.namespaces.sequences.dialogs.redact.confirmTitle,
-                strings.eventStore.namespaces.sequences.dialogs.redact.confirmMessage,
-                DialogButtons.YesNo
-            );
-            if (confirmResult !== DialogResult.Yes) return;
+    const [eventSequences] = AllEventSequences.use({ eventStore });
 
-            const [result] = await showRedactEvent({
-                eventStore: params.eventStore!,
-                namespace: params.namespace!,
-                eventSequenceId: 'event-log',
-                sequenceNumber: selectedEvent.context.sequenceNumber
-            });
-            if (result === DialogResult.Ok) {
-                setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
-            }
+    const [savedQueries, performSavedQueries] = AllSequenceQueries.use({ eventStore });
+    const queriesForNamespace = useMemo(
+        () => savedQueries.data.filter(query => query.namespace === namespace),
+        [savedQueries.data, namespace]
+    );
+
+    const [savedFolders, performSavedFolders] = AllQueryFolders.use({ eventStore });
+    const foldersForNamespace = useMemo(
+        () => savedFolders.data.filter(folder => folder.namespace === namespace),
+        [savedFolders.data, namespace]
+    );
+
+    // Re-reading has to repeat the arguments - a query performed without them narrows nothing and
+    // is rejected before it reaches the server, which would silently leave the hierarchy stale.
+    const performRef = useRef({ queries: performSavedQueries, folders: performSavedFolders });
+    performRef.current = { queries: performSavedQueries, folders: performSavedFolders };
+    const refreshSavedQueries = useCallback(() => {
+        performRef.current.queries({ eventStore });
+        performRef.current.folders({ eventStore });
+    }, [eventStore]);
+
+    const { open, activeIndex, setActiveIndex, update, markSaved, applyPersisted, add, close, closeById, openSaved } =
+        useOpenQueries(queriesForNamespace, namespace, sequenceStrings.newQuery, !savedQueries.isPerforming);
+
+    const hierarchy = useQueryHierarchyActions(
+        eventStore, namespace, queriesForNamespace, foldersForNamespace, refreshSavedQueries, closeById, applyPersisted);
+    const [SaveQueryWrapper, showSaveQuery] = useDialog<SaveQueryDialogResponse>(SaveQueryDialog);
+
+    const persist = useCallback(async (state: SequenceQueryState) => {
+        if (await saveSequenceQuery(state, eventStore)) {
+            markSaved(state);
+            refreshSavedQueries();
         }
-    };
+    }, [eventStore, markSaved, refreshSavedQueries]);
 
-    const observerTypeName = (type: ObserverType): string => {
-        switch (type) {
-            case ObserverType.reactor: return 'Reactor';
-            case ObserverType.projection: return 'Projection';
-            case ObserverType.reducer: return 'Reducer';
-            case ObserverType.external: return 'External';
-            default: return 'Unknown';
+    // The first save is where a query gets its name and its place in the hierarchy; every save
+    // after that just writes it back where it already lives.
+    const save = useCallback(async (state: SequenceQueryState, isFirstSave: boolean) => {
+        if (!isFirstSave) {
+            await persist(state);
+            return;
         }
-    };
 
-    const handleReviseEvent = async () => {
-        if (selectedEvent) {
-            const query = new GetReplayableObserversForEventTypes();
-            const queryResult = await query.perform({
-                eventStore: params.eventStore!,
-                namespace: params.namespace!,
-                eventTypeIds: selectedEvent.context.eventType.id
-            });
+        const [result, response] = await showSaveQuery({
+            name: state.name,
+            scope: state.scope,
+            folder: state.folder,
+            folders: foldersInScope(queriesForNamespace, state.scope, foldersForNamespace)
+        });
+        if (result !== DialogResult.Ok || !response) return;
 
-            const observers = queryResult.data;
-            const reviseStrings = strings.eventStore.namespaces.sequences.dialogs.revise;
-            let confirmMessage: string;
+        await persist({ ...state, ...response });
+    }, [persist, showSaveQuery, queriesForNamespace, foldersForNamespace]);
 
-            if (observers.length > 0) {
-                const observerList = observers
-                    .map(o => `\u2022 ${o.id} (${observerTypeName(o.type)})`)
-                    .join('\n');
-                confirmMessage = `${reviseStrings.confirmMessage}\n\n${observerList}`;
-            } else {
-                confirmMessage = reviseStrings.confirmNoObservers;
-            }
-
-            const confirmResult = await showConfirmation(
-                reviseStrings.confirmTitle,
-                confirmMessage,
-                DialogButtons.YesNo
-            );
-            if (confirmResult !== DialogResult.Yes) return;
-
-            const [result] = await showRevise({
-                event: selectedEvent,
-                eventStore: params.eventStore!,
-                namespace: params.namespace!
-            });
-            if (result === DialogResult.Ok) {
-                setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
-            }
+    // Renaming from the tab writes the new name back there and then, the same as renaming the node
+    // in the hierarchy does - a name is what a query is called rather than an edit to what it asks
+    // for. Only the name is written, so anything else in flight stays unsaved; and a query that has
+    // never been saved has nowhere to write it to yet, so it just carries the name until it is.
+    const rename = useCallback(async (index: number, query: OpenQuery, name: string) => {
+        if (query.saved === null) {
+            update(index, { ...query.state, name });
+            return;
         }
-    };
 
-    const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.context.sequenceNumber);
-    const typePath = GetPathFor<AppendedEvent>(et => et.context.eventType.id);
-    const eventSourceIdPath = GetPathFor<AppendedEvent>(et => et.context.eventSourceId);
-    const occurredPath = GetPathFor<AppendedEvent>(et => et.context.occurred);
+        if (!await saveSequenceQuery({ ...query.saved, name }, eventStore)) return;
 
-    const filters: DataTableFilterMeta = {
-        idPath: { value: null, matchMode: FilterMatchMode.IN },
-        eventSourceIdPath: { value: null, matchMode: FilterMatchMode.EQUALS },
-        occurredPath: { value: null, matchMode: FilterMatchMode.BETWEEN }
-    };
+        applyPersisted(state => (state.id === query.state.id ? { ...state, name } : state));
+        refreshSavedQueries();
+    }, [eventStore, update, applyPersisted, refreshSavedQueries]);
 
-    const [eventTypes] = AllEventTypes.use({
-        eventStore: params.eventStore!
-    });
-
-    const handleAppendEvent = async () => {
-        const [result] = await showAppendEvent();
-        if (result === DialogResult.Ok) {
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
-        }
-    };
-
-    const handleExportEvents = useCallback(async () => {
-        const query = new AppendedEvents();
-        const result = await query.perform(queryArgs);
-        if (!result.hasData || result.data.length === 0) return;
-
-        const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
-
-        const exportData = result.data.map(event => ({
-            eventType: event.context.eventType.id,
-            eventSourceId: event.context.eventSourceId,
-            sequenceNumber: event.context.sequenceNumber,
-            occurred: event.context.occurred,
-            content: (() => {
-                try {
-                    return JSON.parse(event.content);
-                } catch {
-                    return event.content;
-                }
-            })()
-        }));
-
-        const json = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `events-${sanitize(params.eventStore!)}-${sanitize(params.namespace!)}-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, [queryArgs, params.eventStore, params.namespace]);
-
-    const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
-        return (
-            <MultiSelect
-                value={options.value}
-                options={eventTypes.data}
-                onChange={(e) => options.filterCallback(e.value)}
-                optionLabel='id'
-                placeholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType}
-                maxSelectedLabels={1}
-                className='p-column-filter' />
-        );
-    };
+    const hierarchyWidth = useHierarchyWidth();
+    const activeQuery = open[activeIndex];
 
     return (
-        <Page title={strings.eventStore.namespaces.sequences.title}>
-            <DataPage
-                key={refreshTrigger}
-                title={strings.eventStore.namespaces.sequences.title}
-                query={AppendedEvents}
-                queryArguments={queryArgs}
-                selection={selectedEvent}
-                emptyMessage={strings.eventStore.namespaces.sequences.empty}
-                dataKey={sequenceNumberPath}
-                defaultFilters={filters}
-                globalFilterFields={['context.eventType.id']}
-                detailsComponent={EventDetails}
-                onSelectionChange={(e) => setSelectedEvent(e.value as AppendedEvent | null)}>
+        <Page title={sequenceStrings.title}>
+            <div className='sequences'>
+                <Allotment className='h-full' proportionalLayout={false} onChange={hierarchyWidth.onChange}>
+                    <Allotment.Pane preferredSize={hierarchyWidth.width} minSize={minimumHierarchyWidth}>
+                        <QueryHierarchy
+                            queries={queriesForNamespace}
+                            folders={foldersForNamespace}
+                            selectedQueryId={activeQuery?.state.id ?? null}
+                            renamingId={hierarchy.renamingId}
+                            onRenamingIdChange={hierarchy.setRenamingId}
+                            onOpen={openSaved}
+                            onNewQuery={(scope, folder) => add(scope, folder)}
+                            onNewFolder={hierarchy.newFolder}
+                            onRenameQuery={hierarchy.renameQuery}
+                            onRenameFolder={hierarchy.renameFolder}
+                            onDeleteQuery={hierarchy.deleteQuery}
+                            onDeleteFolder={hierarchy.deleteFolder} />
+                    </Allotment.Pane>
 
-                <DataPage.MenuItems>
-                    <MenuItem
-                        id='appendEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.appendEvent}
-                        icon={faIcons.FaPlus}
-                        command={handleAppendEvent} />
-                    <MenuItem
-                        id='redactEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.redact}
-                        icon={faIcons.FaEraser}
-                        disableOnUnselected
-                        command={handleRedactEvent} />
-                    <MenuItem
-                        id='reviseEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.revise}
-                        icon={faIcons.FaArrowsRotate}
-                        disableOnUnselected
-                        command={handleReviseEvent} />
-                    <MenuItem
-                        id='exportEvents'
-                        label={strings.eventStore.namespaces.sequences.actions.export}
-                        icon={faIcons.FaFileExport}
-                        command={handleExportEvents} />
-                </DataPage.MenuItems>
+                    <Allotment.Pane className='flex-grow'>
+                        <div className='sequences__tabs'>
+                            <TabView
+                                className='sequences__tabview'
+                                activeIndex={activeIndex}
+                                onTabChange={event => setActiveIndex(event.index)}
+                                onTabClose={event => close(event.index)}>
+                                {open.map((query, index) => (
+                                    <TabPanel
+                                        key={query.state.id}
+                                        closable
+                                        header={
+                                            <QueryTabHeader
+                                                name={query.state.name || sequenceStrings.newQuery}
+                                                hasUnsavedChanges={hasUnsavedChanges(query)}
+                                                onRename={name => rename(index, query, name)} />
+                                        }>
+                                        <QueryEditor
+                                            state={query.state}
+                                            eventStore={eventStore}
+                                            eventTypeIds={eventTypeIds}
+                                            eventSequenceIds={eventSequences.data}
+                                            hasUnsavedChanges={hasUnsavedChanges(query)}
+                                            onChange={state => update(index, state)}
+                                            onSave={() => save(query.state, query.saved === null)} />
+                                    </TabPanel>
+                                ))}
+                            </TabView>
 
-                <DataPage.Columns>
-                    <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
+                            <Button
+                                className='sequences__add'
+                                icon='pi pi-plus'
+                                text
+                                aria-label={sequenceStrings.actions.newQuery}
+                                tooltip={sequenceStrings.actions.newQuery}
+                                tooltipOptions={{ position: 'left', className: 'sequences__add-tooltip' }}
+                                onClick={() => add(SequenceQueryScope.user, '')} />
+                        </div>
+                    </Allotment.Pane>
+                </Allotment>
+            </div>
 
-                    <Column
-                        field={typePath}
-                        header={strings.eventStore.namespaces.sequences.columns.eventType}
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField={typePath}
-                        filterElement={eventTypeFilterTemplate}
-                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType} />
-
-                    <Column
-                        field={eventSourceIdPath}
-                        header={strings.eventStore.namespaces.sequences.columns.eventSourceId}
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField={eventSourceIdPath}
-                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventSourceId} />
-
-                    <Column
-                        field={occurredPath}
-                        header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred}
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField={occurredPath}
-                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
-                </DataPage.Columns>
-            </DataPage>
-            <AppendEventWrapper />
-            <RedactEventWrapper />
-            <ReviseWrapper />
+            <SaveQueryWrapper />
         </Page>
     );
 };

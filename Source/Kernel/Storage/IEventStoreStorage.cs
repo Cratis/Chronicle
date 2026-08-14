@@ -15,6 +15,7 @@ using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
+using Cratis.Chronicle.Storage.SequenceQueries;
 
 namespace Cratis.Chronicle.Storage;
 
@@ -72,6 +73,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IExternalServiceDefinitionsStorage"/> for the event store.
     /// </summary>
     IExternalServiceDefinitionsStorage ExternalServices { get; }
+
+    /// <summary>
+    /// Gets the <see cref="ISequenceQueryStorage"/> for the event store.
+    /// </summary>
+    ISequenceQueryStorage SequenceQueries { get; }
 
     /// <summary>
     /// Gets the <see cref="ICapturesStorage"/> for the event store.

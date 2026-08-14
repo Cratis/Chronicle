@@ -31,6 +31,7 @@ using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -157,6 +158,19 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IProjectionFuturesStorage ProjectionFutures { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Every event sequence keeps its state as one document keyed by its identifier, so the
+    /// collection holding them is the list of sequences the namespace has.
+    /// </remarks>
+    public async Task<IEnumerable<EventSequenceId>> GetEventSequences()
+    {
+        var collection = _eventStoreNamespaceDatabase.GetCollection<EventSequenceState>(WellKnownCollectionNames.EventSequences);
+        var identifiers = await collection.DistinctAsync<string>("_id", FilterDefinition<EventSequenceState>.Empty).ConfigureAwait(false);
+
+        return (await identifiers.ToListAsync().ConfigureAwait(false)).Select(_ => new EventSequenceId(_)).ToArray();
+    }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

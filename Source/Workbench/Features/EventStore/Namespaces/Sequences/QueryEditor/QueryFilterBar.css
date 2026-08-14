@@ -1,0 +1,45 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.query-filter-bar__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 4px;
+    background: var(--surface-card);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.query-filter-bar__trigger:hover {
+    background: var(--surface-hover);
+}
+
+.query-filter-bar__trigger.is-open {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.query-filter-bar__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--primary-color);
+    color: var(--primary-color-text);
+    font-size: 0.7rem;
+}
+
+/* The panel is rendered into the document body and positioned from the trigger's left edge, which
+   runs it off the side of the window when the trigger sits at the right of the toolbar. Lining its
+   right edge up with the trigger's keeps it on screen. Scoped to while our bar is on the page so the
+   pivot viewer's own filter panel is left alone. */
+body.query-filter-bar-anchored .pv-filter-dropdown {
+    left: auto !important;
+    right: var(--query-filter-bar-right, 1rem);
+}

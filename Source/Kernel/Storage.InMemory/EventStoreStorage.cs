@@ -21,6 +21,7 @@ using Cratis.Chronicle.Storage.InMemory.Observation.Webhooks;
 using Cratis.Chronicle.Storage.InMemory.Projections;
 using Cratis.Chronicle.Storage.InMemory.ReadModels;
 using Cratis.Chronicle.Storage.InMemory.Seeding;
+using Cratis.Chronicle.Storage.InMemory.SequenceQueries;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
@@ -30,6 +31,7 @@ using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
+using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage.InMemory;
@@ -79,6 +81,9 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage();
+
+    /// <inheritdoc/>
+    public ISequenceQueryStorage SequenceQueries { get; } = new SequenceQueryStorage();
 
     /// <inheritdoc/>
     public ICapturesStorage Captures { get; } = new CapturesStorage();

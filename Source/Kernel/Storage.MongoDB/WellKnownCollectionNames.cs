@@ -109,6 +109,16 @@ public static class WellKnownCollectionNames
     public const string ExternalServiceDefinitions = "external-services";
 
     /// <summary>
+    /// The collection that holds saved event sequence queries.
+    /// </summary>
+    public const string SequenceQueries = "sequence-queries";
+
+    /// <summary>
+    /// The collection that holds the folders saved event sequence queries are filed into.
+    /// </summary>
+    public const string SequenceQueryFolders = "sequence-query-folders";
+
+    /// <summary>
     /// The collection that holds captures.
     /// </summary>
     public const string Captures = "captures";

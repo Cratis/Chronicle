@@ -18,6 +18,7 @@ using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReadModelsReplayContexts = Cratis.Chronicle.Storage.ReadModels.ReplayContexts;
 using SinksSinks = Cratis.Chronicle.Storage.Sinks.Sinks;
@@ -80,6 +81,22 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public IProjectionFuturesStorage ProjectionFutures { get; } = new Projections.ProjectionFuturesStorage(eventStore, @namespace, database, jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Every event sequence keeps its state as one row keyed by its identifier, so the table holding
+    /// them is the list of sequences the namespace has.
+    /// </remarks>
+    public async Task<IEnumerable<EventSequenceId>> GetEventSequences()
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var identifiers = await scope.DbContext.EventSequences
+            .Select(_ => _.EventSequenceId)
+            .Distinct()
+            .ToListAsync();
+
+        return identifiers.Select(_ => new EventSequenceId(_)).ToArray();
+    }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId) =>
