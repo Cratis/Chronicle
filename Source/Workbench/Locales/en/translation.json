@@ -413,7 +413,8 @@
                     "deleteQuery": "Delete query",
                     "newFolder": "New folder",
                     "rename": "Rename",
-                    "save": "Save"
+                    "save": "Save",
+                    "deleteFolder": "Delete folder"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -424,20 +425,22 @@
                 "filters": {
                     "placeholders": {
                         "eventType": "Event type",
-                        "eventSourceId": "Event source",
-                        "occurred": "Occurred"
+                        "eventSourceId": "Filter by event source id",
+                        "eventSourceType": "Filter by event source type",
+                        "eventStreamType": "Filter by event stream type",
+                        "correlationId": "Filter by correlation id",
+                        "tags": "Add a tag and press enter"
                     },
-                    "eventSourceId": {
-                        "placeholder": "Filter by event source id",
-                        "help": "Filters the entire sequence on the server."
-                    },
-                    "pageScopedNote": "Column filters below apply only to the currently loaded page.",
                     "title": "Filters",
                     "noEventsToPlot": "No events to plot for the current filters.",
                     "clearRange": "Clear time range",
                     "groups": {
                         "eventType": "Event type",
                         "eventSource": "Event source",
+                        "eventSourceType": "Event source type",
+                        "eventStreamType": "Event stream type",
+                        "correlation": "Correlation",
+                        "tags": "Tags",
                         "occurred": "Time range"
                     }
                 },
@@ -467,6 +470,15 @@
                         "confirmTitle": "Confirm Revision",
                         "confirmMessage": "The following observers will be replayed after this revision:",
                         "confirmNoObservers": "No observers will be replayed. Proceed with revision?"
+                    },
+                    "deleteQuery": {
+                        "title": "Delete query",
+                        "message": "Delete \"{name}\"? This cannot be undone."
+                    },
+                    "deleteFolder": {
+                        "title": "Delete folder",
+                        "empty": "Delete the folder \"{folder}\"?",
+                        "withQueries": "Delete the folder \"{folder}\" and the {count} queries filed under it? This cannot be undone."
                     }
                 },
                 "details": {
@@ -488,7 +500,15 @@
                 "scope": {
                     "onlyMe": "Only me",
                     "everyone": "Everyone"
-                }
+                },
+                "newFolder": "New folder",
+                "save": {
+                    "title": "Save query",
+                    "visibleTo": "Visible to",
+                    "folder": "Folder",
+                    "rootFolder": "No folder"
+                },
+                "eventSequence": "Event sequence"
             },
             "observers": {
                 "title": "Observers",

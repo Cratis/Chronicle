@@ -2,25 +2,18 @@
 /* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
 .sequences {
-    display: flex;
-    gap: 1rem;
-    height: 100%;
-    min-height: 0;
-}
-
-.sequences__queries {
-    display: flex;
     flex: 1 1 auto;
-    min-width: 0;
     min-height: 0;
+    padding: 1rem;
 }
 
 .sequences__tabs {
     position: relative;
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    height: 100%;
     min-height: 0;
+    padding-left: 1rem;
 }
 
 .sequences__tabview {
@@ -30,8 +23,29 @@
     min-height: 0;
 }
 
+/* PrimeReact stacks its panels as plain blocks, so the open query would size to its toolbar and the
+   results would collapse to nothing. Both wrappers become flex rows of the height they are given. */
+.sequences__tabview .p-tabview-panels,
+.sequences__tabview .p-tabview-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sequences__tabview .p-tabview-panels {
+    padding: 0;
+}
+
 .sequences__add {
     position: absolute;
     top: 0.15rem;
     right: 0;
+}
+
+/* The button sits hard against the right edge, where a tooltip has no room to lay its text out and
+   ends up one letter per line. Keeping it on one line lets it open to the left instead. The tooltip
+   is rendered into the document body, so it is reached by its own class rather than from here. */
+.sequences__add-tooltip .p-tooltip-text {
+    white-space: nowrap;
 }

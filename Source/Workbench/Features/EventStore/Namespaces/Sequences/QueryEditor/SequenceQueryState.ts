@@ -17,12 +17,22 @@ export interface SequenceQueryState {
     name: string;
     /** Who the query is visible to. */
     scope: SequenceQueryScope;
+    /** The folder within the scope the query is filed under, or empty when it sits at the root. */
+    folder: string;
+    /** Whether the query has been saved at least once. */
+    isSaved: boolean;
     /** The namespace the query runs against. */
     namespace: string;
     /** The event sequence the query runs against. */
     eventSequenceId: string;
     /** The event source to narrow to, or empty for every event source. */
     eventSourceId: string;
+    /** The event source type to narrow to, or empty for every event source type. */
+    eventSourceType: string;
+    /** The event stream type to narrow to, or empty for every event stream type. */
+    eventStreamType: string;
+    /** The correlation to narrow to, or empty for every correlation. */
+    correlationId: string;
     /** The event type identifiers to narrow to, or empty for every event type. */
     eventTypes: string[];
     /** The tags to narrow to, or empty for every event. */
@@ -31,9 +41,14 @@ export interface SequenceQueryState {
     occurredFrom?: number;
     /** The exclusive upper bound on when the event occurred, in epoch milliseconds. */
     occurredTo?: number;
-    /** Whether results are ordered newest first. */
+    /** What the results are ordered by. */
+    sortBy: string;
+    /** Whether results are ordered from the highest value down rather than from the lowest up. */
     descending: boolean;
 }
+
+/** The field a query orders by until the user picks another one. */
+export const defaultSortBy = 'sequenceNumber';
 
 /** The event sequence a newly created query starts on. */
 export const defaultEventSequenceId = 'event-log';
@@ -43,17 +58,30 @@ export const defaultEventSequenceId = 'event-log';
  * @param id The identifier to give the query.
  * @param name The display name to give the query.
  * @param namespace The namespace the query runs against.
+ * @param scope Who the query should be visible to once it is saved.
+ * @param folder The folder to file the query under once it is saved.
  * @returns The new query state.
  */
-export const createSequenceQueryState = (id: string, name: string, namespace: string): SequenceQueryState => ({
+export const createSequenceQueryState = (
+    id: string,
+    name: string,
+    namespace: string,
+    scope: SequenceQueryScope = SequenceQueryScope.user,
+    folder = ''): SequenceQueryState => ({
     id,
     name,
-    scope: SequenceQueryScope.user,
+    scope,
+    folder,
+    isSaved: false,
     namespace,
     eventSequenceId: defaultEventSequenceId,
     eventSourceId: '',
+    eventSourceType: '',
+    eventStreamType: '',
+    correlationId: '',
     eventTypes: [],
     tags: [],
+    sortBy: defaultSortBy,
     descending: true
 });
 
@@ -66,21 +94,27 @@ export const toSequenceQueryState = (query: SequenceQuery): SequenceQueryState =
     id: query.id,
     name: query.name,
     scope: query.scope,
+    folder: query.folder ?? '',
+    isSaved: true,
     namespace: query.namespace,
     eventSequenceId: query.eventSequenceId,
     eventSourceId: query.eventSourceId ?? '',
+    eventSourceType: query.eventSourceType ?? '',
+    eventStreamType: query.eventStreamType ?? '',
+    correlationId: query.correlationId ?? '',
     eventTypes: [...(query.eventTypes ?? [])],
     tags: [...(query.tags ?? [])],
     occurredFrom: query.occurredFrom ? new Date(query.occurredFrom).getTime() : undefined,
     occurredTo: query.occurredTo ? new Date(query.occurredTo).getTime() : undefined,
+    sortBy: query.sortBy || defaultSortBy,
     descending: query.descending
 });
 
 /**
  * Determine whether two query states differ in any way that should be persisted.
  *
- * Saving happens as the user edits rather than behind a save button, so this is what keeps an
- * unchanged query from being written back on every render.
+ * This is what tells the editor whether there is anything to save, which drives both the state of
+ * the save action and the prompt before closing a tab with unsaved work.
  * @param first The first state.
  * @param second The second state.
  * @returns True when the two states are equivalent.
@@ -89,40 +123,19 @@ export const areSequenceQueryStatesEqual = (first: SequenceQueryState, second: S
     first.id === second.id &&
     first.name === second.name &&
     first.scope === second.scope &&
+    first.folder === second.folder &&
     first.namespace === second.namespace &&
     first.eventSequenceId === second.eventSequenceId &&
     first.eventSourceId === second.eventSourceId &&
+    first.eventSourceType === second.eventSourceType &&
+    first.eventStreamType === second.eventStreamType &&
+    first.correlationId === second.correlationId &&
+    first.sortBy === second.sortBy &&
     first.descending === second.descending &&
     first.occurredFrom === second.occurredFrom &&
     first.occurredTo === second.occurredTo &&
     areSetsEqual(first.eventTypes, second.eventTypes) &&
     areSetsEqual(first.tags, second.tags);
-
-/**
- * Determine whether a query narrows on anything at all.
- * @param state The query state.
- * @returns True when at least one filter is set.
- */
-export const hasAnyFilter = (state: SequenceQueryState): boolean =>
-    state.eventSourceId.trim().length > 0 ||
-    state.eventTypes.length > 0 ||
-    state.tags.length > 0 ||
-    state.occurredFrom !== undefined ||
-    state.occurredTo !== undefined;
-
-/**
- * Clear every filter on a query, leaving its identity, sequence and ordering intact.
- * @param state The query state.
- * @returns The state with no narrowing.
- */
-export const withoutFilters = (state: SequenceQueryState): SequenceQueryState => ({
-    ...state,
-    eventSourceId: '',
-    eventTypes: [],
-    tags: [],
-    occurredFrom: undefined,
-    occurredTo: undefined
-});
 
 const areSetsEqual = (first: string[], second: string[]): boolean => {
     if (first.length !== second.length) return false;

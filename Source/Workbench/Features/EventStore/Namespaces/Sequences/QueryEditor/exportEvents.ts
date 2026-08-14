@@ -1,40 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AppendedEvent } from 'Api/Events';
-
-/**
- * The shape an exported event takes in the downloaded file.
- */
-export interface ExportedEvent {
-    /** The identifier of the event's type. */
-    eventType: string;
-    /** The event source the event belongs to. */
-    eventSourceId: string;
-    /** The event's position in the sequence. */
-    sequenceNumber: string;
-    /** When the event occurred. */
-    occurred: Date;
-    /** The event's content, parsed when it is valid JSON and left as-is when it is not. */
-    content: unknown;
-}
-
-/**
- * Convert events into the shape they are exported in.
- *
- * Content is stored as a JSON string; it is parsed so the export nests naturally rather than
- * embedding an escaped string, and left alone when it turns out not to be JSON at all.
- * @param events The events to convert.
- * @returns The exportable events.
- */
-export const toExportedEvents = (events: AppendedEvent[]): ExportedEvent[] =>
-    events.map(event => ({
-        eventType: event.context.eventType.id,
-        eventSourceId: event.context.eventSourceId,
-        sequenceNumber: event.context.sequenceNumber.toString(),
-        occurred: event.context.occurred,
-        content: parseContent(event.content)
-    }));
+import { ExportEvents } from 'Api/EventSequences/ExportEvents';
+import { ExportedEvent } from 'Api/EventSequences/ExportedEvent';
+import { QueryEventsParameters } from 'Api/Events/QueryEvents';
 
 /**
  * Build the file name an export downloads as.
@@ -45,6 +14,45 @@ export const toExportedEvents = (events: AppendedEvent[]): ExportedEvent[] =>
  */
 export const exportFileName = (eventStore: string, namespace: string, today: Date): string =>
     `events-${sanitize(eventStore)}-${sanitize(namespace)}-${today.toISOString().slice(0, 10)}.json`;
+
+/**
+ * Render exported events as the JSON the file holds.
+ *
+ * Content arrives as the JSON string it is stored as; it is parsed so the file nests naturally
+ * rather than embedding an escaped string, and left alone when it turns out not to be JSON at all.
+ * @param events The events the server exported.
+ * @returns The file contents.
+ */
+export const toExportedJson = (events: ExportedEvent[]): string =>
+    JSON.stringify(events.map(event => ({ ...event, content: parseContent(event.content) })), null, 2);
+
+/**
+ * Export everything a query matches, as a file the browser saves.
+ *
+ * The whole matching set is assembled by the server rather than paged through here - the browser
+ * only ever holds one page of results, so it has nothing to export from on its own.
+ * @param queryArguments The arguments the query is currently running with.
+ * @param eventStore The event store the events come from.
+ * @param namespace The namespace the events come from.
+ * @returns Awaitable promise.
+ */
+export const exportQueryToFile = async (
+    queryArguments: QueryEventsParameters,
+    eventStore: string,
+    namespace: string): Promise<void> => {
+    const result = await new ExportEvents().perform(queryArguments);
+    if (!result.hasData || result.data.length === 0) return;
+
+    const blob = new Blob([toExportedJson(result.data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = exportFileName(eventStore, namespace, new Date());
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
 
 const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
 

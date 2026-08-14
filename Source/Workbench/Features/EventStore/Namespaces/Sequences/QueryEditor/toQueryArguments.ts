@@ -1,15 +1,25 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { QueryEventsParameters } from 'Api/EventSequences/QueryEvents';
+import { QueryEventsParameters } from 'Api/Events/QueryEvents';
 import { SequenceHistogramParameters } from 'Api/EventSequences/SequenceHistogram';
 import { SequenceQueryState } from './SequenceQueryState';
+
+const narrowing = (state: SequenceQueryState) => ({
+    eventSourceId: state.eventSourceId.trim() || undefined,
+    eventSourceType: state.eventSourceType.trim() || undefined,
+    eventStreamType: state.eventStreamType.trim() || undefined,
+    correlationId: state.correlationId.trim() || undefined,
+    eventTypeIds: state.eventTypes.length > 0 ? state.eventTypes.join(',') : undefined,
+    tags: state.tags.length > 0 ? state.tags.join(',') : undefined
+});
 
 /**
  * Project a query's state onto the arguments its event query takes.
  *
  * Absent filters are sent as undefined rather than as empty strings, so the backend leaves those
- * dimensions unnarrowed instead of matching on an empty value.
+ * dimensions unnarrowed instead of matching on an empty value. Ordering is deliberately absent:
+ * Arc carries that on the query itself rather than as an argument.
  * @param state The query state.
  * @param eventStore The event store the query runs against.
  * @returns The arguments for the events query.
@@ -18,11 +28,9 @@ export const toQueryArguments = (state: SequenceQueryState, eventStore: string):
     eventStore,
     namespace: state.namespace,
     eventSequenceId: state.eventSequenceId,
-    eventSourceId: state.eventSourceId.trim() || undefined,
-    eventTypeIds: state.eventTypes.length > 0 ? state.eventTypes.join(',') : undefined,
+    ...narrowing(state),
     occurredFrom: state.occurredFrom !== undefined ? new Date(state.occurredFrom) : undefined,
-    occurredTo: state.occurredTo !== undefined ? new Date(state.occurredTo) : undefined,
-    descending: state.descending
+    occurredTo: state.occurredTo !== undefined ? new Date(state.occurredTo) : undefined
 });
 
 /**
@@ -44,6 +52,5 @@ export const toHistogramArguments = (
     namespace: state.namespace,
     eventSequenceId: state.eventSequenceId,
     resolution,
-    eventSourceId: state.eventSourceId.trim() || undefined,
-    eventTypeIds: state.eventTypes.length > 0 ? state.eventTypes.join(',') : undefined
+    ...narrowing(state)
 });

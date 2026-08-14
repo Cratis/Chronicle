@@ -1,0 +1,20 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.save-query {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.5rem 0;
+}
+
+.save-query__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.save-query__field > span {
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+}

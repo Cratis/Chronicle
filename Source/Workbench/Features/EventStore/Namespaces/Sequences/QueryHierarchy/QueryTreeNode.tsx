@@ -46,7 +46,7 @@ export interface QueryTreeNodeProps {
     /** Called with the new name, or with null when the rename is abandoned. */
     onCommitRename: (node: QueryNode, name: string | null) => void;
 
-    /** Called when the row's delete button asks to remove a query. */
+    /** Called when the row's delete button asks to remove the node. */
     onDelete: (node: QueryNode) => void;
 }
 
@@ -66,9 +66,11 @@ export const QueryTreeNode = (props: QueryTreeNodeProps) => {
     const sequenceStrings = strings.eventStore.namespaces.sequences;
 
     const isQuery = node.kind === QueryNodeKind.Query;
+    const isScope = node.kind === QueryNodeKind.Scope;
     const isExpanded = expandedIds.has(node.id);
     const isRenaming = renamingId === node.id;
     const hasChildren = node.children.length > 0;
+
 
     const [draft, setDraft] = useState(node.name);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +92,7 @@ export const QueryTreeNode = (props: QueryTreeNodeProps) => {
             <div
                 className={`query-tree-node__row ${selectedId === node.id ? 'is-selected' : ''}`}
                 style={{ paddingLeft: `${level * 0.85 + 0.35}rem` }}
-                onClick={() => isQuery && props.onSelect(node)}
+                onClick={() => (isQuery ? props.onSelect(node) : props.onToggleExpand(node.id))}
                 onDoubleClick={() => !isRenaming && props.onStartRename(node)}>
 
                 <button
@@ -112,6 +114,7 @@ export const QueryTreeNode = (props: QueryTreeNodeProps) => {
                         onChange={event => setDraft(event.target.value)}
                         onBlur={commit}
                         onClick={event => event.stopPropagation()}
+                        onDoubleClick={event => event.stopPropagation()}
                         onKeyDown={event => {
                             if (event.key === 'Enter') commit();
                             if (event.key === 'Escape') props.onCommitRename(node, null);
@@ -137,11 +140,11 @@ export const QueryTreeNode = (props: QueryTreeNodeProps) => {
                             </button>
                         </>
                     )}
-                    {isQuery && (
+                    {!isScope && (
                         <button
                             type='button'
-                            title={sequenceStrings.actions.deleteQuery}
-                            aria-label={sequenceStrings.actions.deleteQuery}
+                            title={isQuery ? sequenceStrings.actions.deleteQuery : sequenceStrings.actions.deleteFolder}
+                            aria-label={isQuery ? sequenceStrings.actions.deleteQuery : sequenceStrings.actions.deleteFolder}
                             onClick={event => { event.stopPropagation(); props.onDelete(node); }}>
                             <faIcons.FaTrash />
                         </button>

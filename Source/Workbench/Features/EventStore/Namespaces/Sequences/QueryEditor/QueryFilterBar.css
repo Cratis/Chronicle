@@ -17,6 +17,11 @@
     background: var(--surface-hover);
 }
 
+.query-filter-bar__trigger.is-open {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
 .query-filter-bar__count {
     display: inline-flex;
     align-items: center;
@@ -28,4 +33,13 @@
     background: var(--primary-color);
     color: var(--primary-color-text);
     font-size: 0.7rem;
+}
+
+/* The panel is rendered into the document body and positioned from the trigger's left edge, which
+   runs it off the side of the window when the trigger sits at the right of the toolbar. Lining its
+   right edge up with the trigger's keeps it on screen. Scoped to while our bar is on the page so the
+   pivot viewer's own filter panel is left alone. */
+body.query-filter-bar-anchored .pv-filter-dropdown {
+    left: auto !important;
+    right: var(--query-filter-bar-right, 1rem);
 }

@@ -1,28 +1,18 @@
 /* Copyright (c) Cratis. All rights reserved. */
 /* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
 
-.query-editor {
+.events-table {
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--border-radius);
+    overflow: hidden;
 }
 
-.query-editor__toolbar {
-    padding: 0.5rem 0 0.75rem;
-}
-
-.query-editor__toolbar-end {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.query-editor__sequence {
-    min-width: 10rem;
-}
-
-.query-editor__results {
+.events-table__rows {
     flex: 1 1 auto;
     min-height: 0;
+    overflow: auto;
 }

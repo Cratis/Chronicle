@@ -5,3 +5,4 @@ export * from './QueryHierarchy';
 export * from './QueryNode';
 export * from './QueryNodeKind';
 export * from './buildQueryTree';
+export * from './folderNaming';

@@ -1,21 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import strings from 'Strings';
+import { QueryFolder } from 'Api/SequenceQueries/QueryFolder';
 import { SequenceQuery } from 'Api/SequenceQueries/SequenceQuery';
 import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
-import { buildQueryTree, queryNodeId } from './buildQueryTree';
+import { buildQueryTree, folderNodeId, queryNodeId } from './buildQueryTree';
+import { renamedFolderPath, rewriteFolderPath } from './folderNaming';
 import { QueryNode } from './QueryNode';
 import { QueryNodeKind } from './QueryNodeKind';
 import { QueryTreeNode } from './QueryTreeNode';
 import './QueryHierarchy.css';
 
 const STORAGE_KEY_EXPANDED = 'cratis.workbench.sequences.hierarchy.expandedIds';
-const STORAGE_KEY_WIDTH = 'cratis.workbench.sequences.hierarchy.width';
-const MIN_WIDTH = 180;
-const MAX_WIDTH = 640;
-const DEFAULT_WIDTH = 260;
 
 /**
  * Props for {@link QueryHierarchy}.
@@ -24,8 +22,17 @@ export interface QueryHierarchyProps {
     /** The saved queries visible to the user. */
     queries: SequenceQuery[];
 
+    /** The folders stored for the hierarchy, including the ones holding nothing yet. */
+    folders: QueryFolder[];
+
     /** The identifier of the query currently being viewed, or null. */
     selectedQueryId: string | null;
+
+    /** The identifier of the node that should open in rename mode, or null. */
+    renamingId: string | null;
+
+    /** Called when the node being renamed changes, including when a rename finishes. */
+    onRenamingIdChange: (id: string | null) => void;
 
     /** Called when a saved query is picked. */
     onOpen: (query: SequenceQuery) => void;
@@ -39,14 +46,15 @@ export interface QueryHierarchyProps {
     /** Called when a saved query is renamed from the tree. */
     onRenameQuery: (query: SequenceQuery, name: string) => void;
 
+    /** Called when a folder is renamed from the tree. */
+    onRenameFolder: (scope: SequenceQueryScope, folder: string, name: string) => void;
+
     /** Called when a saved query is deleted from the tree. */
     onDeleteQuery: (query: SequenceQuery) => void;
-}
 
-const readStoredWidth = (): number => {
-    const stored = Number(localStorage.getItem(STORAGE_KEY_WIDTH));
-    return Number.isFinite(stored) && stored >= MIN_WIDTH ? stored : DEFAULT_WIDTH;
-};
+    /** Called when an empty folder is deleted from the tree. */
+    onDeleteFolder: (scope: SequenceQueryScope, folder: string) => void;
+}
 
 const readStoredExpanded = (): string[] | null => {
     try {
@@ -59,8 +67,8 @@ const readStoredExpanded = (): string[] | null => {
 };
 
 /**
- * The resizable sidebar listing saved queries as a hierarchy: a root per scope, folders within them,
- * and the queries filed into those folders.
+ * The sidebar listing saved queries as a hierarchy: a root per scope, folders within them, and the
+ * queries filed into those folders.
  * @param props The {@link QueryHierarchyProps}.
  * @returns The rendered sidebar.
  */
@@ -68,24 +76,36 @@ export const QueryHierarchy = (props: QueryHierarchyProps) => {
     const sequenceStrings = strings.eventStore.namespaces.sequences;
 
     const roots = useMemo(
-        () => buildQueryTree(props.queries, sequenceStrings.scope.onlyMe, sequenceStrings.scope.everyone),
-        [props.queries, sequenceStrings.scope.onlyMe, sequenceStrings.scope.everyone]);
+        () => buildQueryTree(
+            props.queries,
+            sequenceStrings.scope.onlyMe,
+            sequenceStrings.scope.everyone,
+            props.folders),
+        [props.queries, props.folders, sequenceStrings.scope.onlyMe, sequenceStrings.scope.everyone]);
 
     // Both scope roots start open when there is no stored preference, so the queries are visible
     // without having to discover the twisty first.
     const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(
         readStoredExpanded() ?? [
-            queryNodeId(SequenceQueryScope.user, ''),
-            queryNodeId(SequenceQueryScope.everyone, '')
+            folderNodeId(SequenceQueryScope.user, ''),
+            folderNodeId(SequenceQueryScope.everyone, '')
         ]));
-
-    const [renamingId, setRenamingId] = useState<string | null>(null);
-    const [width, setWidth] = useState(readStoredWidth);
-    const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY_EXPANDED, JSON.stringify([...expandedIds]));
     }, [expandedIds]);
+
+    // A node created from the tree is only reachable once its parent is open, so opening it is part
+    // of creating it rather than something the user has to do afterwards.
+    useEffect(() => {
+        if (!props.renamingId) return;
+        setExpandedIds(current => {
+            const ancestors = roots.flatMap(root => ancestorIdsOf(root, props.renamingId!));
+            if (ancestors.every(id => current.has(id))) return current;
+
+            return new Set([...current, ...ancestors]);
+        });
+    }, [props.renamingId, roots]);
 
     const toggleExpand = useCallback((id: string) => {
         setExpandedIds(current => {
@@ -95,79 +115,100 @@ export const QueryHierarchy = (props: QueryHierarchyProps) => {
         });
     }, []);
 
-    // Dragging is tracked on the window rather than the handle so the pointer can leave the narrow
-    // handle mid-drag without the resize sticking.
-    const beginResize = useCallback((event: React.PointerEvent) => {
-        dragStateRef.current = { startX: event.clientX, startWidth: width };
-
-        const move = (moveEvent: PointerEvent) => {
-            const state = dragStateRef.current;
-            if (!state) return;
-            const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, state.startWidth + moveEvent.clientX - state.startX));
-            setWidth(next);
-        };
-
-        const up = () => {
-            dragStateRef.current = null;
-            window.removeEventListener('pointermove', move);
-            window.removeEventListener('pointerup', up);
-            setWidth(current => {
-                localStorage.setItem(STORAGE_KEY_WIDTH, String(current));
-                return current;
-            });
-        };
-
-        window.addEventListener('pointermove', move);
-        window.addEventListener('pointerup', up);
-    }, [width]);
-
     const startRename = useCallback((node: QueryNode) => {
-        // Only saved queries can be renamed from here - a folder has no identity of its own beyond the
-        // paths of the queries filed under it, so renaming one means rewriting all of them.
-        if (node.kind === QueryNodeKind.Query) setRenamingId(node.id);
-    }, []);
+        // A scope root is one of the two fixed places a query can live, so its name is not the
+        // user's to change.
+        if (node.kind !== QueryNodeKind.Scope) props.onRenamingIdChange(node.id);
+    }, [props]);
 
     const commitRename = useCallback((node: QueryNode, name: string | null) => {
-        setRenamingId(null);
-        if (name && node.query && name !== node.name) props.onRenameQuery(node.query, name);
+        props.onRenamingIdChange(null);
+        if (!name || name === node.name) return;
+
+        if (node.kind === QueryNodeKind.Query && node.query) {
+            props.onRenameQuery(node.query, name);
+            return;
+        }
+
+        if (node.kind !== QueryNodeKind.Folder) return;
+
+        // A folder node is identified by its path, so renaming one gives every node at or below it a
+        // new identity. Moving the expansion over with them is what keeps the tree from folding up
+        // under the user the moment they rename a folder.
+        const renamed = renamedFolderPath(node.folder, name);
+        setExpandedIds(current => new Set([...current].map(id => rewriteExpandedId(id, node.scope, node.folder, renamed))));
+        props.onRenameFolder(node.scope, node.folder, name);
+    }, [props]);
+
+    const deleteNode = useCallback((node: QueryNode) => {
+        if (node.kind === QueryNodeKind.Query && node.query) {
+            props.onDeleteQuery(node.query);
+        } else if (node.kind === QueryNodeKind.Folder) {
+            props.onDeleteFolder(node.scope, node.folder);
+        }
     }, [props]);
 
     return (
-        <aside className='query-hierarchy' style={{ width: `${width}px` }}>
-            <div className='query-hierarchy__content'>
-                <h2 className='query-hierarchy__title'>{sequenceStrings.savedQueries}</h2>
+        <aside className='query-hierarchy'>
+            <h2 className='query-hierarchy__title'>{sequenceStrings.savedQueries}</h2>
 
-                {props.queries.length === 0 && (
-                    <p className='query-hierarchy__empty'>{sequenceStrings.noSavedQueries}</p>
-                )}
+            {props.queries.length === 0 && (
+                <p className='query-hierarchy__empty'>{sequenceStrings.noSavedQueries}</p>
+            )}
 
-                <ul className='query-hierarchy__tree'>
-                    {roots.map(root => (
-                        <QueryTreeNode
-                            key={root.id}
-                            node={root}
-                            level={0}
-                            selectedId={props.selectedQueryId
-                                ? queryNodeId(root.scope, '', props.selectedQueryId)
-                                : null}
-                            expandedIds={expandedIds}
-                            renamingId={renamingId}
-                            onToggleExpand={toggleExpand}
-                            onSelect={node => node.query && props.onOpen(node.query)}
-                            onAddQuery={node => props.onNewQuery(node.scope, node.folder)}
-                            onAddFolder={node => props.onNewFolder(node.scope, node.folder)}
-                            onStartRename={startRename}
-                            onCommitRename={commitRename}
-                            onDelete={node => node.query && props.onDeleteQuery(node.query)} />
-                    ))}
-                </ul>
-            </div>
-
-            <div
-                className='query-hierarchy__resizer'
-                role='separator'
-                aria-orientation='vertical'
-                onPointerDown={beginResize} />
+            <ul className='query-hierarchy__tree'>
+                {roots.map(root => (
+                    <QueryTreeNode
+                        key={root.id}
+                        node={root}
+                        level={0}
+                        selectedId={props.selectedQueryId ? queryNodeId(props.selectedQueryId) : null}
+                        expandedIds={expandedIds}
+                        renamingId={props.renamingId}
+                        onToggleExpand={toggleExpand}
+                        onSelect={node => node.query && props.onOpen(node.query)}
+                        onAddQuery={node => props.onNewQuery(node.scope, node.folder)}
+                        onAddFolder={node => props.onNewFolder(node.scope, node.folder)}
+                        onStartRename={startRename}
+                        onCommitRename={commitRename}
+                        onDelete={deleteNode} />
+                ))}
+            </ul>
         </aside>
     );
+};
+
+/**
+ * Move an expanded folder identifier over to where its folder was renamed to.
+ * @param id The expanded node identifier.
+ * @param scope The scope the renamed folder lives under.
+ * @param from The folder path before the rename.
+ * @param to The folder path after it.
+ * @returns The rewritten identifier, or the original when it names something else.
+ */
+const rewriteExpandedId = (id: string, scope: SequenceQueryScope, from: string, to: string): string => {
+    const prefix = `${scope}:folder:`;
+    if (!id.startsWith(prefix)) return id;
+
+    return `${prefix}${rewriteFolderPath(id.slice(prefix.length), from, to)}`;
+};
+
+/**
+ * Collect the identifiers of every node between the root and a node, the root included and the node
+ * itself excluded.
+ * @param node The node to descend from.
+ * @param targetId The identifier to look for.
+ * @returns The ancestor identifiers, or an empty array when the target is not underneath.
+ */
+const ancestorIdsOf = (node: QueryNode, targetId: string): string[] => {
+    if (node.id === targetId) return [];
+
+    for (const child of node.children) {
+        if (child.id === targetId) return [node.id];
+
+        const beneath = ancestorIdsOf(child, targetId);
+        if (beneath.length > 0) return [node.id, ...beneath];
+    }
+
+    return [];
 };
