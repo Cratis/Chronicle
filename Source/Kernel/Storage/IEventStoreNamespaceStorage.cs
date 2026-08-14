@@ -98,6 +98,17 @@ public interface IEventStoreNamespaceStorage
     IProjectionFuturesStorage ProjectionFutures { get; }
 
     /// <summary>
+    /// Get the event sequences that exist for the event store namespace.
+    /// </summary>
+    /// <returns>A collection of <see cref="EventSequenceId"/>.</returns>
+    /// <remarks>
+    /// An event sequence exists from the moment it holds state, so this is what the namespace has
+    /// actually been used for rather than what it could be used for. The well-known sequences are
+    /// not implied - a caller that needs them regardless has to add them itself.
+    /// </remarks>
+    Task<IEnumerable<EventSequenceId>> GetEventSequences();
+
+    /// <summary>
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.
     /// </summary>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>

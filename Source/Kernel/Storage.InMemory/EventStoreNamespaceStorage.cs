@@ -96,6 +96,14 @@ public sealed class EventStoreNamespaceStorage(
     public IProjectionFuturesStorage ProjectionFutures { get; } = new ProjectionFuturesStorage();
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A sequence exists here from the moment something asks for it, which is the in-memory
+    /// equivalent of it having state written for it.
+    /// </remarks>
+    public Task<IEnumerable<EventSequenceId>> GetEventSequences() =>
+        Task.FromResult<IEnumerable<EventSequenceId>>([.. _eventSequences.Keys]);
+
+    /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId) => GetConcreteEventSequence(eventSequenceId);
 
     /// <inheritdoc/>

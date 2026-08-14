@@ -19,6 +19,15 @@ public interface IEventSequences
     Task<AppendResponse> Append(AppendRequest request, CallContext context = default);
 
     /// <summary>
+    /// Get the event sequences a namespace has.
+    /// </summary>
+    /// <param name="request">The <see cref="GetEventSequencesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetEventSequencesResponse"/>.</returns>
+    [Operation]
+    Task<GetEventSequencesResponse> GetEventSequences(GetEventSequencesRequest request, CallContext context = default);
+
+    /// <summary>
     /// Append many events to an event sequence.
     /// </summary>
     /// <param name="request">The <see cref="AppendManyRequest"/> with all the details and events.</param>

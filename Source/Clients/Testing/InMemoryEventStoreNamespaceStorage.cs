@@ -86,6 +86,13 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
     public IProjectionFuturesStorage ProjectionFutures => throw new NotSupportedException();
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The in-process harness serves a single event sequence, so that is the whole list.
+    /// </remarks>
+    public Task<IEnumerable<KernelEventSequences::EventSequenceId>> GetEventSequences() =>
+        Task.FromResult<IEnumerable<KernelEventSequences::EventSequenceId>>([KernelEventSequences::EventSequenceId.Log]);
+
+    /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(KernelEventSequences::EventSequenceId eventSequenceId) => eventSequenceStorage;
 
     /// <inheritdoc/>

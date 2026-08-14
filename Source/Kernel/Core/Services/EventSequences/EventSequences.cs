@@ -38,6 +38,16 @@ internal sealed class EventSequences(
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
+    public async Task<GetEventSequencesResponse> GetEventSequences(GetEventSequencesRequest request, CallContext context = default)
+    {
+        var eventSequences = await grainFactory
+            .GetEventSequences(request.EventStore, request.Namespace)
+            .GetEventSequences();
+
+        return new() { EventSequenceIds = [.. eventSequences.Select(_ => _.Value)] };
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendResponse> Append(AppendRequest request, CallContext context = default)
     {
         var eventSequence = GetEventSequenceGrain(request);
@@ -133,7 +143,8 @@ internal sealed class EventSequences(
         var totalCount = await eventSequence.GetCountMatching(criteria);
 
         var appendedEvents = new List<AppendedEvent>();
-        using (var cursor = await eventSequence.GetPage(criteria, request.Skip, request.Take, request.Descending))
+        var sort = new EventSequenceQuerySort((Storage.EventSequences.EventSequenceQuerySortBy)request.SortBy, request.Descending);
+        using (var cursor = await eventSequence.GetPage(criteria, request.Skip, request.Take, sort))
         {
             while (await cursor.MoveNext())
             {

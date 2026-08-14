@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
@@ -87,6 +88,7 @@ internal sealed class ChronicleServerStartupTask(
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await jobsManager.Rehydrate();
+                await grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate();
                 await RehydrateReducerAndReactorObservers(eventStore, namespaceName);
             });
             await Task.WhenAll(rehydrateAll);

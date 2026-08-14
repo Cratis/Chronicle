@@ -12,6 +12,16 @@ namespace Cratis.Chronicle.EventSequences;
 public static class EventSequencesGrainFactoryExtensions
 {
     /// <summary>
+    /// Gets the <see cref="IEventSequences"/> managing the sequences of an event store namespace.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use for getting the grain.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> to get for.</param>
+    /// <param name="namespaceName">The <see cref="EventStoreNamespaceName"/> to get for.</param>
+    /// <returns>An <see cref="IEventSequences"/>.</returns>
+    public static IEventSequences GetEventSequences(this IGrainFactory grainFactory, EventStoreName eventStore, EventStoreNamespaceName namespaceName) =>
+        grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(eventStore, namespaceName));
+
+    /// <summary>
     /// Gets the event sequence for a specific <see cref="EventSequenceId"/> and <see cref="EventStoreName"/> and <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use for getting the event sequence.</param>
