@@ -44,4 +44,22 @@ public class EventSequenceQueryCriteria
     /// </summary>
     [ProtoMember(5)]
     public DateTimeOffset? OccurredTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event source type to narrow to. Null or empty means every event source type.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event stream type to narrow to. Null or empty means every event stream type.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the correlation to narrow to. Null means every correlation.
+    /// </summary>
+    [ProtoMember(8)]
+    public Guid? CorrelationId { get; set; }
 }

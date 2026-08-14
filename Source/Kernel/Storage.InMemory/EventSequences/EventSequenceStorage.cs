@@ -90,13 +90,18 @@ public class EventSequenceStorage(
         EventSequenceQueryCriteria criteria,
         int skip,
         int take,
-        bool descending = false,
+        EventSequenceQuerySort? sort = null,
         CancellationToken cancellationToken = default)
     {
+        var order = sort ?? EventSequenceQuerySort.Default;
         var matching = Matching(Events, criteria);
-        var ordered = descending
-            ? matching.OrderByDescending(_ => _.Context.SequenceNumber.Value)
-            : matching.OrderBy(_ => _.Context.SequenceNumber.Value);
+        var ordered = order.By switch
+        {
+            EventSequenceQuerySortBy.Occurred => OrderBy(matching, _ => _.Context.Occurred, order.Descending),
+            EventSequenceQuerySortBy.EventType => OrderBy(matching, _ => _.Context.EventType.Id.Value, order.Descending),
+            EventSequenceQuerySortBy.EventSourceId => OrderBy(matching, _ => _.Context.EventSourceId.Value, order.Descending),
+            _ => OrderBy(matching, _ => _.Context.SequenceNumber.Value, order.Descending)
+        };
 
         return Task.FromResult<IEventCursor>(new EventCursor([.. ordered.Skip(skip).Take(take)]));
     }
@@ -575,17 +580,24 @@ public class EventSequenceStorage(
     static string Serialize(ExpandoObject content) => JsonSerializer.Serialize(content, _serializerOptions);
 
     /// <summary>
+    /// Order events by a key in either direction.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key ordered on.</typeparam>
+    /// <param name="events">The events to order.</param>
+    /// <param name="key">The key to order by.</param>
+    /// <param name="descending">Whether to order from the highest value down rather than from the lowest up.</param>
+    /// <returns>The ordered events.</returns>
+    static IOrderedEnumerable<AppendedEvent> OrderBy<TKey>(IEnumerable<AppendedEvent> events, Func<AppendedEvent, TKey> key, bool descending) =>
+        descending ? events.OrderByDescending(key) : events.OrderBy(key);
+
+    /// <summary>
     /// Narrow events to those matching a set of query criteria.
     /// </summary>
     /// <param name="events">The events to narrow.</param>
     /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> narrowing the events.</param>
     /// <returns>Matching events - every event when the criteria narrows nothing.</returns>
     static IEnumerable<AppendedEvent> Matching(IEnumerable<AppendedEvent> events, EventSequenceQueryCriteria criteria) =>
-        events.Where(_ => criteria.Matches(
-            _.Context.EventSourceId,
-            _.Context.EventType.Id,
-            _.Context.Tags.Select(tag => tag.Value),
-            _.Context.Occurred));
+        events.Where(_ => criteria.Matches(_.Context));
 
     /// <summary>
     /// Narrows the events by the supplied criteria, matching how the persistent storage providers build their queries.

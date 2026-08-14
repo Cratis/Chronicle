@@ -118,14 +118,19 @@ public class EventSequenceStorage(
         EventSequenceQueryCriteria criteria,
         int skip,
         int take,
-        bool descending = false,
+        EventSequenceQuerySort? sort = null,
         CancellationToken cancellationToken = default)
     {
+        var order = sort ?? EventSequenceQuerySort.Default;
         var collection = _collection;
         var find = collection.Find(CreateFilterFor(criteria));
-        var sorted = descending
-            ? find.SortByDescending(_ => _.SequenceNumber)
-            : find.SortBy(_ => _.SequenceNumber);
+        var sorted = order.By switch
+        {
+            EventSequenceQuerySortBy.Occurred => order.Descending ? find.SortByDescending(_ => _.Occurred) : find.SortBy(_ => _.Occurred),
+            EventSequenceQuerySortBy.EventType => order.Descending ? find.SortByDescending(_ => _.Type) : find.SortBy(_ => _.Type),
+            EventSequenceQuerySortBy.EventSourceId => order.Descending ? find.SortByDescending(_ => _.EventSourceId) : find.SortBy(_ => _.EventSourceId),
+            _ => order.Descending ? find.SortByDescending(_ => _.SequenceNumber) : find.SortBy(_ => _.SequenceNumber)
+        };
 
         var cursor = await sorted
             .Skip(skip)
@@ -980,6 +985,21 @@ public class EventSequenceStorage(
         if (criteria.HasEventSourceId)
         {
             filters.Add(Builders<Event>.Filter.Eq(_ => _.EventSourceId, criteria.EventSourceId));
+        }
+
+        if (criteria.HasEventSourceType)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(_ => _.EventSourceType, criteria.EventSourceType));
+        }
+
+        if (criteria.HasEventStreamType)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(_ => _.EventStreamType, criteria.EventStreamType));
+        }
+
+        if (criteria.HasCorrelationId)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(_ => _.CorrelationId, criteria.CorrelationId));
         }
 
         if (criteria.HasEventTypes)

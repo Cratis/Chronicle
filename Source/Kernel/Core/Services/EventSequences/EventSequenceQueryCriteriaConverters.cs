@@ -24,6 +24,9 @@ public static class EventSequenceQueryCriteriaConverters
     public static EventSequenceQueryCriteria ToChronicle(this Contracts.EventSequences.EventSequenceQueryCriteria criteria) =>
         new(
             string.IsNullOrWhiteSpace(criteria.EventSourceId) ? null : new EventSourceId(criteria.EventSourceId),
+            string.IsNullOrWhiteSpace(criteria.EventSourceType) ? null : new EventSourceType(criteria.EventSourceType),
+            string.IsNullOrWhiteSpace(criteria.EventStreamType) ? null : new EventStreamType(criteria.EventStreamType),
+            criteria.CorrelationId is null ? null : new CorrelationId(criteria.CorrelationId.Value),
             criteria.EventTypes.Count == 0 ? null : [.. criteria.EventTypes.ToChronicle()],
             criteria.Tags.Count == 0 ? null : [.. criteria.Tags.Select(tag => new Tag(tag))],
             criteria.OccurredFrom,

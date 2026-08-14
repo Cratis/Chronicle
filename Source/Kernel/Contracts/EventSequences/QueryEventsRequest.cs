@@ -40,8 +40,14 @@ public class QueryEventsRequest : IEventSequenceRequest
     public int Take { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether to order from the newest event down rather than from the oldest up.
+    /// Gets or sets a value indicating whether to order from the highest value down rather than from the lowest up.
     /// </summary>
     [ProtoMember(7)]
     public bool Descending { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the events are ordered by. Defaults to their position in the sequence.
+    /// </summary>
+    [ProtoMember(8)]
+    public EventSequenceQuerySortBy SortBy { get; set; }
 }

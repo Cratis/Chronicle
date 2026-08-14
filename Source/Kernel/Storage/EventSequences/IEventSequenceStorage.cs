@@ -260,15 +260,19 @@ public interface IEventSequenceStorage
     Task<EventCount> GetCountMatching(EventSequenceQueryCriteria criteria);
 
     /// <summary>
-    /// Get a page of events matching a set of criteria, ordered by sequence number.
+    /// Get a page of events matching a set of criteria.
     /// </summary>
     /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> narrowing the events returned.</param>
     /// <param name="skip">Number of matching events to skip before the page starts.</param>
     /// <param name="take">Maximum number of events in the page.</param>
-    /// <param name="descending">Whether to order from the newest event down rather than from the oldest up.</param>
+    /// <param name="sort">How to order the events, or <see langword="null"/> for <see cref="EventSequenceQuerySort.Default"/>.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/> over the page.</returns>
-    Task<IEventCursor> GetPage(EventSequenceQueryCriteria criteria, int skip, int take, bool descending = false, CancellationToken cancellationToken = default);
+    /// <remarks>
+    /// The order is applied in storage rather than to the page, so paging through a sorted query
+    /// walks the whole matching set in that order rather than sorting each page on its own.
+    /// </remarks>
+    Task<IEventCursor> GetPage(EventSequenceQueryCriteria criteria, int skip, int take, EventSequenceQuerySort? sort = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get the number of matching events per time bucket, for driving a time range picker.

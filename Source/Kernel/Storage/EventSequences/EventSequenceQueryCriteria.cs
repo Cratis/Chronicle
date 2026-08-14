@@ -9,6 +9,9 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// Represents the criteria that narrow an event sequence query made for presentation purposes.
 /// </summary>
 /// <param name="EventSourceId">Optional <see cref="EventSourceId"/> to narrow to.</param>
+/// <param name="EventSourceType">Optional <see cref="EventSourceType"/> to narrow to.</param>
+/// <param name="EventStreamType">Optional <see cref="EventStreamType"/> to narrow to.</param>
+/// <param name="CorrelationId">Optional <see cref="CorrelationId"/> to narrow to.</param>
 /// <param name="EventTypes">Optional <see cref="EventType">event types</see> to narrow to - an event matches when it is any of them.</param>
 /// <param name="Tags">Optional <see cref="Tag">tags</see> to narrow to - an event matches when it carries any of them.</param>
 /// <param name="OccurredFrom">Optional inclusive lower bound on when the event occurred.</param>
@@ -17,9 +20,16 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// Every member is optional and a <see langword="null"/> or empty value means "do not narrow on this
 /// dimension". Callers asking for everything pass <see cref="Empty"/>, never a set of sentinels, so an
 /// implementation must treat an absent value as "match all" rather than as a value to compare against.
+/// The sentinel each dimension carries for "everything" - an unspecified <see cref="EventSourceId"/>,
+/// an unspecified <see cref="EventSourceType"/>, <see cref="EventStreamType.All"/>, a
+/// <see cref="CorrelationId.NotSet"/>, an empty event type or tag set - is treated the same way, so a
+/// caller that passes one of those rather than <see langword="null"/> still gets every event back.
 /// </remarks>
 public record EventSequenceQueryCriteria(
     EventSourceId? EventSourceId = null,
+    EventSourceType? EventSourceType = null,
+    EventStreamType? EventStreamType = null,
+    CorrelationId? CorrelationId = null,
     IEnumerable<EventType>? EventTypes = null,
     IEnumerable<Tag>? Tags = null,
     DateTimeOffset? OccurredFrom = null,
@@ -36,6 +46,21 @@ public record EventSequenceQueryCriteria(
     public bool HasEventSourceId => EventSourceId?.IsSpecified == true;
 
     /// <summary>
+    /// Gets a value indicating whether the criteria narrows on the event source type.
+    /// </summary>
+    public bool HasEventSourceType => EventSourceType is { Value.Length: > 0 };
+
+    /// <summary>
+    /// Gets a value indicating whether the criteria narrows on the event stream type.
+    /// </summary>
+    public bool HasEventStreamType => EventStreamType is { Value.Length: > 0, IsAll: false };
+
+    /// <summary>
+    /// Gets a value indicating whether the criteria narrows on the correlation.
+    /// </summary>
+    public bool HasCorrelationId => CorrelationId is not null && CorrelationId != Execution.CorrelationId.NotSet;
+
+    /// <summary>
     /// Gets a value indicating whether the criteria narrows on event types.
     /// </summary>
     public bool HasEventTypes => EventTypes?.Any() == true;
@@ -48,33 +73,45 @@ public record EventSequenceQueryCriteria(
     /// <summary>
     /// Determine whether an event matches the criteria.
     /// </summary>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the event.</param>
-    /// <param name="eventType">The <see cref="EventTypeId"/> of the event.</param>
-    /// <param name="tags">The tags carried by the event.</param>
-    /// <param name="occurred">When the event occurred.</param>
+    /// <param name="context">The <see cref="EventContext"/> of the event.</param>
     /// <returns>True if the event matches every dimension the criteria narrows on, false otherwise.</returns>
-    public bool Matches(EventSourceId eventSourceId, EventTypeId eventType, IEnumerable<string> tags, DateTimeOffset occurred)
+    public bool Matches(EventContext context)
     {
-        if (HasEventSourceId && EventSourceId != eventSourceId)
+        if (HasEventSourceId && EventSourceId != context.EventSourceId)
         {
             return false;
         }
 
-        if (HasEventTypes && !EventTypes!.Any(_ => _.Id == eventType))
+        if (HasEventSourceType && EventSourceType != context.EventSourceType)
         {
             return false;
         }
 
-        if (HasTags && !Tags!.Any(tag => tags.Contains(tag.Value)))
+        if (HasEventStreamType && EventStreamType != context.EventStreamType)
         {
             return false;
         }
 
-        if (OccurredFrom is not null && occurred < OccurredFrom)
+        if (HasCorrelationId && CorrelationId != context.CorrelationId)
         {
             return false;
         }
 
-        return OccurredTo is null || occurred < OccurredTo;
+        if (HasEventTypes && !EventTypes!.Any(_ => _.Id == context.EventType.Id))
+        {
+            return false;
+        }
+
+        if (HasTags && !Tags!.Any(tag => context.Tags.Any(_ => _ == tag)))
+        {
+            return false;
+        }
+
+        if (OccurredFrom is not null && context.Occurred < OccurredFrom)
+        {
+            return false;
+        }
+
+        return OccurredTo is null || context.Occurred < OccurredTo;
     }
 }

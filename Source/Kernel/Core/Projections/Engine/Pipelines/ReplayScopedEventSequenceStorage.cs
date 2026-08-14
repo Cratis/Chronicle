@@ -108,8 +108,8 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public Task<EventCount> GetCountMatching(EventSequenceQueryCriteria criteria) => inner.GetCountMatching(criteria);
 
     /// <inheritdoc/>
-    public Task<IEventCursor> GetPage(EventSequenceQueryCriteria criteria, int skip, int take, bool descending = false, CancellationToken cancellationToken = default) =>
-        inner.GetPage(criteria, skip, take, descending, cancellationToken);
+    public Task<IEventCursor> GetPage(EventSequenceQueryCriteria criteria, int skip, int take, EventSequenceQuerySort? sort = null, CancellationToken cancellationToken = default) =>
+        inner.GetPage(criteria, skip, take, sort, cancellationToken);
 
     /// <inheritdoc/>
     public Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria) =>

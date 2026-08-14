@@ -778,15 +778,20 @@ public class EventSequenceStorage(
         EventSequenceQueryCriteria criteria,
         int skip,
         int take,
-        bool descending = false,
+        EventSequenceQuerySort? sort = null,
         CancellationToken cancellationToken = default)
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+        var order = sort ?? EventSequenceQuerySort.Default;
         var query = ApplyCriteria(scope.DbContext.Events.AsQueryable(), criteria);
-        var ordered = descending
-            ? query.OrderByDescending(e => e.SequenceNumber)
-            : query.OrderBy(e => e.SequenceNumber);
+        var ordered = order.By switch
+        {
+            EventSequenceQuerySortBy.Occurred => order.Descending ? query.OrderByDescending(e => e.Occurred) : query.OrderBy(e => e.Occurred),
+            EventSequenceQuerySortBy.EventType => order.Descending ? query.OrderByDescending(e => e.Type) : query.OrderBy(e => e.Type),
+            EventSequenceQuerySortBy.EventSourceId => order.Descending ? query.OrderByDescending(e => e.EventSourceId) : query.OrderBy(e => e.EventSourceId),
+            _ => order.Descending ? query.OrderByDescending(e => e.SequenceNumber) : query.OrderBy(e => e.SequenceNumber)
+        };
 
         var entries = await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
 
@@ -833,6 +838,25 @@ public class EventSequenceStorage(
         {
             var eventSourceId = criteria.EventSourceId!.Value;
             query = query.Where(e => e.EventSourceId == eventSourceId);
+        }
+
+        if (criteria.HasEventSourceType)
+        {
+            var eventSourceType = criteria.EventSourceType!.Value;
+            query = query.Where(e => e.EventSourceType == eventSourceType);
+        }
+
+        if (criteria.HasEventStreamType)
+        {
+            var eventStreamType = criteria.EventStreamType!.Value;
+            query = query.Where(e => e.EventStreamType == eventStreamType);
+        }
+
+        if (criteria.HasCorrelationId)
+        {
+            // Stored the same way the writer serializes it, so the comparison stays a plain string match.
+            var correlationId = criteria.CorrelationId!.ToString();
+            query = query.Where(e => e.CorrelationId == correlationId);
         }
 
         if (criteria.HasEventTypes)

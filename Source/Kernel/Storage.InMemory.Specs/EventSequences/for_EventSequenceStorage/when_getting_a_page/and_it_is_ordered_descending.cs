@@ -12,7 +12,7 @@ public class and_it_is_ordered_descending : given.a_storage_with_events_spread_o
 
     async Task Because()
     {
-        using var cursor = await _storage.GetPage(EventSequenceQueryCriteria.Empty, 0, 2, descending: true);
+        using var cursor = await _storage.GetPage(EventSequenceQueryCriteria.Empty, 0, 2, sort: EventSequenceQuerySort.NewestFirst);
         await cursor.MoveNext();
         _page = cursor.Current;
     }
