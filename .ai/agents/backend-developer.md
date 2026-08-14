@@ -43,7 +43,7 @@ Always read and follow the canonical rules in `.ai/rules/`:
 1. **Determine the namespace root** by reading an existing source file to identify the convention (e.g. `Studio`, `Library`, `MyApp`).
 2. **Read existing slices** in the same feature to understand naming, existing concepts, and events you may reference.
 3. **Create a single `.cs` file** at `<Feature>/<Slice>/<Slice>.cs` (under the app source root; an optional `<Module>/` may group the feature — there is **no** top-level `Features/` wrapper).
-4. **Validate** by building Debug *and* Release (Release regenerates the TypeScript proxies; Debug compiles `#if DEBUG` spec code).
+4. **Validate** by building Debug *and* Release (Debug regenerates the TypeScript proxies and compiles `#if DEBUG` spec code; build Release with `-p:CratisProxiesOutputPath=` to skip re-running proxy generation).
 5. Fix all compiler errors and warnings before handing back.
 
 ---

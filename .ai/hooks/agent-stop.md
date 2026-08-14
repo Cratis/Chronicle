@@ -24,13 +24,13 @@ When the agent finishes a session, verify the work against **fresh signals** bef
    ```
    dotnet clean
    ```
-2. **Build Debug** from repository root — validates `#if DEBUG` spec code:
+2. **Build Debug** from repository root — validates `#if DEBUG` spec code and regenerates the TypeScript proxies:
    ```
    dotnet build
    ```
-3. **Build Release** from repository root — regenerates the TypeScript proxies:
+3. **Build Release** from repository root — build-only check; skip re-running proxy generation:
    ```
-   dotnet build -c Release
+   dotnet build -c Release -p:CratisProxiesOutputPath=
    ```
 4. **Run specs/tests for every affected project** — use the project's test command; if you cannot isolate the affected scope, run the repository-level test command.
 5. **Frontend** (when frontend files changed) — run lint, the type/build check, and frontend tests.

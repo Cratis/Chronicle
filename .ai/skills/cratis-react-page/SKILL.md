@@ -8,7 +8,7 @@ description: Step-by-step guidance for building a React page in a Cratis Arc app
 ### Step 1 — Prerequisites
 
 - Backend query and command endpoints must already exist (see `cratis-readmodel` and `cratis-command` skills).
-- Run a Release `dotnet build` on the backend to regenerate proxies before importing them.
+- Run a Debug `dotnet build` on the backend to regenerate proxies before importing them.
 
 Import `DataPage` (and its `Column`/`MenuItem` helpers) from the **subpath**, not the root barrel:
 

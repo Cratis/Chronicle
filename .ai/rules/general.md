@@ -127,18 +127,20 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 ## Implementation Workflow
 
 - **Phase 0 — Model the request.** Confirm Module/Feature, Slice name, slice type, domain rules. For new behavior or unclear event vocabulary, run the **event-modeling** skill before writing code.
-- **Phase 1 — Backend.** Write the slice file. **Gate:** build clean Debug *and* Release (Release regenerates the TypeScript proxies; Debug compiles `#if DEBUG` spec code).
+- **Phase 1 — Backend.** Write the slice file. **Gate:** build clean Debug *and* Release (Debug regenerates the TypeScript proxies and compiles `#if DEBUG` spec code; Release is a build-only check — see the proxy-generation note below).
 - **Phase 2 — Specs.** Mandatory for every slice type, in-process scenario family first: `CommandScenario<T>` (commands), `EventScenario` (constraints/append), `ReadModelScenario<T>` (projections/reducers), `ReactorScenario<T>` (reactors). Reserve out-of-process integration specs for host/infra/transport boundaries. **Gate:** tests pass.
 - **Phase 3 — Frontend.** Proxies now exist. Build React components from generated proxies, register in the composition page, wire routing. **Gate:** lint, conditional test, and build all clean.
 
-**Backend before frontend, always** — the frontend depends on proxies that only exist after a successful Release build. After creating each new file, build (C#) or compile (TypeScript) before moving on — fix every error as it appears rather than accumulating it.
+**Backend before frontend, always** — the frontend depends on proxies that only exist after a successful Debug build. After creating each new file, build (C#) or compile (TypeScript) before moving on — fix every error as it appears rather than accumulating it.
+
+**Proxy generation runs on Debug, not Release.** `dotnet build -c Debug` is the canonical trigger for regenerating TypeScript proxies — it carries the fullest, most reliably-emitted PDB debug information the proxy generator relies on to place generated files. Generate proxies with a Debug build first; when you (or an agent) subsequently build Release purely to verify the app compiles in that configuration, skip proxy regeneration so the second build can't re-run the generator against a different compilation and touch already-correct generated files: `dotnet build -c Release -p:CratisProxiesOutputPath=`. The empty override clears the output path property the generator's MSBuild target is conditioned on, so the target no-ops for that invocation — no generated file is read or written.
 
 ## Quality Gates
 
 | Phase | Command (app-pinned) | Pass criteria |
 |---|---|---|
-| Backend | build (Debug) | zero errors, zero warnings — validates `#if DEBUG` spec code |
-| Backend | build (Release) | zero errors, zero warnings — regenerates proxies |
+| Backend | build (Debug) | zero errors, zero warnings — validates `#if DEBUG` spec code and regenerates proxies |
+| Backend | build (Release) | zero errors, zero warnings — build-only check; pass `-p:CratisProxiesOutputPath=` to skip re-running proxy generation |
 | Specs | test | zero failures |
 | Frontend | lint | zero errors |
 | Frontend | test | zero failures when frontend specs/behavior changed |

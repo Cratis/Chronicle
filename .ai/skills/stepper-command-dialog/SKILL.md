@@ -28,7 +28,7 @@ public record CreateProject(ProjectName Name, EmailAddress Email, Description De
 }
 ```
 
-Run a Release `dotnet build` to generate the `CreateProject` TypeScript proxy before importing it.
+Run a Debug `dotnet build` to generate the `CreateProject` TypeScript proxy before importing it.
 
 ---
 

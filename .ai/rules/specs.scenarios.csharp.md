@@ -26,7 +26,7 @@ For Cratis application behavior, prefer the four in-process scenario helpers ove
 
 > **Out-of-process Chronicle integration specs are an advanced case** — reserve them for host wiring, real infrastructure, serialization/transport, or end-to-end boundaries the scenario helpers can't exercise. They are not the default vertical-slice test shape.
 
-**Every spec file is wrapped in `#if DEBUG … #endif`** so spec code ships only in Debug (the Debug build gate validates it; the Release build regenerates proxies).
+**Every spec file is wrapped in `#if DEBUG … #endif`** so spec code ships only in Debug (the Debug build gate validates it and also regenerates proxies).
 
 ### `CommandScenario<TCommand>` — State Change default
 

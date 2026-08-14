@@ -40,7 +40,7 @@ File creation order within the slice:
 
 ## Step 4 — Build
 
-Run `dotnet build` in **both** Debug and Release. Fix ALL errors and warnings before proceeding — Release regenerates the TypeScript proxies; Debug compiles `#if DEBUG` spec code.
+Run `dotnet build` in **both** Debug and Release. Fix ALL errors and warnings before proceeding — Debug regenerates the TypeScript proxies and compiles `#if DEBUG` spec code; build Release with `-p:CratisProxiesOutputPath=` to skip re-running proxy generation.
 
 ## Step 5 — Write specs (mandatory for every slice type)
 

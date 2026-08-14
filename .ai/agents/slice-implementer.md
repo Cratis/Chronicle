@@ -30,7 +30,7 @@ A new vertical slice (State Change, State View, Automation, Translation), or a n
 For new behavior, unclear event names/stream boundaries, or multi-slice flows, run the `event-modeling` skill first. Confirm Module/Feature/slice name + type, the behavior in one sentence, whether a UI surface is needed, and the event/read-model/scenario outline. Ask only when a real product/domain choice can't be answered from the repo.
 
 ### Phase 2 — Backend
-Write `<Module>/<Feature>/<Slice>/<Slice>.cs` with all backend artifacts (declaration order per `general.md`). **Gate:** build clean in **Debug and Release** (zero errors/warnings — Debug validates `#if DEBUG` spec code, Release regenerates the TypeScript proxies).
+Write `<Module>/<Feature>/<Slice>/<Slice>.cs` with all backend artifacts (declaration order per `general.md`). **Gate:** build clean in **Debug and Release** (zero errors/warnings — Debug validates `#if DEBUG` spec code and regenerates the TypeScript proxies; build Release with `-p:CratisProxiesOutputPath=` to skip re-running proxy generation).
 
 ### Phase 3 — Specs
 Mandatory for every slice type. Use the scenario family: `CommandScenario<T>` (state change), `EventScenario` (constraints), `ReadModelScenario<T>` (projections/reducers), `ReactorScenario<T>` (reactors). Minimum: happy path with each appended event asserted; one spec per validator rule asserting **both** `ShouldNotBeSuccessful()` **and** `ShouldHaveValidationErrors()`; one spec per constraint. **Gate:** tests pass.
