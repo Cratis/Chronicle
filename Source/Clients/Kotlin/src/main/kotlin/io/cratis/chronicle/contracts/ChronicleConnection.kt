@@ -3,15 +3,15 @@
 
 package io.cratis.chronicle.contracts
 
-import Cratis.Chronicle.Contracts.EventStoresGrpcKt
-import Cratis.Chronicle.Contracts.NamespacesGrpcKt
 import Cratis.Chronicle.Contracts.Clients.ConnectionServiceGrpcKt
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.EventStores.EventStoresGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.Host.ServerGrpcKt
 import Cratis.Chronicle.Contracts.Identities.IdentitiesGrpcKt
 import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
+import Cratis.Chronicle.Contracts.Namespaces.NamespacesGrpcKt
 import Cratis.Chronicle.Contracts.Observation.FailedPartitionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
