@@ -26,16 +26,33 @@ public class v16_30_0 : Migration
                 Name = table.StringColumn(migrationBuilder),
                 Scope = table.NumberColumn<int>(migrationBuilder),
                 Owner = table.StringColumn(migrationBuilder),
+                Folder = table.StringColumn(migrationBuilder),
                 Namespace = table.StringColumn(migrationBuilder),
                 EventSequenceId = table.StringColumn(migrationBuilder),
                 Filter = table.JsonColumn<SequenceQueryFilter>(migrationBuilder),
+                SortBy = table.NumberColumn<int>(migrationBuilder),
                 Descending = table.Column<bool>(nullable: false),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.SequenceQueries}", x => x.Id));
+
+        migrationBuilder.CreateTable(
+            name: WellKnownTableNames.SequenceQueryFolders,
+            columns: table => new
+            {
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                Scope = table.NumberColumn<int>(migrationBuilder),
+                Owner = table.StringColumn(migrationBuilder),
+                Namespace = table.StringColumn(migrationBuilder),
+                Path = table.StringColumn(migrationBuilder),
+            },
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.SequenceQueryFolders}", x => x.Id));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropTable(
+            name: WellKnownTableNames.SequenceQueryFolders);
+
         migrationBuilder.DropTable(
             name: WellKnownTableNames.SequenceQueries);
     }

@@ -16,7 +16,8 @@ namespace Cratis.Chronicle.Concepts.SequenceQueries;
 /// <param name="Namespace">The namespace the query runs against.</param>
 /// <param name="EventSequenceId">The event sequence the query runs against.</param>
 /// <param name="Filter">The narrowing the user configured.</param>
-/// <param name="Descending">Whether results are ordered newest first.</param>
+/// <param name="SortBy">What the results are ordered by.</param>
+/// <param name="Descending">Whether results are ordered from the highest value down rather than from the lowest up.</param>
 public record SequenceQueryDefinition(
     SequenceQueryId Id,
     SequenceQueryName Name,
@@ -26,4 +27,5 @@ public record SequenceQueryDefinition(
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
     SequenceQueryFilter Filter,
+    SequenceQuerySortBy SortBy,
     bool Descending);

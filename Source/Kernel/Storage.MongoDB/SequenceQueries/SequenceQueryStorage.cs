@@ -18,6 +18,9 @@ public class SequenceQueryStorage(IEventStoreDatabase eventStoreDatabase) : ISeq
     IMongoCollection<SequenceQueryDefinition> Collection =>
         eventStoreDatabase.GetCollection<SequenceQueryDefinition>(WellKnownCollectionNames.SequenceQueries);
 
+    IMongoCollection<SequenceQueryFolder> FolderCollection =>
+        eventStoreDatabase.GetCollection<SequenceQueryFolder>(WellKnownCollectionNames.SequenceQueryFolders);
+
     /// <inheritdoc/>
     public async Task<IEnumerable<Concepts.SequenceQueries.SequenceQueryDefinition>> GetAllFor(SequenceQueryOwner owner)
     {
@@ -64,5 +67,40 @@ public class SequenceQueryStorage(IEventStoreDatabase eventStoreDatabase) : ISeq
         var value = id.Value;
 
         await Collection.DeleteOneAsync(_ => _.Id == value);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<SequenceQueryFolderDefinition>> GetAllFoldersFor(SequenceQueryOwner owner)
+    {
+        var ownerValue = owner.Value;
+        using var result = await FolderCollection.FindAsync(_ => _.Scope == SequenceQueryScope.Everyone || _.Owner == ownerValue);
+        var folders = await result.ToListAsync();
+
+        return folders.Select(_ => _.ToKernel()).ToArray();
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Awaited rather than returned for the same reason as <see cref="Save"/>.
+    /// </remarks>
+    public async Task SaveFolder(SequenceQueryFolderDefinition definition)
+    {
+        var id = definition.Id.Value;
+
+        await FolderCollection.ReplaceOneAsync(
+            filter: _ => _.Id == id,
+            replacement: definition.ToMongoDB(),
+            options: new ReplaceOptions { IsUpsert = true });
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Awaited rather than returned for the same reason as <see cref="Save"/>.
+    /// </remarks>
+    public async Task DeleteFolder(SequenceQueryFolderId id)
+    {
+        var value = id.Value;
+
+        await FolderCollection.DeleteOneAsync(_ => _.Id == value);
     }
 }

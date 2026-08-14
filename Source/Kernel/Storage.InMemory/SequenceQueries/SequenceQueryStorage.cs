@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Storage.InMemory.SequenceQueries;
 public class SequenceQueryStorage : ISequenceQueryStorage, IDisposable
 {
     readonly ConcurrentDictionary<string, SequenceQueryDefinition> _definitions = new();
+    readonly ConcurrentDictionary<string, SequenceQueryFolderDefinition> _folders = new();
     readonly ConcurrentDictionary<string, ReplaySubject<IEnumerable<SequenceQueryDefinition>>> _subjects = new();
 
     /// <inheritdoc/>
@@ -43,6 +44,31 @@ public class SequenceQueryStorage : ISequenceQueryStorage, IDisposable
     {
         _definitions.TryRemove(id.Value, out _);
         NotifyChange();
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<SequenceQueryFolderDefinition>> GetAllFoldersFor(SequenceQueryOwner owner) =>
+        Task.FromResult<IEnumerable<SequenceQueryFolderDefinition>>(
+        [
+            .. _folders.Values
+                .Where(_ => _.Scope == SequenceQueryScope.Everyone || _.Owner == owner)
+                .OrderBy(_ => _.Path.Value)
+        ]);
+
+    /// <inheritdoc/>
+    public Task SaveFolder(SequenceQueryFolderDefinition definition)
+    {
+        _folders[definition.Id.Value] = definition;
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task DeleteFolder(SequenceQueryFolderId id)
+    {
+        _folders.TryRemove(id.Value, out _);
 
         return Task.CompletedTask;
     }

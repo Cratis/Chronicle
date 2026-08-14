@@ -56,7 +56,12 @@ public class SequenceQueryDefinition
     public SequenceQueryFilter Filter { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets a value indicating whether results are ordered newest first.
+    /// Gets or sets what the results are ordered by.
+    /// </summary>
+    public SequenceQuerySortBy SortBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether results are ordered from the highest value down.
     /// </summary>
     public bool Descending { get; set; }
 }

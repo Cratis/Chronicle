@@ -76,6 +76,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<SequenceQueries.SequenceQueryDefinition> SequenceQueries { get; set; }
 
     /// <summary>
+    /// Gets or sets the folders saved event sequence queries are filed into.
+    /// </summary>
+    public DbSet<SequenceQueries.SequenceQueryFolder> SequenceQueryFolders { get; set; }
+
+    /// <summary>
     /// Gets or sets the captures DbSet.
     /// </summary>
     public DbSet<Capture> Captures { get; set; }

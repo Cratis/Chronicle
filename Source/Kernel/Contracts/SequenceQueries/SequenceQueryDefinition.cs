@@ -87,4 +87,28 @@ public class SequenceQueryDefinition
     /// </summary>
     [ProtoMember(13, IsRequired = true)]
     public string Folder { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event source type to narrow to. Empty means every event source type.
+    /// </summary>
+    [ProtoMember(14, IsRequired = true)]
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event stream type to narrow to. Empty means every event stream type.
+    /// </summary>
+    [ProtoMember(15, IsRequired = true)]
+    public string EventStreamType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the correlation to narrow to. Empty means every correlation.
+    /// </summary>
+    [ProtoMember(16, IsRequired = true)]
+    public string CorrelationId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets what the results are ordered by.
+    /// </summary>
+    [ProtoMember(17)]
+    public SequenceQuerySortBy SortBy { get; set; }
 }

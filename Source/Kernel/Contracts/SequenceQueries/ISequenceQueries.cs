@@ -43,4 +43,30 @@ public interface ISequenceQueries
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task Delete(DeleteSequenceQueryRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get the folders an owner can see.
+    /// </summary>
+    /// <param name="request">The <see cref="GetSequenceQueriesRequest"/>.</param>
+    /// <returns>A collection of <see cref="SequenceQueryFolderDefinition"/>.</returns>
+    [Operation]
+    Task<IEnumerable<SequenceQueryFolderDefinition>> GetSequenceQueryFolders(GetSequenceQueriesRequest request);
+
+    /// <summary>
+    /// Save a folder, replacing any existing folder with the same identifier.
+    /// </summary>
+    /// <param name="request">The <see cref="SaveSequenceQueryFolderRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task SaveFolder(SaveSequenceQueryFolderRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Delete a folder.
+    /// </summary>
+    /// <param name="request">The <see cref="DeleteSequenceQueryFolderRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task DeleteFolder(DeleteSequenceQueryFolderRequest request, CallContext context = default);
 }

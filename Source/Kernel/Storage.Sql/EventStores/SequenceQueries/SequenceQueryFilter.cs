@@ -14,6 +14,21 @@ public class SequenceQueryFilter
     public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the event source type to narrow to, or empty for every event source type.
+    /// </summary>
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event stream type to narrow to, or empty for every event stream type.
+    /// </summary>
+    public string EventStreamType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the correlation to narrow to, or empty for every correlation.
+    /// </summary>
+    public string CorrelationId { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the event type identifiers to narrow to, or empty for every event type.
     /// </summary>
     public IList<string> EventTypes { get; set; } = [];

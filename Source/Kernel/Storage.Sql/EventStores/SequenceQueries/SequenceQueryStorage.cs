@@ -65,6 +65,39 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<SequenceQueryFolderDefinition>> GetAllFoldersFor(SequenceQueryOwner owner)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var ownerValue = owner.Value;
+        var folders = await scope.DbContext.SequenceQueryFolders
+            .Where(_ => _.Scope == SequenceQueryScope.Everyone || _.Owner == ownerValue)
+            .OrderBy(_ => _.Path)
+            .ToListAsync();
+
+        return folders.Select(_ => _.ToKernel()).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task SaveFolder(SequenceQueryFolderDefinition definition)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.SequenceQueryFolders.Upsert(definition.ToSql());
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteFolder(SequenceQueryFolderId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var value = id.Value;
+        var folder = await scope.DbContext.SequenceQueryFolders.SingleOrDefaultAsync(_ => _.Id == value);
+        if (folder is null) return;
+
+        scope.DbContext.SequenceQueryFolders.Remove(folder);
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
     public void Dispose()
     {
         foreach (var subject in _subjects.Values)

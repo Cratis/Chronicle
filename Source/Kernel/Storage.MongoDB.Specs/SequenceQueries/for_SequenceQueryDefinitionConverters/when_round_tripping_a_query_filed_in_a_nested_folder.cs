@@ -25,7 +25,8 @@ public class when_round_tripping_a_query_filed_in_a_nested_folder : Specificatio
         Folder,
         "default",
         "event-log",
-        new SequenceQueryFilter(string.Empty, [], [], null, null),
+        SequenceQueryFilter.Empty,
+        SequenceQuerySortBy.Occurred,
         Descending: true);
 
     void Because() => _result = _original.ToMongoDB().ToKernel();
@@ -34,4 +35,5 @@ public class when_round_tripping_a_query_filed_in_a_nested_folder : Specificatio
     [Fact] void should_keep_the_name() => _result.Name.ShouldEqual(_original.Name);
     [Fact] void should_keep_the_scope() => _result.Scope.ShouldEqual(_original.Scope);
     [Fact] void should_keep_the_owner() => _result.Owner.ShouldEqual(_original.Owner);
+    [Fact] void should_keep_what_it_is_ordered_by() => _result.SortBy.ShouldEqual(_original.SortBy);
 }

@@ -8,6 +8,7 @@ using Cratis.Reactive;
 using ProtoBuf.Grpc;
 using ContractISequenceQueries = Cratis.Chronicle.Contracts.SequenceQueries.ISequenceQueries;
 using SequenceQueryDefinition = Cratis.Chronicle.Contracts.SequenceQueries.SequenceQueryDefinition;
+using SequenceQueryFolderDefinition = Cratis.Chronicle.Contracts.SequenceQueries.SequenceQueryFolderDefinition;
 
 namespace Cratis.Chronicle.Services.SequenceQueries;
 
@@ -41,4 +42,19 @@ internal sealed class SequenceQueries(IStorage storage) : ContractISequenceQueri
     /// <inheritdoc/>
     public Task Delete(Contracts.SequenceQueries.DeleteSequenceQueryRequest request, CallContext context = default) =>
         storage.GetEventStore(request.EventStore).SequenceQueries.Delete(new SequenceQueryId(request.Id));
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<SequenceQueryFolderDefinition>> GetSequenceQueryFolders(Contracts.SequenceQueries.GetSequenceQueriesRequest request)
+    {
+        var folders = await storage.GetEventStore(request.EventStore).SequenceQueries.GetAllFoldersFor(request.Owner);
+        return folders.Select(_ => _.ToContract());
+    }
+
+    /// <inheritdoc/>
+    public Task SaveFolder(Contracts.SequenceQueries.SaveSequenceQueryFolderRequest request, CallContext context = default) =>
+        storage.GetEventStore(request.EventStore).SequenceQueries.SaveFolder(request.Folder.ToKernel());
+
+    /// <inheritdoc/>
+    public Task DeleteFolder(Contracts.SequenceQueries.DeleteSequenceQueryFolderRequest request, CallContext context = default) =>
+        storage.GetEventStore(request.EventStore).SequenceQueries.DeleteFolder(new SequenceQueryFolderId(request.Id));
 }

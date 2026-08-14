@@ -26,10 +26,14 @@ public static class SequenceQueryDefinitionConverters
             Namespace = definition.Namespace,
             EventSequenceId = definition.EventSequenceId,
             EventSourceId = definition.Filter.EventSourceId,
+            EventSourceType = definition.Filter.EventSourceType,
+            EventStreamType = definition.Filter.EventStreamType,
+            CorrelationId = definition.Filter.CorrelationId,
             EventTypes = [.. definition.Filter.EventTypes],
             Tags = [.. definition.Filter.Tags],
             OccurredFrom = definition.Filter.OccurredFrom,
             OccurredTo = definition.Filter.OccurredTo,
+            SortBy = (Contracts.SequenceQueries.SequenceQuerySortBy)definition.SortBy,
             Descending = definition.Descending
         };
 
@@ -49,9 +53,41 @@ public static class SequenceQueryDefinitionConverters
             definition.EventSequenceId,
             new SequenceQueryFilter(
                 definition.EventSourceId,
+                definition.EventSourceType,
+                definition.EventStreamType,
+                definition.CorrelationId,
                 definition.EventTypes,
                 definition.Tags,
                 definition.OccurredFrom,
                 definition.OccurredTo),
+            (SequenceQuerySortBy)definition.SortBy,
             definition.Descending);
+
+    /// <summary>
+    /// Convert a folder to the contract representation.
+    /// </summary>
+    /// <param name="folder">The kernel <see cref="SequenceQueryFolderDefinition"/> to convert.</param>
+    /// <returns>The converted <see cref="Contracts.SequenceQueries.SequenceQueryFolderDefinition"/>.</returns>
+    public static Contracts.SequenceQueries.SequenceQueryFolderDefinition ToContract(this SequenceQueryFolderDefinition folder) =>
+        new()
+        {
+            Id = folder.Id,
+            Scope = (Contracts.SequenceQueries.SequenceQueryScope)folder.Scope,
+            Owner = folder.Owner,
+            Namespace = folder.Namespace,
+            Path = folder.Path
+        };
+
+    /// <summary>
+    /// Convert a folder to the kernel representation.
+    /// </summary>
+    /// <param name="folder">The contract <see cref="Contracts.SequenceQueries.SequenceQueryFolderDefinition"/> to convert.</param>
+    /// <returns>The converted <see cref="SequenceQueryFolderDefinition"/>.</returns>
+    public static SequenceQueryFolderDefinition ToKernel(this Contracts.SequenceQueries.SequenceQueryFolderDefinition folder) =>
+        new(
+            folder.Id,
+            (SequenceQueryScope)folder.Scope,
+            folder.Owner,
+            folder.Namespace,
+            folder.Path);
 }
