@@ -27,7 +27,11 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
     /// <param name="eventSequenceId">Event sequence to get for.</param>
     /// <param name="resolution">The time bucket size - minute, hour, day, week or month. Defaults to hour.</param>
     /// <param name="eventSourceId">Optional event source to narrow to.</param>
+    /// <param name="eventSourceType">Optional event source type to narrow to.</param>
+    /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
+    /// <param name="correlationId">Optional correlation identifier to narrow to.</param>
     /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
+    /// <param name="tags">Optional comma separated tags to narrow to - an event matches when it carries any of them.</param>
     /// <param name="occurredFrom">Optional inclusive lower bound on when the event occurred.</param>
     /// <param name="occurredTo">Optional exclusive upper bound on when the event occurred.</param>
     /// <returns>The buckets containing at least one matching event, ordered by time ascending.</returns>
@@ -42,7 +46,11 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
         string eventSequenceId,
         string? resolution = default,
         string? eventSourceId = default,
+        string? eventSourceType = default,
+        string? eventStreamType = default,
+        string? correlationId = default,
         string? eventTypeIds = default,
+        string? tags = default,
         DateTimeOffset? occurredFrom = default,
         DateTimeOffset? occurredTo = default)
     {
@@ -53,7 +61,15 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             Resolution = histogramResolution,
-            Criteria = EventSequenceQueryCriteriaFactory.Create(eventSourceId, eventTypeIds, occurredFrom, occurredTo)
+            Criteria = EventSequenceQueryCriteriaFactory.Create(new(
+                eventSourceId,
+                eventSourceType,
+                eventStreamType,
+                correlationId,
+                eventTypeIds,
+                tags,
+                occurredFrom,
+                occurredTo))
         });
 
         return response.Buckets

@@ -17,11 +17,15 @@ namespace Cratis.Chronicle.Api.SequenceQueries;
 /// <param name="Namespace">The namespace the query runs against.</param>
 /// <param name="EventSequenceId">The event sequence the query runs against.</param>
 /// <param name="EventSourceId">The event source to narrow to, or empty for every event source.</param>
+/// <param name="EventSourceType">The event source type to narrow to, or empty for every event source type.</param>
+/// <param name="EventStreamType">The event stream type to narrow to, or empty for every event stream type.</param>
+/// <param name="CorrelationId">The correlation to narrow to, or empty for every correlation.</param>
 /// <param name="EventTypes">The event type identifiers to narrow to, or empty for every event type.</param>
 /// <param name="Tags">The tags to narrow to, or empty for every event.</param>
 /// <param name="OccurredFrom">The inclusive lower bound on when the event occurred.</param>
 /// <param name="OccurredTo">The exclusive upper bound on when the event occurred.</param>
-/// <param name="Descending">Whether results are ordered newest first.</param>
+/// <param name="SortBy">What the results are ordered by.</param>
+/// <param name="Descending">Whether results are ordered from the highest value down rather than from the lowest up.</param>
 /// <remarks>
 /// Replaces the whole query every time rather than patching it, so the caller always sends the
 /// complete state it wants persisted.
@@ -36,10 +40,14 @@ public record SaveSequenceQuery(
     string Namespace,
     string EventSequenceId,
     string EventSourceId,
+    string EventSourceType,
+    string EventStreamType,
+    string CorrelationId,
     IEnumerable<string> EventTypes,
     IEnumerable<string> Tags,
     DateTimeOffset? OccurredFrom,
     DateTimeOffset? OccurredTo,
+    string SortBy,
     bool Descending)
 {
     /// <summary>
@@ -65,10 +73,14 @@ public record SaveSequenceQuery(
                 Namespace = Namespace,
                 EventSequenceId = EventSequenceId,
                 EventSourceId = EventSourceId,
+                EventSourceType = EventSourceType,
+                EventStreamType = EventStreamType,
+                CorrelationId = CorrelationId,
                 EventTypes = [.. EventTypes],
                 Tags = [.. Tags],
                 OccurredFrom = OccurredFrom,
                 OccurredTo = OccurredTo,
+                SortBy = SequenceQuerySortByParser.Parse(SortBy),
                 Descending = Descending
             }
         });

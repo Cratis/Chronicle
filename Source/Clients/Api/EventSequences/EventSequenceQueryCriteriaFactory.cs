@@ -14,30 +14,26 @@ public static class EventSequenceQueryCriteriaFactory
     /// <summary>
     /// Create criteria from the narrowing values of a workbench query.
     /// </summary>
-    /// <param name="eventSourceId">Optional event source to narrow to.</param>
-    /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
-    /// <param name="occurredFrom">Optional inclusive lower bound on when the event occurred.</param>
-    /// <param name="occurredTo">Optional exclusive upper bound on when the event occurred.</param>
-    /// <param name="tags">Optional comma separated tags to narrow to.</param>
+    /// <param name="narrowing">The <see cref="EventSequenceQueryNarrowing"/> the caller asked for.</param>
     /// <returns>The <see cref="EventSequenceQueryCriteria"/>.</returns>
     /// <remarks>
     /// A blank value leaves its dimension unnarrowed rather than turning into an empty-string match,
     /// which is what a query with no filters configured sends.
     /// </remarks>
-    public static EventSequenceQueryCriteria Create(
-        string? eventSourceId,
-        string? eventTypeIds,
-        DateTimeOffset? occurredFrom,
-        DateTimeOffset? occurredTo,
-        string? tags = default) =>
+    public static EventSequenceQueryCriteria Create(EventSequenceQueryNarrowing narrowing) =>
         new()
         {
-            EventSourceId = string.IsNullOrWhiteSpace(eventSourceId) ? null : eventSourceId,
-            EventTypes = [.. Split(eventTypeIds).Select(id => new EventType { Id = id, Generation = 1 })],
-            Tags = [.. Split(tags)],
-            OccurredFrom = occurredFrom,
-            OccurredTo = occurredTo
+            EventSourceId = Trimmed(narrowing.EventSourceId),
+            EventSourceType = Trimmed(narrowing.EventSourceType),
+            EventStreamType = Trimmed(narrowing.EventStreamType),
+            CorrelationId = Guid.TryParse(narrowing.CorrelationId, out var correlationId) ? correlationId : null,
+            EventTypes = [.. Split(narrowing.EventTypeIds).Select(id => new EventType { Id = id, Generation = 1 })],
+            Tags = [.. Split(narrowing.Tags)],
+            OccurredFrom = narrowing.OccurredFrom,
+            OccurredTo = narrowing.OccurredTo
         };
+
+    static string? Trimmed(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     static string[] Split(string? value) =>
         string.IsNullOrWhiteSpace(value)
