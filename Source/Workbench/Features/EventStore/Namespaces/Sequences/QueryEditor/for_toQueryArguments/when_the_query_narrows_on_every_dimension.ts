@@ -23,7 +23,6 @@ describe('when the query narrows on every dimension', () => {
     it('should send the event types as a comma separated list', () => args.eventTypeIds!.should.equal('Registered,Archived'));
     it('should send the lower bound as a date', () => args.occurredFrom!.getTime().should.equal(from));
     it('should send the upper bound as a date', () => args.occurredTo!.getTime().should.equal(to));
-    it('should carry the chosen ordering', () => args.descending!.should.be.false);
 });
 
 /**

@@ -6,8 +6,8 @@ import { areSequenceQueryStatesEqual, createSequenceQueryState } from '../Sequen
 const state = createSequenceQueryState('the-id', 'The query', 'default');
 
 /**
- * Queries save themselves as the user edits, so this comparison is what stops an unchanged query
- * from being written back on every render.
+ * This comparison is what tells the editor whether a query has anything to save, so it decides both
+ * whether the save action is offered and whether the tab is marked as carrying unsaved work.
  */
 describe('when comparing two query states', () => {
     it('should treat identical states as equal', () =>

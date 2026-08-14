@@ -6,7 +6,8 @@ import { toQueryArguments } from '../toQueryArguments';
 
 /**
  * A query with no filters set has to leave every dimension unnarrowed. Sending empty strings instead
- * would make the backend match on an empty value and silently return nothing.
+ * would make the backend match on an empty value and silently return nothing. Ordering is not here
+ * at all - Arc carries that on the query rather than as an argument.
  */
 describe('when the query narrows nothing', () => {
     const args = toQueryArguments(createSequenceQueryState('the-id', 'The query', 'default'), 'the-store');
@@ -18,7 +19,6 @@ describe('when the query narrows nothing', () => {
     it('should carry the event store', () => args.eventStore.should.equal('the-store'));
     it('should carry the namespace', () => args.namespace.should.equal('default'));
     it('should carry the event sequence', () => args.eventSequenceId.should.equal('event-log'));
-    it('should default to newest first', () => args.descending!.should.be.true);
 });
 
 describe('when the query has only whitespace as its event source', () => {
