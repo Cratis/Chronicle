@@ -15,6 +15,7 @@ public class ValueExpression(string value) : IEventValueExpression
     /// <summary>
     /// Represents a null value.
     /// </summary>
+    [Obsolete($"A clear is no longer a constant - use {nameof(NullExpression)}.{nameof(NullExpression.Instance)}, which builds the $null expression. This built $value(null), which wrote the literal string \"null\".")]
     public static readonly ValueExpression Null = new("null");
 
     /// <inheritdoc/>

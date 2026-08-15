@@ -125,6 +125,25 @@ static class FromDefinitionExtensions
     }
 
     /// <summary>
+    /// Adds a clear mapping to the From definition for a given event type.
+    /// </summary>
+    /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <param name="eventType">The event type that clears the member.</param>
+    /// <param name="propertyName">The property name on the projection model.</param>
+    /// <remarks>
+    /// A clear is a mapping like any other rather than the absence of one - that is the whole point. The member is
+    /// written back to no value every time the event is observed, so the clear survives a full replay instead of
+    /// leaving whatever the member last held.
+    /// </remarks>
+    internal static void AddClearMapping(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, Type eventType, string propertyName)
+    {
+        var eventTypeId = getOrCreateEventType(eventType);
+        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+        fromDefinition.Properties[propertyName] = WellKnownExpressions.Null;
+    }
+
+    /// <summary>
     /// Adds a context property mapping to the From definition for a given event type.
     /// </summary>
     /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
