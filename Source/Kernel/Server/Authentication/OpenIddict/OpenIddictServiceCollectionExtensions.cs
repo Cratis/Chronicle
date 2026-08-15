@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Storage.Sql.Cluster.Security;
@@ -25,9 +24,13 @@ public static class OpenIddictServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="chronicleOptions">The Chronicle options.</param>
+    /// <param name="encryptionCertificateRing">The <see cref="Cratis.Chronicle.Security.IEncryptionCertificateRing"/> holding the active and previous certificates.</param>
     /// <returns>The service collection for chaining.</returns>
     /// <exception cref="InvalidOperationException">Thrown when required certificates are not configured in production.</exception>
-    public static IServiceCollection AddOpenIddictIfEnabled(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
+    public static IServiceCollection AddOpenIddictIfEnabled(
+        this IServiceCollection services,
+        Configuration.ChronicleOptions chronicleOptions,
+        Cratis.Chronicle.Security.IEncryptionCertificateRing encryptionCertificateRing)
     {
         // Disable OpenIddict if using an external authority or if OAuthAuthority feature is disabled
         if (!chronicleOptions.Features.OAuthAuthority || !chronicleOptions.Authentication.UseInternalAuthority)
@@ -91,17 +94,18 @@ public static class OpenIddictServiceCollectionExtensions
                     .UseDataProtection();
 
                 // Configure encryption and signing keys
-                // If a certificate is configured, use it for encryption and signing
+                // The whole certificate ring is registered, which is what lets tokens issued under a previous
+                // certificate keep validating across a rotation. OpenIddict picks which one *issues* by its own
+                // documented ordering - it prefers the X.509 key with the furthest expiration date, not the one
+                // Chronicle marks active - so promoting a certificate that expires earlier than one still in the
+                // ring leaves OpenIddict issuing under the longer-lived one.
                 // In development without a certificate, use ephemeral keys for convenience
                 // In production, a certificate is required
-                var encryptionCertificate = chronicleOptions.EncryptionCertificate;
-                if (encryptionCertificate.IsConfigured && File.Exists(encryptionCertificate.CertificatePath))
+                if (encryptionCertificateRing.IsConfigured)
                 {
-                    var cert = X509CertificateLoader.LoadPkcs12FromFile(
-                        encryptionCertificate.CertificatePath,
-                        encryptionCertificate.CertificatePassword);
-                    options.AddEncryptionCertificate(cert)
-                           .AddSigningCertificate(cert);
+                    var certificates = encryptionCertificateRing.All.Select(_ => _.Certificate).ToArray();
+                    options.AddEncryptionCertificates(certificates)
+                           .AddSigningCertificates(certificates);
                 }
                 else if (IsDevelopmentEnvironment())
                 {
