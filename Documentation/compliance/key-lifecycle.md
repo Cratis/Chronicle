@@ -42,11 +42,11 @@ The fence lives in the key store because that is the only place it can be writte
 ```mermaid
 stateDiagram-v2
     [*] --> NeverProvisioned
-    NeverProvisioned --> Active: first [PII] value appended
+    NeverProvisioned --> Active: first PII value appended
     Active --> Active: rotation mints a higher revision
     Active --> Erased: erasure - fence written, then key material destroyed
     NeverProvisioned --> Erased: erasure - fence written even where no key existed
-    Erased --> Erased: appending [PII] fails loudly
+    Erased --> Erased: appending PII fails loudly
     Erased --> NewLifecycleAllowed: AllowNewEncryptionKeyFor - explicit and authorized
     NewLifecycleAllowed --> Active: next append mints a fresh key above the fence
     NewLifecycleAllowed --> Erased: a later erasure closes it again
