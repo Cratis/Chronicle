@@ -289,6 +289,14 @@ public class ProjectionValidator(
                 case DecrementMappingSyntax:
                     ValidatePropertyExists(mapping.Property, targetSchema, errors, mapping);
                     break;
+
+                // Every mapping the language can express is handled above. A kind that reaches here is one a newer
+                // Screenplay parses and this validator does not know, and skipping it silently would let it through
+                // unvalidated to the visitor, which throws UnsupportedProjectionSyntax. Report it as a compiler
+                // error instead, so it comes back as a diagnostic on the declaration rather than as an exception.
+                default:
+                    errors.Add($"Mapping of type '{mapping.GetType().Name}' is not supported", mapping.Location.Line, mapping.Location.Column);
+                    break;
             }
         }
     }
