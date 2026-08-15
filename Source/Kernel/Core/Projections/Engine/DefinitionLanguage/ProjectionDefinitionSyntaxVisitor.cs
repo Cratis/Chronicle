@@ -195,6 +195,17 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
             Nested: context.Nested.Count > 0 ? context.Nested : null);
     }
 
+    /// <summary>
+    /// Converts the mappings of a block into the property expressions they are stored as.
+    /// </summary>
+    /// <param name="mappings">The mappings to convert.</param>
+    /// <returns>The stored expression per property.</returns>
+    /// <exception cref="UnsupportedProjectionSyntax">Thrown when a mapping kind has no expression to store as.</exception>
+    /// <remarks>
+    /// <c>clear property</c> and <c>property = null</c> are two spellings of the same act and both become
+    /// <see cref="WellKnownExpressions.Null"/>. <c>clear</c> is the one the generator emits, because assigning a
+    /// value and taking one away are different acts and spelling both with <c>=</c> hides that.
+    /// </remarks>
     Dictionary<PropertyPath, string> ProcessMappings(IEnumerable<MappingSyntax> mappings)
     {
         var properties = new Dictionary<PropertyPath, string>();
@@ -204,7 +215,8 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
             var property = new PropertyPath(mapping.Property);
             properties[property] = mapping switch
             {
-                SetMappingSyntax set => ConvertExpressionToString(set.Source),
+                SetMappingSyntax set => ConvertSetSource(set.Source),
+                ClearMappingSyntax => WellKnownExpressions.Null,
                 AddMappingSyntax add => $"{WellKnownExpressions.Add}({ConvertExpressionToString(add.Value)})",
                 SubtractMappingSyntax subtract => $"{WellKnownExpressions.Subtract}({ConvertExpressionToString(subtract.Value)})",
                 IncrementMappingSyntax => WellKnownExpressions.Increment,
@@ -216,6 +228,21 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
 
         return properties;
     }
+
+    /// <summary>
+    /// Converts the source of a set mapping to the expression it is stored as.
+    /// </summary>
+    /// <param name="source">The source expression of the mapping.</param>
+    /// <returns>The stored expression.</returns>
+    /// <remarks>
+    /// A null literal is the declaration language's spelling of a clear, so it becomes the clear expression rather
+    /// than the empty string a null stores as elsewhere - an empty expression reads as a property path to the
+    /// engine, which is not a clear and not anything else either.
+    /// </remarks>
+    string ConvertSetSource(ExpressionSyntax source) =>
+        source is LiteralExpressionSyntax { Value: null }
+            ? WellKnownExpressions.Null
+            : ConvertExpressionToString(source);
 
     PropertyExpression ConvertKey(KeySyntax? key)
     {

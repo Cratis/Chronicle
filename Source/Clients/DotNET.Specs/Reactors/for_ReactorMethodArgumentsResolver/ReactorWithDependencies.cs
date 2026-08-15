@@ -11,6 +11,8 @@ public class ReactorWithDependencies : IReactor
 
     public Task EventAndContext(SomeEvent @event, EventContext context) => Task.CompletedTask;
 
+    public Task WithDelivery(SomeEvent @event, ReactorDelivery delivery) => Task.CompletedTask;
+
     public Task WithReadModel(SomeEvent @event, SomeReadModel readModel) => Task.CompletedTask;
 
     public Task WithService(SomeEvent @event, ISomeService service) => Task.CompletedTask;

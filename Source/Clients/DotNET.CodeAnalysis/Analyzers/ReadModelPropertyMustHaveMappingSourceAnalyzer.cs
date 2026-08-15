@@ -24,13 +24,14 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
 {
     const string ModelBoundNamespace = "Cratis.Chronicle.Projections.ModelBound";
     const string IdentifierName = "Id";
+    const string SetValueAttributeName = "SetValueAttribute";
 
     static readonly HashSet<string> ModelBoundMappingAttributeNames = new(StringComparer.Ordinal)
     {
         "FromEventAttribute",
         "SetFromAttribute",
         "SetFromContextAttribute",
-        "SetValueAttribute",
+        SetValueAttributeName,
         "ChildrenFromAttribute",
         "JoinAttribute",
         "AddFromAttribute",
@@ -204,6 +205,22 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
         attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace;
 
     static bool IsMappingOrKeyAttribute(AttributeData attribute) =>
-        IsModelBoundMappingAttribute(attribute) ||
+        (IsModelBoundMappingAttribute(attribute) && !DeclaresAClear(attribute)) ||
         attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.KeyAttributeName;
+
+    /// <summary>
+    /// Determines whether an attribute declares a clear rather than a mapping source.
+    /// </summary>
+    /// <param name="attribute">The attribute to inspect.</param>
+    /// <returns>True when the attribute clears the member rather than sourcing it.</returns>
+    /// <remarks>
+    /// A null <c>[SetValue]</c> is a clear: it says what returns the member to no value, never where a value comes
+    /// from. Counting it as a mapping source would silence this rule for a member that genuinely has none - the
+    /// member would be cleared by one event and populated by nothing, which is precisely what the rule reports.
+    /// <c>[ClearWith]</c> is not listed as a mapping attribute at all, so it needs no exclusion here.
+    /// </remarks>
+    static bool DeclaresAClear(AttributeData attribute) =>
+        attribute.AttributeClass?.Name == SetValueAttributeName &&
+        attribute.ConstructorArguments.Length > 0 &&
+        attribute.ConstructorArguments[0] is { Kind: not TypedConstantKind.Error, Value: null };
 }

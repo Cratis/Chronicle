@@ -109,6 +109,16 @@ public class EventStoreSubscriptionObserverSubscriber(
             return;
         }
 
+        // The target may have erased this subject. Copying the source key in is precisely how an erased key came
+        // back before the fence existed - the copy happens because the target holds no key, which is the state an
+        // erasure creates. The store refuses the write regardless; asking first is what turns a thrown exception
+        // into a logged refusal for the common case, so forwarding of the subject's non-PII events keeps flowing.
+        if (await encryptionKeyStorage.GetErasureFor(targetEventStore, _key.Namespace, identifier) is { NewKeyAllowed: false })
+        {
+            logger.SkippedCopyingEncryptionKeyToErasedEventStore(_key.EventStore, targetEventStore, _key.Namespace);
+            return;
+        }
+
         var sourceKey = await encryptionKeyStorage.TryGetFor(_key.EventStore, _key.Namespace, identifier);
         if (sourceKey is null)
         {

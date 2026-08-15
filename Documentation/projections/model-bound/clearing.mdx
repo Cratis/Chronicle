@@ -1,0 +1,86 @@
+# Clearing Values
+
+Some facts take a value away without putting anything in its place. A note is deleted, a due date is dropped, a shift is released. `ClearWith` declares which event does that, and the projection writes the member back to `null` every time the event is observed — including when the read model is rebuilt from the beginning of the stream.
+
+## Basic Usage
+
+Put `ClearWith` on the member the event empties. The member has to be nullable.
+
+<ChronicleClientTabs snippet="projections/model-bound/clearing/basic" />
+
+When `MbClearingProjectNoted` occurs, `Note` is populated. When `MbClearingProjectNoteCleared` occurs, `Note` goes back to `null`. A later `MbClearingProjectNoted` sets it again — a clear is a value written at a point in the stream, not a terminal state for the member.
+
+## The Same Clear as a Null SetValue
+
+`SetValue` with `null` means exactly the same thing and builds exactly the same mapping. Reach for whichever reads better where you are: `ClearWith` states the intent, and `SetValue(null)` sits naturally alongside the other `SetValue` declarations on a member.
+
+<ChronicleClientTabs snippet="projections/model-bound/clearing/set-value-null" />
+
+## The Member Must Be Able to Hold No Value
+
+Clearing means returning a member to *no value*, so the member must have that state. A non-nullable member does not, and the declaration is refused: [CHR0048](../../code-analysis/CHR0048) reports it as a build warning — scheduled to become an error in the next major — and building the projection throws `CannotClearNonNullableMember`, so an unaddressed warning fails at startup.
+
+<ChronicleClientTabs snippet="projections/model-bound/clearing/nullable" />
+
+This is deliberate rather than a limitation to work around. The only value a projection could write to a non-nullable member is its type default — `""`, `0`, `DateTimeOffset.MinValue` — and that is a *different fact*. A reader seeing an empty string cannot tell whether the value was cleared or was genuinely empty, which is exactly the ambiguity a type-specific "not set" sentinel introduces.
+
+So decide which you mean:
+
+| You mean | Declare |
+| --- | --- |
+| No value at all | A nullable member plus `[ClearWith<TEvent>]` |
+| A specific value that happens to be the type default | `[SetValue<TEvent>("")]`, `[SetValue<TEvent>(0)]`, … |
+
+## Child Items
+
+A member of a child collection item clears the same way. The clearing event has to reach the child, so it needs its own `ChildrenFrom` with the key that identifies which item to clear.
+
+<ChronicleClientTabs snippet="projections/model-bound/clearing/child" />
+
+## Nested Objects
+
+`ClearWith` on a member *of* a nested type clears that member and leaves the object standing. `ClearWith` on the `Nested` member itself — or on the nested type, as described in [Nested Objects](nested) — clears the whole object back to `null`.
+
+<ChronicleClientTabs snippet="projections/model-bound/clearing/nested-member" />
+
+Declaring it on the holding member rather than on the nested type is worth preferring when the nested type is shared: the owner names the event that ends *its* relationship, and the nested type does not have to know about it.
+
+## When This Is the Wrong Fit
+
+- **Emptying a collection.** `ClearWith` on a `ChildrenFrom` collection is not a supported way to remove every item; use `RemovedWith` on the child, described in [Removal](removal).
+- **Deleting the whole read model.** That is a root-level `RemovedWith`, not a clear.
+- **A member that should fall back to a default rather than to nothing.** Say so with `SetValue`; the declaration then records the value on purpose instead of leaving a reader to guess.
+
+## In the Projection Declaration Language
+
+`clear` is a statement of its own, alongside `increment`, `decrement` and `count`. It names the member the event empties:
+
+```text
+projection Notes => MbClearingProjectNotes
+    from MbClearingProjectNoted
+        note = note
+    from MbClearingProjectNoteCleared
+        clear note
+```
+
+A clear reaches a member of a nested object through its path — the same clear the `MbClearingContract` example above declares with an attribute:
+
+```text
+projection Employees => MbClearingEmployee
+    from MbClearingNoticeWithdrawn
+        clear contract.noticeGiven
+```
+
+`note = null` compiles to exactly the same mapping and keeps working, so existing declarations need no change. Prefer `clear` in new ones: assigning a value and taking one away are different acts, and spelling both with `=` hides that. It is also what you get back — when Chronicle generates a declaration from a projection definition it writes `clear`, whichever spelling the declaration was authored in. See the [Projection Declaration Language](../projection-declaration-language/) for the rest of the syntax.
+
+## In the Fluent API
+
+`Clear` is an operation in its own right, alongside `Set`, `Increment` and `Count`. It is available everywhere `Set` is — at the root, inside `Children`, and inside `Nested`.
+
+<ChronicleClientTabs snippet="projections/model-bound/clearing/fluent" />
+
+`Set(...).ToValue(null)` means the same thing and keeps working, so existing projections need no change. Prefer `Clear` in new code: it names the operation instead of spelling it as a set of a value that happens to be absent, and it reads the same as the `ClearWith` attribute.
+
+`Clear` carries a default implementation that throws `ClearNotSupported`, so adding it to the builder interface does not break an implementation written outside Chronicle: such a builder keeps compiling and only fails if it is actually asked to clear something, which it could not have been before the member existed.
+
+The nullable rule is enforced here too. C# cannot express "a nullable-annotated reference type" as a generic constraint — a non-nullable argument converts to a nullable parameter without complaint — so `Clear` cannot refuse a non-nullable member at its signature. Building the projection refuses it instead, throwing `CannotClearNonNullableMember`, and [CHR0048](../../code-analysis/CHR0048) reports both `Clear` and `ToValue(null)` at build time.

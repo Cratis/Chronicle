@@ -4,6 +4,8 @@
   href: basic-mapping.mdx
 - name: Set Constant Value
   href: set-value.mdx
+- name: Clearing Values
+  href: clearing.mdx
 - name: Convention-Based
   href: convention-based.mdx
 - name: FromEvery

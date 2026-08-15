@@ -25,4 +25,7 @@ internal static partial class CompositeEncryptionKeyStorageLogMessages
 
     [LoggerMessage(LogLevel.Warning, "One of the composed key stores already held a different encryption key for '{Identifier}' than the primary store provisioned. Values protected under one of them cannot be read back through the other - reconcile the stores before completing the cutover")]
     internal static partial void InnerStoreHoldsDivergentKey(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier);
+
+    [LoggerMessage(LogLevel.Error, "One of the composed key stores has the encryption key for '{Identifier}' recorded as erased while another still holds it. The key is not served and not healed across - the erasure did not reach every store, so repeat it until it does")]
+    internal static partial void ErasedKeySurvivedInAnotherStore(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier);
 }

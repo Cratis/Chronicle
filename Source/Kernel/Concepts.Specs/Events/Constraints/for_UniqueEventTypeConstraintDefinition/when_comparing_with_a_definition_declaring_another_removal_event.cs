@@ -27,9 +27,9 @@ public class when_comparing_with_a_definition_declaring_another_removal_event : 
 
     void Establish()
     {
-        _definition = new(_name, [_coveredEventTypeId], _returnedEventTypeId);
-        _equivalent = new(_name, [_coveredEventTypeId], _returnedEventTypeId);
-        _withAnotherRemovalEvent = new(_name, [_coveredEventTypeId], _writtenOffEventTypeId);
+        _definition = new(_name, [_coveredEventTypeId], [_returnedEventTypeId]);
+        _equivalent = new(_name, [_coveredEventTypeId], [_returnedEventTypeId]);
+        _withAnotherRemovalEvent = new(_name, [_coveredEventTypeId], [_writtenOffEventTypeId]);
         _withoutRemovalEvent = new(_name, [_coveredEventTypeId]);
     }
 

@@ -45,7 +45,10 @@ Both stores are now live, and Chronicle keeps them in step for you:
 
 - A key is looked for in the dedicated store first. When it is only in the default storage, it is served from there and **written into the dedicated store as it is read** — so the migration happens through ordinary traffic, with no script to write and no verify pass to run.
 - New keys are provisioned in the dedicated store and mirrored back to the default storage, so both stay complete. That is what makes the move reversible: set `migrateFromDefaultStorage` back to `false` — or drop the `storage` section entirely — and nothing is lost.
-- Erasing a key erases it from **both** stores. A deletion that only reaches one of them fails loudly rather than reporting success, because a key surviving in either store is not an erasure.
+- Erasing a key erases it from **both** stores, and records the erasure in both. A deletion that only reaches one of them fails loudly rather than reporting success, because a key surviving in either store is not an erasure — and a store that has the subject recorded as erased will not accept the other store's copy, so a half-finished erasure cannot be healed back into place by ordinary traffic.
+
+> [!CAUTION]
+> A key store written outside Chronicle has to implement the erasure members of `IEncryptionKeyStorage` before it can be composed here. One that does not fails loudly the first time an erasure is attempted through it, because an erasure it cannot record is an erasure that can be undone by the next read. See [The encryption key lifecycle](../../compliance/key-lifecycle.md).
 
 A key moves the first time it is *read*, so a subject whose data nobody has queried still lives only in the default storage. Before you turn `migrateFromDefaultStorage` off, confirm the dedicated store actually holds every key — turning it off early puts the subjects that were never read straight back into the empty-string outcome above. Once you have confirmed it, removing the leftover keys from the general storage backend is an ordinary cleanup you decide on separately, not the irreversible last step of a sequence.
 
@@ -62,6 +65,28 @@ As an environment variable:
 ```shell
 export Cratis__Chronicle__Compliance__Encryption__MigrateFromDefaultStorage=true
 ```
+
+## Backup and restore ordering
+
+The compliance key store is the third item in a Chronicle backup set, alongside the encryption-certificate ring and the storage backend. It is an independent subsystem: **the encryption certificate does not protect these keys, and these keys do not protect anything the certificate protects.** The two are backed up separately and restored separately, and getting either wrong loses different data.
+
+Restore in this order:
+
+1. The [encryption-certificate ring](../encryption-certificate.md#backup-and-restore-ordering), in the shape it had when the backup was taken.
+2. The storage backend (MongoDB or SQL).
+3. The compliance key store — **to the same point in time as (2)**.
+
+Step 3 is the one specific to this page, and it is a point-in-time match rather than a "latest wins":
+
+- A key store restored **older** than the storage is missing keys for subjects created since. Every `[PII]` value belonging to those subjects reads back as an **empty string** — byte-for-byte identical to a completed [right to erasure](../../compliance/index), reported by nothing.
+- A key store restored **newer** than the storage brings back keys for subjects whose erasure the storage backup predates. Nothing breaks, and that is the problem: an erasure you have already reported as complete is silently undone.
+
+When `migrateFromDefaultStorage` is on, both stores are live and both are part of the backup set. Restoring only the dedicated store leaves the keys that had not been read yet — the ones still living only in the default storage — out of the restore.
+
+> [!CAUTION]
+> A key store cannot be reconstructed. Deleting a key is the erasure mechanism, so there is no escrow, no recovery key and no support path — exactly as intended. Treat the key store backup with the same retention as the storage backups it has to match.
+
+Vault and Azure Key Vault both keep every key revision as a distinct secret, so their own backup and point-in-time restore facilities cover this; when the keys live in the general storage backend instead, the database backup already carries them and steps 2 and 3 are the same restore.
 
 ## Vault
 

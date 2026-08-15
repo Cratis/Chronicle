@@ -47,8 +47,8 @@ public static class EventHandlerMethods
 
     /// <summary>
     /// Check whether a <see cref="MethodInfo"/> has the shape of an event handler method — a first parameter
-    /// that is a known event type, with an optional <see cref="EventContext"/> as the second parameter —
-    /// regardless of whether its return type is a supported side-effect return type.
+    /// that is a known event type, with an optional <see cref="EventContext"/> or <see cref="ReactorDelivery"/>
+    /// as the second parameter — regardless of whether its return type is a supported side-effect return type.
     /// </summary>
     /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
@@ -72,7 +72,9 @@ public static class EventHandlerMethods
             return false;
         }
 
-        return parameters.Length == 1 || parameters[1].ParameterType == typeof(EventContext);
+        return parameters.Length == 1 ||
+               parameters[1].ParameterType == typeof(EventContext) ||
+               parameters[1].ParameterType == typeof(ReactorDelivery);
     }
 
     /// <summary>

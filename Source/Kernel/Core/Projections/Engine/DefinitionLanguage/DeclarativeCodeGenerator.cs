@@ -63,6 +63,11 @@ public class DeclarativeCodeGenerator
 
     static string ConvertExpressionForSet(string expression)
     {
+        // A clear is emitted as its own Clear(...) call by the property-mapping loop, which owns the target
+        // property name. This stays as the fallback for any other caller, where ToValue(null) is the equivalent
+        // spelling that continues an already-emitted Set(...).
+        if (expression == WellKnownExpressions.Null) return "ToValue(null)";
+
         // For Set operations, event context properties need ToEventContextProperty
         if (expression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && expression.EndsWith(')'))
         {
@@ -301,6 +306,10 @@ public class DeclarativeCodeGenerator
                 else if (normalizedExpression == WellKnownExpressions.Count)
                 {
                     propLines.Add($".Count(m => m.{propertyPath})");
+                }
+                else if (normalizedExpression == WellKnownExpressions.Null)
+                {
+                    propLines.Add($".Clear(m => m.{propertyPath})");
                 }
                 else
                 {

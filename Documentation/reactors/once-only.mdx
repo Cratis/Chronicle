@@ -19,6 +19,11 @@ event as an ordinary observation, so a `OnceOnly` handler runs again** — which
 handler failed before its side effect ran, and recovery exists to run it. Keep designing for the handler
 being invoked more than once when it fails partway through.
 
+When the side effect must survive that retry too, take a [delivery identity](delivery-identity) alongside this
+attribute: it gives you a key that is stable across the failure and the recovery, so a record you keep under it
+lets the handler recognize the redelivery. The two compose — `OnceOnly` keeps replay out for free, the identity
+covers what is left.
+
 ## Where you put it
 
 `OnceOnly` goes on a handler method or on the reactor class, and the two mean different things:

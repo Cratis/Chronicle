@@ -25,7 +25,8 @@ internal static class AppendResultConverters
             SequenceNumber = result.SequenceNumber,
             ConstraintViolations = result.ConstraintViolations.Select(_ => _.ToContract()).ToList(),
             Errors = result.Errors.Select(_ => _.Value).ToList(),
-            ConcurrencyViolation = result.ConcurrencyViolation?.ToContract()
+            ConcurrencyViolation = result.ConcurrencyViolation?.ToContract(),
+            ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
 
     /// <summary>
@@ -40,6 +41,7 @@ internal static class AppendResultConverters
             SequenceNumbers = result.SequenceNumbers.Select(_ => _.Value).ToList(),
             ConstraintViolations = result.ConstraintViolations.Select(_ => _.ToContract()).ToList(),
             Errors = result.Errors.Select(_ => _.Value).ToList(),
-            ConcurrencyViolations = result.ConcurrencyViolations.Select(_ => _.ToContract()).ToList()
+            ConcurrencyViolations = result.ConcurrencyViolations.Select(_ => _.ToContract()).ToList(),
+            ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
 }

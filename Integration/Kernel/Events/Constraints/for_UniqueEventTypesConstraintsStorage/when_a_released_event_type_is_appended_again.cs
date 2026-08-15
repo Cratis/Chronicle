@@ -80,7 +80,7 @@ public class when_a_released_event_type_is_appended_again(context context) : Giv
         }
 
         UniqueEventTypeConstraintDefinition Definition =>
-            new($"loan-open-{_eventSequenceId}", [_checkedOutEventType.Id], _returnedEventType.Id);
+            new($"loan-open-{_eventSequenceId}", [_checkedOutEventType.Id], [_returnedEventType.Id]);
 
         Task Append(EventSequenceNumber sequenceNumber, EventType eventType, EventSourceId eventSourceId) =>
             _eventSequence.Append(

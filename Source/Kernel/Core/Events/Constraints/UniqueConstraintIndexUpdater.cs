@@ -23,7 +23,9 @@ public class UniqueConstraintIndexUpdater(
     {
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
 
-        if (context.EventTypeId == definition.RemovedWith)
+        // Any of the declared removal events releases the claim on its own — a lifecycle that ends in more than
+        // one way has more than one terminal fact, and each of them frees the value.
+        if (definition.RemovedWith.Contains(context.EventTypeId))
         {
             await storage.Remove(context.EventSourceId, definition.Name, scopeKey);
         }

@@ -26,7 +26,7 @@ internal static class ConstraintConverters
                 new UniqueConstraintDefinition(
                     constraint.Name,
                     constraint.Definition.Value0!.EventDefinitions.Select(e => e.ToChronicle()),
-                    constraint.RemovedWith is null ? null : (EventTypeId)constraint.RemovedWith,
+                    constraint.ToRemovedWith(),
                     constraint.Definition.Value0!.IgnoreCasing,
                     scope),
 
@@ -34,7 +34,7 @@ internal static class ConstraintConverters
                 new UniqueEventTypeConstraintDefinition(
                     constraint.Name,
                     constraint.Definition.Value1!.EventTypeIds.Select(_ => (EventTypeId)_).ToArray(),
-                    constraint.RemovedWith is null ? null : (EventTypeId)constraint.RemovedWith,
+                    constraint.ToRemovedWith(),
                     scope),
 
             _ => null!
@@ -58,4 +58,18 @@ internal static class ConstraintConverters
             scope.EventStreamType is not null ? (EventStreamType)scope.EventStreamType : null,
             scope.EventStreamId is not null ? (EventStreamId)scope.EventStreamId : null);
     }
+
+    /// <summary>
+    /// Convert the removal event types a contract <see cref="Contracts.Events.Constraints.Constraint"/> carries.
+    /// </summary>
+    /// <param name="constraint"><see cref="Contracts.Events.Constraints.Constraint"/> to read from.</param>
+    /// <returns>The <see cref="EventTypeId"/> values of the events that release the constraint.</returns>
+    /// <remarks>
+    /// A client older than the plural form sends its one removal event on this same field, and arrives here as a
+    /// one-element collection rather than as nothing: the field kept its number, and one length-delimited value is
+    /// indistinguishable on the wire from a repeated field holding one. That is what makes the kernel safe to
+    /// upgrade ahead of its clients, which is the order the release notes ask for.
+    /// </remarks>
+    static EventTypeId[] ToRemovedWith(this Contracts.Events.Constraints.Constraint constraint) =>
+        constraint.RemovedWith?.Select(_ => (EventTypeId)_).ToArray() ?? [];
 }

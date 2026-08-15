@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Storage.Compliance;
 public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
 {
     readonly Dictionary<Key, EncryptionKey> _keys = [];
+    readonly Dictionary<Scope, EncryptionKeyErasure> _erasures = [];
     readonly Lock _lock = new();
 
     /// <inheritdoc/>
@@ -22,6 +23,7 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
         lock (_lock)
         {
             var actualRevision = IsLatest(revision) ? GetNextRevision(eventStore, eventStoreNamespace, identifier) : revision!;
+            ErasureFor(eventStore, eventStoreNamespace, identifier).EnsureCanSave(identifier, actualRevision, key);
             _keys[new(eventStore, eventStoreNamespace, identifier, actualRevision)] = key;
         }
 
@@ -38,7 +40,8 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
                 return Task.FromResult(existing);
             }
 
-            _keys[new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Initial)] = key;
+            var revision = ErasureFor(eventStore, eventStoreNamespace, identifier).RevisionForNewKey(identifier, key);
+            _keys[new(eventStore, eventStoreNamespace, identifier, revision)] = key;
             return Task.FromResult(key);
         }
     }
@@ -99,7 +102,49 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(ErasureFor(eventStore, eventStoreNamespace, identifier));
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        lock (_lock)
+        {
+            var scope = new Scope(eventStore, eventStoreNamespace, identifier);
+            var present = _keys
+                .Where(_ => _.Key.EventStore == eventStore && _.Key.EventStoreNamespace == eventStoreNamespace && _.Key.Identifier == identifier)
+                .Select(_ => (_.Key.Revision, _.Value));
+            _erasures[scope] = EncryptionKeyErasure.Covering(_erasures.GetValueOrDefault(scope), present);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        lock (_lock)
+        {
+            var scope = new Scope(eventStore, eventStoreNamespace, identifier);
+            if (_erasures.TryGetValue(scope, out var erasure))
+            {
+                _erasures[scope] = erasure with { NewKeyAllowed = true };
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
+
+    EncryptionKeyErasure? ErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _erasures.GetValueOrDefault(new Scope(eventStore, eventStoreNamespace, identifier));
 
     EncryptionKey? TryGetLatest(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         _keys
@@ -117,6 +162,8 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
             .Max();
         return maxRevision + 1u;
     }
+
+    sealed record Scope(EventStoreName EventStore, EventStoreNamespaceName EventStoreNamespace, EncryptionKeyIdentifier Identifier);
 
     sealed record Key(EventStoreName EventStore, EventStoreNamespaceName EventStoreNamespace, EncryptionKeyIdentifier Identifier, EncryptionKeyRevision Revision);
 }

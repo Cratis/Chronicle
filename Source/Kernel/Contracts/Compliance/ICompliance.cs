@@ -26,4 +26,14 @@ public interface ICompliance
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Authorize a new encryption key for a subject whose key was erased, so that a later lawful lifecycle can
+    /// protect their data again under a fresh key.
+    /// </summary>
+    /// <param name="request">The <see cref="AllowNewEncryptionKeyRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default);
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Properties;
 using Cratis.Reflection;
 using Cratis.Serialization;
@@ -104,6 +105,22 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
         var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, false);
         _propertyExpressions[propertyPath] = setBuilder;
         return setBuilder;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder Clear<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
+    {
+        var targetPropertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
+
+        // The same ruling the model-bound attributes are held to, enforced in the same place - where the definition
+        // is built. C# cannot express "a nullable-annotated reference type" as a generic constraint, so the
+        // signature alone cannot refuse this and the check has to be made here.
+        ScalarClear.ThrowIfCannotHoldNull(typeof(TReadModel), targetPropertyPath.GetPropertyInfoFor<TReadModel>());
+
+        var propertyPath = _namingPolicy.GetPropertyName(targetPropertyPath);
+        ThrowIfPropertyAlreadyDefined(propertyPath);
+        _propertyExpressions[propertyPath] = new ClearBuilder<TReadModel, TEvent, TProperty>(propertyPath);
+        return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>

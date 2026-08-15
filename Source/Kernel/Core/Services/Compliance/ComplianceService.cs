@@ -59,6 +59,10 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonComplia
     public Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default) =>
         GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyFor(request.Identifier);
 
+    /// <inheritdoc/>
+    public Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default) =>
+        GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyFor(request.Identifier);
+
     IPIIManager GetPIIManager(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         grainFactory.GetGrain<IPIIManager>(Guid.Empty, new PIIManagerKey(eventStore, @namespace));
 }

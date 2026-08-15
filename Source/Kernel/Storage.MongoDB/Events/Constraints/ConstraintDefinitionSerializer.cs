@@ -46,6 +46,7 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
     const string LegacyUniqueEventTypeElementName = "eventTypeId";
 
     static readonly string _uniqueEventTypesElementName = nameof(UniqueEventTypeConstraintDefinition.EventTypeIds).ToCamelCase();
+    static readonly string _removedWithElementName = nameof(UniqueEventTypeConstraintDefinition.RemovedWith).ToCamelCase();
 
     /// <inheritdoc/>
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, IConstraintDefinition value)
@@ -66,6 +67,11 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
         if (type == typeof(UniqueEventTypeConstraintDefinition))
         {
             bsonDocument = UpgradeLegacyUniqueEventTypeDefinition(bsonDocument);
+        }
+
+        if (type == typeof(UniqueEventTypeConstraintDefinition) || type == typeof(UniqueConstraintDefinition))
+        {
+            bsonDocument = UpgradeLegacySingleRemovalEvent(bsonDocument);
         }
 
         return (IConstraintDefinition)BsonSerializer.Deserialize(bsonDocument, type);
@@ -135,6 +141,38 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
 
         var upgraded = new BsonDocument(document.Elements.Where(element => element.Name != LegacyUniqueEventTypeElementName));
         upgraded.Add(_uniqueEventTypesElementName, new BsonArray { legacyEventType });
+        return upgraded;
+    }
+
+    /// <summary>
+    /// Upgrade a constraint definition persisted before the constraint could be released by several events.
+    /// </summary>
+    /// <param name="document">The <see cref="BsonDocument"/> that was read.</param>
+    /// <returns>The document to deserialize from - the one that was read when there is nothing to upgrade.</returns>
+    /// <remarks>
+    /// The removal event used to be a single optional value and is persisted under the same element name, so a
+    /// document written by an earlier kernel holds a string where an array is now expected and the driver refuses
+    /// it. Mapping that string onto a one-element array keeps the constraint releasing on the event it was
+    /// declared with; the next registration persists the new shape.
+    /// <para>
+    /// A document written with no removal event at all carries the element as null, which the driver would hand
+    /// on as a null sequence. Dropping the element instead lets the definition's own normalization answer with an
+    /// empty one.
+    /// </para>
+    /// </remarks>
+    static BsonDocument UpgradeLegacySingleRemovalEvent(BsonDocument document)
+    {
+        if (!document.TryGetValue(_removedWithElementName, out var removedWith) || removedWith.IsBsonArray)
+        {
+            return document;
+        }
+
+        var upgraded = new BsonDocument(document.Elements.Where(element => element.Name != _removedWithElementName));
+        if (!removedWith.IsBsonNull)
+        {
+            upgraded.Add(_removedWithElementName, new BsonArray { removedWith });
+        }
+
         return upgraded;
     }
 }

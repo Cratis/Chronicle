@@ -59,6 +59,11 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
             return eventContext;
         }
 
+        if (parameterType == typeof(ReactorDelivery))
+        {
+            return ReactorDelivery.For(reactor, eventContext);
+        }
+
         if (eventStore is not null && IsReadModel(eventStore, parameterType))
         {
             var key = reactor is ICanResolveReadModelKey keyResolver

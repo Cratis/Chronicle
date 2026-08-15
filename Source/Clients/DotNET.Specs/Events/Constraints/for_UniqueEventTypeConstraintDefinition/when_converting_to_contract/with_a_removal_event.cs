@@ -28,10 +28,10 @@ public class with_a_removal_event : Specification
             _constraintName,
             _ => string.Empty,
             [_checkedOutEventType.Id],
-            _returnedEventType.Id);
+            [_returnedEventType.Id]);
     }
 
     void Because() => _contract = _definition.ToContract();
 
-    [Fact] void should_carry_the_removal_event() => _contract.RemovedWith.ShouldEqual(_returnedEventType.Id.Value);
+    [Fact] void should_carry_the_removal_event() => _contract.RemovedWith.ShouldContainOnly([_returnedEventType.Id.Value]);
 }

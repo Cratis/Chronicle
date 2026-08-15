@@ -78,7 +78,7 @@ public class ReindexConstraintsStep(
         // claim simply stays released. Removal and unsupported events fall through to Update, which
         // releases or ignores the claim as appropriate.
         if (definition.SupportsEventType(@event.Context.EventType.Id) &&
-            @event.Context.EventType.Id != definition.RemovedWith &&
+            !definition.RemovedWith.Contains(@event.Context.EventType.Id) &&
             definition.GetPropertiesAndValues(context).Any(_ => string.IsNullOrEmpty(_.Value)))
         {
             return;

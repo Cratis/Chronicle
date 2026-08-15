@@ -18,7 +18,7 @@ public class and_event_in_context_is_remove_event : Specification
     void Establish()
     {
         _storage = Substitute.For<IUniqueConstraintsStorage>();
-        _definition = new("SomeConstraint", [new("SomeEvent", [])], "SomeRemoveEvent");
+        _definition = new("SomeConstraint", [new("SomeEvent", [])], [(EventTypeId)"SomeRemoveEvent"]);
 
         _context = new([], EventSourceId.New(), "SomeRemoveEvent", new ExpandoObject());
         _updater = new(_definition, _context, _storage);

@@ -18,7 +18,8 @@ The rules are:
   delivers it.
 
 Reach for [OnceOnly](once-only) instead when the side effect should simply not happen again. Use `Replay` when
-a replay needs to do something *different* rather than nothing.
+a replay needs to do something *different* rather than nothing. Neither covers the re-delivery that follows a
+failed partition being recovered — for that, see [Delivery identity](delivery-identity).
 
 :::note[Client coverage]
 Elixir and TypeScript have no equivalent marker, so a replay always re-runs the regular handler there.

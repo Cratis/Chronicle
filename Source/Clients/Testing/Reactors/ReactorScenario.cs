@@ -47,6 +47,16 @@ public class ReactorScenario<TReactor>
     IEventStore? _eventStore;
 
     /// <summary>
+    /// The sequence number the next event handed to the reactor is given.
+    /// </summary>
+    /// <remarks>
+    /// Every event the scenario delivers gets its own number, contiguously from the first, across every
+    /// <c>Given</c> call. Without that, a reactor keyed on <see cref="ReactorDelivery"/> would see two distinct
+    /// events as the same delivery and skip the second - the scenario would report an idempotent reactor broken.
+    /// </remarks>
+    EventSequenceNumber _nextSequenceNumber = EventSequenceNumber.First;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ReactorScenario{TReactor}"/> class.
     /// </summary>
     /// <param name="serviceProvider">
@@ -225,9 +235,10 @@ public class ReactorScenario<TReactor>
                 eventSourceId,
                 EventStreamType.All,
                 EventStreamId.Default,
-                EventSequenceNumber.Unavailable,
+                _nextSequenceNumber,
                 CorrelationId.New());
 
+            _nextSequenceNumber += 1;
             await invoker.Invoke(@event, context);
         }
     }

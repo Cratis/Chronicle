@@ -79,6 +79,10 @@ public record KeywordKey(string From, string Projection, string Key, string Join
 
 public record KeywordKeyReadModel(KeywordKey Key);
 
+public record NoteReadModel(string? Note, NoteOwner? Owner);
+
+public record NoteOwner(string? Name, string? Note);
+
 public record SimulatedOrderReadModel(
     string OrderId,
     string SimulationId,

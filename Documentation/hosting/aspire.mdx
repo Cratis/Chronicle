@@ -54,6 +54,22 @@ The two calls are independent, so you can point both at the same `.pfx` if one c
 
 The password argument is optional, but supply it: Chronicle reads the file as PKCS#12 only when a password is present, and a TLS listener needs the private key inside that PKCS#12 container. [Local Certificate Setup](./local-certificates) shows how to generate a suitable `.pfx` with `dotnet dev-certs` or OpenSSL; [Production Hosting](./production.md) covers what a real deployment should use instead of a self-signed one.
 
+#### Rotating the encryption certificate
+
+`WithEncryptionCertificate` sets the **active** certificate. Chronicle also accepts previously active certificates, kept for decryption only, so a rotation needs no downtime — see [Rotating the certificate](./encryption-certificate.md#rotating-the-certificate). There is no builder method for that list yet; mount the previous certificate and point the configuration at it directly:
+
+```csharp
+var chronicle = builder
+    .AddCratisChronicle(configure: chronicle => chronicle
+        .WithTlsCertificate("certs/chronicle.pfx", "YourPassword")
+        .WithEncryptionCertificate("certs/encryption-2026.pfx", "YourNewPassword"))
+    .WithBindMount("certs/encryption-2025.pfx", "/certs/encryption-previous.pfx", isReadOnly: true)
+    .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePath", "/certs/encryption-previous.pfx")
+    .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePassword", "YourOldPassword");
+```
+
+`AddCratisChronicle` returns the resource builder, so `WithBindMount` and `WithEnvironment` chain straight onto it. The bind mount is what `WithEncryptionCertificate` would have done for you: the path in the environment variable is the path *inside* the container, so a host path handed straight to Chronicle names a file it cannot see.
+
 ### MongoDB
 
 <ChronicleClientTabs snippet="hosting/aspire/mongo" />

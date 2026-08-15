@@ -15,12 +15,12 @@ public class and_it_declares_a_removal_event : given.a_stored_constraint_definit
 {
     static readonly EventTypeId _coveredEventTypeId = "the-event-type";
     static readonly EventTypeId _removalEventTypeId = "the-removal-event-type";
-    static readonly UniqueEventTypeConstraintDefinition _definition = new(ConstraintNameValue, [_coveredEventTypeId], _removalEventTypeId);
+    static readonly UniqueEventTypeConstraintDefinition _definition = new(ConstraintNameValue, [_coveredEventTypeId], [_removalEventTypeId]);
 
     IConstraintDefinition _result;
 
     void Because() => _result = Read(Write(_definition));
 
     [Fact] void should_read_back_the_definition_that_was_written() => _result.ShouldEqual(_definition);
-    [Fact] void should_keep_the_removal_event() => ((UniqueEventTypeConstraintDefinition)_result).RemovedWith.ShouldEqual(_removalEventTypeId);
+    [Fact] void should_keep_the_removal_event() => ((UniqueEventTypeConstraintDefinition)_result).RemovedWith.ShouldContainOnly([_removalEventTypeId]);
 }

@@ -21,7 +21,7 @@ public class without_a_removal_event : Specification
             _constraintName,
             _ => "",
             [_eventType.Id],
-            null);
+            []);
     }
 
     void Because()
@@ -33,5 +33,5 @@ public class without_a_removal_event : Specification
     [Fact] void should_have_correct_name() => _contract.Name.ShouldEqual(_constraintName.Value);
     [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(Contracts.Events.Constraints.ConstraintType.UniqueEventType);
     [Fact] void should_event_type() => _definitionContract.EventTypeIds.ShouldContainOnly([_eventType.Id.Value]);
-    [Fact] void should_have_no_removal_event() => _contract.RemovedWith.ShouldBeNull();
+    [Fact] void should_have_no_removal_event() => _contract.RemovedWith.ShouldBeEmpty();
 }

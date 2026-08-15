@@ -32,7 +32,13 @@ Call `.RemovedWith<T>()` to name the event that ends a cycle. A covered event th
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/releasing" />
 
-The removal applies to the constraint declared immediately before it, and it is per event source — one employee ending their shift opens their own next cycle and nobody else's. Declaring several event types under one name makes them a single constraint, and a single constraint has one removal event.
+The removal applies to the constraint declared immediately before it, and it is per event source — one employee ending their shift opens their own next cycle and nobody else's.
+
+A cycle can end in more than one way, so chain `.RemovedWith<T>()` once for each event that ends it. Every one of them releases the constraint on its own, and the cycle ends at whichever was appended most recently:
+
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/releasing-several-events" />
+
+Declaring several event types under one name makes them a single constraint, and the removal events declared across those declarations all apply to it.
 
 The [model-bound form](../model-bound/unique-event-type) expresses the same thing with `[RemoveConstraint]` on the event that ends the cycle.
 

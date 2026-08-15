@@ -34,6 +34,8 @@ Use multiple clear annotations when more than one event should clear the same ne
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/multiple-clear-events" />
 
+The same annotation on the *parent property* clears the same nested object. Prefer it when the nested type is shared, so the owner names the event that ends its own relationship and the nested type does not have to know about it. To clear a single member of the nested object rather than the whole object, put the annotation on that member — see [Clearing Values](clearing).
+
 ## Updating From Multiple Events
 
 A nested type can be populated or updated by several events. Matching property names are auto-mapped by default.

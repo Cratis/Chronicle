@@ -268,13 +268,14 @@ public class EventSequence(
             }
 
             var (compliantEvent, compliantContent, constraintContext) = getValidAndCompliantEvent.AsT0;
+            var concurrencyCheckPerformed = concurrencyScope.ShouldBeValidated;
             var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
             if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
             {
-                return AppendResult.Failed(correlationId, concurrencyViolation);
+                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyCheckPerformed);
             }
 
-            return await AppendValidAndCompliantEvent(
+            var appendResult = await AppendValidAndCompliantEvent(
                 eventSourceType,
                 eventSourceId,
                 eventStreamType,
@@ -289,6 +290,8 @@ public class EventSequence(
                 constraintContext,
                 occurred,
                 subject);
+
+            return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
         catch (Exception ex)
         {
@@ -336,10 +339,11 @@ public class EventSequence(
                 };
             }
 
+            var concurrencyCheckPerformed = concurrencyScopes.ShouldAllBeValidated;
             var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
             if (concurrencyViolations.Any())
             {
-                return AppendManyResult.Failed(correlationId, concurrencyViolations);
+                return AppendManyResult.Failed(correlationId, concurrencyViolations).ReportingConcurrencyCheck(concurrencyCheckPerformed);
             }
 
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
@@ -349,7 +353,8 @@ public class EventSequence(
                 return (eventAndResult.Event, CompliantEvent: compliantEvent, ConstraintContext: constraintContext);
             });
 
-            return await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
+            var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
+            return appendManyResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
         catch (Exception ex)
         {

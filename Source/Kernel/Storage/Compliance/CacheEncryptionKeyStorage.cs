@@ -34,6 +34,12 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// Cached keys have no time-to-live, so an entry written in that window would never be removed again.
 /// </para>
 /// <para>
+/// Recording an erasure invalidates exactly like a deletion does, and for the same reason: the fence is written
+/// before the key material is destroyed, so between those two steps the backing store still holds a key this cache
+/// would otherwise keep serving. Erasure state itself is never cached - it is read on the provisioning path only,
+/// which happens once per subject, and a stale "not erased" is the one answer that must never be given.
+/// </para>
+/// <para>
 /// This makes the decorator self-sufficient for the store it wraps. It says nothing about caches on other silos -
 /// those are reached by the cluster-wide eviction the erasure issues - and nothing about keys a peer store can heal
 /// back into the wrapped store afterwards.
@@ -83,6 +89,40 @@ public class CacheEncryptionKeyStorage(
     /// <inheritdoc/>
     public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         Invalidate(new KeyScope(eventStore, eventStoreNamespace, identifier), revision: null);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        actualKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public async Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        Invalidate(scope, revision: null);
+
+        try
+        {
+            await actualKeyStore.RecordErasureFor(eventStore, eventStoreNamespace, identifier);
+        }
+        finally
+        {
+            // The fence lands before the key material is destroyed, so a read that missed the cache after the first
+            // invalidation can still reach the backing store while the key is there and cache what it found.
+            // Invalidating again once the fence is durable is what closes that window - the same shape the deletion
+            // uses, and for the same reason.
+            Invalidate(scope, revision: null);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        await actualKeyStore.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier);
+
+        // A remembered absence is what stops the next append reaching the store to provision the new lifecycle's
+        // key, so the authorization has to clear it rather than wait out the negative cache's time-to-live.
+        Invalidate(new KeyScope(eventStore, eventStoreNamespace, identifier), revision: null);
+    }
 
     /// <inheritdoc/>
     public async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
@@ -225,7 +265,19 @@ public class CacheEncryptionKeyStorage(
             _absentKeys.Remove(latest);
         }
 
-        await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        try
+        {
+            await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        }
+        catch
+        {
+            // The backing store can refuse a save outright - an erased subject's key material is refused however it
+            // is offered back. Leaving what it refused in a cache that has no time-to-live would serve the erased
+            // key for the lifetime of the process, from the one place the fence cannot reach. A transient failure
+            // gets the same treatment: a key that was never persisted must not be served as though it had been.
+            Invalidate(scope, revision);
+            throw;
+        }
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;

@@ -34,7 +34,7 @@ public class and_a_unique_event_type_constraint_was_declared : given.a_constrain
 
     [Fact] void should_have_a_single_constraint() => _result.Count.ShouldEqual(1);
     [Fact] void should_still_cover_the_declared_event_type() => ((UniqueEventTypeConstraintDefinition)_result[0]).EventTypeIds.ShouldContainOnly([_checkedOutEventType.Id]);
-    [Fact] void should_carry_the_removal_event() => ((UniqueEventTypeConstraintDefinition)_result[0]).RemovedWith.ShouldEqual(_returnedEventType.Id);
+    [Fact] void should_carry_the_removal_event() => ((UniqueEventTypeConstraintDefinition)_result[0]).RemovedWith.ShouldContainOnly([_returnedEventType.Id]);
 
     record LoanCheckedOut();
     record LoanReturned();

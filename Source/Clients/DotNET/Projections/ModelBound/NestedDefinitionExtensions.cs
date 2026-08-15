@@ -22,6 +22,7 @@ static class NestedDefinitionExtensions
     /// <param name="namingPolicy">The naming policy for converting property names.</param>
     /// <param name="memberName">The member name on the projection model.</param>
     /// <param name="memberType">The type of the member (the nullable nested type).</param>
+    /// <param name="memberClearWithEventTypes">The event types declared by a member-level <see cref="ClearWithAttribute{TEvent}"/> on the nested member.</param>
     /// <param name="processMember">The action to process child members recursively.</param>
     /// <param name="parentModelType">The type of the parent model that contains this nested property.</param>
     internal static void ProcessNestedAttribute(
@@ -30,6 +31,7 @@ static class NestedDefinitionExtensions
         INamingPolicy namingPolicy,
         string memberName,
         Type memberType,
+        IEnumerable<Type> memberClearWithEventTypes,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         Type? parentModelType = null)
     {
@@ -64,6 +66,7 @@ static class NestedDefinitionExtensions
             definition.Nested[propertyName] = nestedDef;
         }
 
+        AddClearWithEventTypes(memberClearWithEventTypes, nestedDef, getOrCreateEventType);
         ProcessNestedTypeDefinition(nestedType, nestedDef, getOrCreateEventType, namingPolicy, processMember, definition, parentModelType);
     }
 
@@ -75,6 +78,7 @@ static class NestedDefinitionExtensions
     /// <param name="namingPolicy">The naming policy for converting property names.</param>
     /// <param name="memberName">The member name on the projection model.</param>
     /// <param name="memberType">The type of the member (the nullable nested type).</param>
+    /// <param name="memberClearWithEventTypes">The event types declared by a member-level <see cref="ClearWithAttribute{TEvent}"/> on the nested member.</param>
     /// <param name="processMember">The action to process child members recursively.</param>
     /// <param name="definition">The root projection definition.</param>
     /// <param name="parentModelType">The type of the parent model that contains this nested property.</param>
@@ -84,6 +88,7 @@ static class NestedDefinitionExtensions
         INamingPolicy namingPolicy,
         string memberName,
         Type memberType,
+        IEnumerable<Type> memberClearWithEventTypes,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
         Type? parentModelType = null)
@@ -119,6 +124,7 @@ static class NestedDefinitionExtensions
             parentChildrenDef.Nested[propertyName] = nestedDef;
         }
 
+        AddClearWithEventTypes(memberClearWithEventTypes, nestedDef, getOrCreateEventType);
         ProcessNestedTypeDefinition(nestedType, nestedDef, getOrCreateEventType, namingPolicy, processMember, definition, parentModelType);
     }
 
@@ -211,13 +217,28 @@ static class NestedDefinitionExtensions
                     nestedDef.From.AddCountMapping(getOrCreateEventType, countEventType, paramPropertyName);
                 }
 
-                if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+                var parameterIsNested = parameter.IsDefined(typeof(NestedAttribute), inherit: false);
+
+                // A [ClearWith] on a positional parameter of the nested record is a scalar clear of that member.
+                // The parameter, not the generated property, is where the attribute lands, so it has to be read
+                // here - the property pass below never sees it.
+                if (!parameterIsNested)
+                {
+                    foreach (var (_, clearWithEventType) in parameter.GetAttributesOfGenericType<ClearWithAttribute<object>>())
+                    {
+                        ScalarClear.ThrowIfCannotHoldNull(nestedType, parameter);
+                        nestedDef.From.AddClearMapping(getOrCreateEventType, clearWithEventType, paramPropertyName);
+                    }
+                }
+
+                if (parameterIsNested)
                 {
                     nestedDef.ProcessNestedAttributeForChildren(
                         getOrCreateEventType,
                         namingPolicy,
                         parameter.Name!,
                         parameter.ParameterType,
+                        parameter.GetAttributesOfGenericType<ClearWithAttribute<object>>().Select(_ => _.EventType),
                         processMember,
                         definition,
                         nestedType);
@@ -241,6 +262,7 @@ static class NestedDefinitionExtensions
                     namingPolicy,
                     childProperty.Name,
                     childProperty.PropertyType,
+                    childProperty.GetAttributesOfGenericType<ClearWithAttribute<object>>().Select(_ => _.EventType),
                     processMember,
                     definition,
                     nestedType);
@@ -251,20 +273,36 @@ static class NestedDefinitionExtensions
     static void ProcessClearWithAttributes(
         Type nestedType,
         ChildrenDefinition nestedDef,
+        Func<Type, EventType> getOrCreateEventType) =>
+        AddClearWithEventTypes(
+            nestedType.GetCustomAttributes()
+                .Where(attr => attr.GetType().IsGenericType && attr.GetType().GetGenericTypeDefinition() == typeof(ClearWithAttribute<>))
+                .Select(attr => attr.GetType().GetGenericArguments()[0]),
+            nestedDef,
+            getOrCreateEventType);
+
+    /// <summary>
+    /// Registers every event type that clears a nested single-object entry back to null.
+    /// </summary>
+    /// <param name="eventTypes">The event types that clear the nested object.</param>
+    /// <param name="nestedDef">The nested definition to register the clears on.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <remarks>
+    /// Both spellings land here: a class-level <see cref="ClearWithAttribute{TEvent}"/> on the nested type, and one
+    /// on the member that holds it. They mean the same thing, so they register the same way - the member-level form
+    /// exists so the owner can declare the clear without the shared nested type having to know about the event.
+    /// </remarks>
+    static void AddClearWithEventTypes(
+        IEnumerable<Type> eventTypes,
+        ChildrenDefinition nestedDef,
         Func<Type, EventType> getOrCreateEventType)
     {
-        foreach (var attr in nestedType.GetCustomAttributes())
+        foreach (var eventType in eventTypes)
         {
-            if (attr.GetType().IsGenericType &&
-                attr.GetType().GetGenericTypeDefinition() == typeof(ClearWithAttribute<>))
+            nestedDef.RemovedWith[getOrCreateEventType(eventType)] = new RemovedWithDefinition
             {
-                var eventType = attr.GetType().GetGenericArguments()[0];
-                var eventTypeId = getOrCreateEventType(eventType);
-                nestedDef.RemovedWith[eventTypeId] = new RemovedWithDefinition
-                {
-                    Key = WellKnownExpressions.EventSourceId
-                };
-            }
+                Key = WellKnownExpressions.EventSourceId
+            };
         }
     }
 

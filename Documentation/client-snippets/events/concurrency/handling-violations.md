@@ -11,7 +11,7 @@ public class ConcurrencySafeAccountService(IEventLog eventLog)
     public async Task<bool> TryOpenAccount(EventSourceId accountId, string accountName)
     {
         var concurrencyScope = new ConcurrencyScope(
-            SequenceNumber: 0, // Expect this to be the first event
+            SequenceNumber: EventSequenceNumber.BeforeFirst, // Expect no event for this account yet
             EventSourceId: accountId);
 
         var result = await eventLog.Append(
@@ -25,7 +25,8 @@ public class ConcurrencySafeAccountService(IEventLog eventLog)
             return false;
         }
 
-        return result.IsSuccess;
+        // False would mean nothing was compared against the event store
+        return result.IsSuccess && result.ConcurrencyCheckPerformed;
     }
 }
 ```

@@ -43,6 +43,17 @@ public class AppendResult
     public bool HasErrors => Errors.Any();
 
     /// <summary>
+    /// Gets a value indicating whether the concurrency check was actually performed for the append.
+    /// </summary>
+    /// <remarks>
+    /// False means nothing was compared against the event store - either the append asked for no check
+    /// (<c>ConcurrencyScope.None</c>), or it declared a scope that carries no expectation the kernel can validate
+    /// (an incomplete scope) and the check was skipped. A skipped check looks from the outside exactly like a
+    /// passing one, which is why the outcome says which it was.
+    /// </remarks>
+    public bool ConcurrencyCheckPerformed { get; init; }
+
+    /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
@@ -103,5 +114,20 @@ public class AppendResult
     {
         CorrelationId = correlationId,
         Errors = errors.ToList()
+    };
+
+    /// <summary>
+    /// Create a copy of this result that reports whether the concurrency check was performed.
+    /// </summary>
+    /// <param name="performed">Whether the concurrency check was performed.</param>
+    /// <returns>A copy of this <see cref="AppendResult"/> reporting <paramref name="performed"/>.</returns>
+    internal AppendResult ReportingConcurrencyCheck(bool performed) => new()
+    {
+        CorrelationId = CorrelationId,
+        SequenceNumber = SequenceNumber,
+        ConstraintViolations = ConstraintViolations,
+        Errors = Errors,
+        ConcurrencyViolation = ConcurrencyViolation,
+        ConcurrencyCheckPerformed = performed
     };
 }

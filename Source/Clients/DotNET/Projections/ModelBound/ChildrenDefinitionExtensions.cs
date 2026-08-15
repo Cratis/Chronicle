@@ -239,6 +239,11 @@ static class ChildrenDefinitionExtensions
                             var invariantValue = ConvertValueToInvariantString(value);
                             childrenDef.From.AddSetValueMapping(getOrCreateEventType, setValueEventType, paramPropertyName, invariantValue);
                         }
+                        else
+                        {
+                            ScalarClear.ThrowIfCannotHoldNull(childType, parameter);
+                            childrenDef.From.AddClearMapping(getOrCreateEventType, setValueEventType, paramPropertyName);
+                        }
                     }
 
                     // Process SetFrom attributes on constructor parameters
@@ -331,9 +336,33 @@ static class ChildrenDefinitionExtensions
                             var invariantValue = FromDefinitionExtensions.ConvertValueToInvariantString(value);
                             childrenDef.From.AddSetValueMapping(getOrCreateEventType, setValueEventType, paramPropertyName, invariantValue);
                         }
+                        else
+                        {
+                            ScalarClear.ThrowIfCannotHoldNull(childType, parameter);
+                            childrenDef.From.AddClearMapping(getOrCreateEventType, setValueEventType, paramPropertyName);
+                        }
                     }
 
-                    // Check if this parameter has any explicit mapping attributes
+                    // Process ClearWith attributes on constructor parameters. A [Nested] member is handled by
+                    // ProcessNestedAttributeForChildren, which clears the whole nested object; on any other member
+                    // this is a scalar clear.
+                    if (!parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+                    {
+                        foreach (var (_, clearWithEventType) in parameter.GetAttributesOfGenericType<ClearWithAttribute<object>>())
+                        {
+                            if (!ShouldPropagateChildMemberEvent(clearWithEventType, childType, includeSelfReferencingEvents))
+                            {
+                                continue;
+                            }
+
+                            ScalarClear.ThrowIfCannotHoldNull(childType, parameter);
+                            childrenDef.From.AddClearMapping(getOrCreateEventType, clearWithEventType, paramPropertyName);
+                        }
+                    }
+
+                    // Check if this parameter has any explicit mapping attributes. [ClearWith] is deliberately not
+                    // one of them: a clear says what removes a value, never where the value comes from, so it must
+                    // not stand in for a mapping source or suppress the diagnostic that reports a missing one.
                     var hasExplicitMapping = parameter.GetCustomAttributes()
                         .Any(a => a.GetType().IsGenericType &&
                                    (a.GetType().GetGenericTypeDefinition() == typeof(SetFromContextAttribute<>) ||
@@ -493,6 +522,7 @@ static class ChildrenDefinitionExtensions
                         namingPolicy,
                         parameter.Name!,
                         parameter.ParameterType,
+                        parameter.GetAttributesOfGenericType<ClearWithAttribute<object>>().Select(_ => _.EventType),
                         processMember,
                         definition,
                         childType);
@@ -536,6 +566,7 @@ static class ChildrenDefinitionExtensions
                     namingPolicy,
                     property.Name,
                     property.PropertyType,
+                    property.GetAttributesOfGenericType<ClearWithAttribute<object>>().Select(_ => _.EventType),
                     processMember,
                     definition,
                     childType);

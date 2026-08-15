@@ -355,6 +355,8 @@ internal class ModelBoundProjectionBuilder(
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
         }
 
+        var parameterIsNested = parameter.IsDefined(typeof(NestedAttribute), inherit: false);
+
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<SetValueAttribute<object>>())
         {
             allEventTypesReferencedByModel.Add(eventType);
@@ -364,6 +366,23 @@ internal class ModelBoundProjectionBuilder(
             {
                 var invariantValue = ConvertValueToInvariantString(value);
                 targetFrom.AddSetValueMapping(GetOrCreateEventType, eventType, propertyName, invariantValue);
+            }
+            else
+            {
+                ScalarClear.ThrowIfCannotHoldNull(parameter.Member.DeclaringType!, parameter);
+                targetFrom.AddClearMapping(GetOrCreateEventType, eventType, propertyName);
+            }
+        }
+
+        // A [ClearWith] on a [Nested] single-object member clears the whole nested object and is routed to that
+        // nested definition by ProcessNestedAttribute below. On any other member it is a scalar clear.
+        if (!parameterIsNested)
+        {
+            foreach (var (_, eventType) in parameter.GetAttributesOfGenericType<ClearWithAttribute<object>>())
+            {
+                allEventTypesReferencedByModel.Add(eventType);
+                ScalarClear.ThrowIfCannotHoldNull(parameter.Member.DeclaringType!, parameter);
+                targetFrom.AddClearMapping(GetOrCreateEventType, eventType, propertyName);
             }
         }
 
@@ -415,9 +434,16 @@ internal class ModelBoundProjectionBuilder(
                 }
             }
 
-            if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+            if (parameterIsNested)
             {
-                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, ProcessMember, modelType);
+                definition.ProcessNestedAttribute(
+                    GetOrCreateEventType,
+                    _namingPolicy,
+                    memberName,
+                    parameter.ParameterType,
+                    parameter.GetAttributesOfGenericType<ClearWithAttribute<object>>().Select(_ => _.EventType),
+                    ProcessMember,
+                    modelType);
             }
         }
 
@@ -503,6 +529,8 @@ internal class ModelBoundProjectionBuilder(
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
         }
 
+        var memberIsNested = Attribute.IsDefined(property, typeof(NestedAttribute));
+
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<SetValueAttribute<object>>())
         {
             eventTypesReferencedByMember.Add(eventType);
@@ -512,6 +540,23 @@ internal class ModelBoundProjectionBuilder(
             {
                 var invariantValue = ConvertValueToInvariantString(value);
                 targetFrom.AddSetValueMapping(GetOrCreateEventType, eventType, propertyName, invariantValue);
+            }
+            else
+            {
+                ScalarClear.ThrowIfCannotHoldNull(property.DeclaringType!, property);
+                targetFrom.AddClearMapping(GetOrCreateEventType, eventType, propertyName);
+            }
+        }
+
+        // A [ClearWith] on a [Nested] single-object member clears the whole nested object and is routed to that
+        // nested definition by ProcessNestedAttribute below. On any other member it is a scalar clear.
+        if (!memberIsNested)
+        {
+            foreach (var (_, eventType) in property.GetAttributesOfGenericType<ClearWithAttribute<object>>())
+            {
+                eventTypesReferencedByMember.Add(eventType);
+                ScalarClear.ThrowIfCannotHoldNull(property.DeclaringType!, property);
+                targetFrom.AddClearMapping(GetOrCreateEventType, eventType, propertyName);
             }
         }
 
@@ -565,10 +610,17 @@ internal class ModelBoundProjectionBuilder(
                 }
             }
 
-            if (Attribute.IsDefined(property, typeof(NestedAttribute)))
+            if (memberIsNested)
             {
                 var memberType = property is PropertyInfo propInfo2 ? propInfo2.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
-                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, ProcessMember, modelType);
+                definition.ProcessNestedAttribute(
+                    GetOrCreateEventType,
+                    _namingPolicy,
+                    property.Name,
+                    memberType,
+                    property.GetAttributesOfGenericType<ClearWithAttribute<object>>().Select(_ => _.EventType),
+                    ProcessMember,
+                    modelType);
             }
         }
 

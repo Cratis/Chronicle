@@ -4,9 +4,7 @@ uid: Chronicle.Compliance.Erasure
 
 # Erasing a subject
 
-A right-to-erasure request arrives naming one person, and Chronicle gives you exactly one call to make. What the call does not tell you is the thing you actually have to certify: **when is the erasure complete?**
-
-The answer depends on how many event stores that person's data reached — and Chronicle may have put their key into more event stores than you appended to. This page walks through what one erasure reaches, what it leaves behind, and how to write an erasure that covers everything.
+A right-to-erasure request arrives naming one person, and Chronicle gives you exactly one call to make. This page covers what that call reaches, what happens to that person afterwards, and what you still have to do yourself before you can certify the erasure as complete.
 
 ## The one call
 
@@ -17,94 +15,76 @@ var eventStore = await chronicleClient.GetEventStore("Sales");
 await eventStore.PII.DeleteEncryptionKeyFor("person-42");
 ```
 
-`IEventStore.PII` is an `IPIIManager`, and `DeleteEncryptionKeyFor` removes every revision of the key and evicts it from every silo's cache.
+`IEventStore.PII` is an `IPIIManager`. `DeleteEncryptionKeyFor` removes every revision of the key, evicts it from every silo's cache, and records the erasure so that nothing puts the key back afterwards.
 
 Read one of that subject's events afterwards and nothing breaks. The event is still there, its sequence number is still there, and every field that was not marked `[PII]` still holds its value — only the PII properties come back as empty strings. That is the whole point of crypto-shredding: the log stays immutable and the personal data stops existing.
 
-## The erasure is scoped to one event store and one namespace
+## What one call reaches
 
-`IEventStore.PII` is bound to the event store *and* the namespace you resolved the event store from. So is the key it deletes. Chronicle holds encryption keys per `(event store, namespace)` pair — a separate key store per pair, whichever [compliance storage](../hosting/configuration/compliance-storage.md) backend you configure — and a delete addressed at one pair never touches another.
+The erasure covers **every event store in the namespace you erased in**, not only the event store you resolved `PII` from.
 
-That scoping is the right default. It is also the part that is easy to get wrong, for two reasons:
-
-- **A delete that reaches nothing still succeeds.** Erasing a subject in an event store that holds no key for them is a no-op, not an error. If you name the wrong event store, or spell it wrong, nothing at runtime tells you the erasure removed nothing.
-- **A namespace is a separate scope too.** In a multi-tenant deployment, the same person in two namespaces has two keys. Erasing in one leaves the other readable.
-
-## A subscription copies the key into another event store
-
-Here is the part that is not obvious from anything you wrote. When an [event store subscription](../subscriptions/index.md) forwards a subject's events from one event store to another, Chronicle copies that subject's encryption key into the target event store — once per subject, the first time an event for them is forwarded:
+That is not generosity, it is arithmetic. When an [event store subscription](../subscriptions/index.md) forwards a subject's events from one event store to another, Chronicle copies that subject's encryption key into the target event store — and it never copies across namespaces. So the set of places the key can have reached is exactly *every event store, in this namespace*, and that is the set the erasure covers:
 
 ```mermaid
 flowchart LR
-    subgraph A["Event store A"]
-        AO["outbox"]
-        AK["key for person-42"]
+    subgraph N["Namespace 'Default'"]
+        A["Event store<br/>Sales"]
+        B["Event store<br/>Support"]
+        C["Event store<br/>Billing"]
     end
-    subgraph B["Event store B"]
-        BI["inbox-A"]
-        BK["key for person-42<br/>(copied from A)"]
+    subgraph O["Namespace 'tenant-b'"]
+        D["Event store<br/>Sales"]
     end
-    AO -->|forwarded event| BI
-    AK -.->|copied when missing| BK
+    A -->|forwarded events copy the key| B
+    E["DeleteEncryptionKeyFor(person-42)"] --> A
+    E --> B
+    E --> C
+    E -.->|never| D
 ```
 
-You never asked for the key to be there, and no client API reports that it is. The kernel logs the copy at debug level, naming both event stores and the namespace, so it is at least visible in the kernel log:
+The erasure runs in two phases across that set: it records the erasure in every event store first, and only then destroys the key material. Fencing everything before destroying anything is what closes the window a per-store fan-out could not — between the first delete and the last, one event store still held the key and another did not, and an event forwarded in that interval copied the survivor into a store that had just been cleared.
 
-```text
-Copied a subject's encryption key from event store 'Sales' to event store 'Support' in
-namespace 'Default' while forwarding events. That subject now holds a key in both event
-stores, and erasing it reaches only the one it is asked for
-```
+Every phase attempts every event store even when one of them fails, and the failures are reported together as `EncryptionKeyErasureIncomplete`. **A partial erasure is not an erasure** — repeat the call once the failing store is reachable. A call that returns without throwing reached everything.
 
-The line deliberately does not name the subject. The identifier is the person the key belongs to, and a log entry naming them is unencrypted personal data that survives the very erasure the key deletion performs — so the log tells you *that* a copy happened and *where*, and leaves *who* to the erasure record you keep yourself.
+> [!IMPORTANT]
+> The namespace is the boundary. In a multi-tenant deployment the same person in two namespaces has two keys and is, as far as Chronicle is concerned, two subjects. Erasing in one namespace deliberately leaves the other untouched — issue one erasure per namespace the person appears in.
 
-Two consequences follow, and both matter for compliance:
+## The subject is fenced, not banned
 
-- **Erasing through one event store is an incomplete erasure.** The copy in the other event store keeps decrypting that subject's forwarded events exactly as before.
-- **A surviving copy can restore a deleted key.** The copy happens whenever the target store has *no* key for the subject — which is precisely the state you just created by erasing. If events for that subject are still being forwarded *into* the store you erased, the next one copies the surviving key back, and PII you had already shredded becomes readable again.
+Deleting the key is only half of an erasure; the other half is making sure nothing puts it back. Chronicle records the erasure beside the keys, and from then on that store refuses to provision a key for the subject, refuses to accept the destroyed key material back, and refuses to let a subscription copy a key in.
 
-> [!CAUTION]
-> An erasure is only durable once no event store that still holds the subject's key forwards events into an event store you erased. Erase everywhere, and erase after forwarding for that subject has stopped — not before.
+The practical consequence is worth knowing before you erase:
 
-## Erasing everywhere
+**Appending a `[PII]` value for an erased subject fails.** It does not quietly mint a new key, and it does not quietly blank the value — both of those would be a silent surprise, one restarting protection for a person who asked to be forgotten and the other losing data with no signal. It fails with `EncryptionKeyErased` instead.
 
-The complete erasure enumerates every event store and every namespace and deletes in each. Both enumerations are on the client, so this needs no configuration and no hard-coded store names:
+If the same person later has a lawful basis to be protected again, say so:
 
 ```csharp
-public class SubjectErasure(IChronicleClient chronicleClient)
-{
-    public async Task Erase(EncryptionKeyIdentifier subject)
-    {
-        foreach (var eventStoreName in await chronicleClient.GetEventStores())
-        {
-            var eventStore = await chronicleClient.GetEventStore(eventStoreName);
-
-            foreach (var @namespace in await eventStore.GetNamespaces())
-            {
-                var scopedEventStore = await chronicleClient.GetEventStore(eventStoreName, @namespace);
-                await scopedEventStore.PII.DeleteEncryptionKeyFor(subject);
-            }
-        }
-    }
-}
+var eventStore = await chronicleClient.GetEventStore("Sales");
+await eventStore.PII.AllowNewEncryptionKeyFor("person-42");
 ```
 
-Deleting in a pair that holds no key for the subject costs one round-trip and removes nothing, so enumerating everything is safe — and it is more robust than listing the event stores you believe are involved, because it stays correct when someone adds a subscription later.
+That creates no key. It authorizes the next `[PII]` value written for the subject to provision a fresh, independent one — which protects data written from then on and can decrypt nothing that came before. The erased key itself never comes back. Like the erasure, the authorization covers every event store in the namespace.
 
-Prefer this over hard-coding the other event store's name. A hard-coded name that no longer matches produces a delete that succeeds and erases nothing, which is the failure mode with no signal at all.
+The mechanics of the fence, and what it cannot protect you against, are in [The encryption key lifecycle](key-lifecycle.md).
 
-## Honest limits
+## What you still have to do
 
-There is no API that answers "which event stores hold a key for this subject", and no cascading delete that follows the copies Chronicle made. The fan-out above is the complete erasure available today, and the kernel log line is the only place the propagation itself surfaces.
+Chronicle erases keys. It does not know what else your system did with the data.
 
-Between the first delete and the last, one event store has the key and another does not. A subject's event forwarded in that interval copies the survivor back into a store you already cleared. Quiesce forwarding for the subject before erasing, or re-run the fan-out afterwards and check the kernel log for a copy that landed mid-erasure.
+- **Erase in every namespace the person appears in.** One call per namespace; there is no cross-namespace erasure, by design.
+- **Deal with the failed partition, if there is one.** An event carrying `[PII]` for a subject you erased cannot be appended, so a forwarding subscription or a reactor that keeps producing them will report a failed partition for that event source. That is the signal that something is still writing the person's data — either stop it, or authorize a new key.
+- **Expect the same refusal when you replay.** Rebuilding a stored read model re-writes the protected values it holds, so a replay that covers an erased subject is refused for that subject's partition too. Authorize a new key for anyone you intend to keep protecting before a rebuild that has to cover them.
+- **Record the *who*.** Chronicle logs that an erasure completed, which event stores it reached, and the subject as a one-way binding rather than by name — see [what Chronicle records](key-lifecycle.md). What it cannot know, and therefore cannot record, is who asked for the erasure and under what legal basis. That part is yours.
+- **Chase the copies outside Chronicle.** Read models exported to a warehouse, search indexes, backups, and anything a reactor sent to a third party are outside the key store and outside the erasure.
 
 ## See also
 
 | Topic | Description |
 |---|---|
+| [The encryption key lifecycle](key-lifecycle.md) | How the fence works, and what it does not protect against |
 | [Compliance](index.md) | How Chronicle protects personal data in an immutable log |
 | [Subject](../concepts/subject) | The identity a PII encryption key is held under |
-| [Compliance and PII in subscriptions](../subscriptions/compliance-and-pii.md) | What forwarding preserves, and what it copies |
+| [Compliance and PII in subscriptions](../subscriptions/compliance-and-pii.md) | What forwarding preserves, and what it no longer copies |
 | [Compliance Storage](../hosting/configuration/compliance-storage.md) | Where encryption keys are stored |
 | [Event Redaction](../events/redaction) | Removing an event's content rather than its key |

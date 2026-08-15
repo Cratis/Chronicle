@@ -43,4 +43,10 @@ public class AppendManyResponse
     /// </summary>
     [ProtoMember(5, IsRequired = true)]
     public IList<ConcurrencyViolation> ConcurrencyViolations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the concurrency check was actually performed for every scope the append carried.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool ConcurrencyCheckPerformed { get; set; }
 }
