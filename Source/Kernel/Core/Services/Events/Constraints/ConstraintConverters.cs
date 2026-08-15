@@ -65,8 +65,10 @@ internal static class ConstraintConverters
     /// <param name="constraint"><see cref="Contracts.Events.Constraints.Constraint"/> to read from.</param>
     /// <returns>The <see cref="EventTypeId"/> values of the events that release the constraint.</returns>
     /// <remarks>
-    /// A client older than the plural field sends nothing here, which reads as a constraint with no removal event —
-    /// the same answer the field's absence gave when it held a single optional value.
+    /// A client older than the plural form sends its one removal event on this same field, and arrives here as a
+    /// one-element collection rather than as nothing: the field kept its number, and one length-delimited value is
+    /// indistinguishable on the wire from a repeated field holding one. That is what makes the kernel safe to
+    /// upgrade ahead of its clients, which is the order the release notes ask for.
     /// </remarks>
     static EventTypeId[] ToRemovedWith(this Contracts.Events.Constraints.Constraint constraint) =>
         constraint.RemovedWith?.Select(_ => (EventTypeId)_).ToArray() ?? [];
