@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents the result of an append many operation.
 /// </summary>
-public record AppendManyResult
+public class AppendManyResult
 {
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
@@ -103,5 +103,20 @@ public record AppendManyResult
     {
         CorrelationId = correlationId,
         ConcurrencyViolations = violations
+    };
+
+    /// <summary>
+    /// Create a copy of this result that reports whether the concurrency check was performed.
+    /// </summary>
+    /// <param name="performed">Whether the concurrency check was performed for every scope.</param>
+    /// <returns>A copy of this <see cref="AppendManyResult"/> reporting <paramref name="performed"/>.</returns>
+    internal AppendManyResult ReportingConcurrencyCheck(bool performed) => new()
+    {
+        CorrelationId = CorrelationId,
+        SequenceNumbers = SequenceNumbers,
+        ConstraintViolations = ConstraintViolations,
+        Errors = Errors,
+        ConcurrencyViolations = ConcurrencyViolations,
+        ConcurrencyCheckPerformed = performed
     };
 }
