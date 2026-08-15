@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents the result of an append many operation.
 /// </summary>
-public class AppendManyResult
+public record AppendManyResult
 {
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
@@ -42,6 +42,17 @@ public class AppendManyResult
     /// Gets whether or not there are any errors that occurred.
     /// </summary>
     public bool HasErrors => Errors.Any();
+
+    /// <summary>
+    /// Gets a value indicating whether the concurrency check was actually performed for every scope the append carried.
+    /// </summary>
+    /// <remarks>
+    /// False means at least one event source in the batch had nothing compared against the event store - either the
+    /// append carried no scopes at all, one of them asked for no check (<c>ConcurrencyScope.None</c>), or one
+    /// declared a scope the kernel cannot validate (an incomplete scope) and that check was skipped. A skipped check
+    /// looks from the outside exactly like a passing one, which is why the outcome says which it was.
+    /// </remarks>
+    public bool ConcurrencyCheckPerformed { get; init; }
 
     /// <summary>
     /// Gets any violations that occurred during the operation.

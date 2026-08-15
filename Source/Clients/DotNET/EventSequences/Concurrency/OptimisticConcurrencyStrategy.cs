@@ -17,6 +17,10 @@ public class OptimisticConcurrencyStrategy(IEventSequence eventSequence) : IConc
     /// kernel validates the append against. Reading a broader tail than the kernel compares to would report a
     /// conflict between appends the scope says are independent; reading a narrower one would let a real conflict
     /// through. The two have to be asked the same question.
+    /// When nothing matches that narrowing the tail read answers <see cref="EventSequenceNumber.Unavailable"/>,
+    /// which also means "no sequence number was supplied" and is therefore skipped by the kernel. The scope says
+    /// <see cref="EventSequenceNumber.BeforeFirst"/> instead - the expectation the first append into a scope
+    /// actually has, and one the kernel can check.
     /// </remarks>
     public async Task<ConcurrencyScope> GetScope(
         EventSourceId eventSourceId,
@@ -33,7 +37,7 @@ public class OptimisticConcurrencyStrategy(IEventSequence eventSequence) : IConc
             filterEventTypes: eventTypes);
 
         return new ConcurrencyScope(
-            tail,
+            tail.IsUnavailable ? EventSequenceNumber.BeforeFirst : tail,
             eventSourceId,
             eventStreamType,
             eventStreamId,

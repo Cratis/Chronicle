@@ -32,6 +32,13 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
             scope.EventStreamId,
             scope.EventStreamType);
 
+        if (scope.ExpectsNoMatchingEvent)
+        {
+            return tailSequenceNumber.IsActualValue
+                ? new ConcurrencyViolation(eventSourceId, scope.SequenceNumber, tailSequenceNumber)
+                : Option<ConcurrencyViolation>.None();
+        }
+
         if (!tailSequenceNumber.IsActualValue)
         {
             return Option<ConcurrencyViolation>.None();
@@ -74,7 +81,10 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
     /// <remarks>
     /// Failing open here looks identical to never having asked for a check, so a caller that believes its writes
     /// are serialized never finds out otherwise. The append is still allowed - rejecting it would break every
-    /// caller that already builds such a scope - but it does not pass unnoticed.
+    /// caller that already builds such a scope - but it does not pass unnoticed: the operator sees this warning,
+    /// and the caller sees it on the append result, which reports the check as not performed.
+    /// A scope a strategy resolved against an empty narrowing never reaches here - it expects
+    /// <see cref="EventSequenceNumber.BeforeFirst"/>, which is checked.
     /// </remarks>
     void WarnIfIncomplete(EventSourceId eventSourceId, ConcurrencyScope scope)
     {

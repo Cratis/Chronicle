@@ -30,19 +30,41 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     public static readonly EventSequenceNumber Max = ulong.MaxValue - 1;
 
     /// <summary>
+    /// Gets the value representing the position before the first event.
+    /// </summary>
+    /// <remarks>
+    /// A concurrency scope carrying this number expects no event matching its narrowing to exist yet.
+    /// <see cref="Unavailable"/> cannot say that, because it also means "no sequence number was supplied at all",
+    /// so a scope a strategy resolved against an empty narrowing would be indistinguishable from a scope that
+    /// asked for nothing. This value distinguishes the two, and the kernel validates it as "no event matching
+    /// this scope may exist".
+    /// Unlike <see cref="Max"/> and <see cref="Unavailable"/> this is <em>not</em> a wire value and must not become
+    /// one. A scope crosses the wire saying it expects no matching event in a field of its own, carrying
+    /// <see cref="Unavailable"/> as its number, so that a kernel or client on either side of a version mismatch
+    /// that has never heard of the expectation falls back to skipping the check rather than comparing a real tail
+    /// against a number nothing can exceed.
+    /// </remarks>
+    public static readonly EventSequenceNumber BeforeFirst = ulong.MaxValue - 2;
+
+    /// <summary>
     /// Check if the <see cref="EventSequenceNumber"/> is an actual value representing a sequence number.
     /// </summary>
     /// <returns>True if it can, false if not.</returns>
     /// <remarks>
-    /// Values such as <see cref="Unavailable"/>, <see cref="Max"/> are not actual values.
-    /// They are system values used for special purposes.
+    /// Values such as <see cref="Unavailable"/>, <see cref="Max"/> and <see cref="BeforeFirst"/> are not actual
+    /// values. They are system values used for special purposes.
     /// </remarks>
-    public bool IsActualValue => this != Unavailable && this != Max;
+    public bool IsActualValue => this != Unavailable && this != Max && this != BeforeFirst;
 
     /// <summary>
     /// Check if the <see cref="EventSequenceNumber"/> is unavailable.
     /// </summary>
     public bool IsUnavailable => this == Unavailable;
+
+    /// <summary>
+    /// Check if the <see cref="EventSequenceNumber"/> is the position before the first event.
+    /// </summary>
+    public bool IsBeforeFirst => this == BeforeFirst;
 
     /// <summary>
     /// Implicitly convert from <see cref="ulong"/> to <see cref="EventSequenceNumber"/>.

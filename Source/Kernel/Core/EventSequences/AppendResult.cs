@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents the result of an append operation.
 /// </summary>
-public class AppendResult
+public record AppendResult
 {
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
@@ -41,6 +41,17 @@ public class AppendResult
     /// Gets whether there are any errors that occurred.
     /// </summary>
     public bool HasErrors => Errors.Any();
+
+    /// <summary>
+    /// Gets a value indicating whether the concurrency check was actually performed for the append.
+    /// </summary>
+    /// <remarks>
+    /// False means nothing was compared against the event store - either the append asked for no check
+    /// (<c>ConcurrencyScope.None</c>), or it declared a scope that carries no expectation the kernel can validate
+    /// (an incomplete scope) and the check was skipped. A skipped check looks from the outside exactly like a
+    /// passing one, which is why the outcome says which it was.
+    /// </remarks>
+    public bool ConcurrencyCheckPerformed { get; init; }
 
     /// <summary>
     /// Gets any violations that occurred during the operation.

@@ -16,10 +16,16 @@ internal static class ConcurrencyScopeConverters
     /// </summary>
     /// <param name="scope"><see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/> to convert.</param>
     /// <returns>A converted <see cref="ConcurrencyScope"/>.</returns>
+    /// <remarks>
+    /// The expectation that no event matching the narrowing exists is read from its own field, never inferred from
+    /// the sequence number. A client too old to set the field sends the "unavailable" number it always sent, which
+    /// becomes the incomplete scope the validator skips and reports as unchecked - the older behavior, not a
+    /// silently weaker one.
+    /// </remarks>
     public static ConcurrencyScope ToChronicle(
         this Contracts.EventSequences.Concurrency.ConcurrencyScope scope) =>
         new(
-            scope.SequenceNumber,
+            ToExpectedSequenceNumber(scope),
             scope.EventSourceId,
             ToMaybeConcept<EventStreamType>(scope.EventStreamType, value => value),
             ToMaybeConcept<EventStreamId>(scope.EventStreamId, value => value),
@@ -40,6 +46,30 @@ internal static class ConcurrencyScopeConverters
             .ToDictionary(
                 eventSourceIdAndScope => new EventSourceId(eventSourceIdAndScope.Key),
                 eventSourceIdAndScope => eventSourceIdAndScope.Value.ToChronicle()));
+
+    /// <summary>
+    /// Resolve the expected <see cref="EventSequenceNumber"/> a contract scope asks to be validated against.
+    /// </summary>
+    /// <param name="scope">The contract scope that arrived.</param>
+    /// <returns>The expected <see cref="EventSequenceNumber"/>.</returns>
+    /// <remarks>
+    /// Only <see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope.ExpectsNoMatchingEvent"/> can put a
+    /// scope into the before-first expectation. A sequence number that happens to hold the reserved value without
+    /// the field being set did not come from a client that means it, and is downgraded to
+    /// <see cref="EventSequenceNumber.Unavailable"/> rather than promoted to an expectation - the number field
+    /// carries no intent of its own, which is the property that keeps a version mismatch from inventing a check
+    /// or silently dropping one.
+    /// </remarks>
+    static EventSequenceNumber ToExpectedSequenceNumber(Contracts.EventSequences.Concurrency.ConcurrencyScope scope)
+    {
+        if (scope.ExpectsNoMatchingEvent)
+        {
+            return EventSequenceNumber.BeforeFirst;
+        }
+
+        var sequenceNumber = new EventSequenceNumber(scope.SequenceNumber);
+        return sequenceNumber.IsBeforeFirst ? EventSequenceNumber.Unavailable : sequenceNumber;
+    }
 
     static T? ToMaybeConcept<T>(string? value, Func<string, T> toConcept)
         where T : ConceptAs<string>

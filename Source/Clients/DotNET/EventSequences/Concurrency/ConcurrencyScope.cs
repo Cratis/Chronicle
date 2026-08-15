@@ -33,6 +33,17 @@ public record ConcurrencyScope(
     public static readonly ConcurrencyScope None = new(EventSequenceNumber.Unavailable);
 
     /// <summary>
+    /// Gets a value indicating whether the scope expects no event matching its narrowing to exist yet.
+    /// </summary>
+    /// <remarks>
+    /// This is what <see cref="OptimisticConcurrencyStrategy"/> produces for the first append into a scope: it
+    /// reads the tail through the scope's own narrowing and finds no event matching it, so it answers
+    /// <see cref="EventSequenceNumber.BeforeFirst"/> rather than a number. The kernel validates it as "no event
+    /// matching this scope may exist" and rejects the append if one appeared in the meantime.
+    /// </remarks>
+    public bool ExpectsNoMatchingEvent => this != NotSet && this != None && SequenceNumber.IsBeforeFirst;
+
+    /// <summary>
     /// Gets a value indicating whether the scope narrows an append without saying which sequence number it expects.
     /// </summary>
     /// <remarks>
@@ -40,10 +51,8 @@ public record ConcurrencyScope(
     /// supply the expected sequence number, and it has no sequence number of its own for the kernel to validate
     /// against - so the append is checked against nothing, which looks exactly like never having asked for a check.
     /// Build <see cref="None"/> to append without a check, or <see cref="NotSet"/> to let the strategy resolve the
-    /// expected sequence number. A scope a strategy resolved lands here too:
-    /// <see cref="OptimisticConcurrencyStrategy"/> reads the tail through the scope's own narrowing, and there is
-    /// no tail to read when no event matches that narrowing yet - the first append into a scope always looks
-    /// like this.
+    /// expected sequence number. A scope <see cref="OptimisticConcurrencyStrategy"/> resolved never lands here:
+    /// an empty narrowing gives <see cref="ExpectsNoMatchingEvent"/>, which the kernel checks.
     /// </remarks>
-    public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue;
+    public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue && !SequenceNumber.IsBeforeFirst;
 }

@@ -43,4 +43,10 @@ public class AppendResponse
     /// </summary>
     [ProtoMember(5)]
     public ConcurrencyViolation? ConcurrencyViolation { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the concurrency check was actually performed for the append.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool ConcurrencyCheckPerformed { get; set; }
 }

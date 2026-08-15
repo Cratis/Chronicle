@@ -546,6 +546,7 @@ public class EventSequence(
                 EventStore = eventStoreName,
                 EventStoreNamespace = @namespace,
                 EventSequenceId = eventSequenceId,
+                ConcurrencyCheckPerformed = batchResult.ConcurrencyCheckPerformed,
                 Observers = GetObservers()
             };
         }
@@ -559,6 +560,7 @@ public class EventSequence(
             ConstraintViolations = batchResult.ConstraintViolations,
             ConcurrencyViolation = batchResult.ConcurrencyViolations.FirstOrDefault(),
             Errors = batchResult.Errors,
+            ConcurrencyCheckPerformed = batchResult.ConcurrencyCheckPerformed,
             Observers = GetObservers()
         };
     }

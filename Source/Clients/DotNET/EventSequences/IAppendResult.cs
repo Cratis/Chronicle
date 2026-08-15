@@ -36,6 +36,21 @@ public interface IAppendResult
     bool HasErrors { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the concurrency check was actually performed for the operation.
+    /// </summary>
+    /// <remarks>
+    /// A skipped concurrency check looks from the outside exactly like a passing one - the append succeeds either
+    /// way - so this is the only way for a caller to tell whether the serialization it believes it has was
+    /// enforced. False means nothing was compared against the event store: the operation either asked for no check
+    /// (<see cref="Concurrency.ConcurrencyScope.None"/>), carried no scope at all, or declared a scope with no
+    /// expectation the kernel could validate
+    /// (<see cref="Concurrency.ConcurrencyScope.IsIncomplete"/>).
+    /// The first append into a scope is not a skip: the optimistic strategy resolves it to
+    /// <see cref="Events.EventSequenceNumber.BeforeFirst"/>, which the kernel checks.
+    /// </remarks>
+    bool ConcurrencyCheckPerformed { get; }
+
+    /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
     IEnumerable<ConstraintViolation> ConstraintViolations { get; }
