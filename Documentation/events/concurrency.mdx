@@ -130,6 +130,20 @@ That is the race the check exists to catch, so the fix is the same as for any ot
 
 If a first append genuinely must not be serialized against other writers, opt it out explicitly with `ConcurrencyScope.None` rather than relying on the old skip.
 
+### Mixed-Version Deployments
+
+A scope declares "I expect no matching event" in a **field of its own** on the wire, and sends `EventSequenceNumber.Unavailable` as its sequence number. `EventSequenceNumber.BeforeFirst` is an in-process value and never crosses the wire. That is what makes a client/kernel version mismatch safe in both directions:
+
+| Client | Kernel | First append into a narrowed scope |
+|---|---|---|
+| current | current | **Checked.** Rejected if a matching event arrived in between |
+| current | older | **Skipped**, with the `SkippingIncompleteConcurrencyScope` warning — the older behavior. The older kernel does not know the field, reads `Unavailable`, and declines to validate exactly as it always did |
+| older | current | **Skipped**, same warning. The older client never sets the field, so the kernel has no expectation to check |
+
+A skew therefore degrades to the old, documented skip and says so in the log — it never produces a check that reports success without running. Both directions are pinned by specs under `for_ConcurrencyScopeConverters/when_a_client_and_kernel_version_disagree`.
+
+One caveat on the diagnostic itself: `IAppendResult.ConcurrencyCheckPerformed` is sent by the kernel, so a **current client against an older kernel always reads `false`** — the older kernel does not send the field. That is correct for a skipped first append and conservative for every other append (it under-reports a check that did run). It never over-reports.
+
 ## Best Practices
 
 1. **Use specific scoping**: Scope concurrency as narrowly as possible to avoid unnecessary blocking — every scope is checked, including [the first append into each one](#the-first-append-into-a-scope-is-checked-too)
