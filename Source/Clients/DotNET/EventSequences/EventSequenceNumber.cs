@@ -38,7 +38,11 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// so a scope a strategy resolved against an empty narrowing would be indistinguishable from a scope that
     /// asked for nothing. This value distinguishes the two, and the kernel validates it as "no event matching
     /// this scope may exist".
-    /// It is a wire value on the same terms as <see cref="Max"/> - see the remarks there.
+    /// Unlike <see cref="Max"/> and <see cref="Unavailable"/> this is <em>not</em> a wire value and must not become
+    /// one. A scope crosses the wire saying it expects no matching event in a field of its own, carrying
+    /// <see cref="Unavailable"/> as its number, so that a kernel or client on either side of a version mismatch
+    /// that has never heard of the expectation falls back to skipping the check rather than comparing a real tail
+    /// against a number nothing can exceed.
     /// </remarks>
     public static readonly EventSequenceNumber BeforeFirst = ulong.MaxValue - 2;
 

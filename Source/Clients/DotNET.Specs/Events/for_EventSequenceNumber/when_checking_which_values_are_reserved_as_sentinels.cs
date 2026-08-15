@@ -4,10 +4,18 @@
 namespace Cratis.Chronicle.Events.for_EventSequenceNumber;
 
 /// <summary>
-/// The sentinels are wire values. The kernel has its own copy of <see cref="EventSequenceNumber"/> and the two are
-/// compared across the wire - <c>ConcurrencyScope.NotSet</c> is built from <c>Max</c> on both sides, and a concurrency
-/// scope carrying <c>BeforeFirst</c> is validated by the kernel as "no event matching this scope may exist" - so the
-/// numbers pinned here have to be the same numbers the kernel's copy pins.
+/// <para>
+/// <c>First</c>, <c>Unavailable</c> and <c>Max</c> are wire values. The kernel has its own copy of
+/// <see cref="EventSequenceNumber"/> and the two are compared across the wire - <c>ConcurrencyScope.NotSet</c> is
+/// built from <c>Max</c> on both sides - so the numbers pinned here have to be the same numbers the kernel's copy
+/// pins.
+/// </para>
+/// <para>
+/// <c>BeforeFirst</c> is deliberately not one of them. A scope says it expects no matching event in a field of its
+/// own and sends <c>Unavailable</c> as its number, so the value pinned here only has to be a number no real
+/// sequence number reaches. Putting it on the wire would make a kernel that predates the expectation read it as an
+/// ordinary number every tail compares below, turning the check into one that always passes.
+/// </para>
 /// </summary>
 public class when_checking_which_values_are_reserved_as_sentinels : Specification
 {
