@@ -1,0 +1,44 @@
+# CHR0048: A clear is declared for a member that cannot hold null
+
+## Rule Description
+
+Clearing a read model member means returning it to *no value*. A member declared non-nullable has no such state, so the declaration has nothing correct to write.
+
+The rule fires on either spelling of a clear — `[ClearWith<TEvent>]` on a member, or `[SetValue<TEvent>(null)]` — when the member cannot hold null:
+
+- a reference type declared non-nullable in a nullable-aware context (`string`, not `string?`);
+- any value type that is not `Nullable<T>` (`int`, `DateTimeOffset`, an enum, a `ConceptAs<T>` struct).
+
+A reference type in a file that has opted out of nullable analysis is *oblivious* rather than non-null. That promises nothing, so it is left alone — and the projection builder makes the same call at runtime.
+
+Not reported: a class-level `[ClearWith]` on a nested type, or one on the member holding it. Those clear a whole nested object, which is nullable by construction.
+
+## Severity
+
+Error
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0048/violation" />
+
+## Why This Rule Exists
+
+The only value a projection could write to a non-nullable member is its type default — an empty string, a zero, `DateTimeOffset.MinValue`. That is a *different fact* from "not set", and the read model cannot tell the two apart: a reader seeing `""` cannot know whether the value was cleared or genuinely empty.
+
+Standing a type default in for "not set" is precisely the workaround the scalar clear exists to remove. Consumers used to invent type-specific sentinels because Chronicle had no clear; defining clear *as* the sentinel would ship the workaround under a name that promises something else. So the declaration is refused rather than reinterpreted.
+
+An error rather than a warning, unlike most new rules. A scalar clear is new capability, so no shipping code can depend on this declaration working: until it existed, `[ClearWith]` on a member and a null `[SetValue]` were both reported as inert by the retired [CHR0047](CHR0047), and the fluent `ToValue(null)` silently wrote the four-character string `"null"`. There is nothing to break, and no reading under which the declaration is what its author meant.
+
+The same rule is enforced when the projection is built, where it throws `CannotClearNonNullableMember`. That covers what the analyzer never sees — a read model from an assembly compiled without the Chronicle analyzers, or one whose diagnostic was suppressed — so the failure is loud at startup rather than a quiet type default in storage.
+
+## How To Fix It
+
+Decide which fact you actually mean:
+
+- **You mean "no value".** Declare the member nullable — `string?`, `int?`, `DateTimeOffset?` — and keep the clear.
+- **You mean a specific value.** Use `[SetValue<TEvent>("")]`, `[SetValue<TEvent>(0)]`, or whatever the value is. It says so in the declaration, and a reader of the read model can see it was set on purpose.
+
+## Related Rules
+
+- [CHR0047: A clear declaration is never applied by projection construction](CHR0047) — retired; this rule took over the shapes that are still wrong.
+- [CHR0024: Read model property has no mapping source](CHR0024) — a member whose only declaration is a clear has no source and is still reported.

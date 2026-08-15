@@ -78,5 +78,7 @@
   href: CHR0045.mdx
 - name: CHR0046 - Passive read model redirects the document key away from the event's own stream
   href: CHR0046.mdx
-- name: CHR0047 - A clear declaration is never applied by projection construction
+- name: CHR0047 - Retired - a clear declaration is never applied by projection construction
   href: CHR0047.mdx
+- name: CHR0048 - A clear is declared for a member that cannot hold null
+  href: CHR0048.mdx
