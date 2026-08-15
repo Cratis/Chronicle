@@ -4,7 +4,7 @@
 
 Clearing a read model member means returning it to *no value*. A member declared non-nullable has no such state, so the declaration has nothing correct to write.
 
-The rule fires on either spelling of a clear — `[ClearWith<TEvent>]` on a member, or `[SetValue<TEvent>(null)]` — when the member cannot hold null:
+The rule fires on every spelling of a clear — the model-bound `[ClearWith<TEvent>]` on a member and `[SetValue<TEvent>(null)]`, and the fluent `.Clear(...)` and `.Set(...).ToValue(null)` — when the member cannot hold null:
 
 - a reference type declared non-nullable in a nullable-aware context (`string`, not `string?`);
 - any value type that is not `Nullable<T>` (`int`, `DateTimeOffset`, an enum, a `ConceptAs<T>` struct).
@@ -33,7 +33,9 @@ Standing a type default in for "not set" is precisely the workaround the scalar 
 
 No shipping code can depend on this declaration working. Until a scalar clear existed, `[ClearWith]` on a member and a null `[SetValue]` were both reported as inert by the retired [CHR0047](CHR0047) — the projection emitted no mapping at all for the member — and the fluent `ToValue(null)` silently wrote the four-character string `"null"`. There is no reading under which the declaration was what its author meant.
 
-The same rule is enforced when the projection is built, where it throws `CannotClearNonNullableMember`. That covers what the analyzer never sees — a read model from an assembly compiled without the Chronicle analyzers, or one whose diagnostic was suppressed — so the failure is loud at startup rather than a quiet type default in storage.
+The same rule is enforced when the projection is built, where it throws `CannotClearNonNullableMember` — for the model-bound attributes and for the fluent `.Clear(...)` alike. That covers what the analyzer never sees — a read model from an assembly compiled without the Chronicle analyzers, or one whose diagnostic was suppressed — so the failure is loud at startup rather than a quiet type default in storage.
+
+The rule could not be moved into the type system. C# cannot express "a nullable-annotated reference type" as a generic constraint: a non-nullable argument converts to a nullable parameter without complaint, so `Clear<TProperty>(Expression<Func<TReadModel, TProperty?>>)` accepts `m => m.NonNullableName` silently. Constraining to `struct` does refuse a non-nullable *value* type at compile time, but only that half, and it reports as `CS0411 — type arguments cannot be inferred`, which explains nothing about the actual problem. One rule that says what is wrong beats a compile error for half the cases and silence for the rest.
 
 ## How To Fix It
 

@@ -22,7 +22,7 @@ Apply the attribute more than once to respond to multiple event types:
 
 ## Clearing a Value
 
-Passing `null` clears the member instead of setting it — the projection writes it back to no value every time the event occurs. `ClearWith` says the same thing and reads better; both are covered in [Clearing Values](clearing).
+Passing `null` clears the member instead of setting it — the projection writes it back to no value every time the event occurs. `ClearWith` says the same thing and reads better (as does the fluent `Clear`); all of them are covered in [Clearing Values](clearing).
 
 The member has to be nullable. Clearing a non-nullable member raises [CHR0048](../../code-analysis/CHR0048) and is refused when the projection is built, because the only value that could be written is the type default, which is a different fact from "not set".
 

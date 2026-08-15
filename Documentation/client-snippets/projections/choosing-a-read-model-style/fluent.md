@@ -16,12 +16,12 @@ public class ChoosingStyleBookStatusProjection : IProjectionFor<ChoosingStyleBoo
             .Set(m => m.Title).To(e => e.Title)
             .Set(m => m.Isbn).To(e => e.Isbn)
             .Set(m => m.IsBorrowed).ToValue(false)
-            .Set(m => m.BorrowedBy).ToValue(null))
+            .Clear(m => m.BorrowedBy))
         .From<ChoosingStyleBookBorrowed>(_ => _
             .Set(m => m.IsBorrowed).ToValue(true)
             .Set(m => m.BorrowedBy).To(e => e.MemberName))
         .From<ChoosingStyleBookReturned>(_ => _
             .Set(m => m.IsBorrowed).ToValue(false)
-            .Set(m => m.BorrowedBy).ToValue(null));
+            .Clear(m => m.BorrowedBy));
 }
 ```
