@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </summary>
 /// <param name="Name">Name of the constraint.</param>
 /// <param name="EventTypeIds">The <see cref="EventTypeId"/> values the constraint covers.</param>
-/// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that releases the constraint.</param>
+/// <param name="RemovedWith">The <see cref="EventTypeId"/> values of the events that release the constraint.</param>
 /// <param name="Scope">The <see cref="ConstraintScope"/> for the constraint.</param>
 /// <remarks>
 /// The constraint allows at most one event drawn from the covered event types per event source. A single event
@@ -19,10 +19,16 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// constraint only when it comes after the most recent removal event on the same event source. Without one the
 /// constraint can only say "forever", which no lifecycle that repeats can express.
 /// </para>
+/// <para>
+/// Several removal events are allowed, because a cycle can end in more than one way — a shift is closed by being
+/// ended or by being cancelled. Each of them releases the constraint on its own, so the cycle ends at whichever
+/// of them was appended most recently.
+/// </para>
 /// </remarks>
-public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, EventTypeId? RemovedWith = default, ConstraintScope? Scope = default) : IConstraintDefinition
+public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, IEnumerable<EventTypeId> RemovedWith = null!, ConstraintScope? Scope = default) : IConstraintDefinition
 {
     readonly IEnumerable<EventTypeId>? _eventTypeIds = EventTypeIds;
+    readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
 
     /// <summary>
     /// Gets the <see cref="EventTypeId"/> values the constraint covers.
@@ -45,6 +51,21 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
         init => _eventTypeIds = value;
     }
 
+    /// <summary>
+    /// Gets the <see cref="EventTypeId"/> values of the events that release the constraint.
+    /// </summary>
+    /// <remarks>
+    /// Normalized to an empty sequence when absent, for the same reason and by the same mechanism as
+    /// <see cref="EventTypeIds"/>: a constraint that declares no removal event has nothing here, and a definition
+    /// persisted before the constraint could be released by several events carries a single value under this name
+    /// which storage upgrades on read.
+    /// </remarks>
+    public IEnumerable<EventTypeId> RemovedWith
+    {
+        get => _removedWith ?? [];
+        init => _removedWith = value;
+    }
+
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => Equals(other as UniqueEventTypeConstraintDefinition);
 
@@ -58,28 +79,33 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
     /// whether a constraint changed by comparing the incoming definition to the stored one — so reference
     /// equality would report every re-registration as a change. The collection is therefore compared by content.
     /// <para>
-    /// The removal event is part of the comparison because it is part of what the constraint means. Leaving it out
-    /// would make adding, changing, or dropping the event that releases the constraint indistinguishable from a
-    /// re-registration of the same definition, so the stored definition would keep enforcing the previous rule.
+    /// The removal events are part of the comparison because they are part of what the constraint means. Leaving
+    /// them out would make adding, changing, or dropping an event that releases the constraint indistinguishable
+    /// from a re-registration of the same definition, so the stored definition would keep enforcing the previous
+    /// rule. They are compared by content for the same reason the covered event types are.
     /// </para>
     /// </remarks>
     public virtual bool Equals(UniqueEventTypeConstraintDefinition? other) =>
         other is not null &&
         Name == other.Name &&
-        RemovedWith == other.RemovedWith &&
         Scope == other.Scope &&
-        EventTypeIds.SequenceEqual(other.EventTypeIds);
+        EventTypeIds.SequenceEqual(other.EventTypeIds) &&
+        RemovedWith.SequenceEqual(other.RemovedWith);
 
     /// <inheritdoc/>
     public override int GetHashCode()
     {
         var hashCode = default(HashCode);
         hashCode.Add(Name);
-        hashCode.Add(RemovedWith);
         hashCode.Add(Scope);
         foreach (var eventTypeId in EventTypeIds)
         {
             hashCode.Add(eventTypeId);
+        }
+
+        foreach (var removalEventTypeId in RemovedWith)
+        {
+            hashCode.Add(removalEventTypeId);
         }
 
         return hashCode.ToHashCode();

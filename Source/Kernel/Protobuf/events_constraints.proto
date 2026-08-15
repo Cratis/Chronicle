@@ -3,11 +3,12 @@ package Cratis.Chronicle.Contracts.Events.Constraints;
 import "google/protobuf/empty.proto";
 
 message Constraint {
+   reserved 3;
    string Name = 1;
    ConstraintType Type = 2;
-   string RemovedWith = 3;
    OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition Definition = 4;
    ConstraintScope Scope = 5;
+   repeated string RemovedWith = 6;
 }
 message ConstraintScope {
    string EventSourceType = 1;

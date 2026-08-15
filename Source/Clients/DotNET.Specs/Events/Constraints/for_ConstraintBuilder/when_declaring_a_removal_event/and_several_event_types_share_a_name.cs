@@ -39,7 +39,7 @@ public class and_several_event_types_share_a_name : given.a_constraint_builder_w
 
     [Fact] void should_merge_into_a_single_constraint() => _result.Count.ShouldEqual(1);
     [Fact] void should_cover_both_event_types() => ((UniqueEventTypeConstraintDefinition)_result[0]).EventTypeIds.ShouldContainOnly([_checkedOutEventType.Id, _renewedEventType.Id]);
-    [Fact] void should_keep_the_removal_event() => ((UniqueEventTypeConstraintDefinition)_result[0]).RemovedWith.ShouldEqual(_returnedEventType.Id);
+    [Fact] void should_keep_the_removal_event() => ((UniqueEventTypeConstraintDefinition)_result[0]).RemovedWith.ShouldContainOnly([_returnedEventType.Id]);
 
     record LoanCheckedOut();
     record LoanRenewed();

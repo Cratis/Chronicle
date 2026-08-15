@@ -15,6 +15,7 @@ public class a_unique_event_types_constraints_storage : Specification
     protected const string ConstraintNameValue = "loan-open";
     protected static readonly EventType _checkedOutEventType = new("LoanCheckedOut", EventTypeGeneration.First);
     protected static readonly EventType _returnedEventType = new("LoanReturned", EventTypeGeneration.First);
+    protected static readonly EventType _writtenOffEventType = new("LoanWrittenOff", EventTypeGeneration.First);
     protected static readonly EventSourceId _borrower = "borrower";
     protected static readonly EventSourceId _anotherBorrower = "another-borrower";
 
@@ -32,10 +33,13 @@ public class a_unique_event_types_constraints_storage : Specification
     }
 
     protected static UniqueEventTypeConstraintDefinition DefinitionReleasedByReturn =>
-        new(ConstraintNameValue, [_checkedOutEventType.Id], _returnedEventType.Id);
+        new(ConstraintNameValue, [_checkedOutEventType.Id], [_returnedEventType.Id]);
 
     protected static UniqueEventTypeConstraintDefinition DefinitionWithoutRemovalEvent =>
         new(ConstraintNameValue, [_checkedOutEventType.Id]);
+
+    protected static UniqueEventTypeConstraintDefinition DefinitionReleasedByReturnOrWriteOff =>
+        new(ConstraintNameValue, [_checkedOutEventType.Id], [_returnedEventType.Id, _writtenOffEventType.Id]);
 
     protected Task Append(ulong sequenceNumber, EventType eventType, EventSourceId eventSourceId) =>
         _eventSequenceStorage.Append(

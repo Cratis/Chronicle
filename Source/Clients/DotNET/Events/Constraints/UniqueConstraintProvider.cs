@@ -37,8 +37,11 @@ public class UniqueConstraintProvider(
         var constraints = new List<IConstraintDefinition>();
         foreach (var constraint in uniqueConstraints)
         {
-            var removalEventType = clientArtifactsProvider.RemoveConstraintEventTypes
-                .FirstOrDefault(t => t.GetRemoveConstraints().Any(a => constraint.Key == (ConstraintName)a.ConstraintName));
+            // Every event type declaring [RemoveConstraint] for this name releases it, not just the first one
+            // found. A lifecycle can end in more than one way, and each of those facts is a release.
+            var removalEventTypes = clientArtifactsProvider.RemoveConstraintEventTypes
+                .Where(t => t.GetRemoveConstraints().Any(a => constraint.Key == (ConstraintName)a.ConstraintName))
+                .ToArray();
 
             var builder = new ConstraintBuilder(eventTypes, namingPolicy);
             builder.Unique(unique =>
@@ -71,7 +74,7 @@ public class UniqueConstraintProvider(
                     unique.On(eventTypes.GetEventTypeFor(constrainedProperty.EventType), [constrainedProperty.Property.Name]);
                 }
 
-                if (removalEventType is not null)
+                foreach (var removalEventType in removalEventTypes)
                 {
                     unique.RemovedWith(eventTypes.GetEventTypeFor(removalEventType));
                 }

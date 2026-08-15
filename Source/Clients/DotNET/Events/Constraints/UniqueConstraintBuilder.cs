@@ -21,9 +21,9 @@ public class UniqueConstraintBuilder(
 {
     readonly List<UniqueConstraintEventDefinition> _eventTypesAndProperties = [];
     readonly Dictionary<EventTypeId, JsonSchema> _eventTypeSchemas = [];
+    readonly List<EventTypeId> _removedWith = [];
     ConstraintName? _name;
     ConstraintViolationMessageProvider? _messageProvider;
-    EventTypeId? _removedWith;
     bool _ignoreCasing;
 
     /// <inheritdoc/>
@@ -76,9 +76,18 @@ public class UniqueConstraintBuilder(
         RemovedWith(eventTypes.GetEventTypeFor(typeof(TEventType)));
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Collected rather than replaced. A lifecycle can end in more than one way — an invitation is released by
+    /// being accepted, revoked or expiring — and each declaration used to overwrite the previous one, so every
+    /// terminal event but the last compiled, registered and released nothing.
+    /// </remarks>
     public IUniqueConstraintBuilder RemovedWith(EventType eventType)
     {
-        _removedWith = eventType.Id;
+        if (!_removedWith.Contains(eventType.Id))
+        {
+            _removedWith.Add(eventType.Id);
+        }
+
         return this;
     }
 
@@ -96,7 +105,7 @@ public class UniqueConstraintBuilder(
             name,
             messageProvider,
             [.. _eventTypesAndProperties],
-            _removedWith,
+            [.. _removedWith],
             _ignoreCasing);
     }
 

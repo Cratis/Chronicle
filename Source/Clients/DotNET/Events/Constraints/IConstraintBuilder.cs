@@ -66,8 +66,10 @@ public interface IConstraintBuilder
     /// violates the constraint when it comes after the most recent removal event on the same event source.
     /// <para>
     /// It applies to the <see cref="Unique{TEventType}(ConstraintViolationMessage, ConstraintName)"/> declaration it
-    /// follows, which is why it belongs on the same chain. Declaring several event types under one constraint name
-    /// makes them one constraint, and the first removal event declared for that name is the one it is released with.
+    /// follows, which is why it belongs on the same chain. Call it as many times as the lifecycle has terminal
+    /// facts: every declared event type releases the constraint on its own, and declaring a second does not replace
+    /// the first. Declaring several event types under one constraint name makes them one constraint, which is
+    /// released by every removal event declared for that name.
     /// </para>
     /// </remarks>
     IConstraintBuilder RemovedWith<TRemovalEventType>();

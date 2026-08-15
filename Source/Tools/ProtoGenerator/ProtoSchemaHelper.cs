@@ -203,38 +203,58 @@ internal static partial class ProtoSchemaHelper
     }
 
     /// <summary>
+    /// Find the contract types that have retired field numbers and therefore need a reservation emitted somewhere.
+    /// </summary>
+    /// <param name="types">The contract types to look through.</param>
+    /// <returns>The types carrying the reserved-fields attribute.</returns>
+    /// <remarks>
+    /// The caller needs this separately from <see cref="DeclareReservedFields"/> because a reservation is required
+    /// once per run and emitted once per schema. Asking up front what has to be reserved is what makes it possible
+    /// to check afterwards that everything was.
+    /// </remarks>
+    public static IEnumerable<Type> TypesWithRetiredFields(IEnumerable<Type> types) =>
+        types.Where(_ => FindReservedProtoFields(_) is not null);
+
+    /// <summary>
     /// Emits a <c>reserved</c> declaration for every field number a contract type has retired.
     /// </summary>
     /// <param name="schema">The generated schema.</param>
     /// <param name="types">The contract types the schema was generated from.</param>
-    /// <returns>The schema with reservations declared.</returns>
+    /// <returns>The <see cref="ReservedFieldsDeclaration"/> holding the schema and the types it reserved for.</returns>
     /// <remarks>
     /// The schema generator has no notion of a retired field, so a <c>reserved</c> line added to the generated
     /// file by hand disappears the next time anyone regenerates - silently, and with nothing to notice it by.
     /// Reading it from the contract instead makes the generated file reproducible, which is the only form a
     /// reservation can survive in.
+    /// <para>
+    /// A type with no message in this schema is skipped rather than refused. One schema is generated per package
+    /// and this is handed every contract type in the assembly, so the overwhelming majority of them legitimately
+    /// have no message here. Refusing per schema failed the generation of every package that did not happen to
+    /// contain the type - which is what it did, for 22 of 23 packages, leaving their .proto files unregenerated.
+    /// The reservation is still mandatory; it is the caller that has to check it across the whole run, which is
+    /// what <see cref="ReservedFieldsDeclaration.Declared"/> is reported for.
+    /// </para>
     /// </remarks>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when a type asks for reserved field numbers but none can be emitted for it - the attribute carries no
-    /// numbers, its numbers cannot be read, or no matching message exists in the generated schema. A reservation that
-    /// quietly does not happen frees the number for reuse again, which is what this exists to prevent.
+    /// Thrown when a type asks for reserved field numbers that cannot be read at all - the attribute carries no
+    /// numbers, or its numbers cannot be read. Those are wrong wherever the type ends up, so they fail immediately.
     /// </exception>
-    public static string DeclareReservedFields(string schema, IEnumerable<Type> types)
+    public static ReservedFieldsDeclaration DeclareReservedFields(string schema, IEnumerable<Type> types)
     {
+        var declared = new List<Type>();
+
         foreach (var type in types)
         {
-            var reserved = Array.Find(
-                type.GetCustomAttributes(inherit: false),
-                _ => string.Equals(_.GetType().Name, ReservedProtoFieldsAttributeName, StringComparison.Ordinal));
+            var reserved = FindReservedProtoFields(type);
             if (reserved is null)
             {
                 continue;
             }
 
-            // Everything below this point is reached only because a type asked for reserved field numbers, so every
-            // way of not producing them is an error rather than a skip. A field number that quietly stops being
-            // reserved is available for reuse again, which is the corruption this whole attribute exists to prevent -
-            // and it would not show up until a new field silently collided with an old one on the wire.
+            // A malformed attribute is wrong in every package, so it fails here rather than being counted as
+            // "nothing to declare". A field number that quietly stops being reserved is available for reuse again,
+            // which is the corruption this whole attribute exists to prevent - and it would not show up until a new
+            // field silently collided with an old one on the wire.
             var fieldNumbers = reserved.GetType().GetProperty(FieldNumbersPropertyName)?.GetValue(reserved)
                 ?? throw new InvalidOperationException(
                     $"'{type.FullName}' carries {ReservedProtoFieldsAttributeName} but it has no readable '{FieldNumbersPropertyName}' property. The attribute and this generator have to agree on that name.");
@@ -246,15 +266,18 @@ internal static partial class ProtoSchemaHelper
                     $"'{type.FullName}' carries {ReservedProtoFieldsAttributeName} without any field numbers. Reserve the numbers that were retired, or drop the attribute.");
             }
 
-            var declaration = MessageDeclarationRegex.Matches(schema).FirstOrDefault(_ => _.Groups["name"].Value == type.Name)
-                ?? throw new InvalidOperationException(
-                    $"'{type.FullName}' carries {ReservedProtoFieldsAttributeName}, but no 'message {type.Name}' was found in the generated schema, so its retired field numbers would not be reserved.");
+            var declaration = MessageDeclarationRegex.Matches(schema).FirstOrDefault(_ => _.Groups["name"].Value == type.Name);
+            if (declaration is null)
+            {
+                continue;
+            }
 
             var insertAt = declaration.Index + declaration.Length;
             schema = schema[..insertAt] + $"{Environment.NewLine}   reserved {string.Join(", ", numbers)};" + schema[insertAt..];
+            declared.Add(type);
         }
 
-        return schema;
+        return new(schema, declared);
     }
 
     /// <summary>
@@ -301,4 +324,9 @@ internal static partial class ProtoSchemaHelper
 
         return string.Join('\n', lines);
     }
+
+    static Attribute? FindReservedProtoFields(Type type) =>
+        Array.Find(
+            type.GetCustomAttributes(inherit: false),
+            _ => string.Equals(_.GetType().Name, ReservedProtoFieldsAttributeName, StringComparison.Ordinal)) as Attribute;
 }

@@ -40,6 +40,10 @@ An event type can release more than one constraint by stacking multiple attribut
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/multiple-remove-constraints" />
 
+The reverse also holds: more than one event type can release the same constraint. Name it from each event that ends the lifecycle and every one of them frees the held values:
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/several-removal-events" />
+
 ## How constraints are enforced
 
 The Chronicle Kernel reads the `[Unique]` and `[RemoveConstraint]` attributes when the client connects and creates the indexes it needs. Every subsequent append is checked against those indexes server-side, so no constraint logic runs in client code.

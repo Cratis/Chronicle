@@ -55,4 +55,18 @@ public class a_stored_constraint_definition : Specification
         { "_id", ConstraintNameValue },
         { "eventTypeId", eventTypeId }
     };
+
+    /// <summary>
+    /// Build the stored shape of a definition persisted before a constraint could be released by several events.
+    /// </summary>
+    /// <param name="eventTypeIds">The event types the constraint covered.</param>
+    /// <param name="removalEventTypeId">The single event the constraint was released with, or <see langword="null"/> for none.</param>
+    /// <returns>The legacy sub-document.</returns>
+    protected static BsonDocument LegacySingleRemovalDocument(IEnumerable<string> eventTypeIds, string? removalEventTypeId) => new()
+    {
+        { "_t", nameof(UniqueEventTypeConstraintDefinition) },
+        { "_id", ConstraintNameValue },
+        { "eventTypeIds", new BsonArray(eventTypeIds) },
+        { "removedWith", (BsonValue?)removalEventTypeId ?? BsonNull.Value }
+    };
 }

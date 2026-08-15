@@ -17,5 +17,5 @@ public class with_removed_with : given.a_unique_constraint_builder_with_owner_an
 
     void Because() => _result = _constraintBuilder.Build() as UniqueConstraintDefinition;
 
-    [Fact] void should_have_the_removed_with_event_type_id() => _result.RemovedWith.ShouldEqual(_removedWithEventType.Id);
+    [Fact] void should_have_the_removed_with_event_type_id() => _result.RemovedWith.ShouldContainOnly([_removedWithEventType.Id]);
 }

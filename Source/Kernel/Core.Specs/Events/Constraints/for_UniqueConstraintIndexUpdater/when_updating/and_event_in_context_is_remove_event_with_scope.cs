@@ -18,7 +18,7 @@ public class and_event_in_context_is_remove_event_with_scope : Specification
     void Establish()
     {
         _storage = Substitute.For<IUniqueConstraintsStorage>();
-        _definition = new("ScopedConstraint", [new("SomeEvent", [])], "SomeRemoveEvent", Scope: new ConstraintScope(EventSourceType: "MySourceType"));
+        _definition = new("ScopedConstraint", [new("SomeEvent", [])], [(EventTypeId)"SomeRemoveEvent"], Scope: new ConstraintScope(EventSourceType: "MySourceType"));
 
         _context = new([], EventSourceId.New(), "SomeRemoveEvent", new ExpandoObject(), eventSourceType: "MySourceType");
         _updater = new(_definition, _context, _storage);

@@ -33,7 +33,7 @@ public class when_providing_with_removal_event : Specification
     void Because() => _result = new UniqueEventTypeConstraintsProvider(_clientArtifactsProvider, _eventTypes).Provide();
 
     [Fact] void should_return_one_constraint() => _result.Count.ShouldEqual(1);
-    [Fact] void should_set_removed_with_to_removal_event() => ((UniqueEventTypeConstraintDefinition)_result[0]).RemovedWith.ShouldEqual(_removalEventType.Id);
+    [Fact] void should_set_removed_with_to_removal_event() => ((UniqueEventTypeConstraintDefinition)_result[0]).RemovedWith.ShouldContainOnly([_removalEventType.Id]);
 
     [Unique(message: EventMessage)] record ConstrainedEvent;
     [RemoveConstraint(nameof(ConstrainedEvent))] record RemovalEvent;

@@ -43,7 +43,7 @@ public class when_providing_with_removal_event : Specification
     void Because() => _result = _provider.Provide();
 
     [Fact] void should_return_one_constraint() => _result.Count.ShouldEqual(1);
-    [Fact] void should_set_removed_with_to_removal_event() => ((UniqueConstraintDefinition)_result[0]).RemovedWith.ShouldEqual(_removalEventType.Id);
+    [Fact] void should_set_removed_with_to_removal_event() => ((UniqueConstraintDefinition)_result[0]).RemovedWith.ShouldContainOnly([_removalEventType.Id]);
 
     record EventWithConstraint([property: Unique(ConstraintName)] string Property);
     [RemoveConstraint(ConstraintName)] record ConstraintRemovalEvent;

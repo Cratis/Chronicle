@@ -18,11 +18,14 @@ public class UniqueEventTypeConstraintsProvider(IClientArtifactsProvider clientA
             .Select<Type, IConstraintDefinition>(eventType =>
             {
                 var constraintName = eventType.GetConstraintName();
-                var removalEventType = clientArtifactsProvider.RemoveConstraintEventTypes
-                    .FirstOrDefault(t => t.GetRemoveConstraints().Any(a => constraintName == (ConstraintName)a.ConstraintName));
-                var removedWith = removalEventType is not null
-                    ? eventTypes.GetEventTypeFor(removalEventType).Id
-                    : null;
+
+                // Every event type declaring [RemoveConstraint] for this name releases it, not just the first one
+                // found. A lifecycle can end in more than one way, and each of those facts is a release.
+                var removedWith = clientArtifactsProvider.RemoveConstraintEventTypes
+                    .Where(t => t.GetRemoveConstraints().Any(a => constraintName == (ConstraintName)a.ConstraintName))
+                    .Select(t => eventTypes.GetEventTypeFor(t).Id)
+                    .Distinct()
+                    .ToArray();
 
                 return new UniqueEventTypeConstraintDefinition(
                     constraintName,
