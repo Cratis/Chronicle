@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -30,6 +31,16 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
     /// <inheritdoc/>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
+        // An empty value holds no personal data, so there is nothing for a key to protect and no reason to mint
+        // one. It matters most after an erasure: every PII value for an erased subject releases as empty, and
+        // rebuilding a read model re-applies what the release produced. Provisioning a key at that point would be
+        // resurrection by replay - and refusing to would break the rebuild over data that is already gone. The
+        // release path passes an empty value straight through, so nothing about the round trip changes.
+        if (value.GetValueKind() == JsonValueKind.String && value.GetValue<string>().Length == 0)
+        {
+            return value;
+        }
+
         var key = await EnsureKeyFor(eventStore, eventStoreNamespace, identifier);
         var valueAsString = value.ToString();
         var encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key);
