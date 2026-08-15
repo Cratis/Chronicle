@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
 
@@ -24,7 +27,12 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <param name="keyStore">The <see cref="IEncryptionKeyStorage"/>.</param>
 /// <param name="cacheClient">The <see cref="IEncryptionKeyCacheClient"/> used to evict the key from every silo's cache.</param>
 /// <param name="storage">The <see cref="IStorage"/> used to enumerate the event stores an erasure has to reach.</param>
-public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClient cacheClient, IStorage storage) : Grain, IPIIManager
+/// <param name="logger">The <see cref="ILogger{TCategoryName}"/> the compliance acts are recorded to.</param>
+public class PIIManager(
+    IEncryptionKeyStorage keyStore,
+    IEncryptionKeyCacheClient cacheClient,
+    IStorage storage,
+    ILogger<PIIManager> logger) : Grain, IPIIManager
 {
     /// <inheritdoc/>
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
@@ -48,8 +56,11 @@ public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClien
 
         if (failures.Count > 0)
         {
+            logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
             throw new EncryptionKeyErasureIncomplete(identifier, failures);
         }
+
+        logger.ErasedSubject(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
     }
 
     /// <inheritdoc/>
@@ -67,8 +78,26 @@ public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClien
 
         if (failures.Count > 0)
         {
+            logger.NewEncryptionKeyAuthorizationIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
             throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
         }
+
+        logger.AllowedNewEncryptionKey(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
+    }
+
+    static string Names(IEnumerable<EventStoreName> eventStores) => string.Join(", ", eventStores.Select(_ => _.Value));
+
+    static string BindingFor(EncryptionKeyIdentifier identifier)
+    {
+        // The act is logged, the person is not. Chronicle deliberately does not name the data subject in its logs -
+        // a line naming an erased person is unencrypted personal data that outlives the crypto-shred, and unlike the
+        // erasure fence, which lives inside the key store and is destroyed with it, a log line travels to
+        // aggregators whose retention and access sit outside the deployment's data boundary. The binding is a
+        // stable one-way derivation of the identifier, so an operator who already knows the subject can compute it
+        // and find the act; it just does not hand the name to everyone who can read a log. It is a pseudonym rather
+        // than an anonymization - a low-entropy identifier space is brute-forceable - which is exactly the trade a
+        // pseudonymous binding is meant to make.
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(identifier.Value)));
     }
 
     static async Task ForEach(IEnumerable<EventStoreName> eventStores, List<Exception> failures, Func<EventStoreName, Task> operation)

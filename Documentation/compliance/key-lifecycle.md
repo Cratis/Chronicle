@@ -107,7 +107,30 @@ await eventStore.PII.AllowNewEncryptionKeyFor("person-42");
 
 Like erasure, this reaches every event store in the namespace, and like erasure it is a deliberate, explicit act rather than something ordinary traffic can cause. It does **not** create a key. It sets `NewKeyAllowed` on the fence, and the next `[PII]` value appended for that subject mints a fresh key at revision `ErasedThrough + 1`.
 
-Chronicle does not keep a per-subject record of who authorized it or when — the same reason it does not name the subject in its logs, since a durable line naming an erased person is the thing an erasure exists to remove. That record is yours to keep, alongside the erasure record.
+## What Chronicle records, and what is still yours
+
+Both acts are logged, because the one that makes crypto-shredding reversible is the one an incident review will ask about. Chronicle records the **completion** of each — an erasure and an authorization that reached every event store — at information level:
+
+```text
+Erased the encryption key for the subject bound to 'a3f1…' in namespace 'Default', across all 3 event stores
+in it: Sales, Support, Billing. Every PII value protected under that key is now permanently unreadable, and no
+event store in the namespace will provision or accept a key for the subject until a new one is explicitly
+authorized
+```
+
+```text
+Authorized a new encryption key for the erased subject bound to 'a3f1…' in namespace 'Default', across all 3
+event stores in it: Sales, Support, Billing. The erased key does not come back - the next PII value written for
+the subject provisions a fresh, independent one that can decrypt nothing written before the erasure
+```
+
+An erasure or authorization that did **not** reach every event store is a different message at error level, saying so in as many words — a partial erasure can never be mistaken for a completed one in the log.
+
+Three things about what is in those lines:
+
+- **The subject appears as a binding, not by name.** It is a stable one-way derivation of the subject identifier, so you can compute it for a person you are investigating and find the act — but a log aggregator, whose retention and access sit outside the deployment, does not end up holding the name of someone whose data the erasure existed to remove. It is a pseudonym, not an anonymization: a small or guessable identifier space can be worked backwards, which is the trade a pseudonymous binding makes.
+- **No key material is ever logged** — not the key, not its fingerprint, nothing derived from it.
+- **The actor is not recorded, because Chronicle does not know it.** Who asked for the erasure, who authorized the new key, under what legal basis, and on whose instruction is yours to record. Chronicle can tell you an erasure completed across three event stores at a given moment; it cannot tell you who decided it should.
 
 The new key is independent of the erased one in every sense that matters:
 
