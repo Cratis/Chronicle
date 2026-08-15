@@ -10,11 +10,25 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// </summary>
 /// <param name="eventSequence">The <see cref="IEventSequence"/> to use for getting the tail sequence number.</param>
 /// <param name="options">
-/// Optional <see cref="ConcurrencyOptions"/> deciding whether the first append into a scope is checked. Defaults to
-/// <see cref="ConcurrencyOptions.CheckFirstAppendIntoAScopeByDefault"/> when not supplied.
+/// The <see cref="ConcurrencyOptions"/> deciding whether the first append into a scope is checked. Null falls back
+/// to <see cref="ConcurrencyOptions.CheckFirstAppendIntoAScopeByDefault"/>.
 /// </param>
-public class OptimisticConcurrencyStrategy(IEventSequence eventSequence, ConcurrencyOptions? options = default) : IConcurrencyScopeStrategy
+public class OptimisticConcurrencyStrategy(IEventSequence eventSequence, ConcurrencyOptions? options) : IConcurrencyScopeStrategy
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimisticConcurrencyStrategy"/> class without options.
+    /// </summary>
+    /// <param name="eventSequence">The <see cref="IEventSequence"/> to use for getting the tail sequence number.</param>
+    /// <remarks>
+    /// Kept as its own constructor rather than folded into the one above with a default argument, so that code
+    /// compiled against a build without <see cref="ConcurrencyOptions"/> keeps binding to a constructor that
+    /// exists. Behaves as <see cref="ConcurrencyOptions.CheckFirstAppendIntoAScopeByDefault"/> says.
+    /// </remarks>
+    public OptimisticConcurrencyStrategy(IEventSequence eventSequence)
+        : this(eventSequence, default)
+    {
+    }
+
     bool ChecksTheFirstAppend => options?.CheckFirstAppendIntoAScope ?? ConcurrencyOptions.CheckFirstAppendIntoAScopeByDefault;
 
     /// <inheritdoc/>
