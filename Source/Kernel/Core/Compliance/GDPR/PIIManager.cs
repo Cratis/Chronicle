@@ -30,8 +30,8 @@ public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClien
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
     {
         var key = GetKey();
-        var eventStores = await EventStoresToReach(key);
         List<Exception> failures = [];
+        var eventStores = await EventStoresToReach(key, failures);
 
         // Fencing every event store before destroying anything in any of them is what closes the window the
         // per-store erasure could not: between the first delete and the last, one store still held the key and
@@ -56,8 +56,8 @@ public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClien
     public async Task AllowNewEncryptionKeyFor(EncryptionKeyIdentifier identifier)
     {
         var key = GetKey();
-        var eventStores = await EventStoresToReach(key);
         List<Exception> failures = [];
+        var eventStores = await EventStoresToReach(key, failures);
 
         await ForEach(eventStores, failures, eventStore => keyStore.AllowNewKeyFor(eventStore, key.Namespace, identifier));
 
@@ -88,14 +88,23 @@ public class PIIManager(IEncryptionKeyStorage keyStore, IEncryptionKeyCacheClien
         }
     }
 
-    async Task<IReadOnlyList<EventStoreName>> EventStoresToReach(PIIManagerKey key)
+    async Task<IReadOnlyList<EventStoreName>> EventStoresToReach(PIIManagerKey key, List<Exception> failures)
     {
-        var eventStores = await storage.GetEventStores();
-
-        // The event store this manager is addressed at is always included, even when the cluster listing does not
-        // have it yet - an erasure that skipped the store the caller named would be the most surprising outcome of
-        // all, and the listing is registration state rather than a statement about which keys exist.
-        return [.. eventStores.Append(key.EventStore).Distinct()];
+        try
+        {
+            // The event store this manager is addressed at is always included, even when the cluster listing does
+            // not have it yet - an erasure that skipped the store the caller named would be the most surprising
+            // outcome of all, and the listing is registration state rather than a statement about which keys exist.
+            var eventStores = await storage.GetEventStores();
+            return [.. eventStores.Append(key.EventStore).Distinct()];
+        }
+        catch (Exception error)
+        {
+            // Losing the listing must not lose the erasure. The event store the caller named is erased either way,
+            // and the failure is reported so a partial reach is never mistaken for a complete one.
+            failures.Add(error);
+            return [key.EventStore];
+        }
     }
 
     PIIManagerKey GetKey()
