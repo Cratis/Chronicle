@@ -19,14 +19,9 @@ public class and_a_type_has_retired_field_numbers : Specification
         }
         """;
 
-    ReservedFieldsDeclaration _declaration;
     string _result;
 
-    void Because()
-    {
-        _declaration = ProtoSchemaHelper.DeclareReservedFields(Schema, [typeof(TypeWithRetiredFields)]);
-        _result = _declaration.Schema;
-    }
+    void Because() => _result = ProtoSchemaHelper.DeclareReservedFields(Schema, [typeof(TypeWithRetiredFields)]);
 
     [Fact] void should_reserve_them_in_ascending_order() => _result.ShouldContain("reserved 1, 3, 7;");
     [Fact] void should_reserve_them_inside_the_message_that_retired_them() =>
@@ -36,5 +31,4 @@ public class and_a_type_has_retired_field_numbers : Specification
         _result[.._result.IndexOf("message TypeWithRetiredFields {", StringComparison.Ordinal)].ShouldNotContain("reserved");
 
     [Fact] void should_keep_the_declared_fields() => _result.ShouldContain("string name = 2;");
-    [Fact] void should_report_the_type_it_reserved_for() => _declaration.Declared.ShouldContainOnly([typeof(TypeWithRetiredFields)]);
 }

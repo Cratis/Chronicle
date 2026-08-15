@@ -21,7 +21,7 @@ public class and_the_real_contract_attribute_is_used : Specification
 
     void Because() => _result = ProtoSchemaHelper.DeclareReservedFields(
         "message ContractCarryingTheRealAttribute {\n}",
-        [typeof(ContractCarryingTheRealAttribute)]).Schema;
+        [typeof(ContractCarryingTheRealAttribute)]);
 
     [Fact] void should_find_the_attribute_by_the_name_the_generator_looks_for() => _result.ShouldContain("reserved 4, 9;");
 
