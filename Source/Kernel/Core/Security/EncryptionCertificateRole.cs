@@ -1,11 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Cratis.Chronicle.Security;
 
 /// <summary>
 /// Represents the position a certificate holds in the encryption-certificate ring.
 /// </summary>
+/// <remarks>
+/// Serialized by name rather than by number: the rotation diagnostic is read by operators, and a role that
+/// reads as <c>2</c> tells them nothing.
+/// </remarks>
+[JsonConverter(typeof(JsonStringEnumConverter<EncryptionCertificateRole>))]
 public enum EncryptionCertificateRole
 {
     /// <summary>
