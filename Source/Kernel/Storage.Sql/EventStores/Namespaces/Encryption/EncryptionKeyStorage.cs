@@ -171,7 +171,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             await ErasureIn(scope.DbContext, identifier),
             present.Select(_ => ((EncryptionKeyRevision)_.Revision, new StoredEncryptionKey(_.PublicKey, _.PrivateKey))));
 
-        await Upsert(scope.DbContext, identifier, erasure);
+        await UpsertErasure(scope.DbContext, identifier, erasure);
     }
 
     /// <inheritdoc/>
@@ -186,7 +186,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             return;
         }
 
-        await Upsert(scope.DbContext, identifier, erasure with { NewKeyAllowed = true });
+        await UpsertErasure(scope.DbContext, identifier, erasure with { NewKeyAllowed = true });
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
@@ -213,7 +213,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
                 entity.NewKeyAllowed);
     }
 
-    static async Task Upsert(NamespaceDbContext dbContext, EncryptionKeyIdentifier identifier, StoredEncryptionKeyErasure erasure)
+    static async Task UpsertErasure(NamespaceDbContext dbContext, EncryptionKeyIdentifier identifier, StoredEncryptionKeyErasure erasure)
     {
         await dbContext.EncryptionKeyErasures.Upsert(new EncryptionKeyErasure
         {
