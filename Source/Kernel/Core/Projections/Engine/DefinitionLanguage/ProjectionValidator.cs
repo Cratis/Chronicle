@@ -352,10 +352,12 @@ public class ProjectionValidator(
 
             property = prop;
 
-            // If this isn't the last part, navigate to the nested schema
+            // If this isn't the last part, navigate to the nested schema. A nullable object carries the Null flag
+            // alongside Object, so this has to test the flag rather than compare - otherwise no path through a
+            // nullable nested object resolves, and every nested object a projection can clear is nullable.
             if (part != parts[^1])
             {
-                if (prop.ActualSchema.Type == JsonObjectType.Object)
+                if (prop.ActualSchema.Type.HasFlag(JsonObjectType.Object))
                 {
                     currentSchema = prop.ActualSchema;
                 }
