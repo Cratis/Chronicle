@@ -27,7 +27,7 @@ public class and_the_implementation_predates_the_member : given.two_implementati
         _erasureError = await Catch.Exception(() => _manager.DeleteEncryptionKeyFor(Identifier));
     }
 
-    [Fact] void should_fail_rather_than_silently_doing_nothing() => _error.ShouldBeOfExactType<NotSupportedException>();
+    [Fact] void should_fail_rather_than_silently_doing_nothing() => _error.ShouldBeOfExactType<AllowNewEncryptionKeyNotSupported>();
     [Fact] void should_name_the_implementation() => _error.Message.ShouldContain(typeof(predates_the_member).FullName!);
     [Fact] void should_name_the_member() => _error.Message.ShouldContain(nameof(IPIIManager.AllowNewEncryptionKeyFor));
     [Fact] void should_still_support_erasing() => _erasureError.ShouldBeNull();

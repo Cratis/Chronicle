@@ -29,7 +29,7 @@ public interface IPIIManager
     /// </summary>
     /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to authorize a new key for.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="NotSupportedException">Thrown by an implementation that does not override this member.</exception>
+    /// <exception cref="AllowNewEncryptionKeyNotSupported">Thrown by an implementation that does not override this member.</exception>
     /// <remarks>
     /// <para>
     /// Erasing a subject removes the key that exists now; it does not ban the identifier forever. This creates no
@@ -44,6 +44,5 @@ public interface IPIIManager
     /// </para>
     /// </remarks>
     Task AllowNewEncryptionKeyFor(EncryptionKeyIdentifier identifier) =>
-        throw new NotSupportedException(
-            $"'{GetType().FullName}' does not implement IPIIManager.AllowNewEncryptionKeyFor. Override it to support authorizing a new encryption key for a subject whose key was erased.");
+        throw new AllowNewEncryptionKeyNotSupported(GetType());
 }
