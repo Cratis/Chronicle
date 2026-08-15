@@ -3,12 +3,13 @@
 
 using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 
-namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_InertClearDeclarationAnalyzer.when_analyzing_a_clear_declaration;
+namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ClearOnNonNullableMemberAnalyzer.when_analyzing_a_clear_declaration;
 
 /// <summary>
-/// A class-level ClearWith on a nested type is the one shape projection construction reads.
+/// A class-level clear on a nested type has no member to be nullable, and clears the whole nested object rather
+/// than a scalar. It is not this rule's business.
 /// </summary>
-public class and_clear_with_is_on_the_nested_type : given.an_inert_clear_declaration_analyzer
+public class and_clear_with_is_on_the_nested_type_itself : given.a_clear_on_non_nullable_member_analyzer
 {
     const string Usage = """
     public record SliceCommandCleared();
@@ -23,7 +24,7 @@ public class and_clear_with_is_on_the_nested_type : given.an_inert_clear_declara
 
     Task _result;
 
-    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.InertClearDeclarationAnalyzer>.VerifyAnalyzer(CreateSource(Usage));
+    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ClearOnNonNullableMemberAnalyzer>.VerifyAnalyzer(CreateSource(Usage));
 
     [Fact] Task should_not_report_any_diagnostic() => _result;
 }
