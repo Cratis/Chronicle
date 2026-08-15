@@ -11,9 +11,10 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 /// <remarks>
 /// The first parameter of a handler method is always the event it reacts to. Any further parameters are
-/// resolved as dependencies: an <see cref="EventContext"/> parameter receives the event context, a read
-/// model parameter is materialized strongly consistent from its reducer or projection, and any other
-/// parameter is resolved from the <see cref="IServiceProvider"/>.
+/// resolved as dependencies: an <see cref="EventContext"/> parameter receives the event context, a
+/// <see cref="ReactorDelivery"/> parameter receives the identity of this delivery, a read model parameter is
+/// materialized strongly consistent from its reducer or projection, and any other parameter is resolved from
+/// the <see cref="IServiceProvider"/>.
 /// </remarks>
 public interface IReactorMethodArgumentsResolver
 {
