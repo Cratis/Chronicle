@@ -28,4 +28,13 @@ public class PIIManager(
             Namespace = @namespace,
             Identifier = identifier
         });
+
+    /// <inheritdoc/>
+    public Task AllowNewEncryptionKeyFor(EncryptionKeyIdentifier identifier) =>
+        _servicesAccessor.Services.Compliance.AllowNewEncryptionKey(new AllowNewEncryptionKeyRequest
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            Identifier = identifier
+        });
 }

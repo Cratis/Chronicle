@@ -31,9 +31,17 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// silently blank every value it protects.
 /// </para>
 /// <para>
-/// <b>Erasure must reach every store.</b> <see cref="DeleteFor"/> attempts every store even after one fails, and
-/// then reports the failure: a key left behind in one store is healed back into the others by the next read, so a
-/// partial erasure is not an erasure.
+/// <b>Erasure must reach every store.</b> <see cref="DeleteFor"/> and <see cref="RecordErasureFor"/> attempt every
+/// store even after one fails, and then report the failure: a key left behind in one store is healed back into the
+/// others by the next read, so a partial erasure is not an erasure.
+/// </para>
+/// <para>
+/// <b>One store's erasure fences all of them.</b> <see cref="GetErasureFor"/> answers with the strictest fence any
+/// store holds, so provisioning is refused everywhere the moment one member records an erasure. A read that finds
+/// key material any member recorded as destroyed returns nothing at all rather than healing the survivor around -
+/// every member is asked, because which one kept a survivor and which one recorded the erasure is an accident of
+/// ordering. Composition exists to move keys between backends; it must not become the path by which an erased key
+/// moves back.
 /// </para>
 /// </remarks>
 public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryptionKeyCache
@@ -96,6 +104,12 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 continue;
             }
 
+            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, key))
+            {
+                _logger.ErasedKeySurvivedInAnotherStore(identifier);
+                return null;
+            }
+
             await Heal(missing, eventStore, eventStoreNamespace, identifier, key, revision);
             return key;
         }
@@ -115,6 +129,11 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     /// <inheritdoc/>
     public async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
+        // A fence recorded in any store refuses provisioning for all of them. Checking only the primary would let
+        // a store that the erasure did not reach - or one that was added to the composition afterwards - become
+        // the single place the subject gets a key again, which is the resurrection with extra steps.
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanProvision(identifier, key);
+
         // The primary is authoritative for provisioning. Provisioning on another store when it is unreachable
         // would let two silos mint different keys for the same subject, and every value encrypted under the
         // losing key would become permanently undecryptable - so a primary failure is raised, never worked around.
@@ -149,6 +168,10 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     {
         List<Exception>? failures = null;
 
+        // This answers about presence, not about what a read hands over. Telling the truth about a key that is
+        // physically there is the safe direction for both of its callers: a caller that would otherwise go and
+        // copy the key stops, and one that wants the key gets it from TryGetFor, which is where the fence is
+        // applied because that is where the material is known.
         foreach (var store in _inner)
         {
             try
@@ -194,6 +217,61 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        List<Exception>? failures = null;
+        var erasures = new List<EncryptionKeyErasure>();
+
+        foreach (var store in _inner)
+        {
+            try
+            {
+                if (await store.GetErasureFor(eventStore, eventStoreNamespace, identifier) is { } erasure)
+                {
+                    erasures.Add(erasure);
+                }
+            }
+            catch (Exception error)
+            {
+                (failures ??= []).Add(error);
+                _logger.ReadingFromInnerStoreFailed(identifier, error);
+            }
+        }
+
+        // Nothing readable at all is the one case that cannot be answered: reporting "never erased" would let
+        // provisioning mint over a fence nobody could see. A store that did answer is trusted even while another
+        // is down, because refusing otherwise would stop every write of a protected value for the duration of a
+        // secondary outage - and a fence that only the unreachable store holds means its erasure was already
+        // reported incomplete, which is the signal to repeat it.
+        if (failures is not null && failures.Count == _inner.Length)
+        {
+            throw new EncryptionKeyStorageUnavailable(identifier, failures);
+        }
+
+        return erasures.Count == 0 ? null : Strictest(erasures);
+    }
+
+    /// <inheritdoc/>
+    public async Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var failures = await ForEachStore(store => store.RecordErasureFor(eventStore, eventStoreNamespace, identifier));
+        if (failures.Count > 0)
+        {
+            throw new EncryptionKeyErasureIncomplete(identifier, failures);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var failures = await ForEachStore(store => store.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier));
+        if (failures.Count > 0)
+        {
+            throw new EncryptionKeyLifecycleIncomplete(identifier, failures);
+        }
+    }
+
+    /// <inheritdoc/>
     public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         // Cluster-wide crypto-shred reaches the registered IEncryptionKeyStorage on every silo. The composite is
@@ -203,6 +281,17 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         {
             evictable.EvictFromCache(eventStore, eventStoreNamespace, identifier);
         }
+    }
+
+    static EncryptionKeyErasure Strictest(List<EncryptionKeyErasure> erasures)
+    {
+        // The strictest fence wins: the highest floor, every fenced fingerprint any store knows about, and a new
+        // lifecycle only where every store that recorded an erasure has authorized one. Merging towards the
+        // lenient side would let the composition become a way to shop for a store that forgot.
+        return new(
+            erasures.Max(_ => _.ErasedThrough.Value),
+            [.. erasures.SelectMany(_ => _.ErasedKeyFingerprints).Distinct(StringComparer.Ordinal)],
+            erasures.TrueForAll(_ => _.NewKeyAllowed));
     }
 
     async Task<List<Exception>> ForEachStore(Func<IEncryptionKeyStorage, Task> operation)
@@ -222,6 +311,37 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         }
 
         return failures;
+    }
+
+    async Task<bool> AnyStoreDestroyed(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        // Every store is asked, not only the ones read past on the way here: which member happens to still hold a
+        // survivor and which one recorded the erasure is an accident of ordering, and a guarantee that depends on
+        // that ordering is not a guarantee. The question is about this key's material rather than about the
+        // identifier, so it stays true after a later lifecycle - a successor key was never destroyed, and is
+        // served, while the material an erasure destroyed is refused however it found its way back.
+        foreach (var store in _inner)
+        {
+            try
+            {
+                if (await store.GetErasureFor(eventStore, eventStoreNamespace, identifier) is { } erasure &&
+                    erasure.ErasedKeyFingerprints.Contains(key.Fingerprint, StringComparer.Ordinal))
+                {
+                    return true;
+                }
+            }
+            catch (Exception error)
+            {
+                // A store that cannot be reached is logged and skipped, exactly as it is when the key itself is
+                // being read. Refusing the key because one member is down would turn a secondary outage into every
+                // protected value reading back empty, which is the outcome an untrue absence causes and the one
+                // this class exists to avoid. A fence only that member holds is missed until it is back, and its
+                // erasure was reported incomplete when it was recorded.
+                _logger.ReadingFromInnerStoreFailed(identifier, error);
+            }
+        }
+
+        return false;
     }
 
     async Task Heal(List<IEncryptionKeyStorage> stores, EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision)

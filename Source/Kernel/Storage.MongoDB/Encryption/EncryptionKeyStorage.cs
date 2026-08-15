@@ -34,6 +34,8 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             ? await GetNextRevision(collection, identifier)
             : revision!;
 
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
+
         var id = new EncryptionKeyId(identifier, actualRevision);
         await collection.ReplaceOneAsync(
             _ => _.Id == id,
@@ -54,7 +56,8 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             return existing;
         }
 
-        var id = new EncryptionKeyId(identifier, EncryptionKeyRevision.Initial);
+        var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
+        var id = new EncryptionKeyId(identifier, revision);
         try
         {
             await collection.InsertOneAsync(new EncryptionKeyForIdentifier(id, key.Public, key.Private));
@@ -142,6 +145,48 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyErasure?> GetErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var collection = GetErasureCollection(eventStore, eventStoreNamespace);
+        var document = await collection.Find(_ => _.Id == identifier).FirstOrDefaultAsync();
+        return document is null
+            ? null
+            : new EncryptionKeyErasure(document.ErasedThrough, document.ErasedKeyFingerprints, document.NewKeyAllowed);
+    }
+
+    /// <inheritdoc/>
+    public async Task RecordErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var keys = await GetCollection(eventStore, eventStoreNamespace);
+        var present = await keys.Find(_ => _.Id.Identifier == identifier).ToListAsync();
+        var erasure = EncryptionKeyErasure.Covering(
+            await GetErasureFor(eventStore, eventStoreNamespace, identifier),
+            present.Select(_ => (_.Id.Revision, new EncryptionKey(_.PublicKey, _.PrivateKey))));
+
+        await UpsertErasure(eventStore, eventStoreNamespace, identifier, erasure);
+    }
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        if (await GetErasureFor(eventStore, eventStoreNamespace, identifier) is not { } erasure)
+        {
+            return;
+        }
+
+        await UpsertErasure(eventStore, eventStoreNamespace, identifier, erasure with { NewKeyAllowed = true });
+    }
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
     static async Task<EncryptionKeyRevision> GetNextRevision(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier)
@@ -153,6 +198,21 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
 
         return latestDoc is null ? (EncryptionKeyRevision)1u : latestDoc.Id.Revision.Value + 1u;
     }
+
+    async Task UpsertErasure(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasure erasure)
+    {
+        var collection = GetErasureCollection(eventStore, eventStoreNamespace);
+        await collection.ReplaceOneAsync(
+            _ => _.Id == identifier,
+            new EncryptionKeyErasureForIdentifier(identifier, erasure.ErasedThrough, [.. erasure.ErasedKeyFingerprints], erasure.NewKeyAllowed),
+            new ReplaceOptions { IsUpsert = true });
+    }
+
+    IMongoCollection<EncryptionKeyErasureForIdentifier> GetErasureCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace) =>
+        database
+            .GetEventStoreDatabase(eventStore)
+            .GetNamespaceDatabase(eventStoreNamespace)
+            .GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures");
 
     async Task<IMongoCollection<EncryptionKeyForIdentifier>> GetCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
     {

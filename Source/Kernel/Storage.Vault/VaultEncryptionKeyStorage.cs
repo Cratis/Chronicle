@@ -31,6 +31,19 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
     const string DefaultMountPoint = "secret";
     const string PublicKeyField = "publicKey";
     const string PrivateKeyField = "privateKey";
+    const string ErasedThroughField = "erasedThrough";
+    const string ErasedKeyFingerprintsField = "erasedKeyFingerprints";
+    const string NewKeyAllowedField = "newKeyAllowed";
+
+    /// <summary>
+    /// The leaf an erasure is written under, beside the numbered revisions.
+    /// </summary>
+    /// <remarks>
+    /// Revisions are numbered, so a non-numeric leaf can never collide with one, and the revision enumeration
+    /// already skips anything that does not parse as a number - which is what keeps the fence out of it and lets
+    /// a deletion of every revision leave the fence standing.
+    /// </remarks>
+    const string ErasureLeaf = "erasure";
 
     readonly VaultClient _vaultClient = CreateVaultClient(connectionDetails);
     readonly string _mountPoint = string.IsNullOrEmpty(mountPoint) ? DefaultMountPoint : mountPoint;
@@ -46,6 +59,8 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         var actualRevision = IsLatest(revision)
             ? await GetNextRevision(eventStore, eventStoreNamespace, identifier)
             : revision!;
+
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
 
         var path = BuildPath(eventStore, eventStoreNamespace, identifier, actualRevision);
         var data = new Dictionary<string, object>
@@ -140,6 +155,68 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyErasure?> GetErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var path = BuildErasurePath(eventStore, eventStoreNamespace, identifier);
+        try
+        {
+            var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: _mountPoint);
+            if (!secret.Data.Data.TryGetValue(ErasedThroughField, out var erasedThrough) || erasedThrough is null)
+            {
+                return null;
+            }
+
+            var fingerprints = secret.Data.Data.TryGetValue(ErasedKeyFingerprintsField, out var raw) && raw is not null
+                ? raw.ToString()!.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : [];
+            var newKeyAllowed = secret.Data.Data.TryGetValue(NewKeyAllowedField, out var allowed) && allowed is not null &&
+                bool.TryParse(allowed.ToString(), out var parsed) && parsed;
+
+            return new EncryptionKeyErasure(uint.Parse(erasedThrough.ToString()!), fingerprints, newKeyAllowed);
+        }
+        catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task RecordErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var present = new List<(EncryptionKeyRevision Revision, EncryptionKey Key)>();
+        foreach (var revision in await ListRevisions(eventStore, eventStoreNamespace, identifier))
+        {
+            if (await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is { } key)
+            {
+                present.Add((revision, key));
+            }
+        }
+
+        var erasure = EncryptionKeyErasure.Covering(await GetErasureFor(eventStore, eventStoreNamespace, identifier), present);
+        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure);
+    }
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        if (await GetErasureFor(eventStore, eventStoreNamespace, identifier) is not { } erasure)
+        {
+            return;
+        }
+
+        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure with { NewKeyAllowed = true });
+    }
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
     static VaultClient CreateVaultClient(string address)
@@ -169,6 +246,28 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier) =>
         $"{eventStore}/{eventStoreNamespace}/{identifier}";
+
+    string BuildErasurePath(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        $"{BuildDirectoryPath(eventStore, eventStoreNamespace, identifier)}/{ErasureLeaf}";
+
+    async Task WriteErasure(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyErasure erasure)
+    {
+        var data = new Dictionary<string, object>
+        {
+            [ErasedThroughField] = erasure.ErasedThrough.Value.ToString(),
+            [ErasedKeyFingerprintsField] = string.Join(',', erasure.ErasedKeyFingerprints),
+            [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString()
+        };
+
+        await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(BuildErasurePath(eventStore, eventStoreNamespace, identifier), data, mountPoint: _mountPoint);
+    }
 
     async Task<EncryptionKeyRevision> GetNextRevision(
         EventStoreName eventStore,

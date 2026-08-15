@@ -10,5 +10,7 @@
   href: read-models.mdx
 - name: Erasing a subject
   href: erasing-a-subject.md
+- name: The encryption key lifecycle
+  href: key-lifecycle.md
 - name: Compliance in Arc applications
   href: arc.md

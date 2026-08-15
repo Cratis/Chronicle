@@ -35,6 +35,19 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
     const string SecretNamePrefix = "chronicle";
     const string PublicKeyField = "publicKey";
     const string PrivateKeyField = "privateKey";
+    const string ErasedThroughField = "erasedThrough";
+    const string ErasedKeyFingerprintsField = "erasedKeyFingerprints";
+    const string NewKeyAllowedField = "newKeyAllowed";
+
+    /// <summary>
+    /// The suffix an erasure is stored under, beside the numbered revisions.
+    /// </summary>
+    /// <remarks>
+    /// Revisions are numbered, so a non-numeric suffix can never collide with one, and the revision enumeration
+    /// already skips anything that does not parse as a number - which is what keeps the fence out of it and lets
+    /// a deletion of every revision leave the fence standing.
+    /// </remarks>
+    const string ErasureSuffix = "erasure";
 
     [GeneratedRegex("[^a-z0-9]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SanitizeRegex { get; }
@@ -50,6 +63,8 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
         var actualRevision = IsLatest(revision)
             ? await GetNextRevision(eventStore, eventStoreNamespace, identifier)
             : revision!;
+
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
 
         var name = BuildSecretName(eventStore, eventStoreNamespace, identifier, actualRevision);
         var value = JsonSerializer.Serialize(new Dictionary<string, string>
@@ -142,6 +157,68 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyErasure?> GetErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        try
+        {
+            var secret = await secretClient.GetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier));
+            if (secret.Value.Properties.Enabled == false ||
+                JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value) is not { } data ||
+                !data.TryGetValue(ErasedThroughField, out var erasedThrough))
+            {
+                return null;
+            }
+
+            var fingerprints = data.TryGetValue(ErasedKeyFingerprintsField, out var raw)
+                ? raw.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : [];
+            var newKeyAllowed = data.TryGetValue(NewKeyAllowedField, out var allowed) && bool.TryParse(allowed, out var parsed) && parsed;
+
+            return new EncryptionKeyErasure(uint.Parse(erasedThrough), fingerprints, newKeyAllowed);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task RecordErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var present = new List<(EncryptionKeyRevision Revision, EncryptionKey Key)>();
+        foreach (var revision in await ListRevisions(eventStore, eventStoreNamespace, identifier))
+        {
+            if (await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is { } key)
+            {
+                present.Add((revision, key));
+            }
+        }
+
+        var erasure = EncryptionKeyErasure.Covering(await GetErasureFor(eventStore, eventStoreNamespace, identifier), present);
+        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure);
+    }
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        if (await GetErasureFor(eventStore, eventStoreNamespace, identifier) is not { } erasure)
+        {
+            return;
+        }
+
+        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure with { NewKeyAllowed = true });
+    }
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
     static string Sanitize(string input) =>
@@ -159,6 +236,28 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier) =>
         $"{SecretNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--";
+
+    string BuildErasureSecretName(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        $"{BuildSecretPrefix(eventStore, eventStoreNamespace, identifier)}{ErasureSuffix}";
+
+    async Task WriteErasure(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyErasure erasure)
+    {
+        var value = JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            [ErasedThroughField] = erasure.ErasedThrough.Value.ToString(),
+            [ErasedKeyFingerprintsField] = string.Join(',', erasure.ErasedKeyFingerprints),
+            [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString()
+        });
+
+        await secretClient.SetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier), value);
+    }
 
     async Task<EncryptionKeyRevision> GetNextRevision(
         EventStoreName eventStore,

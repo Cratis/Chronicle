@@ -1,8 +1,12 @@
 # Design note — erasing a subject whose encryption key was copied across event stores
 
-Status: **open question, no implementation.** This note exists because IMP-23 asks for three capabilities
-that change public API, and picking one without a ruling would be worse than not starting. Written against
-`origin/main` at `v16.19.1-4-g1f0ce2bbe`.
+Status: **answered and implemented.** The ruling this note asked for arrived as Ada's D98 (2026-08-10) —
+erasure removes the key incarnation that exists now, and is not a permanent ban on the subject identifier —
+and option 3 was built on it, together with the fan-out of option 1 folded into the existing erasure call.
+The shipped mechanism and its limits are documented in
+[The encryption key lifecycle](Documentation/compliance/key-lifecycle.md); the three questions under
+"Still owed" below are each answered there. Everything from here down is the original analysis, kept as the
+record of how the decision was reached. Written against `origin/main` at `v16.19.1-4-g1f0ce2bbe`.
 
 Ask 4 (documentation) and the observability half of ask 2 (a log line) are already implemented on this
 branch and are out of scope here. What follows covers asks 1, 2 and 3.

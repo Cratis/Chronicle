@@ -27,7 +27,7 @@ When a projection or observer reads the event, Chronicle performs the reverse: i
 
 Encryption keys are managed by the `IPIIManager` grain in the Chronicle kernel. Keys are stored and retrieved by event source identifier, so every individual whose data lives in the event store has their own key. Deleting a key is the Chronicle equivalent of GDPR erasure.
 
-A key belongs to one event store and one namespace, and so does the delete — and an event store subscription copies a subject's key into the event store it forwards to. An erasure therefore has to cover every event store and namespace that holds the subject, which is what [Erasing a subject](erasing-a-subject.md) walks through.
+A key belongs to one event store and one namespace, and an event store subscription copies a subject's key into the event store it forwards to. An erasure therefore covers every event store in the namespace it is issued in, and records itself there so that nothing provisions or copies a key for that subject afterwards. [Erasing a subject](erasing-a-subject.md) walks through the call and what it reaches; [The encryption key lifecycle](key-lifecycle.md) explains the mechanism and its limits.
 
 ## Marking data as PII
 
