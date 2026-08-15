@@ -22,13 +22,13 @@ public class two_constraints : no_constraints
         _firstConstraint = new UniqueConstraintDefinition(_firstConstraintName,
             _ => (ConstraintViolationMessage)$"First {{{FirstProperty}}} second {{{SecondProperty}}}",
             [new UniqueConstraintEventDefinition(FirstEventTypeName, [FirstProperty])],
-            null,
+            [],
             false);
 
         _secondConstraint = new UniqueConstraintDefinition(_secondConstraintName,
             _ => (ConstraintViolationMessage)$"First {{{FirstProperty}}} second {{{SecondProperty}}}",
             [new UniqueConstraintEventDefinition(SecondEventTypeName, [SecondProperty])],
-            null,
+            [],
             false);
 
         _constraintsProvider.Provide().Returns(new[] { _firstConstraint, _secondConstraint }.ToImmutableList());

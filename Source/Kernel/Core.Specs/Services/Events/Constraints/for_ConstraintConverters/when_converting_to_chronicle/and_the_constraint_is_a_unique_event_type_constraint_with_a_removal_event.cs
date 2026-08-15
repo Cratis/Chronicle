@@ -25,7 +25,7 @@ public class and_the_constraint_is_a_unique_event_type_constraint_with_a_removal
     {
         Name = ConstraintNameValue,
         Type = Contracts.Events.Constraints.ConstraintType.UniqueEventType,
-        RemovedWith = _returnedEventTypeId.Value,
+        RemovedWith = [_returnedEventTypeId.Value],
         Definition = new(new UniqueEventTypeConstraintDefinitionContract
         {
             EventTypeIds = [_checkedOutEventTypeId.Value]
@@ -36,5 +36,5 @@ public class and_the_constraint_is_a_unique_event_type_constraint_with_a_removal
 
     [Fact] void should_have_the_constraint_name() => _result.Name.Value.ShouldEqual(ConstraintNameValue);
     [Fact] void should_cover_the_event_type() => _result.EventTypeIds.ShouldContainOnly([_checkedOutEventTypeId]);
-    [Fact] void should_carry_the_removal_event() => _result.RemovedWith.ShouldEqual(_returnedEventTypeId);
+    [Fact] void should_carry_the_removal_event() => _result.RemovedWith.ShouldContainOnly([_returnedEventTypeId]);
 }

@@ -30,6 +30,10 @@ public interface IUniqueEventTypesConstraintsStorage
     /// blocks the append, so an event source that has been released is free to start the next cycle. The whole
     /// definition is passed rather than its parts so that a reader cannot answer against half of it.
     /// </para>
+    /// <para>
+    /// A definition may declare several removal events, because a cycle can end in more than one way. The cycle
+    /// ends at the most recent of them, not at the most recent of any one of them.
+    /// </para>
     /// </remarks>
     Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(UniqueEventTypeConstraintDefinition definition, EventSourceId eventSourceId, string scopeKey = "");
 }

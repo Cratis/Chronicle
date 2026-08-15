@@ -30,5 +30,5 @@ public class and_the_constraint_is_a_unique_event_type_constraint_without_a_remo
 
     void Because() => _result = (KernelUniqueEventTypeConstraintDefinition)_contract.ToChronicle();
 
-    [Fact] void should_have_no_removal_event() => _result.RemovedWith.ShouldBeNull();
+    [Fact] void should_have_no_removal_event() => _result.RemovedWith.ShouldBeEmpty();
 }

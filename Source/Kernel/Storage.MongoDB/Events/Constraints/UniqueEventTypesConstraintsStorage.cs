@@ -41,14 +41,25 @@ public class UniqueEventTypesConstraintsStorage(IEventStoreNamespaceDatabase dat
         return (true, EventSequenceNumber.Unavailable);
     }
 
+    /// <summary>
+    /// Find the most recent event on the event source that releases the constraint.
+    /// </summary>
+    /// <param name="definition">The <see cref="UniqueEventTypeConstraintDefinition"/> to read the removal events from.</param>
+    /// <param name="forEventSource">Filter narrowing to the event source being answered for.</param>
+    /// <returns>The <see cref="EventSequenceNumber"/> the current cycle starts after, or <see langword="null"/> when nothing released it.</returns>
+    /// <remarks>
+    /// Any of the declared removal events ends a cycle, so the latest across all of them is the one that counts —
+    /// looking at only one of them would keep answering against a cycle that another terminal fact already closed.
+    /// </remarks>
     async Task<EventSequenceNumber?> GetLatestRemoval(UniqueEventTypeConstraintDefinition definition, FilterDefinition<Event> forEventSource)
     {
-        if (definition.RemovedWith is null)
+        var removalEventTypeIds = definition.RemovedWith.ToArray();
+        if (removalEventTypeIds.Length == 0)
         {
             return null;
         }
 
-        var filter = forEventSource & Builders<Event>.Filter.Eq(_ => _.Type, definition.RemovedWith);
+        var filter = forEventSource & Builders<Event>.Filter.In(_ => _.Type, removalEventTypeIds);
         var latest = await _collection.Find(filter).SortByDescending(_ => _.SequenceNumber).FirstOrDefaultAsync();
         return latest?.SequenceNumber;
     }

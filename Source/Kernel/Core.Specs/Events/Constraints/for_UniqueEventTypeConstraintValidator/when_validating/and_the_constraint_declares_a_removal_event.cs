@@ -30,7 +30,7 @@ public class and_the_constraint_declares_a_removal_event : Specification
         var definition = new UniqueEventTypeConstraintDefinition(
             "LoanOpen",
             [_checkedOutEventType.Id],
-            _returnedEventType.Id);
+            [_returnedEventType.Id]);
 
         _validator = new UniqueEventTypeConstraintValidator(definition, _storage);
         _context = new([], EventSourceId.New(), _checkedOutEventType.Id, new ExpandoObject());
@@ -45,7 +45,7 @@ public class and_the_constraint_declares_a_removal_event : Specification
     [Fact] void should_be_valid() => _result.IsValid.ShouldBeTrue();
     [Fact] async Task should_hand_storage_the_removal_event() =>
         await _storage.Received(1).IsAllowed(
-            Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.RemovedWith == _returnedEventType.Id),
+            Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.RemovedWith.Contains(_returnedEventType.Id)),
             _context.EventSourceId,
             Arg.Any<string>());
 }

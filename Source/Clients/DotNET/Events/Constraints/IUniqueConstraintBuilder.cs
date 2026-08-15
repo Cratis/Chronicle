@@ -47,6 +47,10 @@ public interface IUniqueConstraintBuilder
     /// </summary>
     /// <typeparam name="TEventType">The <see cref="EventType"/> that removes the constraint.</typeparam>
     /// <returns>Builder for continuation.</returns>
+    /// <remarks>
+    /// Call this as many times as the lifecycle has terminal facts. Every declared event type releases the
+    /// constraint on its own — declaring a second does not replace the first.
+    /// </remarks>
     IUniqueConstraintBuilder RemovedWith<TEventType>();
 
     /// <summary>
@@ -54,6 +58,10 @@ public interface IUniqueConstraintBuilder
     /// </summary>
     /// <param name="eventType">The <see cref="EventType"/> that would remove the constraint.</param>
     /// <returns>The builder for continuation.</returns>
+    /// <remarks>
+    /// Call this as many times as the lifecycle has terminal facts. Every declared event type releases the
+    /// constraint on its own — declaring a second does not replace the first.
+    /// </remarks>
     IUniqueConstraintBuilder RemovedWith(EventType eventType);
 
     /// <summary>

@@ -69,7 +69,7 @@ public class ConstraintBuilder(
             name ?? eventType.Id.Value,
             messageCallback,
             [eventType.Id],
-            null)));
+            [])));
 
         return this;
     }
@@ -84,7 +84,8 @@ public class ConstraintBuilder(
         }
 
         var removalEventType = eventTypes.GetEventTypeFor(typeof(TRemovalEventType));
-        _constraints[index] = ((UniqueEventTypeConstraintDefinition)_constraints[index]) with { RemovedWith = removalEventType.Id };
+        var declaration = (UniqueEventTypeConstraintDefinition)_constraints[index];
+        _constraints[index] = declaration with { RemovedWith = [.. declaration.RemovedWith.Append(removalEventType.Id).Distinct()] };
         return this;
     }
 
@@ -114,9 +115,8 @@ public class ConstraintBuilder(
     /// Merging happens here rather than downstream so that names stay unique across the built set, which
     /// registration, change detection, and violation message resolution all rely on.
     /// <para>
-    /// One constraint has one removal event, so the first declared for the name wins. Coalescing rather than
-    /// keeping the first declaration's value means a removal event declared on any of the merged declarations
-    /// survives, instead of being silently dropped because it was not declared on the first one.
+    /// The removal events are unioned rather than picked from one declaration, so every event declared to release
+    /// the name releases it, wherever among the merged declarations it was written.
     /// </para>
     /// </remarks>
     static List<IConstraintDefinition> MergeUniqueEventTypeConstraintsSharingName(IEnumerable<IConstraintDefinition> constraints)
@@ -141,7 +141,7 @@ public class ConstraintBuilder(
             merged[existingIndex] = existing with
             {
                 EventTypeIds = existing.EventTypeIds.Concat(uniqueEventType.EventTypeIds).Distinct().ToArray(),
-                RemovedWith = existing.RemovedWith ?? uniqueEventType.RemovedWith
+                RemovedWith = existing.RemovedWith.Concat(uniqueEventType.RemovedWith).Distinct().ToArray()
             };
         }
 

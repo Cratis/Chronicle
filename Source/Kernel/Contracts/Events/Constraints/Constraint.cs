@@ -7,6 +7,7 @@ namespace Cratis.Chronicle.Contracts.Events.Constraints;
 /// Represents a constraint.
 /// </summary>
 [ProtoContract]
+[ReservedProtoFields(3)]
 public class Constraint
 {
     /// <summary>
@@ -22,10 +23,14 @@ public class Constraint
     public ConstraintType Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the event type id that removes the constraint.
+    /// Gets or sets the event type identifiers that remove the constraint.
     /// </summary>
-    [ProtoMember(3)]
-    public string? RemovedWith { get; set; }
+    /// <remarks>
+    /// Every one of them releases the constraint on its own. Field 3 held the single event type id this replaces
+    /// and is reserved so an older payload is ignored rather than misread.
+    /// </remarks>
+    [ProtoMember(6)]
+    public IList<string> RemovedWith { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the definition of the constraint.

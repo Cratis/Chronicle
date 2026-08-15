@@ -8,11 +8,34 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </summary>
 /// <param name="Name">Name of the constraint.</param>
 /// <param name="EventDefinitions">Collection of <see cref="UniqueConstraintEventDefinition"/>.</param>
-/// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that removes the constraint.</param>
+/// <param name="RemovedWith">The <see cref="EventTypeId"/> values of the events that remove the constraint.</param>
 /// <param name="IgnoreCasing">Whether this constraint should ignore casing.</param>
 /// <param name="Scope">The <see cref="ConstraintScope"/> for the constraint.</param>
-public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, EventTypeId? RemovedWith = default, bool IgnoreCasing = false, ConstraintScope? Scope = default) : IConstraintDefinition
+/// <remarks>
+/// Several removal events are allowed, because a lifecycle can end in more than one way — an invited address is
+/// released by the invitation being accepted, revoked or expiring. Each of them releases the claimed value on its
+/// own, so the value is free again after whichever of them the event source reaches.
+/// </remarks>
+public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, IEnumerable<EventTypeId> RemovedWith = null!, bool IgnoreCasing = false, ConstraintScope? Scope = default) : IConstraintDefinition
 {
+    readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+
+    /// <summary>
+    /// Gets the <see cref="EventTypeId"/> values of the events that remove the constraint.
+    /// </summary>
+    /// <remarks>
+    /// Normalized to an empty sequence when absent. Most constraints declare no removal event at all, and a
+    /// definition persisted before the constraint could be released by several events carries a single value under
+    /// this name which storage upgrades on read. The normalization is on the way out rather than in the
+    /// initializer, because a document deserializer is free to materialize the record without running either a
+    /// constructor or the initializer — the MongoDB driver does exactly that.
+    /// </remarks>
+    public IEnumerable<EventTypeId> RemovedWith
+    {
+        get => _removedWith ?? [];
+        init => _removedWith = value;
+    }
+
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => Equals(other as UniqueConstraintDefinition);
 
@@ -32,22 +55,26 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
     public virtual bool Equals(UniqueConstraintDefinition? other) =>
         other is not null &&
         Name == other.Name &&
-        RemovedWith == other.RemovedWith &&
         IgnoreCasing == other.IgnoreCasing &&
         Scope == other.Scope &&
-        EventDefinitions.SequenceEqual(other.EventDefinitions);
+        EventDefinitions.SequenceEqual(other.EventDefinitions) &&
+        RemovedWith.SequenceEqual(other.RemovedWith);
 
     /// <inheritdoc/>
     public override int GetHashCode()
     {
         var hashCode = default(HashCode);
         hashCode.Add(Name);
-        hashCode.Add(RemovedWith);
         hashCode.Add(IgnoreCasing);
         hashCode.Add(Scope);
         foreach (var eventDefinition in EventDefinitions)
         {
             hashCode.Add(eventDefinition);
+        }
+
+        foreach (var removalEventTypeId in RemovedWith)
+        {
+            hashCode.Add(removalEventTypeId);
         }
 
         return hashCode.ToHashCode();
@@ -90,7 +117,7 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
             }
         }
 
-        if (RemovedWith != existingDefinition.RemovedWith || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
+        if (!RemovedWith.SequenceEqual(existingDefinition.RemovedWith) || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
         {
             changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
         }
