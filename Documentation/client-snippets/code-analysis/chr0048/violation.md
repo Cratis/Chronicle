@@ -12,14 +12,14 @@ public record Chr0048SliceCommandSet(string Command, int Attempts);
 public record Chr0048Slice(
     [Key] string Id,
 
-    // Error CHR0048: 'Command' is declared as a non-nullable string, so there is no value the clear
+    // Warning CHR0048: 'Command' is declared as a non-nullable string, so there is no value the clear
     // could write except the empty string - a different fact the read model cannot tell apart from a
     // real value. Declare it as string? to clear it, or say what you mean with [SetValue<T>("")].
     [SetFrom<Chr0048SliceCommandSet>(nameof(Chr0048SliceCommandSet.Command))]
     [ClearWith<Chr0048SliceCommandCleared>]
     string Command,
 
-    // Error CHR0048: a value type cannot hold null whatever the nullable context says, and zero is a
+    // Warning CHR0048: a value type cannot hold null whatever the nullable context says, and zero is a
     // count rather than the absence of one. Declare it as int? to clear it.
     [SetFrom<Chr0048SliceCommandSet>(nameof(Chr0048SliceCommandSet.Attempts))]
     [SetValue<Chr0048SliceCommandCleared>(null)]

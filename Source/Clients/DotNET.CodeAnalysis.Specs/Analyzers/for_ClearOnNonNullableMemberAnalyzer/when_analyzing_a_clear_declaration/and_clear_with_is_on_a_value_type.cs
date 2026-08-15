@@ -24,7 +24,7 @@ public class and_clear_with_is_on_a_value_type : given.a_clear_on_non_nullable_m
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ClearOnNonNullableMemberAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.ClearOnNonNullableMember, DiagnosticSeverity.Error, "Attempts", "int"));
+        new ExpectedDiagnostic(DiagnosticIds.ClearOnNonNullableMember, DiagnosticSeverity.Warning, "Attempts", "int"));
 
     [Fact] Task should_report_the_clear_on_non_nullable_member_diagnostic() => _result;
 }

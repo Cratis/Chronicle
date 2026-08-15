@@ -18,7 +18,7 @@ When `MbClearingProjectNoted` occurs, `Note` is populated. When `MbClearingProje
 
 ## The Member Must Be Able to Hold No Value
 
-Clearing means returning a member to *no value*, so the member must have that state. A non-nullable member does not, and the declaration is refused: [CHR0048](../../code-analysis/CHR0048) reports it as a build error, and building the projection throws `CannotClearNonNullableMember`.
+Clearing means returning a member to *no value*, so the member must have that state. A non-nullable member does not, and the declaration is refused: [CHR0048](../../code-analysis/CHR0048) reports it as a build warning — scheduled to become an error in the next major — and building the projection throws `CannotClearNonNullableMember`, so an unaddressed warning fails at startup.
 
 <ChronicleClientTabs snippet="projections/model-bound/clearing/nullable" />
 

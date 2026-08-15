@@ -26,7 +26,7 @@ public class and_clear_with_is_on_a_non_nullable_property : given.a_clear_on_non
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ClearOnNonNullableMemberAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.ClearOnNonNullableMember, DiagnosticSeverity.Error, "Command", "string"));
+        new ExpectedDiagnostic(DiagnosticIds.ClearOnNonNullableMember, DiagnosticSeverity.Warning, "Command", "string"));
 
     [Fact] Task should_report_the_clear_on_non_nullable_member_diagnostic() => _result;
 }

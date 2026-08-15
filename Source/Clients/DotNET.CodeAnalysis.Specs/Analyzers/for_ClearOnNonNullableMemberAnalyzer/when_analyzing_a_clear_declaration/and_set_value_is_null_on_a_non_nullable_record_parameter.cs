@@ -25,7 +25,7 @@ public class and_set_value_is_null_on_a_non_nullable_record_parameter : given.a_
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.ClearOnNonNullableMemberAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.ClearOnNonNullableMember, DiagnosticSeverity.Error, "Command", "string"));
+        new ExpectedDiagnostic(DiagnosticIds.ClearOnNonNullableMember, DiagnosticSeverity.Warning, "Command", "string"));
 
     [Fact] Task should_report_the_clear_on_non_nullable_member_diagnostic() => _result;
 }
