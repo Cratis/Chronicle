@@ -217,10 +217,8 @@ re-encrypted in bulk — the previous certificate stays in the ring until nothin
 
 ```mermaid
 flowchart LR
-    A["1. Issue new certificate<br/>keep the old file"] --> B["2. New = active<br/>old = previous[0]<br/>restart every node"]
-    B --> C["3. Watch the diagnostic<br/>until nothing depends<br/>on the previous one"]
-    C --> D["4. Remove previous[0]<br/>restart every node"]
-    D --> E["5. Keep the old file<br/>in the backup set"]
+    A["Ring holds A<br/>A is active"] -->|"issue B, make it active,<br/>move A to previous"| B["Ring holds B and A<br/>B protects everything new,<br/>A still reads what it protected"]
+    B -->|"diagnostic reports nothing<br/>depends on A"| C["Ring holds B<br/>A is retired,<br/>its file stays in the backup set"]
 ```
 
 1. **Issue the new certificate.** Keep the file the current one lives in — you are going to need it in the

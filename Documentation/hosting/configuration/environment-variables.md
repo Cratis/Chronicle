@@ -62,6 +62,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Tls__CertificatePassword | TLS certificate password |
 | Cratis__Chronicle__EncryptionCertificate__CertificatePath | Encryption certificate path (PFX) — OAuth keys, webhook credentials, Data Protection keys |
 | Cratis__Chronicle__EncryptionCertificate__CertificatePassword | Encryption certificate password |
+| Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePath | Path to a certificate that was active before, kept for decryption only during a [rotation](../encryption-certificate.md#rotating-the-certificate). Index upwards for more than one |
+| Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePassword | Password for that certificate |
 | OTEL_EXPORTER_OTLP_ENDPOINT | OTLP receiver endpoint for telemetry export |
 | OTEL_EXPORTER_OTLP_PROTOCOL | OTLP export protocol (`grpc` or `http/protobuf`) |
 | OTEL_EXPORTER_OTLP_HEADERS | Additional headers for the OTLP exporter |
