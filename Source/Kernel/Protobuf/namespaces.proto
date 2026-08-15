@@ -17,9 +17,6 @@ message EnsureNamespaceRequest {
    string EventStore = 1;
    string Namespace = 2;
 }
-message ObserveNamespacesRequest {
-   string EventStore = 1;
-}
 message QueryResult_IEnumerable_String {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2; // default value could not be applied: True
@@ -40,7 +37,6 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service Namespaces {
-   rpc AllNamespaces (AllNamespacesRequest) returns (QueryResult_IEnumerable_String);
+   rpc AllNamespaces (AllNamespacesRequest) returns (stream QueryResult_IEnumerable_String);
    rpc EnsureNamespace (EnsureNamespaceRequest) returns (CommandResult);
-   rpc ObserveNamespaces (ObserveNamespacesRequest) returns (stream QueryResult_IEnumerable_String);
 }
