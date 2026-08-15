@@ -213,6 +213,10 @@ public class ModelBoundCodeGenerator
                     var innerValue = normalizedExpression[(WellKnownExpressions.Value.Length + 1)..^1];
                     propInfo.SetValues.Add((eventTypeName, innerValue));
                 }
+                else if (normalizedExpression == WellKnownExpressions.Null)
+                {
+                    propInfo.Clears.Add(eventTypeName);
+                }
                 else
                 {
                     propInfo.SetFroms.Add((eventTypeName, GetEventPropertyName(normalizedExpression)));
@@ -265,6 +269,14 @@ public class ModelBoundCodeGenerator
         foreach (var setValue in propInfo.SetValues)
         {
             attributes.Add(CreateSetValueAttribute(setValue.EventTypeName, setValue.Value));
+        }
+
+        // A clear is emitted as [ClearWith<TEvent>] rather than [SetValue<TEvent>(null)]. Both compile to the same
+        // expression, but the one that says "clear" reads as the intent rather than as a constant that happens to
+        // be absent.
+        foreach (var clear in propInfo.Clears)
+        {
+            attributes.Add(CreateSimpleAttribute("ClearWith", clear));
         }
 
         return attributes;
@@ -356,6 +368,7 @@ public class ModelBoundCodeGenerator
         public string PropertyName { get; set; } = string.Empty;
         public List<(string EventTypeName, string EventPropertyName)> SetFroms { get; } = [];
         public List<(string EventTypeName, string Value)> SetValues { get; } = [];
+        public List<string> Clears { get; } = [];
         public List<(string EventTypeName, string EventPropertyName)> AddFroms { get; } = [];
         public List<(string EventTypeName, string EventPropertyName)> SubtractFroms { get; } = [];
         public List<string> Increments { get; } = [];

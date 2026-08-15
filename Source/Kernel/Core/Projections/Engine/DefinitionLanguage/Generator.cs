@@ -421,6 +421,13 @@ public class Generator : IGenerator
             return WellKnownExpressions.CausedBy;
         }
 
+        // A clear is written as the declaration language's null literal. This has to precede the catch-all that
+        // passes anything containing '$' through untouched, which would otherwise emit the raw expression.
+        if (normalizedExpression.Equals(WellKnownExpressions.Null, StringComparison.Ordinal))
+        {
+            return "null";
+        }
+
         // Convert C# boolean ToString() to projection declaration language format
         if (normalizedExpression.Equals("True", StringComparison.Ordinal))
         {
