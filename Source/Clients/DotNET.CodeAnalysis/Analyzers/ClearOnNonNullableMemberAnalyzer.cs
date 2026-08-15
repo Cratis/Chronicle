@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
@@ -42,6 +43,9 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "Clearing a read model member means returning it to no value. A member declared non-nullable has no such state, so the only thing the projection could write is the type default - an empty string, a zero - which is a different fact the read model cannot tell apart from a real value. Building the projection refuses the declaration outright, so leaving this warning unaddressed fails at startup rather than at build time. Declare the member as nullable to clear it, or set the value explicitly with [SetValue<TEvent>(...)].");
 
+    const string ClearMethodName = "Clear";
+    const string ToValueMethodName = "ToValue";
+
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
@@ -51,7 +55,115 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
         context.RegisterSyntaxNodeAction(AnalyzeAttribute, SyntaxKind.Attribute);
+        context.RegisterCompilationStartAction(compilationStart =>
+        {
+            var symbols = FluentProjectionSymbols.TryCreate(compilationStart.Compilation);
+            if (symbols is null)
+            {
+                return;
+            }
+
+            compilationStart.RegisterSyntaxNodeAction(syntaxNode => AnalyzeInvocation(syntaxNode, symbols), SyntaxKind.InvocationExpression);
+        });
     }
+
+    /// <summary>
+    /// Analyze the fluent spellings of a clear.
+    /// </summary>
+    /// <param name="context">The syntax analysis context.</param>
+    /// <param name="symbols">The resolved Chronicle fluent builder symbols.</param>
+    /// <remarks>
+    /// C# cannot express "a nullable-annotated reference type" as a generic constraint - a non-nullable argument
+    /// converts to a nullable parameter without complaint - so <c>Clear</c> cannot refuse this at its signature and
+    /// the rule has to be applied here. <c>Set(...).ToValue(null)</c> is the same clear and is held to the same rule.
+    /// </remarks>
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, FluentProjectionSymbols symbols)
+    {
+        var invocation = (InvocationExpressionSyntax)context.Node;
+
+        if (context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method)
+        {
+            return;
+        }
+
+        var (memberType, memberName) = method switch
+        {
+            { Name: ClearMethodName } when FluentProjectionSymbols.IsMethodOn(method, symbols.ReadModelPropertiesBuilder) =>
+                GetClearedMember(context, invocation),
+            { Name: ToValueMethodName } when FluentProjectionSymbols.IsMethodOn(method, symbols.TypedSetBuilder) && DeclaresNullArgument(context, invocation) =>
+                (method.ContainingType.TypeArguments[2], GetSetMemberName(invocation)),
+            _ => (null, string.Empty)
+        };
+
+        if (memberType is null || CanHoldNull(memberType))
+        {
+            return;
+        }
+
+        var call = GetCallSpan(invocation);
+
+        context.ReportDiagnostic(Diagnostic.Create(
+            Rule,
+            Location.Create(invocation.SyntaxTree, call),
+            invocation.SyntaxTree.GetText(context.CancellationToken).ToString(call),
+            memberName,
+            memberType.ToDisplayString()));
+    }
+
+    /// <summary>
+    /// Narrow an invocation to the call itself, excluding whatever it is chained onto.
+    /// </summary>
+    /// <param name="invocation">The invocation to narrow.</param>
+    /// <returns>The span covering the method name and its arguments.</returns>
+    /// <remarks>
+    /// A fluent call's syntax node starts at the receiver, so reporting the node underlines the whole chain up to
+    /// this point. The offending declaration is the call, so that is what gets the squiggle.
+    /// </remarks>
+    static TextSpan GetCallSpan(InvocationExpressionSyntax invocation) =>
+        invocation.Expression is MemberAccessExpressionSyntax memberAccess
+            ? TextSpan.FromBounds(memberAccess.Name.SpanStart, invocation.Span.End)
+            : invocation.Span;
+
+    /// <summary>
+    /// Resolve the member a <c>Clear</c> call targets from its accessor lambda.
+    /// </summary>
+    /// <param name="context">The syntax analysis context.</param>
+    /// <param name="invocation">The <c>Clear</c> invocation.</param>
+    /// <returns>The member's type and name, or a null type when the accessor is not a plain property access.</returns>
+    static (ITypeSymbol? Type, string Name) GetClearedMember(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
+    {
+        if (invocation.ArgumentList.Arguments.Count == 0 ||
+            invocation.ArgumentList.Arguments[0].Expression is not SimpleLambdaExpressionSyntax { Body: MemberAccessExpressionSyntax memberAccess })
+        {
+            return (null, string.Empty);
+        }
+
+        return context.SemanticModel.GetSymbolInfo(memberAccess).Symbol is IPropertySymbol property
+            ? (property.Type, property.Name)
+            : (null, string.Empty);
+    }
+
+    /// <summary>
+    /// Determine whether a <c>ToValue</c> call declares a compile-time null, which makes it a clear.
+    /// </summary>
+    /// <param name="context">The syntax analysis context.</param>
+    /// <param name="invocation">The <c>ToValue</c> invocation.</param>
+    /// <returns>True when the argument folds to null.</returns>
+    static bool DeclaresNullArgument(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation) =>
+        invocation.ArgumentList.Arguments.Count > 0 &&
+        context.SemanticModel.GetConstantValue(invocation.ArgumentList.Arguments[0].Expression) is { HasValue: true, Value: null };
+
+    /// <summary>
+    /// Recover the member name from the <c>Set(...)</c> that a <c>ToValue</c> continues, for the message only.
+    /// </summary>
+    /// <param name="invocation">The <c>ToValue</c> invocation.</param>
+    /// <returns>The member name, or an empty string when it cannot be read off the chain.</returns>
+    static string GetSetMemberName(InvocationExpressionSyntax invocation) =>
+        invocation.Expression is MemberAccessExpressionSyntax { Expression: InvocationExpressionSyntax setInvocation } &&
+        setInvocation.ArgumentList.Arguments.Count > 0 &&
+        setInvocation.ArgumentList.Arguments[0].Expression is SimpleLambdaExpressionSyntax { Body: MemberAccessExpressionSyntax setMember }
+            ? setMember.Name.Identifier.Text
+            : string.Empty;
 
     static void AnalyzeAttribute(SyntaxNodeAnalysisContext context)
     {

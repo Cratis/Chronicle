@@ -65,15 +65,12 @@ projection Notes => MbClearingProjectNotes
 
 ## In the Fluent API
 
-`ToValue(null)` builds the same clear:
+`Clear` is an operation in its own right, alongside `Set`, `Increment` and `Count`. It is available everywhere `Set` is — at the root, inside `Children`, and inside `Nested`.
 
-```csharp
-public class MbClearingProjectNotesProjection : IProjectionFor<MbClearingProjectNotes>
-{
-    public void Define(IProjectionBuilderFor<MbClearingProjectNotes> builder) => builder
-        .From<MbClearingProjectNoted>(_ => _
-            .Set(m => m.Note).To(e => e.Note))
-        .From<MbClearingProjectNoteCleared>(_ => _
-            .Set(m => m.Note).ToValue(null));
-}
-```
+<ChronicleClientTabs snippet="projections/model-bound/clearing/fluent" />
+
+`Set(...).ToValue(null)` means the same thing and keeps working, so existing projections need no change. Prefer `Clear` in new code: it names the operation instead of spelling it as a set of a value that happens to be absent, and it reads the same as the `ClearWith` attribute.
+
+`Clear` carries a default implementation that throws `ClearNotSupported`, so adding it to the builder interface does not break an implementation written outside Chronicle: such a builder keeps compiling and only fails if it is actually asked to clear something, which it could not have been before the member existed.
+
+The nullable rule is enforced here too. C# cannot express "a nullable-annotated reference type" as a generic constraint — a non-nullable argument converts to a nullable parameter without complaint — so `Clear` cannot refuse a non-nullable member at its signature. Building the projection refuses it instead, throwing `CannotClearNonNullableMember`, and [CHR0048](../../code-analysis/CHR0048) reports both `Clear` and `ToValue(null)` at build time.
