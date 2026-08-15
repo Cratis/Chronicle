@@ -63,6 +63,28 @@ As an environment variable:
 export Cratis__Chronicle__Compliance__Encryption__MigrateFromDefaultStorage=true
 ```
 
+## Backup and restore ordering
+
+The compliance key store is the third item in a Chronicle backup set, alongside the encryption-certificate ring and the storage backend. It is an independent subsystem: **the encryption certificate does not protect these keys, and these keys do not protect anything the certificate protects.** The two are backed up separately and restored separately, and getting either wrong loses different data.
+
+Restore in this order:
+
+1. The [encryption-certificate ring](../encryption-certificate.md#backup-and-restore-ordering), in the shape it had when the backup was taken.
+2. The storage backend (MongoDB or SQL).
+3. The compliance key store — **to the same point in time as (2)**.
+
+Step 3 is the one specific to this page, and it is a point-in-time match rather than a "latest wins":
+
+- A key store restored **older** than the storage is missing keys for subjects created since. Every `[PII]` value belonging to those subjects reads back as an **empty string** — byte-for-byte identical to a completed [right to erasure](../../compliance/index), reported by nothing.
+- A key store restored **newer** than the storage brings back keys for subjects whose erasure the storage backup predates. Nothing breaks, and that is the problem: an erasure you have already reported as complete is silently undone.
+
+When `migrateFromDefaultStorage` is on, both stores are live and both are part of the backup set. Restoring only the dedicated store leaves the keys that had not been read yet — the ones still living only in the default storage — out of the restore.
+
+> [!CAUTION]
+> A key store cannot be reconstructed. Deleting a key is the erasure mechanism, so there is no escrow, no recovery key and no support path — exactly as intended. Treat the key store backup with the same retention as the storage backups it has to match.
+
+Vault and Azure Key Vault both keep every key revision as a distinct secret, so their own backup and point-in-time restore facilities cover this; when the keys live in the general storage backend instead, the database backup already carries them and steps 2 and 3 are the same restore.
+
 ## Vault
 
 HashiCorp Vault provides a purpose-built secrets backend that is well-suited for storing PII encryption keys. Chronicle uses the [KV v2 secrets engine](https://developer.hashicorp.com/vault/docs/secrets/kv/kv-v2) to store each key revision at a distinct path.

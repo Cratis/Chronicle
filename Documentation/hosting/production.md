@@ -36,6 +36,8 @@ That matters because the production path needs all three of these before it will
 
 The encryption certificate is required because the **internal OAuth authority** needs it. It is therefore not required when that authority is out of the picture: turning the `oAuthAuthority` feature off, or pointing `Cratis__Chronicle__Authentication__Authority` at an external authority (which disables the internal one automatically), removes the requirement. See [Features](configuration/features.md). The value-encryption subsystem is separate — it still throws `EncryptionCertificateNotConfigured` on first use if you encrypt values without a certificate configured.
 
+"Not configured" and "configured wrongly" are different states. A `CertificatePath` pointing at a file that is not there stops startup with `EncryptionCertificateFileNotFound`, naming the path — it does not quietly fall back to running without a certificate. See [What a broken ring does](encryption-certificate.md#what-a-broken-ring-does).
+
 The development images generate a self-signed TLS certificate and fall back to ephemeral OAuth keys instead of throwing, which is exactly why a Compose file that works against `latest-development` fails against `latest`. See [Data Protection Key Encryption](encryption-certificate.md) and [TLS Configuration](configuration/tls.md) for generating and mounting the certificates.
 
 ## Storage requirements
@@ -184,6 +186,23 @@ Treat that port as internal — it serves the other HTTP/1.1 endpoints too, so d
 
 > **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details, and [Health Endpoint](configuration/health-endpoint.md) for the dedicated port.
 
+## Backup and restore
+
+A Chronicle deployment is not restorable from a database backup alone. Three things have to be backed up, and restored **in this order** — restoring them in the wrong order produces data nothing can read, and nothing about the restore reports it.
+
+| Order | What | Where it lives |
+| --- | --- | --- |
+| 1 | The encryption-certificate ring — every certificate and its password, in the shape the ring had **when the backup was taken** | Your secret store |
+| 2 | The storage backend (MongoDB or SQL) — event store data, the Data Protection key ring, webhook definitions and their encrypted credentials, OAuth applications and tokens | Your database backups |
+| 3 | The compliance key store, when one is configured, at the same point in time as (2) | Vault, Azure Key Vault, or the general storage |
+
+The Data Protection key ring lives *inside* the storage backend, so a database backup already carries it. What a database backup cannot carry is the certificate that unlocks it — that is why the certificates come first, and why they have to be the ones that were live when the backup was taken rather than the ones live today.
+
+> [!CAUTION]
+> **A certificate has to stay in the backup set for longer than it stays in the ring** — for at least as long as the oldest backup you would still restore. Retiring a certificate from the ring and deleting the file makes every backup taken before that rotation permanently unreadable.
+
+Start one node after a restore and read `GET /diagnostics/encryption-certificates` before starting the rest: keys reported with the role `Retired` mean the ring is missing a certificate the restored data needs. The full procedure, the retention rule and the failure modes are in [Backup and restore ordering](encryption-certificate.md#backup-and-restore-ordering); the PII key store has its own ordering in [Compliance Storage](configuration/compliance-storage.md).
+
 ## Security Considerations
 
 - **Network Isolation**: Run Chronicle in a private network with MongoDB
@@ -304,8 +323,10 @@ volumes:
 ```
 
 Both nodes share one encryption certificate on purpose: Data Protection keys live in the shared storage, so
-every instance must be able to decrypt what any other instance wrote. See
-[Data Protection Key Encryption](encryption-certificate.md).
+every instance must be able to decrypt what any other instance wrote. The same holds for the whole
+certificate ring during a rotation — give every node the same `Previous` list, or a node will fail to read
+what another one wrote. See [Data Protection Key Encryption](encryption-certificate.md) and
+[Rotating the certificate](encryption-certificate.md#rotating-the-certificate).
 
 Each container reaches the others over the Compose network by service name, so the default advertised
 address works. When you instead run multiple nodes directly on one host, set
