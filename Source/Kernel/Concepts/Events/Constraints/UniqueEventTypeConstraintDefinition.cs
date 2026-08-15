@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Cratis.Chronicle.Concepts.Events.Constraints;
 
 /// <summary>
@@ -24,11 +26,40 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// ended or by being cancelled. Each of them releases the constraint on its own, so the cycle ends at whichever
 /// of them was appended most recently.
 /// </para>
+/// <para>
+/// The primary constructor is named explicitly because the record has two: this one and the obsolete overload
+/// taking a single removal event. A serializer offered a choice refuses rather than guesses — the SQL provider
+/// persists definitions as JSON and reads them back through this type, and would otherwise throw on the first
+/// definition it read.
+/// </para>
 /// </remarks>
+[method: JsonConstructor]
 public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, IEnumerable<EventTypeId> RemovedWith = null!, ConstraintScope? Scope = default) : IConstraintDefinition
 {
     readonly IEnumerable<EventTypeId>? _eventTypeIds = EventTypeIds;
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UniqueEventTypeConstraintDefinition"/> class from a single removal event.
+    /// </summary>
+    /// <param name="name">Name of the constraint.</param>
+    /// <param name="eventTypeIds">The <see cref="EventTypeId"/> values the constraint covers.</param>
+    /// <param name="removedWith">The <see cref="EventTypeId"/> of the event that releases the constraint, or <see langword="null"/> for none.</param>
+    /// <param name="scope">The <see cref="ConstraintScope"/> for the constraint.</param>
+    /// <remarks>
+    /// The signature this type had while a constraint could only be released by one event. It is kept so that an
+    /// assembly compiled against that shape keeps linking: optional arguments are baked in at the call site, so
+    /// every previously compiled call refers to the full argument list, which is what this restores.
+    /// </remarks>
+    [Obsolete("A constraint can be released by more than one event. Pass a collection of event type ids instead - this overload wraps the single value and will be removed.")]
+    public UniqueEventTypeConstraintDefinition(
+        ConstraintName name,
+        IEnumerable<EventTypeId> eventTypeIds,
+        EventTypeId? removedWith,
+        ConstraintScope? scope)
+        : this(name, eventTypeIds, removedWith is null ? [] : [removedWith], scope)
+    {
+    }
 
     /// <summary>
     /// Gets the <see cref="EventTypeId"/> values the constraint covers.

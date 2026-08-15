@@ -25,4 +25,29 @@ public record UniqueEventTypeConstraintDefinition(
     ConstraintViolationMessageProvider MessageCallback,
     IEnumerable<EventTypeId> EventTypeIds,
     IEnumerable<EventTypeId> RemovedWith,
-    ConstraintScope? Scope = default) : IConstraintDefinition;
+    ConstraintScope? Scope = default) : IConstraintDefinition
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UniqueEventTypeConstraintDefinition"/> class from a single removal event.
+    /// </summary>
+    /// <param name="name">Name of the constraint.</param>
+    /// <param name="messageCallback">The callback that provides the <see cref="ConstraintViolationMessage"/> of the constraint.</param>
+    /// <param name="eventTypeIds">The <see cref="EventTypeId"/> values the constraint covers.</param>
+    /// <param name="removedWith">The <see cref="Events.EventTypeId"/> of the event that removes the constraint, or <see langword="null"/> for none.</param>
+    /// <param name="scope">The <see cref="ConstraintScope"/> for the constraint.</param>
+    /// <remarks>
+    /// The signature this type had while a constraint could only be released by one event. It is kept so that an
+    /// assembly compiled against that shape keeps linking: optional arguments are baked in at the call site, so
+    /// every previously compiled call refers to the full argument list, which is what this restores.
+    /// </remarks>
+    [Obsolete("A constraint can be released by more than one event. Pass a collection of event type ids instead - this overload wraps the single value and will be removed.")]
+    public UniqueEventTypeConstraintDefinition(
+        ConstraintName name,
+        ConstraintViolationMessageProvider messageCallback,
+        IEnumerable<EventTypeId> eventTypeIds,
+        EventTypeId? removedWith,
+        ConstraintScope? scope)
+        : this(name, messageCallback, eventTypeIds, removedWith is null ? [] : [removedWith], scope)
+    {
+    }
+}
