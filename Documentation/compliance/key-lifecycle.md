@@ -105,7 +105,9 @@ var eventStore = await chronicleClient.GetEventStore("Sales");
 await eventStore.PII.AllowNewEncryptionKeyFor("person-42");
 ```
 
-Like erasure, this reaches every event store in the namespace, and like erasure it is deliberate and auditable. It does **not** create a key. It sets `NewKeyAllowed` on the fence, and the next `[PII]` value appended for that subject mints a fresh key at revision `ErasedThrough + 1`.
+Like erasure, this reaches every event store in the namespace, and like erasure it is a deliberate, explicit act rather than something ordinary traffic can cause. It does **not** create a key. It sets `NewKeyAllowed` on the fence, and the next `[PII]` value appended for that subject mints a fresh key at revision `ErasedThrough + 1`.
+
+Chronicle does not keep a per-subject record of who authorized it or when — the same reason it does not name the subject in its logs, since a durable line naming an erased person is the thing an erasure exists to remove. That record is yours to keep, alongside the erasure record.
 
 The new key is independent of the erased one in every sense that matters:
 
@@ -118,6 +120,8 @@ Until you make that call, appending a `[PII]` value for an erased subject fails 
 > [!IMPORTANT]
 > A forwarded event carrying `[PII]` for an erased subject fails to append in the target event store, and the observer partition for that event source enters a failed state. The rest of the subscription keeps flowing. Either stop appending that subject's personal data, or authorize a new key — both are deliberate acts, which is the intent.
 
+The same refusal reaches anything that *writes* protected values, not only appends. Replaying a projection or reducer into a stored read model re-applies what the release produced, so a rebuild that touches an erased subject asks for a key and is refused for that subject's partition. This is deliberate: the alternative is to store the subject's slot in the clear, which changes what a unique constraint over a `[PII]` property means, or to mint a key on replay, which is the resurrection the fence exists to stop. Authorize a new key for the subjects you intend to keep protecting before a rebuild that has to cover them.
+
 ## The threat model
 
 What the fence stops, and what it does not, stated plainly.
@@ -129,7 +133,7 @@ What the fence stops, and what it does not, stated plainly.
 | `GetOrAddFor` minting a fresh revision 1 after an erasure | The fence: provisioning throws `EncryptionKeyErased` |
 | A cross-event-store subscription copying the pre-erasure key back in | The fence in the target, plus the fingerprint of the destroyed key |
 | A composed key store healing a surviving member's copy into the erased member | `SaveFor` refusing every revision at or below `ErasedThrough` |
-| A composed store *serving* a copy that survived in one member after another member was erased | The composite reads fail closed and report the divergence instead of returning the key |
+| A composed store *serving* a copy that survived in one member after another member was erased | Every member is asked whether it recorded that key's material as destroyed; if any did, the read returns nothing and reports the divergence |
 | A silo cache handing back a key after the erasure landed | The fence invalidates the local cache, and the erasure evicts every silo's cache cluster-wide |
 | An erasure that reached three stores out of four reporting success | `EncryptionKeyErasureIncomplete`, listing every failure |
 | A key erased for subject A being provisioned for subject B | Fences and keys are per subject; nothing in this path is shared between subjects |
@@ -142,6 +146,8 @@ Be honest about these when you write your erasure procedure — the fence is a m
 - **Copies made outside Chronicle.** A key exported from the key store, an application-level cache, a dump of the backing database, or a secrets-manager audit trail is outside the fence's reach.
 - **Mixed-version silos.** A silo running a version without the fence will happily provision over it. Upgrade every silo before relying on the contract; a cluster running both is unsupported while an erasure is in force.
 - **A third-party key store.** A custom `IEncryptionKeyStorage` that does not implement the fence fails loudly the first time an erasure is attempted through it, rather than silently erasing reversibly. That is the safe failure, not a working erasure.
+- **A composed store whose only fenced member is unreachable.** When key stores are composed, a member that cannot be reached is skipped rather than allowed to fail every read — otherwise one backend's outage would blank every protected value in the deployment. While it is down, a fence that only it holds is invisible, so provisioning can mint a fresh key for a subject it had erased. Its erasure was reported incomplete when it happened; repeat it once the store is back.
+- **New personal data written before an erasure lands.** The fence stops what happens after it is recorded. A value appended in the same instant is protected under the key that is being destroyed, which means it is erased too — but a value appended a moment later, after a new key is authorized, is not.
 - **Ciphertext already read.** Erasure makes stored values unreadable. Anything already decrypted, projected into an external system, or displayed is beyond it.
 - **The fence itself is a durable record.** It states that *some* identifier was erased in a given store. It holds no key material and no personal data beyond the subject identifier, which every appended event already carries in the clear — but it does outlive the key, by design, because that is what makes the erasure stick.
 

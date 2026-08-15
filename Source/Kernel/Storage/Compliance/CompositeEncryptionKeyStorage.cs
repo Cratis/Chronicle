@@ -37,9 +37,11 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// </para>
 /// <para>
 /// <b>One store's erasure fences all of them.</b> <see cref="GetErasureFor"/> answers with the strictest fence any
-/// store holds, and a read that finds a key in one store while another store has that identifier fenced returns
-/// nothing at all rather than healing the survivor around. Composition exists to move keys between backends; it
-/// must not become the path by which an erased key moves back.
+/// store holds, so provisioning is refused everywhere the moment one member records an erasure. A read that finds
+/// key material any member recorded as destroyed returns nothing at all rather than healing the survivor around -
+/// every member is asked, because which one kept a survivor and which one recorded the erasure is an accident of
+/// ordering. Composition exists to move keys between backends; it must not become the path by which an erased key
+/// moves back.
 /// </para>
 /// </remarks>
 public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryptionKeyCache
@@ -102,7 +104,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 continue;
             }
 
-            if (await AnyFenced(missing, eventStore, eventStoreNamespace, identifier))
+            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, key))
             {
                 _logger.ErasedKeySurvivedInAnotherStore(identifier);
                 return null;
@@ -165,27 +167,19 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         List<Exception>? failures = null;
-        var missing = new List<IEncryptionKeyStorage>();
 
+        // This answers about presence, not about what a read hands over. Telling the truth about a key that is
+        // physically there is the safe direction for both of its callers: a caller that would otherwise go and
+        // copy the key stops, and one that wants the key gets it from TryGetFor, which is where the fence is
+        // applied because that is where the material is known.
         foreach (var store in _inner)
         {
             try
             {
                 if (await store.HasFor(eventStore, eventStoreNamespace, identifier, revision))
                 {
-                    // Answering "yes" from a store while another store has the identifier fenced would tell the
-                    // caller a key is available that TryGetFor refuses to hand over, and would send the
-                    // cross-event-store copy looking for it.
-                    if (await AnyFenced(missing, eventStore, eventStoreNamespace, identifier))
-                    {
-                        _logger.ErasedKeySurvivedInAnotherStore(identifier);
-                        return false;
-                    }
-
                     return true;
                 }
-
-                missing.Add(store);
             }
             catch (Exception error)
             {
@@ -319,28 +313,31 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         return failures;
     }
 
-    async Task<bool> AnyFenced(List<IEncryptionKeyStorage> stores, EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    async Task<bool> AnyStoreDestroyed(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        // Only the stores that came up empty are asked, and only once one of the later stores produced a key - so
-        // on the ordinary path, where the primary answers, this costs nothing. The case it catches is the
-        // expensive one to be wrong about: an erasure that reached some members and not others, where healing
-        // would put the key back and returning it would serve personal data meant to be unreadable.
-        foreach (var store in stores)
+        // Every store is asked, not only the ones read past on the way here: which member happens to still hold a
+        // survivor and which one recorded the erasure is an accident of ordering, and a guarantee that depends on
+        // that ordering is not a guarantee. The question is about this key's material rather than about the
+        // identifier, so it stays true after a later lifecycle - a successor key was never destroyed, and is
+        // served, while the material an erasure destroyed is refused however it found its way back.
+        foreach (var store in _inner)
         {
             try
             {
-                if (await store.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null)
+                if (await store.GetErasureFor(eventStore, eventStoreNamespace, identifier) is { } erasure &&
+                    erasure.ErasedKeyFingerprints.Contains(key.Fingerprint, StringComparer.Ordinal))
                 {
                     return true;
                 }
             }
             catch (Exception error)
             {
-                // The store answered a read a moment ago, so failing here is an anomaly rather than an outage -
-                // and guessing either way is worse than saying so. Guessing "not fenced" heals an erased key back;
-                // guessing "fenced" blanks a live subject's data.
+                // A store that cannot be reached is logged and skipped, exactly as it is when the key itself is
+                // being read. Refusing the key because one member is down would turn a secondary outage into every
+                // protected value reading back empty, which is the outcome an untrue absence causes and the one
+                // this class exists to avoid. A fence only that member holds is missed until it is back, and its
+                // erasure was reported incomplete when it was recorded.
                 _logger.ReadingFromInnerStoreFailed(identifier, error);
-                throw new EncryptionKeyStorageUnavailable(identifier, [error]);
             }
         }
 

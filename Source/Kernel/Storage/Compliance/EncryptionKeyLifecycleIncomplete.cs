@@ -10,9 +10,11 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// the composed key stores.
 /// </summary>
 /// <remarks>
-/// The stores that were not reached still refuse to provision, so a partial authorization fails closed rather than
-/// dangerously - but it leaves the subject able to hold a key in some stores and not others, which shows up later
-/// as a forwarded event that cannot be appended. Repeat the authorization once every store is reachable.
+/// The stores that were not reached keep the fence they already had, so the subject can hold a key in some stores
+/// and not others - which shows up later as an event that cannot be appended where the authorization never landed.
+/// A store that could not be read is also not counted when the composite decides whether a new key is allowed, so
+/// while it stays unreachable the composite can report the authorization the stores that answered agreed on.
+/// Repeat the authorization once every store is reachable.
 /// </remarks>
 /// <param name="identifier">The <see cref="EncryptionKeyIdentifier"/> a new key was being authorized for.</param>
 /// <param name="failures">The failures reported by the stores that could not be reached.</param>

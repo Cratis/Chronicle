@@ -265,7 +265,19 @@ public class CacheEncryptionKeyStorage(
             _absentKeys.Remove(latest);
         }
 
-        await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        try
+        {
+            await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        }
+        catch
+        {
+            // The backing store can refuse a save outright - an erased subject's key material is refused however it
+            // is offered back. Leaving what it refused in a cache that has no time-to-live would serve the erased
+            // key for the lifetime of the process, from the one place the fence cannot reach. A transient failure
+            // gets the same treatment: a key that was never persisted must not be served as though it had been.
+            Invalidate(scope, revision);
+            throw;
+        }
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
