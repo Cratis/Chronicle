@@ -5,7 +5,7 @@ using System.Text;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 
-namespace Cratis.Chronicle.Storage.Compliance.for_InMemoryEncryptionKeyStorage.when_getting_or_adding_a_key.given;
+namespace Cratis.Chronicle.Storage.Compliance.for_InMemoryEncryptionKeyStorage.given;
 
 public class an_in_memory_key_store : Specification
 {
@@ -33,5 +33,27 @@ public class an_in_memory_key_store : Specification
         }
 
         return count;
+    }
+
+    protected Task<EncryptionKey> Provision(EncryptionKey key) =>
+        _store.GetOrAddFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, key);
+
+    protected Task Save(EncryptionKey key, EncryptionKeyRevision? revision = null) =>
+        _store.SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, key, revision);
+
+    protected Task<EncryptionKey?> Latest() =>
+        _store.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+
+    protected Task<EncryptionKeyErasure?> Erasure() =>
+        _store.GetErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+
+    protected Task AllowNewKey() =>
+        _store.AllowNewKeyFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+
+    protected async Task Erase()
+    {
+        // Erase the subject the way the platform does it - fence first, then destroy the key material.
+        await _store.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
+        await _store.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
     }
 }
