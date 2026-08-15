@@ -51,17 +51,27 @@ Declaring it on the holding member rather than on the nested type is worth prefe
 - **Deleting the whole read model.** That is a root-level `RemovedWith`, not a clear.
 - **A member that should fall back to a default rather than to nothing.** Say so with `SetValue`; the declaration then records the value on purpose instead of leaving a reader to guess.
 
-## In the Declarative Language
+## In the Projection Declaration Language
 
-A clear is the `null` literal in a mapping:
+`clear` is a statement of its own, alongside `increment`, `decrement` and `count`. It names the member the event empties:
 
 ```text
 projection Notes => MbClearingProjectNotes
     from MbClearingProjectNoted
         note = note
     from MbClearingProjectNoteCleared
-        note = null
+        clear note
 ```
+
+A clear reaches a member of a nested object through its path — the same clear the `MbClearingContract` example above declares with an attribute:
+
+```text
+projection Employees => MbClearingEmployee
+    from MbClearingNoticeWithdrawn
+        clear contract.noticeGiven
+```
+
+`note = null` compiles to exactly the same mapping and keeps working, so existing declarations need no change. Prefer `clear` in new ones: assigning a value and taking one away are different acts, and spelling both with `=` hides that. It is also what you get back — when Chronicle generates a declaration from a projection definition it writes `clear`, whichever spelling the declaration was authored in. See the [Projection Declaration Language](../projection-declaration-language/) for the rest of the syntax.
 
 ## In the Fluent API
 

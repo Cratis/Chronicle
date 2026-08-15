@@ -377,6 +377,13 @@ public class Generator : IGenerator
         {
             sb.AppendLine($"{Indent(indent)}count {propertyName}");
         }
+        else if (normalizedExpression == WellKnownExpressions.Null)
+        {
+            // A clear is its own statement rather than an assignment of the null literal. The language still
+            // accepts 'property = null' and compiles it to the same mapping, but taking a value away is not the
+            // same act as assigning one, so this is what a clear round-trips as.
+            sb.AppendLine($"{Indent(indent)}clear {propertyName}");
+        }
         else
         {
             sb.AppendLine($"{Indent(indent)}{propertyName} = {ConvertExpressionForOutput(normalizedExpression)}");
@@ -421,8 +428,10 @@ public class Generator : IGenerator
             return WellKnownExpressions.CausedBy;
         }
 
-        // A clear is written as the declaration language's null literal. This has to precede the catch-all that
-        // passes anything containing '$' through untouched, which would otherwise emit the raw expression.
+        // In an expression position - a key, a parent key, an 'add by' operand - the clear expression has no
+        // statement of its own to become, so it renders as the null literal. A property mapping never reaches
+        // here: GeneratePropertyMapping emits 'clear <property>' before delegating. This has to precede the
+        // catch-all that passes anything containing '$' through untouched, which would emit the raw expression.
         if (normalizedExpression.Equals(WellKnownExpressions.Null, StringComparison.Ordinal))
         {
             return "null";

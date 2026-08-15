@@ -284,10 +284,19 @@ public class ProjectionValidator(
                     ValidatePropertyExists(subtract.Property, targetSchema, errors, subtract);
                     ValidateEventPropertyExists(subtract.Value, eventSchema, errors);
                     break;
+                case ClearMappingSyntax:
                 case CountMappingSyntax:
                 case IncrementMappingSyntax:
                 case DecrementMappingSyntax:
                     ValidatePropertyExists(mapping.Property, targetSchema, errors, mapping);
+                    break;
+
+                // Every mapping the language can express is handled above. A kind that reaches here is one a newer
+                // Screenplay parses and this validator does not know, and skipping it silently would let it through
+                // unvalidated to the visitor, which throws UnsupportedProjectionSyntax. Report it as a compiler
+                // error instead, so it comes back as a diagnostic on the declaration rather than as an exception.
+                default:
+                    errors.Add($"Mapping of type '{mapping.GetType().Name}' is not supported", mapping.Location.Line, mapping.Location.Column);
                     break;
             }
         }
@@ -352,10 +361,12 @@ public class ProjectionValidator(
 
             property = prop;
 
-            // If this isn't the last part, navigate to the nested schema
+            // If this isn't the last part, navigate to the nested schema. A nullable object carries the Null flag
+            // alongside Object, so this has to test the flag rather than compare - otherwise no path through a
+            // nullable nested object resolves, and every nested object a projection can clear is nullable.
             if (part != parts[^1])
             {
-                if (prop.ActualSchema.Type == JsonObjectType.Object)
+                if (prop.ActualSchema.Type.HasFlag(JsonObjectType.Object))
                 {
                     currentSchema = prop.ActualSchema;
                 }
