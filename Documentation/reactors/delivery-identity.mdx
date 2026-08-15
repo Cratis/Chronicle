@@ -1,9 +1,9 @@
 # Delivery identity
 
-A reactor can be handed the same event more than once, and until now it had no way to tell the difference. Declare
-a `ReactorDelivery` parameter on a handler method and Chronicle gives you a stable identity for *this delivery of
-this event to this reactor* — the same value every time the event comes back, and a different value for every
-genuinely different delivery.
+A reactor can be handed the same event more than once, and nothing in the event itself says whether this is the
+first time. Declare a `ReactorDelivery` parameter on a handler method and Chronicle gives you a stable identity
+for *this delivery of this event to this reactor* — the same value every time the event comes back, and a
+different value for every genuinely different delivery.
 
 <ChronicleClientTabs snippet="reactors/delivery-identity/basic" />
 
@@ -45,7 +45,7 @@ sequenceDiagram
 
 ## How the three relate
 
-| | Covers replay | Covers recovery after a failure | Needs storage |
+| Mechanism | Covers replay | Covers recovery after a failure | Needs storage |
 |---|---|---|---|
 | `[OnceOnly]` | Yes — the handler is skipped | No | No |
 | `[Replay]` | Yes — a different handler takes over | No | No |
@@ -94,8 +94,8 @@ one thing you cannot compute yourself, and leaves the rest to you.
   it cannot suppress a repeat on your behalf. Nothing is skipped unless your own code skips it.
 - **Chronicle stores no receipt.** There is no framework-managed table of completed deliveries, no retention
   policy to configure, and no state added to your event store. The record is yours to write, index, and expire.
-- **The gap between the effect and the record is still a gap.** Charge the card, and die before writing the
-  receipt, and the retry charges again. Recording the identity narrows at-least-once towards at-most-once exactly
+- **The gap between the effect and the record is still a gap.** Charge the card, die before writing the receipt,
+  and the retry charges again. Recording the identity narrows at-least-once towards at-most-once exactly
   as far as your record is atomic with the effect — write both in one database transaction and the gap closes;
   call a remote API and it does not. Where you cannot close it, use the identity as the idempotency key the remote
   API itself accepts, and let it deduplicate.
