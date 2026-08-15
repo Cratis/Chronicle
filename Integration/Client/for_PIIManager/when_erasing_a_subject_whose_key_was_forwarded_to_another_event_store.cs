@@ -12,14 +12,20 @@ namespace Cratis.Chronicle.Integration.for_PIIManager;
 
 /// <summary>
 /// Records what a cross-event-store subscription does to an erasure, end to end against a real silo and a real
-/// MongoDB.
+/// MongoDB - and what the erasure fence does to it in turn.
 /// </summary>
 /// <remarks>
-/// Two of the facts below pin behavior that is <b>wrong</b> and is expected to be inverted: the copy left in the
-/// other event store, and the erased PII becoming readable again once an event is forwarded back. They are here
-/// because the defect is real and undocumented, and a measurement of it is worth more than its absence — not
-/// because the outcome is desired. Each is named and documented as pinning today's behavior. When a tombstone
-/// the copy honors lands, those two go red, and going red is the point: invert them, do not adjust them.
+/// <para>
+/// This spec used to pin the defect: forwarding copied the subject's key into the second event store, one erasure
+/// reached only the store it was addressed at, and a later forwarded event copied the survivor back and made
+/// already-shredded personal data readable again. Those three facts are inverted here, which is what they were
+/// written to become.
+/// </para>
+/// <para>
+/// It walks the whole lifecycle in one run: the copy still happens before the erasure, one erasure now clears both
+/// event stores, appending the subject's personal data afterwards fails rather than quietly minting a key, and an
+/// explicitly authorized new lifecycle gives them a fresh key that cannot read a word of what came before.
+/// </para>
 /// </remarks>
 /// <param name="context">The context the facts assert against.</param>
 [Collection(ChronicleCollection.Name)]
@@ -30,7 +36,6 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         public const string SourceEventStoreName = "pii-forwarding-source";
         public const string TargetEventStoreName = "pii-forwarding-target";
         public const string ForwardSubscriptionId = "pii-forwarding-source-to-target";
-        public const string BackSubscriptionId = "pii-forwarding-target-to-source";
 
         /// <summary>
         /// Gets the event source the subject's event is appended to. Per run, so this spec and its sibling
@@ -39,19 +44,26 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         public EventSourceId EventSourceId { get; } = $"request-{Guid.NewGuid():N}";
         public Subject Subject { get; } = $"person-{Guid.NewGuid():N}";
         public string SocialSecurityNumber { get; } = "111-22-3333";
+        public string NewSocialSecurityNumber { get; } = "444-55-6666";
 
         public bool SourceHasKeyAfterForwarding { get; private set; }
         public bool TargetHasKeyAfterForwarding { get; private set; }
         public bool KeyMaterialIsIdenticalAfterForwarding { get; private set; }
 
         public bool SourceHasKeyAfterErasure { get; private set; } = true;
-        public bool TargetHasKeyAfterErasure { get; private set; }
+        public bool TargetHasKeyAfterErasure { get; private set; } = true;
         public string PiiInSourceAfterErasure { get; private set; } = string.Empty;
         public string PiiInTargetAfterErasure { get; private set; } = string.Empty;
+        public bool SourceIsFencedAfterErasure { get; private set; }
+        public bool TargetIsFencedAfterErasure { get; private set; }
 
-        public bool SourceHasKeyAfterForwardingBack { get; private set; }
-        public bool KeyMaterialIsRestoredAfterForwardingBack { get; private set; }
-        public string PiiInSourceAfterForwardingBack { get; private set; } = string.Empty;
+        public bool AppendSucceededWhileErased { get; private set; } = true;
+        public bool SourceHasKeyAfterAppendingWhileErased { get; private set; } = true;
+
+        public bool AppendSucceededAfterAuthorizing { get; private set; }
+        public bool KeyMaterialIsFreshAfterAuthorizing { get; private set; }
+        public string PiiOfTheErasedEventAfterAuthorizing { get; private set; } = string.Empty;
+        public string PiiOfTheNewEventAfterAuthorizing { get; private set; } = string.Empty;
 
         public override IEnumerable<Type> EventTypes => [typeof(PersonRegistered)];
 
@@ -65,7 +77,6 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
             await Task.WhenAll(sourceEventStore.EventTypes.Register(), targetEventStore.EventTypes.Register());
 
             await Subscribe(targetEventStore, ForwardSubscriptionId, SourceEventStoreName);
-            await Subscribe(sourceEventStore, BackSubscriptionId, TargetEventStoreName);
 
             // The subject's key is minted in the source store by the append, and the forwarding
             // subscriber copies it into the target store before it appends to the target's inbox.
@@ -81,33 +92,56 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
             KeyMaterialIsIdenticalAfterForwarding = sourceKey is not null && targetKey is not null &&
                 sourceKey.Private.SequenceEqual(targetKey.Private) && sourceKey.Public.SequenceEqual(targetKey.Public);
 
-            // The obvious erasure: the consumer holds the source event store and erases through it.
+            // One call, through whichever event store the consumer happens to hold.
             await sourceEventStore.PII.DeleteEncryptionKeyFor(Subject.Value);
 
             SourceHasKeyAfterErasure = await keys.HasFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
             TargetHasKeyAfterErasure = await keys.HasFor(TargetEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
-            PiiInSourceAfterErasure = await ReadSocialSecurityNumber(sourceEventStore, EventSequenceId.Outbox);
-            PiiInTargetAfterErasure = await ReadSocialSecurityNumber(targetEventStore, InboxFrom(SourceEventStoreName));
+            SourceIsFencedAfterErasure = await keys.GetErasureFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value) is not null;
+            TargetIsFencedAfterErasure = await keys.GetErasureFor(TargetEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value) is not null;
+            PiiInSourceAfterErasure = await ReadSocialSecurityNumber(sourceEventStore, EventSequenceId.Outbox, EventSequenceNumber.First);
+            PiiInTargetAfterErasure = await ReadSocialSecurityNumber(targetEventStore, InboxFrom(SourceEventStoreName), EventSequenceNumber.First);
 
-            // Any later event for the same subject traveling the other way restores the erased key.
-            await targetEventStore.GetEventSequence(EventSequenceId.Outbox).Append(
-                EventSourceId,
-                new PersonRegistered(Subject, "Jane Doe", SocialSecurityNumber));
-            await WaitForInboxTail(SourceEventStoreName, TargetEventStoreName);
+            // Any later event for the same subject used to bring the key back. It now fails instead - loudly,
+            // rather than quietly restarting protection for a person who asked to be forgotten.
+            AppendSucceededWhileErased = await TryAppendPersonalData(sourceEventStore, SocialSecurityNumber);
+            SourceHasKeyAfterAppendingWhileErased = await keys.HasFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
 
-            var resurrectedKey = await keys.TryGetFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
-            SourceHasKeyAfterForwardingBack = resurrectedKey is not null;
-            KeyMaterialIsRestoredAfterForwardingBack = resurrectedKey is not null && sourceKey is not null &&
-                resurrectedKey.Private.SequenceEqual(sourceKey.Private) && resurrectedKey.Public.SequenceEqual(sourceKey.Public);
-            PiiInSourceAfterForwardingBack = await ReadSocialSecurityNumber(sourceEventStore, EventSequenceId.Outbox);
+            // The same person, with a lawful basis to be protected again. This creates no key; the next append does.
+            await sourceEventStore.PII.AllowNewEncryptionKeyFor(Subject.Value);
+            AppendSucceededAfterAuthorizing = await TryAppendPersonalData(sourceEventStore, NewSocialSecurityNumber);
+
+            var freshKey = await keys.TryGetFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
+            KeyMaterialIsFreshAfterAuthorizing = freshKey is not null && sourceKey is not null &&
+                !freshKey.Private.SequenceEqual(sourceKey.Private) && !freshKey.Public.SequenceEqual(sourceKey.Public);
+
+            PiiOfTheErasedEventAfterAuthorizing = await ReadSocialSecurityNumber(sourceEventStore, EventSequenceId.Outbox, EventSequenceNumber.First);
+            PiiOfTheNewEventAfterAuthorizing = await ReadSocialSecurityNumber(sourceEventStore, EventSequenceId.Outbox, new EventSequenceNumber(EventSequenceNumber.First.Value + 1UL));
         }
 
         static EventSequenceId InboxFrom(string sourceEventStoreName) => new($"inbox-{sourceEventStoreName}");
 
-        static async Task<string> ReadSocialSecurityNumber(IEventStore eventStore, EventSequenceId sequenceId)
+        static async Task<string> ReadSocialSecurityNumber(IEventStore eventStore, EventSequenceId sequenceId, EventSequenceNumber sequenceNumber)
         {
             var events = await eventStore.GetEventSequence(sequenceId).GetFromSequenceNumber(EventSequenceNumber.First);
-            return ((PersonRegistered)events.First(_ => _.Context.SequenceNumber == EventSequenceNumber.First).Content).SocialSecurityNumber;
+            var appended = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
+            return appended is null ? string.Empty : ((PersonRegistered)appended.Content).SocialSecurityNumber;
+        }
+
+        async Task<bool> TryAppendPersonalData(IEventStore eventStore, string socialSecurityNumber)
+        {
+            // Whether the refusal arrives as a failed result or as an exception is a transport detail; what the
+            // spec is about is that it is not silently accepted.
+            var succeeded = false;
+            var error = await Catch.Exception(async () =>
+            {
+                var result = await eventStore.GetEventSequence(EventSequenceId.Outbox).Append(
+                    EventSourceId,
+                    new PersonRegistered(Subject, "Jane Doe", socialSecurityNumber));
+                succeeded = result.IsSuccess;
+            });
+
+            return error is null && succeeded;
         }
 
         async Task Subscribe(IEventStore targetEventStore, string subscriptionId, string sourceEventStoreName)
@@ -166,45 +200,46 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         Context.SourceHasKeyAfterErasure.ShouldBeFalse();
 
     [Fact]
-    void should_leave_the_copy_in_the_other_event_store() =>
-        Context.TargetHasKeyAfterErasure.ShouldBeTrue();
+    void should_remove_the_copy_from_the_other_event_store() =>
+        Context.TargetHasKeyAfterErasure.ShouldBeFalse();
+
+    [Fact]
+    void should_fence_the_erased_event_store() =>
+        Context.SourceIsFencedAfterErasure.ShouldBeTrue();
+
+    [Fact]
+    void should_fence_the_event_store_the_key_was_copied_into() =>
+        Context.TargetIsFencedAfterErasure.ShouldBeTrue();
 
     [Fact]
     void should_blank_the_pii_in_the_erased_event_store() =>
         Context.PiiInSourceAfterErasure.ShouldEqual(string.Empty);
 
-    /// <summary>
-    /// PINS TODAY'S DEFECT — not the desired outcome.
-    /// </summary>
-    /// <remarks>
-    /// A completed, audited erasure leaves the subject's personal data readable in the other event store. The
-    /// consumer has to know to erase everywhere; nothing at runtime tells them. Invert this fact — the PII in the
-    /// other event store should be blank — the day an erasure reaches every store the platform copied the key
-    /// into. Until then it measures the gap.
-    /// </remarks>
     [Fact]
-    void should_today_leave_the_pii_readable_in_the_other_event_store() =>
-        Context.PiiInTargetAfterErasure.ShouldEqual(Context.SocialSecurityNumber);
+    void should_blank_the_pii_in_the_other_event_store() =>
+        Context.PiiInTargetAfterErasure.ShouldEqual(string.Empty);
 
     [Fact]
-    void should_restore_the_key_when_an_event_is_forwarded_back() =>
-        Context.SourceHasKeyAfterForwardingBack.ShouldBeTrue();
+    void should_refuse_to_store_the_subjects_personal_data_while_they_are_erased() =>
+        Context.AppendSucceededWhileErased.ShouldBeFalse();
 
     [Fact]
-    void should_restore_the_original_key_material() =>
-        Context.KeyMaterialIsRestoredAfterForwardingBack.ShouldBeTrue();
+    void should_not_mint_a_key_for_the_erased_subject() =>
+        Context.SourceHasKeyAfterAppendingWhileErased.ShouldBeFalse();
 
-    /// <summary>
-    /// PINS TODAY'S DEFECT — not the desired outcome, and the worst of the three.
-    /// </summary>
-    /// <remarks>
-    /// The forwarded copy reinstates the pre-erasure key material, so personal data that was crypto-shredded and
-    /// recorded as erased reads in clear again. No consumer can work around it: the copy happens precisely
-    /// because the target holds no key, which is the state an erasure creates. Invert this fact — the PII should
-    /// stay blank — the day the copy honors a tombstone. That is design option 3 in
-    /// <c>DESIGN-imp-23-cross-store-key-erasure.md</c>, and it is blocked on a ruling, not on effort.
-    /// </remarks>
     [Fact]
-    void should_today_make_the_erased_pii_readable_again() =>
-        Context.PiiInSourceAfterForwardingBack.ShouldEqual(Context.SocialSecurityNumber);
+    void should_protect_the_subject_again_once_a_new_key_is_authorized() =>
+        Context.AppendSucceededAfterAuthorizing.ShouldBeTrue();
+
+    [Fact]
+    void should_give_the_new_lifecycle_key_material_of_its_own() =>
+        Context.KeyMaterialIsFreshAfterAuthorizing.ShouldBeTrue();
+
+    [Fact]
+    void should_keep_the_erased_pii_unreadable_under_the_new_key() =>
+        Context.PiiOfTheErasedEventAfterAuthorizing.ShouldEqual(string.Empty);
+
+    [Fact]
+    void should_read_back_the_pii_written_after_the_new_lifecycle_began() =>
+        Context.PiiOfTheNewEventAfterAuthorizing.ShouldEqual(Context.NewSocialSecurityNumber);
 }
