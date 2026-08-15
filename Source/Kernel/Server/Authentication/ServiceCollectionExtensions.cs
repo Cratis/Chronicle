@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.MongoDB.Security;
@@ -43,20 +42,28 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IUserStore<User>, UserStore>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
+        // The ring is resolved once, here, because Data Protection and OpenIddict are configured while the
+        // service collection is still being built. Registering that same instance is what makes the rotation
+        // diagnostic report the certificates those two were actually handed, rather than a second reading of
+        // the same configuration.
+        var encryptionCertificateRing = Cratis.Chronicle.Security.EncryptionCertificateRing.From(chronicleOptions);
+        services.AddSingleton<Cratis.Chronicle.Security.IEncryptionCertificateRing>(encryptionCertificateRing);
+
         // Configure Data Protection (required for webhook secret encryption)
         // This is set up here to ensure it's available even when OpenIddict is disabled
         services.AddSingleton<IXmlRepository, GrainBasedXmlRepository>();
         var dataProtectionBuilder = services.AddDataProtection()
             .SetApplicationName("Chronicle");
 
-        // Configure key encryption with certificate if available
-        var encryptionCert = chronicleOptions.EncryptionCertificate;
-        if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
+        // New keys are protected with the active certificate; every certificate in the ring can unprotect,
+        // so keys written before a rotation stay readable through it. The active certificate is passed to
+        // both calls deliberately - the decryption set is stated in full rather than relying on
+        // ProtectKeysWithCertificate to also register it.
+        if (encryptionCertificateRing.IsConfigured)
         {
-            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
-                encryptionCert.CertificatePath,
-                encryptionCert.CertificatePassword);
-            dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+            dataProtectionBuilder
+                .ProtectKeysWithCertificate(encryptionCertificateRing.Active.Certificate)
+                .UnprotectKeysWithAnyCertificate([.. encryptionCertificateRing.All.Select(_ => _.Certificate)]);
         }
 
         // Add ASP.NET Identity
@@ -75,7 +82,7 @@ public static class ServiceCollectionExtensions
             .AddApiEndpoints();
 
         // Add OpenIdDict if OAuth Authority feature is enabled
-        services.AddOpenIddictIfEnabled(chronicleOptions);
+        services.AddOpenIddictIfEnabled(chronicleOptions, encryptionCertificateRing);
 
         var bearerScheme = chronicleOptions.Authentication.UseInternalAuthority ? OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme : JwtBearerDefaults.AuthenticationScheme;
 

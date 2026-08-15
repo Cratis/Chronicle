@@ -1,29 +1,42 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Security;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEncryption"/>.
 /// </summary>
-/// <param name="chronicleOptions"><see cref="IOptions{ChronicleOptions}"/> for getting Chronicle configuration.</param>
+/// <param name="ring">The <see cref="IEncryptionCertificateRing"/> holding the active and previous certificates.</param>
+/// <param name="logger">The <see cref="ILogger{TCategoryName}"/> to report a dependency on a previous certificate to.</param>
 [Singleton]
-public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncryption
+public class Encryption(IEncryptionCertificateRing ring, ILogger<Encryption> logger) : IEncryption
 {
+    /// <summary>
+    /// The marker that introduces a value carrying the key id of the certificate that protected it.
+    /// </summary>
+    /// <remarks>
+    /// A value written before Chronicle labeled its ciphertext is bare base64 and carries no marker, so a
+    /// value that does not start with this is read by trying every certificate in the ring.
+    /// </remarks>
+    public const string KeyIdPrefix = "crk1";
+
+    const char KeyIdSeparator = ':';
+
 #if DEVELOPMENT
     const string DefaultCertificateFolder = "certificates";
     const string DefaultCertificateFileName = "encryption-cert.pfx";
     const string DefaultCertificatePassword = "chronicle-auto-generated";
 #endif
 
-    readonly ChronicleOptions _options = chronicleOptions.Value;
+    readonly Lazy<IEncryptionCertificateRing> _ring = new(() => ResolveRing(ring));
+    readonly ConcurrentDictionary<string, bool> _reportedPreviousKeyIds = new(StringComparer.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
     public string Encrypt(string plainText)
@@ -33,16 +46,11 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
             return plainText;
         }
 
-        using var certificate = LoadCertificate();
-        using var rsa = certificate.GetRSAPublicKey();
-        if (rsa is not null)
-        {
-            var dataToEncrypt = Encoding.UTF8.GetBytes(plainText);
-            var encryptedData = rsa.Encrypt(dataToEncrypt, RSAEncryptionPadding.OaepSHA256);
-            return Convert.ToBase64String(encryptedData);
-        }
+        var active = _ring.Value.Active;
+        using var rsa = active.Certificate.GetRSAPublicKey() ?? throw new MissingPublicKeyInCertificate();
+        var encrypted = rsa.Encrypt(Encoding.UTF8.GetBytes(plainText), RSAEncryptionPadding.OaepSHA256);
 
-        throw new MissingPublicKeyInCertificate();
+        return $"{KeyIdPrefix}{KeyIdSeparator}{active.KeyId}{KeyIdSeparator}{Convert.ToBase64String(encrypted)}";
     }
 
     /// <inheritdoc/>
@@ -53,62 +61,106 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
             return encryptedText;
         }
 
-        using var certificate = LoadCertificate();
-        using var rsa = certificate.GetRSAPrivateKey();
-        if (rsa is not null)
+        var resolved = _ring.Value;
+
+        if (TryReadKeyId(encryptedText, out var keyId, out var cipherText))
         {
-            var dataToDecrypt = Convert.FromBase64String(encryptedText);
-            var decryptedData = rsa.Decrypt(dataToDecrypt, RSAEncryptionPadding.OaepSHA256);
-            return Encoding.UTF8.GetString(decryptedData);
+            var entry = resolved.Find(keyId) ?? throw new EncryptionCertificateNotInRing(keyId, resolved.All.Select(_ => _.KeyId));
+            ReportDependencyOnPreviousCertificate(entry);
+
+            return DecryptWith(entry.Certificate, cipherText);
         }
 
-        throw new MissingPrivateKeyInCertificate();
+        // Written before ciphertext carried a key id, so the only way to find the certificate is to try each
+        // in ring order. Select is deferred, so this stops at the first one that opens it.
+        var match = resolved.All
+            .Select(entry => (Entry: entry, PlainText: TryDecryptWith(entry.Certificate, encryptedText)))
+            .FirstOrDefault(_ => _.PlainText is not null);
+
+        if (match.PlainText is null)
+        {
+            throw new ValueNotDecryptableWithAnyCertificate(resolved.All.Select(_ => _.KeyId));
+        }
+
+        ReportDependencyOnPreviousCertificate(match.Entry);
+
+        return match.PlainText;
     }
 
-    X509Certificate2 LoadCertificate()
+    static bool TryReadKeyId(string value, out string keyId, out string cipherText)
     {
-        var encryptionCert = _options.EncryptionCertificate;
+        keyId = string.Empty;
+        cipherText = string.Empty;
 
-        // If a certificate is configured and exists, use it
-        if (encryptionCert.IsConfigured && File.Exists(encryptionCert.CertificatePath))
+        if (!value.StartsWith($"{KeyIdPrefix}{KeyIdSeparator}", StringComparison.Ordinal))
         {
-#if NET8_0
-            return new X509Certificate2(
-                encryptionCert.CertificatePath,
-                encryptionCert.CertificatePassword);
-#else
-            return X509CertificateLoader.LoadPkcs12FromFile(
-                encryptionCert.CertificatePath,
-                encryptionCert.CertificatePassword);
-#endif
+            return false;
+        }
+
+        var parts = value.Split(KeyIdSeparator, 3);
+        if (parts.Length != 3)
+        {
+            return false;
+        }
+
+        keyId = parts[1];
+        cipherText = parts[2];
+
+        return true;
+    }
+
+    static string DecryptWith(X509Certificate2 certificate, string cipherText)
+    {
+        using var rsa = certificate.GetRSAPrivateKey() ?? throw new MissingPrivateKeyInCertificate();
+        var decrypted = rsa.Decrypt(Convert.FromBase64String(cipherText), RSAEncryptionPadding.OaepSHA256);
+
+        return Encoding.UTF8.GetString(decrypted);
+    }
+
+    static string? TryDecryptWith(X509Certificate2 certificate, string cipherText)
+    {
+        if (!certificate.HasPrivateKey)
+        {
+            return null;
+        }
+
+        try
+        {
+            return DecryptWith(certificate, cipherText);
+        }
+        catch (Exception exception) when (exception is CryptographicException or FormatException)
+        {
+            // This certificate is not the one that protected the value - OAEP padding does not verify, or the
+            // value is not base64 at all. Neither is an error here; the caller decides what an exhausted ring means.
+            return null;
+        }
+    }
+
+    static IEncryptionCertificateRing ResolveRing(IEncryptionCertificateRing ring)
+    {
+        if (ring.IsConfigured)
+        {
+            return ring;
         }
 
 #if DEVELOPMENT
-        // For development: check for or generate a self-signed certificate
-        return LoadOrGenerateDevelopmentCertificate();
+        return EncryptionCertificateRing.For(LoadOrGenerateDevelopmentCertificate());
 #else
-        // In production, a certificate is required
         throw new EncryptionCertificateNotConfigured();
 #endif
     }
 
 #if DEVELOPMENT
-    X509Certificate2 LoadOrGenerateDevelopmentCertificate()
+    static X509Certificate2 LoadOrGenerateDevelopmentCertificate()
     {
         var certificateFolder = Path.Combine(Directory.GetCurrentDirectory(), DefaultCertificateFolder);
         var certificatePath = Path.Combine(certificateFolder, DefaultCertificateFileName);
 
-        // If the certificate already exists, load it
         if (File.Exists(certificatePath))
         {
-#if NET8_0
-            return new X509Certificate2(certificatePath, DefaultCertificatePassword);
-#else
             return X509CertificateLoader.LoadPkcs12FromFile(certificatePath, DefaultCertificatePassword);
-#endif
         }
 
-        // Generate a new self-signed certificate for development
         Directory.CreateDirectory(certificateFolder);
 
         using var rsa = RSA.Create(2048);
@@ -118,26 +170,26 @@ public class Encryption(IOptions<ChronicleOptions> chronicleOptions) : IEncrypti
             HashAlgorithmName.SHA256,
             RSASignaturePadding.Pkcs1);
 
-        // Add key usage extensions
         request.CertificateExtensions.Add(
             new X509KeyUsageExtension(
                 X509KeyUsageFlags.KeyEncipherment | X509KeyUsageFlags.DataEncipherment,
                 critical: true));
 
-        // Create a self-signed certificate valid for 10 years
-        var certificate = request.CreateSelfSigned(
+        using var certificate = request.CreateSelfSigned(
             DateTimeOffset.UtcNow.AddDays(-1),
             DateTimeOffset.UtcNow.AddYears(10));
 
-        // Export to PFX with password
-        var pfxData = certificate.Export(X509ContentType.Pfx, DefaultCertificatePassword);
-        File.WriteAllBytes(certificatePath, pfxData);
+        File.WriteAllBytes(certificatePath, certificate.Export(X509ContentType.Pfx, DefaultCertificatePassword));
 
-#if NET8_0
-        return new X509Certificate2(certificatePath, DefaultCertificatePassword);
-#else
         return X509CertificateLoader.LoadPkcs12FromFile(certificatePath, DefaultCertificatePassword);
-#endif
     }
 #endif
+
+    void ReportDependencyOnPreviousCertificate(EncryptionCertificateRingEntry entry)
+    {
+        if (entry.Role != EncryptionCertificateRole.Active && _reportedPreviousKeyIds.TryAdd(entry.KeyId, true))
+        {
+            logger.ValueDecryptedWithPreviousCertificate(entry.KeyId);
+        }
+    }
 }
