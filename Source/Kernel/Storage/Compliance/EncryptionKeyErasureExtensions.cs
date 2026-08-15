@@ -9,10 +9,10 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// Extension methods for applying an <see cref="EncryptionKeyErasure"/> to a write.
 /// </summary>
 /// <remarks>
-/// Every <see cref="IEncryptionKeyStorage"/> implementation has to make the same two decisions - may this key be
-/// saved at this revision, and what revision does a newly provisioned key get - and getting either of them wrong
-/// in one backend silently reopens the resurrection the fence exists to close. They live here so that all of them
-/// make the decision once, in the same words.
+/// Every <see cref="IEncryptionKeyStorage"/> implementation has to make the same decisions - may this key be saved
+/// at this revision, may a new one be provisioned at all, and what revision does it get - and getting any of them
+/// wrong in one backend silently reopens the resurrection the fence exists to close. They live here so that all of
+/// them decide once, in the same words.
 /// </remarks>
 public static class EncryptionKeyErasureExtensions
 {
