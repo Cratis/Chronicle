@@ -25,6 +25,7 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
     readonly IEventValueProviderExpressionResolver[] _resolvers =
     [
         new EventSourceIdExpressionResolver(),
+        new NullExpressionResolver(),
         new EventContextPropertyExpressionResolver(),
         new EventContentExpressionResolver(),
         new ValueExpressionResolver()

@@ -49,6 +49,11 @@ public static class WellKnownExpressions
     public const string Count = "$count";
 
     /// <summary>
+    /// The null expression - clears a scalar read model member back to no value.
+    /// </summary>
+    public const string Null = "$null";
+
+    /// <summary>
     /// The composite key expression.
     /// </summary>
     public const string Composite = "$composite";
