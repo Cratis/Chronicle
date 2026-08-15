@@ -284,6 +284,7 @@ public class ProjectionValidator(
                     ValidatePropertyExists(subtract.Property, targetSchema, errors, subtract);
                     ValidateEventPropertyExists(subtract.Value, eventSchema, errors);
                     break;
+                case ClearMappingSyntax:
                 case CountMappingSyntax:
                 case IncrementMappingSyntax:
                 case DecrementMappingSyntax:

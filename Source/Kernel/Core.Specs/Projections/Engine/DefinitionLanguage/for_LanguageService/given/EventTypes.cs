@@ -94,6 +94,10 @@ public record DepartmentCreated(string DepartmentId, string Name);
 
 public record EmployeeHired(string EmployeeId, string DepartmentId, string Name);
 
+public record Noted(string Note);
+
+public record NoteCleared(string Reason);
+
 public record OrderPlaced(string OrderId, string SimulationId, string SimulationConfigurationId, string SimulationRunId, string DestinationPostalCode, DateTimeOffset OrderDate, string OptimalRoute);
 
 public record ItemLoadedOnTransport(string OrderId, string SimulationId, string SimulationConfigurationId, string SimulationRunId, decimal Distance, TimeSpan ElapsedTime, decimal Co2FootPrint, decimal Cost, DateTimeOffset Timestamp);

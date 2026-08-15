@@ -52,6 +52,17 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
         return new CompilerResult(recompiledDefinition, generated);
     }
 
+    protected CompilerErrors CompileExpectingErrors(string definition)
+    {
+        var result = _languageService.Compile(
+            definition,
+            ProjectionOwner.Client,
+            [_readModelDefinition],
+            _eventTypeSchemas);
+
+        return result.Match(_ => CompilerErrors.Empty, errors => errors);
+    }
+
     static ReadModelDefinition CreateReadModelDefinition<T>()
         where T : class
     {
