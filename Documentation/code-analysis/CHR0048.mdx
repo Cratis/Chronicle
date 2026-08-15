@@ -15,7 +15,11 @@ Not reported: a class-level `[ClearWith]` on a nested type, or one on the member
 
 ## Severity
 
-Error
+Warning — **scheduled to become an error in the next major release.**
+
+Warning rather than error for its first release, following the precedent recorded on the retired [CHR0047](CHR0047): these analyzers ship inside the `Cratis.Chronicle` package, so under `TreatWarningsAsErrors` — the Cratis default — a new warning already breaks a consumer build on upgrade. An error is a strictly stronger break and buys little, because the declaration it reports never worked in the first place.
+
+The declaration has no correct reading, so the escalation to an error is announced here rather than sprung later. Treat this warning as a build failure in waiting, and note that it is the *softer* of the two signals: building the projection refuses the declaration outright (see below), so leaving the warning unaddressed fails at application startup instead of at build time.
 
 ## Example
 
@@ -27,7 +31,7 @@ The only value a projection could write to a non-nullable member is its type def
 
 Standing a type default in for "not set" is precisely the workaround the scalar clear exists to remove. Consumers used to invent type-specific sentinels because Chronicle had no clear; defining clear *as* the sentinel would ship the workaround under a name that promises something else. So the declaration is refused rather than reinterpreted.
 
-An error rather than a warning, unlike most new rules. A scalar clear is new capability, so no shipping code can depend on this declaration working: until it existed, `[ClearWith]` on a member and a null `[SetValue]` were both reported as inert by the retired [CHR0047](CHR0047), and the fluent `ToValue(null)` silently wrote the four-character string `"null"`. There is nothing to break, and no reading under which the declaration is what its author meant.
+No shipping code can depend on this declaration working. Until a scalar clear existed, `[ClearWith]` on a member and a null `[SetValue]` were both reported as inert by the retired [CHR0047](CHR0047) — the projection emitted no mapping at all for the member — and the fluent `ToValue(null)` silently wrote the four-character string `"null"`. There is no reading under which the declaration was what its author meant.
 
 The same rule is enforced when the projection is built, where it throws `CannotClearNonNullableMember`. That covers what the analyzer never sees — a read model from an assembly compiled without the Chronicle analyzers, or one whose diagnostic was suppressed — so the failure is loud at startup rather than a quiet type default in storage.
 

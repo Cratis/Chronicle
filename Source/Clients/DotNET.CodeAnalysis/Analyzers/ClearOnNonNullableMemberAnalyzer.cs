@@ -26,19 +26,21 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     /// The descriptor for the diagnostic.
     /// </summary>
     /// <remarks>
-    /// An error rather than a warning. A scalar clear is new capability, so no shipping code can be relying on this
-    /// declaration working - until now both spellings were reported by the retired <c>CHR0047</c> as inert, and the
-    /// third (the fluent <c>ToValue(null)</c>) silently wrote the string "null". There is nothing to break and no
-    /// reading under which the declaration is what its author meant.
+    /// A warning for its first release, following the precedent recorded on the retired <c>CHR0047</c>: these
+    /// analyzers ship inside the <c>Cratis.Chronicle</c> package, so under <c>TreatWarningsAsErrors</c> a new
+    /// warning already breaks a consumer build on upgrade - which is what makes it a minor release. An error is a
+    /// strictly stronger break and buys little here, because the declaration never worked in the first place.
+    /// The declaration has no correct reading, so this is scheduled to become
+    /// <see cref="DiagnosticSeverity.Error"/> in the next major.
     /// </remarks>
     internal static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.ClearOnNonNullableMember,
         title: "A clear is declared for a member that cannot hold null",
         messageFormat: "'{0}' clears '{1}', which is declared as '{2}' and cannot hold null. Declare the member as nullable, or use [SetValue<TEvent>(...)] with the value you actually want it to hold.",
         category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Clearing a read model member means returning it to no value. A member declared non-nullable has no such state, so the only thing the projection could write is the type default - an empty string, a zero - which is a different fact the read model cannot tell apart from a real value. Declare the member as nullable to clear it, or set the value explicitly with [SetValue<TEvent>(...)].");
+        description: "Clearing a read model member means returning it to no value. A member declared non-nullable has no such state, so the only thing the projection could write is the type default - an empty string, a zero - which is a different fact the read model cannot tell apart from a real value. Building the projection refuses the declaration outright, so leaving this warning unaddressed fails at startup rather than at build time. Declare the member as nullable to clear it, or set the value explicitly with [SetValue<TEvent>(...)].");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
