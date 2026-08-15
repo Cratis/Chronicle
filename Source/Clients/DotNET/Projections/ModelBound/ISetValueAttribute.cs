@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 public interface ISetValueAttribute : IEventBoundAttribute
 {
     /// <summary>
-    /// Gets the constant value to set.
+    /// Gets the constant value to set, or <see langword="null"/> to clear the member back to no value.
     /// </summary>
-    object Value { get; }
+    object? Value { get; }
 }

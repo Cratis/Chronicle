@@ -34,5 +34,5 @@ public class literal_expressions : given.a_language_service_with_schemas<given.U
     [Fact] void should_have_string_literal() => _result.From[(EventType)"UserCreated"].Properties[new PropertyPath("status")].ShouldContain("Active");
     [Fact] void should_have_integer_literal() => _result.From[(EventType)"UserCreated"].Properties[new PropertyPath("version")].ShouldEqual("1");
     [Fact] void should_have_decimal_literal() => _result.From[(EventType)"UserCreated"].Properties[new PropertyPath("rating")].ShouldEqual("4.5");
-    [Fact] void should_have_null_literal() => _result.From[(EventType)"UserCreated"].Properties[new PropertyPath("metadata")].ShouldEqual("");
+    [Fact] void should_store_the_null_literal_as_a_clear() => _result.From[(EventType)"UserCreated"].Properties[new PropertyPath("metadata")].ShouldEqual(Concepts.WellKnownExpressions.Null);
 }

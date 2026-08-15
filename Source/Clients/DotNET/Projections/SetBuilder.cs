@@ -99,7 +99,7 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     {
         if (value is null)
         {
-            _expression = ValueExpression.Null;
+            _expression = NullExpression.Instance;
             return _parent;
         }
 

@@ -228,7 +228,18 @@ public static class DiagnosticIds
     public const string PassiveProjectionKeyRedirection = "CHR0046";
 
     /// <summary>
-    /// A model-bound clear declaration that projection construction never applies.
+    /// Retired. A model-bound clear declaration that projection construction never applies.
     /// </summary>
+    /// <remarks>
+    /// Both declarations this reported - a null <c>[SetValue]</c> and a member-level <c>[ClearWith]</c> - are a
+    /// working scalar clear as of the feature that retired the rule, so every reading of it became false. The id is
+    /// kept reserved rather than reused: anyone who suppressed it did so to accept a clear that did nothing, and
+    /// that suppression must never silently carry over to a different rule.
+    /// </remarks>
     public const string InertClearDeclaration = "CHR0047";
+
+    /// <summary>
+    /// A clear is declared for a read model member that cannot hold null.
+    /// </summary>
+    public const string ClearOnNonNullableMember = "CHR0048";
 }

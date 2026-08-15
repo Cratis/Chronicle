@@ -1,35 +1,27 @@
-# CHR0047: A clear declaration is never applied by projection construction
+# CHR0047: A clear declaration is never applied by projection construction (retired)
 
 ## Rule Description
 
-Chronicle has no scalar clear. Two declarations look like one, compile, register, and do nothing:
+**This rule has been retired and no longer reports anything.** It warned that two declarations looked like a clear, compiled, registered, and did nothing:
 
-- **`[SetValue<TEvent>(null)]`.** Projection construction reads the attribute's value and emits a mapping only when it is non-null. A null is dropped, so no mapping exists for the member at all. The member is nonetheless counted as explicitly mapped, which also suppresses the "no mapping source" diagnostic ([CHR0024](CHR0024)) that would otherwise notice the gap.
-- **`[ClearWith<TEvent>]` on a property or a parameter.** The only consumer collects **class-level** `[ClearWith]` attributes from a `[Nested]` type. A member-level application binds to nothing. The attribute's own documentation scopes it to a nested single-object property, so this is a shape that was never supported rather than a regression.
+- `[SetValue<TEvent>(null)]`, which projection construction dropped where the set-value mappings were built.
+- `[ClearWith<TEvent>]` on a property or a parameter, which only the class-level form on a nested type was ever read from.
 
-In both cases the projected value keeps whatever it last held, including across a full replay.
+Both are a working [scalar clear](../projections/model-bound/clearing) now: they write the member back to no value every time the event is observed, replay included. Every reading of the rule became false, so it was removed rather than narrowed.
 
-Not reported: a `[SetValue]` with any real constant, including `false` and `""`; and a class-level `[ClearWith]` on a nested type, which is the one shape projection construction reads.
+The identifier stays reserved and will never be reused. Anyone who suppressed `CHR0047` did so to accept a clear that did nothing; carrying that suppression silently onto a different rule would hide something they never agreed to.
 
 ## Severity
 
-Warning
+None — the rule is no longer reported.
 
-## Example
+## What To Do Instead
 
-<ChronicleClientTabs snippet="code-analysis/chr0047/violation" />
+Nothing. If you suppressed `CHR0047` — with `#pragma warning disable`, a `NoWarn`, or an `.editorconfig` entry — remove the suppression: the declaration it covered now does what it says.
 
-## Why This Rule Exists
-
-`[ClearWith<T>]` clears a whole nested object but cannot clear a scalar. The apparently equivalent `[SetValue<T>(null)]` both conflicts with nullable warnings at the declaration and is then silently discarded, so the declaration reads as a supported clear and behaves as if it were absent. Consumers work around it by inventing type-specific sentinels — an empty string standing in for "not set" — which is not equivalent to null and leaks storage mechanics into the domain shape.
-
-This rule is the diagnostic half of that problem, not the feature. A real scalar clear needs an explicit unset expression threaded through the kernel resolver and the code generators; until that exists, the build should at least refuse to accept a declaration that cannot work.
-
-Warning rather than error for its first release, following the precedent recorded on [CHR0043](CHR0043): both shapes compile in code that ships today, and a new error would break those builds. Neither shape has a correct reading, so raising it later is defensible.
-
-Narrowing `ClearWithAttribute`'s own `AttributeUsage` to `AttributeTargets.Class` would turn the second half into a compile error and make this rule redundant for it. That is a source-breaking change for anyone who has written the member-level form, so it belongs to a major release rather than to this rule.
+One shape still has no correct reading, and [CHR0048](CHR0048) reports it: clearing a member that cannot hold null. Declare the member as nullable, or set the value you actually want with `[SetValue<TEvent>(...)]`.
 
 ## Related Rules
 
-- [CHR0024: Read model property has no mapping source](CHR0024) — the diagnostic a null `[SetValue]` suppresses.
-- [CHR0040: Several [SetFromContext] for the same event type on one member](CHR0040) — another mapping declaration that is silently discarded.
+- [CHR0048: A clear is declared for a member that cannot hold null](CHR0048) — the rule that took over the shapes that are still wrong.
+- [CHR0024: Read model property has no mapping source](CHR0024) — a null `[SetValue]` no longer suppresses it, because a clear is not a mapping source.

@@ -18,6 +18,16 @@ public static class EventValueProviders
     public static readonly ValueProvider<AppendedEvent> EventSourceId = @event => @event.Context.EventSourceId.Value;
 
     /// <summary>
+    /// Create a <see cref="ValueProvider{T}"/> that provides no value, clearing whatever the target member held.
+    /// </summary>
+    /// <remarks>
+    /// This is the provider behind <see cref="Concepts.WellKnownExpressions.Null"/>. It provides a value like any
+    /// other rather than the absence of a mapping: the resulting property change carries null as its new value, so
+    /// the member is written back to no value every time the clearing event is observed, replay included.
+    /// </remarks>
+    public static readonly ValueProvider<AppendedEvent> Null = _ => null!;
+
+    /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that provides a value from the event content.
     /// </summary>
     /// <param name="sourceProperty">Source property.</param>
@@ -40,9 +50,9 @@ public static class EventValueProviders
     /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that provides a constant value.
     /// </summary>
-    /// <param name="value">Constant to provide.</param>
+    /// <param name="value">Constant to provide, or <see langword="null"/> to clear the target member.</param>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> Value(string value) => _ => value;
+    public static ValueProvider<AppendedEvent> Value(string? value) => _ => value!;
 
     /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that generates a new unique identifier from the event metadata.

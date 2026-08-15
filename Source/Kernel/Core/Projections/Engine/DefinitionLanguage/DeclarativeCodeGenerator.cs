@@ -63,6 +63,9 @@ public class DeclarativeCodeGenerator
 
     static string ConvertExpressionForSet(string expression)
     {
+        // A clear maps back to the fluent builder's null value
+        if (expression == WellKnownExpressions.Null) return "ToValue(null)";
+
         // For Set operations, event context properties need ToEventContextProperty
         if (expression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && expression.EndsWith(')'))
         {
