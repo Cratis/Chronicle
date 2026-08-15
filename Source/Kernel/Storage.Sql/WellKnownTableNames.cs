@@ -224,6 +224,11 @@ public static class WellKnownTableNames
     public const string EncryptionKeys = "EncryptionKeys";
 
     /// <summary>
+    /// The table that holds recorded erasures of encryption keys for compliance handling.
+    /// </summary>
+    public const string EncryptionKeyErasures = "EncryptionKeyErasures";
+
+    /// <summary>
     /// The table that holds OAuth tokens.
     /// </summary>
     public const string Tokens = "Tokens";

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.EntityFrameworkCore;
 using StoredEncryptionKey = Cratis.Chronicle.Storage.Compliance.EncryptionKey;
+using StoredEncryptionKeyErasure = Cratis.Chronicle.Storage.Compliance.EncryptionKeyErasure;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 
@@ -28,6 +29,8 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         var actualRevision = IsLatest(revision)
             ? await GetNextRevision(scope.DbContext, identifier)
             : revision!.Value;
+
+        (await ErasureIn(scope.DbContext, identifier)).EnsureCanSave(identifier, actualRevision, key);
 
         await scope.DbContext.EncryptionKeys.Upsert(new EncryptionKey
         {
@@ -52,12 +55,13 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         }
 
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+        var revision = (await ErasureIn(scope.DbContext, identifier)).RevisionForNewKey(identifier, key);
         try
         {
             scope.DbContext.EncryptionKeys.Add(new EncryptionKey
             {
                 Identifier = identifier.Value,
-                Revision = EncryptionKeyRevision.Initial.Value,
+                Revision = revision.Value,
                 PublicKey = key.Public,
                 PrivateKey = key.Private
             });
@@ -66,9 +70,9 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         }
         catch (DbUpdateException)
         {
-            // Another provisioner inserted the initial revision first (primary key violation on
+            // Another provisioner inserted the same revision first (primary key violation on
             // Identifier + Revision). Converge on the persisted key so every writer encrypts under the same one.
-            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Initial);
+            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
             return winner ?? key;
         }
     }
@@ -141,6 +145,50 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<StoredEncryptionKeyErasure?> GetErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+        return await ErasureIn(scope.DbContext, identifier);
+    }
+
+    /// <inheritdoc/>
+    public async Task RecordErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+
+        var present = await scope.DbContext.EncryptionKeys
+            .Where(e => e.Identifier == identifier.Value)
+            .ToListAsync();
+
+        var erasure = StoredEncryptionKeyErasure.Covering(
+            await ErasureIn(scope.DbContext, identifier),
+            present.Select(_ => ((EncryptionKeyRevision)_.Revision, new StoredEncryptionKey(_.PublicKey, _.PrivateKey))));
+
+        await Upsert(scope.DbContext, identifier, erasure);
+    }
+
+    /// <inheritdoc/>
+    public async Task AllowNewKeyFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+        if (await ErasureIn(scope.DbContext, identifier) is not { } erasure)
+        {
+            return;
+        }
+
+        await Upsert(scope.DbContext, identifier, erasure with { NewKeyAllowed = true });
+    }
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
     static async Task<uint> GetNextRevision(NamespaceDbContext dbContext, EncryptionKeyIdentifier identifier)
@@ -149,5 +197,31 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             .Where(e => e.Identifier == identifier.Value)
             .MaxAsync(e => (uint?)e.Revision);
         return (maxRevision ?? 0u) + 1u;
+    }
+
+    static async Task<StoredEncryptionKeyErasure?> ErasureIn(NamespaceDbContext dbContext, EncryptionKeyIdentifier identifier)
+    {
+        var entity = await dbContext.EncryptionKeyErasures
+            .AsNoTracking()
+            .SingleOrDefaultAsync(e => e.Identifier == identifier.Value);
+
+        return entity is null
+            ? null
+            : new StoredEncryptionKeyErasure(
+                entity.ErasedThrough,
+                entity.ErasedKeyFingerprints.Split(',', StringSplitOptions.RemoveEmptyEntries),
+                entity.NewKeyAllowed);
+    }
+
+    static async Task Upsert(NamespaceDbContext dbContext, EncryptionKeyIdentifier identifier, StoredEncryptionKeyErasure erasure)
+    {
+        await dbContext.EncryptionKeyErasures.Upsert(new EncryptionKeyErasure
+        {
+            Identifier = identifier.Value,
+            ErasedThrough = erasure.ErasedThrough.Value,
+            ErasedKeyFingerprints = string.Join(',', erasure.ErasedKeyFingerprints),
+            NewKeyAllowed = erasure.NewKeyAllowed
+        });
+        await dbContext.SaveChangesAsync();
     }
 }

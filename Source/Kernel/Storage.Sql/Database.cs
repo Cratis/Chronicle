@@ -65,6 +65,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         WellKnownTableNames.Patches,
         WellKnownTableNames.SystemInformation,
         WellKnownTableNames.EncryptionKeys,
+        WellKnownTableNames.EncryptionKeyErasures,
         WellKnownTableNames.Tokens,
         WellKnownTableNames.Authorizations,
         WellKnownTableNames.Scopes,

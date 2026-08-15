@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Compliance;
 public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
 {
     readonly ConcurrentDictionary<Key, EncryptionKey> _keys = new();
+    readonly ConcurrentDictionary<Scope, EncryptionKeyErasure> _erasures = new();
 
     /// <inheritdoc/>
     public Task SaveFor(
@@ -26,6 +27,8 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
         var actualRevision = IsLatest(revision)
             ? GetNextRevision(eventStore, eventStoreNamespace, identifier)
             : revision!;
+
+        ErasureFor(eventStore, eventStoreNamespace, identifier).EnsureCanSave(identifier, actualRevision, key);
 
         _keys[new Key(eventStore, eventStoreNamespace, identifier, actualRevision)] = key;
         return Task.CompletedTask;
@@ -43,7 +46,8 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
             return Task.FromResult(existing);
         }
 
-        var added = _keys.GetOrAdd(new Key(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Initial), key);
+        var revision = ErasureFor(eventStore, eventStoreNamespace, identifier).RevisionForNewKey(identifier, key);
+        var added = _keys.GetOrAdd(new Key(eventStore, eventStoreNamespace, identifier, revision), key);
         return Task.FromResult(added);
     }
 
@@ -107,7 +111,47 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        Task.FromResult(ErasureFor(eventStore, eventStoreNamespace, identifier));
+
+    /// <inheritdoc/>
+    public Task RecordErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var scope = new Scope(eventStore, eventStoreNamespace, identifier);
+        var present = KeysFor(eventStore, eventStoreNamespace, identifier).Select(_ => (_.Key.Revision, _.Value));
+        _erasures[scope] = EncryptionKeyErasure.Covering(_erasures.GetValueOrDefault(scope), present);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task AllowNewKeyFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var scope = new Scope(eventStore, eventStoreNamespace, identifier);
+        if (_erasures.TryGetValue(scope, out var erasure))
+        {
+            _erasures[scope] = erasure with { NewKeyAllowed = true };
+        }
+
+        return Task.CompletedTask;
+    }
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
+
+    EncryptionKeyErasure? ErasureFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        _erasures.GetValueOrDefault(new Scope(eventStore, eventStoreNamespace, identifier));
 
     IEnumerable<KeyValuePair<Key, EncryptionKey>> KeysFor(
         EventStoreName eventStore,
@@ -139,6 +183,17 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
 
         return latest + 1u;
     }
+
+    /// <summary>
+    /// Represents the identity an erasure is recorded against.
+    /// </summary>
+    /// <param name="EventStore">The <see cref="EventStoreName"/> the key belongs to.</param>
+    /// <param name="EventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the key belongs to.</param>
+    /// <param name="Identifier">The <see cref="EncryptionKeyIdentifier"/>.</param>
+    sealed record Scope(
+        EventStoreName EventStore,
+        EventStoreNamespaceName EventStoreNamespace,
+        EncryptionKeyIdentifier Identifier);
 
     /// <summary>
     /// Represents the composite key for a stored encryption key.
