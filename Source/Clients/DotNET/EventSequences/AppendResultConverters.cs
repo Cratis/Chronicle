@@ -27,7 +27,8 @@ internal static class AppendResultConverters
             SequenceNumber = result.SequenceNumber,
             ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
             Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
-            ConcurrencyViolation = result.ConcurrencyViolation?.ToClient()
+            ConcurrencyViolation = result.ConcurrencyViolation?.ToClient(),
+            ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
     }
 
@@ -44,7 +45,8 @@ internal static class AppendResultConverters
             SequenceNumbers = result.SequenceNumbers.Select(_ => (EventSequenceNumber)_).ToImmutableList(),
             ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
             Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
-            ConcurrencyViolations = result.ConcurrencyViolations.Select(_ => _.ToClient()).ToImmutableList()
+            ConcurrencyViolations = result.ConcurrencyViolations.Select(_ => _.ToClient()).ToImmutableList(),
+            ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
     }
 }

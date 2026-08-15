@@ -45,6 +45,9 @@ public record AppendResult : IAppendResult, IAppendResultForObserverCompletion
     public bool HasErrors => Errors.Any();
 
     /// <inheritdoc />
+    public bool ConcurrencyCheckPerformed { get; init; }
+
+    /// <inheritdoc />
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>

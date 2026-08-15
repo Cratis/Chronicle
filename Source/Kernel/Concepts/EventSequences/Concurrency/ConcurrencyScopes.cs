@@ -17,6 +17,16 @@ public class ConcurrencyScopes(IDictionary<EventSourceId, ConcurrencyScope> scop
     public IDictionary<EventSourceId, ConcurrencyScope> Scopes { get; } = new Dictionary<EventSourceId, ConcurrencyScope>(scopes);
 
     /// <summary>
+    /// Gets a value indicating whether every scope here asks for a concurrency check the kernel can perform.
+    /// </summary>
+    /// <remarks>
+    /// An empty collection is false rather than vacuously true - no scope asked for anything, so nothing was
+    /// checked. A caller reading this off the append result wants to know that the guarantee it believes it has
+    /// covers the whole batch, and one skipped scope is enough to break that.
+    /// </remarks>
+    public bool ShouldAllBeValidated => Scopes.Count > 0 && Scopes.Values.All(scope => scope.ShouldBeValidated);
+
+    /// <summary>
     /// Gets the <see cref="ConcurrencyScope"/> for the <see cref="EventSourceId"/>.
     /// If there is no <see cref="ConcurrencyScope"/> then <see cref="ConcurrencyScope.None"/> will be returned.
     /// </summary>
