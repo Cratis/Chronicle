@@ -33,6 +33,15 @@ public class UniqueEventTypeConstraintValidator(
         // depends on the removal event: a covered event that precedes the most recent removal belongs to a closed
         // cycle and no longer blocks anything.
         var (isAllowed, sequenceNumber) = await storage.IsAllowed(definition, context.EventSourceId, scopeKey);
+
+        // The event source id is deliberately absent from the message. A violation message is a response body -
+        // it travels back to whoever attempted the append as a validation result - and an event source id is the
+        // stream identity and the compliance subject, which Chronicle's own analyzers treat as potentially
+        // sensitive and which cannot be encrypted because correlation depends on reading it. It is also the one
+        // value the caller already holds: it just tried to append an event for that event source.
+        //
+        // It is not moved to the violation details either. Details travel the same route to the same caller, so
+        // that would relocate the value rather than withhold it.
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()
@@ -42,7 +51,7 @@ public class UniqueEventTypeConstraintValidator(
                     this.CreateViolation(
                         context,
                         sequenceNumber,
-                        $"Event '{context.EventTypeId}' with event source id '{context.EventSourceId}' violated a unique event type constraint on sequence number {sequenceNumber}")
+                        $"Event '{context.EventTypeId}' violated a unique event type constraint on sequence number {sequenceNumber}")
                 ]
             };
     }
