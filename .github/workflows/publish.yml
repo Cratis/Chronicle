@@ -1,12 +1,12 @@
 name: Publish
 
-# Keyed by the pull request, never by a value that several simultaneously-closing pull requests share.
-# Merging a consolidation closes every pull request whose commits it carries, each of those fires its own
-# pull_request:closed event, and on a shared group cancel-in-progress means the last run to start cancels
-# the rest — including the one that was supposed to cut the release.
+# Never cancel a release in flight. On push every merge to main shares one group, so cancelling would let the
+# next merge kill a run that may already have tagged and cut the release but not yet finished publishing.
+# This also retires the hazard the pull_request trigger had, where a consolidation merge closed several pull
+# requests at once and their simultaneous runs cancelled each other: one push is one run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
@@ -36,9 +36,13 @@ on:
         - info
         - warning
         - debug
-  pull_request:
-    types: [closed]
-    # Only a pull request into main releases. On "**" every base branch released, so merging one pull
+  # Releasing on push rather than on the pull_request closed event is deliberate. A pull request from a fork
+  # runs with a read-only GITHUB_TOKEN and no secrets even on merge, so it cannot create the release or reach
+  # the publishing credentials - which is how a merged, labeled fork contribution silently released nothing.
+  # A push to main always runs with a full-permission token, and the release action finds the merged pull
+  # request and its label from the commit.
+  push:
+    # Only main releases. On "**" every base branch released, so merging one pull
     # request into another one's branch - the ordinary way to stack work - cut and published a version
     # from a branch that was still in review. That is how Cratis.Fundamentals v7.17.0 came to be
     # published from the head of an open pull request, carrying every unmerged change on that branch
@@ -68,14 +72,12 @@ permissions:
 
 jobs:
   release:
-    # A pull request closed without merging has nothing to release. Skipping early also keeps those runs from
-    # doing any work at all, on top of the concurrency key above keeping them out of each other's way.
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
       prerelease: ${{ steps.release.outputs.prerelease }}
+      reason: ${{ steps.release.outputs.reason }}
 
     steps:
       - name: Checkout code
@@ -674,14 +676,15 @@ jobs:
   verify-published:
     # A merged pull request that publishes nothing is the failure mode that silently costs a release: the release
     # job succeeds, every publish job is skipped for want of should-publish, and the whole run reports green. Fail
-    # instead, so a release that did not happen cannot be mistaken for one that did. workflow_dispatch is excluded
-    # because a manual run may legitimately resolve to no publish.
-    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true'
+    # instead, so a release that did not happen cannot be mistaken for one that did. Only for the
+    # reasons that mean something went wrong - publishing nothing is correct and routine for the others, such
+    # as a commit pushed straight to main, a Dependabot merge, or a re-run of a run that already released.
+    if: always() && needs.release.result == 'success' && contains(fromJSON('["no-label", "error"]'), needs.release.outputs.reason)
     runs-on: ubuntu-latest
     needs: [release]
 
     steps:
       - name: Report that nothing was published
         run: |
-          echo "::error::The release action reported should-publish: false for a merged pull request, so no packages were published and no release was cut. The usual cause is a missing major, minor or patch label - see verify-semver-label."
+          echo "::error::Nothing was published and no release was cut (reason: ${{ needs.release.outputs.reason }}). For 'no-label', add exactly one of major, minor or patch to the merged pull request and re-run this workflow - see verify-semver-label, which is meant to catch this before the merge."
           exit 1
