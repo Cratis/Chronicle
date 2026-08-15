@@ -75,7 +75,7 @@ Chronicle erases keys. It does not know what else your system did with the data.
 - **Erase in every namespace the person appears in.** One call per namespace; there is no cross-namespace erasure, by design.
 - **Deal with the failed partition, if there is one.** An event carrying `[PII]` for a subject you erased cannot be appended, so a forwarding subscription or a reactor that keeps producing them will report a failed partition for that event source. That is the signal that something is still writing the person's data — either stop it, or authorize a new key.
 - **Expect the same refusal when you replay.** Rebuilding a stored read model re-writes the protected values it holds, so a replay that covers an erased subject is refused for that subject's partition too. Authorize a new key for anyone you intend to keep protecting before a rebuild that has to cover them.
-- **Keep your own erasure record.** Chronicle's own log line about key propagation deliberately does not name the subject, because a durable, unencrypted line naming a person is exactly what the erasure exists to remove. What was erased, when, and on whose request is yours to record.
+- **Record the *who*.** Chronicle logs that an erasure completed, which event stores it reached, and the subject as a one-way binding rather than by name — see [what Chronicle records](key-lifecycle.md). What it cannot know, and therefore cannot record, is who asked for the erasure and under what legal basis. That part is yours.
 - **Chase the copies outside Chronicle.** Read models exported to a warehouse, search indexes, backups, and anything a reactor sent to a third party are outside the key store and outside the erasure.
 
 ## See also
