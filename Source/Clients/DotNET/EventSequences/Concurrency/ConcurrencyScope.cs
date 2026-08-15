@@ -51,8 +51,9 @@ public record ConcurrencyScope(
     /// supply the expected sequence number, and it has no sequence number of its own for the kernel to validate
     /// against - so the append is checked against nothing, which looks exactly like never having asked for a check.
     /// Build <see cref="None"/> to append without a check, or <see cref="NotSet"/> to let the strategy resolve the
-    /// expected sequence number. A scope <see cref="OptimisticConcurrencyStrategy"/> resolved never lands here:
-    /// an empty narrowing gives <see cref="ExpectsNoMatchingEvent"/>, which the kernel checks.
+    /// expected sequence number. A scope <see cref="OptimisticConcurrencyStrategy"/> resolved lands here too, for
+    /// the first append into a scope, unless <see cref="ConcurrencyOptions.CheckFirstAppendIntoAScope"/> is turned
+    /// on - with it on, an empty narrowing gives <see cref="ExpectsNoMatchingEvent"/>, which the kernel checks.
     /// </remarks>
     public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue && !SequenceNumber.IsBeforeFirst;
 }

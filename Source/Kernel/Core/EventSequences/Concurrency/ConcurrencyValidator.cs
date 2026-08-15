@@ -83,8 +83,9 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
     /// are serialized never finds out otherwise. The append is still allowed - rejecting it would break every
     /// caller that already builds such a scope - but it does not pass unnoticed: the operator sees this warning,
     /// and the caller sees it on the append result, which reports the check as not performed.
-    /// A scope a strategy resolved against an empty narrowing never reaches here - it expects
-    /// <see cref="EventSequenceNumber.BeforeFirst"/>, which is checked.
+    /// A scope a strategy resolved against an empty narrowing reaches here unless the client opted into checking
+    /// the first append into a scope; with that on it expects <see cref="EventSequenceNumber.BeforeFirst"/>
+    /// instead, which is checked.
     /// </remarks>
     void WarnIfIncomplete(EventSourceId eventSourceId, ConcurrencyScope scope)
     {
