@@ -24,7 +24,7 @@ After you change a projection, the existing read model still reflects the *old* 
 
 ## My reactor ran twice (or sent a duplicate notification)
 
-That's expected — reactors can run more than once for the same event during replay or recovery. The fix is not to prevent it but to make the reactor **idempotent**: record that the side effect happened and skip it if it already did. See [Reacting to events](/chronicle/tutorial/reacting/).
+That's expected — reactors can run more than once for the same event during replay or recovery. The fix is not to prevent it but to make the reactor **idempotent**: record that the side effect happened and skip it if it already did. Chronicle gives you the key to record it under — see [Delivery identity](/chronicle/reactors/delivery-identity/), and [Reacting to events](/chronicle/tutorial/reacting/) for the wider pattern.
 
 ## My reactor throws and the stream seems stuck
 
