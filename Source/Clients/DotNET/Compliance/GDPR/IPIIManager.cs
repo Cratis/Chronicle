@@ -29,10 +29,21 @@ public interface IPIIManager
     /// </summary>
     /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to authorize a new key for.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="NotSupportedException">Thrown by an implementation that does not override this member.</exception>
     /// <remarks>
+    /// <para>
     /// Erasing a subject removes the key that exists now; it does not ban the identifier forever. This creates no
     /// key - it lets the next PII value written for the subject provision a fresh, independent one, which can
     /// decrypt nothing written before the erasure. The erased key itself never comes back, whatever else happens.
+    /// </para>
+    /// <para>
+    /// The default implementation exists so that adding this member did not break implementations written before
+    /// it - realistically test doubles, which never call it and keep compiling. It throws rather than doing
+    /// nothing, because an authorization that silently did not happen reads as a subject who can be protected
+    /// again right up until the append that proves they cannot.
+    /// </para>
     /// </remarks>
-    Task AllowNewEncryptionKeyFor(EncryptionKeyIdentifier identifier);
+    Task AllowNewEncryptionKeyFor(EncryptionKeyIdentifier identifier) =>
+        throw new NotSupportedException(
+            $"'{GetType().FullName}' does not implement IPIIManager.AllowNewEncryptionKeyFor. Override it to support authorizing a new encryption key for a subject whose key was erased.");
 }
