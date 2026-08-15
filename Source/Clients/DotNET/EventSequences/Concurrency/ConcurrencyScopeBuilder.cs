@@ -29,6 +29,24 @@ public class ConcurrencyScopeBuilder
     }
 
     /// <summary>
+    /// Expect no event matching this scope's narrowing to exist yet.
+    /// </summary>
+    /// <returns><see cref="ConcurrencyScopeBuilder"/> for continuation.</returns>
+    /// <remarks>
+    /// The expectation a first append actually has. The kernel rejects the append with a concurrency violation if
+    /// an event matching the narrowing appeared between the scope being built and the append arriving, which is how
+    /// "only one writer may open this partition" is expressed as a concurrency concern.
+    /// This asks for the check on one append. To have
+    /// <see cref="OptimisticConcurrencyStrategy"/> produce it for every first append, turn on
+    /// <see cref="ConcurrencyOptions.CheckFirstAppendIntoAScope"/> instead.
+    /// </remarks>
+    public ConcurrencyScopeBuilder ExpectingNoMatchingEvent()
+    {
+        _sequenceNumber = EventSequenceNumber.BeforeFirst;
+        return this;
+    }
+
+    /// <summary>
     /// Sets the <see cref="EventSourceId"/> for the concurrency scope.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to scope to.</param>

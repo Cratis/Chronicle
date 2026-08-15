@@ -73,12 +73,13 @@ public record ConcurrencyScope(
     /// </summary>
     /// <returns>true if the scope carries narrowing metadata but no expected sequence number, false if not.</returns>
     /// <remarks>
-    /// A caller built it without resolving an expected sequence number, where <see cref="None"/> (append without a
-    /// check) or <see cref="NotSet"/> (let the strategy decide) is what was wanted instead. A strategy no longer
-    /// produces this state - one that resolves the expected tail and finds no event matching the scope's narrowing
-    /// answers <see cref="EventSequenceNumber.BeforeFirst"/>, which is validated rather than skipped. A scope that
-    /// does reach this state asks for a check and gets none, which is indistinguishable from having asked for
-    /// nothing. It is skipped, but never silently.
+    /// A scope reaches this state two ways. A caller can build it without resolving an expected sequence number,
+    /// where <see cref="None"/> (append without a check) or <see cref="NotSet"/> (let the strategy decide) is what
+    /// was wanted instead. A strategy also produces it having resolved the expected tail correctly and found no
+    /// event matching the scope's narrowing, unless the client opted into checking the first append - in which case
+    /// it answers <see cref="EventSequenceNumber.BeforeFirst"/> and is validated rather than skipped. Either way a
+    /// scope that reaches this state asks for a check and gets none, which is indistinguishable from having asked
+    /// for nothing. It is skipped, but never silently - the append result reports the check as not performed.
     /// </remarks>
     public bool IsIncomplete => this != NotSet && this != None && !SequenceNumber.IsActualValue && !SequenceNumber.IsBeforeFirst;
 }

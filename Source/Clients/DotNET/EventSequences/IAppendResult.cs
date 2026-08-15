@@ -45,10 +45,15 @@ public interface IAppendResult
     /// (<see cref="Concurrency.ConcurrencyScope.None"/>), carried no scope at all, or declared a scope with no
     /// expectation the kernel could validate
     /// (<see cref="Concurrency.ConcurrencyScope.IsIncomplete"/>).
-    /// The first append into a scope is not a skip: the optimistic strategy resolves it to
-    /// <see cref="Events.EventSequenceNumber.BeforeFirst"/>, which the kernel checks.
+    /// The first append into a scope reports false unless the first-append check is opted into - see
+    /// <see cref="Concurrency.ConcurrencyOptions.CheckFirstAppendIntoAScope"/>.
     /// </remarks>
-    bool ConcurrencyCheckPerformed { get; }
+    /// <remarks>
+    /// This has a default implementation returning <see langword="false"/> so that adding it does not break an existing
+    /// implementation of this interface. An implementation that has not been updated therefore reports the check as
+    /// not performed, which under-reports rather than promising a guarantee it cannot speak for.
+    /// </remarks>
+    bool ConcurrencyCheckPerformed => false;
 
     /// <summary>
     /// Gets any violations that occurred during the operation.

@@ -272,7 +272,7 @@ public class EventSequence(
             var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
             if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
             {
-                return AppendResult.Failed(correlationId, concurrencyViolation) with { ConcurrencyCheckPerformed = concurrencyCheckPerformed };
+                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyCheckPerformed);
             }
 
             var appendResult = await AppendValidAndCompliantEvent(
@@ -291,7 +291,7 @@ public class EventSequence(
                 occurred,
                 subject);
 
-            return appendResult with { ConcurrencyCheckPerformed = concurrencyCheckPerformed };
+            return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
         catch (Exception ex)
         {
@@ -343,7 +343,7 @@ public class EventSequence(
             var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
             if (concurrencyViolations.Any())
             {
-                return AppendManyResult.Failed(correlationId, concurrencyViolations) with { ConcurrencyCheckPerformed = concurrencyCheckPerformed };
+                return AppendManyResult.Failed(correlationId, concurrencyViolations).ReportingConcurrencyCheck(concurrencyCheckPerformed);
             }
 
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
@@ -354,7 +354,7 @@ public class EventSequence(
             });
 
             var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
-            return appendManyResult with { ConcurrencyCheckPerformed = concurrencyCheckPerformed };
+            return appendManyResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
         catch (Exception ex)
         {
