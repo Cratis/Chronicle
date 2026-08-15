@@ -16,12 +16,12 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.17.1" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.17.1" />
-    <PackageVersion Include="Cratis.Arc" Version="21.14.2" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="21.14.2" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="21.14.2" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="21.14.2" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="21.14.2" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="21.14.2" />
+    <PackageVersion Include="Cratis.Arc" Version="21.15.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="21.15.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="21.15.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="21.15.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="21.15.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="21.15.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="2.1.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
@@ -88,14 +88,14 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.2.2" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.16.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.152" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.156" />
     <!-- Testing & Specifications -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
-    <PackageVersion Include="Testcontainers" Version="4.13.0" />
+    <PackageVersion Include="Testcontainers" Version="4.14.0" />
     <!--
         Testcontainers 4.13.0 brings in SSH.NET 2025.1.0, which GHSA-q939-rpr3-3284 covers. 2026.0.0 is the
         patched release, so every project referencing Testcontainers also references SSH.NET directly to pull
@@ -103,7 +103,7 @@
     -->
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
