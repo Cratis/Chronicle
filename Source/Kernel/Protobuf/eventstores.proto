@@ -34,6 +34,7 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service EventStores {
-   rpc AllEventStores (.google.protobuf.Empty) returns (stream QueryResult_IEnumerable_String);
+   rpc AllEventStores (.google.protobuf.Empty) returns (QueryResult_IEnumerable_String);
    rpc EnsureEventStore (EnsureEventStoreRequest) returns (CommandResult);
+   rpc ObserveEventStores (.google.protobuf.Empty) returns (stream QueryResult_IEnumerable_String);
 }
