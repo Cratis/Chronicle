@@ -167,11 +167,15 @@ public interface IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
     /// <param name="readModelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>Builder continuation.</returns>
     /// <exception cref="ModelBound.CannotClearNonNullableMember">Thrown when the target property cannot hold null.</exception>
+    /// <exception cref="ClearNotSupported">Thrown when an alternate builder implementation does not support clearing a member.</exception>
     /// <remarks>
     /// Clearing is its own operation rather than a set of a special value: the member is written back to null every
     /// time the event is observed, replay included. The property has to be able to hold null - clearing one that
     /// cannot is refused here, because the only value that could be written is the type default, which is a
     /// different fact than "no value". Use <c>Set(...).ToValue(...)</c> when a type default is what you mean.
+    /// The default implementation throws, so adding this member does not break an implementation outside this
+    /// assembly: it keeps compiling, and only fails if it is actually asked to clear something.
     /// </remarks>
-    TBuilder Clear<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor);
+    TBuilder Clear<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
+        throw new ClearNotSupported(GetType());
 }
