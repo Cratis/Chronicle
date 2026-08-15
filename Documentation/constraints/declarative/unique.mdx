@@ -28,6 +28,10 @@ Call `.RemovedWith<T>()` to register the event type that releases the constraint
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/releasing" />
 
+A lifecycle often ends in more than one way — an invitation is over when it is accepted, revoked, or expires. Call `.RemovedWith<T>()` once for each of those events and every one of them releases the value on its own; declaring a second does not replace the first:
+
+<ChronicleClientTabs snippet="constraints/declarative/unique/releasing-several-events" />
+
 ## Ignoring casing
 
 Call `.IgnoreCasing()` to make the uniqueness check case-insensitive:

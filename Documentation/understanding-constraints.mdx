@@ -37,7 +37,7 @@ A few things make this practical:
 
 <ChronicleClientTabs snippet="understanding-constraints/event-type-attribute" />
 
-- **Values can be released.** When the thing that held the value goes away, mark that event with `[RemoveConstraint]` so the value can be claimed again:
+- **Values can be released.** When the thing that held the value goes away, mark that event with `[RemoveConstraint]` so the value can be claimed again. A lifecycle that ends in more than one way marks each of those events — every one of them releases the value:
 
 <ChronicleClientTabs snippet="understanding-constraints/remove-constraint" />
 
