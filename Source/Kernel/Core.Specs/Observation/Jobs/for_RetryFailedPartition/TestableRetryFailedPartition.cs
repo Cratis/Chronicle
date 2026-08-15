@@ -23,6 +23,14 @@ public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOp
     /// <inheritdoc/>
     public Type GrainType => typeof(IRetryFailedPartition);
 
+    /// <summary>
+    /// Prepares the steps the real job would run, so a spec can inspect what a recovery actually re-delivers.
+    /// </summary>
+    /// <param name="request">The <see cref="RetryFailedPartitionRequest"/> to prepare steps for.</param>
+    /// <returns>The <see cref="JobStepDetails"/> the real job prepares.</returns>
+    public Task<IImmutableList<JobStepDetails>> PrepareRecoverySteps(RetryFailedPartitionRequest request) =>
+        base.PrepareSteps(request);
+
     /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request) =>
         Task.FromResult<IImmutableList<JobStepDetails>>(ImmutableList<JobStepDetails>.Empty);
