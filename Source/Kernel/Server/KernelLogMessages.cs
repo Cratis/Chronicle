@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Security;
+
 namespace Cratis.Chronicle.Server;
 
 internal static partial class KernelLogMessages
@@ -25,6 +27,18 @@ internal static partial class KernelLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Cratis Chronicle Server configured successfully - starting services")]
     internal static partial void ServerConfigured(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Warning, "No encryption certificate is configured. Data Protection keys are stored without certificate protection, and value encryption has no certificate to use")]
+    internal static partial void EncryptionCertificateRingNotConfigured(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Information, "Encryption-certificate ring loaded with {CertificateCount} certificate(s), active key id {ActiveKeyId}")]
+    internal static partial void EncryptionCertificateRingLoaded(this ILogger<Kernel> logger, int certificateCount, string activeKeyId);
+
+    [LoggerMessage(LogLevel.Information, "Encryption certificate {KeyId} is {Role} - subject '{Subject}', valid until {NotAfter}, loaded from '{CertificatePath}'")]
+    internal static partial void EncryptionCertificateInRing(this ILogger<Kernel> logger, string keyId, EncryptionCertificateRole role, string subject, DateTimeOffset notAfter, string certificatePath);
+
+    [LoggerMessage(LogLevel.Warning, "Encryption certificate {KeyId} expired on {NotAfter}. It still decrypts what it protected, but it cannot be the active certificate")]
+    internal static partial void EncryptionCertificateInRingHasExpired(this ILogger<Kernel> logger, string keyId, DateTimeOffset notAfter);
 
     [LoggerMessage(LogLevel.Information, "Cratis Chronicle Server started successfully - ready and listening on port {Port} for gRPC (HTTP/2) and Workbench, API and OAuth (HTTP/1.1)")]
     internal static partial void ServerStarted(this ILogger<Kernel> logger, int port);

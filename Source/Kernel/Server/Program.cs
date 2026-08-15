@@ -275,6 +275,28 @@ var app = builder.Build();
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
 
+// State the certificate ring at every boot. A rotation is carried out by restarting nodes with a changed
+// ring, so this is the record of what each node actually loaded - the thing that has to match across the
+// cluster, and the thing a restore has to reproduce. (#3690)
+var encryptionCertificateRing = app.Services.GetRequiredService<Cratis.Chronicle.Security.IEncryptionCertificateRing>().GetStatus();
+if (encryptionCertificateRing.IsConfigured)
+{
+    logger.EncryptionCertificateRingLoaded(encryptionCertificateRing.Certificates.Count(), encryptionCertificateRing.ActiveKeyId);
+    foreach (var entry in encryptionCertificateRing.Certificates)
+    {
+        logger.EncryptionCertificateInRing(entry.KeyId, entry.Role, entry.Subject, entry.NotAfter, entry.CertificatePath);
+    }
+
+    foreach (var expired in encryptionCertificateRing.Certificates.Where(_ => _.HasExpired))
+    {
+        logger.EncryptionCertificateInRingHasExpired(expired.KeyId, expired.NotAfter);
+    }
+}
+else
+{
+    logger.EncryptionCertificateRingNotConfigured();
+}
+
 // Opt-in: when the dedicated health port is exclusive, nothing but the health endpoint is answered
 // on it. This is registered first so no later middleware or endpoint - Workbench static files, the
 // REST API, the OAuth flows, the fallback - ever observes such a request. The decision keys on
@@ -390,6 +412,13 @@ app.MapPost(
     async (IGrainFactory grainFactory, ILocalSiloDetails localSiloDetails) =>
         await grainFactory.GetConnectedClients(localSiloDetails.SiloAddress).ReserveConnection())
     .AllowAnonymous();
+
+// Where a certificate rotation stands: the ring this node loaded, and what the stored Data Protection keys
+// still depend on. Authenticated, like everything that is not explicitly anonymous - it names key ids and
+// certificate subjects, never key material. (#3690)
+app.MapGet(
+    "/diagnostics/encryption-certificates",
+    (IEncryptionCertificateRotationDiagnostics diagnostics) => diagnostics.GetReport());
 
 // Kernel state reset is exposed via the gRPC IServer.ResetKernelState operation, which
 // only honours the call in DEVELOPMENT builds. See Cratis.Chronicle.Services.Host.Server.
