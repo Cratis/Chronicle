@@ -10,6 +10,7 @@ import React from 'react';
 import App from "./App";
 import { configure as configureMobx } from 'mobx';
 import { Bindings } from '../Bindings';
+import { primeUiLicense } from './primeUiLicense';
 
 Bindings.initialize();
 
@@ -19,7 +20,7 @@ configureMobx({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <CratisComponentsProvider value={{ ripple: true, unstyled: true }}>
+        <CratisComponentsProvider value={{ ripple: true, unstyled: true, license: primeUiLicense }}>
             <App />
         </CratisComponentsProvider>
     </React.StrictMode>

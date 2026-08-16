@@ -307,3 +307,8 @@ certificates/
 .grpc-schema-gen*
 .playwright-mcp
 .claude/worktrees
+
+# Local environment configuration - holds the PrimeUI license key, never commit it.
+.env
+.env.local
+!.env.example
