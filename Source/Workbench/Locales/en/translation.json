@@ -6,7 +6,8 @@
             "yes": "Yes",
             "no": "No",
             "save": "Save"
-        }
+        },
+        "loading": "Loading…"
     },
     "layout": {
         "topBar": {
@@ -427,7 +428,8 @@
                     "newFolder": "New folder",
                     "rename": "Rename",
                     "save": "Save",
-                    "deleteFolder": "Delete folder"
+                    "deleteFolder": "Delete folder",
+                    "closeQuery": "Close query"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -649,7 +651,8 @@
                     "generation": "Generation",
                     "array": "Array",
                     "object": "Object",
-                    "null": "null"
+                    "null": "null",
+                    "rowsPerPage": "Rows per page"
                 },
                 "placeholders": {
                     "selectReadModel": "Select a Read Model",

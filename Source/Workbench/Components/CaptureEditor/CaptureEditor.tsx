@@ -6,7 +6,7 @@ import MonacoEditor, { Monaco, OnMount } from 'Components/MonacoEditor/MonacoEdi
 import type { editor, Uri } from 'monaco-editor';
 import { registerCaptureDefinitionLanguage, languageId, disposeCaptureDefinitionLanguage } from './index';
 import { registerDynamicCompletions } from './dynamicCompletions';
-import { Button } from 'primereact/button';
+import { Button } from 'Components/Button';
 import { CaptureHelpPanel } from './CaptureHelpPanel';
 import Strings from 'Strings';
 

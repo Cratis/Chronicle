@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
 import { AllUsers, User, RemoveUser, RequirePasswordChange } from 'Api/Security';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { AddUserDialog } from './Add/AddUserDialog';
@@ -78,24 +77,20 @@ export const Users = () => {
                 onSelectionChange={(e) => setSelectedUser(e.value as User)}>
                 <DataPage.MenuItems>
                     <MenuItem
-                        id="add"
                         label={strings.eventStore.system.users.actions.add}
                         icon={faIcons.FaPlus}
                         command={handleAddUser} />
                     <MenuItem
-                        id="changePassword"
                         label={strings.eventStore.system.users.actions.changePassword}
                         icon={faIcons.FaKey}
                         disableOnUnselected
                         command={handleChangePassword} />
                     <MenuItem
-                        id="requirePasswordChange"
                         label="Require Password Change"
                         icon={faIcons.FaTriangleExclamation}
                         disableOnUnselected
                         command={handleRequirePasswordChange} />
                     <MenuItem
-                        id="remove"
                         label={strings.eventStore.system.users.actions.remove}
                         icon={faIcons.FaTrash}
                         disableOnUnselected

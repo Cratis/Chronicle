@@ -4,7 +4,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { ProgressSpinner } from 'primereact/progressspinner';
+import { ProgressSpinner } from 'Components/ProgressSpinner';
 
 interface ProtectedRouteProps {
     children: ReactNode;

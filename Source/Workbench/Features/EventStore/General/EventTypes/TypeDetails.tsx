@@ -10,8 +10,8 @@ import { AllTypeFormats } from 'Api/TypeFormats';
 import { EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { Register } from 'Api/Events';
 import { AllEventTypeGenerations } from 'Api/EventTypes/AllEventTypeGenerations';
-import { Dropdown } from 'primereact/dropdown';
-import { TabView, TabPanel } from 'primereact/tabview';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { Tabs, TabPanel } from 'Components/Tabs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ObserversForEventType } from './ObserversForEventType';
@@ -91,32 +91,34 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
                     <Dropdown
                         value={selectedGeneration}
                         options={generationOptions}
+                        optionLabel='label'
+                        optionValue='value'
                         onChange={(event) => handleGenerationChange(event.value)}
                         style={{ minWidth: '160px' }}
                     />
                 </div>
             )}
-            <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
-                panelContainerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 0 }}>
-                <TabPanel header={strings.eventStore.general.eventTypes.tabs.schema}
-                    contentStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                    <SchemaEditor
-                        schema={schema}
-                        eventTypeName={currentRegistration.type.id}
-                        canEdit={canEdit}
-                        canNotEditReason={canEditReason}
-                        onChange={handleSchemaChange}
-                        onSave={handleSave}
-                        typeFormats={typeFormatsQuery.data}
-                    />
+            <Tabs className='flex flex-col flex-1 min-h-0'
+                panelContainerClassName='flex flex-col flex-1 min-h-0 p-0'>
+                <TabPanel header={strings.eventStore.general.eventTypes.tabs.schema}>
+                    <div className='flex flex-col flex-1 min-h-0'>
+                        <SchemaEditor
+                            schema={schema}
+                            eventTypeName={currentRegistration.type.id}
+                            canEdit={canEdit}
+                            canNotEditReason={canEditReason}
+                            onChange={handleSchemaChange}
+                            onSave={handleSave}
+                            typeFormats={typeFormatsQuery.data}
+                        />
+                    </div>
                 </TabPanel>
-                <TabPanel header={strings.eventStore.general.eventTypes.tabs.observers}
-                    contentStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 0 }}>
-                    <div style={{ flex: 1, minHeight: 0, padding: '0 16px 16px 16px' }}>
+                <TabPanel header={strings.eventStore.general.eventTypes.tabs.observers}>
+                    <div className='flex flex-col flex-1 min-h-0' style={{ padding: '0 16px 16px 16px' }}>
                         <ObserversForEventType eventTypeId={currentRegistration.type.id} />
                     </div>
                 </TabPanel>
-            </TabView>
+            </Tabs>
         </div>
     );
 };

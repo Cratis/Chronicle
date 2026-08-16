@@ -1,22 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
-import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
-import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
-import { FilterMatchMode } from 'primereact/api';
-import { Dropdown } from 'primereact/dropdown';
-import { Menubar } from 'primereact/menubar';
+import { Column } from '@cratis/components/DataTables';
+import { DataTable } from 'Components/DataTable';
+import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import { IconField } from 'primereact/iconfield';
-import { InputIcon } from 'primereact/inputicon';
 import { InputText } from 'primereact/inputtext';
-import { ObserverType } from 'Api/Observation/ObserverType';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
-import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
 import strings from 'Strings';
-import { AllObservers, AllObserversParameters, ObserverOwner } from 'Api/Observation';
+import { AllObservers, AllObserversParameters } from 'Api/Observation';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Page } from 'Components/Common/Page';
@@ -29,14 +24,6 @@ import { ObserverDetails } from './ObserverDetails';
 import { ObserverSequenceType } from './ObserverSequenceType';
 
 const legacyEventLogSequenceId = '00000000-0000-0000-0000-000000000000';
-
-const observerSequenceTypeOrder = [
-    ObserverSequenceType.eventLog,
-    ObserverSequenceType.system,
-    ObserverSequenceType.outbox,
-    ObserverSequenceType.inbox,
-    ObserverSequenceType.custom,
-];
 
 const getObserverSequenceType = (eventSequenceId: string) => {
     switch (eventSequenceId) {
@@ -59,21 +46,6 @@ const getObserverSequenceType = (eventSequenceId: string) => {
     return ObserverSequenceType.custom;
 };
 
-const getObserverSequenceTypeLabel = (sequenceType: ObserverSequenceType) => {
-    switch (sequenceType) {
-        case ObserverSequenceType.eventLog:
-            return strings.eventStore.namespaces.observers.sequenceTypes.eventLog;
-        case ObserverSequenceType.system:
-            return strings.eventStore.namespaces.observers.sequenceTypes.system;
-        case ObserverSequenceType.outbox:
-            return strings.eventStore.namespaces.observers.sequenceTypes.outbox;
-        case ObserverSequenceType.inbox:
-            return strings.eventStore.namespaces.observers.sequenceTypes.inbox;
-        case ObserverSequenceType.custom:
-            return strings.eventStore.namespaces.observers.sequenceTypes.custom;
-    }
-};
-
 const observerType = (observer: ObserverInformation) => getObserverTypeAsText(observer.type);
 
 const observerOwner = (observer: ObserverInformation) => getObserverOwnerAsText(observer.owner);
@@ -82,69 +54,9 @@ const runningState = (observer: ObserverInformation) => {
     return getObserverRunningStateAsText(observer.runningState);
 };
 
-const observerTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-    <Dropdown
-        value={options.value}
-        options={[
-            { label: strings.eventStore.namespaces.observers.types.unknown, value: ObserverType.unknown },
-            { label: strings.eventStore.namespaces.observers.types.reactor, value: ObserverType.reactor },
-            { label: strings.eventStore.namespaces.observers.types.projection, value: ObserverType.projection },
-            { label: strings.eventStore.namespaces.observers.types.reducer, value: ObserverType.reducer },
-            { label: strings.eventStore.namespaces.observers.types.external, value: ObserverType.external },
-        ]}
-        onChange={(e) => options.filterCallback(e.value)}
-        optionLabel='label'
-        placeholder='All'
-        showClear
-        className='p-column-filter'
-    />
-);
-
-const observerOwnerFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-    <Dropdown
-        value={options.value}
-        options={[
-            { label: strings.eventStore.namespaces.observers.owners.none, value: ObserverOwner.none },
-            { label: strings.eventStore.namespaces.observers.owners.client, value: ObserverOwner.client },
-            { label: strings.eventStore.namespaces.observers.owners.kernel, value: ObserverOwner.kernel },
-        ]}
-        onChange={(e) => options.filterCallback(e.value)}
-        optionLabel='label'
-        placeholder='All'
-        showClear
-        className='p-column-filter'
-    />
-);
-
-const runningStateFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-    <Dropdown
-        value={options.value}
-        options={[
-            { label: strings.eventStore.namespaces.observers.states.unknown, value: ObserverRunningState.unknown },
-            { label: strings.eventStore.namespaces.observers.states.active, value: ObserverRunningState.active },
-            { label: strings.eventStore.namespaces.observers.states.suspended, value: ObserverRunningState.suspended },
-            { label: strings.eventStore.namespaces.observers.states.replaying, value: ObserverRunningState.replaying },
-            { label: strings.eventStore.namespaces.observers.states.disconnected, value: ObserverRunningState.disconnected },
-            { label: strings.eventStore.namespaces.observers.states.quarantined, value: ObserverRunningState.quarantined },
-        ]}
-        onChange={(e) => options.filterCallback(e.value)}
-        optionLabel='label'
-        placeholder='All'
-        showClear
-        className='p-column-filter'
-    />
-);
-
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [searchText, setSearchText] = useState('');
-    const [filters, setFilters] = useState<DataTableFilterMeta>({
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        type: { value: null, matchMode: FilterMatchMode.EQUALS },
-        owner: { value: null, matchMode: FilterMatchMode.EQUALS },
-        runningState: { value: null, matchMode: FilterMatchMode.EQUALS },
-        sequenceType: { value: null, matchMode: FilterMatchMode.EQUALS },
-    });
 
     const queryArgs: AllObserversParameters = {
         eventStore: params.eventStore!,
@@ -153,27 +65,18 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
 
     const [observers] = AllObservers.when(!!viewModel.currentNamespace).use(queryArgs);
 
-    const observerRows = (observers.data ?? []).map(observer => ({
-        ...observer,
-        sequenceType: getObserverSequenceType(observer.eventSequenceId),
-    }));
+    const searchTerm = searchText.trim().toLowerCase();
 
-    const observerSequenceTypeOptions = observerSequenceTypeOrder
-        .filter(sequenceType => observerRows.some(observer => observer.sequenceType === sequenceType))
-        .map(sequenceType => ({
-            label: getObserverSequenceTypeLabel(sequenceType),
-            value: sequenceType,
-        }));
+    const observerRows = (observers.data ?? [])
+        .map(observer => ({
+            ...observer,
+            sequenceType: getObserverSequenceType(observer.eventSequenceId),
+        }))
+        .filter(observer => searchTerm === ''
+            || observer.id.toLowerCase().includes(searchTerm)
+            || observer.eventSequenceId.toLowerCase().includes(searchTerm));
 
-    const handleSearch = (value: string) => {
-        setSearchText(value);
-        setFilters(prev => ({
-            ...prev,
-            global: { value: value || null, matchMode: FilterMatchMode.CONTAINS }
-        }));
-    };
-
-    const menuItems = [
+    const menuItems: ActionMenuItem[] = [
         {
             label: strings.eventStore.namespaces.observers.actions.replay,
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
@@ -189,46 +92,33 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     ];
 
     const searchInput = (
-        <IconField iconPosition='left'>
-            <InputIcon className='pi pi-search' />
+        <IconField.Root>
+            <IconField.Inset>
+                <i className='pi pi-search' />
+            </IconField.Inset>
             <InputText
                 value={searchText}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => setSearchText(event.target.value)}
                 placeholder={strings.eventStore.namespaces.observers.search}
             />
-        </IconField>
-    );
-
-    const observerSequenceTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-        <Dropdown
-            value={options.value}
-            options={observerSequenceTypeOptions}
-            onChange={(e) => options.filterCallback(e.value)}
-            optionLabel='label'
-            placeholder='All'
-            showClear
-            className='p-column-filter'
-        />
+        </IconField.Root>
     );
 
     return (
         <Page title={strings.eventStore.namespaces.observers.title}>
-            <div className='px-4 py-2'>
-                <Menubar model={menuItems} end={searchInput} />
+            <div className='px-4 py-2 flex items-center justify-between gap-2'>
+                <ActionMenubar model={menuItems} />
+                {searchInput}
             </div>
             <div className='flex-1 overflow-hidden px-4 pb-4'>
                 <Allotment className='h-full' proportionalLayout={false}>
                     <Allotment.Pane className='flex-grow'>
-                        <DataTable
+                        <DataTable<ObserverInformation>
                             value={observerRows}
                             selectionMode='single'
                             selection={viewModel.selectedObserver}
-                            onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
+                            onSelectionChange={(event) => (viewModel.selectedObserver = event.value ?? undefined)}
                             dataKey='id'
-                            filters={filters}
-                            filterDisplay='menu'
-                            onFilter={(e) => setFilters(e.filters)}
-                            globalFilterFields={['id', 'eventSequenceId']}
                             emptyMessage={strings.eventStore.namespaces.observers.empty}
                             scrollable
                             scrollHeight='flex'
@@ -240,28 +130,24 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 sortable
                                 showFilterMatchModes={false}
                                 filter
-                                filterMenuStyle={{ width: '14rem' }}
-                                filterField='sequenceType'
-                                filterElement={observerSequenceTypeFilterTemplate} />
+                                filterField='sequenceType' />
                             <Column
                                 field='type'
                                 header={strings.eventStore.namespaces.observers.columns.observerType}
                                 sortable
+                                dataType='numeric'
                                 showFilterMatchModes={false}
                                 filter
-                                filterMenuStyle={{ width: '14rem' }}
                                 filterField='type'
-                                filterElement={observerTypeFilterTemplate}
                                 body={observerType} />
                             <Column
                                 field='owner'
                                 header={strings.eventStore.namespaces.observers.columns.owner}
                                 sortable
+                                dataType='numeric'
                                 showFilterMatchModes={false}
                                 filter
-                                filterMenuStyle={{ width: '14rem' }}
                                 filterField='owner'
-                                filterElement={observerOwnerFilterTemplate}
                                 body={observerOwner} />
                             <Column
                                 field='nextEventSequenceNumber'
@@ -280,9 +166,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 sortable
                                 showFilterMatchModes={false}
                                 filter
-                                filterMenuStyle={{ width: '14rem' }}
                                 filterField='runningState'
-                                filterElement={runningStateFilterTemplate}
                                 body={runningState} />
                         </DataTable>
                     </Allotment.Pane>

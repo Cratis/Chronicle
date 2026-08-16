@@ -21,9 +21,12 @@
         "@cratis/arc.react": "^20.66.1",
         "@cratis/arc.react.mvvm": "^20.66.1",
         "@cratis/arc.vite": "^20.66.1",
-        "@cratis/components": "^2.5.1",
+        "@cratis/components": "^3.0.0",
         "@cratis/screenplay-language": "^1.6.4",
         "@monaco-editor/react": "^4.7.0",
+        "@primereact/core": "^11.0.0",
+        "@primereact/headless": "^11.0.0",
+        "@primereact/types": "^11.0.0",
         "allotment": "^1.20.5",
         "chart.js": "^4.5.1",
         "echarts": "^6.1.0",
@@ -91,8 +94,7 @@
     },
     "resolutions": {
         "@cratis/arc.react": "^20.66.1",
-        "@cratis/arc": "^20.66.1",
-        "primereact": "10.9.8"
+        "@cratis/arc": "^20.66.1"
     },
     "packageManager": "yarn@4.17.1"
 }

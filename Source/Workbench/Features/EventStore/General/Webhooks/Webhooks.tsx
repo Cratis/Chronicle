@@ -1,14 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
 import strings from 'Strings';
 import { GetWebhooks, RemoveWebHook, type WebhookDefinition } from 'Api/Webhooks';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AddWebhookDialog } from './Add/AddWebhookDialog';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { useState } from 'react';
@@ -68,12 +67,10 @@ export const Webhooks = () => {
 
                 <DataPage.MenuItems>
                     <MenuItem
-                        id='create'
                         label={strings.eventStore.general.webhooks.actions.add}
                         icon={faIcons.FaPlus}
                         command={handleAddWebhook} />
                     <MenuItem
-                        id='remove'
                         label={strings.eventStore.general.webhooks.actions.remove}
                         icon={faIcons.FaTrash}
                         disableOnUnselected
@@ -92,7 +89,7 @@ export const Webhooks = () => {
                         field='authorizationType'
                         style={{ width: '150px' }}
                         header={strings.eventStore.general.webhooks.columns.authorization}
-                        body={(webhook) => getAuthorizationTypeString(webhook.authorizationType)} />
+                        body={(webhook: WebhookDefinition) => getAuthorizationTypeString(webhook.authorizationType)} />
                     <Column
                         field='isActive'
                         style={{ width: '80px' }}

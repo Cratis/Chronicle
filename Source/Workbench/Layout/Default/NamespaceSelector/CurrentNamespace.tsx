@@ -4,7 +4,7 @@
 import css from "./NamespaceSelector.module.css";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { HTMLAttributes, useEffect, useRef, useState } from "react";
-import { Tooltip } from "primereact/tooltip";
+import { Tooltip } from "@cratis/components/Common";
 
 export interface ICurrentNamespaceProps extends HTMLAttributes<HTMLDivElement> {
     namespace: string;
@@ -32,20 +32,22 @@ export const CurrentNamespace = ({ namespace: namespace, compact, ...rest }: ICu
         return initials;
     };
     if (compact) {
-        return <>
-            <Tooltip target={`.${css.smallNamespaceWrapper}`}/>
+        return (
             <div className={css.smallCurrentNamespace} {...rest} >
-                <div className={css.smallNamespaceWrapper} data-pr-tooltip={namespace}>
-                    <span className={css.namespaceName}>{getInitials(namespace)}</span>
-                </div>
+                <Tooltip content={namespace}>
+                    <div className={css.smallNamespaceWrapper}>
+                        <span className={css.namespaceName}>{getInitials(namespace)}</span>
+                    </div>
+                </Tooltip>
             </div>
-        </>;
+        );
     }
-    return <>
-        {isEllipsisActive && <Tooltip target={`.${css.currentNamespace}`}/>}
-        <div className={`${css.currentNamespace}`} {...rest} data-pr-tooltip={namespace}>
-            <span className={css.namespaceName} ref={namespaceNameRef}>{namespace}</span>
-            <span><MdKeyboardArrowDown size={25}/></span>
-        </div>
-    </>;
+    return (
+        <Tooltip content={namespace} disabled={!isEllipsisActive}>
+            <div className={`${css.currentNamespace}`} {...rest}>
+                <span className={css.namespaceName} ref={namespaceNameRef}>{namespace}</span>
+                <span><MdKeyboardArrowDown size={25}/></span>
+            </div>
+        </Tooltip>
+    );
 };

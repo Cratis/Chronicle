@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Card } from 'primereact/card';
-import { Chart } from 'primereact/chart';
-import { SelectButton } from 'primereact/selectbutton';
-import { Tag } from 'primereact/tag';
+import { Tag } from '@cratis/components/Display';
+import { Card } from 'Components/Card';
+import { Chart } from 'Components/Chart';
+import { ToggleButton } from 'primereact/togglebutton';
+import { ToggleButtonGroup, type ToggleButtonGroupValueChangeEvent } from 'primereact/togglebuttongroup';
 import { useState } from 'react';
 
 interface TimelineEvent {
@@ -114,25 +115,19 @@ export const TimelineWidget = ({ className }: { className?: string }) => {
     };
 
     return (
-        <Card
-            className={`shadow-lg h-full ${className ?? ''}`}
-            pt={{
-                root: { className: 'border border-gray-700/60' },
-                body: { className: 'p-4 h-full flex flex-col' },
-                content: { className: 'p-0 flex-1 min-h-0 flex flex-col' }
-            }}>
+        <Card className={`shadow-lg h-full border border-gray-700/60 ${className ?? ''}`}>
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-white">Timeline</h3>
-                <SelectButton
+                <ToggleButtonGroup
                     value={view}
-                    onChange={e => setView(e.value)}
-                    options={viewOptions}
-                    className="text-xs"
-                    pt={{
-                        root: { className: 'border-gray-700' },
-                        button: { className: 'text-xs px-2 py-1' }
-                    }}
-                />
+                    onValueChange={(event: ToggleButtonGroupValueChangeEvent) => setView(event.value as string)}
+                    className="text-xs border-gray-700">
+                    {viewOptions.map(option => (
+                        <ToggleButton.Root key={option.value} value={option.value} className="text-xs px-2 py-1">
+                            {option.label}
+                        </ToggleButton.Root>
+                    ))}
+                </ToggleButtonGroup>
             </div>
 
             <div className="flex-1 min-h-0" style={{ height: '160px' }}>

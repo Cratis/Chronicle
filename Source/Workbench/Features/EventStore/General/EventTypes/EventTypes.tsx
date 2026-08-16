@@ -1,29 +1,21 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
+import { Column } from '@cratis/components/DataTables';
 import strings from 'Strings';
 import { AllEventTypesParameters, AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { FilterMatchMode } from 'primereact/api';
-import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
+import { DataTable } from 'Components/DataTable';
 import { Page } from 'Components/Common/Page';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
 import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { useState, useCallback, useMemo } from 'react';
-import { Dropdown } from 'primereact/dropdown';
 import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 import { AddEventTypeDialog } from './AddEventTypeDialog';
-import { Menubar } from 'primereact/menubar';
+import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import { Allotment } from 'allotment';
-
-const defaultFilters: DataTableFilterMeta = {
-    tombstone: { value: null, matchMode: FilterMatchMode.IN },
-    owner: { value: null, matchMode: FilterMatchMode.EQUALS },
-    source: { value: null, matchMode: FilterMatchMode.EQUALS }
-};
 
 const renderTombstone = () => {
     return 'no';
@@ -49,47 +41,12 @@ const renderOwner = (eventType: EventTypeRegistration) => {
     return strings.eventStore.general.eventTypes.owners.unknown;
 };
 
-const ownerFilterOptions = [
-    { label: strings.eventStore.general.eventTypes.owners.client, value: EventTypeOwner.client },
-    { label: strings.eventStore.general.eventTypes.owners.server, value: EventTypeOwner.server }
-];
-
-const sourceFilterOptions = [
-    { label: strings.eventStore.general.eventTypes.sources.code, value: EventTypeSource.code },
-    { label: strings.eventStore.general.eventTypes.sources.user, value: EventTypeSource.user }
-];
-
-const ownerFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-    <Dropdown
-        value={options.value}
-        options={ownerFilterOptions}
-        onChange={(e) => options.filterCallback(e.value)}
-        optionLabel='label'
-        placeholder='All'
-        showClear
-        className='p-column-filter'
-    />
-);
-
-const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-    <Dropdown
-        value={options.value}
-        options={sourceFilterOptions}
-        onChange={(e) => options.filterCallback(e.value)}
-        optionLabel='label'
-        placeholder='All'
-        showClear
-        className='p-column-filter'
-    />
-);
-
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventTypeDialogWrapper, showAddEventTypeDialog] = useDialog(AddEventTypeDialog);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedItem, setSelectedItem] = useState<EventTypeRegistration | undefined>(undefined);
-    const [filters, setFilters] = useState<DataTableFilterMeta>(defaultFilters);
 
     const queryArgs: AllEventTypesParameters = {
         eventStore: params.eventStore!
@@ -106,7 +63,7 @@ export const EventTypes = () => {
         }
     }, [showAddEventTypeDialog]);
 
-    const menuItems = useMemo(() => [
+    const menuItems = useMemo<ActionMenuItem[]>(() => [
         {
             label: strings.eventStore.general.eventTypes.actions.create,
             icon: <faIcons.FaPlus className='mr-2' />,
@@ -140,7 +97,7 @@ export const EventTypes = () => {
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane className="flex-grow">
                     <div className="px-4 py-2">
-                        <Menubar
+                        <ActionMenubar
                             aria-label="Actions"
                             model={menuItems}
                         />
@@ -154,12 +111,8 @@ export const EventTypes = () => {
                             scrollHeight='flex'
                             selectionMode='single'
                             selection={selectedItem}
-                            onSelectionChange={(e) => setSelectedItem(e.value as EventTypeRegistration)}
+                            onSelectionChange={(event) => setSelectedItem(event.value ?? undefined)}
                             dataKey='type.id'
-                            filters={filters}
-                            filterDisplay='menu'
-                            onFilter={(e) => setFilters(e.filters)}
-                            globalFilterFields={['tombstone']}
                             emptyMessage={strings.eventStore.general.eventTypes.empty}>
 
                             <Column field='type.id' header={strings.eventStore.general.eventTypes.columns.name} sortable />
@@ -169,9 +122,7 @@ export const EventTypes = () => {
                                 header={strings.eventStore.general.eventTypes.columns.owner}
                                 showFilterMatchModes={false}
                                 filter
-                                filterMenuStyle={{ width: '14rem' }}
                                 filterField='owner'
-                                filterElement={ownerFilterTemplate}
                                 body={renderOwner}
                                 sortable />
                             <Column
@@ -180,9 +131,7 @@ export const EventTypes = () => {
                                 header={strings.eventStore.general.eventTypes.columns.source}
                                 showFilterMatchModes={false}
                                 filter
-                                filterMenuStyle={{ width: '14rem' }}
                                 filterField='source'
-                                filterElement={sourceFilterTemplate}
                                 body={renderSource}
                                 sortable />
                             <Column

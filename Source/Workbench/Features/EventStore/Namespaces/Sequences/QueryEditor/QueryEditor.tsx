@@ -4,8 +4,7 @@
 import { useState } from 'react';
 import { Allotment } from 'allotment';
 import { Dropdown } from '@cratis/components/Dropdown';
-import { Menubar } from 'primereact/menubar';
-import { MenuItem } from 'primereact/menuitem';
+import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
@@ -78,42 +77,36 @@ export const QueryEditor = ({
     const { AppendEventWrapper, RedactEventWrapper, ReviseWrapper, append, redact, revise } =
         useEventActions(eventStore, state.namespace, state.eventSequenceId, selectedEvent, run);
 
-    const menuItems: MenuItem[] = [
+    const menuItems: ActionMenuItem[] = [
         {
-            id: 'save',
             label: sequenceStrings.actions.save,
             icon: <faIcons.FaFloppyDisk className='mr-2' />,
             disabled: !hasUnsavedChanges,
             command: onSave
         },
         {
-            id: 'run',
             label: sequenceStrings.actions.run,
             icon: <faIcons.FaPlay className='mr-2' />,
             command: run
         },
         {
-            id: 'appendEvent',
             label: sequenceStrings.actions.appendEvent,
             icon: <faIcons.FaPlus className='mr-2' />,
             command: append
         },
         {
-            id: 'redactEvent',
             label: sequenceStrings.actions.redact,
             icon: <faIcons.FaEraser className='mr-2' />,
             disabled: !selectedEvent,
             command: redact
         },
         {
-            id: 'reviseEvent',
             label: sequenceStrings.actions.revise,
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
             disabled: !selectedEvent,
             command: revise
         },
         {
-            id: 'exportEvents',
             label: sequenceStrings.actions.export,
             icon: <faIcons.FaFileExport className='mr-2' />,
             command: () => exportQueryToFile(runArguments, eventStore, state.namespace)
@@ -124,6 +117,8 @@ export const QueryEditor = ({
     // saved query never silently re-points itself at another sequence.
     const sequenceOptions = [...new Set([state.eventSequenceId, ...eventSequenceIds])];
 
+    // The menubar has no end slot of its own, so what used to be handed to it sits beside it in the
+    // toolbar row instead.
     const toolbarEnd = (
         <div className='query-editor__toolbar-end'>
             <Dropdown
@@ -131,7 +126,6 @@ export const QueryEditor = ({
                 value={state.eventSequenceId}
                 options={sequenceOptions}
                 aria-label={sequenceStrings.eventSequence}
-                tooltip={sequenceStrings.eventSequence}
                 onChange={event => applyAndRun({ ...state, eventSequenceId: event.value as string })} />
 
             <QueryFilterBar
@@ -145,8 +139,9 @@ export const QueryEditor = ({
 
     return (
         <div className='query-editor'>
-            <div className='query-editor__toolbar'>
-                <Menubar aria-label={sequenceStrings.title} model={menuItems} end={toolbarEnd} />
+            <div className='query-editor__toolbar flex items-center justify-between gap-3'>
+                <ActionMenubar aria-label={sequenceStrings.title} model={menuItems} />
+                {toolbarEnd}
             </div>
 
             <div className='query-editor__results'>

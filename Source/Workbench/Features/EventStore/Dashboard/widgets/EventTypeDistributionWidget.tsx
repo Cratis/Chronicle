@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Card } from 'primereact/card';
-import { Chart } from 'primereact/chart';
-import { Dropdown } from 'primereact/dropdown';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { Card } from 'Components/Card';
+import { Chart } from 'Components/Chart';
 import { useState } from 'react';
 
 interface EventTypeShare {
@@ -46,13 +46,7 @@ export const EventTypeDistributionWidget = ({ className }: { className?: string 
     };
 
     return (
-        <Card
-            className={`shadow-lg h-full ${className ?? ''}`}
-            pt={{
-                root: { className: 'border border-gray-700/60' },
-                body: { className: 'p-4' },
-                content: { className: 'p-0' }
-            }}>
+        <Card className={`shadow-lg h-full border border-gray-700/60 ${className ?? ''}`}>
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h3 className="text-sm font-semibold text-white">Event Type Distribution</h3>
@@ -61,8 +55,7 @@ export const EventTypeDistributionWidget = ({ className }: { className?: string 
                 <Dropdown
                     value={timeRange}
                     options={['Last 24 hours', 'Last 7 days', 'Last 30 days']}
-                    className="text-xs"
-                    pt={{ root: { className: 'border-gray-700 text-xs' } }}
+                    className="text-xs border-gray-700"
                 />
             </div>
 

@@ -6,9 +6,9 @@ import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
 import { EventType } from 'Api/Events';
 import { AuthorizationType } from 'Api/Security';
-import { MultiSelect } from 'primereact/multiselect';
-import { Message } from 'primereact/message';
-import { Button } from 'primereact/button';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { Message } from 'Components/Message';
+import { Button } from 'Components/Button';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
@@ -143,15 +143,14 @@ export const AddWebhookDialog = () => {
                 />
                 <div className="field mb-3">
                     <label htmlFor="eventTypes">{strings.eventStore.general.webhooks.dialogs.addWebhook.eventTypes}</label>
-                    <MultiSelect
+                    <Dropdown
                         id="eventTypes"
+                        multiple
                         value={selectedEventTypes}
                         options={allEventTypes.data}
-                        onChange={(e) => setSelectedEventTypes(e.value)}
+                        onChange={(event) => setSelectedEventTypes(event.value)}
                         optionLabel="id"
-                        dataKey="id"
                         placeholder="Select event types"
-                        display="chip"
                     />
                 </div>
                 <DropdownField<AddWebHook>

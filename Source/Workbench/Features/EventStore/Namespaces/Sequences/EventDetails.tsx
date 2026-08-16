@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useMemo } from 'react';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Dropdown } from 'primereact/dropdown';
+import { Tabs, TabPanel } from 'Components/Tabs';
+import { Dropdown } from '@cratis/components/Dropdown';
 import { AppendedEvent } from 'Api/Events';
 import { EventRevision } from 'Api/Events/EventRevision';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
@@ -229,9 +229,11 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                             <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
                                 {strings.eventStore.namespaces.sequences.details.revision}:
                             </label>
-                            <Dropdown
+                            <Dropdown<number>
                                 value={effectiveRevision}
                                 options={revisionOptions}
+                                optionLabel='label'
+                                optionValue='value'
                                 onChange={(e) => setSelectedRevision(e.value)}
                                 placeholder={revisionPlaceholder}
                                 style={{ minWidth: '200px' }}
@@ -243,9 +245,11 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                             <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
                                 {strings.eventStore.namespaces.sequences.details.generation}:
                             </label>
-                            <Dropdown
+                            <Dropdown<number>
                                 value={selectedGeneration ?? item.context.eventType.generation}
                                 options={generationOptions}
+                                optionLabel='label'
+                                optionValue='value'
                                 onChange={(e) => setSelectedGeneration(e.value)}
                                 placeholder={generationPlaceholder}
                                 style={{ minWidth: '200px' }}
@@ -254,7 +258,9 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                     )}
                 </div>
             )}
-            <TabView>
+            <Tabs
+                className='flex flex-col flex-1 min-h-0'
+                panelContainerClassName='flex-1 min-h-0 overflow-y-auto'>
                 <TabPanel header="Context">
                     <ObjectContentEditor
                         object={contextObject as Json}
@@ -267,7 +273,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                         schema={formattedSchema}
                     />
                 </TabPanel>
-            </TabView>
+            </Tabs>
         </div>
     );
 };

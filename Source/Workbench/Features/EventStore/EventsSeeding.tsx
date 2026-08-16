@@ -6,9 +6,9 @@ import { NamespaceSeedData } from 'Api/Seeding/NamespaceSeedData';
 import { SeedEntry } from 'Api/Seeding/SeedEntry';
 import { Page } from 'Components/Common/Page';
 import { Allotment } from 'allotment';
-import { Column } from 'primereact/column';
-import { DataTable, DataTableExpandedRows, DataTableSelectionSingleChangeEvent, DataTableValueArray } from 'primereact/datatable';
-import { TabView, TabPanel } from 'primereact/tabview';
+import { Column, type DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
+import { DataTable } from 'Components/DataTable';
+import { Tabs, TabPanel } from 'Components/Tabs';
 import { useMemo, useState } from 'react';
 import { SeedEntryDetails } from './Seeding/SeedEntryDetails';
 
@@ -24,8 +24,6 @@ interface FlatSeedEntry extends SeedEntry {
 export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentProps) => {
     const title = namespace ? `Seed Data - ${namespace}` : 'Global Seed Data';
     const [selectedItem, setSelectedItem] = useState<FlatSeedEntry | undefined>(undefined);
-    const [expandedRowsBySource, setExpandedRowsBySource] = useState<DataTableValueArray | DataTableExpandedRows | undefined>(undefined);
-    const [expandedRowsByType, setExpandedRowsByType] = useState<DataTableValueArray | DataTableExpandedRows | undefined>(undefined);
 
     const [result] = namespace
         ? NamespaceSeedData.use({ eventStore, namespace })
@@ -51,8 +49,8 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
         );
     }, [result.data]);
 
-    const onSelectionChange = (e: DataTableSelectionSingleChangeEvent<FlatSeedEntry[]>) => {
-        setSelectedItem(e.value);
+    const onSelectionChange = (e: DataTableSelectionChangeEvent<FlatSeedEntry>) => {
+        setSelectedItem(e.value ?? undefined);
     };
 
     const contentPreview = (rowData: SeedEntry) => {
@@ -76,7 +74,7 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
                 <Allotment className="h-full" proportionalLayout={false}>
                     <Allotment.Pane className="flex-grow">
                         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            <TabView style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+                            <Tabs style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
                                 panelContainerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 0 }}>
                                 <TabPanel header="Per Event Source" contentStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 0 }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '1rem', overflow: 'hidden' }}>
@@ -92,15 +90,8 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
                                             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                                                 <DataTable
                                                     value={byEventSource}
-                                                    rowGroupMode="subheader"
-                                                    groupRowsBy="eventSourceId"
-                                                    sortMode="single"
-                                                    sortField="eventSourceId"
-                                                    sortOrder={1}
-                                                    expandableRowGroups
-                                                    expandedRows={expandedRowsBySource}
-                                                    onRowToggle={(e) => setExpandedRowsBySource(e.data)}
-                                                    rowGroupHeaderTemplate={rowGroupHeaderTemplateBySource}
+                                                    groupField="eventSourceId"
+                                                    groupHeaderTemplate={rowGroupHeaderTemplateBySource}
                                                     selectionMode="single"
                                                     selection={selectedItem}
                                                     onSelectionChange={onSelectionChange}
@@ -129,15 +120,8 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
                                             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                                                 <DataTable
                                                     value={byEventType}
-                                                    rowGroupMode="subheader"
-                                                    groupRowsBy="eventTypeId"
-                                                    sortMode="single"
-                                                    sortField="eventTypeId"
-                                                    sortOrder={1}
-                                                    expandableRowGroups
-                                                    expandedRows={expandedRowsByType}
-                                                    onRowToggle={(e) => setExpandedRowsByType(e.data)}
-                                                    rowGroupHeaderTemplate={rowGroupHeaderTemplateByType}
+                                                    groupField="eventTypeId"
+                                                    groupHeaderTemplate={rowGroupHeaderTemplateByType}
                                                     selectionMode="single"
                                                     selection={selectedItem}
                                                     onSelectionChange={onSelectionChange}
@@ -153,7 +137,7 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
                                         </div>
                                     </div>
                                 </TabPanel>
-                            </TabView>
+                            </Tabs>
                         </div>
                     </Allotment.Pane>
                     {selectedItem && (

@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
 import { AllApplications, Application, RemoveApplication } from 'Api/Security';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { AddApplicationDialog } from './Add/AddApplicationDialog';
@@ -62,18 +61,15 @@ export const Applications = () => {
                 onSelectionChange={(e) => setSelectedApplication(e.value as Application)}>
                 <DataPage.MenuItems>
                     <MenuItem
-                        id="add"
                         label={strings.eventStore.system.applications.actions.add}
                         icon={faIcons.FaPlus}
                         command={handleAddApplication} />
                     <MenuItem
-                        id="changeSecret"
                         label={strings.eventStore.system.applications.actions.changeSecret}
                         icon={faIcons.FaKey}
                         disableOnUnselected
                         command={handleChangeSecret} />
                     <MenuItem
-                        id="remove"
                         label={strings.eventStore.system.applications.actions.remove}
                         icon={faIcons.FaTrash}
                         disableOnUnselected

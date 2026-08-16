@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ChangeApplicationSecret } from 'Api/Security';
-import { Button } from 'primereact/button';
+import { Button } from 'Components/Button';
 import { useMemo, useState } from 'react';
 import strings from 'Strings';
 import { Guid } from '@cratis/fundamentals';

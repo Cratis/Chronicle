@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useMemo, useCallback } from 'react';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Paginator, PaginatorPageChangeEvent } from 'primereact/paginator';
+import { Column } from '@cratis/components/DataTables';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { DataTable } from 'Components/DataTable';
+import { Paginator } from 'Components/Paginator';
 import strings from 'Strings';
 import { Json } from 'Features';
 import * as faIcons from 'react-icons/fa6';
@@ -188,10 +189,7 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
         ));
     }, [currentData, navigateToArray, navigateToObject]);
 
-    const onPageChange = (event: PaginatorPageChangeEvent) => {
-        setPage(event.page);
-        setPageSize(event.rows);
-    };
+    const pageSizeOptions = useMemo(() => [10, 25, 50, 100].map(size => ({ label: String(size), value: size })), []);
 
     return (
         <>
@@ -215,9 +213,7 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
                         <DataTable
                             value={objectArray}
-                            loading={isPerforming}
-                            emptyMessage={strings.eventStore.namespaces.readModels.empty}
-                            className="p-datatable-sm"
+                            emptyMessage={isPerforming ? strings.general.loading : strings.eventStore.namespaces.readModels.empty}
                             selectionMode="single"
                             selection={(selectedInstance && typeof selectedInstance === 'object' && !Array.isArray(selectedInstance)) ? selectedInstance as { [k: string]: Json } : null}
                             onSelectionChange={(e) => {
@@ -226,8 +222,8 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                                     setNavigationPath([]);
                                 }
                             }}
-                            onRowClick={(e) => {
-                                const rowData = { ...e.data };
+                            onRowClick={(row) => {
+                                const rowData = { ...row };
                                 // Remove internal properties before showing
                                 delete rowData.__arrayIndex;
                                 delete rowData.__sourceInstance;
@@ -242,18 +238,33 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                             }}
                             style={selectedInstance ? { minWidth: '100%', width: 'max-content' } : { minWidth: '100%' }}
                         >
-                            {...columns}
+                            {columns}
                         </DataTable>
                     </div>
 
                     {totalItems > 0 && navigationPath.length === 0 && (
-                        <div style={{ borderTop: '1px solid var(--surface-border)', flexShrink: 0 }}>
+                        <div
+                            style={{
+                                borderTop: '1px solid var(--surface-border)',
+                                flexShrink: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '0.5rem'
+                            }}>
                             <Paginator
-                                first={page * pageSize}
-                                rows={pageSize}
+                                page={page}
+                                pageSize={pageSize}
                                 totalRecords={totalItems}
-                                rowsPerPageOptions={[10, 25, 50, 100]}
-                                onPageChange={onPageChange}
+                                onPageChange={setPage}
+                            />
+                            <Dropdown<number>
+                                value={pageSize}
+                                options={pageSizeOptions}
+                                optionLabel='label'
+                                optionValue='value'
+                                aria-label={strings.eventStore.namespaces.readModels.labels.rowsPerPage}
+                                onChange={event => { setPageSize(event.value); setPage(0); }}
                             />
                         </div>
                     )}

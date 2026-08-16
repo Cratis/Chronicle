@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState } from 'react';
-import { Button } from 'primereact/button';
+import { Button } from 'Components/Button';
 import { DialogButtons, DialogResult, useConfirmationDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';

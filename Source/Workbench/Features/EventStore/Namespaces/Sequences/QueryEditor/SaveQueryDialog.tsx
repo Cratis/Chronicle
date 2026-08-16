@@ -6,7 +6,8 @@ import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { Dialog } from '@cratis/components/Dialogs';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { InputText } from 'primereact/inputtext';
-import { SelectButton } from 'primereact/selectbutton';
+import { ToggleButton } from 'primereact/togglebutton';
+import { ToggleButtonGroup, type ToggleButtonGroupValueChangeEvent } from 'primereact/togglebuttongroup';
 import strings from 'Strings';
 import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
 import './SaveQueryDialog.css';
@@ -79,16 +80,21 @@ export const SaveQueryDialog = () => {
                         value={name}
                         placeholder={sequenceStrings.newQuery}
                         autoFocus
-                        onChange={event => setName(event.target.value)} />
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setName(event.target.value)} />
                 </label>
 
                 <label className='save-query__field'>
                     <span>{sequenceStrings.save.visibleTo}</span>
-                    <SelectButton
+                    <ToggleButtonGroup
                         value={scope}
-                        options={scopeOptions}
                         allowEmpty={false}
-                        onChange={event => setScope(event.value as SequenceQueryScope)} />
+                        onValueChange={(event: ToggleButtonGroupValueChangeEvent) => setScope(event.value as SequenceQueryScope)}>
+                        {scopeOptions.map(option => (
+                            <ToggleButton.Root key={option.value} value={option.value}>
+                                {option.label}
+                            </ToggleButton.Root>
+                        ))}
+                    </ToggleButtonGroup>
                 </label>
 
                 <label className='save-query__field'>
@@ -96,7 +102,6 @@ export const SaveQueryDialog = () => {
                     <Dropdown
                         value={folder}
                         options={folderOptions}
-                        editable
                         optionLabel='label'
                         optionValue='value'
                         placeholder={sequenceStrings.save.rootFolder}

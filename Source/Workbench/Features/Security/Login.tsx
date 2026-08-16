@@ -4,13 +4,13 @@
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { LoginViewModel } from './LoginViewModel';
 import { InputText } from 'primereact/inputtext';
-import { Password } from 'primereact/password';
-import { Button } from 'primereact/button';
-import { Message } from 'primereact/message';
-import { ProgressSpinner } from 'primereact/progressspinner';
+import { InputPassword, type InputPasswordValueChangeEvent } from 'primereact/inputpassword';
+import { Button } from 'Components/Button';
+import { Message } from 'Components/Message';
+import { ProgressSpinner } from 'Components/ProgressSpinner';
 import css from './Login.module.css';
 import chronicleLogo from './chronicle.svg';
-import { useEffect } from 'react';
+import { useEffect, type ChangeEvent } from 'react';
 
 export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
     useEffect(() => {
@@ -69,7 +69,7 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                                 <InputText
                                     id="username"
                                     value={viewModel.username}
-                                    onChange={(e) => viewModel.username = e.target.value}
+                                    onChange={(event: ChangeEvent<HTMLInputElement>) => viewModel.username = event.target.value}
                                     className={css.input}
                                     placeholder="Enter your username"
                                     autoFocus={!viewModel.requiresPasswordChange}
@@ -79,15 +79,12 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
 
                             <div className={css.formGroup}>
                                 <label htmlFor="password" className={css.label}>Password</label>
-                                <Password
+                                <InputPassword
                                     id="password"
                                     value={viewModel.password}
-                                    onChange={(e) => viewModel.password = e.target.value}
+                                    onValueChange={(event: InputPasswordValueChangeEvent) => viewModel.password = event.value}
                                     className={css.input}
-                                    inputClassName={css.passwordInput}
                                     placeholder="Enter your password"
-                                    feedback={false}
-                                    toggleMask
                                     disabled={viewModel.isLoggingIn}
                                 />
                             </div>
@@ -120,16 +117,12 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                                 <label htmlFor="newPassword" className={css.label}>
                                     {viewModel.isInitialSetup ? 'Password' : 'New Password'}
                                 </label>
-                                <Password
+                                <InputPassword
                                     id="newPassword"
                                     value={viewModel.newPassword}
-                                    onChange={(e) => viewModel.newPassword = e.target.value}
+                                    onValueChange={(event: InputPasswordValueChangeEvent) => viewModel.newPassword = event.value}
                                     className={css.input}
-                                    inputClassName={css.passwordInput}
-                                    panelClassName={css.passwordPanel}
-                                    appendTo="self"
                                     placeholder={viewModel.isInitialSetup ? 'Enter password' : 'Enter new password'}
-                                    toggleMask
                                     autoFocus={viewModel.requiresPasswordChange}
                                     disabled={viewModel.isLoggingIn}
                                 />
@@ -137,15 +130,12 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
 
                             <div className={css.formGroup}>
                                 <label htmlFor="confirmPassword" className={css.label}>Confirm Password</label>
-                                <Password
+                                <InputPassword
                                     id="confirmPassword"
                                     value={viewModel.confirmPassword}
-                                    onChange={(e) => viewModel.confirmPassword = e.target.value}
+                                    onValueChange={(event: InputPasswordValueChangeEvent) => viewModel.confirmPassword = event.value}
                                     className={css.input}
-                                    inputClassName={css.passwordInput}
                                     placeholder="Confirm password"
-                                    feedback={false}
-                                    toggleMask
                                     disabled={viewModel.isLoggingIn}
                                 />
                             </div>

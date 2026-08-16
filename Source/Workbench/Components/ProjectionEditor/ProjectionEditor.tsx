@@ -15,7 +15,7 @@ import {
 import { JsonSchema } from '@cratis/components/types';
 import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Api/Projections';
 import { AllEventSequences } from 'Api/EventSequences';
-import { Button } from 'primereact/button';
+import { Button } from 'Components/Button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
 import Strings from 'Strings';
