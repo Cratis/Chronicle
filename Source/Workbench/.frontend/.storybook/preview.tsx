@@ -17,9 +17,10 @@ import { Arc } from '@cratis/arc.react';
 import { MVVM } from '@cratis/arc.react.mvvm';
 import { DialogComponents } from '@cratis/arc.react/dialogs';
 import { BusyIndicatorDialog, ConfirmationDialog } from '@cratis/components/Dialogs';
+import { primeUiLicense } from '../primeUiLicense';
 
 const withProviders: Decorator = (Story) => (
-    <CratisComponentsProvider value={{ ripple: true, unstyled: true, license: import.meta.env.CHRONICLE_PRIMEUI_LICENSE || undefined }}>
+    <CratisComponentsProvider value={{ ripple: true, unstyled: true, license: primeUiLicense }}>
         <div className='cratis-theme cratis-dark'>
             <Arc development={true}>
                 <MVVM>

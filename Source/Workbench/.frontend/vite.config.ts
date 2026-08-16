@@ -11,7 +11,10 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
     root: fileURLToPath(new URL('./', import.meta.url)),
-    envPrefix: 'CHRONICLE_',
+    // CHRONICLE_ is the Workbench's own namespace; PRIMEUI_ is PrimeTek's, so their license key keeps the
+    // name it has everywhere else - one PRIMEUI_LICENSE in a shell profile, a .env or a CI secret, rather
+    // than a differently-prefixed copy per application.
+    envPrefix: ['CHRONICLE_', 'PRIMEUI_'],
     optimizeDeps: {
         exclude: ['tslib'],
     },

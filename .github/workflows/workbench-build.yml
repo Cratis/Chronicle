@@ -48,4 +48,4 @@ jobs:
           # PrimeReact 11 is commercially licensed and verifies a key at runtime. Absent on a fork's pull
           # request, where secrets are not exposed - the build still succeeds, the bundle just carries no
           # key. See https://primeui.dev/licenses/community
-          CHRONICLE_PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}
+          PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}

@@ -233,7 +233,7 @@ jobs:
           CHRONICLE_COMMIT_SHA: ${{ github.sha }}
           # PrimeReact 11 is commercially licensed and verifies a key at runtime; a released Workbench
           # without one shows an "Invalid PrimeUI License" banner. See https://primeui.dev/licenses/community
-          CHRONICLE_PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}
+          PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}
 
       - name: Upload workbench output
         uses: actions/upload-artifact@v4
