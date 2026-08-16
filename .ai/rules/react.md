@@ -153,6 +153,8 @@ if (result.hasExceptions) { toast.error('Something went wrong'); console.error(r
 // happy path — refresh queries, close, etc.
 ```
 
+`toastCommandResult(result, opts)` from `@cratis/components/Notifications` collapses this whole branch into one call (with a `<Toaster />` mounted) — success/not-authorized/validation/exception → the right toast, no stack traces shown.
+
 ### Command helpers
 
 - **`useCommandInstance(Command)`** — read the live reactive command instance for dependent fields (read it; never mutate — mutations go through field bindings).

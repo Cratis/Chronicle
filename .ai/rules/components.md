@@ -21,10 +21,36 @@ Reach PrimeReact almost exclusively through Cratis Components wrappers. Import f
 | Dropdown | `Dropdown` | `@cratis/components/Dropdown` |
 | Command dialog | `CommandDialog` / `StepperCommandDialog` | `@cratis/components/CommandDialog` |
 | Data/confirmation dialog | `Dialog` / `ConfirmationDialog` / `BusyIndicatorDialog` | `@cratis/components/Dialogs` |
-| Command form fields | `InputTextField`, … | `@cratis/components/CommandForm` |
+| Command form fields | `InputTextField`, `PasswordField`, `ToggleSwitchField`, `RatingField`, … | `@cratis/components/CommandForm` |
+| Notifications (toasts) | `Toaster` / `toast` / `toastCommandResult` | `@cratis/components/Notifications` |
+| Status & display | `Tag` / `Badge` / `Chip` / `Skeleton` / `Avatar` / `ProgressBar` | `@cratis/components/Display` |
 | Canvas tool palette | `Toolbar` | `@cratis/components/Toolbar` |
 
 Use `Dropdown` from `@cratis/components/Dropdown` (not raw `primereact/dropdown`) — it appends to the document body and stacks correctly above overlays, avoiding the z-index issues raw PrimeReact dropdowns have inside dialogs.
+
+### Notifications — feedback for commands run outside a dialog
+
+`CommandDialog` handles success/error feedback itself. For a command executed
+**programmatically** (`command.execute()` outside a dialog), mount one
+`<Toaster />` near the app root and surface the result with `toastCommandResult`
+(both from `@cratis/components/Notifications`) — it maps the granular
+`ICommandResult` flags to the right toast (success, not-authorized, validation
+with per-field messages, exceptions — never stack traces):
+
+```tsx
+const result = await command.execute();
+if (toastCommandResult(result, { successTitle: 'Author registered' })) refresh();
+```
+
+For ad-hoc notifications, call the imperative `toast.success/info/warn/error(...)`
+— each takes an **options object**, not a bare string: `toast.info({ title: 'Saved', description: '…' })`.
+
+### Column filtering & display components
+
+`<Column>` supports `filter` (a per-column filter menu with match modes) and
+`DataPage` / the data tables show a global search box when `globalFilterFields`
+is set. Use the `Display` components (`Tag`, `Badge`, `Skeleton`, …) for status
+indicators and loading states in tables and detail views.
 
 ### `DataPage` — query list pages
 
@@ -33,8 +59,7 @@ Use `Dropdown` from `@cratis/components/Dropdown` (not raw `primereact/dropdown`
 Columns and toolbar actions are compositional children:
 
 ```tsx
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
-import { Column } from 'primereact/column';
+import { DataPage, MenuItem, Column } from '@cratis/components/DataPage';
 
 <DataPage title="Accounts" query={AllAccounts} emptyMessage="No accounts yet.">
     <DataPage.Columns>
@@ -77,7 +102,24 @@ Add an `index.ts` that re-exports the public surface so import paths stay stable
 
 Consistent styling comes from discipline: static styles in CSS files, dynamic values inline, and colors always from PrimeReact's design tokens. This ensures theming works automatically and no component breaks the visual language.
 
-- Use **CSS classes in co-located `.css` files** for static styles.
+### App setup — the imports Cratis Components needs
+
+From `@cratis/components` **3.0.0** (PrimeReact 11), an app must do two things or the components render unstyled and PrimeReact may end up with two React contexts:
+
+1. **Install PrimeReact yourself** — it is a **peer dependency**, not bundled: `primereact@^11`, `@primereact/core@^11`, `@primereact/headless@^11`, `primeicons@^8`. Two copies of PrimeReact means two `PrimeReactProvider` contexts, which breaks overlays and `pt` silently. Delete any `resolutions`/`overrides` pin that used to work around this.
+2. **Import the stylesheets explicitly**, in this order — components no longer import their own CSS:
+
+   ```ts
+   import '@cratis/components/tokens';   // the --cratis-* layer every component reads
+   import '@cratis/components/styles';   // every component stylesheet, in one file
+   import '@cratis/components/theme';    // optional: the license-free baseline look
+   ```
+
+PrimeReact 11 ships **zero CSS** — there is no `primereact/resources/themes/*.css`. A styled look comes from a `@primeuix/themes` preset passed through the provider (`value={{ theme: { preset: Aura } }}`, license-gated), from `@cratis/components/theme` (no license), or from your own `pt`/CSS.
+
+### Writing styles inside the library
+
+- Use **CSS classes in co-located `.css` files** for static styles, and add an `@import` for each new stylesheet to `Source/styles.css` — the build fails if a component stylesheet is not reachable from that manifest. **Never** add `import './Foo.css'` to a `.tsx`: a CSS file in the JavaScript module graph is what made the published package unloadable in Node (Cratis/Components#118).
 - Each component must have its own CSS file — never add sub-component styles to the parent's CSS. This keeps styles co-located with the component they belong to.
 - The composition root's CSS only contains layout/grid rules for positioning children — it should not style the children themselves.
 - Use inline `style` props **only** for runtime-dynamic values (pixel positions, computed sizes).

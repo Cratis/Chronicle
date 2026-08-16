@@ -244,7 +244,7 @@ public record StockDecreased(ISBN Isbn, BookStock StockBeforeDecrease);
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
+import { Column } from '@cratis/components/DataPage';
 import { DataTable } from 'primereact/datatable';
 import { AllProjects } from './AllProjects';
 
@@ -318,8 +318,7 @@ export const AddProject = ({ closeDialog }: DialogProps) => {
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
-import { Menubar } from 'primereact/menubar';
-import { MenuItem } from 'primereact/menuitem';
+import { Button } from 'primereact/button';
 import * as mdIcons from 'react-icons/md';
 import { Page } from '@cratis/components/Common';
 import { AddProject } from './Registration/AddProject';
@@ -328,17 +327,15 @@ import { Listing } from './Listing/Listing';
 export const Projects = () => {
     const [AddProjectDialog, showAddProjectDialog] = useDialog(AddProject);
 
-    const menuItems: MenuItem[] = [
-        {
-            label: 'Add Project',
-            icon: mdIcons.MdAdd,
-            command: async () => { await showAddProjectDialog(); }
-        }
-    ];
-
+    // PrimeReact 11 removed the standalone Menubar; for a query-backed list
+    // page prefer `DataPage` + `<DataPage.MenuItems>`, or compose `Button`s
+    // (content is children in v11) for a custom toolbar.
     return (
         <Page title="Projects">
-            <Menubar model={menuItems} />
+            <Button variant="text" onClick={() => showAddProjectDialog()}>
+                <mdIcons.MdAdd />
+                <span>Add Project</span>
+            </Button>
             <Listing />
             <AddProjectDialog />
         </Page>

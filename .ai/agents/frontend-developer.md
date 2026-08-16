@@ -189,24 +189,21 @@ import { Page } from '@cratis/components/Common';
 import { AddProject } from './Registration/AddProject';
 import { Listing } from './Listing/Listing';
 import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
-import { Menubar } from 'primereact/menubar';
-import { MenuItem } from 'primereact/menuitem';
+import { Button } from 'primereact/button';
 import * as mdIcons from 'react-icons/md';
 
 export const Projects = () => {
     const [AddProjectDialog, showAddProjectDialog] = useDialog(AddProject);
 
-    const menuItems: MenuItem[] = [
-        {
-            label: 'Add Project',
-            icon: mdIcons.MdAdd,
-            command: async () => { await showAddProjectDialog(); }
-        }
-    ];
-
+    // For a query-backed list page, prefer `DataPage` with `<DataPage.MenuItems>`
+    // (it owns the action bar). PrimeReact 11 removed the standalone `Menubar`;
+    // for a custom toolbar, compose `Button`s (content is children in v11).
     return (
         <Page title="Projects">
-            <Menubar model={menuItems} />
+            <Button variant="text" onClick={() => showAddProjectDialog()}>
+                <mdIcons.MdAdd />
+                <span>Add Project</span>
+            </Button>
             <Listing />
             <AddProjectDialog />
         </Page>
