@@ -9,23 +9,6 @@
     padding: 20px;
 }
 
-/* PrimeReact renders the inline flex only on the .p-tabview root; its internal
-   .p-tabview-panels / .p-tabview-panel are not flexed or height-constrained, so
-   they auto-size to content and no scrollbar engages. Flex the tabview and make
-   the panels container the single, height-constrained vertical scroll region. */
-.eventDetails :global(.p-tabview) {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-.eventDetails :global(.p-tabview-panels) {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-}
-
-.eventDetails :global(.p-tabview-panel) {
-    height: 100%;
-}
+/* PrimeReact 11 is unstyled and carries no `p-*` classes, so the tab strip's
+   flex/scroll plumbing is applied through the `Tabs` wrapper's own class props
+   at the call site rather than from descendant selectors here. */
