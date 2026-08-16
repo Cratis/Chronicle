@@ -15,6 +15,9 @@ export default defineConfig({
     // name it has everywhere else - one PRIMEUI_LICENSE in a shell profile, a .env or a CI secret, rather
     // than a differently-prefixed copy per application.
     envPrefix: ['CHRONICLE_', 'PRIMEUI_'],
+    // .env lives in Source/Workbench (next to .env.example), not in this config directory -
+    // Vite otherwise only reads .env files from the config root.
+    envDir: fileURLToPath(new URL('..', import.meta.url)),
     optimizeDeps: {
         exclude: ['tslib'],
     },
