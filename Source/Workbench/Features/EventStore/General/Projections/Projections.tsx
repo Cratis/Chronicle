@@ -7,20 +7,17 @@ import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from '@cratis/components/types';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
-import { Menubar } from 'primereact/menubar';
-import { Tooltip } from 'primereact/tooltip';
-import { Dialog } from 'primereact/dialog';
-import { Button } from 'primereact/button';
+import { ActionMenubar, Tooltip, type ActionMenuItem } from '@cratis/components/Common';
+import { Dialog } from '@cratis/components/Dialogs';
 import { useState, useEffect, useMemo } from 'react';
-import type { MenuItem } from 'primereact/menuitem';
 import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
+import { DataTable } from 'Components/DataTable';
+import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, SaveProjection } from 'Api/Projections';
+import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, ProjectionWithDeclaration, SaveProjection } from 'Api/Projections';
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
@@ -294,10 +291,11 @@ export const Projections = () => {
                     <div className="px-4 py-4">
                         <DataTable
                             value={projections.data}
+                            dataKey="identifier"
                             selectionMode="single"
-                            selection={selectedProjection as never}
+                            selection={selectedProjection as ProjectionWithDeclaration | null}
                             emptyMessage={strings.eventStore.general.projections.empty}
-                            onSelectionChange={async (e) => {
+                            onSelectionChange={async (event) => {
                                 if (hasUnsavedChanges) {
                                     const result = await showConfirmation(
                                         strings.eventStore.general.projections.dialogs.unsavedChanges.title,
@@ -308,17 +306,15 @@ export const Projections = () => {
                                         return;
                                     }
                                 }
-                                setSelectedProjection(e.value);
-                                const newDeclaration = toDisplayNameDeclaration(e.value?.declaration ?? '', readModels.data, draftReadModel);
+                                setSelectedProjection(event.value);
+                                const newDeclaration = toDisplayNameDeclaration(event.value?.declaration ?? '', readModels.data, draftReadModel);
                                 setDeclarationValue(newDeclaration);
                                 setOriginalDeclarationValue(newDeclaration);
                                 setReadModelInstances([]);
                                 setSelectedInstance(null);
                                 setPage(0);
                             }}
-                            pt={{
-                                root: { className: 'rounded-lg overflow-hidden' }
-                            }}>
+                            className='rounded-lg overflow-hidden'>
 
                             <Column field="identifier" header="Name" />
                             <Column field="containerName" header="Container Name" />
@@ -327,8 +323,7 @@ export const Projections = () => {
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">
                     <div className="px-4 py-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Tooltip target="[data-pr-tooltip]" />
-                        <Menubar
+                        <ActionMenubar
                             model={[
                                 {
                                     label: strings.eventStore.general.projections.actions.new,
@@ -393,16 +388,16 @@ export const Projections = () => {
                                             setSyntaxErrors(errors);
                                         }
                                     },
-                                    template: saveDisabledReason ? (item: MenuItem) => (
-                                        <div
-                                            className="p-menuitem-link p-disabled"
-                                            data-pr-tooltip={saveDisabledReason}
-                                            data-pr-position="bottom"
-                                            style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                                        >
-                                            {item.icon}
-                                            <span className="p-menuitem-text">{item.label}</span>
-                                        </div>
+                                    template: saveDisabledReason ? (item: ActionMenuItem) => (
+                                        <Tooltip content={saveDisabledReason} position="bottom">
+                                            <div
+                                                className="p-menuitem-link p-disabled"
+                                                style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                                            >
+                                                {item.icon}
+                                                <span className="p-menuitem-text">{item.label}</span>
+                                            </div>
+                                        </Tooltip>
                                     ) : undefined
                                 },
                                 {
@@ -429,16 +424,16 @@ export const Projections = () => {
                                         setSelectedInstance(null);
                                         setPage(0);
                                     },
-                                    template: previewDisabledReason ? (item: MenuItem) => (
-                                        <div
-                                            className="p-menuitem-link p-disabled"
-                                            data-pr-tooltip={previewDisabledReason}
-                                            data-pr-position="bottom"
-                                            style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                                        >
-                                            {item.icon}
-                                            <span className="p-menuitem-text">{item.label}</span>
-                                        </div>
+                                    template: previewDisabledReason ? (item: ActionMenuItem) => (
+                                        <Tooltip content={previewDisabledReason} position="bottom">
+                                            <div
+                                                className="p-menuitem-link p-disabled"
+                                                style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                                            >
+                                                {item.icon}
+                                                <span className="p-menuitem-text">{item.label}</span>
+                                            </div>
+                                        </Tooltip>
                                     ) : undefined
                                 },
                                 {
@@ -488,29 +483,15 @@ export const Projections = () => {
             </Allotment>
 
             <Dialog
-                header={(initialReadModelSchema ? 'Edit' : 'Create') + ' Read Model: ' + newReadModelDisplayName}
+                title={(initialReadModelSchema ? 'Edit' : 'Create') + ' Read Model: ' + newReadModelDisplayName}
                 visible={isCreateReadModelDialogOpen}
-                style={{ width: '800px', height: '80vh' }}
-                modal
-                resizable={true}
-                footer={(
-                    <>
-                        <Button
-                            label={strings.general.buttons.ok}
-                            icon="pi pi-check"
-                            onClick={handleSaveReadModel}
-                            disabled={!pendingReadModel?.displayName || !pendingReadModel?.identifier || !pendingReadModel?.containerName}
-                            autoFocus
-                        />
-                        <Button
-                            label={strings.general.buttons.cancel}
-                            icon="pi pi-times"
-                            onClick={handleCancelReadModel}
-                            outlined
-                        />
-                    </>
-                )}
-                onHide={handleCancelReadModel}>
+                width='800px'
+                style={{ height: '80vh' }}
+                isValid={!!pendingReadModel?.displayName && !!pendingReadModel?.identifier && !!pendingReadModel?.containerName}
+                okLabel={strings.general.buttons.ok}
+                cancelLabel={strings.general.buttons.cancel}
+                onConfirm={handleSaveReadModel}
+                onCancel={handleCancelReadModel}>
                 <ReadModelTypeEditor
                     initialDisplayName={newReadModelDisplayName}
                     initialIdentifier={draftForDialog?.identifier || newReadModelDisplayName}

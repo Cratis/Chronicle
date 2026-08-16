@@ -7,7 +7,7 @@ import { HomeViewModel } from './HomeViewModel';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { useRelativePath } from '../Utils/useRelativePath';
 import css from './Home.module.css';
-import { Button } from 'primereact/button';
+import { Button } from 'Components/Button';
 import { ImPlus } from "react-icons/im";
 import strings from 'Strings';
 import { useDialog } from '@cratis/arc.react/dialogs';

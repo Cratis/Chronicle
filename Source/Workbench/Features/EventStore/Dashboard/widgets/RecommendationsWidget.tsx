@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Button } from 'primereact/button';
-import { Card } from 'primereact/card';
+import { Card } from 'Components/Card';
+import { Button } from 'Components/Button';
 import { MdCheckCircle, MdChevronRight, MdError, MdWarning } from 'react-icons/md';
 
 interface Recommendation {
@@ -53,13 +53,7 @@ export const RecommendationsWidget = ({ className }: { className?: string }) => 
     };
 
     return (
-        <Card
-            className={`shadow-lg h-full ${className ?? ''}`}
-            pt={{
-                root: { className: 'border border-gray-700/60' },
-                body: { className: 'p-4' },
-                content: { className: 'p-0' }
-            }}>
+        <Card className={`shadow-lg h-full border border-gray-700/60 ${className ?? ''}`}>
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Recommendations</h3>
                 <Button icon={<MdChevronRight />} rounded text severity="secondary" size="small" />

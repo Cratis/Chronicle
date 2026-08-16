@@ -34,12 +34,12 @@ export const QueryTabHeader = ({ name, hasUnsavedChanges, onRename }: QueryTabHe
     const inputRef = useRef<HTMLInputElement>(null);
     const labelRef = useRef<HTMLSpanElement>(null);
 
-    // The tab is a padded link that this only fills a sliver of, so listening on the label alone
+    // The tab is a padded element that this only fills a sliver of, so listening on the label alone
     // would leave most of the tab dead to a double-click. The listener goes on the tab itself,
     // which is PrimeReact's element rather than ours - hence reaching for it rather than binding
     // through JSX.
     useEffect(() => {
-        const tab = labelRef.current?.closest('.p-tabview-nav-link') ?? labelRef.current?.closest('li');
+        const tab = labelRef.current?.closest('[role="tab"]');
         if (!tab) return;
 
         const startRenaming = () => setIsRenaming(true);
@@ -68,12 +68,12 @@ export const QueryTabHeader = ({ name, hasUnsavedChanges, onRename }: QueryTabHe
                 ref={inputRef}
                 className='query-tab-header__rename'
                 value={draft}
-                onChange={event => setDraft(event.target.value)}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)}
                 onBlur={commit}
-                onClick={event => event.stopPropagation()}
-                onDoubleClick={event => event.stopPropagation()}
-                onKeyDown={event => {
-                    // The box sits inside the tab's link, which acts on Space and Enter to select
+                onClick={(event: React.MouseEvent<HTMLInputElement>) => event.stopPropagation()}
+                onDoubleClick={(event: React.MouseEvent<HTMLInputElement>) => event.stopPropagation()}
+                onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+                    // The box sits inside the tab, which acts on Space and Enter to select
                     // the tab - left to bubble, a space would move the tab rather than reach the name.
                     event.stopPropagation();
                     if (event.key === 'Enter') commit();

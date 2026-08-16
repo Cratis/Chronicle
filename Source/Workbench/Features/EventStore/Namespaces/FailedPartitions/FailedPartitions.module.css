@@ -1,7 +1,0 @@
-.errorTooltip :global(.p-tooltip-text) {
-    white-space: pre-line;
-    max-width: 32rem;
-    max-height: 16rem;
-    overflow: hidden;
-    font-size: 0.8125rem;
-}

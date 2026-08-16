@@ -4,7 +4,7 @@
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { Dialog } from '@cratis/components/Dialogs';
 import { InputText } from 'primereact/inputtext';
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import strings from 'Strings';
 
 export class AddNamespaceRequest {
@@ -34,7 +34,7 @@ export const AddNamespace = () => {
                     <span className="p-inputgroup-addon">
                         <i className="pi pi-user"></i>
                     </span>
-                    <InputText placeholder={strings.eventStore.general.namespaces.dialogs.addNamespace.name} value={name} onChange={e => setName(e.target.value)} />
+                    <InputText placeholder={strings.eventStore.general.namespaces.dialogs.addNamespace.name} value={name} onChange={(event: ChangeEvent<HTMLInputElement>) => setName(event.target.value)} />
                 </div>
             </div>
         </Dialog>

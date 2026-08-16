@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
-import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
+import { DialogButtons } from '@cratis/arc.react/dialogs';
+import { Dialog } from '@cratis/components/Dialogs';
 import { InputText } from 'primereact/inputtext';
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 
 export interface QueryModalProps {
     isOpen: boolean;
@@ -26,25 +26,19 @@ export const QueryModal = (props: QueryModalProps) => {
         newFolder(folderName);
     };
 
-    const footerContent = (
-        <div>
-            <Button label='No' icon='pi pi-times' onClick={handleModalClose} />
-            <Button label='Yes' icon='pi pi-check' onClick={addNewFolder} autoFocus />
-        </div>
-    );
-
     return (
         <Dialog
-            header='Queries'
+            title='Queries'
             visible={isOpen}
-            style={{ width: '50vw' }}
-            onHide={handleModalClose}
-            footer={footerContent}
+            width='50vw'
+            buttons={DialogButtons.YesNo}
+            onConfirm={addNewFolder}
+            onCancel={handleModalClose}
         >
             <InputText
                 value={folderName}
-                onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
-                    setFolderName(evt.target.value)
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setFolderName(event.target.value)
                 }
             />
             <p className='m-0'>

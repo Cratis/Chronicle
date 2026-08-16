@@ -3,9 +3,9 @@
 
 import { AllConnectedClients, ConnectedClient } from 'Api/Clients';
 import { Page } from 'Components/Common/Page';
-import { Column } from 'primereact/column';
-import { DataTable, DataTableExpandedRows, DataTableValueArray } from 'primereact/datatable';
-import { SelectButton } from 'primereact/selectbutton';
+import { Column } from '@cratis/components/DataTables';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { DataTable } from 'Components/DataTable';
 import { Toolbar } from 'primereact/toolbar';
 import { useState } from 'react';
 import strings from 'Strings';
@@ -17,7 +17,6 @@ enum ConnectedClientsView {
 
 export const ConnectedClients = () => {
     const [view, setView] = useState<ConnectedClientsView>(ConnectedClientsView.BySilo);
-    const [expandedRows, setExpandedRows] = useState<DataTableValueArray | DataTableExpandedRows | undefined>(undefined);
 
     const [result] = AllConnectedClients.use();
     const clients = result.data ?? [];
@@ -37,28 +36,23 @@ export const ConnectedClients = () => {
 
     return (
         <Page title={strings.connectedClients.title}>
-            <Toolbar
-                className='mb-3'
-                end={
-                    <SelectButton
+            <Toolbar.Root className='mb-3'>
+                <Toolbar.End>
+                    <Dropdown<ConnectedClientsView>
                         value={view}
-                        onChange={event => event.value && setView(event.value as ConnectedClientsView)}
                         options={viewOptions}
-                        allowEmpty={false} />
-                } />
+                        optionLabel='label'
+                        optionValue='value'
+                        aria-label={strings.connectedClients.title}
+                        onChange={event => event.value && setView(event.value)} />
+                </Toolbar.End>
+            </Toolbar.Root>
 
             {view === ConnectedClientsView.BySilo
                 ? <DataTable
                     value={clients}
-                    rowGroupMode='subheader'
-                    groupRowsBy='siloAddress'
-                    sortMode='single'
-                    sortField='siloAddress'
-                    sortOrder={1}
-                    expandableRowGroups
-                    expandedRows={expandedRows}
-                    onRowToggle={event => setExpandedRows(event.data)}
-                    rowGroupHeaderTemplate={siloGroupHeaderTemplate}
+                    groupField='siloAddress'
+                    groupHeaderTemplate={siloGroupHeaderTemplate}
                     dataKey='connectionId'
                     emptyMessage={strings.connectedClients.empty}
                     scrollable
@@ -74,9 +68,6 @@ export const ConnectedClients = () => {
                 </DataTable>
                 : <DataTable
                     value={clients}
-                    sortMode='single'
-                    sortField='siloAddress'
-                    sortOrder={1}
                     dataKey='connectionId'
                     emptyMessage={strings.connectedClients.empty}
                     scrollable

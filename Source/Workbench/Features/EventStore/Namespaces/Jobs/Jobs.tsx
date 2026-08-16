@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
-import { Column } from 'primereact/column';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
 import { AllJobs, AllJobsParameters } from 'Api/Jobs';
 import { Job, JobStatus } from 'Api/Jobs';
@@ -63,17 +62,14 @@ export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
             onSelectionChange={e => viewModel.selectedJob = e.value as Job}>
             <DataPage.MenuItems>
                 <MenuItem
-                    id="stop"
                     label={strings.eventStore.namespaces.jobs.actions.stop} icon={faIcons.FaStop}
                     disableOnUnselected
                     command={() => viewModel.stop()} />
                 <MenuItem
-                    id="resume"
                     label={strings.eventStore.namespaces.jobs.actions.resume} icon={faIcons.FaPlay}
                     disableOnUnselected
                     command={() => viewModel.resume()} />
                 <MenuItem
-                    id="delete"
                     label={strings.eventStore.namespaces.jobs.actions.delete} icon={faIcons.FaDeleteLeft}
                     disableOnUnselected
                     command={() => viewModel.delete()} />

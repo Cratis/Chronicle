@@ -3,17 +3,15 @@
 
 import { Page } from 'Components/Common/Page';
 import { CaptureEditor, type CaptureDeclarationSyntaxError } from 'Components/CaptureEditor';
-import { Menubar } from 'primereact/menubar';
-import { Tag } from 'primereact/tag';
-import { Tooltip } from 'primereact/tooltip';
+import { ActionMenubar, Tooltip, type ActionMenuItem } from '@cratis/components/Common';
+import { Tag } from '@cratis/components/Display';
 import { useEffect, useMemo, useState } from 'react';
-import type { MenuItem } from 'primereact/menuitem';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
+import { DataTable } from 'Components/DataTable';
+import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AllCaptures, SaveCapture, StartCapture, StopCapture, DeleteCapture, ValidateCaptureDeclaration, CaptureStatus, type Capture, type CaptureValidationMessage } from 'Api/Captures';
@@ -190,7 +188,7 @@ export const Captures = () => {
         }
     };
 
-    const menuItems: MenuItem[] = [
+    const menuItems: ActionMenuItem[] = [
         {
             label: strings.eventStore.general.captures.actions.new,
             icon: <faIcons.FaPlus className='mr-2' />,
@@ -201,16 +199,16 @@ export const Captures = () => {
             icon: <faIcons.FaFloppyDisk className='mr-2' />,
             disabled: !!saveDisabledReason,
             command: saveDisabledReason ? undefined : handleSave,
-            template: saveDisabledReason ? (item: MenuItem) => (
-                <div
-                    className="p-menuitem-link p-disabled"
-                    data-pr-tooltip={saveDisabledReason}
-                    data-pr-position="bottom"
-                    style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                >
-                    {item.icon}
-                    <span className="p-menuitem-text">{item.label}</span>
-                </div>
+            template: saveDisabledReason ? (item: ActionMenuItem) => (
+                <Tooltip content={saveDisabledReason} position="bottom">
+                    <div
+                        className="p-menuitem-link p-disabled"
+                        style={{ cursor: 'not-allowed', opacity: 0.6 }}
+                    >
+                        {item.icon}
+                        <span className="p-menuitem-text">{item.label}</span>
+                    </div>
+                </Tooltip>
             ) : undefined,
         },
         isStarted
@@ -271,10 +269,8 @@ export const Captures = () => {
                             selectionMode="single"
                             selection={selectedCapture}
                             emptyMessage={strings.eventStore.general.captures.empty}
-                            onSelectionChange={(e) => selectCapture(e.value as Capture | null)}
-                            pt={{
-                                root: { className: 'rounded-lg overflow-hidden' },
-                            }}
+                            onSelectionChange={(event) => selectCapture(event.value)}
+                            className="rounded-lg overflow-hidden"
                         >
                             <Column field="name" header={strings.eventStore.general.captures.columns.name} />
                             <Column field="status" header={strings.eventStore.general.captures.columns.status} body={statusBody} />
@@ -283,8 +279,7 @@ export const Captures = () => {
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">
                     <div className="px-4 py-4" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Tooltip target="[data-pr-tooltip]" />
-                        <Menubar model={menuItems} />
+                        <ActionMenubar model={menuItems} />
 
                         <div className="pt-4" style={{ flex: 1, minHeight: 0 }}>
                             {showEmptyState ? (

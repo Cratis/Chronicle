@@ -6,8 +6,8 @@ import { useWorkbenchContext } from '../context/WorkbenchContext';
 import * as Shared from 'Shared';
 import { FaHouse, FaCaretDown } from 'react-icons/fa6';
 import css from './Breadcrumb.module.css';
-import { useEffect, useRef } from 'react';
-import { OverlayPanel } from 'primereact/overlaypanel';
+import { useEffect, useState } from 'react';
+import { Popover, type PopoverRootOpenChangeEvent } from 'primereact/popover';
 import { ItemsList } from 'Components/ItemsList/ItemsList';
 import { BreadCrumbViewModel } from './BreadCrumbViewModel';
 import { withViewModel } from '@cratis/arc.react.mvvm';
@@ -17,7 +17,7 @@ export const Breadcrumb = withViewModel(BreadCrumbViewModel, ({ viewModel }) => 
     const location = useLocation();
     const params = useParams<Shared.EventStoreAndNamespaceParams>();
     const { pageTitle, setPageTitle } = useWorkbenchContext();
-    const eventStorePanel = useRef<OverlayPanel>(null);
+    const [isEventStorePanelOpen, setIsEventStorePanelOpen] = useState(false);
 
     const navigateToHome = () => {
         navigate('/');
@@ -31,7 +31,7 @@ export const Breadcrumb = withViewModel(BreadCrumbViewModel, ({ viewModel }) => 
 
     const handleEventStoreClick = (eventStore: string) => {
         navigate(`/event-store/${eventStore}`);
-        eventStorePanel.current?.hide();
+        setIsEventStorePanelOpen(false);
     };
 
     // Clear page title when at event store root
@@ -67,14 +67,22 @@ export const Breadcrumb = withViewModel(BreadCrumbViewModel, ({ viewModel }) => 
                             className={css.eventStore}>
                             {params.eventStore}
                         </a>
-                        <span
-                            className={css.caret}
-                            onClick={(e) => eventStorePanel.current?.toggle(e)}>
-                            <FaCaretDown />
-                        </span>
-                        <OverlayPanel ref={eventStorePanel}>
-                            <ItemsList<string> items={viewModel.eventStores} onItemClicked={handleEventStoreClick} />
-                        </OverlayPanel>
+                        <Popover.Root
+                            open={isEventStorePanelOpen}
+                            onOpenChange={(event: PopoverRootOpenChangeEvent) => setIsEventStorePanelOpen(event.value ?? false)}>
+                            <Popover.Trigger as="span" className={css.caret}>
+                                <FaCaretDown />
+                            </Popover.Trigger>
+                            <Popover.Portal>
+                                <Popover.Positioner>
+                                    <Popover.Popup>
+                                        <Popover.Content>
+                                            <ItemsList<string> items={viewModel.eventStores} onItemClicked={handleEventStoreClick} />
+                                        </Popover.Content>
+                                    </Popover.Popup>
+                                </Popover.Positioner>
+                            </Popover.Portal>
+                        </Popover.Root>
                     </div>
                     {pageTitle && (
                         <>

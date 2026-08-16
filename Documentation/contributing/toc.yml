@@ -2,6 +2,8 @@
   href: ./index.md
 - name: Integration Tests
   href: ./integration-tests.md
+- name: PrimeUI License
+  href: ./primeui-license.md
 - name: Clients
   href: ./clients/toc.yml
 - name: Kernel

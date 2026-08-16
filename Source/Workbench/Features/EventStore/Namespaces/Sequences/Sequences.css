@@ -23,19 +23,8 @@
     min-height: 0;
 }
 
-/* PrimeReact stacks its panels as plain blocks, so the open query would size to its toolbar and the
-   results would collapse to nothing. Both wrappers become flex rows of the height they are given. */
-.sequences__tabview .p-tabview-panels,
-.sequences__tabview .p-tabview-panel {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-}
-
-.sequences__tabview .p-tabview-panels {
-    padding: 0;
-}
+/* PrimeReact 11 is unstyled and carries no `p-*` classes; the panels' flex/height
+   plumbing is applied through the tab components' own class props at the call site. */
 
 .sequences__add {
     position: absolute;
@@ -46,6 +35,7 @@
 /* The button sits hard against the right edge, where a tooltip has no room to lay its text out and
    ends up one letter per line. Keeping it on one line lets it open to the left instead. The tooltip
    is rendered into the document body, so it is reached by its own class rather than from here. */
-.sequences__add-tooltip .p-tooltip-text {
+.sequences__add-tooltip .cratis-tooltip-popup,
+.cratis-tooltip-popup.sequences__add-tooltip {
     white-space: nowrap;
 }

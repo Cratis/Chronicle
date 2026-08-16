@@ -27,6 +27,7 @@ const config: StorybookConfig = {
         const cfg: ViteConfig = { ...existingConfig };
         delete cfg.root;
         cfg.server = { ...(cfg.server || {}), open: false } as unknown;
+        cfg.envPrefix = ['CHRONICLE_', 'PRIMEUI_'];
 
         const tsconfigPath = path.resolve(__dirname, '../tsconfig.json');
         cfg.plugins = [

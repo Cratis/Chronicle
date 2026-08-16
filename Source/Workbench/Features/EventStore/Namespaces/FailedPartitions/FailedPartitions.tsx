@@ -3,10 +3,9 @@
 
 import strings from 'Strings';
 import { AllFailedPartitions, AllFailedPartitionsParameters } from 'Api/Observation';
-import { Column } from 'primereact/column';
-import { DataTableFilterMeta } from 'primereact/datatable';
-import { FilterMatchMode } from 'primereact/api';
-import { Tooltip } from 'primereact/tooltip';
+import { type DataTableFilterMeta } from '@cratis/components/DataTables';
+import { FilterMatchMode } from '@primereact/headless/datatable';
+import { Tooltip } from '@cratis/components/Common';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { FailedPartition } from 'Api/Observation';
@@ -14,13 +13,12 @@ import { withViewModel } from '@cratis/arc.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
 import { FailedPartitionDetails } from './FailedPartitionDetails';
 import { getFailedPartitionErrorGlimpse } from './getFailedPartitionErrorGlimpse';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
-import css from './FailedPartitions.module.css';
 
 const defaultFilters: DataTableFilterMeta = {
-    tombstone: { value: null, matchMode: FilterMatchMode.IN },
+    tombstone: { value: null, matchMode: FilterMatchMode.In },
 };
 
 const partition = (failedPartition: FailedPartition) => {
@@ -29,7 +27,11 @@ const partition = (failedPartition: FailedPartition) => {
 
 const partitionColumnBody = (failedPartition: FailedPartition) => {
     const glimpse = getFailedPartitionErrorGlimpse(failedPartition);
-    return <span data-pr-tooltip={glimpse || undefined}>{partition(failedPartition)}</span>;
+    return (
+        <Tooltip content={glimpse} position='bottom'>
+            <span>{partition(failedPartition)}</span>
+        </Tooltip>
+    );
 };
 
 const attempts = (failedPartition: FailedPartition) => {
@@ -51,7 +53,6 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
 
     return (
         <Page title={strings.eventStore.namespaces.failedPartitions.title}>
-        <Tooltip className={css.errorTooltip} target='[data-pr-tooltip]' position='bottom' />
         <DataPage
             title={strings.eventStore.namespaces.failedPartitions.title}
             query={AllFailedPartitions}
@@ -65,7 +66,6 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
 
             <DataPage.MenuItems>
                 <MenuItem
-                    id='retry'
                     label={strings.eventStore.namespaces.failedPartitions.actions.retry}
                     icon={faIcons.FaArrowsRotate}
                     disableOnUnselected

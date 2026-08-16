@@ -111,11 +111,11 @@ export const QueryTreeNode = (props: QueryTreeNodeProps) => {
                         ref={inputRef}
                         className='query-tree-node__rename'
                         value={draft}
-                        onChange={event => setDraft(event.target.value)}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)}
                         onBlur={commit}
-                        onClick={event => event.stopPropagation()}
-                        onDoubleClick={event => event.stopPropagation()}
-                        onKeyDown={event => {
+                        onClick={(event: React.MouseEvent<HTMLInputElement>) => event.stopPropagation()}
+                        onDoubleClick={(event: React.MouseEvent<HTMLInputElement>) => event.stopPropagation()}
+                        onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
                             if (event.key === 'Enter') commit();
                             if (event.key === 'Escape') props.onCommitRename(node, null);
                         }} />

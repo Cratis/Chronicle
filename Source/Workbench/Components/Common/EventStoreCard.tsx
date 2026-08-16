@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Card } from 'primereact/card';
+import { Card } from 'Components/Card';
 import { useNavigate } from 'react-router-dom';
 import { ImDatabase } from "react-icons/im";
 
@@ -31,9 +31,9 @@ export function EventStoreCard(props: IEventStoreCard) {
     return (
         <Card
             className='m-4 flex border-2 shadow-none w-160 h-50 overflow-hidden text-ellipsis whitespace-nowrap'
-            title={heading}
             footer={footer}
             header={image}>
+            {heading}
             {description}
         </Card>
     );

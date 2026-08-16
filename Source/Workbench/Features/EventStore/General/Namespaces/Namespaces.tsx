@@ -6,9 +6,8 @@ import { NamespacesViewModel } from './NamespacesViewModel';
 import { AllNamespaces, AllNamespacesParameters } from 'Api/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
-import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 import { useDialog } from '@cratis/arc.react.mvvm/dialogs';
@@ -35,7 +34,6 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
 
                 <DataPage.MenuItems>
                     <MenuItem
-                        id='create'
                         label={strings.eventStore.general.eventTypes.actions.create} icon={faIcons.FaPlus}
                         command={() => viewModel.addNamespace()} />
                 </DataPage.MenuItems>

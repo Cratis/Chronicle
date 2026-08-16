@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Card } from 'primereact/card';
-import { Tag } from 'primereact/tag';
-import { ProgressBar } from 'primereact/progressbar';
+import { ProgressBar, Tag } from '@cratis/components/Display';
+import { Card } from 'Components/Card';
 import { MdBolt, MdCheckCircle, MdEventAvailable, MdPeople, MdStorage, MdTimer, MdWaves } from 'react-icons/md';
 
 import type { ReactElement } from 'react';
@@ -72,12 +71,7 @@ export const StatusSummary = () => {
             {metrics.map(metric => (
                 <Card
                     key={metric.label}
-                    className="shadow-lg"
-                    pt={{
-                        root: { className: 'border border-gray-700/60 bg-surface-900' },
-                        body: { className: 'p-3' },
-                        content: { className: 'p-0' }
-                    }}>
+                    className="shadow-lg border border-gray-700/60 bg-surface-900">
                     <div className="flex items-center gap-3">
                         <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${metric.iconBg}`}>
                             {metric.icon}
@@ -91,7 +85,6 @@ export const StatusSummary = () => {
                                         value={100}
                                         showValue={false}
                                         className="h-1.5 w-10"
-                                        pt={{ value: { className: 'bg-green-500' } }}
                                     />
                                 )}
                             </div>

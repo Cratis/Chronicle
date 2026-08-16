@@ -5,8 +5,9 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Allotment } from 'allotment';
 import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
-import { TabPanel, TabView } from 'primereact/tabview';
-import { Button } from 'primereact/button';
+import { Tabs, type TabsRootChangeEvent } from 'primereact/tabs';
+import { Button } from 'Components/Button';
+import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -143,32 +144,45 @@ export const Sequences = () => {
 
                     <Allotment.Pane className='flex-grow'>
                         <div className='sequences__tabs'>
-                            <TabView
+                            <Tabs.Root
                                 className='sequences__tabview'
-                                activeIndex={activeIndex}
-                                onTabChange={event => setActiveIndex(event.index)}
-                                onTabClose={event => close(event.index)}>
-                                {open.map((query, index) => (
-                                    <TabPanel
-                                        key={query.state.id}
-                                        closable
-                                        header={
+                                value={activeIndex}
+                                onValueChange={(event: TabsRootChangeEvent) => setActiveIndex(Number(event.value))}>
+                                <Tabs.List>
+                                    {open.map((query, index) => (
+                                        // Rendered as a div rather than the default button so the close
+                                        // control can sit inside the tab without nesting one button in another.
+                                        <Tabs.Tab key={query.state.id} as='div' value={index}>
                                             <QueryTabHeader
                                                 name={query.state.name || sequenceStrings.newQuery}
                                                 hasUnsavedChanges={hasUnsavedChanges(query)}
                                                 onRename={name => rename(index, query, name)} />
-                                        }>
-                                        <QueryEditor
-                                            state={query.state}
-                                            eventStore={eventStore}
-                                            eventTypeIds={eventTypeIds}
-                                            eventSequenceIds={eventSequences.data}
-                                            hasUnsavedChanges={hasUnsavedChanges(query)}
-                                            onChange={state => update(index, state)}
-                                            onSave={() => save(query.state, query.saved === null)} />
-                                    </TabPanel>
-                                ))}
-                            </TabView>
+                                            <button
+                                                type='button'
+                                                className='ml-2 opacity-60 hover:opacity-100'
+                                                aria-label={sequenceStrings.actions.closeQuery}
+                                                title={sequenceStrings.actions.closeQuery}
+                                                onClick={event => { event.stopPropagation(); close(index); }}>
+                                                <faIcons.FaXmark />
+                                            </button>
+                                        </Tabs.Tab>
+                                    ))}
+                                </Tabs.List>
+                                <Tabs.Panels className='flex flex-col flex-1 min-h-0 p-0'>
+                                    {open.map((query, index) => (
+                                        <Tabs.Panel key={query.state.id} value={index} className='flex-1 min-h-0'>
+                                            <QueryEditor
+                                                state={query.state}
+                                                eventStore={eventStore}
+                                                eventTypeIds={eventTypeIds}
+                                                eventSequenceIds={eventSequences.data}
+                                                hasUnsavedChanges={hasUnsavedChanges(query)}
+                                                onChange={state => update(index, state)}
+                                                onSave={() => save(query.state, query.saved === null)} />
+                                        </Tabs.Panel>
+                                    ))}
+                                </Tabs.Panels>
+                            </Tabs.Root>
 
                             <Button
                                 className='sequences__add'

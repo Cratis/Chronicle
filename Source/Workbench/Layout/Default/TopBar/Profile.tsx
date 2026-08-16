@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useRef } from 'react';
-import { OverlayPanel } from 'primereact/overlaypanel';
+import { useState } from 'react';
+import { Popover, type PopoverRootOpenChangeEvent } from 'primereact/popover';
 import * as icons from "react-icons/fa";
 import css from './Profile.module.css';
-import { Button } from 'primereact/button';
+import { Button } from 'Components/Button';
 import { useDarkMode } from 'usehooks-ts';
 import strings from 'Strings';
 import { useAuth } from '../../../Features/Security/AuthContext';
@@ -23,10 +23,10 @@ const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onCli
 export const Profile = () => {
     const { isDarkMode, toggle: toggleDarkMode } = useDarkMode();
     const { logout } = useAuth();
-    const overlayPanelRef = useRef<OverlayPanel>(null);
+    const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
 
     const handleLogout = async () => {
-        overlayPanelRef.current?.hide();
+        setIsProfilePanelOpen(false);
         await logout();
     };
 
@@ -34,24 +34,34 @@ export const Profile = () => {
         <div className='flex-1'>
             <div className={'flex justify-end gap-3 '}>
 
-                <Button
-                    icon={<icons.FaUser />}
-                    rounded
-                    severity="info"
-                    className="p-2"
-                    onClick={(e) => overlayPanelRef.current?.toggle(e)}
-                    aria-label="User" />
+                <Popover.Root
+                    open={isProfilePanelOpen}
+                    onOpenChange={(event: PopoverRootOpenChangeEvent) => setIsProfilePanelOpen(event.value ?? false)}>
+                    <Popover.Trigger as="span">
+                        <Button
+                            icon={<icons.FaUser />}
+                            rounded
+                            severity="info"
+                            className="p-2"
+                            aria-label="User" />
+                    </Popover.Trigger>
 
-
-                <OverlayPanel ref={overlayPanelRef} className={css.overlayPanel}>
-                    <ul className={css.profileItems}>
-                        <ProfileItem icon={<icons.FaUser />} label={strings.layout.topBar.profile.myAccount} />
-                        {isDarkMode ?
-                            <ProfileItem icon={<icons.FaSun />} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode} /> :
-                            <ProfileItem icon={<icons.FaMoon />} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode} />}
-                        <ProfileItem icon={<icons.FaSignOutAlt />} label="Logout" onClick={handleLogout} />
-                    </ul>
-                </OverlayPanel>
+                    <Popover.Portal>
+                        <Popover.Positioner>
+                            <Popover.Popup className={css.overlayPanel}>
+                                <Popover.Content>
+                                    <ul className={css.profileItems}>
+                                        <ProfileItem icon={<icons.FaUser />} label={strings.layout.topBar.profile.myAccount} />
+                                        {isDarkMode ?
+                                            <ProfileItem icon={<icons.FaSun />} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode} /> :
+                                            <ProfileItem icon={<icons.FaMoon />} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode} />}
+                                        <ProfileItem icon={<icons.FaSignOutAlt />} label="Logout" onClick={handleLogout} />
+                                    </ul>
+                                </Popover.Content>
+                            </Popover.Popup>
+                        </Popover.Positioner>
+                    </Popover.Portal>
+                </Popover.Root>
             </div>
         </div>);
 };

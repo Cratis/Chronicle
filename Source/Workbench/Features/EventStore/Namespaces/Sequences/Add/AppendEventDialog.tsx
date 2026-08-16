@@ -10,8 +10,8 @@ import { Dialog } from '@cratis/components/Dialogs';
 import { ObjectContentEditor as _OCE } from '@cratis/components';
 const ObjectContentEditor = _OCE.ObjectContentEditor;
 import { InputText } from 'primereact/inputtext';
-import { Dropdown } from 'primereact/dropdown';
-import { Button } from 'primereact/button';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { Button } from 'Components/Button';
 import { useState, useEffect } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
@@ -114,9 +114,9 @@ export const AppendEventDialog = () => {
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="field mb-3">
                     <label htmlFor="eventType">{strings.eventStore.namespaces.sequences.dialogs.appendEvent.eventType}</label>
-                    <Dropdown
+                    <Dropdown<EventTypeRegistration>
                         id="eventType"
-                        value={selectedEventType}
+                        value={selectedEventType ?? undefined}
                         options={allEventTypes.data}
                         onChange={(e) => setSelectedEventType(e.value)}
                         optionLabel="type.id"
@@ -131,7 +131,7 @@ export const AppendEventDialog = () => {
                         <InputText
                             id="eventSourceId"
                             value={eventSourceId}
-                            onChange={(e) => setEventSourceId(e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventSourceId(e.target.value)}
                             placeholder={strings.eventStore.namespaces.sequences.dialogs.appendEvent.eventSourceIdPlaceholder}
                             className="w-full"
                         />
@@ -149,7 +149,7 @@ export const AppendEventDialog = () => {
                     <InputText
                         id="eventSourceType"
                         value={eventSourceType}
-                        onChange={(e) => setEventSourceType(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventSourceType(e.target.value)}
                         className="w-full"
                     />
                 </div>
@@ -159,7 +159,7 @@ export const AppendEventDialog = () => {
                     <InputText
                         id="eventStreamType"
                         value={eventStreamType}
-                        onChange={(e) => setEventStreamType(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventStreamType(e.target.value)}
                         className="w-full"
                     />
                 </div>
@@ -169,7 +169,7 @@ export const AppendEventDialog = () => {
                     <InputText
                         id="eventStreamId"
                         value={eventStreamId}
-                        onChange={(e) => setEventStreamId(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventStreamId(e.target.value)}
                         className="w-full"
                     />
                 </div>

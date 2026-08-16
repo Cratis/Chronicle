@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FilterEditor, FilterPanel } from '@cratis/components/Filter';
-import { Chips } from 'primereact/chips';
+import { Chip } from '@cratis/components/Display';
+import { InputTags, type InputTagsRootValueChangeEvent } from 'primereact/inputtags';
 import { InputText } from 'primereact/inputtext';
 import strings from 'Strings';
 import { SequenceHistogram } from 'Api/EventSequences/SequenceHistogram';
@@ -134,7 +135,7 @@ export const QueryFilterBar = ({ state, eventStore, eventTypeIds, onChange, onFi
                     className='w-full'
                     value={(value as string) ?? ''}
                     placeholder={placeholder}
-                    onChange={event => onEditorChange(event.target.value)} />
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => onEditorChange(event.target.value)} />
             )}
         </FilterEditor>
     );
@@ -174,11 +175,22 @@ export const QueryFilterBar = ({ state, eventStore, eventTypeIds, onChange, onFi
 
                 <FilterEditor filterKey={tagsFilterKey}>
                     {({ value, onChange: onEditorChange }) => (
-                        <Chips
+                        <InputTags.Root
                             className='w-full'
                             value={(value as string[]) ?? []}
-                            placeholder={filterStrings.placeholders.tags}
-                            onChange={event => onEditorChange(event.value?.length ? event.value : undefined)} />
+                            onValueChange={(event: InputTagsRootValueChangeEvent) =>
+                                onEditorChange(event.value?.length ? event.value : undefined)}>
+                            <InputTags.Items>
+                                {({ item, remove }) => (
+                                    <Chip label={item} removable onRemove={remove} removeAriaLabel={item} />
+                                )}
+                            </InputTags.Items>
+                            <InputTags.Control>
+                                {({ controlProps }) => (
+                                    <input {...controlProps} placeholder={filterStrings.placeholders.tags} />
+                                )}
+                            </InputTags.Control>
+                        </InputTags.Root>
                     )}
                 </FilterEditor>
 

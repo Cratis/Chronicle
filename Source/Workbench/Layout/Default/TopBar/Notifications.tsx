@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Badge } from 'primereact/badge';
+import { Badge } from '@cratis/components/Display';
 
 export const Notifications = () => {
     return (<div className='flex-1'>

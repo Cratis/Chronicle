@@ -3,21 +3,20 @@
 
 import strings from 'Strings';
 import { AllRecommendations, AllRecommendationsParameters } from 'Api/Recommendations';
-import { DataTableFilterMeta } from 'primereact/datatable';
-import { FilterMatchMode } from 'primereact/api';
+import { type DataTableFilterMeta } from '@cratis/components/DataTables';
+import { FilterMatchMode } from '@primereact/headless/datatable';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { Column } from 'primereact/column';
 import { Recommendation } from 'Api/Recommendations/Recommendation';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/arc.react.mvvm';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 
 const defaultFilters: DataTableFilterMeta = {
-    tombstone: { value: null, matchMode: FilterMatchMode.IN },
+    tombstone: { value: null, matchMode: FilterMatchMode.In },
 };
 
 const occurred = (recommendation: Recommendation) => {
@@ -61,12 +60,10 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
 
             <DataPage.MenuItems>
                 <MenuItem
-                    id='perform'
                     label={strings.eventStore.namespaces.recommendations.actions.perform} icon={faIcons.FaArrowsRotate}
                     disableOnUnselected
                     command={() => viewModel.perform()} />
                 <MenuItem
-                    id='ignore'
                     label={strings.eventStore.namespaces.recommendations.actions.ignore} icon={faIcons.FaArrowsRotate}
                     disableOnUnselected
                     command={() => handleIgnore()} />

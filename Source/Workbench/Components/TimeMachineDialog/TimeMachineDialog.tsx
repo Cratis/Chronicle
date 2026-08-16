@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
-import { Dialog } from 'primereact/dialog';
+import { Dialog } from '@cratis/components/Dialogs';
 import { TimeMachine, type Version } from '@cratis/components/TimeMachine';
 import { useState, useEffect } from 'react';
 import { AllSnapshotsForReadModel } from 'Api/ReadModels/AllSnapshotsForReadModel';
@@ -65,14 +65,13 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
 
     return (
         <Dialog
-            header="Time Machine"
+            title="Time Machine"
             visible={true}
-            onHide={() => closeDialog(DialogResult.Cancelled)}
-            style={{ width: '80vw', height: '80vh' }}
-            modal
-            dismissableMask
-            draggable={false}
-            resizable={false}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}
+            width="80vw"
+            style={{ height: '80vh' }}
+            buttons={null}
+            dismissable
         >
             <div style={{ height: 'calc(80vh - 100px)', display: 'flex', flexDirection: 'column' }}>
                 {versions.length > 0 ? (

@@ -3,14 +3,14 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
-import { Dropdown } from 'primereact/dropdown';
+import { Dropdown } from '@cratis/components/Dropdown';
 import { Allotment } from 'allotment';
 import { Page, ReadModelInstances, getInstanceKey } from 'Components';
 import { AllReadModelDefinitions, ReadModelDefinition } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelOccurrences, ReadModelInstances as ReadModelInstancesApi } from 'Api/ReadModels';
 import * as faIcons from 'react-icons/fa6';
-import { Menubar } from 'primereact/menubar';
+import { ActionMenubar } from '@cratis/components/Common';
 import strings from 'Strings';
 import { FluxCapacitor } from 'Icons';
 import { Json } from 'Features';
@@ -159,46 +159,46 @@ const ReadModelsContent = () => {
     return (
         <Page title={strings.eventStore.namespaces.readModels.title}>
             <div className="px-4 py-4">
-                <Menubar
-                    start={(
-                        <div className="flex items-center gap-3">
-                            <Dropdown
-                                id="readModel"
-                                value={selectedReadModel}
-                                options={allReadModels.data || []}
-                                onChange={(e) => handleReadModelChange(e.value)}
-                                optionLabel="containerName"
-                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
-                                className="w-16rem"
-                            />
-                            <Dropdown
-                                id="occurrence"
-                                value={selectedOccurrence}
-                                options={occurrenceOptions}
-                                onChange={(e) => handleOccurrenceChange(e.value)}
-                                placeholder={strings.eventStore.namespaces.readModels.placeholders.selectOccurrence}
-                                className="w-16rem"
-                                disabled={!selectedReadModel}
-                            />
-                        </div>
-                    )}
-                    model={[
-                        {
-                            label: strings.eventStore.namespaces.readModels.actions.query,
-                            icon: <faIcons.FaArrowsRotate className='mr-2' />,
-                            command: executeQuery,
-                            disabled: !selectedReadModel || !selectedOccurrence
-                        },
-                        {
-                            label: strings.eventStore.namespaces.readModels.actions.timeMachine,
-                            icon: <FluxCapacitor size={20} />,
-                            command: async () => {
-                                await showTimeMachineDialog();
+                <div className="flex items-center gap-3">
+                    <Dropdown<ReadModelDefinition | null>
+                        id="readModel"
+                        value={selectedReadModel}
+                        options={allReadModels.data || []}
+                        onChange={(event) => handleReadModelChange(event.value)}
+                        optionLabel="containerName"
+                        placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
+                        className="w-16rem"
+                    />
+                    <Dropdown<string | null>
+                        id="occurrence"
+                        value={selectedOccurrence}
+                        options={occurrenceOptions}
+                        optionLabel="label"
+                        optionValue="value"
+                        onChange={(event) => handleOccurrenceChange(event.value)}
+                        placeholder={strings.eventStore.namespaces.readModels.placeholders.selectOccurrence}
+                        className="w-16rem"
+                        disabled={!selectedReadModel}
+                    />
+                    <ActionMenubar
+                        model={[
+                            {
+                                label: strings.eventStore.namespaces.readModels.actions.query,
+                                icon: <faIcons.FaArrowsRotate className='mr-2' />,
+                                command: executeQuery,
+                                disabled: !selectedReadModel || !selectedOccurrence
                             },
-                            disabled: !selectedReadModel || !selectedOccurrence || !selectedInstance
-                        }
-                    ]}
-                />
+                            {
+                                label: strings.eventStore.namespaces.readModels.actions.timeMachine,
+                                icon: <FluxCapacitor size={20} />,
+                                command: async () => {
+                                    await showTimeMachineDialog();
+                                },
+                                disabled: !selectedReadModel || !selectedOccurrence || !selectedInstance
+                            }
+                        ]}
+                    />
+                </div>
             </div>
 
             <div className="h-full" style={{ height: '100%' }}>

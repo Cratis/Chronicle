@@ -1,20 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
 import strings from 'Strings';
 import { AllReadModelDefinitions, ReadModelDefinition, ReadModelOwner, ReadModelSource } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { AddReadModelDialog } from './Add/AddReadModelDialog';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import { ReadModelDetails } from './ReadModelDetails';
 import * as faIcons from 'react-icons/fa6';
 import { useState, useCallback } from 'react';
-import { Dropdown } from 'primereact/dropdown';
-import { DataTableFilterMeta } from 'primereact/datatable';
-import { FilterMatchMode } from 'primereact/api';
+import { type DataTableFilterMeta } from '@cratis/components/DataTables';
+import { FilterMatchMode } from '@primereact/headless/datatable';
 import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 
 const renderSource = (readModel: ReadModelDefinition) => {
@@ -55,43 +53,9 @@ export const ReadModelTypes = () => {
     };
 
     const filters: DataTableFilterMeta = {
-        owner: { value: null, matchMode: FilterMatchMode.EQUALS },
-        source: { value: null, matchMode: FilterMatchMode.EQUALS }
+        owner: { value: null, matchMode: FilterMatchMode.Equals },
+        source: { value: null, matchMode: FilterMatchMode.Equals }
     };
-
-    const ownerFilterOptions = [
-        { label: strings.eventStore.general.readModels.owners.client, value: ReadModelOwner.client },
-        { label: strings.eventStore.general.readModels.owners.server, value: ReadModelOwner.server }
-    ];
-
-    const sourceFilterOptions = [
-        { label: strings.eventStore.general.readModels.sources.code, value: ReadModelSource.code },
-        { label: strings.eventStore.general.readModels.sources.user, value: ReadModelSource.user }
-    ];
-
-    const ownerFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-        <Dropdown
-            value={options.value}
-            options={ownerFilterOptions}
-            onChange={(e) => options.filterCallback(e.value)}
-            optionLabel='label'
-            placeholder='All'
-            showClear
-            className='p-column-filter'
-        />
-    );
-
-    const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
-        <Dropdown
-            value={options.value}
-            options={sourceFilterOptions}
-            onChange={(e) => options.filterCallback(e.value)}
-            optionLabel='label'
-            placeholder='All'
-            showClear
-            className='p-column-filter'
-        />
-    );
 
     return (
         <Page title={strings.eventStore.general.readModels.title}>
@@ -109,7 +73,6 @@ export const ReadModelTypes = () => {
 
                 <DataPage.MenuItems>
                     <MenuItem
-                        id='create'
                         label={strings.eventStore.general.readModels.actions.create}
                         icon={faIcons.FaPlus}
                         command={handleAddReadModel} />
@@ -133,9 +96,7 @@ export const ReadModelTypes = () => {
                         header={strings.eventStore.general.readModels.columns.owner}
                         showFilterMatchModes={false}
                         filter
-                        filterMenuStyle={{ width: '14rem' }}
                         filterField='owner'
-                        filterElement={ownerFilterTemplate}
                         body={renderOwner} />
                     <Column
                         field='source'
@@ -143,9 +104,7 @@ export const ReadModelTypes = () => {
                         header={strings.eventStore.general.readModels.columns.source}
                         showFilterMatchModes={false}
                         filter
-                        filterMenuStyle={{ width: '14rem' }}
                         filterField='source'
-                        filterElement={sourceFilterTemplate}
                         body={renderSource} />
                     <Column
                         field='generation'

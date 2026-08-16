@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, type ChangeEvent } from "react";
 
-import { OverlayPanel } from "primereact/overlaypanel";
+import { Popover, type PopoverRootOpenChangeEvent } from "primereact/popover";
 import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
@@ -25,36 +25,45 @@ export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, IName
         }
     }, [params.eventStore, viewModel]);
 
-    const op = useRef<OverlayPanel>(null);
+    const [isNamespacePanelOpen, setIsNamespacePanelOpen] = useState(false);
 
     const selectNamespace = (namespace: string) => {
         viewModel.onNamespaceSelected(namespace);
-        op?.current?.hide();
+        setIsNamespacePanelOpen(false);
     };
 
     const filteredNamespaces = useMemo(() => viewModel.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())), [viewModel.namespaces, search]);
 
     return (
         <div>
-            <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
-                namespace={viewModel.currentNamespace} onClick={(e) => {
-                    op?.current?.toggle(e, null);
-                }} />
+            <Popover.Root
+                open={isNamespacePanelOpen}
+                onOpenChange={(event: PopoverRootOpenChangeEvent) => setIsNamespacePanelOpen(event.value ?? false)}>
+                <Popover.Trigger as="div">
+                    <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
+                        namespace={viewModel.currentNamespace} />
+                </Popover.Trigger>
 
-            <OverlayPanel ref={op}
-                className={`${css.overlayPanel} ${layoutConfig.leftSidebarOpen ? css.openOverlayPanel : css.closedOverlayPanel}`}>
+                <Popover.Portal>
+                    <Popover.Positioner>
+                        <Popover.Popup
+                            className={`${css.overlayPanel} ${layoutConfig.leftSidebarOpen ? css.openOverlayPanel : css.closedOverlayPanel}`}>
+                            <Popover.Content>
+                                <div>
+                                    <div className={'mb-2'}>
+                                        <InputText value={search}
+                                            placeholder={'Search for namespace'}
+                                            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                                                setSearch(event.target.value);
+                                            }} />
+                                    </div>
 
-                <div>
-                    <div className={'mb-2'}>
-                        <InputText value={search}
-                            placeholder={'Search for namespace'}
-                            onChange={(e) => {
-                                setSearch(e.target.value);
-                            }} />
-                    </div>
-
-                    <ItemsList<string> items={filteredNamespaces} onItemClicked={selectNamespace} />
-                </div>
-            </OverlayPanel>
+                                    <ItemsList<string> items={filteredNamespaces} onItemClicked={selectNamespace} />
+                                </div>
+                            </Popover.Content>
+                        </Popover.Popup>
+                    </Popover.Positioner>
+                </Popover.Portal>
+            </Popover.Root>
         </div>);
 });

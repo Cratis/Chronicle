@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Button } from 'primereact/button';
-import { Card } from 'primereact/card';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
-import { Dropdown } from 'primereact/dropdown';
-import { Tag } from 'primereact/tag';
+import { Column } from '@cratis/components/DataTables';
+import { Tag } from '@cratis/components/Display';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { Card } from 'Components/Card';
+import { DataTable } from 'Components/DataTable';
+import { Button } from 'Components/Button';
 import { useState } from 'react';
 import { MdRefresh, MdViewList, MdViewModule } from 'react-icons/md';
 
@@ -44,13 +44,7 @@ export const RecentActivityWidget = ({ className }: { className?: string }) => {
     );
 
     return (
-        <Card
-            className={`shadow-lg h-full ${className ?? ''}`}
-            pt={{
-                root: { className: 'border border-gray-700/60' },
-                body: { className: 'p-4' },
-                content: { className: 'p-0' }
-            }}>
+        <Card className={`shadow-lg h-full border border-gray-700/60 ${className ?? ''}`}>
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h3 className="text-sm font-semibold text-white">Recent Activity</h3>
@@ -63,20 +57,16 @@ export const RecentActivityWidget = ({ className }: { className?: string }) => {
                     <Dropdown
                         value={filter}
                         options={['All event types', 'Observer only', 'Events only']}
-                        className="text-xs"
-                        pt={{ root: { className: 'border-gray-700 text-xs' } }}
+                        className="text-xs border-gray-700"
                     />
                 </div>
             </div>
             <DataTable
                 value={rows}
-                size="small"
+                emptyMessage="No recent activity."
                 scrollable
                 scrollHeight="220px"
-                className="text-sm"
-                pt={{
-                    wrapper: { className: 'rounded-lg' }
-                }}>
+                className="text-sm rounded-lg">
                 <Column header="Event Type" body={eventTypeBody} style={{ minWidth: '10rem' }} />
                 <Column field="streamId" header="Stream ID" style={{ minWidth: '10rem' }} />
                 <Column field="stream" header="Stream" style={{ minWidth: '7rem' }} />

@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Button } from 'primereact/button';
-import { Card } from 'primereact/card';
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
-import { Dropdown } from 'primereact/dropdown';
-import { Tag } from 'primereact/tag';
+import { Column } from '@cratis/components/DataTables';
+import { Tag } from '@cratis/components/Display';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { Card } from 'Components/Card';
+import { DataTable } from 'Components/DataTable';
+import { Button } from 'Components/Button';
 import { useState } from 'react';
 import { MdAdd } from 'react-icons/md';
 
@@ -33,7 +33,7 @@ export const ObserverHealthWidget = ({ className }: { className?: string }) => {
     const statusBody = (row: ObserverRow) => (
         <Tag
             value={row.status === 'success' ? 'Healthy' : row.status === 'warning' ? 'Lagging' : 'Failed'}
-            severity={row.status}
+            severity={row.status === 'warning' ? 'warn' : row.status}
             rounded
             className="text-xs"
         />
@@ -51,13 +51,7 @@ export const ObserverHealthWidget = ({ className }: { className?: string }) => {
     );
 
     return (
-        <Card
-            className={`shadow-lg h-full ${className ?? ''}`}
-            pt={{
-                root: { className: 'border border-gray-700/60' },
-                body: { className: 'p-4' },
-                content: { className: 'p-0' }
-            }}>
+        <Card className={`shadow-lg h-full border border-gray-700/60 ${className ?? ''}`}>
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h3 className="text-sm font-semibold text-white">Observer / Projections Health</h3>
@@ -66,21 +60,17 @@ export const ObserverHealthWidget = ({ className }: { className?: string }) => {
                     <Dropdown
                         value={timeRange}
                         options={['Latest 14 entries', 'Latest 50 entries', 'All']}
-                        className="text-xs"
-                        pt={{ root: { className: 'border-gray-700 text-xs' } }}
+                        className="text-xs border-gray-700"
                     />
                     <Button icon={<MdAdd />} rounded text severity="secondary" size="small" />
                 </div>
             </div>
             <DataTable
                 value={rows}
-                size="small"
+                emptyMessage="No observers."
                 scrollable
                 scrollHeight="220px"
-                className="text-sm"
-                pt={{
-                    wrapper: { className: 'rounded-lg' }
-                }}>
+                className="text-sm rounded-lg">
                 <Column header="Status" body={nameBody} style={{ minWidth: '10rem' }} />
                 <Column header="Events" body={eventsBody} style={{ minWidth: '6rem' }} />
                 <Column field="lagEvents" header="Lag Events" style={{ minWidth: '7rem' }} />

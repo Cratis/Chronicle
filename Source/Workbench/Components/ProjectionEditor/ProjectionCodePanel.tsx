@@ -3,8 +3,9 @@
 
 import React, { useState } from 'react';
 import MonacoEditor from 'Components/MonacoEditor/MonacoEditor';
-import { SelectButton } from 'primereact/selectbutton';
-import { Button } from 'primereact/button';
+import { ToggleButton } from 'primereact/togglebutton';
+import { ToggleButtonGroup, type ToggleButtonGroupValueChangeEvent } from 'primereact/togglebuttongroup';
+import { Button } from 'Components/Button';
 
 interface ProjectionCodePanelProps {
     declarativeCode: string;
@@ -14,11 +15,6 @@ interface ProjectionCodePanelProps {
 
 export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declarativeCode, modelBoundCode, onRefresh }) => {
     const [codeType, setCodeType] = useState<'declarative' | 'modelBound'>('declarative');
-
-    const codeTypeOptions = [
-        { label: 'Declarative', value: 'declarative' },
-        { label: 'Model-Bound', value: 'modelBound' }
-    ];
 
     const handleCopyToClipboard = async () => {
         const code = codeType === 'declarative' ? declarativeCode : modelBoundCode;
@@ -32,12 +28,19 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
     return (
         <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <SelectButton
+                <ToggleButtonGroup
                     value={codeType}
-                    onChange={(e) => setCodeType(e.value)}
-                    options={codeTypeOptions}
+                    allowEmpty={false}
+                    onValueChange={(event: ToggleButtonGroupValueChangeEvent) => setCodeType(event.value as 'declarative' | 'modelBound')}
                     style={{ flex: 1 }}
-                />
+                >
+                    <ToggleButton.Root value='declarative'>
+                        <ToggleButton.Indicator>Declarative</ToggleButton.Indicator>
+                    </ToggleButton.Root>
+                    <ToggleButton.Root value='modelBound'>
+                        <ToggleButton.Indicator>Model-Bound</ToggleButton.Indicator>
+                    </ToggleButton.Root>
+                </ToggleButtonGroup>
                 <Button
                     icon="pi pi-refresh"
                     onClick={onRefresh}

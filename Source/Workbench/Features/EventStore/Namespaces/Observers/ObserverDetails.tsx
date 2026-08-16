@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
-import { DataTable } from 'primereact/datatable';
-import { TabView, TabPanel } from 'primereact/tabview';
+import { Column } from '@cratis/components/DataTables';
+import { DataTable } from 'Components/DataTable';
+import { Tabs, TabPanel } from 'Components/Tabs';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { ObserverOwner } from 'Api/Observation';
 import { ConnectedClient, ConnectedClientsForObserver } from 'Api/Clients';
@@ -61,7 +61,7 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
     return (
         <div className={css.observerDetails}>
             <h2 className={css.title}>{observer.id}</h2>
-            <TabView className={css.tabs} panelContainerClassName={css.tabPanelContainer}>
+            <Tabs className={css.tabs} panelContainerClassName={css.tabPanelContainer}>
                 <TabPanel header={detailStrings.tabs.summary}>
                     <dl className={css.properties}>
                         {properties.map(property => (
@@ -78,8 +78,7 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
                             <DataTable
                                 value={clients.data ?? []}
                                 dataKey='connectionId'
-                                emptyMessage={clientStrings.empty}
-                                size='small'>
+                                emptyMessage={clientStrings.empty}>
                                 <Column field='connectionId' header={clientStrings.columns.connectionId} />
                                 <Column field='clientType' header={clientStrings.columns.clientType} />
                                 <Column field='version' header={clientStrings.columns.version} />
@@ -91,10 +90,12 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
                         </div>
                     )}
                 </TabPanel>
-                <TabPanel header={detailStrings.tabs.eventTypes} contentClassName={css.eventTypesPanel}>
-                    <ObserverEventTypes observer={observer} />
+                <TabPanel header={detailStrings.tabs.eventTypes}>
+                    <div className={css.eventTypesPanel}>
+                        <ObserverEventTypes observer={observer} />
+                    </div>
                 </TabPanel>
-            </TabView>
+            </Tabs>
         </div>
     );
 };
