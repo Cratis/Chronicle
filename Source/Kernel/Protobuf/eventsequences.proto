@@ -151,7 +151,7 @@ message EventSequenceQueryCriteria {
 enum EventSequenceQuerySortBy {
    SequenceNumber = 0;
    Occurred = 1;
-   EventType = 2;
+   EVENT_SEQUENCE_QUERY_SORT_BY_EventType = 2;
    EventSourceId = 3;
 }
 message EventToAppend {
