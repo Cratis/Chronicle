@@ -260,9 +260,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@cratis/components@npm:3.0.0"
+"@cratis/components@npm:^3.4.0":
+  version: 3.4.0
+  resolution: "@cratis/components@npm:3.4.0"
   dependencies:
     allotment: "npm:1.20.5"
     framer-motion: "npm:12.42.2"
@@ -275,7 +275,9 @@ __metadata:
     "@cratis/fundamentals": ^7.10.3
     "@primereact/core": ^11.0.0
     "@primereact/headless": ^11.0.0
+    "@primereact/styles": ^11.0.0
     "@primereact/types": ^11.0.0
+    "@primeuix/themes": ^3.0.0
     primeicons: ^8.0.0
     primereact: ^11.0.0
     react: ^19.0.0
@@ -283,9 +285,13 @@ __metadata:
     reflect-metadata: 0.2.2
     tsyringe: 4.10.0
   peerDependenciesMeta:
+    "@primereact/styles":
+      optional: true
     "@primereact/types":
       optional: true
-  checksum: 10/70457c14a4a7a3b33f37797969970facaf0613456acee568d2ebf2e2debfa49b7f08f0f2ef013cfef5cf811beaca302e2b86a47a89d9909a2785f73bfd73da19
+    "@primeuix/themes":
+      optional: true
+  checksum: 10/d475063987c8feabec9d5c0e1ca2d06dc9a3f8b9b8f3105908c5f16c9c319230403721d482dca49345d8187b1e49e3041b88d082ce1a3f42e975f7ec871ad689
   languageName: node
   linkType: hard
 
@@ -8536,7 +8542,7 @@ __metadata:
     "@cratis/arc.react": "npm:^20.66.1"
     "@cratis/arc.react.mvvm": "npm:^20.66.1"
     "@cratis/arc.vite": "npm:^20.66.1"
-    "@cratis/components": "npm:^3.0.0"
+    "@cratis/components": "npm:^3.4.0"
     "@cratis/screenplay-language": "npm:^1.6.4"
     "@eslint/eslintrc": "npm:3.3.6"
     "@eslint/js": "npm:10.0.1"
