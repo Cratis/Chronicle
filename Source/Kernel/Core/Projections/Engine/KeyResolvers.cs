@@ -177,6 +177,13 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         var parentProjection = projection.Parent!;
+
+        // Any parent-based routing below needs an actual parent key value. When the configured parent key
+        // expression resolves to nothing — the event does not carry the property named as the parent key —
+        // fail with a descriptive exception instead of letting the event-sequence lookup throw a bare
+        // ArgumentNullException from converting a null event source id.
+        ThrowIfMissingParentKey(projection, parentKey, @event);
+
         var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
         logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
 
@@ -227,6 +234,14 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         var arrayIndexers = resolvedParentKey.ArrayIndexers.All.ToList();
         arrayIndexers.Add(new ArrayIndexer(childrenPropertyPath, identifiedByProperty, keyValue!));
         return arrayIndexers;
+    }
+
+    static void ThrowIfMissingParentKey(IProjection projection, Key parentKey, AppendedEvent @event)
+    {
+        if (parentKey.Value is null)
+        {
+            throw new MissingParentKeyForChildEvent(projection, @event);
+        }
     }
 
     static bool IsEventHandledByDescendantProjection(IProjection projection, EventTypeId eventTypeId)
