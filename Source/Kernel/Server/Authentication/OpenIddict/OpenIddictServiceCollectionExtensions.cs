@@ -99,19 +99,25 @@ public static class OpenIddictServiceCollectionExtensions
                 // documented ordering - it prefers the X.509 key with the furthest expiration date, not the one
                 // Chronicle marks active - so promoting a certificate that expires earlier than one still in the
                 // ring leaves OpenIddict issuing under the longer-lived one.
-                // In development without a certificate, use ephemeral keys for convenience
-                // In production, a certificate is required
+                // Without a certificate, a DEVELOPMENT build uses ephemeral keys for convenience - the
+                // same compile-time gate Program.cs uses to generate its self-signed TLS certificate.
+                // The development container images set no environment variables, so a runtime
+                // DOTNET_ENVIRONMENT / ASPNETCORE_ENVIRONMENT check leaves them on the production
+                // branch and they abort at startup demanding a certificate. In production, a
+                // certificate is required.
                 if (encryptionCertificateRing.IsConfigured)
                 {
                     var certificates = encryptionCertificateRing.All.Select(_ => _.Certificate).ToArray();
                     options.AddEncryptionCertificates(certificates)
                            .AddSigningCertificates(certificates);
                 }
-                else if (IsDevelopmentEnvironment())
+#if DEVELOPMENT
+                else
                 {
                     options.AddEphemeralEncryptionKey()
                            .AddEphemeralSigningKey();
                 }
+#else
                 else
                 {
                     throw new InvalidOperationException(
@@ -119,6 +125,7 @@ public static class OpenIddictServiceCollectionExtensions
                         "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
                         "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
                 }
+#endif
 
                 // When no certificate is explicitly configured, development serves the token endpoint
                 // with an auto-generated self-signed certificate. Relax OpenIddict's transport-security
@@ -198,13 +205,5 @@ public static class OpenIddictServiceCollectionExtensions
             });
 
         return services;
-    }
-
-    static bool IsDevelopmentEnvironment()
-    {
-        var dotnetEnvironment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-        var aspnetcoreEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        return string.Equals(dotnetEnvironment, "Development", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(aspnetcoreEnvironment, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

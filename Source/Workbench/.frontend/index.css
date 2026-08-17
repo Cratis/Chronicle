@@ -4,42 +4,13 @@
 @source "../Layout";
 @import '@cratis/components/tokens';
 @import '@cratis/components/styles';
-@import '@cratis/components/theme';
-
-/*
- * PrimeReact 10's compiled theme published the `--surface-*` / `--text-color` /
- * `--primary-color` / `--gray-*` palette that this app's own CSS is written
- * against. PrimeReact 11 ships no CSS at all, so those names resolve to nothing
- * and every border, card background and body color silently disappears.
- *
- * The Cratis baseline theme supplies the same palette under `--cratis-*`, so
- * this maps the old names onto it in one place rather than rewriting ~100 call
- * sites across 30 stylesheets. Anything written from here on should use the
- * `--cratis-*` tokens directly; this layer exists to keep the existing CSS
- * working across the upgrade.
- */
-:root,
-.cratis-theme {
-  --surface-ground: var(--cratis-surface-ground);
-  --surface-section: var(--cratis-surface-section);
-  --surface-card: var(--cratis-surface-card);
-  --surface-overlay: var(--cratis-surface-overlay);
-  --surface-border: var(--cratis-surface-border);
-  --surface-hover: var(--cratis-surface-hover);
-  --surface-0: var(--cratis-surface-card);
-  --text-color: var(--cratis-text-color);
-  --text-color-secondary: var(--cratis-text-color-secondary);
-  --primary-color: var(--cratis-primary-color);
-  --primary-color-text: var(--cratis-primary-color-text);
-  --highlight-bg: var(--cratis-highlight-bg);
-  --highlight-text-color: var(--cratis-highlight-text-color);
-  --border-radius: var(--cratis-border-radius);
-  --gray-300: var(--cratis-surface-border);
-  --gray-600: var(--cratis-surface-overlay);
-  --gray-700: var(--cratis-surface-hover);
-  --gray-800: var(--cratis-surface-card);
-  --menu-text-color: var(--cratis-text-color);
-}
+/* PrimeReact 10's compiled theme published the `--surface-*` / `--text-color` /
+   `--primary-color` / `--gray-*` palette this app's own CSS is written against;
+   PrimeReact 11 ships no CSS. The palette carries those names forward, with the
+   values of the lara-blue themes this app used - following the preset styledMode()
+   applies where PrimeReact 11 has an equivalent token. Anything written from here
+   on should use the `--cratis-*` tokens directly. */
+@import '@cratis/components/primereact-v10-palette';
 
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
@@ -69,6 +40,7 @@
   --cratis-sidebar-menuitem-active-textColor: var(--highlight-text-color);
   --cratis-topbar-bg: var(--gray-800);
   --cratis-layout-border-color: var(--surface-border);
+  --menu-text-color: var(--text-color);
 }
 
 body {

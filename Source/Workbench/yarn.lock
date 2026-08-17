@@ -260,9 +260,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@cratis/components@npm:3.0.0"
+"@cratis/components@npm:^3.4.0":
+  version: 3.4.0
+  resolution: "@cratis/components@npm:3.4.0"
   dependencies:
     allotment: "npm:1.20.5"
     framer-motion: "npm:12.42.2"
@@ -275,7 +275,9 @@ __metadata:
     "@cratis/fundamentals": ^7.10.3
     "@primereact/core": ^11.0.0
     "@primereact/headless": ^11.0.0
+    "@primereact/styles": ^11.0.0
     "@primereact/types": ^11.0.0
+    "@primeuix/themes": ^3.0.0
     primeicons: ^8.0.0
     primereact: ^11.0.0
     react: ^19.0.0
@@ -283,9 +285,13 @@ __metadata:
     reflect-metadata: 0.2.2
     tsyringe: 4.10.0
   peerDependenciesMeta:
+    "@primereact/styles":
+      optional: true
     "@primereact/types":
       optional: true
-  checksum: 10/70457c14a4a7a3b33f37797969970facaf0613456acee568d2ebf2e2debfa49b7f08f0f2ef013cfef5cf811beaca302e2b86a47a89d9909a2785f73bfd73da19
+    "@primeuix/themes":
+      optional: true
+  checksum: 10/d475063987c8feabec9d5c0e1ca2d06dc9a3f8b9b8f3105908c5f16c9c319230403721d482dca49345d8187b1e49e3041b88d082ce1a3f42e975f7ec871ad689
   languageName: node
   linkType: hard
 
@@ -1272,6 +1278,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@primereact/styles@npm:^11.0.0":
+  version: 11.1.0
+  resolution: "@primereact/styles@npm:11.1.0"
+  dependencies:
+    "@primereact/types": "npm:11.1.0"
+    "@primeuix/styled": "npm:^1.0.0"
+    "@primeuix/styles": "npm:^3.0.0"
+    "@primeuix/utils": "npm:^0.8.0"
+  checksum: 10/896d53fb8731febc9ef636a0284869efd453e8b38acd2bf63a161c5a7fa23fbc7b76b50cb8494d71a24de5d8f4d69e238de583cf2b6c4a6f33067541b0094cb4
+  languageName: node
+  linkType: hard
+
 "@primereact/types@npm:11.1.0, @primereact/types@npm:^11.0.0":
   version: 11.1.0
   resolution: "@primereact/types@npm:11.1.0"
@@ -1317,6 +1335,24 @@ __metadata:
     "@primeui/license-manager": "npm:^1.0.0"
     "@primeuix/utils": "npm:^0.8.0"
   checksum: 10/d7297906b25aaf1b1b79244fd42e06c12b951a9d7fe62039c5ca8860e2983b42d7e8783200766ac958518c034fb275c0a1701fec918e0fe33336946f375464b0
+  languageName: node
+  linkType: hard
+
+"@primeuix/styles@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@primeuix/styles@npm:3.0.0"
+  dependencies:
+    "@primeuix/styled": "npm:^1.0.0"
+  checksum: 10/f97d359385911a7cfef02930e5f0c36cd9aa9992043e0d90ff348546001039abc3d4a2cac96719a7a5fe9f420edac167ba15974d5997fdf0694d6cef45d84c4d
+  languageName: node
+  linkType: hard
+
+"@primeuix/themes@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@primeuix/themes@npm:3.0.0"
+  dependencies:
+    "@primeuix/styled": "npm:^1.0.0"
+  checksum: 10/cb253785e4a94ee92cab53ae6dd451fe52ac7811ab44e4cbb1d4b4ebc4c81e71e52fd3a5bd75758294ed21d91d1d352edf261c6dd8b77a7437db483a58a6e6cd
   languageName: node
   linkType: hard
 
@@ -8506,14 +8542,16 @@ __metadata:
     "@cratis/arc.react": "npm:^20.66.1"
     "@cratis/arc.react.mvvm": "npm:^20.66.1"
     "@cratis/arc.vite": "npm:^20.66.1"
-    "@cratis/components": "npm:^3.0.0"
+    "@cratis/components": "npm:^3.4.0"
     "@cratis/screenplay-language": "npm:^1.6.4"
     "@eslint/eslintrc": "npm:3.3.6"
     "@eslint/js": "npm:10.0.1"
     "@monaco-editor/react": "npm:^4.7.0"
     "@primereact/core": "npm:^11.0.0"
     "@primereact/headless": "npm:^11.0.0"
+    "@primereact/styles": "npm:^11.0.0"
     "@primereact/types": "npm:^11.0.0"
+    "@primeuix/themes": "npm:^3.0.0"
     "@storybook/react": "npm:^10.5.5"
     "@storybook/react-vite": "npm:^10.5.5"
     "@tailwindcss/postcss": "npm:4.3.3"
