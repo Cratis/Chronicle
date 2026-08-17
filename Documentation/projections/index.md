@@ -58,6 +58,7 @@ read model being a moment behind.
 | [Declarative Projections](declarative/) | Build read models with the fluent `IProjectionFor<T>` API |
 | [Immediate Projections](immediate-projections.md) | Strong consistency — the read model updates before the append returns |
 | [Eventual Consistency](eventual-consistency) | The default — how and when eventual projections catch up |
+| [Registration lifecycle](registration-lifecycle.md) | What happens when projections register, change, fail, or are no longer declared |
 | [Tagging Projections](tagging-projections) | Organize and tag projections |
 | [Appended event metadata filters](../events/filtering/index.md) | How tags and metadata correlate reducers and reactors that run alongside projections |
 
