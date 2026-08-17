@@ -195,12 +195,13 @@ export const DataTable = <TData extends object>({
                                         {column.props.sortable && column.props.field
                                             ? (
                                                 <PrimeDataTable.Sort field={column.props.field}>
-                                                    {column.props.header}
+                                                    <PrimeDataTable.THeadTitle>{column.props.header}</PrimeDataTable.THeadTitle>
                                                     <PrimeDataTable.SortIndicator match='asc'> ▲</PrimeDataTable.SortIndicator>
                                                     <PrimeDataTable.SortIndicator match='desc'> ▼</PrimeDataTable.SortIndicator>
                                                 </PrimeDataTable.Sort>
                                             )
-                                            : <span>{column.props.header}</span>}
+                                            // The title part rather than a bare span, so the theme's column-title weight reaches it.
+                                            : <PrimeDataTable.THeadTitle>{column.props.header}</PrimeDataTable.THeadTitle>}
                                         {column.props.filter && (column.props.filterField ?? column.props.field) && (
                                             <ColumnFilterMenu
                                                 field={(column.props.filterField ?? column.props.field) as string}
