@@ -14,6 +14,9 @@ internal static partial class ProjectionObserverSubscriberLogging
     [LoggerMessage(LogLevel.Warning, "Projection pipeline for key {Key} is not yet ready — event will be retried as a failed partition")]
     internal static partial void PipelineNotReady(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
 
+    [LoggerMessage(LogLevel.Error, "Failed building the projection pipeline for key {Key} — events will fail their partition with this cause until the projection definition is corrected")]
+    internal static partial void FailedBuildingPipeline(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key);
+
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling to projection pipeline for key {Key}. Last successfully observed event was {LastObservedEventSequenceNumber}")]
     internal static partial void ErrorHandling(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key, ulong lastObservedEventSequenceNumber);
 
