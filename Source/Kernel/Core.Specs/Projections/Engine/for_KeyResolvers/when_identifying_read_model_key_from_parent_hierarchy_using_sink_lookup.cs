@@ -87,6 +87,11 @@ public class when_identifying_read_model_key_from_parent_hierarchy_using_sink_lo
         _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Any<IEnumerable<EventTypeId>>())
             .Returns(Option<AppendedEvent>.None());
 
+        // The child is not in the sink yet — the direct child-key lookup misses and the
+        // resolution falls through to the parent-key strategies under test.
+        _sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey)
+            .Returns(Option<Key>.None());
+
         // Sink lookup returns the root key
         // Capture the property path used in the query to verify it's correct
         _sink.When(x => x.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ParentKey))

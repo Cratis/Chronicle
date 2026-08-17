@@ -10,6 +10,7 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.for_KeyResolvers;
@@ -83,6 +84,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
         _rootProjection.OwnEventTypes.Returns([_rootEventType]);
         _rootProjection.IdentifiedByProperty.Returns((PropertyPath)"id");
         _rootProjection.Path.Returns((ProjectionPath)"root");
+        _rootProjection.ChildrenPropertyPath.Returns(PropertyPath.NotSet);
 
         _childProjection = Substitute.For<IProjection>();
         _childProjection.HasParent.Returns(true);
@@ -95,6 +97,11 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
 
         // When looking up parent event by EventSourceId (ParentKey), return the root event
         _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(_rootEventType.Id))).Returns(_rootEvent);
+
+        // The child is not in the sink yet — the direct child-key lookup misses and the
+        // resolution falls through to the parent-key strategies under test.
+        _sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey)
+            .Returns(Option<Key>.None());
 
         // Root projection's key resolver returns the EventSourceId as the key
         _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __, @event) => Task.FromResult(KeyResolverResult.Resolved(new Key(@event.Context.EventSourceId.ToString(), ArrayIndexers.NoIndexers))));

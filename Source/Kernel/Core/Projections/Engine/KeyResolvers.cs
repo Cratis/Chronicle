@@ -177,6 +177,35 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         var parentProjection = projection.Parent!;
+
+        // Any parent-based routing below needs an actual parent key value. When the configured parent key
+        // expression resolves to nothing — the event does not carry the property named as the parent key —
+        // fail with a descriptive exception instead of letting the event-sequence lookup throw a bare
+        // ArgumentNullException from converting a null event source id.
+        ThrowIfMissingParentKey(projection, parentKey, @event);
+
+        // A keyed UPDATE to an already-projected child of the root carries the child's own key in the
+        // event content. When the sink already holds that child under the document identified by the
+        // resolved parent key, resolve the placement directly — no parent-event lookup, no creation-event
+        // scan and no rejection guard on every subsequent event of the stream. The parent key must confirm
+        // the located root: the same child key can exist under multiple roots, so the child key alone never
+        // decides the placement. On any miss or mismatch — including when the current event IS the child's
+        // creation event — fall through to the event-sequence strategies.
+        var childKeyValue = key.Value;
+        if (!parentProjection.HasParent &&
+            childKeyValue is not null and not ExpandoObject &&
+            childKeyValue.ToString() != @event.Context.EventSourceId.Value)
+        {
+            var childLocationPath = BuildFullParentChildPropertyPath(projection, identifiedByProperty);
+            var existingChildRoot = await sink.TryFindRootKeyByChildValue(childLocationPath, childKeyValue);
+            if (existingChildRoot.TryGetValue(out var existingChildRootKey) &&
+                Equals(existingChildRootKey.Value?.ToString(), parentKey.Value!.ToString()))
+            {
+                logger.FromParentHierarchyResolvedExistingChildBySink(childKeyValue, childLocationPath.Path, parentKey.Value);
+                return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, childKeyValue)]) });
+            }
+        }
+
         var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
         logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
 
@@ -227,6 +256,14 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         var arrayIndexers = resolvedParentKey.ArrayIndexers.All.ToList();
         arrayIndexers.Add(new ArrayIndexer(childrenPropertyPath, identifiedByProperty, keyValue!));
         return arrayIndexers;
+    }
+
+    static void ThrowIfMissingParentKey(IProjection projection, Key parentKey, AppendedEvent @event)
+    {
+        if (parentKey.Value is null)
+        {
+            throw new MissingParentKeyForChildEvent(projection, @event);
+        }
     }
 
     static bool IsEventHandledByDescendantProjection(IProjection projection, EventTypeId eventTypeId)
@@ -571,9 +608,17 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return null;
         }
 
-        if (creationEvent.Context.SequenceNumber >= @event.Context.SequenceNumber)
+        if (creationEvent.Context.SequenceNumber == @event.Context.SequenceNumber)
         {
-            logger.FromParentHierarchyChildCreationEventNotEarlier(creationEvent.Context.SequenceNumber.Value, @event.Context.SequenceNumber.Value);
+            // The current event is itself the earliest candidate creation event — the normal outcome when
+            // resolving a creation event. Nothing earlier exists to anchor to; not an anomaly.
+            logger.FromParentHierarchyCurrentEventIsEarliestCreationEvent(@event.Context.SequenceNumber.Value);
+            return null;
+        }
+
+        if (creationEvent.Context.SequenceNumber > @event.Context.SequenceNumber)
+        {
+            logger.FromParentHierarchyChildCreationEventLaterThanCurrent(creationEvent.Context.SequenceNumber.Value, @event.Context.SequenceNumber.Value);
             return null;
         }
 
@@ -621,14 +666,22 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         logger.FromParentHierarchyAttemptingViaChildCreationEvent(eventSourceId);
 
         var headSequenceNumber = await eventSequenceStorage.GetHeadSequenceNumber(creationEventTypes, eventSourceId);
-        if (headSequenceNumber == EventSequenceNumber.Unavailable ||
-            headSequenceNumber >= @event.Context.SequenceNumber)
+        if (headSequenceNumber == EventSequenceNumber.Unavailable)
         {
-            if (headSequenceNumber != EventSequenceNumber.Unavailable)
-            {
-                logger.FromParentHierarchyChildCreationEventNotEarlier(headSequenceNumber.Value, @event.Context.SequenceNumber.Value);
-            }
+            return null;
+        }
 
+        if (headSequenceNumber == @event.Context.SequenceNumber)
+        {
+            // The current event is itself the earliest candidate creation event — the normal outcome when
+            // resolving a creation event. Nothing earlier exists to anchor to; not an anomaly.
+            logger.FromParentHierarchyCurrentEventIsEarliestCreationEvent(@event.Context.SequenceNumber.Value);
+            return null;
+        }
+
+        if (headSequenceNumber > @event.Context.SequenceNumber)
+        {
+            logger.FromParentHierarchyChildCreationEventLaterThanCurrent(headSequenceNumber.Value, @event.Context.SequenceNumber.Value);
             return null;
         }
 
