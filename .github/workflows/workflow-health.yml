@@ -1,0 +1,113 @@
+name: Workflow Health
+
+# A workflow that fails every day and is never fixed teaches everyone to ignore it, and once
+# ignored it is indistinguishable from a workflow that does not exist. This watchdog turns
+# "persistently red" into an actionable object: a GitHub issue, filed once, that somebody has
+# to close by fixing the workflow or deleting it.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Queue rather than cancel: a run interrupted midway could file half its issues and,
+  # having been killed before logging, leave the picture harder to reason about.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Report persistently red workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      issues: write
+      actions: read
+
+    steps:
+      # github-script over `gh api` + jq: the logic is a join across three REST resources
+      # (workflows, their runs, open issues) plus a multi-line issue body. In JavaScript that
+      # is plain objects and template literals; in bash it is jq pipelines and quoting.
+      - name: Find workflows that have been red for three runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const STREAK_LENGTH = 3;
+            const RUNS_TO_INSPECT = 20;   // Plenty of headroom to find 3 decisive runs; no pagination needed.
+
+            const { owner, repo } = context.repo;
+            const { data: repository } = await github.rest.repos.get({ owner, repo });
+            const defaultBranch = repository.default_branch;
+
+            // Fetched once and matched on the exact title. Cheaper and more reliable than the
+            // search API, which has its own rate limit and can lag behind freshly filed issues.
+            const openIssueTitles = new Set(
+              (await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', per_page: 100 }))
+                .filter(issue => !issue.pull_request)
+                .map(issue => issue.title));
+
+            const workflows = (await github.paginate(github.rest.actions.listRepoWorkflows, { owner, repo, per_page: 100 }))
+              .filter(workflow => workflow.state === 'active');
+
+            for (const workflow of workflows) {
+              if (workflow.path.endsWith('workflow-health.yml')) {
+                core.info(`${workflow.name} -> skipped (this watchdog)`);
+                continue;
+              }
+
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflow.id,
+                branch: defaultBranch,
+                status: 'completed',
+                per_page: RUNS_TO_INSPECT
+              });
+
+              // Only success and failure carry a verdict. A cancelled or skipped run says nothing
+              // about the health of the workflow, so it is dropped from the streak entirely rather
+              // than counted as a pass — otherwise a cancellation would silently reset a real streak.
+              const decisive = runs.workflow_runs
+                .filter(run => run.conclusion === 'success' || run.conclusion === 'failure')
+                .slice(0, STREAK_LENGTH);
+
+              if (decisive.length < STREAK_LENGTH) {
+                core.info(`${workflow.name} -> skipped (only ${decisive.length} decisive run(s) on ${defaultBranch})`);
+                continue;
+              }
+
+              if (!decisive.every(run => run.conclusion === 'failure')) {
+                core.info(`${workflow.name} -> healthy (latest: ${decisive.map(run => run.conclusion).join(', ')})`);
+                continue;
+              }
+
+              const streakStart = decisive[decisive.length - 1];
+              core.info(`${workflow.name} -> red since ${streakStart.created_at}`);
+
+              const title = `CI: ${workflow.name} failing repeatedly`;
+              if (openIssueTitles.has(title)) {
+                core.info(`${workflow.name} -> already reported, leaving the open issue alone`);
+                continue;
+              }
+
+              const body = [
+                `\`${workflow.path}\` has failed its last ${STREAK_LENGTH} completed runs on \`${defaultBranch}\`.`,
+                ``,
+                `Failing since **${streakStart.created_at}**:`,
+                ``,
+                ...decisive.map(run => `- ${run.html_url} (${run.created_at})`),
+                ``,
+                `A persistently red workflow must be fixed or deleted — a signal nobody acts on is indistinguishable from no signal.`,
+                ``,
+                `<sub>Filed by \`.github/workflows/workflow-health.yml\`. It will not be filed again while this issue stays open.</sub>`
+              ].join('\n');
+
+              const { data: issue } = await github.rest.issues.create({ owner, repo, title, body });
+              openIssueTitles.add(title);
+              core.info(`${workflow.name} -> filed ${issue.html_url}`);
+            }
