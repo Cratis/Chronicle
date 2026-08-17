@@ -31,6 +31,9 @@ on:
       # reason: it sets the properties the build runs under.
       - "Directory.Packages.props"
       - "Directory.Build.props"
+      # A project added to or dropped from the solution changes what gets built and what gets tested,
+      # without necessarily touching a single source file. The membership assertion below reads it.
+      - "Chronicle.slnx"
       - "Integration/**"
       # The benchmarks job builds these, so a change here has to run it. Without this a broken benchmark
       # project lands green and fails on the next unrelated pull request instead.
@@ -49,6 +52,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # Runs before anything is compiled because it needs nothing but the checkout, and because a spec
+      # project missing from the solution is invisible to every later step: it is never built, never
+      # invoked, and therefore writes no TRX for the zero-test guard to find.
+      - name: Assert every spec project is in the solution
+        run: python3 .github/scripts/assert-solution-membership.py
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
