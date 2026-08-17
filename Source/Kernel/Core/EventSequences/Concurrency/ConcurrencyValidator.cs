@@ -21,7 +21,7 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
     {
         if (!scope.ShouldBeValidated)
         {
-            WarnIfIncomplete(eventSourceId, scope);
+            LogIfIncomplete(eventSourceId, scope);
             return Option<ConcurrencyViolation>.None();
         }
 
@@ -57,7 +57,7 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
         {
             foreach (var (eventSourceId, scope) in scopes.Scopes)
             {
-                WarnIfIncomplete(eventSourceId, scope);
+                LogIfIncomplete(eventSourceId, scope);
             }
 
             return [];
@@ -79,15 +79,15 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> the append is for.</param>
     /// <param name="scope">The <see cref="ConcurrencyScope"/> that is being skipped.</param>
     /// <remarks>
-    /// Failing open here looks identical to never having asked for a check, so a caller that believes its writes
-    /// are serialized never finds out otherwise. The append is still allowed - rejecting it would break every
-    /// caller that already builds such a scope - but it does not pass unnoticed: the operator sees this warning,
-    /// and the caller sees it on the append result, which reports the check as not performed.
-    /// A scope a strategy resolved against an empty narrowing reaches here unless the client opted into checking
-    /// the first append into a scope; with that on it expects <see cref="EventSequenceNumber.BeforeFirst"/>
-    /// instead, which is checked.
+    /// The signal a caller acts on is the append result, which reports the check as not performed - this log line
+    /// is a diagnostic aid on top of it. It is Debug rather than Warning because the state is the shipped default,
+    /// not an anomaly: with checking the first append into a scope not opted into, the strategy resolves an empty
+    /// narrowing to a scope with no expectation, so an application creating many event sources produces this line
+    /// on every one of them. A caller that did opt in sends the expectation that no matching event exists, which
+    /// is validated rather than skipped - so a scope reaching here carries no sign that a check was wanted, and
+    /// there is nothing to warn about.
     /// </remarks>
-    void WarnIfIncomplete(EventSourceId eventSourceId, ConcurrencyScope scope)
+    void LogIfIncomplete(EventSourceId eventSourceId, ConcurrencyScope scope)
     {
         if (scope.IsIncomplete)
         {

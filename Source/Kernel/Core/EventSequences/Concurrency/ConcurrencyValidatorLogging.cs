@@ -11,6 +11,6 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 
 internal static partial class ConcurrencyValidatorLogging
 {
-    [LoggerMessage(LogLevel.Warning, "Skipping the concurrency check for event source '{EventSourceId}' - the append declared a concurrency scope that carries no expected sequence number, so there is nothing to compare against and the append proceeds unchecked")]
+    [LoggerMessage(LogLevel.Debug, "Skipping the concurrency check for event source '{EventSourceId}' - the append declared a concurrency scope that carries no expected sequence number, so there is nothing to compare against and the append proceeds unchecked")]
     internal static partial void SkippingIncompleteConcurrencyScope(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId);
 }
