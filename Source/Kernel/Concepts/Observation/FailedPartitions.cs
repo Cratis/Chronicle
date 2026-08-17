@@ -8,7 +8,10 @@ using Cratis.Chronicle.Concepts.Keys;
 namespace Cratis.Chronicle.Concepts.Observation;
 
 /// <summary>
-/// Represents the state of all failed partitions within an observer.
+/// Represents the state of failed partitions. Typically holds the failures of a single observer, but the
+/// cross-observer storage queries (all failed partitions of a namespace, or of a set of observers) return
+/// their combined result through this type as well — so the same partition key may legitimately appear
+/// once per observer, and entries are identified by their own identity rather than their partition.
 /// </summary>
 public class FailedPartitions
 {
@@ -19,22 +22,33 @@ public class FailedPartitions
     const int MaxResolvedPartitions = 100;
 
     readonly List<FailedPartition> _resolvedPartitions = [];
-    Dictionary<Key, FailedPartition> _partitions = [];
+    Dictionary<FailedPartitionId, FailedPartition> _partitions = [];
 
     /// <summary>
-    /// Gets or sets the failed partitions for the observer.
+    /// Gets or sets the failed partitions.
     /// </summary>
     public IEnumerable<FailedPartition> Partitions
     {
         get => _partitions.Values;
         set
         {
-            _partitions = value.ToDictionary(_ => _.Partition, _ => _);
+            // Keyed by the entry identity rather than the partition: a partition is only unique within
+            // one observer, and the cross-observer queries feed this setter with several observers'
+            // failures at once. The identity is also immutable, unlike the observer — which the grain
+            // storage provider stamps onto an entry while it already sits in this dictionary. Built with
+            // the indexer rather than ToDictionary so reporting stored data can never throw on it.
+            var partitions = new Dictionary<FailedPartitionId, FailedPartition>();
+            foreach (var partition in value)
+            {
+                partitions[partition.Id] = partition;
+            }
+
+            _partitions = partitions;
         }
     }
 
     /// <summary>
-    /// Gets the resolved partitions for the observer.
+    /// Gets the resolved partitions.
     /// </summary>
     public IEnumerable<FailedPartition> ResolvedPartitions => _resolvedPartitions;
 
@@ -44,19 +58,24 @@ public class FailedPartitions
     public bool HasFailedPartitions => _partitions.Count > 0;
 
     /// <summary>
-    /// Check whether a partition is failed.
+    /// Check whether a partition is failed, for any observer represented in this instance.
     /// </summary>
     /// <param name="partition">Partition to check.</param>
     /// <returns>True if failed, false if not.</returns>
-    public bool IsFailed(Key partition) => _partitions.ContainsKey(partition);
+    public bool IsFailed(Key partition) => TryGet(partition, out _);
 
     /// <summary>
-    /// Try to get a failed partition by its partition identifier.
+    /// Try to get a failed partition by its partition identifier. When this instance holds the failures
+    /// of several observers, the first entry for the partition is returned.
     /// </summary>
     /// <param name="partition">Partition to get.</param>
     /// <param name="failedPartition">The optional failed partition.</param>
     /// <returns>True when failed partition exists, false if not.</returns>
-    public bool TryGet(Key partition, [NotNullWhen(true)] out FailedPartition? failedPartition) => _partitions.TryGetValue(partition, out failedPartition);
+    public bool TryGet(Key partition, [NotNullWhen(true)] out FailedPartition? failedPartition)
+    {
+        failedPartition = _partitions.Values.FirstOrDefault(candidate => candidate.Partition == partition);
+        return failedPartition is not null;
+    }
 
     /// <summary>
     /// Register an attempt for a partition.
@@ -106,7 +125,7 @@ public class FailedPartitions
         {
             _resolvedPartitions.RemoveAt(0);
         }
-        _partitions.Remove(partition);
+        _partitions.Remove(failedPartition.Id);
     }
 
     /// <summary>
@@ -121,5 +140,5 @@ public class FailedPartitions
         }
     }
 
-    void Add(FailedPartition failedPartition) => _partitions.Add(failedPartition.Partition, failedPartition);
+    void Add(FailedPartition failedPartition) => _partitions[failedPartition.Id] = failedPartition;
 }
