@@ -11,13 +11,16 @@ public class when_setting_partitions_with_an_exact_duplicate : Specification
     static readonly Key _partition = new("some-partition", ArrayIndexers.NoIndexers);
 
     FailedPartitions _failedPartitions;
+    FailedPartitionId _id;
     FailedPartition _older;
     FailedPartition _newer;
 
     void Establish()
     {
-        _older = new() { Partition = _partition, ObserverId = "the-observer" };
-        _newer = new() { Partition = _partition, ObserverId = "the-observer" };
+        // Same storage identity twice - the last occurrence wins rather than the whole set failing.
+        _id = FailedPartitionId.New();
+        _older = new() { Id = _id, Partition = _partition, ObserverId = "the-observer" };
+        _newer = new() { Id = _id, Partition = _partition, ObserverId = "the-observer" };
         _failedPartitions = new();
     }
 

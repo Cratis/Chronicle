@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// Represents the state of failed partitions. Typically holds the failures of a single observer, but the
 /// cross-observer storage queries (all failed partitions of a namespace, or of a set of observers) return
 /// their combined result through this type as well — so the same partition key may legitimately appear
-/// once per observer, and entries are identified by observer and partition together.
+/// once per observer, and entries are identified by their own identity rather than their partition.
 /// </summary>
 public class FailedPartitions
 {
@@ -22,7 +22,7 @@ public class FailedPartitions
     const int MaxResolvedPartitions = 100;
 
     readonly List<FailedPartition> _resolvedPartitions = [];
-    Dictionary<FailedPartitionKey, FailedPartition> _partitions = [];
+    Dictionary<FailedPartitionId, FailedPartition> _partitions = [];
 
     /// <summary>
     /// Gets or sets the failed partitions.
@@ -32,13 +32,15 @@ public class FailedPartitions
         get => _partitions.Values;
         set
         {
-            // Built with the indexer rather than ToDictionary: this setter is fed straight from storage,
-            // and reporting the data must never throw on it — an exact duplicate (same observer and
-            // partition) collapses to the last occurrence instead of failing the whole collection.
-            var partitions = new Dictionary<FailedPartitionKey, FailedPartition>();
+            // Keyed by the entry identity rather than the partition: a partition is only unique within
+            // one observer, and the cross-observer queries feed this setter with several observers'
+            // failures at once. The identity is also immutable, unlike the observer — which the grain
+            // storage provider stamps onto an entry while it already sits in this dictionary. Built with
+            // the indexer rather than ToDictionary so reporting stored data can never throw on it.
+            var partitions = new Dictionary<FailedPartitionId, FailedPartition>();
             foreach (var partition in value)
             {
-                partitions[FailedPartitionKey.For(partition)] = partition;
+                partitions[partition.Id] = partition;
             }
 
             _partitions = partitions;
@@ -123,7 +125,7 @@ public class FailedPartitions
         {
             _resolvedPartitions.RemoveAt(0);
         }
-        _partitions.Remove(FailedPartitionKey.For(failedPartition));
+        _partitions.Remove(failedPartition.Id);
     }
 
     /// <summary>
@@ -138,16 +140,5 @@ public class FailedPartitions
         }
     }
 
-    void Add(FailedPartition failedPartition) => _partitions[FailedPartitionKey.For(failedPartition)] = failedPartition;
-
-    /// <summary>
-    /// The identity of an entry: a partition is only unique within one observer, so the observer is part
-    /// of the key — two observers failing on the same partition are two distinct entries.
-    /// </summary>
-    /// <param name="ObserverId">The observer the failure belongs to.</param>
-    /// <param name="Partition">The failed partition.</param>
-    readonly record struct FailedPartitionKey(ObserverId ObserverId, Key Partition)
-    {
-        public static FailedPartitionKey For(FailedPartition failedPartition) => new(failedPartition.ObserverId, failedPartition.Partition);
-    }
+    void Add(FailedPartition failedPartition) => _partitions[failedPartition.Id] = failedPartition;
 }
