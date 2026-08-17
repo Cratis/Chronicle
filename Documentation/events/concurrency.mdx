@@ -85,7 +85,7 @@ This strategy gets the current tail sequence number and uses it as the expected 
 
 ## The First Append Into a Scope Is Not Checked by Default
 
-A concurrency check needs something to compare against, and the optimistic strategy gets one by reading the tail *through the scope's own narrowing*. When nothing matching that narrowing has been appended yet there is no tail to read, so the strategy reports `EventSequenceNumber.Unavailable` — the same value that means "no expected sequence number was supplied at all". The kernel cannot act on that, so it skips the check, logs a warning, and lets the append through.
+A concurrency check needs something to compare against, and the optimistic strategy gets one by reading the tail *through the scope's own narrowing*. When nothing matching that narrowing has been appended yet there is no tail to read, so the strategy reports `EventSequenceNumber.Unavailable` — the same value that means "no expected sequence number was supplied at all". The kernel cannot act on that, so it skips the check, notes it in a debug-level log line, and lets the append through — the skip is the designed default, so it is not logged as a warning.
 
 ```mermaid
 flowchart TD
@@ -95,7 +95,7 @@ flowchart TD
     V -->|no| K[(Appended)]
     V -->|yes| R[Concurrency violation]
     T -->|no| C{"First-append check turned on?"}
-    C -->|no, the default| S[Check skipped, warning logged]
+    C -->|no, the default| S[Check skipped, logged at debug]
     S --> K
     C -->|yes| W{"Does anything match it now?"}
     W -->|no| K
@@ -152,7 +152,7 @@ A scope declares "I expect no matching event" in a **field of its own** on the w
 |---|---|---|
 | current | current | **Checked.** Rejected if a matching event arrived in between |
 | current | older | **Skipped**, with the `SkippingIncompleteConcurrencyScope` warning — the older behavior. The older kernel does not know the field, reads `Unavailable`, and declines to validate exactly as it always did |
-| older | current | **Skipped**, same warning. The older client never sets the field, so the kernel has no expectation to check |
+| older | current | **Skipped**, same log line — at debug level, since for a current kernel this is the designed default. The older client never sets the field, so the kernel has no expectation to check |
 
 A skew therefore degrades to the same skip you get with the check off, and says so in the log — it never produces a check that reports success without running. Both directions are pinned by specs under `for_ConcurrencyScopeConverters/when_a_client_and_kernel_version_disagree`.
 
