@@ -606,6 +606,13 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         var dbContext = createDbContext(dbContextOptions, tableName);
 #pragma warning restore CA2000
 
+        // Every event store / namespace pair lives in its own database, and PostgreSQL / SQL Server
+        // refuse a connection to one that does not exist yet. Namespace() creates it on the way past,
+        // but nothing guarantees it ran first: appending to a namespace reaches its event-sequence
+        // table through here, so a namespace whose Namespaces table was never touched arrives at a
+        // database that is not there. Provision it the same way GetOrCreateReadModelDbContext does.
+        await EnsureDatabaseExists(dbContext, connectionString);
+
         // Per-table migration is handled by the table-specific migrator (EnsureTableExists)
         // which already caches "already migrated" inside the migrator implementation, so we
         // only need to call it once per request — the migrator itself will fast-path on
