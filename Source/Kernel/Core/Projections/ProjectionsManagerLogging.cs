@@ -30,4 +30,19 @@ internal static partial class ProjectionsManagerLogging
 
     [LoggerMessage(LogLevel.Debug, "Registering {Count} changed projection definitions")]
     internal static partial void RegisteringChangedDefinitions(this ILogger<ProjectionsManager> logger, int count);
+
+    [LoggerMessage(LogLevel.Error, "The projection engine rejected the definition for projection '{Identifier}' - its previously registered definition remains in effect and registration will be retried on the next registration")]
+    internal static partial void FailedRegisteringProjectionWithEngine(this ILogger<ProjectionsManager> logger, Exception ex, ProjectionId identifier);
+
+    [LoggerMessage(LogLevel.Error, "Failed setting the definition or subscribing the observer for projection '{Identifier}'")]
+    internal static partial void FailedSettingDefinitionAndSubscribing(this ILogger<ProjectionsManager> logger, Exception ex, ProjectionId identifier);
+
+    [LoggerMessage(LogLevel.Information, "Retiring projection '{Identifier}' - it is no longer registered by its owner. Its observer is unsubscribed and its definition removed; its sink container is left untouched")]
+    internal static partial void RetiringProjection(this ILogger<ProjectionsManager> logger, ProjectionId identifier);
+
+    [LoggerMessage(LogLevel.Information, "Retired projection '{Identifier}' wrote to container '{ContainerName}' which projection '{SuccessorIdentifier}' also targets - recommending a replay of the successor to rebuild the container")]
+    internal static partial void RetiredProjectionSharedContainer(this ILogger<ProjectionsManager> logger, ProjectionId identifier, ReadModelContainerName containerName, ProjectionId successorIdentifier);
+
+    [LoggerMessage(LogLevel.Warning, "Failed retiring projection '{Identifier}' - it remains registered and retirement will be retried on the next full registration")]
+    internal static partial void FailedRetiringProjection(this ILogger<ProjectionsManager> logger, Exception ex, ProjectionId identifier);
 }

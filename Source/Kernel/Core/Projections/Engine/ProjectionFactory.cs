@@ -306,6 +306,20 @@ public class ProjectionFactory(
         }
     }
 
+    static JsonSchemaProperty GetChildCollectionProperty(ProjectionId projectionId, ReadModelDefinition rootReadModel, JsonSchema currentReadModelSchema, PropertyPath childrenProperty)
+    {
+        if (!currentReadModelSchema.Properties.TryGetValue(childrenProperty.LastSegment.Value, out var schemaProperty))
+        {
+            throw new MissingChildCollectionInReadModelSchema(
+                projectionId,
+                childrenProperty.Path,
+                rootReadModel.Identifier,
+                currentReadModelSchema.Properties.Keys);
+        }
+
+        return schemaProperty;
+    }
+
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
             CreateInitialState(readModelSchema) :
@@ -376,7 +390,7 @@ public class ProjectionFactory(
                 var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
                     childProjection.IdentifiedByProperty :
                     childDefinition.IdentifiedBy;
-                var childrenProperty = currentReadModelSchema.Properties[childEntry.kvp.Key.LastSegment.Value];
+                var childrenProperty = GetChildCollectionProperty(projection.Identifier, rootReadModel, currentReadModelSchema, childEntry.kvp.Key);
                 var childSchema = childrenProperty.Item?.ActualSchema ?? currentReadModelSchema;
 
                 SetupSubscriptionsRecursively(
@@ -471,7 +485,7 @@ public class ProjectionFactory(
         // Create child projection structures first (without resolving events)
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
         {
-            var childrenProperty = currentReadModelSchema.Properties[kvp.Key.LastSegment.Value];
+            var childrenProperty = GetChildCollectionProperty(projectionId, rootReadModel, currentReadModelSchema, kvp.Key);
             return await CreateProjectionStructure(
                 eventSequenceStorage,
                 projectionId,

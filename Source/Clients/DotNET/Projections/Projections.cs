@@ -45,6 +45,7 @@ public class Projections(
     Dictionary<Type, IProjectionHandler> _handlersByModelType = new();
     Dictionary<Type, IProjectionHandler> _modelBoundHandlers = new();
     Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
+    bool _discovered;
 
     /// <summary>
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
@@ -224,6 +225,7 @@ public class Projections(
                 .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
             ]).ToImmutableList();
 
+        _discovered = true;
         return Task.CompletedTask;
     }
 
@@ -234,7 +236,13 @@ public class Projections(
         {
             EventStore = eventStore.Name,
             Owner = ProjectionOwner.Client,
-            Projections = [.. Definitions]
+            Projections = [.. Definitions],
+
+            // The registration only claims to be the client's full set when discovery has run and every discovered
+            // artifact produced a definition. An artifact whose definition could not be built is excluded from the
+            // batch, and claiming a full set then would make the kernel retire a projection that still exists in
+            // the client.
+            FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
         });
     }
 

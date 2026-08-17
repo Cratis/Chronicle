@@ -28,6 +28,12 @@ public interface IProjection : IGrainWithStringKey
     Task<ProjectionDefinition> GetDefinition();
 
     /// <summary>
+    /// Remove the projection - its definition is deleted from storage and the grain is deactivated.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Remove();
+
+    /// <summary>
     /// Subscribe to changes in projection or pipeline definition changes.
     /// </summary>
     /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>

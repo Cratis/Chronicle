@@ -15,6 +15,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -57,6 +58,7 @@ public class ProjectionObserverSubscriber(
     IProjectionPipeline? _pipeline;
     IProjectionChangesetNotifier? _changesetNotifier;
     JsonSchema? _schema;
+    Exception? _pipelineBuildFailure;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -122,6 +124,22 @@ public class ProjectionObserverSubscriber(
     {
         if (_pipeline is null)
         {
+            // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
+            // heals as soon as the definition is corrected, without requiring the grain to be reactivated.
+            await HandlePipeline();
+        }
+
+        if (_pipeline is null)
+        {
+            if (_pipelineBuildFailure is not null)
+            {
+                return new(
+                    ObserverSubscriberState.Failed,
+                    EventSequenceNumber.Unavailable,
+                    _pipelineBuildFailure.GetAllMessages(),
+                    _pipelineBuildFailure.StackTrace ?? string.Empty);
+            }
+
             logger.PipelineNotReady(_key);
             return new(
                 ObserverSubscriberState.Failed,
@@ -224,12 +242,26 @@ public class ProjectionObserverSubscriber(
             return;
         }
 
-        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
-        var eventStoreStorage = storage.GetEventStore(_key.EventStore);
-        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
-        _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
-        _schema = readModel.GetSchemaForLatestGeneration();
+        // A build failure must not fault the grain: throwing from OnActivateAsync would fail the activation
+        // itself and every partition would report the activation error over and over. Containing the failure
+        // here keeps the grain alive, lets OnNext report the actual cause on the failed partition, and lets a
+        // later definition change (or the retry in OnNext) rebuild the pipeline without a reactivation.
+        try
+        {
+            var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
+            var eventStoreStorage = storage.GetEventStore(_key.EventStore);
+            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+            var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
+            _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
+            _schema = readModel.GetSchemaForLatestGeneration();
+            _pipelineBuildFailure = null;
+        }
+        catch (Exception exception)
+        {
+            _pipeline = null;
+            _pipelineBuildFailure = exception;
+            logger.FailedBuildingPipeline(exception, _key);
+        }
     }
 
     bool HasDefinitionChanged(ProjectionDefinition oldDefinition, ProjectionDefinition newDefinition)
@@ -242,6 +274,11 @@ public class ProjectionObserverSubscriber(
             return true;
         }
 
+        return HasProjectionRulesChanged(oldDefinition, newDefinition);
+    }
+
+    bool HasProjectionRulesChanged(ProjectionDefinition oldDefinition, ProjectionDefinition newDefinition)
+    {
         if (oldDefinition.From.Count != newDefinition.From.Count ||
             oldDefinition.Join.Count != newDefinition.Join.Count ||
             oldDefinition.RemovedWith.Count != newDefinition.RemovedWith.Count ||
@@ -273,6 +310,39 @@ public class ProjectionObserverSubscriber(
 
             if (oldJoinRule.Key != newJoinRule.Key ||
                 oldJoinRule.Properties.Count != newJoinRule.Properties.Count)
+            {
+                return true;
+            }
+        }
+
+        // A child collection that was added, removed or redefined changes the projection structure -
+        // without this, a children-only change kept the stale cached pipeline (#3722).
+        return HasChildCollectionsChanged(oldDefinition.Children, newDefinition.Children) ||
+            HasChildCollectionsChanged(oldDefinition.Nested, newDefinition.Nested);
+    }
+
+    bool HasChildCollectionsChanged(IDictionary<PropertyPath, ChildrenDefinition>? oldChildren, IDictionary<PropertyPath, ChildrenDefinition>? newChildren)
+    {
+        var oldCount = oldChildren?.Count ?? 0;
+        var newCount = newChildren?.Count ?? 0;
+        if (oldCount != newCount)
+        {
+            return true;
+        }
+
+        if (oldChildren is null || newChildren is null)
+        {
+            return false;
+        }
+
+        foreach (var (property, oldChild) in oldChildren)
+        {
+            if (!newChildren.TryGetValue(property, out var newChild))
+            {
+                return true;
+            }
+
+            if (oldChild.IdentifiedBy != newChild.IdentifiedBy || HasProjectionRulesChanged(oldChild, newChild))
             {
                 return true;
             }

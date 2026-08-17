@@ -42,10 +42,11 @@ internal sealed class Projections(
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
-        var projections = request.Projections.Select(_ => _.ToChronicle((Concepts.Projections.ProjectionOwner)(int)request.Owner)).ToArray();
+        var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
+        var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
         try
         {
-            await projectionsManager.Register(projections);
+            await projectionsManager.Register(projections, request.FullSet ? owner : null);
         }
         catch (Exception exception)
         {

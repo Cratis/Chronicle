@@ -31,7 +31,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
-public class ProjectionsManager(
+public partial class ProjectionsManager(
     IProjectionFactory projectionFactory,
     IProjectionsServiceClient projectionsService,
     IProjectionDefinitionComparer projectionDefinitionComparer,
@@ -55,45 +55,50 @@ public class ProjectionsManager(
     }
 
     /// <inheritdoc/>
-    public async Task Register(IEnumerable<ProjectionDefinition> definitions)
+    public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null)
     {
+        var definitionList = definitions.ToList();
+
         // Same-version client replicas re-register identical definitions on every startup and reconnect. Handling
         // only what actually changed makes such a re-registration near-free, and because this grain is non-reentrant
         // it also collapses a queue of identical registrations: the first request does the work, every queued
         // duplicate compares equal against the registered state and returns immediately instead of repeating the
         // per-namespace fan-out. Without this, stacked retries kept the request queue from ever draining.
-        var changedDefinitions = await GetChangedDefinitions(definitions);
+        var changedDefinitions = await GetChangedDefinitions(definitionList);
+        var failures = new Dictionary<ProjectionId, Exception>();
+
         if (changedDefinitions.Count == 0)
         {
             logger.AllDefinitionsUnchanged();
-            return;
         }
-
-        logger.RegisteringChangedDefinitions(changedDefinitions.Count);
-        await projectionsService.Register(_eventStoreName, changedDefinitions);
-
-        // Subscribe projections immediately so that seeded events appended after registration
-        // are not missed due to the asynchronous timer-based subscription scheduling
-        await SetDefinitionAndSubscribeForProjections(changedDefinitions);
-
-        // Merge into the state only after the engine and the projection grains have accepted the definitions, so an
-        // interrupted registration is retried in full on the next attempt instead of being skipped as unchanged.
-        var existingProjections = State.Projections.ToList();
-        foreach (var newDefinition in changedDefinitions)
+        else
         {
-            var existingIndex = existingProjections.FindIndex(p => p.Identifier == newDefinition.Identifier);
-            if (existingIndex >= 0)
+            logger.RegisteringChangedDefinitions(changedDefinitions.Count);
+            var acceptedByEngine = await RegisterWithEngine(changedDefinitions, failures);
+
+            // Subscribe projections immediately so that seeded events appended after registration
+            // are not missed due to the asynchronous timer-based subscription scheduling
+            foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(acceptedByEngine))
             {
-                existingProjections[existingIndex] = newDefinition;
+                failures[identifier] = exception;
             }
-            else
-            {
-                existingProjections.Add(newDefinition);
-            }
+
+            // Merge into the state only the definitions that the engine and the projection grains fully accepted.
+            // A definition that failed anywhere is left out, so the next registration sees it as changed and retries
+            // exactly the work that did not land - one bad definition can no longer leave the others silently stale.
+            MergeIntoState(changedDefinitions.Where(definition => !failures.ContainsKey(definition.Identifier)));
+            await WriteStateAsync();
         }
 
-        State.Projections = existingProjections;
-        await WriteStateAsync();
+        if (fullSetOwner is not null)
+        {
+            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value);
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new SomeProjectionDefinitionsFailedToRegister(_eventStoreName, failures);
+        }
     }
 
     /// <inheritdoc/>
@@ -141,17 +146,25 @@ public class ProjectionsManager(
 
         await Task.WhenAll(State.Projections.Select(async projectionDefinition =>
         {
-            var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
-            var projection = GrainFactory.GetGrain<IProjection>(key);
-            await projection.SetDefinition(projectionDefinition);
-            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == projectionDefinition.ReadModel);
-            if (readModelDefinition is null)
+            try
             {
-                logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
-                return;
-            }
+                var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
+                var projection = GrainFactory.GetGrain<IProjection>(key);
+                await projection.SetDefinition(projectionDefinition);
+                var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == projectionDefinition.ReadModel);
+                if (readModelDefinition is null)
+                {
+                    logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
+                    return;
+                }
 
-            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace, eventTypeSchemas);
+                await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace, eventTypeSchemas);
+            }
+            catch (Exception exception)
+            {
+                // One projection that cannot subscribe in the new namespace must not keep the others from doing so.
+                logger.FailedSettingDefinitionAndSubscribing(exception, projectionDefinition.Identifier);
+            }
         }));
     }
 
@@ -185,7 +198,7 @@ public class ProjectionsManager(
         await SetDefinitionAndSubscribeForProjections(State.Projections);
     }
 
-    async Task SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions)
+    async Task<IReadOnlyDictionary<ProjectionId, Exception>> SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions)
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
@@ -195,17 +208,89 @@ public class ProjectionsManager(
         // storage reads.
         var eventTypeSchemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
 
+        // Failures are isolated per definition: one projection that cannot set its definition or subscribe must not
+        // keep the others from landing, and the caller decides whether the collected failures surface as an error
+        // (registration) or are only logged (the timer-driven resubscription pass).
+        var failures = new Dictionary<ProjectionId, Exception>();
         await Task.WhenAll(definitions.Select(async definition =>
         {
-            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
-            if (readModelDefinition is null)
+            try
             {
-                logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
-                return;
-            }
+                var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+                if (readModelDefinition is null)
+                {
+                    logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                    failures[definition.Identifier] = new ReadModelNotFound(definition.ReadModel);
+                    return;
+                }
 
-            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition, eventTypeSchemas);
+                await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition, eventTypeSchemas);
+            }
+            catch (Exception exception)
+            {
+                failures[definition.Identifier] = exception;
+                logger.FailedSettingDefinitionAndSubscribing(exception, definition.Identifier);
+            }
         }));
+
+        return failures;
+    }
+
+    async Task<IReadOnlyList<ProjectionDefinition>> RegisterWithEngine(IReadOnlyList<ProjectionDefinition> definitions, Dictionary<ProjectionId, Exception> failures)
+    {
+        try
+        {
+            await projectionsService.Register(_eventStoreName, definitions);
+            return definitions;
+        }
+        catch (Exception exception) when (definitions.Count == 1)
+        {
+            failures[definitions[0].Identifier] = exception;
+            logger.FailedRegisteringProjectionWithEngine(exception, definitions[0].Identifier);
+            return [];
+        }
+        catch
+        {
+            // At least one definition in the batch was rejected, and the batch call only surfaces the first failure.
+            // Fall through to registering each definition on its own so one bad definition cannot leave every other
+            // changed definition silently stale.
+        }
+
+        var accepted = new List<ProjectionDefinition>();
+        foreach (var definition in definitions)
+        {
+            try
+            {
+                await projectionsService.Register(_eventStoreName, [definition]);
+                accepted.Add(definition);
+            }
+            catch (Exception exception)
+            {
+                failures[definition.Identifier] = exception;
+                logger.FailedRegisteringProjectionWithEngine(exception, definition.Identifier);
+            }
+        }
+
+        return accepted;
+    }
+
+    void MergeIntoState(IEnumerable<ProjectionDefinition> definitions)
+    {
+        var projections = State.Projections.ToList();
+        foreach (var definition in definitions)
+        {
+            var existingIndex = projections.FindIndex(p => p.Identifier == definition.Identifier);
+            if (existingIndex >= 0)
+            {
+                projections[existingIndex] = definition;
+            }
+            else
+            {
+                projections.Add(definition);
+            }
+        }
+
+        State.Projections = projections;
     }
 
     async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)

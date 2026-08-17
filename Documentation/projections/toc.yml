@@ -6,6 +6,8 @@
   href: architecture.mdx
 - name: Eventual Consistency
   href: eventual-consistency.mdx
+- name: Registration lifecycle
+  href: registration-lifecycle.md
 - name: Appended event metadata filters
   href: filtering.mdx
   items:
