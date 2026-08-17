@@ -3,6 +3,7 @@
 
 import 'reflect-metadata';
 import { CratisComponentsProvider } from '@cratis/components/Common';
+import { styledMode } from '@cratis/components/styled';
 import ReactDOM from 'react-dom/client';
 import 'primeicons/primeicons.css';
 import './index.css';
@@ -20,7 +21,7 @@ configureMobx({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <CratisComponentsProvider value={{ ripple: true, unstyled: true, license: primeUiLicense }}>
+        <CratisComponentsProvider value={{ ripple: true, license: primeUiLicense, ...styledMode() }}>
             <App />
         </CratisComponentsProvider>
     </React.StrictMode>
