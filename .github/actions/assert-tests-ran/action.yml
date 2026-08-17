@@ -1,0 +1,24 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+name: Assert tests ran
+description: >-
+  Fails the job when the TRX files a test step produced report zero executed tests.
+  A run that matches no tests still exits successfully, so without this a broken filter,
+  a project missing from the solution, or a test host that never started all read as a pass.
+
+inputs:
+  path:
+    description: Directory searched recursively for *.trx result files.
+    required: true
+  name:
+    description: Name of the test run, used in the log and failure message.
+    required: false
+    default: The test run
+
+runs:
+  using: composite
+  steps:
+    - name: Assert the executed test count is not zero
+      shell: bash
+      run: python3 "${GITHUB_ACTION_PATH}/assert-tests-ran.py" "${{ inputs.path }}" "${{ inputs.name }}"
