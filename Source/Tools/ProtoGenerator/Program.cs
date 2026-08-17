@@ -63,9 +63,9 @@ foreach (var group in servicesByNamespace)
         schema = ProtoSchemaHelper.FixRpcMethodNameConflicts(schema);
 
         // Fix enum value naming conflicts.
-        // In proto3, enum values use C++ scoping rules and must be unique within the package.
-        // When two enums in the same file share value names, prefix the conflicting values
-        // with an UPPER_SNAKE_CASE version of their parent enum name.
+        // In proto3, enum values use C++ scoping rules and must be unique within the package - a value
+        // collides with a same-named value in another enum and with a same-named message in the same schema.
+        // Conflicting values are prefixed with an UPPER_SNAKE_CASE version of their parent enum name.
         schema = ProtoSchemaHelper.FixEnumValueConflicts(schema);
 
         // Add ISO 8601 format comment to SerializableDateTimeOffset message definitions.

@@ -106,8 +106,9 @@ internal static partial class ProtoSchemaHelper
 
     /// <summary>
     /// Fixes enum value naming conflicts in a proto3 schema.
-    /// In proto3, enum values use C++ scoping rules and must be unique within the package.
-    /// When conflicts are detected, the conflicting values are prefixed with
+    /// In proto3, enum values use C++ scoping rules and must be unique within the package — an enum value is a
+    /// sibling of its enum type, so it collides both with a value of the same name in another enum and with a
+    /// message of the same name in the same schema. Conflicting values are prefixed with
     /// an UPPER_SNAKE_CASE version of their parent enum name.
     /// </summary>
     /// <param name="schema">The proto schema string to process.</param>
@@ -116,6 +117,10 @@ internal static partial class ProtoSchemaHelper
     {
         var enumBlockRegex = EnumBlockRegex;
         var valueDeclarationRegex = ValueDeclarationRegex;
+
+        var messageNames = MessageDeclarationRegex.Matches(schema)
+            .Select(_ => _.Groups["name"].Value)
+            .ToHashSet(StringComparer.Ordinal);
 
         // First pass: collect all value names per enum
         var fullMatches = new List<string>();
@@ -150,7 +155,7 @@ internal static partial class ProtoSchemaHelper
         }
 
         var conflictingNames = valueCounts
-            .Where(kv => kv.Value > 1)
+            .Where(kv => kv.Value > 1 || messageNames.Contains(kv.Key))
             .Select(kv => kv.Key)
             .ToHashSet(StringComparer.Ordinal);
 
