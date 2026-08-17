@@ -45,6 +45,11 @@ public record ReplayCandidateReasonType(string Value) : ConceptAs<string>(Value)
     public static readonly ReplayCandidateReasonType WebhookDefinitionChanged = "WebhookDefinitionChanged";
 
     /// <summary>
+    /// Gets the <see cref="ReplayCandidateReasonType"/> for when a retired projection wrote to the same read model container.
+    /// </summary>
+    public static readonly ReplayCandidateReasonType RetiredProjectionSharedContainer = "RetiredProjectionSharedContainer";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ReplayCandidateReasonType"/>.
     /// </summary>
     /// <param name="value">String to convert from.</param>

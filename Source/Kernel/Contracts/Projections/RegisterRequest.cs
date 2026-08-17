@@ -26,4 +26,14 @@ public class RegisterRequest
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
     public IList<ProjectionDefinition> Projections { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether <see cref="Projections"/> is the complete set of projections for <see cref="Owner"/>.
+    /// When <see langword="true"/>, any registered projection with the same owner that is not in the set is retired:
+    /// its observer stops consuming events and its definition is removed, while its sink container is left untouched.
+    /// Leave <see langword="false"/> for a partial registration, which never retires anything - including when the
+    /// client could not build a definition for every discovered artifact.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool FullSet { get; set; }
 }

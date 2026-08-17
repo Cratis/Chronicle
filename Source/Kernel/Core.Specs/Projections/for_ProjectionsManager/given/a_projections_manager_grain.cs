@@ -31,6 +31,9 @@ public class a_projections_manager_grain : Specification
     protected IProjectionDefinitionComparer _definitionComparer;
     protected IProjection _projectionGrain;
     protected Observation.IObserver _observerGrain;
+    protected Jobs.IJobsManager _jobsManager;
+    protected Recommendations.IRecommendationsManager _recommendationsManager;
+    protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
     protected ProjectionsManagerState _state;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
 
@@ -61,7 +64,13 @@ public class a_projections_manager_grain : Specification
         _silo.AddService(Substitute.For<ILanguageService>());
 
         var storage = Substitute.For<Storage.IStorage>();
-        storage.GetEventStore(Arg.Any<EventStoreName>()).EventTypes.GetLatestForAllEventTypes().Returns([]);
+        var eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
+        storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
+        eventStoreStorage.EventTypes.GetLatestForAllEventTypes().Returns([]);
+        var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
+        eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
+        _failedPartitionsStorage = Substitute.For<Storage.Observation.IFailedPartitionsStorage>();
+        namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
         _silo.AddService(storage);
 
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
@@ -79,6 +88,13 @@ public class a_projections_manager_grain : Specification
 
         _observerGrain = Substitute.For<Observation.IObserver>();
         _silo.AddProbe(_ => _observerGrain);
+
+        _jobsManager = Substitute.For<Jobs.IJobsManager>();
+        _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Storage.Jobs.JobState>.Empty);
+        _silo.AddProbe(_ => _jobsManager);
+
+        _recommendationsManager = Substitute.For<Recommendations.IRecommendationsManager>();
+        _silo.AddProbe(_ => _recommendationsManager);
 
         _state = new ProjectionsManagerState();
         var stateStorage = Substitute.For<IStorage<ProjectionsManagerState>>();
@@ -104,9 +120,9 @@ public class a_projections_manager_grain : Specification
         new Dictionary<EventType, RemovedWithDefinition>(),
         new Dictionary<EventType, RemovedWithJoinDefinition>());
 
-    protected static ReadModelDefinition CreateReadModelDefinition(ReadModelIdentifier identifier) => new(
+    protected static ReadModelDefinition CreateReadModelDefinition(ReadModelIdentifier identifier, string? containerName = null) => new(
         identifier,
-        "TheReadModel",
+        containerName ?? "TheReadModel",
         "TheReadModel",
         ReadModelOwner.Client,
         ReadModelSource.Code,

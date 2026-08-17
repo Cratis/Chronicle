@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Orleans.Services;
 
@@ -19,6 +20,14 @@ public interface IProjectionsService : IGrainService
     /// <param name="definitions">A collection of <see cref="ProjectionDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions);
+
+    /// <summary>
+    /// Unregister a projection from the engine, evicting it and its pipelines in every namespace.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store.</param>
+    /// <param name="projectionId">The <see cref="ProjectionId"/> to unregister.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Unregister(EventStoreName eventStore, ProjectionId projectionId);
 
     /// <summary>
     /// Triggered when a namespace is added to an event store.

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Orleans.Runtime.Services;
 
@@ -23,6 +24,16 @@ public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvid
         foreach (var host in hosts.Keys)
         {
             await GetGrainService(host).Register(eventStore, definitions);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task Unregister(EventStoreName eventStore, ProjectionId projectionId)
+    {
+        var hosts = await _managementGrain.GetHosts(true);
+        foreach (var host in hosts.Keys)
+        {
+            await GetGrainService(host).Unregister(eventStore, projectionId);
         }
     }
 

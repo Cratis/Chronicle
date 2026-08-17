@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
@@ -38,6 +39,19 @@ public class ProjectionsService(
         EvictProjections(eventStore, definitions, allNamespaces);
 
         await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
+    }
+
+    /// <inheritdoc/>
+    public async Task Unregister(EventStoreName eventStore, ProjectionId projectionId)
+    {
+        var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
+        var allNamespaces = await namespaces.GetAll();
+
+        projections.Evict(eventStore, projectionId);
+        foreach (var @namespace in allNamespaces)
+        {
+            projectionPipelines.EvictFor(eventStore, @namespace, projectionId);
+        }
     }
 
     /// <inheritdoc/>

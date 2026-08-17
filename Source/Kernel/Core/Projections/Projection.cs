@@ -110,6 +110,14 @@ public class Projection(
     public Task<ProjectionDefinition> GetDefinition() => Task.FromResult(State);
 
     /// <inheritdoc/>
+    public async Task Remove()
+    {
+        _projectionsByNamespace.Clear();
+        await ClearStateAsync();
+        DeactivateOnIdle();
+    }
+
+    /// <inheritdoc/>
     public Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber)
     {
         _definitionObservers.Subscribe(subscriber, subscriber);
