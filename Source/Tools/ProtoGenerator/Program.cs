@@ -39,6 +39,14 @@ var generator = new SchemaGenerator();
 // Group services by namespace to handle multiple packages
 var servicesByNamespace = services.GroupBy(_ => _.Namespace);
 
+// A retired field number has to be reserved somewhere, but each schema only holds the messages its own package
+// reaches - so the check belongs to the run, not to any one schema. What every contract asks for is collected up
+// front and what the schemas actually declared is added up as they are generated; anything left over at the end is
+// a reservation that did not happen, and the run fails on it.
+var reservationsRequired = ProtoSchemaHelper.TypesWithRetiredFields(contractTypes).ToHashSet();
+var reservationsDeclared = new HashSet<Type>();
+var failures = new List<string>();
+
 foreach (var group in servicesByNamespace)
 {
     var packageName = group.Key ?? "default";
@@ -64,7 +72,9 @@ foreach (var group in servicesByNamespace)
         schema = ProtoSchemaHelper.AddSerializableDateTimeOffsetComment(schema);
 
         // Declare every field number a contract has retired, so the reservation survives regeneration.
-        schema = ProtoSchemaHelper.DeclareReservedFields(schema, contractTypes);
+        var reservations = ProtoSchemaHelper.DeclareReservedFields(schema, contractTypes);
+        schema = reservations.Schema;
+        reservationsDeclared.UnionWith(reservations.Declared);
 
         var fileName = packageName.Replace("Cratis.Chronicle.Contracts.", string.Empty).Replace('.', '_').ToLowerInvariant();
         if (string.IsNullOrEmpty(fileName))
@@ -77,6 +87,27 @@ foreach (var group in servicesByNamespace)
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error generating proto for package {packageName}: {ex.Message}");
+        failures.Add($"Error generating proto for package {packageName}: {ex.Message}");
     }
+}
+
+foreach (var type in reservationsRequired.Except(reservationsDeclared).OrderBy(_ => _.FullName, StringComparer.Ordinal))
+{
+    failures.Add(
+        $"'{type.FullName}' carries {ProtoSchemaHelper.ReservedProtoFieldsAttributeName}, but no generated schema declared a 'message {type.Name}', so its retired field numbers were not reserved anywhere.");
+}
+
+if (failures.Count > 0)
+{
+    Console.WriteLine();
+    foreach (var failure in failures)
+    {
+        Console.WriteLine(failure);
+    }
+
+    // Exiting non-zero is the point. Generation used to report its failures and exit successfully, so the calling
+    // script reported success while leaving stale .proto files on disk - which is how the reserved-fields scoping
+    // defect survived: every package but one failed to regenerate, and nothing said so.
+    Console.WriteLine($"\nProto generation failed with {failures.Count} error(s).");
+    Environment.Exit(1);
 }
