@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+        <AssemblyName>WireCompatibility</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Tools.WireCompatibility</RootNamespace>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Tools.WireCompatibility.Specs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Kernel/Compatibility/Compatibility.csproj" />
+        <!-- The baseline schema has to be generated exactly the way the current one was, or a difference in how
+             they were produced reads as a difference in the contract. -->
+        <ProjectReference Include="../ProtoGenerator/ProtoGenerator.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Referenced so a downloaded contracts assembly resolves its own dependencies against this process. -->
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="OpenTelemetry" />
+        <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="protobuf-net.Grpc.Reflection" />
+        <PackageReference Include="protobuf-net.Reflection" />
+    </ItemGroup>
+</Project>
