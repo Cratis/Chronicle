@@ -62,10 +62,16 @@ experience. They are not optional.
   history only; `git revert` to undo.
 - **Wait for the user's approval before committing.** Prepare changes, show them, then commit on
   approval. Use the `ship-changes` skill for branch/commit/PR mechanics when told to ship.
-- **Never merge PRs yourself** — push and let the user merge (exception: docs-only PRs may merge
-  directly without waiting for CI, and carry **no** semver label).
-- Every non-docs PR needs exactly one semver label (`patch` for these infra/CI tasks unless a
-  public API changes). The `verify` job fails without one — that is expected only for docs-only PRs.
+- **Never merge PRs yourself** — push and let the user merge. No exceptions; the earlier docs-only
+  carve-out is withdrawn.
+- **Most of this program's work must carry NO semver label.** The label is the decision to ship, and
+  almost everything here — CI workflows, scripts, gates, specs — changes nothing a consumer compiles
+  against or runs. Label only a PR that genuinely alters shipped behavior. Labelling infra work
+  `patch` is what turned eight of the eighteen releases on 2026-08-18 into releases of nothing. The
+  `verify` job failing for a missing label is the **expected** state for these PRs; every other check
+  still has to be green. See `.ai/rules/pull-requests.md`.
+- **Group related tasks into one PR.** The PR is the release boundary. Several small merged PRs
+  become several releases; collect a body of work onto one branch as separate commits.
 - PR descriptions become release notes verbatim: Added/Changed/Fixed/... sections only, written for
   framework users; pure internal plumbing (most of Phase 0) gets a minimal, honest description.
 - After pushing, monitor CI via the GitHub MCP tools (`pull_request_read` → `get_check_runs`,
