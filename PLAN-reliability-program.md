@@ -64,12 +64,14 @@ experience. They are not optional.
   approval. Use the `ship-changes` skill for branch/commit/PR mechanics when told to ship.
 - **Never merge PRs yourself** — push and let the user merge. No exceptions; the earlier docs-only
   carve-out is withdrawn.
-- **Most of this program's work must carry NO semver label.** The label is the decision to ship, and
-  almost everything here — CI workflows, scripts, gates, specs — changes nothing a consumer compiles
-  against or runs. Label only a PR that genuinely alters shipped behavior. Labelling infra work
-  `patch` is what turned eight of the eighteen releases on 2026-08-18 into releases of nothing. The
-  `verify` job failing for a missing label is the **expected** state for these PRs; every other check
-  still has to be green. See `.ai/rules/pull-requests.md`.
+- **Most of this program's work carries `no-release`, not a semver label.** The label is the decision
+  to ship, and almost everything here — CI workflows, scripts, gates, specs — changes nothing a
+  consumer compiles against or runs. Reserve `major`/`minor`/`patch` for a PR that genuinely alters
+  shipped behavior; labelling infra work `patch` is what turned eight of the eighteen releases on
+  2026-08-18 into releases of nothing. `no-release` is the fourth release-intent label and exactly
+  one of the four is required — leaving the label off is an omission, not a decision, and stays an
+  error. A `no-release` PR is green like any other, and every check still has to pass. See
+  `.ai/rules/pull-requests.md`.
 - **Group related tasks into one PR.** The PR is the release boundary. Several small merged PRs
   become several releases; collect a body of work onto one branch as separate commits.
 - PR descriptions become release notes verbatim: Added/Changed/Fixed/... sections only, written for
