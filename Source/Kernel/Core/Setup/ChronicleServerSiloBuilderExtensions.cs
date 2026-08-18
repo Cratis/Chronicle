@@ -126,7 +126,10 @@ public static class ChronicleServerSiloBuilderExtensions
                     grainFactory,
                     storage,
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Namespaces.Namespaces>>()),
-                new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
+                new Cratis.Chronicle.Services.Recommendations.Recommendations(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Recommendations.Recommendations>>()),
                 new Cratis.Chronicle.Services.Identities.Identities(
                     storage,
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Identities.Identities>>()),

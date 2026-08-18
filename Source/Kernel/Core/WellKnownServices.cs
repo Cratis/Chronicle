@@ -42,4 +42,9 @@ public static class WellKnownServices
     /// The name of the Identities service.
     /// </summary>
     public const string Identities = "Identities";
+
+    /// <summary>
+    /// The name of the Recommendations service.
+    /// </summary>
+    public const string Recommendations = "Recommendations";
 }
