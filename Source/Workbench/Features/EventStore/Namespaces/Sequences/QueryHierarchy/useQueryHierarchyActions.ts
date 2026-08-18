@@ -4,12 +4,12 @@
 import { useCallback, useState } from 'react';
 import { DialogButtons, DialogResult, useConfirmationDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
-import { DeleteSequenceQuery } from 'Api/SequenceQueries/DeleteSequenceQuery';
-import { DeleteSequenceQueryFolder } from 'Api/SequenceQueries/DeleteSequenceQueryFolder';
-import { QueryFolder } from 'Api/SequenceQueries/QueryFolder';
-import { SaveSequenceQueryFolder } from 'Api/SequenceQueries/SaveSequenceQueryFolder';
-import { SequenceQuery } from 'Api/SequenceQueries/SequenceQuery';
-import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
+import { DeleteSequenceQuery } from 'Features/SequenceQueries';
+import { DeleteSequenceQueryFolder } from 'Features/SequenceQueries';
+import { QueryFolder } from 'Features/SequenceQueries';
+import { SaveSequenceQueryFolder } from 'Features/SequenceQueries';
+import { SequenceQuery } from 'Features/SequenceQueries';
+import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
 import { saveSequenceQuery } from '../QueryEditor/saveSequenceQuery';
 import { SequenceQueryState, toSequenceQueryState } from '../QueryEditor/SequenceQueryState';
 import { folderNodeId, foldersInScope, queryNodeId } from './buildQueryTree';

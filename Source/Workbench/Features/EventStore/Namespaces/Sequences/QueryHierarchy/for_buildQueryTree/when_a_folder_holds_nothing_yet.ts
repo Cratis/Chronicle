@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { QueryFolder } from 'Api/SequenceQueries/QueryFolder';
-import { SequenceQuery } from 'Api/SequenceQueries/SequenceQuery';
-import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
+import { QueryFolder } from 'Features/SequenceQueries';
+import { SequenceQuery } from 'Features/SequenceQueries';
+import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
 import { buildQueryTree, foldersInScope } from '../buildQueryTree';
 import { QueryNodeKind } from '../QueryNodeKind';
 
