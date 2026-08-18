@@ -87,7 +87,11 @@ jobs:
             MAJOR="${RELEASE_VERSION%%.*}"
             echo "Baseline major $MAJOR, from the release version $RELEASE_VERSION."
           else
-            LATEST_TAG="$(git tag --list 'v*' --sort=-v:refname | head -1)"
+            # Read the whole list and take its first line rather than piping into head. Under pipefail, head
+            # closing the pipe kills git with SIGPIPE and the step exits 141 - intermittently, depending on
+            # whether git had finished writing, which is the worst way for a gate to fail.
+            ALL_TAGS="$(git tag --list 'v*' --sort=-v:refname)"
+            LATEST_TAG="${ALL_TAGS%%$'\n'*}"
             if [ -z "$LATEST_TAG" ]; then
               echo "::notice title=Wire compatibility not checked::No release tag exists yet, so there is no released contract to stay compatible with."
               echo "skip=true" >> "$GITHUB_OUTPUT"
