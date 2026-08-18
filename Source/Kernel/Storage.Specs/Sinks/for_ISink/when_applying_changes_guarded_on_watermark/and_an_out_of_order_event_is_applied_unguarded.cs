@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded
 /// so it must never be guarded. This pins that an unguarded write still lands behind the watermark.
 /// </summary>
 /// <typeparam name="THarness">The <see cref="ISinkHarness"/> supplying the implementation under specification.</typeparam>
-public abstract class and_an_out_of_order_event_is_applied_unguarded<THarness> : given.an_accumulating_read_model<THarness>
+public abstract class and_an_out_of_order_event_is_applied_unguarded<THarness> : for_ISink.given.an_accumulating_read_model<THarness>
     where THarness : ISinkHarness, new()
 {
     int _count;

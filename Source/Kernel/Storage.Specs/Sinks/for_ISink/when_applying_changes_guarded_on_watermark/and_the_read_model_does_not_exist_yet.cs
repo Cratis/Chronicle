@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded
 /// conditional upsert would surface the already-applied case as a duplicate key error instead.
 /// </summary>
 /// <typeparam name="THarness">The <see cref="ISinkHarness"/> supplying the implementation under specification.</typeparam>
-public abstract class and_the_read_model_does_not_exist_yet<THarness> : given.an_accumulating_read_model<THarness>
+public abstract class and_the_read_model_does_not_exist_yet<THarness> : for_ISink.given.an_accumulating_read_model<THarness>
     where THarness : ISinkHarness, new()
 {
     ExpandoObject? _result;

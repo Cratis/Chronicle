@@ -10,8 +10,9 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.ReadModels;
 
-namespace Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded_on_watermark.given;
+namespace Cratis.Chronicle.Storage.Sinks.for_ISink.given;
 
 /// <summary>
 /// The arrangement every watermark case shares: one read model accumulating a count, written through
@@ -69,17 +70,38 @@ public abstract class an_accumulating_read_model<THarness> : Specification
     /// Converted rather than cast because the backends round-trip an integer through different CLR
     /// types - SQLite hands back a long where the in-memory sink keeps the int it was given.
     /// </remarks>
-    protected async Task<int> CurrentCount()
+    protected async Task<int> CurrentCount() => (await CurrentCountOrNull())!.Value;
+
+    /// <summary>
+    /// Reads the accumulated count back, or null when the read model is not there at all.
+    /// </summary>
+    /// <returns>The count currently stored for the read model, or null when it does not exist.</returns>
+    protected async Task<int?> CurrentCountOrNull()
     {
         var instance = await _sink.FindOrDefault(_key);
-        return Convert.ToInt32(((IDictionary<string, object?>)instance!)["count"], CultureInfo.InvariantCulture);
+        if (instance is null)
+        {
+            return null;
+        }
+
+        return Convert.ToInt32(((IDictionary<string, object?>)instance)["count"], CultureInfo.InvariantCulture);
     }
+
+    /// <summary>
+    /// Builds the context a replay of this read model runs under.
+    /// </summary>
+    /// <returns>The <see cref="ReplayContext"/> to begin and end a replay with.</returns>
+    protected static ReplayContext ReplayContext() => new(
+        new ReadModelType("test-read-model", ReadModelGeneration.First),
+        ContainerName,
+        $"{ContainerName}-revert",
+        DateTimeOffset.UtcNow);
 
     static ReadModelDefinition CreateReadModelDefinition() =>
         new(
             "test-read-model",
-            "TestReadModel",
             ContainerName,
+            "Test read model",
             ReadModelOwner.Client,
             ReadModelSource.Code,
             ReadModelObserverType.Projection,

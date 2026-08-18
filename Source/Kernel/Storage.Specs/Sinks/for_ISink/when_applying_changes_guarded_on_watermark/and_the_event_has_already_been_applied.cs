@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded
 /// A redelivered event must not be applied twice when the write is guarded on the watermark.
 /// </summary>
 /// <typeparam name="THarness">The <see cref="ISinkHarness"/> supplying the implementation under specification.</typeparam>
-public abstract class and_the_event_has_already_been_applied<THarness> : given.an_accumulating_read_model<THarness>
+public abstract class and_the_event_has_already_been_applied<THarness> : for_ISink.given.an_accumulating_read_model<THarness>
     where THarness : ISinkHarness, new()
 {
     int _count;
