@@ -6,10 +6,9 @@ extern alias KernelCore;
 using System.Reflection;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Traces;
-using Cratis.Types;
 using Microsoft.Extensions.Options;
-using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelConfiguration = KernelCore::Cratis.Chronicle.Configuration;
 using KernelConstraints = KernelCore::Cratis.Chronicle.Events.Constraints;
@@ -27,7 +26,9 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// dependencies except <c>IStorage</c> (in-memory) and
 /// <see cref="Metrics.IMeter{T}"/> / <see cref="Microsoft.Extensions.Logging.ILogger{T}"/> (null implementations).
 /// This means constraint validation, hash calculation, event serialization, migration, and compliance all run
-/// through the actual kernel code paths.
+/// through the actual kernel code paths. Compliance encrypts <c>[PII]</c> with the kernel's real
+/// <c>PIICompliancePropertyValueHandler</c> over an in-memory encryption key store — see
+/// <see cref="InProcessCompliance"/>, whose instance must be the same one the reading side uses.
 /// </remarks>
 internal static class InProcessEventSequence
 {
@@ -58,18 +59,19 @@ internal static class InProcessEventSequence
     /// <param name="eventSequenceId">The <see cref="KernelSequenceConcepts::EventSequenceId"/> the grain represents.</param>
     /// <param name="eventStoreName">The event store name.</param>
     /// <param name="namespaceName">The event store namespace name.</param>
+    /// <param name="compliance">The <see cref="InProcessCompliance"/> the scenario shares, so what this grain encrypts on append is what the reading side can release.</param>
     /// <returns>The initialized kernel <see cref="KernelEventSequences::EventSequence"/> grain.</returns>
     internal static async Task<KernelEventSequences::EventSequence> Create(
         InMemoryStorage storage,
         KernelSequenceConcepts::EventSequenceId eventSequenceId,
         KernelConceptsNs::EventStoreName eventStoreName,
-        KernelConceptsNs::EventStoreNamespaceName namespaceName)
+        KernelConceptsNs::EventStoreNamespaceName namespaceName,
+        InProcessCompliance compliance)
     {
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
 
         var eventTypeMigrations = new KernelMigrations::EventTypeMigrations(storage, expandoObjectConverter);
-        var jsonComplianceManager = new KernelCompliance::JsonComplianceManager(new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>(), NullLogger<KernelCompliance::JsonComplianceManager>.Instance);
         var eventSerializer = new KernelEventSequences::EventSerializer(
             new InMemoryKernelEventTypes(),
             expandoObjectConverter,
@@ -107,7 +109,7 @@ internal static class InProcessEventSequence
                 eventTypeMigrations,
                 null!,
                 new ActivitySource<KernelEventSequences::EventSequence>(),
-                jsonComplianceManager,
+                compliance.Manager,
                 expandoObjectConverter,
                 eventSerializer,
                 new KernelEventSequences::EventHashCalculator(),

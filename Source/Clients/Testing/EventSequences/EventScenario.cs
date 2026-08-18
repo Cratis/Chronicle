@@ -13,13 +13,11 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
-using Cratis.Types;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
@@ -39,6 +37,12 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// real kernel <c>EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
 /// layer is in-memory. All business logic (constraint validation, hash calculation, event serialization,
 /// migration, compliance) runs through the actual kernel code paths.
+/// </para>
+/// <para>
+/// Compliance is real: a <c>[PII]</c> value is encrypted by the kernel's own
+/// <c>PIICompliancePropertyValueHandler</c> as the event is appended, and released again when the event is
+/// read back. The encryption keys live in an in-memory key store scoped to this scenario, so nothing is
+/// shared with — or erasable from — another scenario, and the keys are gone when it is.
 /// </para>
 /// <para>
 /// Use the <see cref="Given"/> property to seed pre-existing events into the event log before
@@ -168,24 +172,24 @@ public class EventScenario(
             identityStorage,
             eventTypesStorage);
 
+        // One compliance stack for the whole scenario: the grain encrypts [PII] on append and the event
+        // sequences service releases it on read, and they can only agree if they share the encryption key store.
+        var compliance = new InProcessCompliance();
+
         var grain = InProcessEventSequence.Create(
             storage,
             kernelEventSequenceId,
             kernelEventStoreName,
-            kernelNamespaceName).GetAwaiter().GetResult();
+            kernelNamespaceName,
+            compliance).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
 
         var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        var eventCompliance = new KernelCore::Cratis.Chronicle.Events.EventCompliance(
-            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>(),
-                NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
-            new ExpandoObjectConverter(new TypeFormats()));
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            eventCompliance,
+            compliance.CreateEventCompliance(),
             jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();
