@@ -7,7 +7,7 @@ import { SchemaEditor as _SE } from '@cratis/components';
 const SchemaEditor = _SE.SchemaEditor;
 import type { JsonSchema } from '@cratis/components/types';
 import { AllTypeFormats } from 'Features/Schemas';
-import { ReadModelDefinition, ReadModelSource, UpdateReadModelDefinition } from 'Features/ReadModelDefinitions';
+import { ReadModelDefinition, ReadModelSource, UpdateReadModelDefinition } from 'Api/ReadModelTypes';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
