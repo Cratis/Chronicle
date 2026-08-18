@@ -408,6 +408,34 @@ existing one.
 **Done when:** the numbers publish automatically and the Status Board below gets a monthly
 review row.
 
+**As built.** `.github/workflows/regression-tax.yml` runs on the 1st at 07:00 UTC, measures the
+month that just ended with `.github/scripts/regression-tax.py`, and commits
+`Metrics/regression-tax.md` — verdicts first, then the whole series beside the seeded baseline in
+`Metrics/fix-share-baseline.txt`. A committed file over a pinned issue: the repository already
+commits generated statistics, a file diffs (each month is a reviewable delta), and it needs no
+issue number to track or write scope on issues. A source that cannot be read is written into the
+dashboard as its reason and fails the run; it is never reported as a zero.
+
+Two definitions had to be refined to reproduce the published series, both recorded in
+`.github/scripts/regression_tax_metrics.py`:
+
+- **Fix-share matches the stem, not the word.** 1,761 subjects in this repository begin *"Fixing"*.
+  Reading step 1's "fix/revert-prefixed" literally (`^(Fix|Revert)\b`) yields 3.8% for Nov'25
+  against a published 20.7%, and a mean absolute error of 7.9 points across the eleven complete
+  months; the stem match brings that to 1.4 points.
+- **Reverts are counted by subject.** `git rev-list -i --grep=revert` searches the whole message
+  and returns 84 over Sep'25→Aug'26, but 39 of those merely *mention* reverting (a dependency bump
+  "and revert the alias workaround"). Subject-stem matching gives 45 in that window and 10 in the
+  prior year — 0.8/month, which is the ~1/month the target is set against.
+
+Unreconciled: the plan's 90-of-304 regression-language issues. The five listed phrases over the
+same window give 74 of 312, and no wider phrasing tried reaches 90. The code's definition is now
+the authority; the published figure cannot be re-derived from the phrases as stated.
+
+Every figure in the three paragraphs above was measured on 2026-08-18. The three that span an
+open window — the 84, the 74 and the 312 — keep moving until Aug'26 closes; the per-month series
+in `Metrics/regression-tax.md` is the stable record.
+
 ---
 
 ## 6. Known open sores (fix opportunistically, they're already issues)
@@ -445,7 +473,7 @@ decision only the user can make.
 | 2.1 | Deterministic completion signals | todo | | design doc first; after 1.2/1.3 |
 | 2.2 | Release train + soak | todo | | blocked-on-user: cadence decision; use the unused prerelease flag as the RC channel |
 | 2.3 | Close-the-class policy | todo | | `.ai` rule, NOT the PR template (§5 gotcha) |
-| 2.4 | Regression-tax dashboard | todo | | seed with baseline in §5 |
+| 2.4 | Regression-tax dashboard | in review | | monthly review = the 1st-of-month commit to `Metrics/regression-tax.md`, seeded to Jul'26: passes volume and fix-share (9.9%), fails patch share (56.8%) and reverts (5) |
 | 8.a | Regenerate-and-diff gate | todo | | |
 | 8.b | Public-API zero-coverage ratchet | todo | | |
 | 8.c | Kernel-facing analysis | todo | | the CHR family is consumer-only today |
