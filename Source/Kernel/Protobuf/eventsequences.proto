@@ -104,8 +104,6 @@ message ConstraintViolation {
    string Message = 5;
    map<string,string> Details = 6;
 }
-message DateTimeOffset {
-}
 message EventContext {
    EventType EventType = 1;
    string EventSourceType = 2;
@@ -142,8 +140,8 @@ message EventSequenceQueryCriteria {
    string EventSourceId = 1;
    repeated EventType EventTypes = 2;
    repeated string Tags = 3;
-   DateTimeOffset OccurredFrom = 4;
-   DateTimeOffset OccurredTo = 5;
+   SerializableDateTimeOffset OccurredFrom = 4;
+   SerializableDateTimeOffset OccurredTo = 5;
    string EventSourceType = 6;
    string EventStreamType = 7;
    .bcl.Guid CorrelationId = 8;
@@ -236,7 +234,7 @@ message HasEventsForEventSourceIdResponse {
    bool HasEvents = 1;
 }
 message HistogramBucket {
-   DateTimeOffset Occurred = 1;
+   SerializableDateTimeOffset Occurred = 1;
    int64 Count = 2;
 }
 enum HistogramResolution {
