@@ -438,6 +438,23 @@ jobs:
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      # A published image that cannot start must fail here, not at the consumer - 15.37.0-15.38.2 shipped
+      # unable to start because nothing ever booted what was pushed. Build the native arch locally and boot it.
+      - name: Build boot-test image
+        uses: docker/build-push-action@v5
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/Production/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: chronicle-boot-test:production
+          build-args: |
+            VERSION=${{ needs.release.outputs.version }}
+
+      - name: Boot the image before publishing
+        run: bash ./Docker/boot-test.sh chronicle-boot-test:production production
+
       - name: Build Production Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -519,6 +536,20 @@ jobs:
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Build boot-test image
+        uses: docker/build-push-action@v5
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/Workbench/Dockerfile
+          load: true
+          tags: chronicle-boot-test:workbench
+          build-args: |
+            VERSION=${{ needs.release.outputs.version }}
+
+      - name: Boot the image before publishing
+        run: bash ./Docker/boot-test.sh chronicle-boot-test:workbench workbench
+
       - name: Build Workbench Image
         uses: docker/build-push-action@v5
         with:
@@ -582,6 +613,23 @@ jobs:
           echo "tags<<EOF" >> $GITHUB_OUTPUT
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      # Boots with no environment at all - the documented zero-config consumer invocation. That exact path
+      # aborted at startup for every development image from 16.33.1 onward without CI noticing.
+      - name: Build boot-test image
+        uses: docker/build-push-action@v5
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/Development/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: chronicle-boot-test:development
+          build-args: |
+            VERSION=${{ needs.release.outputs.version }}
+
+      - name: Boot the image before publishing
+        run: bash ./Docker/boot-test.sh chronicle-boot-test:development development
 
       - name: Build Development Docker Image
         uses: docker/build-push-action@v5
@@ -661,6 +709,21 @@ jobs:
           echo "tags<<EOF" >> $GITHUB_OUTPUT
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Build boot-test image
+        uses: docker/build-push-action@v5
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/DevelopmentSlim/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: chronicle-boot-test:development-slim
+          build-args: |
+            VERSION=${{ needs.release.outputs.version }}
+
+      - name: Boot the image before publishing
+        run: bash ./Docker/boot-test.sh chronicle-boot-test:development-slim development-slim
 
       - name: Build Development Slim Docker Image
         uses: docker/build-push-action@v5
