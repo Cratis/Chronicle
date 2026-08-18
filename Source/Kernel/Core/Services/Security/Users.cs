@@ -67,7 +67,7 @@ internal sealed class Users(
         QueryExecutor.Execute(() =>
             Chronicle.Security.User.AllUsers(storage)
                 .CompletedBy(callContext.CancellationToken)
-                .Select(users => (IEnumerable<UserResponse>)users.Select<Chronicle.Security.User, UserResponse>(u => ToResponse(u)).ToList()));
+                .Select(users => (IEnumerable<UserResponse>)users.Select(u => ToResponse(u)).ToList()));
 
     static UserResponse ToResponse(Chronicle.Security.User user) => new()
     {

@@ -31,5 +31,5 @@ public class and_an_identical_event_is_repeated : given.an_event_seeding_service
     [Fact] void should_keep_every_fact() => EntriesSeededGlobally.Count().ShouldEqual(4);
     [Fact] void should_keep_both_submissions() => EntriesSeededGlobally.Count(_ => _.EventTypeId.Value == "submitted").ShouldEqual(2);
     [Fact] void should_keep_both_approvals() => EntriesSeededGlobally.Count(_ => _.EventTypeId.Value == "approved").ShouldEqual(2);
-    [Fact] void should_keep_the_history_the_seeder_wrote() => EntriesSeededGlobally.Select(_ => _.EventTypeId.Value).ToArray().ShouldEqual<string[]>(["submitted", "approved", "submitted", "approved"]);
+    [Fact] void should_keep_the_history_the_seeder_wrote() => EntriesSeededGlobally.Select(_ => _.EventTypeId.Value).ToArray().ShouldEqual(["submitted", "approved", "submitted", "approved"]);
 }
