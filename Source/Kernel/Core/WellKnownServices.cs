@@ -57,4 +57,9 @@ public static class WellKnownServices
     /// The name of the ExternalServices service.
     /// </summary>
     public const string ExternalServices = "ExternalServices";
+
+    /// <summary>
+    /// The name of the Captures service.
+    /// </summary>
+    public const string Captures = "Captures";
 }

@@ -44,7 +44,7 @@ public sealed class ImplementationContext(string contractsNamespace)
                 var constructor = readModelType.GetConstructors().FirstOrDefault()
                     ?? throw new UnsupportedServiceShape(readModelType.FullName ?? readModelType.Name, "it has no constructor to read its members from.");
 
-                return [.. constructor.GetParameters().Select(p => (ImplementationValues.PropertyName(p.Name ?? "value"), p.ParameterType))];
+                return [.. constructor.GetParameters().Select(p => (ImplementationValues.PropertyName(p.Name ?? "value"), p.ParameterType, MemberNullability.Of(p)))];
             });
 
     /// <summary>
@@ -59,9 +59,9 @@ public sealed class ImplementationContext(string contractsNamespace)
             $"{commandName}Response",
             () => [.. responseType.GetProperties()
                 .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
-                .Select(p => (p.Name, p.PropertyType))]);
+                .Select(p => (p.Name, p.PropertyType, MemberNullability.Of(p)))]);
 
-    ResponseMapping MappingFor(Type domainType, string contractTypeName, Func<IReadOnlyList<(string Name, Type Type)>> members)
+    ResponseMapping MappingFor(Type domainType, string contractTypeName, Func<IReadOnlyList<(string Name, Type Type, bool IsNullable)>> members)
     {
         if (_mappings.TryGetValue(domainType, out var existing))
         {

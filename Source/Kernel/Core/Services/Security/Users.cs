@@ -81,7 +81,7 @@ internal sealed class Users(
             Email = source.Email,
             IsActive = source.IsActive,
             CreatedAt = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.CreatedAt,
-            LastModifiedAt = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.LastModifiedAt,
+            LastModifiedAt = source.LastModifiedAt is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.LastModifiedAt,
             HasLoggedIn = source.HasLoggedIn
         };
 }
