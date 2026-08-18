@@ -1,3 +1,8 @@
+---
+agent: agent
+description: Implement a requested feature as a vertical slice with minimal, focused changes.
+---
+
 # New Feature Prompt
 
 Implement the requested feature as a vertical slice with minimal, focused changes.

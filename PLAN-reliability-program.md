@@ -431,23 +431,73 @@ decision only the user can make.
 
 | Task | Title | Status | PR | Notes |
 |---|---|---|---|---|
-| 0.1 | Boot gate on published images | todo | | |
-| 0.2 | Consumer smoke for packages | todo | | |
-| 0.3 | Silent-success sweep | todo | | proto-gen exit-code part: see §6 caution |
-| 0.4 | Path-filter audit | todo | | `Docker/**` on publish.yml likely already done — verify |
-| 0.5 | Red-workflow alarm | todo | | |
+| 0.1 | Boot gate on published images | **done** | #3735, #3758 | all 4 variants; the gate itself shipped broken (missing TLS + token certs) and blocked 8 publishes — fixed in #3758 |
+| 0.2 | Consumer smoke for packages | **done** | #3755 | starts packed Chronicle beside published Arc before push; runs, does not merely restore |
+| 0.3 | Silent-success sweep | **done** | #3737, #3762 | zero-test guards, solution-membership gate, generators exit non-zero. #3734 (proto regen) still held for Einar |
+| 0.4 | Path-filter audit | **done** | #3737, #3761 | 13 of 17 required paths were uncovered; all closed by widening, contract asserted in CI |
+| 0.5 | Red-workflow alarm | **done** | #3736 | advisory; would flag benchmarks + integration.yml today |
 | 0.6 | Autofix bots → suggesters | todo | | CODEOWNERS in-repo; bot permission is blocked-on-user |
-| 0.7 | Release hygiene on GitHub Releases | todo | | retroactive warnings first; NuGet deprecation is blocked-on-user |
-| 1.1 | Shared storage contract suite | todo | | start from `Storage.Specs` assessment |
-| 1.2 | Harness convergence (finish) | todo | | depends on 1.1 for storage contracts |
+| 0.7 | Release hygiene on GitHub Releases | partial | | 12 broken releases warned retroactively; notes-quality gate = §8-g; NuGet deprecation blocked-on-user |
+| 1.1 | Shared storage contract suite | **done (core)** | #3749–#3752, #3754 | 9 cases × 3 sinks; found D-8, D-9, ChildRemovedFromAll. Remaining: constraints + key storage suites |
+| 1.2 | Harness convergence (finish) | partial | #3759, #3760 | WaitForCompletion no longer lies (merged); compliance wiring open. ReadModelScenario runs NO compliance — feature, not wiring |
 | 1.3 | Hot-core OOP gate + CODEOWNERS | todo | | shares CODEOWNERS with 0.6 |
-| 1.4 | History-integration guards | todo | | branch-protection part is blocked-on-user |
+| 1.4 | History-integration guards | partial | #3763 | spec-deletion tripwire merged; branch-protection/merge-queue still blocked-on-user (#439) |
 | 2.1 | Deterministic completion signals | todo | | design doc first; after 1.2/1.3 |
-| 2.2 | Release train + soak | todo | | blocked-on-user: cadence decision |
+| 2.2 | Release train + soak | todo | | blocked-on-user: cadence decision; use the unused prerelease flag as the RC channel |
 | 2.3 | Close-the-class policy | todo | | `.ai` rule, NOT the PR template (§5 gotcha) |
 | 2.4 | Regression-tax dashboard | todo | | seed with baseline in §5 |
+| 8.a | Regenerate-and-diff gate | todo | | |
+| 8.b | Public-API zero-coverage ratchet | todo | | |
+| 8.c | Kernel-facing analysis | todo | | the CHR family is consumer-only today |
+| 8.d | Timing-coupling ratchet + rule | **done** | #3765 | 67 governing / 25 legitimate sleeps; unannotated baseline entries are 2.1 work |
+| 8.e | Silent-stub sibling comparison | todo | | |
+| 8.f | Path-filter completeness meta-check | **done** | #3761 | |
+| 8.g | PR-body and commit lint | todo | | heading allowlist, not a denylist |
+| 8.h | SQL provider on PR runs | in review | #3764 | SQLite added; blocked on 2 live non-Mongo regressions on main |
+
+**Session log — 2026-08-18.** Seventeen pull requests merged: the whole of Phase 0 except 0.6 and
+the rest of 0.7, the core of 1.1, half of 1.2 and 1.4, and audit items 8.d and 8.f. Two things worth
+carrying forward. First, **the boot gate shipped broken and blocked eight publishes** — it started the
+production image without the TLS and token-encryption certificates that image deliberately requires,
+so it could never have passed; it had been verified against a locally built image rather than a
+published one. A gate is not proven by passing, only by failing when it should. Second, **merging
+eleven pull requests in two minutes raced the release job**: every run read the same latest version
+and tried to create it, and the losers got a 403 from secondary rate limiting. Nothing was lost, but
+it is the argument for 2.2 in miniature, and #3756 serializes it.
+
+**Held deliberately, not forgotten:** #3734 and #3748 touch the proto surface and the gRPC gate while
+Einar is mid-investigation there; #3760 makes real schema validation run in-process, which can surface
+failures in downstream and Arc specs; #3756 changes release behavior. Each wants a human to choose the
+moment.
 
 **Suggested order for a fresh session:** 0.7-step-1 (retroactive warnings — protects users
 today, zero build risk) → 0.3 → 0.1 → 0.4 → 0.5 → 0.2 → 0.6 → rest of 0.7, then 1.1 → 1.3 →
 1.4 → 1.2, then Phase 2. Rationale: 0.3 and 0.1 close the classes behind every *broken release*;
 1.1 is the highest-leverage correctness item and 1.2 builds on it.
+
+---
+
+## 8. Enforcement-audit additions (2026-08-17)
+
+Two audits mapped every corpus invariant and incident category to its actual enforcement. The
+findings below are the prose-only gaps worth closing, in leverage order. The single structural
+headline: **the 45 CHR analyzer diagnostics ship to *consumers* and are applied to almost nothing
+in this repo** — the kernel, where categories G/E/C (40 of 73 incidents) live, has no
+Chronicle-specific analysis at all.
+
+| # | Task | Why (evidence) | Done when |
+|---|---|---|---|
+| **8.a** | **Regenerate-and-diff gate** for generated output | 154 `// @generated by Cratis` files and 6 committed `.proto` files; no `git diff --exit-code` exists anywhere in CI, and every CI build passes `-p:DisableProxyGenerator=true`, so CI has never produced a proxy to compare. Catches hand-edits *and* staleness with one predicate | A job regenerates protos + proxies and fails on any diff; expect one determinism-stabilization pass |
+| **8.b** | **Public-API zero-coverage ratchet** | 20 of 35 public types in `Cratis.Chronicle.Testing` are named by none of the 4,086 spec files — including the shipped `AppendResult` assertion helpers. Coverage is collected and charted but gates nothing | Tier 1: a committed baseline; a PR adding an uncovered public type fails. Tier 2: join the existing cobertura report instead of name-grep |
+| **8.c** | **Point analysis at the kernel** | The CHR family is consumer-only (one sample project opts in). Start with a solution-wide CI tool using `Microsoft.CodeAnalysis.Workspaces`, hosting 8.e plus a narrow sentinel analyzer (`is null` on a type declaring `Unspecified`/`All`/`Default`/`NotSet`) | The sentinel check and 8.e run over `Chronicle.slnx` in CI |
+| **8.d** | **Timing-coupling ratchet + the missing rule** | ~91–114 outcome-governing sleeps in specs/integration, and **no rule anywhere forbids sleeping in a spec**. This is category G, the largest bucket | `specs.csharp.md` says specs await facts, not durations; a committed per-file baseline that PRs may only lower |
+| **8.e** | **Silent-stub sibling comparison** | "A stub that silently succeeds is a bug" is prose. Blanket detection false-positives on genuine no-ops; the sharp predicate is *another implementation of the same member has a real body* — which is also a contract-drift detector | Flags a `Task.CompletedTask`-only member whose sibling implementations do real work, with an `[IntentionalNoOp("reason")]` escape hatch |
+| **8.f** | **Path-filter completeness meta-check** | `.globalconfig`, `.editorconfig`, `global.json`, `Directory.Build.targets`, `nuget.config`, `Docker/**` and non-`.cs` files under `Source/**` still trigger no build. A committed required-paths list makes the next "speed tweak" state what it drops | The workflow's `paths:` is asserted a superset of `build-affecting-paths.txt` |
+| **8.g** | **PR-body and commit lint** | PR bodies publish verbatim as release notes; v16.13.4 shipped an empty `## Test plan` heading. Only the semver label is gated today | Heading allowlist (never a denylist), no closing keywords, no agent transcripts, commit-subject rules. **Not** a PR-template checkbox (§5 gotcha) |
+| **8.h** | **One SQL provider on PR runs** | `generate-integration-matrix.py` defaults to mongodb; sqlite/postgres/mssql are schedule-only. This is exactly why a MongoDB-shaped assumption merged green and broke the nightly for six nights | A non-Mongo backend runs on pull requests (sqlite is container-free) |
+
+Already covered elsewhere and deliberately **not** re-proposed: nullable event properties
+(CHR0012), event-is-a-record (CHR0021), XML docs on public members (SA1600, active), docs code
+examples (`client-snippets` compiles them with warnings-as-errors), and spec folder conventions
+(measured 0 violations in 4,086 files — folded into the membership gate at zero cost rather than
+built standalone).

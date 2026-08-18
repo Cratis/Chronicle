@@ -14,6 +14,12 @@
 # so it can be a bare namespace expression (FullyQualifiedName~Ns) or a sharded
 # OR-expression (FullyQualifiedName~Ns.A.|FullyQualifiedName~Ns.B.).
 #
+# A rescued run is not a clean run. When a retry turns the job green, every test that
+# failed on an earlier attempt is named in a ::warning:: annotation and appended to
+# $RESULTS_DIR/flaky-tests.log, so the flake leaves a record instead of disappearing
+# into a green check. CI already uploads $RESULTS_DIR as the coverage artifact, so the
+# ledger travels with the run for free.
+#
 # Environment:
 #   TEST_MAX_ATTEMPTS    Total attempts including the first run (default: 3).
 #   TEST_MAX_RETRY_TESTS Maximum number of failed tests that will be retried. Above
@@ -36,6 +42,9 @@ MAX_RETRY_TESTS="${TEST_MAX_RETRY_TESTS:-20}"
 # TRX files and the coverage results land there — passing a second --results-directory as an extra
 # arg would make `dotnet test` fail with "expects a single argument but 2 were provided".
 RESULTS_DIR="${TEST_RESULTS_DIR:-$(mktemp -d)}"
+# Ledger of tests a retry rescued. Lives in RESULTS_DIR so it rides along with the
+# coverage artifact CI already uploads.
+FLAKY_LOG="${RESULTS_DIR}/flaky-tests.log"
 
 # Extracts the fully-qualified names of failed tests from a TRX result file.
 extract_failed() {
@@ -55,6 +64,38 @@ names = sorted({
 if names:
     print('\n'.join(names))
 PY
+}
+
+# Union of the tests that failed on attempts 1..N, read back from those attempts' TRX files.
+failed_up_to() {
+    local last="$1" i
+    for ((i = 1; i <= last; i++)); do
+        extract_failed "${RESULTS_DIR}/attempt-${i}.trx"
+    done | sort -u
+}
+
+# Records the tests a retry rescued. Without this a flaky test that passes on attempt 2
+# leaves no trace at all, so nobody can tell a flaky suite from a healthy one.
+record_flaky() {
+    local rescued_on="$1"
+    shift
+    local names=("$@")
+    [ "${#names[@]}" -eq 0 ] && return 0
+
+    local timestamp
+    timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+    mkdir -p "$RESULTS_DIR"
+    local name
+    for name in "${names[@]}"; do
+        printf '%s\t%s\tpassed-on-attempt-%s\t%s\n' \
+            "$timestamp" "$PROJECT" "$rescued_on" "$name" >> "$FLAKY_LOG"
+    done
+
+    local joined
+    joined="$(printf '%s, ' "${names[@]}")"
+    echo "::warning::${#names[@]} flaky test(s) failed on an earlier attempt and passed on attempt ${rescued_on}: ${joined%, }"
+    echo "Recorded ${#names[@]} flaky test(s) in ${FLAKY_LOG}."
 }
 
 run() {
@@ -120,6 +161,16 @@ while [ $attempt -lt "$MAX_ATTEMPTS" ]; do
 
     if [ $status -eq 0 ]; then
         echo "Previously failed tests passed on attempt ${attempt} — treating as flaky, not a regression."
+
+        rescued=()
+        while IFS= read -r line; do
+            [ -n "$line" ] && rescued+=("$line")
+        done < <(failed_up_to $((attempt - 1)))
+
+        if [ "${#rescued[@]}" -gt 0 ]; then
+            record_flaky "$attempt" "${rescued[@]}"
+        fi
+
         exit 0
     fi
 done
