@@ -1,0 +1,54 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
+
+/// <summary>
+/// Renders the expressions that move a value between its domain type and the type it travels as.
+/// </summary>
+/// <remarks>
+/// The contracts carry the unwrapped form of every concept, so the conversion has to happen somewhere. It
+/// happens here, in the generated implementation, which is the only place that sees both sides at once.
+/// </remarks>
+public static class ImplementationValues
+{
+    /// <summary>
+    /// Renders reading a value off the wire and handing it to an artifact that declares a domain type.
+    /// </summary>
+    /// <param name="expression">The expression reading the wire value.</param>
+    /// <param name="declaredType">The type the artifact declares.</param>
+    /// <returns>The expression to pass to the artifact.</returns>
+    public static string ToDomain(string expression, Type declaredType) =>
+        TypeHelper.IsConceptType(declaredType)
+            ? $"({QualifiedTypeName.For(declaredType)}){expression}"
+            : expression;
+
+    /// <summary>
+    /// Renders handing a domain value to the wire.
+    /// </summary>
+    /// <param name="expression">The expression reading the domain value.</param>
+    /// <param name="declaredType">The type the artifact declares.</param>
+    /// <returns>The expression to assign to the contract property.</returns>
+    /// <remarks>
+    /// A concept converts down to its primitive implicitly through <c>ConceptAs&lt;T&gt;</c>, but the cast is
+    /// written out anyway: it states which primitive the contract expects, so a concept whose underlying type
+    /// changes fails here rather than silently changing the wire shape.
+    /// </remarks>
+    public static string ToContract(string expression, Type declaredType)
+    {
+        if (TypeHelper.IsConceptType(declaredType))
+        {
+            return $"({QualifiedTypeName.For(TypeHelper.UnwrapConceptType(declaredType))}){expression}";
+        }
+
+        return expression;
+    }
+
+    /// <summary>
+    /// Gets the property name a constructor parameter surfaces as.
+    /// </summary>
+    /// <param name="name">The parameter name.</param>
+    /// <returns>The property name.</returns>
+    public static string PropertyName(string name) =>
+        string.IsNullOrEmpty(name) ? name : char.ToUpperInvariant(name[0]) + name[1..];
+}
