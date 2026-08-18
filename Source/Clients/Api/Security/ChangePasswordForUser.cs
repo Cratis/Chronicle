@@ -31,6 +31,7 @@ public record ChangePasswordForUser(
         users.ChangeUserPassword(new()
         {
             UserId = UserId,
+            OldPassword = oldPassword,
             Password = Password,
             ConfirmedPassword = ConfirmedPassword
         }).EnsureSuccess();
