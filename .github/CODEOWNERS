@@ -1,0 +1,51 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# Review ownership of the hot core.
+#
+# Only the hot core is listed. Ownership over the whole repository would put a maintainer in front of
+# every documentation typo and would be routed around within a week; this file exists so that the
+# areas where a fix breaks a sibling path - and where an autofix bot has twice committed a mechanical
+# rewrite that broke the build outright (`c237e5e74`, `aedafe1bc`) - cannot change without a
+# maintainer looking at it.
+#
+# The paths below mirror `.github/hot-core-paths.txt` one for one, and
+# `.github/scripts/detect-hot-core-changes.py --verify` fails the build if they ever stop matching.
+# That script runs on every pull request, so the two contracts cannot drift in silence.
+#
+# PLACEHOLDER-OWNER: the owner below is a placeholder and does not resolve. A CODEOWNERS entry whose
+# owner is not a real user or team that has read access to this repository is ignored by GitHub - the
+# file parses, the rule is listed, and nothing whatsoever is enforced. Replace
+# `@Cratis/kernel-maintainers` with the real team or users and delete this paragraph, including the
+# `PLACEHOLDER-OWNER` marker: the hot-core gate emits a warning on every pull request while the
+# marker is present, and stops as soon as it is gone. Ownership only becomes review *enforcement*
+# once "Require review from Code Owners" is enabled in branch protection, which is a repository
+# setting and not something this file can do on its own.
+
+# area: Observer handling
+/Source/Kernel/Core/Observation/ @Cratis/kernel-maintainers
+
+# area: Projection key resolution and the changeset pipeline
+/Source/Kernel/Core/Projections/ @Cratis/kernel-maintainers
+
+# area: Changeset consolidation
+/Source/Infrastructure/Changes/ @Cratis/kernel-maintainers
+
+# area: AppendedEventsQueue
+/Source/Kernel/Core/EventSequences/*AppendedEventsQueue* @Cratis/kernel-maintainers
+
+# area: Compliance (PII and encryption)
+/Source/Kernel/Core/Compliance/ @Cratis/kernel-maintainers
+
+# area: MongoDB sink
+/Source/Kernel/Storage.MongoDB/Sinks/ @Cratis/kernel-maintainers
+
+# area: SQL sink
+/Source/Kernel/Storage.Sql/Sinks/ @Cratis/kernel-maintainers
+
+# The contracts that decide all of the above. Weakening the hot-core list, the gate, or this file
+# should cost the same review as changing the code they protect.
+/.github/CODEOWNERS @Cratis/kernel-maintainers
+/.github/hot-core-paths.txt @Cratis/kernel-maintainers
+/.github/workflows/hot-core-gate.yml @Cratis/kernel-maintainers
+/.github/scripts/detect-hot-core-changes.py @Cratis/kernel-maintainers

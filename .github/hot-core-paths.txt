@@ -1,0 +1,71 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# The hot core - the areas where a fix breaks a sibling path.
+#
+# THE RULE: a pull request touching any path listed here runs the full out-of-process integration
+# matrix and must have it green, and needs a review from the owner in `.github/CODEOWNERS`.
+#
+# This file is a committed contract, not documentation. `.github/scripts/detect-hot-core-changes.py`
+# reads it on every pull request and decides whether `.github/workflows/hot-core-gate.yml` runs the
+# matrix or no-ops green, and the same script asserts that every pattern here is also owned in
+# `.github/CODEOWNERS` - so the two can never drift apart in silence.
+#
+# WHY THESE AREAS AND NOT OTHERS: twenty of the last seventy-three regressions were fixes that broke
+# a sibling path, and they concentrate in the areas below. Twice the repair was a rollback that
+# deliberately reinstated a known bug because the fix could not be made without breaking a sibling
+# (`b3e03dbb8`, `d1c168c7e`). The out-of-process integration matrix is the only oracle that has
+# reliably caught this class, and on a pull request it otherwise runs the default storage backend
+# only - so the three non-default backends, where the sibling breakage usually surfaces, are exactly
+# what a hot-core change is currently allowed to merge without.
+#
+# FORMAT: one pattern per line, under an `# area:` heading that names the area it belongs to; the
+# heading is what the gate prints back to the author. `**` matches any character including `/`, `*`
+# matches any character except `/`. Every pattern is verified to match at least one tracked file, so
+# the list cannot rot into fiction after a rename - the plan's own path list had already gone stale
+# (`Source/Kernel/Grains/Observation` moved to `Source/Kernel/Core/Observation`) before it was wired.
+#
+# Spec trees are deliberately absent. `Source/Kernel/Core.Specs/**` and the integration suites change
+# constantly and a change confined to them cannot break a sibling runtime path; including them would
+# make the expensive matrix the default and teach everyone to route around it.
+
+# area: Observer handling
+# `Observer.Handling.cs` and the rest of the observer grain family - catchup, replay, failing,
+# rescue, watchdog, subscriber selection. The single densest source of the "fixed one path, broke
+# the neighbouring one" incidents, because every observer kind shares this state machine.
+Source/Kernel/Core/Observation/**
+
+# area: Projection key resolution and the changeset pipeline
+# `Projections/Engine/KeyResolvers.cs` decides which read-model document an event lands on;
+# `Projections/Engine/Pipelines/**` and the `ProjectionChangeset*` mediator/notifier/forwarder carry
+# the changeset from the engine to the sink. A key-resolution change that is right for one shape of
+# projection - root join, keyed child, parent hierarchy - has repeatedly been wrong for another.
+Source/Kernel/Core/Projections/**
+
+# area: Changeset consolidation
+# `Changeset.cs` consolidates child additions, resolved joins and property changes into the set of
+# changes a sink applies. Its consolidation rules are the shared substrate under every sink, so a
+# change here reaches MongoDB and SQL at once.
+Source/Infrastructure/Changes/**
+
+# area: AppendedEventsQueue
+# The fan-out from an append to every subscribed observer, including backpressure, coalescing and
+# partition interleaving. Concurrency-shaped, and its failures are invisible to a single-backend run.
+Source/Kernel/Core/EventSequences/*AppendedEventsQueue*
+
+# area: Compliance (PII and encryption)
+# Crypto-shredding: key provisioning, apply/release around projections and read models. A defect
+# here is silent - it degrades per property rather than failing a query - so nothing but an
+# end-to-end run against a real store observes it.
+Source/Kernel/Core/Compliance/**
+
+# area: MongoDB sink
+# The default backend's sink and its changeset-to-update translation. Every pull request already
+# exercises this one; it is listed because a change here is the classic way a MongoDB-shaped
+# assumption merges green and breaks SQLite, PostgreSQL and MSSQL on the nightly.
+Source/Kernel/Storage.MongoDB/Sinks/**
+
+# area: SQL sink
+# The sink shared by SQLite, PostgreSQL and MSSQL - the three backends a pull request does not run
+# today, which is precisely why a change here needs the full matrix.
+Source/Kernel/Storage.Sql/Sinks/**
