@@ -29,11 +29,32 @@ try
 #pragma warning restore CA2000
 
     var current = WireContractReader.Read(DescriptorSetFor(options.Current, options.ImportPath));
-    var baselines = await Baselines(nuget, options);
+    var all = await Baselines(nuget, options);
+    var baselines = options.Since is { } floor ? all.Where(_ => ReleaseVersion.IsAtOrAfter(_, floor)).ToArray() : all;
+    var excluded = all.Count - baselines.Count;
     var results = new List<BaselineResult>();
 
     await Console.Out.WriteLineAsync($"Current:  {options.Current}");
+
+    if (options.Since is not null)
+    {
+        await Console.Out.WriteLineAsync($"Floor:    {options.Since} ({excluded} earlier release(s) not compared against)");
+    }
+
     await Console.Out.WriteLineAsync();
+
+    // A floor that excludes everything is not the same as a clean run, and a gate that reports them the same way
+    // is a gate nobody can tell is switched off. Say it out loud, in the log and in the pull request.
+    if (baselines.Count == 0 && options.Since is not null)
+    {
+        await Console.Out.WriteLineAsync($"No release at or after the declared floor {options.Since}, so nothing was compared.");
+        if (options.GitHub)
+        {
+            await Console.Out.WriteLineAsync($"::warning title=Wire compatibility not compared::The declared floor {options.Since} excludes every released baseline, so this run checked nothing.");
+        }
+
+        return 0;
+    }
 
     foreach (var version in baselines)
     {
