@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Authorization;
-using Cratis.Chronicle.Contracts.SequenceQueries;
+using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts.SequenceQueries;
+using Cratis.Chronicle.Storage;
 
-namespace Cratis.Chronicle.Api.SequenceQueries;
+namespace Cratis.Chronicle.SequenceQueries;
 
 /// <summary>
 /// Represents a folder in the saved event sequence query hierarchy.
@@ -29,18 +31,18 @@ public record QueryFolder(
     /// <summary>
     /// Gets the folders the current identity can see - their own, plus the ones shared with everyone.
     /// </summary>
-    /// <param name="sequenceQueries"><see cref="ISequenceQueries"/> for working with saved queries.</param>
-    /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
     /// <returns>A collection of <see cref="QueryFolder"/>.</returns>
     public static async Task<IEnumerable<QueryFolder>> AllQueryFolders(
-        ISequenceQueries sequenceQueries,
+        string eventStore,
         ICurrentPrincipalAccessor currentPrincipalAccessor,
-        string eventStore)
+        IStorage storage)
     {
         var owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor);
-        var folders = await sequenceQueries.GetSequenceQueryFolders(new() { EventStore = eventStore, Owner = owner });
+        var folders = await storage.GetEventStore(eventStore).SequenceQueries.GetAllFoldersFor(owner);
 
-        return folders.Select(_ => _.ToApi()).ToArray();
+        return folders.ToReadModel();
     }
 }
