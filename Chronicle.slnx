@@ -21,6 +21,8 @@
     <Folder Name="/Source/Kernel/">
         <Project Path="Source/Kernel/Concepts/Concepts.csproj" />
         <Project Path="Source/Kernel/Concepts.Specs/Concepts.Specs.csproj" />
+        <Project Path="Source/Kernel/Compatibility/Compatibility.csproj" />
+        <Project Path="Source/Kernel/Compatibility.Specs/Compatibility.Specs.csproj" />
         <Project Path="Source/Kernel/Contracts/Contracts.csproj" />
         <Project Path="Source/Kernel/Core/Core.csproj" />
         <Project Path="Source/Kernel/Core.Specs/Core.Specs.csproj" />
@@ -48,6 +50,8 @@
         <Project Path="Source/Tools/ProtoGenerator/ProtoGenerator.csproj" />
         <Project Path="Source/Tools/ProtoGenerator.Specs/ProtoGenerator.Specs.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
+        <Project Path="Source/Tools/WireCompatibility/WireCompatibility.csproj" />
+        <Project Path="Source/Tools/WireCompatibility.Specs/WireCompatibility.Specs.csproj" />
     </Folder>
     <Folder Name="/Source/">
         <Project Path="Source/Infrastructure/Infrastructure.csproj" />

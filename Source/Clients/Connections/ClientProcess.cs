@@ -12,15 +12,13 @@ namespace Cratis.Chronicle.Connections;
 internal static class ClientProcess
 {
     /// <summary>
-    /// Gets the type of the client - always <c>.NET</c> for this SDK, so the Workbench can tell it
-    /// apart from clients built on other Chronicle SDKs.
-    /// </summary>
-    public static string ClientType => ".NET";
-
-    /// <summary>
     /// Gets the version of the client application - the entry assembly's informational version
     /// without the '+' build metadata, falling back to its assembly version.
     /// </summary>
+    /// <remarks>
+    /// This is the hosting application's version, not the Chronicle SDK's - see <see cref="ChronicleClientIdentity.Version"/>
+    /// for that.
+    /// </remarks>
     public static string Version { get; } = GetEntryAssemblyVersion();
 
     /// <summary>

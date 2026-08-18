@@ -203,6 +203,30 @@ internal static partial class ProtoSchemaHelper
     }
 
     /// <summary>
+    /// Selects the types that declare retired proto field numbers.
+    /// </summary>
+    /// <param name="types">The contract types to look through.</param>
+    /// <returns>Those carrying the reserved-fields attribute.</returns>
+    /// <remarks>
+    /// The schema is generated one package at a time while the attribute is carried by types across the whole
+    /// contracts assembly, so the caller needs to know which types to expect a reservation for before it can tell
+    /// a package that legitimately has no message for a type from a reservation that got lost.
+    /// </remarks>
+    public static IReadOnlyList<Type> WithReservedFields(IEnumerable<Type> types) =>
+        [.. types.Where(type => Array.Exists(
+            type.GetCustomAttributes(inherit: false),
+            _ => string.Equals(_.GetType().Name, ReservedProtoFieldsAttributeName, StringComparison.Ordinal)))];
+
+    /// <summary>
+    /// Determines whether a schema declares a message.
+    /// </summary>
+    /// <param name="schema">The proto schema to look in.</param>
+    /// <param name="messageName">The unqualified message name to look for.</param>
+    /// <returns>True when the schema declares it, false otherwise.</returns>
+    public static bool DeclaresMessage(string schema, string messageName) =>
+        MessageDeclarationRegex.Matches(schema).Any(_ => string.Equals(_.Groups["name"].Value, messageName, StringComparison.Ordinal));
+
+    /// <summary>
     /// Emits a <c>reserved</c> declaration for every field number a contract type has retired.
     /// </summary>
     /// <param name="schema">The generated schema.</param>

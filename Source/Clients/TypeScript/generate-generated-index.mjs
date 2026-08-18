@@ -30,7 +30,10 @@ const generatedModules = [
     'recommendations',
     'security',
     'seeding',
-    'protobuf-net/bcl'
+    'protobuf-net/bcl',
+    // Not proto-generated: the canonical descriptor set, embedded by embed-descriptor-set.mjs so a client can hand
+    // it to the kernel on connect. ts-proto keeps no descriptors at runtime, so it cannot be rebuilt from the above.
+    'descriptorSet'
 ];
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
