@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { SequenceQuery } from 'Api/SequenceQueries/SequenceQuery';
-import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
+import { SequenceQuery } from 'Features/SequenceQueries';
+import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
 
 /**
  * The editable state of one event sequence query.

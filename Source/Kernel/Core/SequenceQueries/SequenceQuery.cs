@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Authorization;
-using Cratis.Chronicle.Contracts.SequenceQueries;
+using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts.SequenceQueries;
+using Cratis.Chronicle.Storage;
 
-namespace Cratis.Chronicle.Api.SequenceQueries;
+namespace Cratis.Chronicle.SequenceQueries;
 
 /// <summary>
 /// Represents an event sequence query a user saved so it can be reopened later.
@@ -49,22 +51,22 @@ public record SequenceQuery(
     /// <summary>
     /// Gets the saved queries the current identity can see - their own, plus the ones shared with everyone.
     /// </summary>
-    /// <param name="sequenceQueries"><see cref="ISequenceQueries"/> for working with saved queries.</param>
-    /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <param name="eventStore">Event store to get for.</param>
+    /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
     /// <returns>A collection of <see cref="SequenceQuery"/>.</returns>
     /// <remarks>
     /// A snapshot rather than an observable: which queries an identity may see depends on the
     /// principal executing the call, and the caller re-reads after saving or deleting anyway.
     /// </remarks>
     public static async Task<IEnumerable<SequenceQuery>> AllSequenceQueries(
-        ISequenceQueries sequenceQueries,
+        string eventStore,
         ICurrentPrincipalAccessor currentPrincipalAccessor,
-        string eventStore)
+        IStorage storage)
     {
         var owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor);
-        var queries = await sequenceQueries.GetSequenceQueries(new() { EventStore = eventStore, Owner = owner });
+        var queries = await storage.GetEventStore(eventStore).SequenceQueries.GetAllFor(owner);
 
-        return queries.Select(_ => _.ToApi()).ToArray();
+        return queries.ToReadModel();
     }
 }

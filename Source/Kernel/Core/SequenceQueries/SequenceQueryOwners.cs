@@ -3,7 +3,7 @@
 
 using Cratis.Arc.Authorization;
 
-namespace Cratis.Chronicle.Api.SequenceQueries;
+namespace Cratis.Chronicle.SequenceQueries;
 
 /// <summary>
 /// Resolves the identity that owns saved event sequence queries.

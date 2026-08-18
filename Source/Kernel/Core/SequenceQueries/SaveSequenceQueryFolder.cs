@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Authorization;
-using Cratis.Chronicle.Contracts.SequenceQueries;
+using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts.SequenceQueries;
+using Cratis.Chronicle.Storage;
 
-namespace Cratis.Chronicle.Api.SequenceQueries;
+namespace Cratis.Chronicle.SequenceQueries;
 
 /// <summary>
 /// Represents the command for saving a folder in the saved query hierarchy.
@@ -29,23 +31,18 @@ public record SaveSequenceQueryFolder(
     /// <summary>
     /// Handles the command.
     /// </summary>
-    /// <param name="sequenceQueries">The <see cref="ISequenceQueries"/> contract.</param>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(ISequenceQueries sequenceQueries, ICurrentPrincipalAccessor currentPrincipalAccessor) =>
-        sequenceQueries.SaveFolder(new()
-        {
-            EventStore = EventStore,
-            Folder = new()
-            {
-                Id = Id,
-                Scope = (Contracts.SequenceQueries.SequenceQueryScope)Scope,
+    internal Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage) =>
+        storage.GetEventStore(EventStore).SequenceQueries.SaveFolder(
+            new SequenceQueryFolderDefinition(
+                Id,
+                Scope,
 
                 // Ownership follows the principal creating the folder, never a value the client
                 // supplies, so a caller cannot plant a folder into somebody else's private set.
-                Owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
-                Namespace = Namespace,
-                Path = Path
-            }
-        });
+                SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
+                Namespace,
+                Path));
 }
