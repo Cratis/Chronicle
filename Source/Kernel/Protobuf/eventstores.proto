@@ -14,17 +14,13 @@ message CommandResult {
 message EnsureEventStoreRequest {
    string Name = 1;
 }
-message EventStoreNamesResponse {
-   string Name = 1;
-   string Id = 2;
-}
-message QueryResult_IEnumerable_EventStoreNamesResponse {
+message QueryResult_IEnumerable_String {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2; // default value could not be applied: True
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
-   repeated EventStoreNamesResponse Data = 6;
+   repeated string Data = 6;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
@@ -38,7 +34,7 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service EventStores {
-   rpc AllEventStores (.google.protobuf.Empty) returns (QueryResult_IEnumerable_EventStoreNamesResponse);
+   rpc AllEventStores (.google.protobuf.Empty) returns (QueryResult_IEnumerable_String);
    rpc EnsureEventStore (EnsureEventStoreRequest) returns (CommandResult);
-   rpc ObserveEventStores (.google.protobuf.Empty) returns (stream QueryResult_IEnumerable_EventStoreNamesResponse);
+   rpc ObserveEventStores (.google.protobuf.Empty) returns (stream QueryResult_IEnumerable_String);
 }
