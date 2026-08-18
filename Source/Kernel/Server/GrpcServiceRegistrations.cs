@@ -25,7 +25,6 @@ public static class GrpcServiceRegistrations
         // streaming services, whose server-to-client lifetime no command or query describes.
         services.AddSingleton<Contracts.Compliance.ICompliance, Services.Compliance.ComplianceService>();
         services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();
-        services.AddSingleton<Contracts.Identities.IIdentities, Services.Identities.Identities>();
         services.AddSingleton<Contracts.EventSequences.IEventSequences, Services.EventSequences.EventSequences>();
         services.AddSingleton<Contracts.Events.IEventTypes, Services.Events.EventTypes>();
         services.AddSingleton<Contracts.Events.Constraints.IConstraints, Services.Events.Constraints.Constraints>();
@@ -61,7 +60,6 @@ public static class GrpcServiceRegistrations
 
             _.MapGrpcService<Services.Compliance.ComplianceService>();
             _.MapGrpcService<Services.Recommendations.Recommendations>();
-            _.MapGrpcService<Services.Identities.Identities>();
             _.MapGrpcService<Services.EventSequences.EventSequences>();
             _.MapGrpcService<Services.Events.EventTypes>();
             _.MapGrpcService<Services.Events.Constraints.Constraints>();

@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Services.Auditing;
-using Cratis.Chronicle.Services.Identities;
 
 namespace Cratis.Chronicle.Services.Events;
 

@@ -163,7 +163,7 @@ internal sealed class TestingServices(
         new KernelNamespacesService(grainFactory, storage, NullLogger<KernelNamespacesService>.Instance));
 
     readonly Lazy<IIdentities> _identities = new(() =>
-        new KernelIdentitiesService(storage));
+        new KernelIdentitiesService(storage, NullLogger<KernelIdentitiesService>.Instance));
 
     readonly Lazy<IEventTypes> _eventTypes = new(() =>
         new KernelEventTypesService(storage, grainFactory, new EventSequences.NoOpEventTypesCacheClient()));
