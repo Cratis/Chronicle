@@ -23,6 +23,8 @@ TIMEOUT="${BOOT_TEST_TIMEOUT:-180}"
 cleanup() {
     docker rm -f "$SERVER" "$MONGO" > /dev/null 2>&1 || true
     docker network rm "$NETWORK" > /dev/null 2>&1 || true
+    [ -n "${CERT_DIR:-}" ] && rm -rf "$CERT_DIR"
+    return 0
 }
 trap cleanup EXIT
 
@@ -50,23 +52,51 @@ start_mongo() {
 
 docker network create "$NETWORK" > /dev/null
 
+# Writes a throwaway PKCS#12 certificate for the variants that require one.
+#
+# The single Chronicle port serves gRPC and HTTP/1.1 together, which it can only do over TLS, so the
+# production image refuses to start without a certificate - deliberately, with a clear message. A boot
+# test that omits one is not testing the image, it is re-proving that requirement, which is how this
+# gate came to fail every production publish on the day it landed. Development generates its own
+# certificate when none is configured, so only production is given one here.
+#
+# The same certificate serves both requirements the production image has: the TLS listener, and
+# OpenIddict's token encryption, which is also mandatory in production and refuses to start without
+# one. Sharing a throwaway certificate between them is fine for a boot test and wrong for a
+# deployment, where the two have different lifetimes and rotation stories.
+write_certificate() {
+    CERT_DIR="$(mktemp -d)"
+    openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+        -keyout "$CERT_DIR/key.pem" -out "$CERT_DIR/cert.pem" -subj "/CN=localhost" > /dev/null 2>&1
+    openssl pkcs12 -export -out "$CERT_DIR/boot-test.pfx" \
+        -inkey "$CERT_DIR/key.pem" -in "$CERT_DIR/cert.pem" -passout pass: > /dev/null 2>&1
+    chmod 0644 "$CERT_DIR/boot-test.pfx"
+}
+
 PORT=35000
+# The port on the host, so a machine already running Chronicle can still run this.
+HOST_PORT="${BOOT_TEST_HOST_PORT:-$PORT}"
 case "$VARIANT" in
     development)
         # The documented zero-configuration consumer invocation - no environment, embedded MongoDB.
-        docker run -d --name "$SERVER" --network "$NETWORK" -p 35000:35000 "$IMAGE" > /dev/null
+        docker run -d --name "$SERVER" --network "$NETWORK" -p "$HOST_PORT:$PORT" "$IMAGE" > /dev/null
         ;;
     production|development-slim)
         # These images use external storage - run them the way Docker/README.md documents.
         start_mongo
-        docker run -d --name "$SERVER" --network "$NETWORK" -p 35000:35000 \
+        write_certificate
+        docker run -d --name "$SERVER" --network "$NETWORK" -p "$HOST_PORT:$PORT" \
+            -v "$CERT_DIR:/boot-test-certificate:ro" \
+            -e Cratis__Chronicle__Tls__CertificatePath=/boot-test-certificate/boot-test.pfx \
+            -e Cratis__Chronicle__EncryptionCertificate__CertificatePath=/boot-test-certificate/boot-test.pfx \
             -e Cratis__Chronicle__Storage__Type=MongoDB \
             -e "Cratis__Chronicle__Storage__ConnectionDetails=mongodb://$MONGO:27017" \
             "$IMAGE" > /dev/null
         ;;
     workbench)
-        docker run -d --name "$SERVER" -p 8080:80 "$IMAGE" > /dev/null
-        PORT=8080
+        PORT=80
+        HOST_PORT="${BOOT_TEST_HOST_PORT:-8080}"
+        docker run -d --name "$SERVER" -p "$HOST_PORT:$PORT" "$IMAGE" > /dev/null
         ;;
     *)
         echo "Unknown variant: $VARIANT" >&2
@@ -74,22 +104,22 @@ case "$VARIANT" in
         ;;
 esac
 
-echo "Waiting up to ${TIMEOUT}s for $IMAGE to listen on port $PORT..."
+echo "Waiting up to ${TIMEOUT}s for $IMAGE to listen on port $HOST_PORT..."
 for i in $(seq 1 "$TIMEOUT"); do
     state=$(docker inspect -f '{{.State.Status}} {{.State.ExitCode}}' "$SERVER")
     if [[ "$state" != running* ]]; then
         fail "container stopped (state: $state) after ${i}s"
     fi
-    if (exec 3<> "/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
-        echo "$IMAGE is listening on port $PORT after ${i}s - confirming it stays up..."
+    if (exec 3<> "/dev/tcp/127.0.0.1/$HOST_PORT") 2>/dev/null; then
+        echo "$IMAGE is listening on port $HOST_PORT after ${i}s - confirming it stays up..."
         sleep 10
         state=$(docker inspect -f '{{.State.Status}} {{.State.ExitCode}}' "$SERVER")
         if [[ "$state" != running* ]]; then
-            fail "container bound port $PORT but stopped right after (state: $state)"
+            fail "container bound port $HOST_PORT but stopped right after (state: $state)"
         fi
-        echo "$IMAGE is running and listening on port $PORT."
+        echo "$IMAGE is running and listening on port $HOST_PORT."
         exit 0
     fi
     sleep 1
 done
-fail "never listened on port $PORT within ${TIMEOUT}s (container still running - startup hang)"
+fail "never listened on port $HOST_PORT within ${TIMEOUT}s (container still running - startup hang)"
