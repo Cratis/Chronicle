@@ -133,7 +133,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<Cratis.Chronicle.Patterns.IFacetSetGenerator>(),
                     sp.GetRequiredService<Cratis.Chronicle.Patterns.IPatternMatcher>(),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>()),
-                new Cratis.Chronicle.Services.Identities.Identities(storage),
+                new Cratis.Chronicle.Services.Identities.Identities(
+                    storage,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Identities.Identities>>()),
                 new EventSequences(
                     grainFactory,
                     storage,

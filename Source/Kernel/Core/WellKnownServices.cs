@@ -37,4 +37,9 @@ public static class WellKnownServices
     /// The name of the EventStores service.
     /// </summary>
     public const string EventStores = "EventStores";
+
+    /// <summary>
+    /// The name of the Identities service.
+    /// </summary>
+    public const string Identities = "Identities";
 }

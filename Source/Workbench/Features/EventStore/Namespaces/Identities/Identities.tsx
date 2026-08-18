@@ -5,7 +5,7 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { Column, DataPage } from '@cratis/components/DataPage';
 import { useParams } from 'react-router-dom';
-import { AllIdentities, AllIdentitiesParameters } from 'Api/Identities';
+import { AllIdentities, AllIdentitiesParameters } from 'Features/Identities';
 import { Page } from 'Components/Common/Page';
 
 export const Identities = () => {
@@ -21,7 +21,7 @@ export const Identities = () => {
             title={strings.eventStore.namespaces.identities.title}
             query={AllIdentities}
             queryArguments={queryArgs}
-            dataKey='id'
+            dataKey='subject'
             emptyMessage={strings.eventStore.namespaces.identities.empty}>
 
             <DataPage.Columns>
