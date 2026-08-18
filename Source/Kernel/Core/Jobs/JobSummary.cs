@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Jobs;
 
@@ -47,7 +46,7 @@ public record JobSummary(
     internal static async Task<IEnumerable<JobSummary>> AllJobs(EventStoreName eventStore, EventStoreNamespaceName @namespace, IGrainFactory grainFactory)
     {
         var jobs = await grainFactory.GetJobsManager(eventStore, @namespace).GetAllJobs();
-        return ToJobs(jobs);
+        return JobSummaryConverters.ToJobs(jobs);
     }
 
     /// <summary>
@@ -66,43 +65,10 @@ public record JobSummary(
 
         if (catchOrObserve.IsSuccess)
         {
-            return catchOrObserve.AsT0.TransformSubject(ToJobs);
+            return catchOrObserve.AsT0.TransformSubject(JobSummaryConverters.ToJobs);
         }
 
         catchOrObserve.TryGetException(out var exception);
         throw exception!;
     }
-
-    private static IEnumerable<JobSummary> ToJobs(IEnumerable<JobState> jobs) => jobs.Select(ToJob);
-
-    private static JobSummary ToJob(JobState job) =>
-        new(
-            (Guid)job.Id,
-            job.Details,
-            job.Type,
-            (JobStatus)(int)job.Status,
-            job.Created,
-            job.StatusChanges.Select(ToStatusChanged),
-            ToProgress(job.Progress));
-
-    private static JobStatusChanged ToStatusChanged(Concepts.Jobs.JobStatusChanged sc) =>
-        new()
-        {
-            Status = (JobStatus)(int)sc.Status,
-            Occurred = sc.Occurred,
-            ExceptionMessages = sc.ExceptionMessages.ToList(),
-            ExceptionStackTrace = sc.ExceptionStackTrace
-        };
-
-    private static JobProgress ToProgress(Concepts.Jobs.JobProgress p) =>
-        new()
-        {
-            TotalSteps = p.TotalSteps,
-            SuccessfulSteps = p.SuccessfulSteps,
-            FailedSteps = p.FailedSteps,
-            StoppedSteps = p.StoppedSteps,
-            IsCompleted = p.IsCompleted,
-            IsStopped = p.IsStopped,
-            Message = p.Message
-        };
 }
