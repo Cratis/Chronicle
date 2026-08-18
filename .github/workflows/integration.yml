@@ -165,6 +165,13 @@ jobs:
             --no-build \
             --collect:"XPlat Code Coverage"
 
+      # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
+      - name: Assert Client integration tests ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: This Client integration shard
+
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
@@ -227,6 +234,13 @@ jobs:
             --no-build \
             --collect:"XPlat Code Coverage"
 
+      # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
+      - name: Assert Kernel integration tests ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: This Kernel integration shard
+
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
@@ -275,6 +289,13 @@ jobs:
             "FullyQualifiedName~${{ matrix.namespace }}" \
             --no-build \
             --collect:"XPlat Code Coverage"
+
+      # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
+      - name: Assert Clustering integration tests ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: This Clustering integration shard
 
       - name: Upload coverage results
         if: always()
