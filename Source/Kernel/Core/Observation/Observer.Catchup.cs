@@ -19,7 +19,7 @@ public partial class Observer
         _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
-        if (State.RunningState == ObserverRunningState.Replaying)
+        if (CurrentRunningState == ObserverRunningState.Replaying)
         {
             logger.SkippingCatchUpBecauseObserverIsReplaying();
             _isPreparingCatchup = false;
@@ -85,7 +85,7 @@ public partial class Observer
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        if (State.RunningState == ObserverRunningState.Replaying)
+        if (CurrentRunningState == ObserverRunningState.Replaying)
         {
             logger.SkippingPartitionCatchUpBecauseObserverIsReplaying();
             return;

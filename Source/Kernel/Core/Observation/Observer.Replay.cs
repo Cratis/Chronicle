@@ -19,7 +19,7 @@ public partial class Observer
             return JobId.NotSet;
         }
 
-        if (State.RunningState != ObserverRunningState.Replaying)
+        if (CurrentRunningState != ObserverRunningState.Replaying)
         {
             await TransitionTo<Replay>();
         }
@@ -40,7 +40,7 @@ public partial class Observer
             return;
         }
 
-        if (State.RunningState == ObserverRunningState.Replaying)
+        if (CurrentRunningState == ObserverRunningState.Replaying)
         {
             logger.SkippingPartitionReplayBecauseObserverIsReplaying();
             return;
@@ -87,7 +87,7 @@ public partial class Observer
 
     async Task<bool> TransitionToReplayIfNeeded()
     {
-        if (State.RunningState == ObserverRunningState.Replaying)
+        if (CurrentRunningState == ObserverRunningState.Replaying)
         {
             logger.Replaying();
             await TransitionTo<Replay>();
