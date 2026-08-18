@@ -3,7 +3,7 @@
 
 import { IMessenger } from '@cratis/arc.react.mvvm/messaging';
 import { inject, injectable } from 'tsyringe';
-import { AllNamespaces } from 'Api/Namespaces';
+import { ObserveNamespaces } from 'Features/Namespaces';
 import { ILocalStorage } from '@cratis/arc.react.mvvm/browser';
 import { BehaviorSubject } from 'rxjs';
 import type { ObservableQuerySubscription } from '@cratis/arc/queries';
@@ -25,7 +25,7 @@ export class Namespaces implements INamespaces {
         private readonly _localStorage: ILocalStorage,
         private readonly _messenger: IMessenger,
         @inject('params') private readonly _params: EventStoreAndNamespaceParams,
-        private readonly _namespacesQuery: AllNamespaces) {
+        private readonly _namespacesQuery: ObserveNamespaces) {
     }
 
     /** @inheritdoc */
