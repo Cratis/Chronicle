@@ -1,0 +1,46 @@
+name: Verify Spec Coverage Retained
+
+# A deleted spec does not fail - it stops being counted. A change that removes the specs proving a
+# behavior alongside the code implementing it therefore leaves CI green with nothing left to break,
+# which is how a stale worktree once reverted a sibling branch's merged hardening without any check
+# noticing. No test run can see this, because the evidence is the absence of a test.
+#
+# This fails a pull request that deletes a `for_*` spec folder in full while the type it specifies is
+# still in the tree. Deleting a type together with its specs is ordinary housekeeping and passes
+# silently; keeping the type while dropping its proof is the shape worth stopping.
+#
+# Triggered on labeled/unlabeled as well as the usual events, so applying the escape hatch label
+# re-runs the check rather than leaving a red cross behind that only a push would clear.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The check diffs the pull request against its base, so it needs both endpoints in the
+          # local object database. The default shallow fetch has neither.
+          fetch-depth: 0
+
+      - name: Assert deleted specs took their subject with them
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: >
+          python3 .github/scripts/assert-spec-deletions-covered.py
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
