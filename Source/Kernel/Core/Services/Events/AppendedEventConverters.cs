@@ -4,7 +4,7 @@
 using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Services.Identities;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Services.Events;
 
