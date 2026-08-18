@@ -38,5 +38,5 @@ public record EventStoreNames()
     /// <returns>An observable subject emitting collections of event store names.</returns>
     internal static ISubject<IEnumerable<string>> ObserveEventStores(IStorage storage) =>
         storage.ObserveEventStores()
-            .TransformSubject(stores => stores.Select(s => s.Value));
+            .TransformSubject<IEnumerable<Concepts.EventStoreName>, IEnumerable<string>>(stores => stores.Select(s => s.Value).ToArray());
 }
