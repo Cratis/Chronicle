@@ -67,13 +67,13 @@ public class SequenceQueryDefinition
     /// Gets or sets the inclusive lower bound on when the event occurred. Null means unbounded.
     /// </summary>
     [ProtoMember(10)]
-    public DateTimeOffset? OccurredFrom { get; set; }
+    public SerializableDateTimeOffset? OccurredFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the exclusive upper bound on when the event occurred. Null means unbounded.
     /// </summary>
     [ProtoMember(11)]
-    public DateTimeOffset? OccurredTo { get; set; }
+    public SerializableDateTimeOffset? OccurredTo { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether results are ordered newest first.
