@@ -146,8 +146,9 @@ Proxies generate into `Source/Workbench/Features`, co-located with components. A
 areas: `Features/EventStore/General/` is a navigation container holding twelve things that are separate areas in
 Core. Move nesting into routing so `Features/Captures` imports from its own folder.
 
-**This is now also a quality gate, not only tidiness.** `yarn lint:ci` reports 127 errors, all of them in
-generated proxies under `Features/**`:
+**This is now also a quality gate, not only tidiness.** `yarn lint:ci` fails - 124 errors at the time of
+writing, and the count moves with every area that migrates - all of them in generated proxies under
+`Features/**`:
 
 - `**/Api/**` is in the ESLint `ignores`, which is why the old location was clean. `Features/**` is not, and
   cannot be — `Features/Security` already mixes generated proxies with hand-written components
