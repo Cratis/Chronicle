@@ -1,0 +1,33 @@
+name: AI Corpus Validation
+
+# Scoped by name rather than `github.workflow` so a reusable-workflow caller can never
+# share this group (see the note in grpc-compatibility.yml).
+concurrency:
+  group: ai-corpus-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths:
+      - ".ai/**"
+      - ".claude/**"
+      - ".github/instructions/**"
+      - ".github/agents/**"
+      - ".agents/**"
+      - "AGENTS.md"
+
+jobs:
+  validate:
+    name: Validate AI corpus
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Structural + adapter integrity of .ai/ and every tool adapter that points into it.
+      # The script exits non-zero on a FAIL; its drift guards are warnings and do not fail.
+      - name: Validate AI corpus
+        run: bash .ai/hooks/scripts/validate-ai-setup.sh
