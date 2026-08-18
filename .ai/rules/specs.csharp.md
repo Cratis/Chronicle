@@ -96,6 +96,26 @@ From `Cratis.Specifications`: `.ShouldEqual(expected)`, `.ShouldBeTrue()`, `.Sho
 - Single-statement assertion lambdas use expression-body form (RCS1021) — `[Fact] void should_x() => result.ShouldEqual(...)`, not a `{ … }` block. Don't break long `should_` lines; don't add blank lines between `should_` methods.
 - **Prefer a concept's sentinel over a raw empty primitive.** When a `ConceptAs<T>` / `EventSourceId<T>` value is expected — as an argument, a mock setup, or an assertion — use its `NotSet` (or `Empty` / `New()`) static rather than a `string.Empty` / `Guid.Empty` / `0` that implicitly converts. It states intent and survives a sentinel-value change (see [concepts.md](./concepts.md)). Reserve raw `string.Empty` for genuinely non-concept `string` values (e.g. asserting a decrypted-to-empty JSON payload).
 
+## Never sleep — await a fact, not a duration
+
+**A spec never waits on the clock for the system under test.** `Thread.Sleep`, a bare `Task.Delay`, or a `SpinWait` before an assertion makes the spec pass because the machine happened to be fast enough, and it silently writes today's latency into the suite: the next fix that shifts timing in the observer/projection core then breaks specs that have nothing to do with it. That coupling — not the bugs being fixed — is the single largest source of regressions in Chronicle, and it is why fixes there keep getting rolled back.
+
+Wait on a signal instead:
+
+| Waiting for | Await |
+|---|---|
+| observers to catch up with an append | `appendResult.WaitForCompletion()` |
+| client artifacts to be registered with the kernel | `eventStore.WaitForRegistration()` |
+| an observer's state or position | `WaitTillActive` / `WaitTillSubscribed` / `WaitTillReachesEventSequenceNumber` / `WaitForState` (reactors, reducers, projections) |
+| a job | the `JobsWaitHelpers` extensions |
+| anything with no helper yet | build the signal: a `SemaphoreSlim` (or `TaskCompletionSource`) released by the code that observes the event, awaited under a timeout — `Source/Clients/XUnit.Integration/EventAppendCollection.cs` is the shipped example, and it never polls |
+
+A **deadline** is not a sleep — every helper above takes a `timeout`, and a timeout is what turns a hang into a named failure. Sleeping *between* re-checks is: a poll loop is a completion signal you have not built yet, so add the signal rather than another `while` + `Task.Delay`.
+
+Three delays are not waits at all and stay allowed — say which one it is in a comment: a test double that is **slow on purpose** so the test can observe it mid-flight (`Task.Delay(HandleTime)`), an **infrastructure readiness backoff** between retries of a connect/start that can legitimately fail, and a `Task.Delay(1)` / `Task.Yield()` that **widens an interleaving window** in a concurrency spec.
+
+The sleeps that predate this rule are frozen per file in `.github/timing-coupling-baseline.txt`; `.github/workflows/timing-coupling-ratchet.yml` fails a pull request that raises any entry or adds a file. The numbers may only go down.
+
 ## What NOT to spec
 
 Simple properties are compiler-verified. Save spec effort for business logic, coordination between dependencies, and complex transformations.
