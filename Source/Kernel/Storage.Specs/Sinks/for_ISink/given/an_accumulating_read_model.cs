@@ -41,11 +41,21 @@ public abstract class an_accumulating_read_model<THarness> : Specification
     void Establish()
     {
         _key = new Key("counter-1", ArrayIndexers.NoIndexers);
-        _harness = new THarness();
+        _harness = CreateHarness();
         _sink = _harness.CreateSink(CreateReadModelDefinition());
     }
 
     void Destroy() => _harness.Dispose();
+
+    /// <summary>
+    /// Creates the harness supplying the implementation under specification.
+    /// </summary>
+    /// <returns>The <typeparamref name="THarness"/> to run the contract through.</returns>
+    /// <remarks>
+    /// Overridable because a backend needing infrastructure receives it through the constructor - a
+    /// container fixture, say - and so cannot be built by the contract itself.
+    /// </remarks>
+    protected virtual THarness CreateHarness() => new();
 
     protected static IChangeset<AppendedEvent, ExpandoObject> ChangesetSettingCountTo(int count)
     {
