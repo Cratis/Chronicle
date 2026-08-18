@@ -8,8 +8,8 @@ name: Wire Compatibility
 # It checks two things, in order:
 #   1. The committed proto files and descriptor set still match the contracts source. A stale descriptor set would
 #      make step 2 compare against something nobody is actually running.
-#   2. The wire contract at HEAD still serves every released minor of the current major, reporting each one, so a
-#      break says which releases it breaks rather than only that something broke.
+#   2. The wire contract at HEAD still serves every released minor of the current major at or after the declared
+#      floor, reporting each one, so a break says which releases it breaks rather than only that something broke.
 
 on:
   workflow_call:
@@ -27,6 +27,24 @@ on:
 env:
   DOTNET_VERSION: "10.0.x"
   PROTOBUF_DIRECTORY: Source/Kernel/Protobuf
+
+  # The release this gate measures from. Anything older is not compared against.
+  #
+  # 16.x already lost intra-major compatibility. From 16.34.0 the Security and Jobs surfaces stopped being
+  # hand-written gRPC contracts and became generated from the Arc artifacts in Core, which renamed every method and
+  # moved every query payload behind a result envelope; COMPATIBILITY-REPORT.md measures exactly what that cost and
+  # concludes it cannot be undone without freezing a pre-Arc response shape into the generator permanently. Moving
+  # the rest of the Web API surface into Core - issue #2908 - breaks the same way for the same reason.
+  #
+  # A gate that fails every run on a break that already shipped stops being read, and one that is turned off
+  # entirely catches nothing. So the contract is measured from a declared point instead: this names the release the
+  # conversion first ships in, everything before it is acknowledged as already broken, and every break after it is
+  # a real finding. Correct the number if the conversion ends up shipping under a different one - a floor above the
+  # actual release measures nothing, which the tool reports as a warning rather than a pass.
+  #
+  # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
+  # release that does, never to make a red check go away.
+  WIRE_BASELINE_FLOOR: "16.37.0"
 
 jobs:
   wire-compatibility:
@@ -111,6 +129,7 @@ jobs:
 
           dotnet run --project Source/Tools/WireCompatibility/WireCompatibility.csproj -- \
             --major "${{ steps.baseline.outputs.major }}" \
+            --since "${{ env.WIRE_BASELINE_FLOOR }}" \
             --current "${{ env.PROTOBUF_DIRECTORY }}/chronicle.desc" \
             --allow-missing-baseline \
             --github | tee wire-compatibility.txt
