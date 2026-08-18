@@ -105,7 +105,10 @@ jobs:
             echo "The regression tax is unchanged"
           else
             git commit -m "Update the regression-tax dashboard for ${MONTH:-$(date -u +%Y-%m)} [skip ci]"
-            git pull --rebase origin "$BRANCH"
+            # Merge rather than rebase, matching the repository's additive-history rule. Only this
+            # bot's own unpushed commit would be replayed either way, so nothing here depends on
+            # rebasing - and a workflow is the last place to normalize a habit the repo forbids.
+            git pull --no-rebase origin "$BRANCH"
             git push
           fi
 
