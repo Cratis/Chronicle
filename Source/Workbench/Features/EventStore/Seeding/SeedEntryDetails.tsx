@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
-import { SeedEntry } from 'Api/Seeding/SeedEntry';
+import { SeedingEntry } from 'Features/Contracts/Seeding';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { ObjectContentEditor as _OCE } from '@cratis/components';
@@ -10,7 +10,7 @@ const ObjectContentEditor = _OCE.ObjectContentEditor;
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 
-export const SeedEntryDetails = ({ item }: IDetailsComponentProps<SeedEntry>) => {
+export const SeedEntryDetails = ({ item }: IDetailsComponentProps<SeedingEntry>) => {
     const params = useParams<EventStoreParams>();
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
 
