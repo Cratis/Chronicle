@@ -151,6 +151,14 @@ public class InMemorySink(
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
+        // Removing a child from every model that matches spans documents, so it cannot be expressed by
+        // applying changes to the one being written - the persistent sinks run it across the container
+        // at this point, and leaving it out here dropped it silently.
+        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            RemoveChildFromAll(childRemovedFromAll);
+        }
+
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
         lock (_collectionLock)
@@ -190,13 +198,22 @@ public class InMemorySink(
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context)
     {
-        _isReplaying = true;
+        lock (_collectionLock)
+        {
+            // A replay starts from nothing, so anything a previous replay left behind must go. Keeping it
+            // would let a second replay finish holding documents the first one produced.
+            _rewindCollection.Clear();
+            _rewindLastHandledEventSequenceNumbers.Clear();
+            _isReplaying = true;
+        }
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task ResumeReplay(ReplayContext context)
     {
+        // Resuming continues an interrupted replay, so what it has already written is kept.
         _isReplaying = true;
         return Task.CompletedTask;
     }
@@ -204,7 +221,37 @@ public class InMemorySink(
     /// <inheritdoc/>
     public Task EndReplay(ReplayContext context)
     {
-        _isReplaying = false;
+        lock (_collectionLock)
+        {
+            // The replay wrote to the rewind collection, so ending it has to promote that collection -
+            // without this the sink kept serving the pre-replay documents and the entire replay result
+            // was discarded. The persistent sinks swap the replay container in at this point.
+            //
+            // A replay that produced no writes is a no-op, not an instruction to empty the read model:
+            // promoting an empty collection would turn a transient race - the job observing no keys
+            // before the event index caught up - into permanent data loss, which is why MongoDB guards
+            // its rename the same way.
+            if (_rewindCollection.Count > 0)
+            {
+                _collection.Clear();
+                _lastHandledEventSequenceNumbers.Clear();
+
+                foreach (var (key, value) in _rewindCollection)
+                {
+                    _collection[key] = value;
+                }
+
+                foreach (var (key, value) in _rewindLastHandledEventSequenceNumbers)
+                {
+                    _lastHandledEventSequenceNumbers[key] = value;
+                }
+            }
+
+            _rewindCollection.Clear();
+            _rewindLastHandledEventSequenceNumbers.Clear();
+            _isReplaying = false;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -213,8 +260,20 @@ public class InMemorySink(
     {
         lock (_collectionLock)
         {
-            _rewindCollection.Clear();
-            _rewindLastHandledEventSequenceNumbers.Clear();
+            // The persistent sinks drop the container they are handed, so which one is named decides what
+            // goes. Ignoring the name and always clearing the replay state meant removing the container the
+            // read model lives in left it readable, and removing a revert container could wipe a replay in
+            // flight - the opposite of what was asked for in both cases.
+            if (containerName == readModel.ContainerName)
+            {
+                _collection.Clear();
+                _lastHandledEventSequenceNumbers.Clear();
+            }
+            else
+            {
+                _rewindCollection.Clear();
+                _rewindLastHandledEventSequenceNumbers.Clear();
+            }
         }
 
         return Task.CompletedTask;
@@ -316,6 +375,22 @@ public class InMemorySink(
 
         return !LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var lastHandled) ||
                lastHandled < eventSequenceNumber.Value;
+    }
+
+    void RemoveChildFromAll(ChildRemovedFromAll childRemoved)
+    {
+        lock (_collectionLock)
+        {
+            foreach (var document in Collection.Values)
+            {
+                var children = document.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, childRemoved.ArrayIndexers);
+                var child = children.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
+                if (child is not null)
+                {
+                    children.Remove(child);
+                }
+            }
+        }
     }
 
     ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)

@@ -23,11 +23,26 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// Factory for creating and setting up a kernel <see cref="KernelEventSequences::EventSequence"/> grain for in-process testing.
 /// </summary>
 /// <remarks>
-/// The kernel grain runs fully in-process without a real Orleans silo. Real implementations are used for all
-/// dependencies except <c>IStorage</c> (in-memory) and
-/// <see cref="Metrics.IMeter{T}"/> / <see cref="Microsoft.Extensions.Logging.ILogger{T}"/> (null implementations).
-/// This means constraint validation, hash calculation, event serialization, migration, and compliance all run
-/// through the actual kernel code paths.
+/// <para>
+/// The kernel grain runs in-process without a real Orleans silo. Real implementations are used for all
+/// dependencies except <c>IStorage</c> (in-memory) and <see cref="Microsoft.Extensions.Logging.ILogger{T}"/>
+/// (null logger). This means constraint validation, hash calculation, event serialization, migration, and
+/// compliance all run through the actual kernel code paths.
+/// </para>
+/// <para>
+/// <b>What it deliberately does not run: observers.</b> The grain is constructed directly and its
+/// <c>OnActivateAsync</c> - which is what an Orleans silo would call - never runs, so the appended-events queue it
+/// would resolve there stays unset and the enqueue after each append is a no-op. No projection, reducer or reactor
+/// is ever driven by an append made here. Waiting for observer completion on the resulting append result therefore
+/// throws <see cref="Observation.CannotWaitForObserverCompletion"/> rather than reporting that everything completed.
+/// </para>
+/// <para>
+/// The unset activation state is otherwise benign: the constraint-version check resolves to
+/// <see cref="InProcessConstraintsGrain"/> and is a no-op, the state-persistence interval keeps its field default,
+/// and the meter passed as <see langword="null"/> is only ever dereferenced inside <c>OnActivateAsync</c> - every
+/// metrics call on the append path goes through a null-conditional scope. Adding a kernel-side use of any of these
+/// outside <c>OnActivateAsync</c> would break that, so keep this list in step with the grain.
+/// </para>
 /// </remarks>
 internal static class InProcessEventSequence
 {

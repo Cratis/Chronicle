@@ -1,0 +1,109 @@
+# Timing-coupling ratchet baseline - enforced by .github/scripts/assert-timing-coupling-ratchet.py
+#
+# Each entry is `<count> <path>`: how many `Thread.Sleep` / `Task.Delay` / `SpinWait` /
+# `Task.Yield` sites that file is allowed to contain. A pull request fails when a file exceeds
+# its entry, and when a file that is not listed here sleeps at all.
+#
+# ENTRIES MAY ONLY DECREASE. The ratchet is one-way: removing a sleep and lowering the number
+# needs no explanation, raising one or adding a file needs a stated reason in the pull request.
+# The check prints a notice naming every entry that can now be lowered.
+#
+# A spec awaits a fact, not a duration - see .ai/rules/specs.csharp.md. These entries are the
+# ones that predate that rule; twenty of the last seventy-three regressions were fixes to the
+# timing-coupled observer and projection core that broke a sibling path, which is what this
+# freeze exists to stop growing. Deterministic completion signals are the real repair.
+#
+# An unannotated entry is a wait that stands in for a missing completion signal - work for the
+# migration. An annotated one is a delay that is not a wait at all and is expected to stay:
+#   knob        - a test double that is slow on purpose, so the test can observe it mid-flight
+#   readiness   - an infrastructure backoff between retries of a connect/start that can fail
+#   deadline    - the timeout arm of a `Task.WhenAny`, which is a bound and not a settle
+#   interleave  - a `Task.Delay(1)` / `Task.Yield()` widening a window in a concurrency spec
+#
+# Regenerate after a rename with `python3 .github/scripts/assert-timing-coupling-ratchet.py
+# --report`, then carry the annotations back over - `--report` prints counts only.
+
+2 Integration/Client/ChronicleConfigurableFixture.cs  # readiness
+1 Integration/Client/Projections/Scenarios/ModelBound/when_projecting_with_nested_in_children/clearing_the_nested_object.cs
+1 Integration/Client/Projections/Scenarios/given/a_projection_and_events_appended_to_it.cs
+1 Integration/Client/Projections/Scenarios/when_projecting_with_deferred_parent_resolution/and_resolves_through_second_event_type.cs
+1 Integration/Client/Projections/Scenarios/when_projecting_with_functions/counting_events_per_key.cs
+1 Integration/Client/Projections/Scenarios/when_projecting_with_functions/decrementing_per_key.cs
+1 Integration/Client/Projections/Scenarios/when_projecting_with_functions/incrementing_per_key.cs
+1 Integration/Client/Projections/Scenarios/when_updating_projection_definition/for_materialized_projection_with_deactivated_subscriber.cs
+1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/UserRegisteredReactor.cs
+1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/UserRegisteredReducer.cs
+1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/and_observers_consume_second_generation.cs
+2 Integration/Client/for_EventSequence/when_redacting/EventSequenceRedactionViaSequenceWaitHelpers.cs
+1 Integration/Client/for_EventSequence/when_redacting/NonReplayableReactor.cs
+1 Integration/Client/for_EventSequence/when_redacting/ReactorSubscribedToEventRedacted.cs
+1 Integration/Client/for_EventSequence/when_redacting/SomeReactor.cs
+1 Integration/Client/for_EventSequence/when_redacting/SomeReducer.cs
+1 Integration/Client/for_EventSequence/when_revising/NonReplayableReactor.cs
+1 Integration/Client/for_EventSequence/when_revising/SomeReactor.cs
+1 Integration/Client/for_EventSequence/when_revising/SomeReducer.cs
+1 Integration/Client/for_EventSequence/when_server_restarts/and_events_are_appended_before_restart.cs  # readiness
+1 Integration/Client/for_EventStoreSubscriptions/given/multi_event_store_subscription_setup.cs
+1 Integration/Client/for_EventStoreSubscriptions/given/subscription_states_after_subscribing.cs
+1 Integration/Client/for_EventStoreSubscriptions/when_registering_implicit_subscriptions/and_reactor_infers_external_inbox_subscription.cs
+1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_filtering_event_types.cs
+1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_forwarding_to_default_namespace.cs
+1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_multiple_source_namespaces_send_to_different_targets.cs
+1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_reactors_coordinate_tenant_outbox_forwarding.cs
+1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_same_namespace_subscribes_from_multiple_sources.cs
+1 Integration/Client/for_PIIManager/when_erasing_a_subject_whose_key_was_forwarded_to_another_event_store.cs
+1 Integration/Client/for_Reactors/ReactorFilteredByEventSourceType.cs  # knob
+1 Integration/Client/for_Reactors/ReactorFilteredByEventStreamType.cs  # knob
+1 Integration/Client/for_Reactors/ReactorFilteredByTag.cs  # knob
+2 Integration/Client/for_Reactors/ReactorThatCanFail.cs
+2 Integration/Client/for_Reactors/ReactorWithReplayHandler.cs
+1 Integration/Client/for_Reactors/ReactorWithoutDelay.cs
+1 Integration/Client/for_Reactors/ReactorWithoutDelayHandlingPii.cs
+1 Integration/Client/for_Reactors/SomeReactor.cs  # knob
+1 Integration/Client/for_ReadModels/given/a_projection_with_events.cs
+1 Integration/Client/for_ReadModels/given/a_projection_with_many_instances.cs
+1 Integration/Client/for_ReadModels/when_a_composed_read_model_lifts_pii/given/two_stored_subjects.cs
+1 Integration/Client/for_ReadModels/when_a_projection_redirects_its_key/and_the_source_subject_is_erased.cs
+1 Integration/Client/for_ReadModels/when_a_read_model_has_a_collection_of_pii_concepts/and_reading_the_instance.cs
+1 Integration/Client/for_ReadModels/when_a_read_model_has_a_collection_of_pii_concepts/and_the_elements_are_objects.cs
+1 Integration/Client/for_ReadModels/when_a_read_model_has_a_nested_pii_concept/and_reading_the_instance.cs
+1 Integration/Client/for_ReadModels/when_a_read_model_has_a_pii_value_object/and_reading_the_instance.cs
+1 Integration/Client/for_ReadModels/when_a_read_model_has_pii_beside_a_geospatial_value/and_reading_the_instance.cs
+1 Integration/Client/for_ReadModels/when_a_subject_owns_a_pii_child_collection/and_reading_the_child_collection.cs
+1 Integration/Client/for_ReadModels/when_getting_instance_with_an_unset_optional/and_the_optional_is_an_enum.cs
+1 Integration/Client/for_ReadModels/when_getting_instances/and_read_model_has_pii_property.cs
+1 Integration/Client/for_ReadModels/when_projecting_a_large_number_of_events/across_many_event_sources.cs
+1 Integration/Client/for_Reducers/ConceptCollectionReducer.cs
+1 Integration/Client/for_Reducers/PointLocationReducer.cs
+1 Integration/Client/for_Reducers/ReducerFilteredByEventSourceType.cs  # knob
+1 Integration/Client/for_Reducers/ReducerFilteredByEventStreamType.cs  # knob
+1 Integration/Client/for_Reducers/ReducerFilteredByTag.cs  # knob
+2 Integration/Client/for_Reducers/ReducerThatCanFail.cs
+1 Integration/Client/for_Reducers/ReducerWithoutDelay.cs
+1 Integration/Client/for_Reducers/ReducerWithoutDelayHandlingPii.cs
+1 Integration/Client/for_Reducers/SlowReducerThatSignalsCompletion.cs  # knob
+1 Integration/Client/for_Reducers/SomeReducer.cs  # knob
+1 Integration/Client/for_Reducers/when_handling_concept_collection/and_reducer_persists_the_concept_collection.cs
+1 Integration/Client/for_Webhooks/InvokedWebhooks.cs
+1 Integration/Client/for_Webhooks/given/webhook_states_after_registering.cs
+2 Integration/Clustering/ClusteringFixture.cs
+1 Integration/Clustering/for_Clustering/when_replaying_a_collapsing_projection.cs
+1 Integration/Clustering/for_ScaledOutClients/ReactorInvocationSignal.cs
+1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
+1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
+1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/given/a_connection_watchdog.cs  # interleave
+1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_keep_alive_is_fresh.cs
+1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_starting_twice.cs
+1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
+1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
+1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
+3 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_the_catchup_trigger_faults.cs
+1 Source/Kernel/Core.Specs/Jobs/for_JobStepThrottle/when_acquiring_and_releasing_slots.cs  # knob
+1 Source/Kernel/Core.Specs/Jobs/for_JobStepThrottle/when_observer_partition_limit_is_lower_than_job_step_limit.cs
+1 Source/Kernel/Core.Specs/Observation/EventStoreSubscriptions/for_EventStoreSubscriptionsManager/when_waiting_until_subscribed/and_subscription_definition_arrives_while_waiting.cs
+1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_acquiring_coarsely_while_a_stripe_is_held.cs  # deadline
+1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_different_event_source_ids_are_acquired_concurrently.cs  # deadline
+1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave
+1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/given/a_striped_pipeline_over_a_shared_read_model.cs  # interleave
+1 Source/Kernel/Services.Specs/ConcurrentCallGate.cs  # deadline
+1 Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs  # interleave

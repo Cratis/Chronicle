@@ -22,22 +22,29 @@ on:
   pull_request:
     branches:
       - "**"
+    # This list is a committed contract. `.github/build-affecting-paths.txt` records every path that must
+    # reach a build and a test run, and carries the evidence for each one; the "Assert the build-affecting
+    # path contract" step below fails when a required path is not covered by any pattern here. Narrowing
+    # this list therefore requires saying in the pull request what stops being covered - a narrowing to
+    # `.cs`/`.csproj` is how a `Directory.Packages.props` bump once merged with no build at all.
     paths:
-      - "Source/**/*.cs"
-      - "Source/**/*.csproj"
-      # Central package management decides what every project in the repository compiles against, so a version
-      # bump here reaches further than any single project file - and reached it without building, because a
-      # change confined to these files matched none of the patterns above. Directory.Build.props for the same
-      # reason: it sets the properties the build runs under.
-      - "Directory.Packages.props"
-      - "Directory.Build.props"
+      - "Source/**"
       - "Integration/**"
-      # The benchmarks job builds these, so a change here has to run it. Without this a broken benchmark
-      # project lands green and fails on the next unrelated pull request instead.
-      - "Benchmarks/**/*.cs"
-      - "Benchmarks/**/*.csproj"
-      - ".github/workflows/dotnet-build.yml"
-      - ".github/workflows/integration.yml"
+      - "Benchmarks/**"
+      - "Docker/**"
+      - "Directory.Packages.props"
+      - "Directory.Packages.NET8.props"
+      - "Directory.Packages.NET9.props"
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "global.json"
+      - ".globalconfig"
+      - ".editorconfig"
+      - "Chronicle.slnx"
+      - "specs.runsettings"
+      - ".github/workflows/**"
+      - ".github/scripts/**"
+      - ".github/build-affecting-paths.txt"
 
 jobs:
   dotnet-build:
@@ -49,6 +56,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # Needs nothing but the checkout, so it runs first and costs a second. A hole in the `paths:` filter
+      # above is invisible by construction - the run that would have caught the change never starts - so
+      # the only place to catch it is a run that did start, comparing the filter against the contract.
+      - name: Assert the build-affecting path contract
+        run: python3 .github/scripts/assert-build-affecting-paths.py
+
+      # Runs before anything is compiled because it needs nothing but the checkout, and because a spec
+      # project missing from the solution is invisible to every later step: it is never built, never
+      # invoked, and therefore writes no TRX for the zero-test guard to find.
+      - name: Assert every spec project is in the solution
+        run: python3 .github/scripts/assert-solution-membership.py
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -214,7 +233,13 @@ jobs:
       - name: Run tests with coverage
         # Integration tests are executed by .github/workflows/integration.yml.
         # Keep regular specs focused on non-integration test suites.
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration" --collect:"XPlat Code Coverage" --results-directory ./coverage-results
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration" --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+
+      - name: Assert specs ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: The specs job
 
       - name: Upload coverage results
         if: always()
@@ -286,7 +311,13 @@ jobs:
         working-directory: ./Integration/Api
         # Keep build enabled for .NET 10 test projects. `--no-build` causes an
         # invalid test assembly argument failure in this workflow context.
-        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true --collect:"XPlat Code Coverage" --results-directory ./coverage-results
+        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+
+      - name: Assert API integration tests ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./Integration/Api/coverage-results
+          name: The API integration job
 
       - name: Upload coverage results
         if: always()
@@ -326,7 +357,13 @@ jobs:
 
       - name: Run MongoDB integration tests with coverage
         working-directory: ./Integration/MongoDB
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage-results
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+
+      - name: Assert MongoDB integration tests ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./Integration/MongoDB/coverage-results
+          name: The MongoDB integration job
 
       - name: Upload coverage results
         if: always()

@@ -710,12 +710,17 @@ public class EventSequenceStorage(
         }
 
         var filter = Builders<Event>.Filter.And([.. filters]);
-        var highest = await collection.Find(filter)
-                                      .SortByDescendingSequenceNumber()
-                                      .Limit(1)
-                                      .SingleOrDefaultAsync()
-                                      .ConfigureAwait(false);
-        return highest?.SequenceNumber ?? EventSequenceNumber.Unavailable;
+
+        // Ascending: the next qualifying event at or after a position is the nearest one, which is what the
+        // name promises and what the SQL and in-memory implementations answer with. Sorting the other way
+        // answered with the last qualifying event instead, so a caller resuming from what it was told would
+        // skip everything between where it asked and where the sequence happened to end.
+        var next = await collection.Find(filter)
+                                   .SortByAscendingSequenceNumber()
+                                   .Limit(1)
+                                   .FirstOrDefaultAsync()
+                                   .ConfigureAwait(false);
+        return next?.SequenceNumber ?? EventSequenceNumber.Unavailable;
     }
 
     /// <inheritdoc/>

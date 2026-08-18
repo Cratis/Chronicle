@@ -1,0 +1,4 @@
+# Spec projects deliberately left out of Chronicle.slnx. Each one is dead weight - it never builds and
+# its tests never run - so every entry MUST reference the GitHub issue tracking the work that removes it.
+Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj  # #3739 - fails against the Key Vault emulator's untrusted root CA
+Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj  # #3738 - packaging-closure spec false positive blocks adding it

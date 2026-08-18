@@ -31,11 +31,24 @@ public class with_multiple_event_sources(context context) : Given<context>(conte
 
             Results = await WaitTillInstancesAreVisible(2);
         }
+
+        /// <summary>
+        /// Gets the projected instance for the event source that appended <paramref name="number"/>.
+        /// </summary>
+        /// <param name="number">The number the event source's <see cref="SomeEvent"/> carried.</param>
+        /// <returns>The instance belonging to that event source.</returns>
+        /// <remarks>
+        /// <c>GetInstances</c> reads the sink, and no sink promises an order — MongoDB answers in
+        /// insertion order while SQL Server answers in clustered-key order, which puts
+        /// <c>another-source</c> first. Identify each instance by what its event source appended
+        /// rather than by where the backend happened to place it.
+        /// </remarks>
+        public SomeReadModel InstanceFor(int number) => Results.Single(_ => _.Number == number);
     }
 
     [Fact] void should_return_two_instances() => Context.Results.Count().ShouldEqual(2);
-    [Fact] void should_have_first_instance_with_first_events() => Context.Results.First().Number.ShouldEqual(Context.FirstEvent.Number);
-    [Fact] void should_have_first_instance_value() => Context.Results.First().Value.ShouldEqual(Context.SecondEvent.Value);
-    [Fact] void should_have_second_instance_with_second_events() => Context.Results.Last().Number.ShouldEqual(Context.ThirdEvent.Number);
-    [Fact] void should_have_second_instance_value() => Context.Results.Last().Value.ShouldEqual(Context.FourthEvent.Value);
+    [Fact] void should_have_an_instance_for_the_first_event_source() => Context.Results.Count(_ => _.Number == Context.FirstEvent.Number).ShouldEqual(1);
+    [Fact] void should_have_the_first_event_sources_value() => Context.InstanceFor(Context.FirstEvent.Number).Value.ShouldEqual(Context.SecondEvent.Value);
+    [Fact] void should_have_an_instance_for_the_second_event_source() => Context.Results.Count(_ => _.Number == Context.ThirdEvent.Number).ShouldEqual(1);
+    [Fact] void should_have_the_second_event_sources_value() => Context.InstanceFor(Context.ThirdEvent.Number).Value.ShouldEqual(Context.FourthEvent.Value);
 }

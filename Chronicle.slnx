@@ -8,6 +8,7 @@
         <Project Path="Source/Clients/AspNetCore/AspNetCore.csproj" />
         <Project Path="Source/Clients/AspNetCore.Specs/AspNetCore.Specs.csproj" />
         <Project Path="Source/Clients/Connections/Connections.csproj" />
+        <Project Path="Source/Clients/Connections.Specs/Connections.Specs.csproj" />
         <Project Path="Source/Clients/DotNET/DotNET.csproj" />
         <Project Path="Source/Clients/DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" />
         <Project Path="Source/Clients/DotNET.CodeAnalysis.Specs/DotNET.CodeAnalysis.Specs.csproj" />
@@ -25,7 +26,9 @@
         <Project Path="Source/Kernel/Core.Specs/Core.Specs.csproj" />
         <Project Path="Source/Kernel/Server/Server.csproj" />
         <Project Path="Source/Kernel/Server.Specs/Server.Specs.csproj" />
+        <Project Path="Source/Kernel/Services.Specs/Services.Specs.csproj" />
         <Project Path="Source/Kernel/Storage/Storage.csproj" />
+        <Project Path="Source/Kernel/Storage.AzureKeyVault/Storage.AzureKeyVault.csproj" />
         <Project Path="Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
         <Project Path="Source/Kernel/Storage.InMemory.Specs/Storage.InMemory.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />

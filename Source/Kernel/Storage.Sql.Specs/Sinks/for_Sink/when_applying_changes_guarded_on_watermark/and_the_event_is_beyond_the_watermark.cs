@@ -1,22 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Sinks;
+using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded_on_watermark;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_guarded_on_watermark;
 
-public class and_the_event_is_beyond_the_watermark : given.an_accumulating_read_model
-{
-    int _count;
-
-    async Task Establish() =>
-        await _sink.ApplyChanges(_key, ChangesetSettingCountTo(1), 42UL);
-
-    async Task Because()
-    {
-        await _sink.ApplyChanges(_key, ChangesetSettingCountTo(2), 43UL, SinkWriteMode.OnlyWhenAdvancingWatermark);
-        _count = await CurrentCount();
-    }
-
-    [Fact] void should_apply_the_event() => _count.ShouldEqual(2);
-}
+public class and_the_event_is_beyond_the_watermark : Contract.and_the_event_is_beyond_the_watermark<SqlSinkHarness>;

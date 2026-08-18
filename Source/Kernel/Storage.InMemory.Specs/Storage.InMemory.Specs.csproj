@@ -16,5 +16,7 @@
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <!-- The shared ISink contract specifications live here and run against this implementation. -->
+        <ProjectReference Include="../Storage.Specs/Storage.Specs.csproj" />
     </ItemGroup>
 </Project>
