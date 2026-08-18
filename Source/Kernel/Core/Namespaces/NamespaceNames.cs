@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Namespaces;
 
 namespace Cratis.Chronicle.Namespaces;
 
@@ -37,5 +38,5 @@ public record NamespaceNames()
         storage.GetEventStore(new Concepts.EventStoreName(eventStore))
             .Namespaces
             .ObserveAll()
-            .TransformSubject(namespaces => namespaces.Select(n => (string)n.Name));
+            .TransformSubject<IEnumerable<NamespaceState>, IEnumerable<string>>(namespaces => namespaces.Select(n => (string)n.Name).ToArray());
 }

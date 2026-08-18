@@ -22,7 +22,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     public Task<CommandResult> AddApplication(AddApplicationRequest request, CallContext callContext = default) =>
         CommandExecutor.Execute(
             new Chronicle.Security.AddApplication(request.Id, request.ClientId, request.ClientSecret),
-            command => command.Handle(grainFactory));
+            command => command.Handle(grainFactory, storage));
 
     /// <inheritdoc/>
     public Task<CommandResult> ChangeApplicationSecret(ChangeApplicationSecretRequest request, CallContext callContext = default) =>
