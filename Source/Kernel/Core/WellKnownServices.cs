@@ -47,4 +47,9 @@ public static class WellKnownServices
     /// The name of the Recommendations service.
     /// </summary>
     public const string Recommendations = "Recommendations";
+
+    /// <summary>
+    /// The name of the EventSeeding service.
+    /// </summary>
+    public const string EventSeeding = "EventSeeding";
 }
