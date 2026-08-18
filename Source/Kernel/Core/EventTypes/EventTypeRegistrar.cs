@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -9,41 +10,34 @@ using Cratis.Chronicle.Events.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Reactive;
+using ProtoBuf.Grpc;
 
-namespace Cratis.Chronicle.EventTypes;
+namespace Cratis.Chronicle.Services.Events;
 
 /// <summary>
-/// Validates and shapes event type registrations on their way into storage.
+/// Represents an implementation of <see cref="IEventTypes"/>.
 /// </summary>
-/// <param name="grainFactory"><see cref="IGrainFactory"/> for appending the system events new generations produce.</param>
 /// <remarks>
-/// This is where registration's rules live - the migration chain has to be unbroken, a schema may not change
-/// under a generation that already exists, and a new generation is a fact the system event log records. The
-/// artifacts state what is being asked for; this decides whether it is allowed and what it means.
+/// Initializes a new instance of the <see cref="EventTypes"/> class.
 /// </remarks>
-public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
+/// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grain references.</param>
+/// <param name="eventTypesCacheClient">Client for evicting event type caches on every silo when a registration changes one.</param>
+internal sealed class EventTypes(
+    IStorage storage,
+    IGrainFactory grainFactory,
+    Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient) : IEventTypes
 {
-    /// <summary>
-    /// Registers event types into an event store, validating them and recording what changed.
-    /// </summary>
-    /// <param name="eventStore">The event store to register into.</param>
-    /// <param name="types">The registrations to write.</param>
-    /// <param name="skipValidation">Whether to skip the migration and schema checks.</param>
-    /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
-    /// <param name="eventTypesCacheClient">Client for evicting the event type cache on every silo.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <exception cref="MissingEventTypeMigrators">Thrown when a migrated event type declares no migrators.</exception>
-    /// <exception cref="MissingFirstGenerationForEventType">Thrown when the migration chain has no first generation.</exception>
-    /// <exception cref="MissingMigrationForEventTypeGeneration">Thrown when a generation in the chain has no migration.</exception>
-    /// <exception cref="EventTypeSchemaChanged">Thrown when a stored generation's schema changed under it.</exception>
-    public async Task Register(
-        EventStoreName eventStore,
-        IEnumerable<EventTypeRegistration> types,
-        bool skipValidation,
-        IStorage storage,
-        IEventTypesCacheClient eventTypesCacheClient)
+    /// <inheritdoc/>
+    public async Task Register(RegisterEventTypesRequest request)
     {
-        var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
+#if DEVELOPMENT
+        var skipValidation = request.DisableValidation;
+#else
+        const bool skipValidation = false;
+#endif
+        var eventTypesStorage = storage.GetEventStore(request.EventStore).EventTypes;
 
         // A client registers every event type it knows about in one call, and every check below - does the event
         // type exist, does this generation exist, has its schema changed - is answered by what is already stored.
@@ -52,7 +46,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         if (!skipValidation)
         {
-            foreach (var eventType in types)
+            foreach (var eventType in request.Types)
             {
                 ValidateMigrationChain(eventType.Type.Id, eventType.Type.Generation, eventType.Migrations);
                 await ValidateSchemaNotChanged(eventType, StoredFor(stored, eventType));
@@ -62,7 +56,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         var eventTypesToRegister = new List<EventTypeToRegister>();
         var newGenerationsPerEventType = new List<NewGenerations>();
 
-        foreach (var eventType in types)
+        foreach (var eventType in request.Types)
         {
             newGenerationsPerEventType.Add(GetNewGenerations(eventType, StoredFor(stored, eventType)));
             eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation));
@@ -75,10 +69,80 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         foreach (var eventTypeId in mutated)
         {
-            await eventTypesCacheClient.Invalidate(eventStore, eventTypeId);
+            await eventTypesCacheClient.Invalidate(request.EventStore, eventTypeId);
         }
 
-        await AppendSystemEventsForNewGenerations(eventStore, newGenerationsPerEventType);
+        await AppendSystemEventsForNewGenerations(request.EventStore, newGenerationsPerEventType);
+    }
+
+    /// <inheritdoc/>
+    public async Task RegisterSingle(RegisterSingleEventTypeRequest request)
+    {
+        var chronicleType = request.Type.Type.ToChronicle();
+        var schema = await JsonSchema.FromJsonAsync(request.Type.Schema);
+        var mutated = await storage
+            .GetEventStore(request.EventStore).EventTypes
+            .Register(
+                chronicleType,
+                schema,
+                (Concepts.Events.EventTypeOwner)(int)request.Type.Owner,
+                (Concepts.Events.EventTypeSource)(int)request.Type.Source);
+
+        if (mutated)
+        {
+            await eventTypesCacheClient.Invalidate(request.EventStore, chronicleType.Id);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Contracts.Events.EventType>> GetAll(GetAllEventTypesRequest request)
+    {
+        var eventTypes = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
+        return eventTypes.Select(_ => _.Type.ToContract());
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeRegistration>> GetAllRegistrations(GetAllEventTypesRequest request)
+    {
+        var eventTypes = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
+        return eventTypes.Select(_ => new EventTypeRegistration
+        {
+            Type = _.Type.ToContract(),
+            Owner = (Contracts.Events.EventTypeOwner)(int)_.Owner,
+            Source = (Contracts.Events.EventTypeSource)(int)_.Source,
+            Schema = _.Schema.ToJson()
+        });
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<EventTypeRegistration>> ObserveAllRegistrations(GetAllEventTypesRequest request, CallContext context = default)
+    {
+        var eventStore = storage.GetEventStore(request.EventStore);
+        return eventStore.EventTypes
+            .ObserveLatestForAllEventTypes()
+            .CompletedBy(context.CancellationToken)
+            .Select(_ => _.Select(_ => new EventTypeRegistration
+            {
+                Type = _.Type.ToContract(),
+                Owner = (Contracts.Events.EventTypeOwner)(int)_.Owner,
+                Source = (Contracts.Events.EventTypeSource)(int)_.Source,
+                Schema = _.Schema.ToJson()
+            }).ToArray());
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeRegistration>> GetAllGenerationsForEventType(GetEventTypeGenerationsRequest request)
+    {
+        var eventTypeId = new EventTypeId(request.EventTypeId);
+        var eventType = new Concepts.Events.EventType(eventTypeId, EventTypeGeneration.First, false);
+        var schemas = await storage.GetEventStore(request.EventStore).EventTypes.GetAllGenerationsForEventType(eventType);
+        return schemas.Select(_ => new EventTypeRegistration
+        {
+            Type = _.Type.ToContract(),
+            Owner = (Contracts.Events.EventTypeOwner)(int)_.Owner,
+            Source = (Contracts.Events.EventTypeSource)(int)_.Source,
+            Schema = _.Schema.ToJson()
+        });
     }
 
     static EventTypeDefinition? StoredFor(Dictionary<EventTypeId, EventTypeDefinition> stored, EventTypeRegistration eventType) =>
