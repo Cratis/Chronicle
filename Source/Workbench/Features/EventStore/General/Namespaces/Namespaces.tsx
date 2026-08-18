@@ -3,7 +3,7 @@
 
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { NamespacesViewModel } from './NamespacesViewModel';
-import { NamespaceNames, ObserveNamespaces, ObserveNamespacesParameters } from 'Features/Namespaces';
+import { ObserveNamespaces, ObserveNamespacesParameters } from 'Features/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
@@ -20,8 +20,8 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
         eventStore: params.eventStore!
     };
 
-    const nameColumn = (namespace: NamespaceNames) => {
-        return <>{namespace.name}</>;
+    const nameColumn = (namespace: string) => {
+        return <>{namespace}</>;
     };
 
     return (
@@ -30,7 +30,6 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 title={strings.eventStore.general.namespaces.title}
                 query={ObserveNamespaces}
                 queryArguments={queryArgs}
-                dataKey='id'
                 emptyMessage={strings.eventStore.general.namespaces.empty}>
 
                 <DataPage.MenuItems>
@@ -40,7 +39,7 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
-                    <Column field='name' header={strings.eventStore.general.namespaces.columns.name} sortable body={nameColumn} />
+                    <Column header={strings.eventStore.general.namespaces.columns.name} sortable body={nameColumn} />
                 </DataPage.Columns>
             </DataPage>
             <AddNamespaceDialog/>

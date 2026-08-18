@@ -6,7 +6,7 @@ import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
 import { ObserveJobs, ObserveJobsParameters } from 'Features/Jobs';
 import { JobSummary } from 'Features/Jobs';
-import { JobStatus } from 'Features/Concepts/Jobs';
+import { JobStatus } from 'Features/Contracts/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { withViewModel } from '@cratis/arc.react.mvvm';
