@@ -278,6 +278,12 @@ jobs:
           # Also pack the Contracts project from Kernel
           dotnet pack ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
+      # Nothing else in this repository installs Chronicle beside the Arc packages that build on it,
+      # so this is the only place the combination an application actually gets is exercised. It runs
+      # before the push because afterwards the version exists and cannot be taken back.
+      - name: Start the packages beside the current Arc packages
+        run: bash ./.github/scripts/verify-consumer-smoke.sh "${{ needs.release.outputs.version }}" "${{ env.NUGET_OUTPUT }}"
+
       # Get a short-lived NuGet API key
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@v1
