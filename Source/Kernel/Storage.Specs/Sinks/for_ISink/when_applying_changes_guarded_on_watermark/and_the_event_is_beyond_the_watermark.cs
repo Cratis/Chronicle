@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.Sinks.for_ISink.when_applying_changes_guarded
 /// A guarded write whose event advances the watermark is applied.
 /// </summary>
 /// <typeparam name="THarness">The <see cref="ISinkHarness"/> supplying the implementation under specification.</typeparam>
-public abstract class and_the_event_is_beyond_the_watermark<THarness> : given.an_accumulating_read_model<THarness>
+public abstract class and_the_event_is_beyond_the_watermark<THarness> : for_ISink.given.an_accumulating_read_model<THarness>
     where THarness : ISinkHarness, new()
 {
     int _count;
