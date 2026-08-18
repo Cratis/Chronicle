@@ -152,7 +152,7 @@ internal sealed class TestingServices(
         new KernelJobsService(grainFactory, storage, NullLogger<KernelJobsService>.Instance));
 
     readonly Lazy<IEventSeeding> _seeding = new(() =>
-        new KernelSeedingService(grainFactory));
+        new KernelSeedingService(grainFactory, NullLogger<KernelSeedingService>.Instance));
 
     readonly Lazy<IEventSequences> _eventSequences = new(() =>
         new KernelEventSequencesService(
