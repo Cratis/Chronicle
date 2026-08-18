@@ -126,9 +126,11 @@ public static class ChronicleServerSiloBuilderExtensions
                     grainFactory,
                     storage,
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Namespaces.Namespaces>>()),
-                new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
-                new Cratis.Chronicle.Services.Patterns.Patterns(
+                new Cratis.Chronicle.Services.Recommendations.Recommendations(
+                    grainFactory,
                     storage,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Recommendations.Recommendations>>()),
+                new Cratis.Chronicle.Services.Patterns.Patterns(
                     sp.GetRequiredService<Cratis.Chronicle.Patterns.IFacetVocabulary>(),
                     sp.GetRequiredService<Cratis.Chronicle.Patterns.IFacetSetGenerator>(),
                     sp.GetRequiredService<Cratis.Chronicle.Patterns.IPatternMatcher>(),
