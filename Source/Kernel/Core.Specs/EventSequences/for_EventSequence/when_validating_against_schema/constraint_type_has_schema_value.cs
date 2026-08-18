@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
 
-namespace Cratis.Chronicle.Grains.Specs.EventSequences.for_EventSequence.when_validating_against_schema;
+namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_validating_against_schema;
 
 public class constraint_type_has_schema_value : Specification
 {

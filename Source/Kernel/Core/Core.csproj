@@ -87,7 +87,9 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
+        <!-- Build-only: it generates TypeScript at build time and carries no runtime assets, so it must not flow
+             to anything consuming this project as a package. -->
+        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>
