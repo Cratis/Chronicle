@@ -1,6 +1,8 @@
 # gRPC Contract Compatibility Validation
 
-This directory contains scripts for validating gRPC API contract compatibility to detect breaking changes.
+This document covers the gRPC contract-compatibility scripts in this directory. The other
+scripts here (coverage collection, the integration matrix generator, the test retry runner,
+issue analysis) are documented by the header comment in each script.
 
 ## Overview
 
@@ -52,30 +54,17 @@ Exit codes:
 - `0`: No breaking changes detected
 - `1`: Breaking changes detected
 
-#### `update-pr-description.sh`
-
-Updates a pull request description with a warning about gRPC breaking changes.
-
-**Usage:**
-
-```bash
-GH_TOKEN=<token> .github/scripts/update-pr-description.sh <pr-number> <breaking-changes>
-```
-
-**Example:**
-
-```bash
-GH_TOKEN=$GITHUB_TOKEN .github/scripts/update-pr-description.sh 123 "Service 'Foo' was removed;Method 'Bar' signature changed"
-```
-
 ### Workflows
 
 #### `grpc-compatibility.yml`
 
-Reusable workflow that checks for gRPC contract compatibility.
+Runs on every pull request that touches `Source/**`, and is also callable as a reusable
+workflow. It generates the schema for the PR branch and for the base branch, compares
+them, and **fails when breaking changes are detected**.
 
 **Inputs:**
-- `base-ref`: Base branch reference to compare against (e.g., `main`, `develop`)
+- `base-ref`: Base branch reference to compare against (e.g., `main`, `develop`). Only
+  populated for `workflow_call`; on a plain `pull_request` the base branch of the PR is used.
 
 **Outputs:**
 - `has-breaking-changes`: Boolean indicating if breaking changes were detected
@@ -91,19 +80,16 @@ jobs:
       base-ref: ${{ github.event.pull_request.base.ref }}
 ```
 
-## Integration
+## Approving an intentional breaking change
 
-The gRPC compatibility check is integrated into:
+The gRPC wire contract is public API — every deployed client speaks it — so a detected
+break fails the check by default. When the break is intentional, add the
+**`grpc-breaking-change-approved`** label to the pull request and re-run the job. The
+workflow reads the labels straight from the event payload, so no token is involved.
 
-1. **Pull Request Workflow** (`pull-requests.yml`):
-   - Runs on every PR
-   - Compares PR branch against the base branch
-   - Adds a warning to the PR description if breaking changes are detected
-
-2. **Publish Workflow** (`publish.yml`):
-   - Runs on releases
-   - Compares against the `main` branch
-   - Ensures release notes capture any breaking changes
+Applying that label is the deliberate act of accepting wire incompatibility, and it
+implies the **`major`** semver label: a broken public contract is a major release by
+definition. The change also belongs in the PR description so it reaches the release notes.
 
 ## Breaking Changes Detection
 
@@ -115,22 +101,21 @@ The system detects the following types of breaking changes:
 
 ## Example Output
 
-When breaking changes are detected, the PR description will be updated with:
+When breaking changes are detected, the job annotates the run and fails:
 
-```markdown
-## ⚠️ gRPC API Breaking Changes Detected
+```text
+⚠️  Breaking changes detected:
 
-This PR introduces **breaking changes** to the gRPC API surface that will cause wire incompatibility with existing clients.
+  - Service 'EventStores' was removed
+  - Method 'Namespaces.GetNamespaces' signature changed
 
-### Breaking Changes:
-- Service 'EventStores' was removed
-- Method 'Namespaces.GetNamespaces' signature changed
-
-Please ensure:
-1. This is intentional and documented in the release notes
-2. Version number is bumped appropriately (major version for breaking changes)
-3. Migration guide is provided if necessary
+Error: Breaking gRPC contract changes detected: Service 'EventStores' was removed;Method 'Namespaces.GetNamespaces' signature changed
+Error: If this break is intentional, add the 'grpc-breaking-change-approved' label to the
+pull request (and the 'major' semver label), then re-run this job.
 ```
+
+Both generated schemas and the raw comparison output are uploaded as the `grpc-schemas`
+artifact on every run, so a failure can be inspected without re-running anything.
 
 ## Development
 

@@ -73,28 +73,45 @@ jobs:
           # Use the script from current (PR) branch to generate schema for baseline code
           current/.github/scripts/generate-grpc-schema.sh baseline/baseline-schema.proto $PWD/baseline
 
+      # A breaking change to the gRPC wire contract FAILS this job. The contract is
+      # public API: every deployed client speaks it, so a silent break is a production
+      # incident, not a review note.
+      #
+      # Escape hatch: an intentional breaking change is approved by adding the
+      # `grpc-breaking-change-approved` label to the pull request. That label is the
+      # deliberate act of accepting wire incompatibility, and it implies the `major`
+      # semver label -- a broken public contract is a major release by definition.
+      # Labels are read from the event payload, so no token or API call is needed.
       - name: Compare schemas
         id: compare
         working-directory: current
+        env:
+          APPROVAL_LABEL: grpc-breaking-change-approved
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          set +e
+          set -euo pipefail
 
-          # Run the comparison
-          .github/scripts/compare-grpc-schemas.sh ../baseline/baseline-schema.proto current-schema.proto > comparison-output.txt 2>&1
-          RESULT=$?
+          if .github/scripts/compare-grpc-schemas.sh ../baseline/baseline-schema.proto current-schema.proto > comparison-output.txt 2>&1; then
+            cat comparison-output.txt
+            echo "has-breaking-changes=false" >> "$GITHUB_OUTPUT"
+            echo "breaking-changes=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           cat comparison-output.txt
 
-          if [ $RESULT -eq 0 ]; then
-            echo "has-breaking-changes=false" >> $GITHUB_OUTPUT
-            echo "breaking-changes=" >> $GITHUB_OUTPUT
-          else
-            echo "has-breaking-changes=true" >> $GITHUB_OUTPUT
+          CHANGES=$(grep "^  - " comparison-output.txt | sed 's/^  - //' | tr '\n' ';' | sed 's/;$//')
+          echo "has-breaking-changes=true" >> "$GITHUB_OUTPUT"
+          echo "breaking-changes=$CHANGES" >> "$GITHUB_OUTPUT"
 
-            # Extract breaking changes and format for output
-            CHANGES=$(grep "^  - " comparison-output.txt | sed 's/^  - //' | tr '\n' ';' | sed 's/;$//')
-            echo "breaking-changes=$CHANGES" >> $GITHUB_OUTPUT
+          if printf '%s' "$PR_LABELS" | grep -q "\"${APPROVAL_LABEL}\""; then
+            echo "::warning::Breaking gRPC contract changes detected, approved by the '${APPROVAL_LABEL}' label. Make sure the PR also carries the 'major' semver label and documents the migration."
+            exit 0
           fi
+
+          echo "::error::Breaking gRPC contract changes detected: ${CHANGES}"
+          echo "::error::If this break is intentional, add the '${APPROVAL_LABEL}' label to the pull request (and the 'major' semver label), then re-run this job."
+          exit 1
 
       - name: Upload schemas for reference
         if: always()
