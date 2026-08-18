@@ -1,4 +1,6 @@
 ---
+applyTo: "**/*"
+description: "Use when running any terminal command. Prefix every command with rtk -- including each command in an && chain -- so token-heavy output is filtered."
 ---
 
 # RTK (Rust Token Killer) - Token-Optimized Commands
