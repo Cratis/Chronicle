@@ -3,7 +3,7 @@
 
 import { AddExternalService } from 'Features/ExternalServices';
 import { ExternalServiceEndpointType } from 'Features/Contracts/ExternalServices';
-import { AuthorizationType } from 'Features/Contracts/Security';
+import { AuthorizationType } from 'Api/Security';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
