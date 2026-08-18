@@ -6,7 +6,7 @@ import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { SchemaEditor as _SE } from '@cratis/components';
 const SchemaEditor = _SE.SchemaEditor;
 import type { JsonSchema } from '@cratis/components/types';
-import { AllTypeFormats } from 'Api/TypeFormats';
+import { AllTypeFormats } from 'Features/Schemas';
 import { ReadModelDefinition, ReadModelSource, UpdateReadModelDefinition } from 'Api/ReadModelTypes';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
