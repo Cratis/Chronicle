@@ -5,6 +5,11 @@ name: Verify Semver Label
 # release having happened when nothing was published. Requiring the label here turns a silent non-release into
 # a visible failure before the merge, where it costs nothing to fix.
 #
+# `no-release` is the fourth accepted answer, and it is a decision rather than an omission: this pull request
+# changes nothing a consumer compiles against or runs, so there is nothing to version. It exists because
+# "leave the label off" cannot be told apart from forgetting one, and a rule whose correct outcome is a red
+# check trains everybody to ignore the check. See .ai/rules/pull-requests.md for what qualifies.
+#
 # Triggered on labeled/unlabeled as well as the usual events, so adding the label re-runs the check rather than
 # leaving a red cross behind that only a push would clear.
 concurrency:
@@ -28,21 +33,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Require exactly one semantic version label
+      - name: Require exactly one release-intent label
         env:
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          count=$(printf '%s' "$LABELS" | jq '[.[] | select(. == "major" or . == "minor" or . == "patch")] | length')
+          set -euo pipefail
+          version=$(printf '%s' "$LABELS" | jq '[.[] | select(. == "major" or . == "minor" or . == "patch")] | length')
+          none=$(printf '%s' "$LABELS" | jq '[.[] | select(. == "no-release")] | length')
+          count=$((version + none))
 
           if [ "$count" -eq 1 ]; then
-            echo "Found one semantic version label."
+            if [ "$none" -eq 1 ]; then
+              echo "Labelled no-release: merging this pull request publishes nothing, by decision."
+            else
+              echo "Found one semantic version label."
+            fi
             exit 0
           fi
 
           if [ "$count" -eq 0 ]; then
-            echo "::error::This pull request has no semantic version label. Add exactly one of major, minor or patch. Without one, merging produces a Publish run that succeeds while skipping every publish step, so no release is cut and nothing is published."
+            echo "::error::This pull request states no release intent. Add exactly one of major, minor or patch to publish a release, or no-release if it changes nothing a consumer compiles against or runs - documentation, CI, tooling and spec-only changes. Without any of them, merging produces a Publish run that skips every publish step, so nothing is released and nothing says that was intended."
+          elif [ "$version" -ge 1 ] && [ "$none" -eq 1 ]; then
+            echo "::error::This pull request is labelled no-release as well as a semantic version. It either ships something or it does not - remove whichever is wrong."
           else
-            echo "::error::This pull request carries $count semantic version labels. Exactly one of major, minor or patch is required, since the release version cannot be derived from more than one."
+            echo "::error::This pull request carries $version semantic version labels. Exactly one of major, minor or patch is required, since the release version cannot be derived from more than one."
           fi
 
           exit 1

@@ -34,9 +34,11 @@ Quick reminders:
   - **minor** — new features, new slices, non-breaking additions
   - **patch** — bug fixes, refactoring with identical behavior
 
-### A pull request that changes nothing outward-facing carries NO label
+### A pull request that changes nothing outward-facing carries `no-release`
 
-**If nothing in the PR can change what a consumer of the framework compiles against, runs, or observes, do not label it at all** — not `patch`, not anything. No label means no release, which is the correct outcome: there is nothing to release.
+**If nothing in the PR can change what a consumer of the framework compiles against, runs, or observes, label it `no-release`** — never `patch`. It is a fourth release-intent label alongside `major`/`minor`/`patch`, and exactly one of the four is required. Merging a `no-release` pull request publishes nothing, which is the correct outcome: there is nothing to release.
+
+`no-release` is a decision, not an omission. Leaving the label off entirely is indistinguishable from forgetting it, so it stays an error.
 
 This covers, whenever the PR touches *only* these:
 
@@ -47,7 +49,7 @@ This covers, whenever the PR touches *only* these:
 
 The test is **outward-facing effect, not file location**. A change under `Source/**` that only touches specs is not shippable; a one-line change to a published package's behavior is, however small. If a consumer could not tell the difference by upgrading, there is nothing to version. When genuinely unsure, ask rather than defaulting to `patch` — an unnecessary release is not free: it burns a version number, ships release notes describing nothing, and buries the releases that matter.
 
-A `verify`-style job that fails because the version label is missing is the **expected** outcome for this kind of PR, not a problem to fix.
+A `no-release` pull request should be **green like any other** — `verify-semver-label` accepts the label, and the publish run skips its "nothing was published" alarm because nothing was meant to be.
 
 ### Group small related changes into one pull request
 
@@ -59,7 +61,7 @@ Split into separate pull requests when the changes are genuinely unrelated, when
 
 **A documentation-only pull request skips this section entirely.** Nothing it changes can break a build, a spec or a lint, so there is nothing to wait for: open it and merge it. Do not monitor its checks, do not wait for green, and do not treat a red `verify` from the deliberately absent version label as a failure. Verify the content instead — links resolve, anchors exist, every code example matches real source.
 
-**Carrying no version label does not otherwise excuse a PR from this section.** A CI, tooling, or spec-only pull request ships nothing, but it is exactly the kind of change that can break the build or the pipeline for everyone else — a broken workflow or a deleted spec does its damage without ever being released. Hold it to every gate below; the only check it is allowed to be red on is the `verify` job complaining about the deliberately absent version label.
+**`no-release` does not otherwise excuse a PR from this section.** A CI, tooling, or spec-only pull request ships nothing, but it is exactly the kind of change that can break the build or the pipeline for everyone else — a broken workflow or a deleted spec does its damage without ever being released. Hold it to every gate below.
 
 Before marking any other PR ready for review:
 - `dotnet build` — zero errors, zero warnings

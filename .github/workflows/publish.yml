@@ -748,7 +748,12 @@ jobs:
     # job succeeds, every publish job is skipped for want of should-publish, and the whole run reports green. Fail
     # instead, so a release that did not happen cannot be mistaken for one that did. workflow_dispatch is excluded
     # because a manual run may legitimately resolve to no publish.
-    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true'
+    #
+    # A pull request labelled no-release published nothing on purpose - it changed no shipped behavior - so this
+    # check would be reporting the intended outcome as a failure, and a job that cries wolf on the common case
+    # stops being read. verify-semver-label guarantees the label is a deliberate choice rather than an omission,
+    # which is what makes it safe to trust here.
+    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true' && !contains(github.event.pull_request.labels.*.name, 'no-release')
     runs-on: ubuntu-latest
     needs: [release]
 
