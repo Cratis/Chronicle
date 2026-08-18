@@ -1,18 +1,18 @@
 name: Publish
 
-# One release at a time, and never cancel one.
+# Publish runs are grouped per pull request, and never cancelled.
 #
-# Deciding the next version is a read followed by a create: the run reads the latest released version
-# and creates the one after it. Two runs doing that at once read the same answer and try to create the
-# same version, so all but one fail - and a burst of them trips GitHub's secondary rate limit, which
-# comes back as a 403 on the create rather than anything that names the real problem. Merging eleven
-# pull requests in two minutes produced exactly that: five runs, all computing v16.35.7, four losing.
-#
-# Every run shares one group so they queue behind each other, and cancel-in-progress is off so queueing
-# is all that happens. A shared group used to be wrong for a different reason: with cancellation on, the
-# last run to start killed the rest, including the one meant to cut the release, which is why this was
-# keyed per pull request. Keying per pull request avoided the cancellation but bought the race instead.
-# Sharing the group without cancelling avoids both.
+# Under the pull_request trigger github.ref is refs/pull/<N>/merge, so this group is unique to one
+# pull request: simultaneous merges never cancel one another's publish run, and with
+# cancel-in-progress off a run that has started always finishes and cuts its version. It does not
+# serialize releases. Choosing the next version is a read then a create, so two runs still read the
+# same latest version and race to create it - merging eleven pull requests in two minutes on
+# 2026-08-18 gave five runs all computing v16.35.7 and four 403s from secondary rate limiting.
+# A constant group would not fix that and must not be introduced: GitHub keeps only one pending run
+# per group and cancels the earlier pending one, so a third merge silently drops the second's
+# release, which is worse than a noisy 403. The real fix is to stop deriving the version from a
+# read-then-create race - retry the create with backoff, or decouple release from merge so only one
+# release run exists at a time (task 2.2 in PLAN-reliability-program.md).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false

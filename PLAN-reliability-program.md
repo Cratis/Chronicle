@@ -404,6 +404,14 @@ core regresses siblings, which is why fixes here keep getting rolled back.
 3. Keep an escape hatch: a `hotfix` label or manual dispatch that releases immediately (still
    through the boot/smoke gates).
 
+**Residual risk, still open:** the publish-run race behind the 2026-08-18 403s is not fixed —
+`publish.yml` groups concurrency per pull request (under `pull_request`, `github.ref` is
+`refs/pull/<N>/merge`), which only guarantees a run is never cancelled, so concurrent runs still
+read the same latest version and race to create it. A constant group is not the answer: GitHub keeps
+only one pending run per group and cancels the earlier pending one, so a burst of merges would
+silently drop a release rather than fail loudly. Until this task decouples release from merge, the
+stopgap is retrying the version creation with backoff.
+
 **Done when:** patch share of releases is below 40% for a full calendar month.
 
 ### Task 2.3 — Close-the-class policy
@@ -520,7 +528,7 @@ so it could never have passed; it had been verified against a locally built imag
 published one. A gate is not proven by passing, only by failing when it should. Second, **merging
 eleven pull requests in two minutes raced the release job**: every run read the same latest version
 and tried to create it, and the losers got a 403 from secondary rate limiting. Nothing was lost, but
-it is the argument for 2.2 in miniature, and #3756 serializes it.
+it is the argument for 2.2 in miniature, and #3756 does not close it — see the residual risk under 2.2.
 
 **Held deliberately, not forgotten:** #3734 and #3748 touch the proto surface and the gRPC gate while
 Einar is mid-investigation there; #3760 makes real schema validation run in-process, which can surface
