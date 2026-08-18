@@ -15,8 +15,8 @@ env:
 
 on:
   workflow_dispatch:
-  # Nightly full-coverage run. Pull requests cover the default storage backend
-  # only, so this is where sqlite, postgresql and mssql get exercised.
+  # Nightly full-coverage run. Pull requests cover mongodb and sqlite, so this is
+  # where postgresql and mssql get exercised.
   schedule:
     - cron: "0 2 * * *"
   pull_request:
@@ -252,7 +252,8 @@ jobs:
       dotnet-cache-key: ${{ needs.dotnet-build-development.outputs.dotnet-cache-key }}
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
       # Every storage backend on the nightly schedule and on manual dispatch;
-      # pull requests run the default backend only.
+      # pull requests run the pull request set (mongodb + sqlite) the generator
+      # declares in PULL_REQUEST_DATABASES.
       all-providers: ${{ github.event_name != 'pull_request' }}
 
   integration-api:
