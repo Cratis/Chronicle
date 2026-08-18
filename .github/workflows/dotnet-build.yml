@@ -41,6 +41,12 @@ on:
       - "Benchmarks/**/*.csproj"
       - ".github/workflows/dotnet-build.yml"
       - ".github/workflows/integration.yml"
+      # The generator decides which namespaces, shards and storage backends the
+      # integration stage runs, so a change to it changes what this workflow
+      # verifies - and without this pattern it would change it without ever
+      # running. Its specs come along for the same reason.
+      - ".github/scripts/generate-integration-matrix.py"
+      - ".github/scripts/test-generate-integration-matrix.py"
 
 jobs:
   dotnet-build:
