@@ -148,7 +148,7 @@ These are substituted for every scenario, whatever your read model looks like:
 | The read model definition | Identifier, container and display name come straight off the CLR type and there are no indexes, where a deployed Chronicle uses your naming policy and the indexes you declared. |
 | The client read surface | `scenario.ReadModels` is the production client surface; its read side wants a running Chronicle and refuses rather than answering. Read what the scenario materialized through `Instance`, `Instances` or `InstanceForEventSourceId`. |
 
-Three more are substituted only for certain shapes — and because the harness can see which of those shapes your read model has, it tells you.
+Four more are substituted only for certain shapes — and because the harness can see which of those shapes your read model has, it tells you.
 
 ## Asking what a scenario substituted
 
@@ -159,8 +159,11 @@ Three more are substituted only for certain shapes — and because the harness c
 | `Layer` | Reported when |
 |---------|---------------|
 | `Sink` | the document key is not a `Guid`, or the read model carries a class-level `[RemovedWith]` |
+| `Compliance` | the read model's schema carries compliance metadata — a `[PII]` member, or a member typed as a `[PII]` concept |
 | `JoinKeyResolution` | the read model or one of its child collections carries a `[Join]` |
 | `DeferredKeyHandling` | a child collection takes its parent key from an event property rather than from the event source id |
+
+`Compliance` is worth singling out, because it is the one whose absence looks most like success. A deployed Chronicle encrypts a read model's `[PII]` members on the way into the sink and releases them on the way out, keyed by the subject the event resolved to. `ReadModelScenario` projects and reads plaintext, so a value that a running system would store as ciphertext — or hand back empty because the subject was erased — reads back here exactly as you wrote it. Assertions about the *value* still hold; assertions about it being protected, about which subject it is keyed by, or about what erasure does to it, do not. Cover those with an `EventScenario`, which does run the real compliance stack, or against a real kernel and store.
 
 An empty list means nothing shape-dependent is being stood in for. Anything in the list is a claim your in-process spec cannot settle on its own — cover it against a real kernel and a real store as well.
 
