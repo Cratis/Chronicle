@@ -161,17 +161,100 @@ generated proxies under `Features/**`:
 Deciding this is deciding where generated output lives relative to hand-written code, which is what this step is
 for.
 
-## Step 6 — verify for real
+## Step 6 — verify for real, and what it found
 
-Not done at all yet, and explicitly asked for: start the kernel, run the Console sample to seed data, and click
-through every Workbench screen against a live backend. **Jobs, EventStores, Namespaces and Identities changed HTTP
-routes** (`/api/event-stores/add` → `/api/event-stores/ensure-event-store`,
-`/api/event-store/{eventStore}/{namespace}/identities` → `/api/identities/all-identities`) — start there.
+Done once, against a live kernel (MongoDB in Docker, kernel on 35000, Vite dev server on 9000, Workbench in a
+browser). **The Workbench does not work on this branch.** It cannot list event stores, so no screen past the
+first is reachable. Two independent defects, neither visible from a build, a spec run or a type-check — which is
+the whole argument for this step existing.
+
+Both were introduced by the earlier migrations on this branch, not by anything on `main`, where every artifact
+still lived in Api and the numbers agreed.
+
+### Defect A — the routes the proxies call are not the routes the kernel serves
+
+`Server/Program.cs` (and `Clients/Workbench/WebServer.cs`) configure Arc with
+`options.GeneratedApis.SegmentsToSkipForRoute = 3`. That is right for an Api artifact —
+`Cratis.Chronicle.Api.Security` minus three segments is `security`, giving `/api/security/…`. It is wrong for a
+Core artifact: `Cratis.Chronicle.Jobs` minus three segments is *nothing*, so the kernel serves `/api/all-jobs`
+while the generated proxy calls `/api/jobs/all-jobs`.
+
+Measured, with `/api/nonsense-xyz` as the calibration for "no such route" (it falls through to the SPA and
+answers 200 with `index.html`; a route that exists answers 401 unauthenticated):
+
+| Route | Kernel |
+| --- | --- |
+| `/api/nonsense-xyz` | 200, SPA — the shape of a missing route |
+| `/api/all-jobs` | 401 — exists |
+| `/api/jobs/all-jobs` | 200, SPA — what the proxy calls, and it is not there |
+
+The same holds for Identities, Recommendations, TypeFormats and Observation.
+
+**There is no setting that serves both.** `CratisProxiesSegmentsToSkip` drives the proxy's route *and* its output
+folder from the same number, so `Features/<Area>/` folders and `/api/<area>/…` routes are the same choice; and
+Arc 21.19.0 has one global `SegmentsToSkipForRoute`, not one per assembly. So while Api and Core coexist, either
+the migrated areas are wrong or the un-migrated ones are.
+
+The options, none of them free:
+
+1. **Set the server to 2 and let the remaining Api areas answer at `/api/api/<area>/…`** until each one moves.
+   Correct end state, one line, and it makes every migrated screen work today — at the cost of a silly route and
+   91 Workbench imports moving to `Api/Api/<Area>` for the duration.
+2. **Leave the server at 3 and generate Core proxies with 3**, so routes match and every Core proxy lands flat in
+   `Features/`. Loses the area folders and invites file-name collisions between areas.
+3. **Finish the migration first, then set the server to 2.** Nothing else changes, but the Workbench stays broken
+   for migrated areas until the last area lands, which makes every intermediate step unverifiable — the state
+   this branch is in now.
+
+This wants a decision before more areas move, because option 3 is what "just keep going" chooses by default.
+
+### Defect B — a property-less read model has no HTTP endpoint at all
+
+`EventStoreNames` and `NamespaceNames` are `[ReadModel]` records with **no properties**, whose queries return
+`IEnumerable<string>`. Arc registers a query performer for the read-model type and its collections; a query
+answering with strings is not a shape it recognizes, so nothing is registered — no route at either spelling, and
+the SSE hub answers a subscription with:
+
+```
+No performer found for query Cratis.Chronicle.EventStores.EventStoreNames.ObserveEventStores
+```
+
+which is what leaves the event store picker empty and the app unusable. The gRPC surface is unaffected: the
+generated service calls the static method directly and never goes through Arc's performers, so the .NET client
+still works and no spec notices.
+
+The fix is to give the read model the property it describes — `EventStoreNames(string Name)` — which changes what
+the query answers with from `["a","b"]` to `[{"name":"a"},{"name":"b"}]`, and so touches the generated contract,
+the .NET client's `AllEventStores`, and the Workbench components that read the list.
+
+### Reproducing it
+
+```bash
+docker run -d --name chronicle-verify-mongo -p 27017:27017 mongo:latest
+dotnet run --project Source/Kernel/Server/Server.csproj -c Debug --no-build     # https://localhost:35000
+cd Source/Workbench && yarn dev                                                  # http://localhost:9000
+```
+
+The kernel's TLS certificate is self-signed, so drive the Workbench through the Vite dev server on 9000 (its
+proxy sets `secure: false`); a browser automation tool refuses 35000 directly. `curl -k` reaches the kernel fine.
+Only `storage.connectionDetails` in `chronicle.json` moves the event storage — Orleans clustering and reminders
+read their own configuration and stayed on 27017, so pointing storage elsewhere just makes startup time out.
+
+### Still not verified
+
+Seeding data with the Console sample, and clicking through the screens past the event store picker. Neither is
+reachable until Defect B is fixed, and neither means anything until Defect A is.
+
+## The state of the branch, honestly
+
+The build is clean, the specs pass, the wire contract is derived, and **the Workbench does not run**. Step 6 above
+says why, and it is the next thing to fix — ahead of migrating any further area, because every area migrated
+under Defect A is another screen that cannot be verified.
 
 ## What is already done on PR #3768
 
-Complete and verified: whole-solution Debug build clean (0 warnings, 0 errors), `npx tsc -b` clean, 7,567 specs
-passing across every unit spec project.
+Whole-solution Debug build clean (0 warnings, 0 errors), `npx tsc -b` clean, 7,567 specs passing across every unit
+spec project. None of that catches either defect in Step 6.
 
 - Wire compatibility gate, tool, kernel-side `CheckCompatibility`, descriptor sets in all four contracts packages.
 - `DateTimeOffset` reached the wire as an empty message on ten fields — fixed at the edge via `TransportTypes`,
