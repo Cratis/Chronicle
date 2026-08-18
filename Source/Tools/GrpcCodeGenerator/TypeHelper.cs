@@ -212,7 +212,7 @@ public static class TypeHelper
 
         if (!type.IsGenericType)
         {
-            return type.Name;
+            return Qualified(type);
         }
 
         var genericDef = type.GetGenericTypeDefinition();
@@ -246,7 +246,7 @@ public static class TypeHelper
             return $"IObservable<{GetTypeName(genericArgs[0])}>";
         }
 
-        var baseName = genericDef.Name;
+        var baseName = Qualified(genericDef);
         var backtickIndex = baseName.IndexOf('`');
         if (backtickIndex >= 0)
         {
@@ -264,4 +264,18 @@ public static class TypeHelper
     /// <returns>True if it has the ReadModel attribute.</returns>
     public static bool IsReadModelType(Type type) =>
         type.GetCustomAttributesData().Any(a => a.AttributeType.Name == "ReadModelAttribute");
+
+    /// <summary>
+    /// Renders a named type with its namespace.
+    /// </summary>
+    /// <param name="type">The type to render.</param>
+    /// <returns>The qualified name.</returns>
+    /// <remarks>
+    /// The contracts are generated one service at a time into one namespace each, and a payload type frequently
+    /// lives in another - an authorization discriminator under Security, referenced by an external service
+    /// definition. An unqualified name compiles only while the two happen to share a namespace, and fails at the
+    /// first one that does not.
+    /// </remarks>
+    static string Qualified(Type type) =>
+        string.IsNullOrEmpty(type.Namespace) ? type.Name : $"global::{type.Namespace}.{type.Name}";
 }

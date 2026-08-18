@@ -112,19 +112,19 @@ public class SeedEventsRequest
     /// Gets or sets the GlobalByEventType.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<EventTypeSeedEntries> GlobalByEventType { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries> GlobalByEventType { get; set; }
 
     /// <summary>
     /// Gets or sets the GlobalByEventSource.
     /// </summary>
     [ProtoMember(3)]
-    public IEnumerable<EventSourceSeedEntries> GlobalByEventSource { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries> GlobalByEventSource { get; set; }
 
     /// <summary>
     /// Gets or sets the NamespacedEntries.
     /// </summary>
     [ProtoMember(4)]
-    public IEnumerable<NamespacedSeedEntries> NamespacedEntries { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Seeding.NamespacedSeedEntries> NamespacedEntries { get; set; }
 }
 
 /// <summary>
@@ -137,13 +137,13 @@ public class SeedDataResponse
     /// Gets or sets the ByEventType.
     /// </summary>
     [ProtoMember(1)]
-    public IEnumerable<EventTypeSeedEntries> ByEventType { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Seeding.EventTypeSeedEntries> ByEventType { get; set; }
 
     /// <summary>
     /// Gets or sets the ByEventSource.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<EventSourceSeedEntries> ByEventSource { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Seeding.EventSourceSeedEntries> ByEventSource { get; set; }
 }
 
 /// <summary>

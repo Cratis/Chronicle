@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Microsoft.Extensions.Logging;
 using IExternalServices = Cratis.Chronicle.Contracts.ExternalServices.IExternalServices;
@@ -22,6 +23,9 @@ public class when_registering_a_postgresql_service : Specification
         _serviceAccessor = (IChronicleServicesAccessor)_chronicleConnection;
         _serviceAccessor.Services.Returns(Substitute.For<IServices>());
         _serviceAccessor.Services.ExternalServices.Returns(Substitute.For<IExternalServices>());
+        _serviceAccessor.Services.ExternalServices
+            .AddExternalServices(Arg.Any<AddExternalServicesRequest>())
+            .Returns(Task.FromResult(CommandResult.Success(Guid.NewGuid())));
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns(new EventStoreName("some-event-store"));
         _eventStore.Connection.Returns(_chronicleConnection);
@@ -35,9 +39,9 @@ public class when_registering_a_postgresql_service : Specification
 
     [Fact]
     void should_configure_a_postgresql_database_endpoint() => _serviceAccessor.Services.ExternalServices.Received(1)
-        .Add(Arg.Is<AddExternalServices>(_ =>
-            _.ExternalServices[0].Endpoint.Type == ExternalServiceEndpointType.PostgreSql &&
-            _.ExternalServices[0].Endpoint.Database!.Host == "db.example.com" &&
-            _.ExternalServices[0].Endpoint.Database!.Port == 5432 &&
-            _.ExternalServices[0].Endpoint.Database!.Database == "customers"));
+        .AddExternalServices(Arg.Is<AddExternalServicesRequest>(_ =>
+            _.ExternalServices.First().Endpoint.Type == ExternalServiceEndpointType.PostgreSql &&
+            _.ExternalServices.First().Endpoint.Database!.Host == "db.example.com" &&
+            _.ExternalServices.First().Endpoint.Database!.Port == 5432 &&
+            _.ExternalServices.First().Endpoint.Database!.Database == "customers"));
 }

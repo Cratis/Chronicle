@@ -81,7 +81,7 @@ public record ImplementationDataMapping(string ContractTypeName, Func<string, st
         // Task<SerializableDateTimeOffset>. See TransportTypes.
         if (TransportTypes.NameFor(type) is { } transport)
         {
-            var transportTypeName = $"global::{TransportTypes.PrimitivesNamespace}.{transport}";
+            var transportTypeName = transport;
             return new(transportTypeName, expression => $"({transportTypeName}){expression}", false);
         }
 
@@ -103,7 +103,7 @@ public record ImplementationDataMapping(string ContractTypeName, Func<string, st
         // the generator to branch around it.
         if (TransportTypes.NameFor(underlying) is { } transport)
         {
-            var transportTypeName = $"global::{TransportTypes.PrimitivesNamespace}.{transport}?";
+            var transportTypeName = $"{transport}?";
             return new(transportTypeName, expression => $"({transportTypeName}){expression}", false);
         }
 

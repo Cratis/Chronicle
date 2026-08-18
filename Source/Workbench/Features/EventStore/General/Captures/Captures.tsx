@@ -15,7 +15,7 @@ import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AllCaptures, SaveCapture, StartCapture, StopCapture, DeleteCapture, ValidateCaptureDeclaration, CaptureStatus, type Capture, type CaptureValidationMessage } from 'Api/Captures';
-import { GetExternalServices } from 'Api/ExternalServices';
+import { GetExternalServices } from 'Features/ExternalServices';
 import { AllEventTypes } from 'Api/EventTypes';
 import { CapturedEventsView } from './CapturedEventsView';
 
