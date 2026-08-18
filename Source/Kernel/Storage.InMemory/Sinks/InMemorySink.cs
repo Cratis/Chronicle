@@ -260,8 +260,20 @@ public class InMemorySink(
     {
         lock (_collectionLock)
         {
-            _rewindCollection.Clear();
-            _rewindLastHandledEventSequenceNumbers.Clear();
+            // The persistent sinks drop the container they are handed, so which one is named decides what
+            // goes. Ignoring the name and always clearing the replay state meant removing the container the
+            // read model lives in left it readable, and removing a revert container could wipe a replay in
+            // flight - the opposite of what was asked for in both cases.
+            if (containerName == readModel.ContainerName)
+            {
+                _collection.Clear();
+                _lastHandledEventSequenceNumbers.Clear();
+            }
+            else
+            {
+                _rewindCollection.Clear();
+                _rewindLastHandledEventSequenceNumbers.Clear();
+            }
         }
 
         return Task.CompletedTask;
