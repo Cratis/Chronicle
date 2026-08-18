@@ -14,8 +14,6 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
-message DateTimeOffset {
-}
 message DeleteJobRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -86,7 +84,7 @@ message JobSummaryResponse {
    string Details = 2;
    string Type = 3;
    JobStatus Status = 4;
-   DateTimeOffset Created = 5;
+   SerializableDateTimeOffset Created = 5;
    repeated JobStatusChanged StatusChanges = 6;
    JobProgress Progress = 7;
 }
