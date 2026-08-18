@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
@@ -12,10 +11,10 @@ public class when_replaying_partition_and_observer_is_replaying : given.an_obser
 {
     Key _partition;
 
-    void Establish()
+    async Task Establish()
     {
         _partition = "some-partition";
-        _stateStorage.State = _stateStorage.State with { RunningState = ObserverRunningState.Replaying };
+        await ObserverIsReplaying();
         _storageStats.ResetCounts();
     }
 

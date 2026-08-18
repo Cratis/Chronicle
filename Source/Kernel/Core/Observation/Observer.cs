@@ -78,6 +78,19 @@ public partial class Observer(
 
     FailedPartitions Failures => failures.State;
 
+    /// <summary>
+    /// Gets the <see cref="ObserverRunningState"/> of the state the observer is currently in.
+    /// </summary>
+    /// <remarks>
+    /// Every decision the observer makes about itself - the delivery gate above all - reads this rather than the
+    /// reported <see cref="ObserverState.RunningState"/>. The reported value deliberately holds the last settled
+    /// running state while the observer passes through a transitional state, so reading it from inside the observer
+    /// would let a gate act on a running state the observer has already left. This value follows the state machine
+    /// exactly, which is what the reported value used to do before it was decoupled.
+    /// </remarks>
+    ObserverRunningState CurrentRunningState =>
+        CurrentState is BaseObserverState state ? state.RunningState : ObserverRunningState.Unknown;
+
     /// <inheritdoc/>
     public override async Task OnActivation(CancellationToken cancellationToken)
     {
@@ -138,7 +151,7 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
-    public Task<bool> IsObserverQuarantined() => Task.FromResult(State.RunningState == ObserverRunningState.Quarantined);
+    public Task<bool> IsObserverQuarantined() => Task.FromResult(CurrentRunningState == ObserverRunningState.Quarantined);
 
     /// <inheritdoc/>
     public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
@@ -146,7 +159,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ClearObserverQuarantine()
     {
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (CurrentRunningState == ObserverRunningState.Quarantined)
         {
             await TransitionTo<Routing>();
         }
@@ -244,7 +257,7 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
 
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (CurrentRunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
@@ -294,7 +307,7 @@ public partial class Observer(
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
 
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (CurrentRunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
@@ -399,7 +412,7 @@ public partial class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
-        if (State.RunningState == ObserverRunningState.Quarantined)
+        if (CurrentRunningState == ObserverRunningState.Quarantined)
         {
             return;
         }
@@ -451,9 +464,20 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Only a settled state is mirrored onto the reported <see cref="ObserverState.RunningState"/>. A transitional
+    /// state has no running state of its own and answers <see cref="ObserverRunningState.Unknown"/>; mirroring that
+    /// would publish and persist it, because the transition writes the state before the transition it schedules from
+    /// its own OnEnter gets to run. Everything watching an observer - the change stream behind
+    /// <see cref="Storage.Observation.IObserverStateStorage.ObserveAll"/>, the streaming gRPC and REST surfaces on
+    /// top of it, and <see cref="GetState"/>, which interleaves and so is answered mid-transition - would see a
+    /// healthy observer flap to Unknown and back on every route, catch-up completion and watchdog re-route. Holding
+    /// the last settled value across the transition is what makes the reported running state stable. An observer
+    /// that has never settled keeps reporting Unknown, which is exactly what it is.
+    /// </remarks>
     protected override Task OnBeforeEnteringState(IState<ObserverState> state)
     {
-        if (state is BaseObserverState observerState)
+        if (state is BaseObserverState { IsTransitional: false } observerState)
         {
             State = State with { RunningState = observerState.RunningState };
         }

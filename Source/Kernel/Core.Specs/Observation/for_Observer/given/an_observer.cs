@@ -12,6 +12,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
@@ -149,6 +150,24 @@ public class an_observer : Specification
 
         _storageStats.ResetCounts();
         _failedPartitionsStorageStats.ResetCounts();
+    }
+
+    /// <summary>
+    /// Puts the observer into the replaying state the way the observer actually gets there.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The observer decides whether it is replaying from the state its machine is in, not from the running state it
+    /// reports, so a spec cannot set this up by assigning the reported value. Reaching Replay needs a settled state
+    /// that allows the transition, which is why the observer is given a subscription and routed first. Routing clears
+    /// the catching-up and replaying partitions on its way through, so a spec that primed either has to prime it again
+    /// afterwards.
+    /// </remarks>
+    protected async Task ObserverIsReplaying()
+    {
+        _observer.SetSubscription(new(_observerId, _observerKey, [EventType.Unknown], typeof(ObserverSubscriber), SiloAddress.Zero, null));
+        await _observer.TransitionTo<Routing>();
+        await _observer.TransitionTo<Replay>();
     }
 
     protected void CheckStartedCatchupJob(EventSequenceNumber lastHandled, Key _partition) => _jobsManager.Received(1)

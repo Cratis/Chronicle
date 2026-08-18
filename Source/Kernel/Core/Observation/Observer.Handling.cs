@@ -369,7 +369,7 @@ public partial class Observer
             return false;
         }
 
-        if (State.RunningState != ObserverRunningState.Active)
+        if (CurrentRunningState != ObserverRunningState.Active)
         {
             logger.ObserverIsNotActive();
             return false;

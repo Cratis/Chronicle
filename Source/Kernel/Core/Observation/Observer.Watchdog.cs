@@ -152,7 +152,7 @@ public partial class Observer
 
     async Task<bool> CheckNextSequenceNumber()
     {
-        if (!_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
+        if (!_subscription.IsSubscribed || CurrentRunningState != ObserverRunningState.Active)
         {
             return false;
         }
