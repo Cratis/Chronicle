@@ -214,6 +214,14 @@ warnings-as-errors Release), and the bot repeatedly rewrote hot kernel files.
 **Done when:** CODEOWNERS is active on hot-core paths, and the user confirms bot direct-commit is
 off.
 
+**Status:** `.github/CODEOWNERS` exists and mirrors `.github/hot-core-paths.txt` one for one, with
+the mirroring asserted on every PR. The owner is **`@Cratis/core`** (einari, woksin, cratis-bot),
+chosen 2026-08-18 — a real team, so the rule resolves and review is auto-requested. **Code-owner
+review is deliberately not required**: "Require review from Code Owners" stays off, so these paths
+request a reviewer without blocking a merge. What blocks is the `hot-core-gate` check, which the
+user agreed to mark required — that is the remaining repository setting. Autofix-bot direct-commit
+permission is still blocked-on-user.
+
 ### Task 0.7 — Release hygiene on GitHub Releases
 **Traces to:** the releases-page evaluation in §1 — broken releases are unmarked and
 indistinguishable from good ones, so consumers (and dependency bots) keep pulling them; the
@@ -306,12 +314,17 @@ run through real kernel storage rather than parallel implementations.
 areas; two rollbacks deliberately reinstated known bugs (`b3e03dbb8`, `d1c168c7e`). The OOP
 integration matrix is the only oracle that has reliably caught this class.
 
-**Hot-core paths** (verify exact current paths before wiring):
-- `Source/Kernel/Grains/Observation/**` (esp. `Observer.Handling`)
-- Projection key resolution (`KeyResolvers`) and `Changeset`/changeset consolidation
-- `AppendedEventsQueue`
+**Hot-core paths** — now a committed contract in `.github/hot-core-paths.txt`, one pattern per area
+with its evidence, asserted on every PR to still match tracked files and to be owned in CODEOWNERS.
+The list this section originally carried had already gone stale: the observation grains live under
+`Source/Kernel/Core/Observation/**`, not `Source/Kernel/Grains/Observation/**`. The seven patterns:
+- `Source/Kernel/Core/Observation/**` (esp. `Observer.Handling.cs`)
+- `Source/Kernel/Core/Projections/**` (key resolution — `Engine/KeyResolvers.cs` — and the
+  changeset pipeline)
+- `Source/Infrastructure/Changes/**` (changeset consolidation)
+- `Source/Kernel/Core/EventSequences/*AppendedEventsQueue*`
 - `Source/Kernel/Core/Compliance/**` (PII/encryption)
-- The SQL and MongoDB sink implementations
+- `Source/Kernel/Storage.MongoDB/Sinks/**` and `Source/Kernel/Storage.Sql/Sinks/**`
 
 **Implementation**
 1. In the PR workflow, add a changed-paths condition: any PR touching these paths must run the
@@ -322,6 +335,14 @@ integration matrix is the only oracle that has reliably caught this class.
 
 **Done when:** a draft PR touching `KeyResolvers.cs` shows the OOP matrix as a required, running
 check; a PR not touching hot paths doesn't pay the cost.
+
+**Status:** `.github/workflows/hot-core-gate.yml` implements both halves — it carries no `paths:`
+filter so the `hot-core-gate` check reports on every PR, green immediately when nothing hot-core is
+touched and green only after the full matrix when something is, and it prints the matched paths
+under their area heading so the author sees why they are waiting. It is a separate workflow rather
+than a job in `dotnet-build.yml` because that workflow's own `paths:` filter would leave the check
+absent — and therefore permanently pending — on a PR it does not apply to. **Blocked-on-user:**
+marking `hot-core-gate` required is a branch-protection setting.
 
 ### Task 1.4 — History-integration guards for parallel agent work
 **Traces to:** a stale agent worktree silently reverted a sibling branch's merged compliance
@@ -472,11 +493,11 @@ decision only the user can make.
 | 0.3 | Silent-success sweep | **done** | #3737, #3762 | zero-test guards, solution-membership gate, generators exit non-zero. #3734 (proto regen) still held for Einar |
 | 0.4 | Path-filter audit | **done** | #3737, #3761 | 13 of 17 required paths were uncovered; all closed by widening, contract asserted in CI |
 | 0.5 | Red-workflow alarm | **done** | #3736 | advisory; would flag benchmarks + integration.yml today |
-| 0.6 | Autofix bots → suggesters | todo | | CODEOWNERS in-repo; bot permission is blocked-on-user |
+| 0.6 | Autofix bots → suggesters | partial | | CODEOWNERS owned by `@Cratis/core`, mirroring `.github/hot-core-paths.txt` and asserted in CI; review requested but not required by choice; bot permission is blocked-on-user |
 | 0.7 | Release hygiene on GitHub Releases | partial | | 12 broken releases warned retroactively; notes-quality gate = §8-g; NuGet deprecation blocked-on-user |
 | 1.1 | Shared storage contract suite | **done (core)** | #3749–#3752, #3754 | 9 cases × 3 sinks; found D-8, D-9, ChildRemovedFromAll. Remaining: constraints + key storage suites |
 | 1.2 | Harness convergence (finish) | partial | #3759, #3760 | WaitForCompletion no longer lies (merged); compliance wiring open. ReadModelScenario runs NO compliance — feature, not wiring |
-| 1.3 | Hot-core OOP gate + CODEOWNERS | todo | | shares CODEOWNERS with 0.6 |
+| 1.3 | Hot-core OOP gate + CODEOWNERS | in review | | `hot-core-gate.yml` runs the full matrix on hot-core paths, no-ops green otherwise. The plan's own `Source/Kernel/Grains/Observation` was stale — the grains live in `Source/Kernel/Core/Observation`. Marking the gate required is blocked-on-user |
 | 1.4 | History-integration guards | partial | #3763 | spec-deletion tripwire merged; branch-protection/merge-queue still blocked-on-user (#439) |
 | 2.1 | Deterministic completion signals | todo | | design doc first; after 1.2/1.3 |
 | 2.2 | Release train + soak | todo | | blocked-on-user: cadence decision; use the unused prerelease flag as the RC channel |
