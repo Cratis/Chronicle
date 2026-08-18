@@ -40,7 +40,7 @@ public static class TransportTypes
         // protobuf-net has no wire representation for DateTimeOffset. bcl.proto declares one, but the runtime
         // model never applies it, so what actually reaches the schema is an empty message. The ISO 8601 string
         // form is also what the pre-16.34.0 contracts used, so every already-published client understands it.
-        [typeof(DateTimeOffset)] = "SerializableDateTimeOffset"
+        [typeof(DateTimeOffset)] = $"global::{PrimitivesNamespace}.SerializableDateTimeOffset"
     };
 
     /// <summary>

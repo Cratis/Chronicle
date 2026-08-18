@@ -172,19 +172,19 @@ public class JobStepSummaryResponse
     /// Gets or sets the Status.
     /// </summary>
     [ProtoMember(4)]
-    public JobStepStatus Status { get; set; }
+    public global::Cratis.Chronicle.Contracts.Jobs.JobStepStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets the StatusChanges.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<JobStepStatusChanged> StatusChanges { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged> StatusChanges { get; set; }
 
     /// <summary>
     /// Gets or sets the Progress.
     /// </summary>
     [ProtoMember(6)]
-    public JobStepProgress Progress { get; set; }
+    public global::Cratis.Chronicle.Contracts.Jobs.JobStepProgress Progress { get; set; }
 }
 
 /// <summary>
@@ -240,25 +240,25 @@ public class JobSummaryResponse
     /// Gets or sets the Status.
     /// </summary>
     [ProtoMember(4)]
-    public JobStatus Status { get; set; }
+    public global::Cratis.Chronicle.Contracts.Jobs.JobStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets the Created.
     /// </summary>
     [ProtoMember(5)]
-    public SerializableDateTimeOffset Created { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Created { get; set; }
 
     /// <summary>
     /// Gets or sets the StatusChanges.
     /// </summary>
     [ProtoMember(6)]
-    public IEnumerable<JobStatusChanged> StatusChanges { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStatusChanged> StatusChanges { get; set; }
 
     /// <summary>
     /// Gets or sets the Progress.
     /// </summary>
     [ProtoMember(7)]
-    public JobProgress Progress { get; set; }
+    public global::Cratis.Chronicle.Contracts.Jobs.JobProgress Progress { get; set; }
 }
 
 /// <summary>

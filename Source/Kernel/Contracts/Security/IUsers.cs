@@ -241,13 +241,13 @@ public class UserResponse
     /// Gets or sets the CreatedAt.
     /// </summary>
     [ProtoMember(5)]
-    public SerializableDateTimeOffset CreatedAt { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// Gets or sets the LastModifiedAt.
     /// </summary>
     [ProtoMember(6)]
-    public SerializableDateTimeOffset? LastModifiedAt { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset? LastModifiedAt { get; set; }
 
     /// <summary>
     /// Gets or sets the HasLoggedIn.
