@@ -1,0 +1,209 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# The gate between a hot-core change and main.
+#
+# Twenty of the last seventy-three regressions were fixes that broke a sibling path, concentrated in
+# the areas listed in `.github/hot-core-paths.txt`, and the out-of-process integration matrix is the
+# only oracle that has reliably caught them. On a pull request that matrix runs the default storage
+# backend alone, so a hot-core change can merge today without ever running the three backends where
+# the sibling breakage usually surfaces. This runs the full matrix for exactly those changes.
+#
+# WHY A SEPARATE WORKFLOW, AND WHY NO `paths:` FILTER: required status checks are configured per
+# repository, not per path, so the check has to report on every pull request or it blocks the ones it
+# was never meant to gate - a required check that never reports leaves a pull request "expected"
+# forever. `hot-core-gate` therefore runs unconditionally and is green in one of two ways: instantly,
+# because no hot-core path was touched, or after the full matrix has passed. `.NET Build &
+# Integration` cannot host it, because that workflow carries a `paths:` filter of its own and does
+# not start at all for a documentation-only pull request.
+
+name: Hot Core Gate
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "**"
+
+env:
+  DOTNET8_VERSION: "8.0.410"
+  DOTNET9_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
+  # Own cache and image tag. Sharing `.NET Build & Integration`'s would mean racing a workflow this
+  # one cannot wait on, and losing that race silently produces an empty restore.
+  HOT_CORE_DEV_CACHE: "hot-core-dev-cache-${{ github.sha }}"
+  HOT_CORE_IMAGE: "ghcr.io/cratis/chronicle:hot-core-${{ github.sha }}"
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      touched: ${{ steps.detect.outputs.touched }}
+
+    steps:
+      # The full history is what makes the diff against the base commit possible; the default
+      # shallow fetch does not contain it.
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Runs on every pull request, hot core or not, because a pattern that has stopped matching any
+      # file - a rename - disarms the gate without failing anything, and a pattern with no owner
+      # disarms the review half the same way.
+      - name: Assert the hot-core contract is intact
+        run: python3 .github/scripts/detect-hot-core-changes.py --verify
+
+      # Prints every hot-core path it matched, under its area heading, to the log and the job
+      # summary. An author who is suddenly waiting on the whole matrix has to be able to see why.
+      - name: Detect hot-core changes
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$BASE_SHA" ]; then
+            echo "Manual run - there is no pull request to diff, so the full matrix runs unconditionally."
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
+
+  # Builds what the matrix consumes. This deliberately does not restore `.NET Build & Integration`'s
+  # caches: they are keyed on the same commit but written by a workflow this one neither depends on
+  # nor can wait for, so reading them is a race whose losing branch is an empty `bin` and a matrix
+  # that passes without running anything. A gate that fails open is the failure mode this program
+  # exists to remove. The cost is paid only by pull requests that touch the hot core.
+  build:
+    needs: [detect]
+    if: needs.detect.outputs.touched == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      dotnet-cache-key: ${{ steps.export.outputs.key }}
+      chronicle-image: ${{ steps.export.outputs.image }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore obj cache
+        uses: actions/cache@v4
+        with:
+          # Package-aware key, as in `.NET Build & Integration`: a dependency bump must not restore
+          # an obj cache built against a different package set.
+          path: ./**/obj
+          key: hot-core-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
+          restore-keys: |
+            hot-core-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
+
+      - uses: actions/cache@v4
+        with:
+          path: ./**/bin
+          key: ${{ env.HOT_CORE_DEV_CACHE }}
+
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      # The integration shards run `--no-build` against the DEVELOPMENT-symbol build, so that is the
+      # variant the cache has to hold.
+      - name: Build with DEVELOPMENT symbol
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # The out-of-process shards start this image instead of hosting the kernel themselves, so
+      # without it there is no "out of process" to test.
+      - name: Build and push development Docker image
+        run: |
+          dotnet publish Source/Kernel/Server/Server.csproj \
+            --configuration Debug \
+            --no-restore \
+            -o Source/Kernel/Server/out
+          docker build -t "${{ env.HOT_CORE_IMAGE }}" -f Docker/Local/Dockerfile .
+          docker push ${{ env.HOT_CORE_IMAGE }}
+
+      - name: Export cache key and image
+        id: export
+        run: |
+          echo "key=${{ env.HOT_CORE_DEV_CACHE }}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ env.HOT_CORE_IMAGE }}" >> "$GITHUB_OUTPUT"
+
+  # The same reusable workflow the nightly run uses, with `all-providers` on: every storage backend,
+  # out of process, not just the default one a pull request gets.
+  full-out-of-process-matrix:
+    needs: [detect, build]
+    if: needs.detect.outputs.touched == 'true'
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/integration.yml
+    secrets: inherit
+    with:
+      dotnet-cache-key: ${{ needs.build.outputs.dotnet-cache-key }}
+      chronicle-image: ${{ needs.build.outputs.chronicle-image }}
+      all-providers: true
+
+  # The single check to mark required in branch protection. It reports on every pull request, which
+  # is the whole point: a required check that is sometimes absent blocks pull requests it does not
+  # apply to. `if: always()` is what lets it run after skipped jobs - without it a skipped dependency
+  # would skip this too, and a skipped required check never reports.
+  hot-core-gate:
+    needs: [detect, build, full-out-of-process-matrix]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Decide
+        env:
+          DETECT: ${{ needs.detect.result }}
+          TOUCHED: ${{ needs.detect.outputs.touched }}
+          BUILD: ${{ needs.build.result }}
+          MATRIX: ${{ needs.full-out-of-process-matrix.result }}
+        run: |
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::Hot-core detection did not complete ($DETECT), so whether this pull request reaches the hot core is unknown. Failing closed."
+            exit 1
+          fi
+
+          if [ "$TOUCHED" != "true" ]; then
+            echo "No hot-core path is touched by this pull request. The full out-of-process integration matrix is not required here."
+            exit 0
+          fi
+
+          if [ "$BUILD" != "success" ] || [ "$MATRIX" != "success" ]; then
+            echo "::error::This pull request changes the hot core, and the full out-of-process integration matrix did not pass (build: $BUILD, matrix: $MATRIX). See the 'Detect hot-core changes' summary for the paths that put it here."
+            exit 1
+          fi
+
+          echo "This pull request changes the hot core and the full out-of-process integration matrix is green."
