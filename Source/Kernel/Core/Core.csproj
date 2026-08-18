@@ -30,12 +30,23 @@
         </ProjectReference>
     </ItemGroup>
 
-    <!-- Generates the gRPC contracts under ../Contracts from this project's Arc artifacts. Gated separately
-         from the TypeScript ProxyGenerator below - see the property group further down for why each is held
-         back. Until this is ungated, the contracts for converted services are checked in and can drift. -->
+    <!-- Services that are not derived from Arc artifacts yet. The generator leaves both the contract and the
+         implementation alone for these, so a hand-written contract that has drifted from what Core can produce
+         is not silently replaced by a smaller one. Observers is the remaining case: Contracts/Observation
+         /IObservers.cs carries five methods Core has no artifacts for, and its existing rpcs are named
+         differently from what the artifacts would produce. Removing it from this list is what Step 3 of the
+         Observation migration means. -->
+    <PropertyGroup>
+        <NonDerivedGrpcServices>Observers</NonDerivedGrpcServices>
+    </PropertyGroup>
+
+    <!-- Generates the gRPC contracts under ../Contracts from this project's Arc artifacts, the classes that
+         implement them under ./Services, and the registrations for those in ../Server. Gated separately from
+         the TypeScript ProxyGenerator below - see the property group further down for why each is held back.
+         Until this is ungated, the contracts for converted services are checked in and can drift. -->
     <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
-        <Message Text="Generating gRPC contracts from Arc artifacts" Importance="high" />
-        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+        <Message Text="Generating gRPC contracts and service implementations from Arc artifacts" Importance="high" />
+        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts --implementations &quot;$(MSBuildThisFileDirectory)Services&quot; --implementations-namespace Cratis.Chronicle.Services --registrations &quot;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs&quot; --registrations-namespace Cratis.Chronicle.Server --exclude $(NonDerivedGrpcServices)" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
     </Target>
 
     <PropertyGroup>
