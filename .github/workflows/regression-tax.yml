@@ -1,0 +1,121 @@
+name: Regression Tax
+
+# The reliability program was justified by four numbers measured by hand over a year. Nothing
+# recomputes them, so the program has no feedback loop and would quietly become folklore. This
+# runs on the first of the month, measures the month that just ended, and commits the result.
+#
+# A committed file rather than a pinned issue, for three reasons. The repository already commits
+# generated statistics (Documentation/statistics/coverage-data.js, written by publish.yml), so the
+# mechanism is proven here. A file diffs: every month's commit is a reviewable delta and
+# `git log Metrics/regression-tax.md` is the history of the program, where an edited issue keeps
+# only a body nobody re-reads. And it is the cheaper of the two to keep alive - no issue number to
+# track, no write scope on issues, nothing for someone to close or unpin by accident.
+
+on:
+  schedule:
+    - cron: "0 7 1 * *"
+  workflow_dispatch:
+    inputs:
+      month:
+        description: "Month to report as YYYY-MM. Empty means the current, partial month."
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # Queue rather than cancel: this job commits, and a run killed between commit and push
+  # would leave the branch in a state the next run has to reason about.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish the regression-tax dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+      issues: read
+
+    steps:
+      # Full history and tags: the script measures every commit and every release tag, and it
+      # refuses to report from a shallow clone rather than mistake a truncated one for a quiet month.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      # The requested month arrives through the environment and is shape-checked before it reaches
+      # any later step, so a dispatch input can never be read as shell.
+      - name: Choose the month to report
+        id: month
+        env:
+          REQUESTED: ${{ github.event.inputs.month }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          MONTH="$REQUESTED"
+          if [ -n "$MONTH" ] && ! printf '%s' "$MONTH" | grep -Eq '^[0-9]{4}-[0-9]{2}$'; then
+            echo "::error::The month must be YYYY-MM."
+            exit 1
+          fi
+          if [ -z "$MONTH" ] && [ "$EVENT" = "schedule" ]; then
+            MONTH=$(date -u -d "$(date -u +%Y-%m-01) -1 day" +%Y-%m)
+          fi
+          echo "month=$MONTH" >> "$GITHUB_OUTPUT"
+          echo "Reporting on ${MONTH:-the current month}"
+
+      # continue-on-error so an unreadable source still publishes a dashboard that says so. The
+      # run is failed further down instead, because the alternative - a silent zero committed as
+      # if it were a measurement - is the failure mode this whole dashboard exists to avoid.
+      - name: Compute the regression tax
+        id: compute
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONTH: ${{ steps.month.outputs.month }}
+        run: |
+          set -euo pipefail
+          ARGUMENTS=(--output Metrics/regression-tax.md)
+          if [ -n "$MONTH" ]; then
+            ARGUMENTS+=(--month "$MONTH")
+          fi
+          python3 .github/scripts/regression-tax.py "${ARGUMENTS[@]}"
+
+      - name: Show the dashboard on the run summary
+        if: always()
+        run: |
+          set -euo pipefail
+          cat Metrics/regression-tax.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit the dashboard
+        if: always()
+        env:
+          MONTH: ${{ steps.month.outputs.month }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add Metrics/regression-tax.md
+          if git diff --staged --quiet; then
+            echo "The regression tax is unchanged"
+          else
+            git commit -m "Update the regression-tax dashboard for ${MONTH:-$(date -u +%Y-%m)} [skip ci]"
+            git pull --rebase origin "$BRANCH"
+            git push
+          fi
+
+      # The compute step is allowed to fail so the dashboard still publishes; this is where that
+      # failure is turned back into a red run. It covers both shapes: a source that could not be
+      # read (an n/a where a number belongs, annotated above) and the script failing outright, in
+      # which case the committed dashboard is last month's and the numbers above are stale.
+      - name: Fail when the month could not be measured
+        if: steps.compute.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          echo "::error::The regression tax could not be measured - see the annotations above. Rerun this workflow once the source is back."
+          exit 1
