@@ -47,7 +47,13 @@ on:
       - ".github/build-affecting-paths.txt"
 
 jobs:
+  # First, before anything is built: a change that breaks the wire contract for clients already running against this
+  # major cannot ship, so there is nothing to gain from building and testing it. See wire-compatibility.yml.
+  wire-compatibility:
+    uses: ./.github/workflows/wire-compatibility.yml
+
   dotnet-build:
+    needs: [wire-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     outputs:
@@ -161,6 +167,7 @@ jobs:
   # for the specs/mongodb/integration-api jobs, which must exercise production
   # (non-DEVELOPMENT) behavior.
   dotnet-build-development:
+    needs: [wire-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:

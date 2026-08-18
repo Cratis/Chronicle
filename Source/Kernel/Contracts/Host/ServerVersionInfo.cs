@@ -20,4 +20,10 @@ public class ServerVersionInfo
     /// </summary>
     [ProtoMember(2)]
     public string CommitSha { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the version of the contracts the server serves - its protocol version.
+    /// </summary>
+    [ProtoMember(3)]
+    public string ProtocolVersion { get; set; } = string.Empty;
 }

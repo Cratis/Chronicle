@@ -98,16 +98,26 @@ jobs:
           version: ${{ github.event.inputs.version }}
           release-notes: ${{ github.event.inputs.release-notes }}
 
-  generate-protos:
+  # Before anything is published: a release that breaks the wire contract for clients already running against this
+  # major cannot go out. Unlike the pull request run, the version is known here, so the baseline is derived from what
+  # is actually being released rather than from the latest tag. See wire-compatibility.yml.
+  wire-compatibility:
     if: needs.release.outputs.publish == 'true'
     needs: [release]
+    uses: ./.github/workflows/wire-compatibility.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+
+  generate-protos:
+    if: needs.release.outputs.publish == 'true'
+    needs: [wire-compatibility, release]
     uses: ./.github/workflows/generate-protos.yml
 
   coverage-statistics:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release]
+    needs: [wire-compatibility, release]
     permissions:
       contents: write
 
@@ -156,7 +166,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release]
+    needs: [wire-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -185,7 +195,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
-    needs: [release]
+    needs: [wire-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -214,7 +224,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release]
+    needs: [wire-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -261,7 +271,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
     permissions:
       # Required for NuGet trusted publishing using OIDC tokens
       id-token: write
@@ -315,7 +325,7 @@ jobs:
     if: needs.release.outputs.publish == 'true' && needs.release.outputs.prerelease != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release, dotnet-pack-and-publish]
+    needs: [wire-compatibility, release, dotnet-pack-and-publish]
 
     steps:
       - name: Trigger Chronicle update on Arc
@@ -328,7 +338,7 @@ jobs:
 
   publish-typescript-client:
     if: needs.release.outputs.publish == 'true'
-    needs: [release, generate-protos]
+    needs: [wire-compatibility, release, generate-protos]
     uses: ./.github/workflows/publish-typescript-client.yml
     secrets: inherit
     with:
@@ -337,7 +347,7 @@ jobs:
 
   publish-kotlin-client:
     if: needs.release.outputs.publish == 'true'
-    needs: [release, generate-protos]
+    needs: [wire-compatibility, release, generate-protos]
     uses: ./.github/workflows/publish-kotlin-client.yml
     secrets: inherit
     with:
@@ -346,7 +356,7 @@ jobs:
 
   publish-elixir-client:
     if: needs.release.outputs.publish == 'true'
-    needs: [release, generate-protos]
+    needs: [wire-compatibility, release, generate-protos]
     uses: ./.github/workflows/publish-elixir-client.yml
     secrets: inherit
     with:
@@ -373,7 +383,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release]
+    needs: [wire-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -402,7 +412,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
-    needs: [release]
+    needs: [wire-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -431,7 +441,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -527,7 +537,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -582,7 +592,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -664,7 +674,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
