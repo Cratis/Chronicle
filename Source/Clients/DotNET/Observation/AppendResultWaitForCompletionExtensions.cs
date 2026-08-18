@@ -18,6 +18,12 @@ public static class AppendResultWaitForCompletionExtensions
     /// <param name="appendResult">The append result to wait for observer completion for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it defaults to 5 seconds.</param>
     /// <returns>An <see cref="AppendResultWaitForCompletionResult"/> describing completion and any failures.</returns>
+    /// <exception cref="CannotWaitForObserverCompletion">Thrown when the append result carries no observer surface, which is the case for the in-process testing surfaces.</exception>
+    /// <remarks>
+    /// An append that never reached the log has nothing to wait for and completes trivially. An append that reached
+    /// the log but carries no observer surface is a different thing entirely: completion is unknowable, so it is
+    /// reported as a failure by name rather than as success.
+    /// </remarks>
     public static async Task<AppendResultWaitForCompletionResult> WaitForCompletion(this IAppendResultForObserverCompletion appendResult, TimeSpan? timeout = default)
     {
         if (appendResult.TailSequenceNumber.IsUnavailable)
@@ -25,12 +31,8 @@ public static class AppendResultWaitForCompletionExtensions
             return new(true, []);
         }
 
-        var observers = appendResult.Observers;
-
-        if (observers is null)
-        {
-            return new(true, []);
-        }
+        var observers = appendResult.Observers ??
+            throw new CannotWaitForObserverCompletion(appendResult.EventStore, appendResult.EventSequenceId);
 
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
