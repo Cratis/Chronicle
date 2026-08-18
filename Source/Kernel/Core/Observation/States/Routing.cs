@@ -31,6 +31,9 @@ public class Routing(
     public override ObserverRunningState RunningState => ObserverRunningState.Unknown;
 
     /// <inheritdoc/>
+    public override bool IsTransitional => true;
+
+    /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Disconnected),

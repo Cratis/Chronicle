@@ -34,6 +34,19 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     /// <returns>Type of initial state.</returns>
     protected virtual Type InitialState => typeof(NoOpState<TStoredState>);
 
+#pragma warning disable CA1721 // Property names should not match get methods - the property is the synchronous counterpart of GetCurrentState and deliberately shares its name.
+    /// <summary>
+    /// Gets the state the machine is currently in.
+    /// </summary>
+    /// <remarks>
+    /// This is the live state instance. It becomes the current one the moment a transition moves into it - before
+    /// <see cref="IState{TStoredState}.OnEnter"/> runs and before the stored state is written - and it stays current
+    /// until the next transition leaves it. <see cref="GetCurrentState"/> hands the very same instance to callers
+    /// outside the machine; this member exists so a subclass can read it without going through a task.
+    /// </remarks>
+    protected IState<TStoredState> CurrentState => _currentState;
+#pragma warning restore CA1721 // Property names should not match get methods
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {

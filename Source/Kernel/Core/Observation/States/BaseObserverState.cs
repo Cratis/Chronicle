@@ -18,6 +18,18 @@ public abstract class BaseObserverState : State<ObserverState>
     public abstract ObserverRunningState RunningState { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the state is a transitional one - a state the observer only passes through
+    /// on its way to a settled state, rather than one it rests in.
+    /// </summary>
+    /// <remarks>
+    /// A transitional state has no meaningful <see cref="RunningState"/> to report; it answers
+    /// <see cref="ObserverRunningState.Unknown"/> because the observer is between running states, not in one.
+    /// Consumers of the observer's reported running state must never see that value, so the observer keeps
+    /// reporting the last settled one while it passes through.
+    /// </remarks>
+    public virtual bool IsTransitional => false;
+
+    /// <summary>
     /// Gets the <see cref="IObserver"/> the state belongs to.
     /// </summary>
     public IObserver Observer => (StateMachine as IObserver)!;
