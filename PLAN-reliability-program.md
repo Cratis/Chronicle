@@ -451,17 +451,17 @@ decision only the user can make.
 
 | Task | Title | Status | PR | Notes |
 |---|---|---|---|---|
-| 0.1 | Boot gate on published images | in review | #3735 | all 4 variants; exec-bit defect reproduced and caught |
-| 0.2 | Consumer smoke for packages | todo | | |
-| 0.3 | Silent-success sweep | in review | #3734, #3737 | proto exit-code + protoc gate; zero-test guards; solution-membership gate |
-| 0.4 | Path-filter audit | partial | #3737 | `Chronicle.slnx` added; §8-f completes the rest |
-| 0.5 | Red-workflow alarm | in review | #3736 | advisory (files an issue), never fails a build |
-| 0.6 | Autofix bots → suggesters | partial | | CODEOWNERS + `.github/hot-core-paths.txt` in-repo; the owner handle is a `PLACEHOLDER-OWNER` and enforces nothing until set, and bot permission is blocked-on-user |
+| 0.1 | Boot gate on published images | **done** | #3735, #3758 | all 4 variants; the gate itself shipped broken (missing TLS + token certs) and blocked 8 publishes — fixed in #3758 |
+| 0.2 | Consumer smoke for packages | **done** | #3755 | starts packed Chronicle beside published Arc before push; runs, does not merely restore |
+| 0.3 | Silent-success sweep | **done** | #3737, #3762 | zero-test guards, solution-membership gate, generators exit non-zero. #3734 (proto regen) still held for Einar |
+| 0.4 | Path-filter audit | **done** | #3737, #3761 | 13 of 17 required paths were uncovered; all closed by widening, contract asserted in CI |
+| 0.5 | Red-workflow alarm | **done** | #3736 | advisory; would flag benchmarks + integration.yml today |
+| 0.6 | Autofix bots → suggesters | partial | | CODEOWNERS + `.github/hot-core-paths.txt` in repo, but the owner is a `PLACEHOLDER-OWNER` and enforces nothing until set; bot permission is blocked-on-user |
 | 0.7 | Release hygiene on GitHub Releases | partial | | 12 broken releases warned retroactively; notes-quality gate = §8-g; NuGet deprecation blocked-on-user |
-| 1.1 | Shared storage contract suite | todo | | start: extract the 3 hand-copied watermark suites; then replay-lifecycle |
-| 1.2 | Harness convergence (finish) | todo | | compliance no-op + `WaitForCompletion` lying come first |
-| 1.3 | Hot-core OOP gate + CODEOWNERS | partial | | `hot-core-gate.yml` runs the full matrix on hot-core paths and no-ops green otherwise; the plan's `Source/Kernel/Grains/Observation` was stale (now `Source/Kernel/Core/Observation`); marking `hot-core-gate` required in branch protection is blocked-on-user |
-| 1.4 | History-integration guards | todo | | branch-protection part is blocked-on-user |
+| 1.1 | Shared storage contract suite | **done (core)** | #3749–#3752, #3754 | 9 cases × 3 sinks; found D-8, D-9, ChildRemovedFromAll. Remaining: constraints + key storage suites |
+| 1.2 | Harness convergence (finish) | partial | #3759, #3760 | WaitForCompletion no longer lies (merged); compliance wiring open. ReadModelScenario runs NO compliance — feature, not wiring |
+| 1.3 | Hot-core OOP gate + CODEOWNERS | in review | | `hot-core-gate.yml` runs the full matrix on hot-core paths, no-ops green otherwise. The plan's own `Source/Kernel/Grains/Observation` was stale — the grains live in `Source/Kernel/Core/Observation`. Marking the gate required is blocked-on-user |
+| 1.4 | History-integration guards | partial | #3763 | spec-deletion tripwire merged; branch-protection/merge-queue still blocked-on-user (#439) |
 | 2.1 | Deterministic completion signals | todo | | design doc first; after 1.2/1.3 |
 | 2.2 | Release train + soak | todo | | blocked-on-user: cadence decision; use the unused prerelease flag as the RC channel |
 | 2.3 | Close-the-class policy | todo | | `.ai` rule, NOT the PR template (§5 gotcha) |
@@ -469,11 +469,26 @@ decision only the user can make.
 | 8.a | Regenerate-and-diff gate | todo | | |
 | 8.b | Public-API zero-coverage ratchet | todo | | |
 | 8.c | Kernel-facing analysis | todo | | the CHR family is consumer-only today |
-| 8.d | Timing-coupling ratchet + rule | todo | | stopgap until 2.1 lands |
+| 8.d | Timing-coupling ratchet + rule | **done** | #3765 | 67 governing / 25 legitimate sleeps; unannotated baseline entries are 2.1 work |
 | 8.e | Silent-stub sibling comparison | todo | | |
-| 8.f | Path-filter completeness meta-check | todo | | finishes 0.4 |
+| 8.f | Path-filter completeness meta-check | **done** | #3761 | |
 | 8.g | PR-body and commit lint | todo | | heading allowlist, not a denylist |
-| 8.h | SQL provider on PR runs | todo | | the reason the nightly broke unseen |
+| 8.h | SQL provider on PR runs | in review | #3764 | SQLite added; blocked on 2 live non-Mongo regressions on main |
+
+**Session log — 2026-08-18.** Seventeen pull requests merged: the whole of Phase 0 except 0.6 and
+the rest of 0.7, the core of 1.1, half of 1.2 and 1.4, and audit items 8.d and 8.f. Two things worth
+carrying forward. First, **the boot gate shipped broken and blocked eight publishes** — it started the
+production image without the TLS and token-encryption certificates that image deliberately requires,
+so it could never have passed; it had been verified against a locally built image rather than a
+published one. A gate is not proven by passing, only by failing when it should. Second, **merging
+eleven pull requests in two minutes raced the release job**: every run read the same latest version
+and tried to create it, and the losers got a 403 from secondary rate limiting. Nothing was lost, but
+it is the argument for 2.2 in miniature, and #3756 serializes it.
+
+**Held deliberately, not forgotten:** #3734 and #3748 touch the proto surface and the gRPC gate while
+Einar is mid-investigation there; #3760 makes real schema validation run in-process, which can surface
+failures in downstream and Arc specs; #3756 changes release behavior. Each wants a human to choose the
+moment.
 
 **Suggested order for a fresh session:** 0.7-step-1 (retroactive warnings — protects users
 today, zero build risk) → 0.3 → 0.1 → 0.4 → 0.5 → 0.2 → 0.6 → rest of 0.7, then 1.1 → 1.3 →
