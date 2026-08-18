@@ -87,14 +87,30 @@ dotnet build Source/Kernel/Core/Core.csproj -c Debug -p:DisableGrpcContractGener
 
 ## Step 3 — migrate area by area
 
-**Done: Jobs, EventStores, Namespaces, Security, Identities.** 18 areas remain in `Source/Clients/Api`:
+Done: **Jobs, EventStores, Namespaces, Security, Identities, Recommendations, TypeFormats, Seeding,
+ExternalServices.** Remaining in `Source/Clients/Api`, roughly by cost:
 
-`Auditing` `Captures` `Clients` `DevelopmentTools` `EventSequences` `EventTypes` `Events` `ExternalServices`
-`Observation` `Projections` `ReadModelTypes` `ReadModels` `Recommendations` `Seeding` `SequenceQueries`
-`TypeFormats` `Webhooks`
+| Area | Api | `Core/Services` | Notes |
+| --- | --- | --- | --- |
+| `Clients` | 2 files | — | `ConnectedClient` reads through `IConnectionService` and `IObservers`; move with **Observation** |
+| `DevelopmentTools` | 2 files | — | `ResetKernelState` calls the `Host` contract; move with **Host** |
+| `ReadModelTypes` | 6 files | — | reads through the ReadModels contract; move with **ReadModels** |
+| `EventTypes` | 4 files | 519 | shares payload records with **Events** |
+| `Captures` | 11 files | 164 | |
+| `SequenceQueries` | 10 files | 153 | the one service no client calls - it is workbench-only |
+| `Webhooks` | 6 files | (in `Observation/Webhooks`) | validator makes async calls to test the endpoint and OAuth |
+| `Events` | 11 files | 357 | payload records the event, sequence, webhook and observation areas all reference |
+| `EventSequences` | 15 files | 586 | paging through `IQueryContextManager`; append/redact/revise carry JSON |
+| `ReadModels` | 4 files | 1,087 | 11 contract methods, one of them a server→client stream |
+| `Projections` | 14 files | 1,053 | |
+| `Observation` | 12 files | 1,645 | largest, and what unblocks Step 2 |
+| `Auditing` | 5 files | 49 | not a service area at all - causation middleware; it needs a home, not a migration |
 
-(`Auditing` is not a service area at all — it is causation middleware and converters. It has no commands or
-queries; what it needs is a home once the Api host goes, not a migration.)
+**Payload records do not get ported.** An Api record that mirrors a contract type - `Api.Events.EventType`,
+`Api.Events.EventContext`, `Api.Seeding.SeedEntry` - is deleted, and the Core artifact references the
+`Contracts.*` type directly, the way `JobSummary` already references `Contracts.Jobs.JobStatus`. The Workbench
+then imports from `Features/Contracts/<Area>` instead of `Api/<Area>`. That removes the Api converter layer
+outright rather than moving it.
 
 ### The recipe, per area
 
@@ -116,7 +132,18 @@ queries; what it needs is a home once the Api host goes, not a migration.)
    `TestingServices` — the three hand-maintained composition roots.
 7. Delete `Api/<Area>`, repoint the Workbench imports from `Api/<Area>` to `Features/<Area>`, and delete the stale
    proxies under `Source/Workbench/Api/<Area>`.
-8. Build the **whole solution**, run `npx tsc -b`, run the specs.
+8. Build the **whole solution**, run `npx tsc -b`, run `yarn lint:ci`, run the specs. A newly generated
+   `index.ts` barrel needs the license header added once - the generator appends to it and leaves it alone
+   afterwards.
+
+Two things bite every time:
+
+- **A `.NET` client that calls the area's contract** has to follow the rename, and its specs mock the contract:
+  an NSubstitute mock of a generated command returns a null `CommandResult`, and `EnsureSuccess` then throws
+  "no result was returned". Set the mock up to return `CommandResult.Success(...)`.
+- **A read model must not share a name with a Workbench component or a contract type it references.** Both show
+  up only as a TypeScript error after generation - `ExternalService` and `IdentityDetails` are both named for
+  that.
 
 Order: leave **Observation** for last. It is the largest (1,645 lines of service, 31 Workbench files) and it is
 what unblocks Step 2.
