@@ -130,7 +130,11 @@ public static class ImplementationMethods
         var assignments = mapping.Members.Select(member =>
         {
             var value = ImplementationDataMapping.For(member.Type, null, context);
-            return $"            {member.Name} = {value.Apply($"source.{member.Name}")}";
+            var read = $"source.{member.Name}";
+
+            // A member that can be absent is mapped only when it is there; the mappers take a value, not nothing.
+            var assigned = value.IsIdentity || !member.IsNullable ? value.Apply(read) : $"{read} is null ? null : {value.Apply(read)}";
+            return $"            {member.Name} = {assigned}";
         });
 
         builder.AppendJoin(",\n", assignments).AppendLine();

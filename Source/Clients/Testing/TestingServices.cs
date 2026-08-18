@@ -143,7 +143,8 @@ internal sealed class TestingServices(
             grainFactory,
             storage,
             new KernelCaptureLanguageService(),
-            new KernelCaptureValidator(storage)));
+            new KernelCaptureValidator(storage),
+            NullLogger<KernelCapturesService>.Instance));
 
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
         new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));

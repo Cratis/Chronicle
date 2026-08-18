@@ -43,8 +43,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         var interfaceMembers = new List<MemberDeclarationSyntax>();
         foreach (var command in serviceDefinition.Commands)
         {
-            var requestTypeName = GenerateCommandRequestType(command, requestResponseTypes);
-            var responseTypeName = GenerateCommandResponseType(command, requestResponseTypes);
+            var requestTypeName = GenerateCommandRequestType(command, targetNamespace, requestResponseTypes);
+            var responseTypeName = GenerateCommandResponseType(command, targetNamespace, requestResponseTypes);
             interfaceMembers.Add(BuildCommandMethod(command, requestTypeName, responseTypeName));
         }
 
@@ -52,7 +52,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         {
             foreach (var method in query.Methods)
             {
-                interfaceMembers.Add(BuildQueryMethod(method, query.ReadModelType, requestResponseTypes));
+                interfaceMembers.Add(BuildQueryMethod(method, query.ReadModelType, targetNamespace, requestResponseTypes));
             }
         }
 
@@ -144,13 +144,14 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     static MethodDeclarationSyntax BuildQueryMethod(
         QueryMethodDefinition method,
         Type readModelType,
+        string targetNamespace,
         List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
     {
         var returnType = method.ReturnType;
         var isObservable = TypeHelper.IsObservableType(returnType);
         var responseTypeName = $"{readModelType.Name}Response";
 
-        var readModelProperties = GetReadModelProperties(readModelType);
+        var readModelProperties = GetReadModelProperties(readModelType, targetNamespace);
         if (readModelProperties.Count > 0 && !requestResponseTypes.Exists(r => r.TypeName == responseTypeName))
         {
             requestResponseTypes.Add((responseTypeName, readModelProperties));
@@ -187,11 +188,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             // implementation generator has to apply identically.
             var props = method.Parameters
                 .Where(p => !ParameterClassification.IsDependency(p.ParameterType))
-                .Select(p =>
-                {
-                    var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
-                    return (p.Name ?? "value", NullableAnnotations.For(TypeHelper.GetTypeName(unwrapped), p));
-                }).ToList();
+                .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)))
+                .ToList();
 
             if (props.Count > 0 && !requestResponseTypes.Exists(r => r.TypeName == requestTypeName))
             {
@@ -236,6 +234,38 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     /// </remarks>
     static string Optional(string typeName, QueryMethodDefinition method) =>
         typeName.EndsWith('?') || !QueryNullability.ResultIsNullable(method.Method) ? typeName : $"{typeName}?";
+
+    /// <summary>
+    /// Renders the type a message member carries.
+    /// </summary>
+    /// <param name="type">The member's declared type.</param>
+    /// <param name="targetNamespace">The namespace the generated messages live in.</param>
+    /// <returns>The rendered type name.</returns>
+    /// <remarks>
+    /// A member typed as a read model carries that read model's generated message, not the Core record - which
+    /// the contracts cannot see at all. A save that answers with what it saved is exactly that shape.
+    /// </remarks>
+    static string MemberTypeName(Type type, string targetNamespace)
+    {
+        var unwrapped = TypeHelper.UnwrapConceptType(type);
+
+        if (TypeHelper.IsReadModelType(unwrapped))
+        {
+            return $"global::{targetNamespace}.{unwrapped.Name}Response";
+        }
+
+        if (unwrapped.IsGenericType &&
+            unwrapped.GetGenericTypeDefinition().FullName?.StartsWith("System.Collections.Generic.IEnumerable`", StringComparison.Ordinal) == true)
+        {
+            var element = unwrapped.GetGenericArguments()[0];
+            if (TypeHelper.IsReadModelType(TypeHelper.UnwrapConceptType(element)))
+            {
+                return $"IEnumerable<{MemberTypeName(element, targetNamespace)}>";
+            }
+        }
+
+        return TypeHelper.GetTypeName(unwrapped);
+    }
 
     static ClassDeclarationSyntax BuildDtoClass(
         string typeName,
@@ -346,6 +376,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
     static string? GenerateCommandRequestType(
         CommandDefinition command,
+        string targetNamespace,
         List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
     {
         var parameters = command.Parameters;
@@ -355,11 +386,9 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         }
 
         var requestTypeName = $"{command.Name}Request";
-        var properties = parameters.Select(p =>
-        {
-            var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
-            return (p.Name ?? "value", NullableAnnotations.For(TypeHelper.GetTypeName(unwrapped), p));
-        }).ToList();
+        var properties = parameters
+            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)))
+            .ToList();
 
         requestResponseTypes.Add((requestTypeName, properties));
         return requestTypeName;
@@ -367,6 +396,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
     static string? GenerateCommandResponseType(
         CommandDefinition command,
+        string targetNamespace,
         List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
     {
         if (command.ResponseType is not { } responseType)
@@ -387,7 +417,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         {
             var properties = responseType.GetProperties()
                 .Where(_ => _.CanRead && _.GetIndexParameters().Length == 0)
-                .Select(_ => (_.Name, NullableAnnotations.For(TypeHelper.GetTypeName(TypeHelper.UnwrapConceptType(_.PropertyType)), _)))
+                .Select(_ => (_.Name, NullableAnnotations.For(MemberTypeName(_.PropertyType, targetNamespace), _)))
                 .ToList();
 
             requestResponseTypes.Add((responseTypeName, properties));
@@ -449,7 +479,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         return observableInterface?.GetGenericArguments()[0];
     }
 
-    static List<(string PropName, string PropType)> GetReadModelProperties(Type readModelType)
+    static List<(string PropName, string PropType)> GetReadModelProperties(Type readModelType, string targetNamespace)
     {
         var constructor = readModelType.GetConstructors().FirstOrDefault();
         if (constructor is null)
@@ -458,11 +488,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         }
 
         return constructor.GetParameters()
-            .Select(p =>
-            {
-                var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
-                return (p.Name ?? "value", NullableAnnotations.For(TypeHelper.GetTypeName(unwrapped), p));
-            })
+            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)))
             .ToList();
     }
 
