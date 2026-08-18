@@ -115,6 +115,12 @@ foreach (var (_, serviceDefinition) in serviceGroups)
         continue;
     }
 
+    if (excluded.Contains(serviceDefinition.ServiceName))
+    {
+        Console.WriteLine($"  Skipped {serviceDefinition.ServiceName} - it is not derived yet and keeps its hand-written contract and implementation.");
+        continue;
+    }
+
     try
     {
         generator.Generate(serviceDefinition, outputDirectory);
