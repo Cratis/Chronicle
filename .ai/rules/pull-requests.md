@@ -55,6 +55,8 @@ A `no-release` pull request should be **green like any other** — `verify-semve
 
 Do not open a pull request per task when the tasks belong to the same body of work. Several small merged PRs become several releases, and a stream of near-empty patch releases makes the release history useless for the people it is written for. Collect related work — a set of CI gates, a group of fixes in one area, the steps of one refactor — onto **one branch, as separate commits**, and open **one** pull request. Commits stay one-logical-unit-each; the pull request is the release boundary, and the release boundary should be a coherent, describable change.
 
+**Consolidating an already-open pull request into another means relabeling it, not just merging its branch.** When you fold pull request X into pull request Y so the two land together, X keeps the release-intent label it already had — folding does not touch it. Then Y merges, X's commits reach the base branch, and GitHub auto-closes X *as merged*, which fires X's own publish run under X's own label. A `patch` still sitting on X cuts a release for work that was already published as part of Y. The auto-close is the behavior you want — X closes as **merged** rather than **closed**, so its author keeps the attribution — so the fix is to relabel X to `no-release`, not to close it by hand. Consolidating is two steps: merge the branch **and** relabel the absorbed pull request.
+
 Split into separate pull requests when the changes are genuinely unrelated, when one is urgent and the others are not, or when one is risky enough to want its own revert.
 
 ## Quality Gates
