@@ -565,6 +565,18 @@ public class EventSequence(
         };
     }
 
+    /// <summary>
+    /// Gets the observer service to carry on the append result, or <see langword="null"/> when the connection has none.
+    /// </summary>
+    /// <returns>The <see cref="Contracts.Observation.IObservers"/>, or <see langword="null"/> when the connection has no observer surface.</returns>
+    /// <remarks>
+    /// The in-process testing surfaces connect through a services implementation that has no observer surface and
+    /// throws <see cref="NotSupportedException"/> for it, while appending itself must keep working there. The absence
+    /// is therefore carried on the result rather than thrown here - and
+    /// <see cref="Observation.AppendResultWaitForCompletionExtensions.WaitForCompletion"/> turns it into a
+    /// <see cref="Observation.CannotWaitForObserverCompletion"/> at the point where it actually matters. A
+    /// <see langword="null"/> here means "no observer surface exists", never "no observers were affected".
+    /// </remarks>
     Contracts.Observation.IObservers? GetObservers()
     {
         try
@@ -573,6 +585,7 @@ public class EventSequence(
         }
         catch (NotSupportedException)
         {
+            // Deferred, not swallowed: waiting for completion fails by name instead of reporting success.
             return null;
         }
     }

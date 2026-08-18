@@ -50,6 +50,13 @@ When you need to wait until observers affected by an append operation have compl
 
 If any affected observer fails while catching up, the returned result includes failed partitions.
 
+Waiting only means something when there are observers behind the connection. The in-process testing
+surfaces (`EventScenario` and `EventStoreForTesting`) run the event sequence without a silo, so an
+append there never reaches a projection, reducer, or reactor. Rather than report that everything
+completed, `WaitForCompletion()` throws `CannotWaitForObserverCompletion` on an append result that
+carries no observer surface — assert on the scenario's own surface, or move the check to an
+out-of-process integration spec where observers genuinely run.
+
 ### Append
 
 <ChronicleClientTabs snippet="events/observing-appends/wait-for-completion-append" />
