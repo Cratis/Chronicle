@@ -17,6 +17,7 @@
         <Project Path="Source/Clients/Testing.Specs/Testing.Specs.csproj" />
         <Project Path="Source/Clients/Workbench/Workbench.csproj" />
         <Project Path="Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+        <Project Path="Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj" />
     </Folder>
     <Folder Name="/Source/Kernel/">
         <Project Path="Source/Kernel/Concepts/Concepts.csproj" />
