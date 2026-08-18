@@ -88,7 +88,7 @@ dotnet build Source/Kernel/Core/Core.csproj -c Debug -p:DisableGrpcContractGener
 ## Step 3 — migrate area by area
 
 Done: **Jobs, EventStores, Namespaces, Security, Identities, Recommendations, TypeFormats, Seeding,
-ExternalServices.** Remaining in `Source/Clients/Api`, roughly by cost:
+ExternalServices, Captures.** Remaining in `Source/Clients/Api`, roughly by cost:
 
 | Area | Api | `Core/Services` | Notes |
 | --- | --- | --- | --- |
@@ -96,7 +96,6 @@ ExternalServices.** Remaining in `Source/Clients/Api`, roughly by cost:
 | `DevelopmentTools` | 2 files | — | `ResetKernelState` calls the `Host` contract; move with **Host** |
 | `ReadModelTypes` | 6 files | — | reads through the ReadModels contract; move with **ReadModels** |
 | `EventTypes` | 4 files | 519 | shares payload records with **Events** |
-| `Captures` | 11 files | 164 | |
 | `SequenceQueries` | 10 files | 153 | the one service no client calls - it is workbench-only |
 | `Webhooks` | 6 files | (in `Observation/Webhooks`) | validator makes async calls to test the endpoint and OAuth |
 | `Events` | 11 files | 357 | payload records the event, sequence, webhook and observation areas all reference |
