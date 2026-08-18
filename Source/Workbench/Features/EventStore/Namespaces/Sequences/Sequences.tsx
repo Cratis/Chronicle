@@ -11,8 +11,8 @@ import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { AllEventSequences } from 'Features/Sequences';
-import { AllEventTypes } from 'Features/EventTypes';
+import { AllEventSequences } from 'Api/EventSequences/AllEventSequences';
+import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
 import { AllQueryFolders } from 'Features/SequenceQueries';
 import { AllSequenceQueries } from 'Features/SequenceQueries';
 import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
@@ -175,7 +175,7 @@ export const Sequences = () => {
                                                 state={query.state}
                                                 eventStore={eventStore}
                                                 eventTypeIds={eventTypeIds}
-                                                eventSequenceIds={eventSequences.data.map(eventSequence => eventSequence.name)}
+                                                eventSequenceIds={eventSequences.data}
                                                 hasUnsavedChanges={hasUnsavedChanges(query)}
                                                 onChange={state => update(index, state)}
                                                 onSave={() => save(query.state, query.saved === null)} />
