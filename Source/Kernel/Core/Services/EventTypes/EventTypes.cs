@@ -27,7 +27,7 @@ namespace Cratis.Chronicle.Services.Events;
 internal sealed class EventTypes(
     IStorage storage,
     IGrainFactory grainFactory,
-    Cratis.Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient) : IEventTypes
+    Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient) : IEventTypes
 {
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)

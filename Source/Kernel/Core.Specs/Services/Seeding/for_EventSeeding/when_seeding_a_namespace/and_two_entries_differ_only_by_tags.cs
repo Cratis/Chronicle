@@ -22,5 +22,5 @@ public class and_two_entries_differ_only_by_tags : given.an_event_seeding_servic
     [Fact] void should_keep_both_entries() => EntriesSeededForTheNamespace.Count().ShouldEqual(2);
     [Fact] void should_keep_the_internal_one() => EntriesSeededForTheNamespace.Any(_ => _.Tags?.Any(tag => tag.Value == "internal") == true).ShouldBeTrue();
     [Fact] void should_keep_the_external_one() => EntriesSeededForTheNamespace.Any(_ => _.Tags?.Any(tag => tag.Value == "external") == true).ShouldBeTrue();
-    [Fact] void should_keep_the_order_the_seeder_wrote() => EntriesSeededForTheNamespace.Select(_ => _.Tags!.Single().Value).ToArray().ShouldEqual<string[]>(["internal", "external"]);
+    [Fact] void should_keep_the_order_the_seeder_wrote() => EntriesSeededForTheNamespace.Select(_ => _.Tags!.Single().Value).ToArray().ShouldEqual(["internal", "external"]);
 }

@@ -13,7 +13,7 @@ public class HistogramBucket
     /// Gets or sets the inclusive start of the time bucket, truncated to the requested resolution.
     /// </summary>
     [ProtoMember(1)]
-    public DateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; }
 
     /// <summary>
     /// Gets or sets the number of events that occurred within the bucket.

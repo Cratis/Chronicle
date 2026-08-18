@@ -37,13 +37,13 @@ public class EventSequenceQueryCriteria
     /// Gets or sets the inclusive lower bound on when the event occurred. Null means unbounded.
     /// </summary>
     [ProtoMember(4)]
-    public DateTimeOffset? OccurredFrom { get; set; }
+    public SerializableDateTimeOffset? OccurredFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the exclusive upper bound on when the event occurred. Null means unbounded.
     /// </summary>
     [ProtoMember(5)]
-    public DateTimeOffset? OccurredTo { get; set; }
+    public SerializableDateTimeOffset? OccurredTo { get; set; }
 
     /// <summary>
     /// Gets or sets the event source type to narrow to. Null or empty means every event source type.
