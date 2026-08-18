@@ -106,6 +106,7 @@ dotnet_diagnostic.SA1518.severity = none
 dotnet_diagnostic.SA1601.severity = none
 dotnet_diagnostic.SA1623.severity = none
 dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.IDE0073.severity = warning
 dotnet_diagnostic.SA1642.severity = none
 dotnet_diagnostic.RCS1013.severity = warning
 dotnet_diagnostic.RCS1018.severity = none
