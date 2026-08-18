@@ -53,12 +53,6 @@ public class CatchingUpInFlight(
     {
         using var scope = logger.BeginCatchingUpInFlightScope(observerKey.ObserverId, observerKey);
 
-        if (state.RunningState == ObserverRunningState.Quarantined)
-        {
-            await StateMachine.TransitionTo<Routing>();
-            return state;
-        }
-
         if (state.InFlightPartitions.Count == 0)
         {
             await StateMachine.TransitionTo<Routing>();
