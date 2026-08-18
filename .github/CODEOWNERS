@@ -13,39 +13,36 @@
 # `.github/scripts/detect-hot-core-changes.py --verify` fails the build if they ever stop matching.
 # That script runs on every pull request, so the two contracts cannot drift in silence.
 #
-# PLACEHOLDER-OWNER: the owner below is a placeholder and does not resolve. A CODEOWNERS entry whose
-# owner is not a real user or team that has read access to this repository is ignored by GitHub - the
-# file parses, the rule is listed, and nothing whatsoever is enforced. Replace
-# `@Cratis/kernel-maintainers` with the real team or users and delete this paragraph, including the
-# `PLACEHOLDER-OWNER` marker: the hot-core gate emits a warning on every pull request while the
-# marker is present, and stops as soon as it is gone. Ownership only becomes review *enforcement*
-# once "Require review from Code Owners" is enabled in branch protection, which is a repository
-# setting and not something this file can do on its own.
+# Ownership here requests review; it does not require it. "Require review from Code Owners" is a
+# branch-protection setting and is deliberately NOT enabled, so a pull request touching these paths
+# auto-requests @Cratis/core and can still merge without their approval. What does block is the
+# `hot-core-gate` check, which runs the full out-of-process integration matrix for changes under
+# these paths. Enabling code-owner review later needs no change to this file.
 
 # area: Observer handling
-/Source/Kernel/Core/Observation/ @Cratis/kernel-maintainers
+/Source/Kernel/Core/Observation/ @Cratis/core
 
 # area: Projection key resolution and the changeset pipeline
-/Source/Kernel/Core/Projections/ @Cratis/kernel-maintainers
+/Source/Kernel/Core/Projections/ @Cratis/core
 
 # area: Changeset consolidation
-/Source/Infrastructure/Changes/ @Cratis/kernel-maintainers
+/Source/Infrastructure/Changes/ @Cratis/core
 
 # area: AppendedEventsQueue
-/Source/Kernel/Core/EventSequences/*AppendedEventsQueue* @Cratis/kernel-maintainers
+/Source/Kernel/Core/EventSequences/*AppendedEventsQueue* @Cratis/core
 
 # area: Compliance (PII and encryption)
-/Source/Kernel/Core/Compliance/ @Cratis/kernel-maintainers
+/Source/Kernel/Core/Compliance/ @Cratis/core
 
 # area: MongoDB sink
-/Source/Kernel/Storage.MongoDB/Sinks/ @Cratis/kernel-maintainers
+/Source/Kernel/Storage.MongoDB/Sinks/ @Cratis/core
 
 # area: SQL sink
-/Source/Kernel/Storage.Sql/Sinks/ @Cratis/kernel-maintainers
+/Source/Kernel/Storage.Sql/Sinks/ @Cratis/core
 
 # The contracts that decide all of the above. Weakening the hot-core list, the gate, or this file
 # should cost the same review as changing the code they protect.
-/.github/CODEOWNERS @Cratis/kernel-maintainers
-/.github/hot-core-paths.txt @Cratis/kernel-maintainers
-/.github/workflows/hot-core-gate.yml @Cratis/kernel-maintainers
-/.github/scripts/detect-hot-core-changes.py @Cratis/kernel-maintainers
+/.github/CODEOWNERS @Cratis/core
+/.github/hot-core-paths.txt @Cratis/core
+/.github/workflows/hot-core-gate.yml @Cratis/core
+/.github/scripts/detect-hot-core-changes.py @Cratis/core

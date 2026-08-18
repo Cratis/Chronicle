@@ -207,11 +207,12 @@ warnings-as-errors Release), and the bot repeatedly rewrote hot kernel files.
 off.
 
 **Status:** `.github/CODEOWNERS` exists and mirrors `.github/hot-core-paths.txt` one for one, with
-the mirroring asserted on every PR. **Blocked-on-user, and the file enforces nothing until it is
-done:** the owner is the placeholder `@Cratis/kernel-maintainers`, and GitHub silently ignores a
-rule whose owner is not a real user or team with read access — the file parses and no review is
-required. The gate warns on every PR while the `PLACEHOLDER-OWNER` marker is present. Ownership
-only becomes *enforcement* once "Require review from Code Owners" is on in branch protection.
+the mirroring asserted on every PR. The owner is **`@Cratis/core`** (einari, woksin, cratis-bot),
+chosen 2026-08-18 — a real team, so the rule resolves and review is auto-requested. **Code-owner
+review is deliberately not required**: "Require review from Code Owners" stays off, so these paths
+request a reviewer without blocking a merge. What blocks is the `hot-core-gate` check, which the
+user agreed to mark required — that is the remaining repository setting. Autofix-bot direct-commit
+permission is still blocked-on-user.
 
 ### Task 0.7 — Release hygiene on GitHub Releases
 **Traces to:** the releases-page evaluation in §1 — broken releases are unmarked and
@@ -456,7 +457,7 @@ decision only the user can make.
 | 0.3 | Silent-success sweep | **done** | #3737, #3762 | zero-test guards, solution-membership gate, generators exit non-zero. #3734 (proto regen) still held for Einar |
 | 0.4 | Path-filter audit | **done** | #3737, #3761 | 13 of 17 required paths were uncovered; all closed by widening, contract asserted in CI |
 | 0.5 | Red-workflow alarm | **done** | #3736 | advisory; would flag benchmarks + integration.yml today |
-| 0.6 | Autofix bots → suggesters | partial | | CODEOWNERS + `.github/hot-core-paths.txt` in repo, but the owner is a `PLACEHOLDER-OWNER` and enforces nothing until set; bot permission is blocked-on-user |
+| 0.6 | Autofix bots → suggesters | partial | | CODEOWNERS owned by `@Cratis/core`, mirroring `.github/hot-core-paths.txt` and asserted in CI; review requested but not required by choice; bot permission is blocked-on-user |
 | 0.7 | Release hygiene on GitHub Releases | partial | | 12 broken releases warned retroactively; notes-quality gate = §8-g; NuGet deprecation blocked-on-user |
 | 1.1 | Shared storage contract suite | **done (core)** | #3749–#3752, #3754 | 9 cases × 3 sinks; found D-8, D-9, ChildRemovedFromAll. Remaining: constraints + key storage suites |
 | 1.2 | Harness convergence (finish) | partial | #3759, #3760 | WaitForCompletion no longer lies (merged); compliance wiring open. ReadModelScenario runs NO compliance — feature, not wiring |
