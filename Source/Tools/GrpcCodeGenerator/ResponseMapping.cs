@@ -9,9 +9,9 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// <param name="DomainType">The type the artifact produces.</param>
 /// <param name="ContractTypeName">The fully qualified name of the generated message.</param>
 /// <param name="MethodName">The name of the generated mapping method.</param>
-/// <param name="Members">The members to copy, as name and declared type.</param>
+/// <param name="Members">The members to copy, as name, declared type and whether the value can be absent.</param>
 public record ResponseMapping(
     Type DomainType,
     string ContractTypeName,
     string MethodName,
-    IReadOnlyList<(string Name, Type Type)> Members);
+    IReadOnlyList<(string Name, Type Type, bool IsNullable)> Members);
