@@ -557,6 +557,11 @@ attempts have now shipped a gate that could never pass; a third that is merely b
 not worth having. Note also that this rebuild is what makes 2.2's release train more valuable, not
 less — a gate that blocks a release is exactly what wants a soak stage to fail in.
 
+**Folding #3756 into #3771 cut v16.36.2 for nothing.** The fold left `patch` on #3756, so when #3771
+merged GitHub auto-closed #3756 as merged and that fired its own publish run; `pull-requests.md` now
+says consolidating is two steps — merge the branch *and* relabel the absorbed pull request
+`no-release`.
+
 **Held deliberately, not forgotten:** #3734 and #3748 touch the proto surface and the gRPC gate while
 Einar is mid-investigation there; #3760 makes real schema validation run in-process, which can surface
 failures in downstream and Arc specs; #3756 changes release behavior. Each wants a human to choose the
