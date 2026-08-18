@@ -412,6 +412,14 @@ only one pending run per group and cancels the earlier pending one, so a burst o
 silently drop a release rather than fail loudly. Until this task decouples release from merge, the
 stopgap is retrying the version creation with backoff.
 
+**The trigger and release intent are one decision.** Releasing on `push` to `main` instead of on the
+`pull_request` closed event was attempted in #3714 — it is what would let fork contributions publish
+at all — and was closed unmerged. `no-release` states release intent as a pull request label, and a
+`push` event does not populate `github.event.pull_request`, so the `verify-published` exemption
+silently stops applying and every deliberate non-release would fail the run on `main`. Whatever this
+task settles on for the trigger has to carry release intent in something a push can read — the merge
+commit, or an API lookup of the associated pull request — at the same time.
+
 **Done when:** patch share of releases is below 40% for a full calendar month.
 
 ### Task 2.3 — Close-the-class policy
