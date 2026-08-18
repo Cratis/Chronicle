@@ -159,6 +159,12 @@ public static class TypeHelper
             return "void";
         }
 
+        // Before anything else: a type protobuf cannot represent is substituted here, or refused. See TransportTypes.
+        if (TransportTypes.NameFor(type) is { } transportType)
+        {
+            return transportType;
+        }
+
         if (type == typeof(string))
         {
             return "string";
@@ -197,11 +203,6 @@ public static class TypeHelper
         if (type == typeof(Guid))
         {
             return "Guid";
-        }
-
-        if (type == typeof(DateTimeOffset))
-        {
-            return "DateTimeOffset";
         }
 
         if (type == typeof(DateTime))
