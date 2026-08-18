@@ -431,7 +431,7 @@ decision only the user can make.
 
 | Task | Title | Status | PR | Notes |
 |---|---|---|---|---|
-| 0.1 | Boot gate on published images | **done** | #3735, #3758 | all 4 variants; the gate itself shipped broken (missing TLS + token certs) and blocked 8 publishes — fixed in #3758 |
+| 0.1 | Boot gate on published images | **reverted** | #3735, #3758 | shipped broken twice and blocked every production publish from 16.35.4 to 16.36.0; reverted. See the note below before rebuilding it |
 | 0.2 | Consumer smoke for packages | **done** | #3755 | starts packed Chronicle beside published Arc before push; runs, does not merely restore |
 | 0.3 | Silent-success sweep | **done** | #3737, #3762 | zero-test guards, solution-membership gate, generators exit non-zero. #3734 (proto regen) still held for Einar |
 | 0.4 | Path-filter audit | **done** | #3737, #3761 | 13 of 17 required paths were uncovered; all closed by widening, contract asserted in CI |
@@ -464,6 +464,25 @@ published one. A gate is not proven by passing, only by failing when it should. 
 eleven pull requests in two minutes raced the release job**: every run read the same latest version
 and tried to create it, and the losers got a 403 from secondary rate limiting. Nothing was lost, but
 it is the argument for 2.2 in miniature, and #3756 serializes it.
+
+**Session log — 2026-08-18, later.** The boot gate (0.1) was reverted. It failed every
+`publish-docker-production` run from 16.35.4 through 16.36.0: it starts the production image with a
+throwaway certificate mounted from a `mktemp -d` directory, and the server reported
+`No TLS certificate is configured` regardless. The configuration keys it passes are correct — they
+match `ChronicleContainerImageTags` exactly — so the certificate is not reachable inside the
+container rather than misconfigured. The likely mechanism is that `mktemp -d` creates a `0700`
+directory owned by the runner's user while the chiseled runtime image runs as UID 1654 and cannot
+traverse it; making the *file* world-readable, as the script does, is not enough. **That mechanism
+is unproven.** It reproduces in isolation on a Linux-owned volume, but an end-to-end run against the
+real production image passed in both the broken and the fixed configuration on macOS, where Docker
+does not enforce Linux bind-mount ownership. The image itself is fine — it was built from `main` and
+booted successfully.
+
+Before this gate is rebuilt, it has to be proven the way the first version was not: **failing when it
+should**, on Linux, against a genuinely broken image, not only passing against a good one. Two
+attempts have now shipped a gate that could never pass; a third that is merely believed to work is
+not worth having. Note also that this rebuild is what makes 2.2's release train more valuable, not
+less — a gate that blocks a release is exactly what wants a soak stage to fail in.
 
 **Held deliberately, not forgotten:** #3734 and #3748 touch the proto surface and the gRPC gate while
 Einar is mid-investigation there; #3760 makes real schema validation run in-process, which can surface
