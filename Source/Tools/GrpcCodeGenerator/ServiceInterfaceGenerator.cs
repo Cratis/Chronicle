@@ -160,9 +160,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         if (isObservable)
         {
             var innerType = GetObservableInnerType(returnType);
-            returnTypeStr = innerType is not null
-                ? $"IObservable<QueryResult<{MapToResponseType(innerType, responseTypeName)}>>"
-                : $"IObservable<QueryResult<{responseTypeName}>>";
+            var observed = innerType is not null ? MapToResponseType(innerType, responseTypeName) : responseTypeName;
+            returnTypeStr = $"IObservable<QueryResult<{Optional(observed, method)}>>";
         }
         else
         {
@@ -172,7 +171,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                 queryReturnType = TypeHelper.GetOneOfSuccessType(queryReturnType);
             }
 
-            var mapped = MapToResponseType(queryReturnType, responseTypeName);
+            var mapped = Optional(MapToResponseType(queryReturnType, responseTypeName), method);
             returnTypeStr = TypeHelper.IsVoidTask(returnType) ? "Task" : $"Task<QueryResult<{mapped}>>";
         }
 
@@ -183,14 +182,15 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         {
             var requestTypeName = $"{method.Name}Request";
 
-            // Filter out DI-injected parameters (interfaces and abstract classes are resolved from the
-            // service container and must not appear as gRPC wire-level request properties).
+            // Filter out DI-injected parameters - they are resolved from the service container and must not
+            // appear as gRPC wire-level request properties. See ParameterClassification for the rule, which the
+            // implementation generator has to apply identically.
             var props = method.Parameters
-                .Where(p => !p.ParameterType.IsInterface && !p.ParameterType.IsAbstract)
+                .Where(p => !ParameterClassification.IsDependency(p.ParameterType))
                 .Select(p =>
                 {
                     var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
-                    return (p.Name ?? "value", TypeHelper.GetTypeName(unwrapped));
+                    return (p.Name ?? "value", NullableAnnotations.For(TypeHelper.GetTypeName(unwrapped), p));
                 }).ToList();
 
             if (props.Count > 0 && !requestResponseTypes.Exists(r => r.TypeName == requestTypeName))
@@ -223,6 +223,19 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                 [.. paramDocs],
                 "The query result."));
     }
+
+    /// <summary>
+    /// Annotates a query's mapped result with the absence the query declares.
+    /// </summary>
+    /// <param name="typeName">The mapped result type name.</param>
+    /// <param name="method">The query method.</param>
+    /// <returns>The annotated type name.</returns>
+    /// <remarks>
+    /// A query that can answer with nothing has to say so on the contract, or the implementation generated
+    /// against that contract has nowhere to put the absence. See <see cref="QueryNullability"/>.
+    /// </remarks>
+    static string Optional(string typeName, QueryMethodDefinition method) =>
+        typeName.EndsWith('?') || !QueryNullability.ResultIsNullable(method.Method) ? typeName : $"{typeName}?";
 
     static ClassDeclarationSyntax BuildDtoClass(
         string typeName,
@@ -345,7 +358,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         var properties = parameters.Select(p =>
         {
             var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
-            return (p.Name ?? "value", TypeHelper.GetTypeName(unwrapped));
+            return (p.Name ?? "value", NullableAnnotations.For(TypeHelper.GetTypeName(unwrapped), p));
         }).ToList();
 
         requestResponseTypes.Add((requestTypeName, properties));
@@ -374,7 +387,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         {
             var properties = responseType.GetProperties()
                 .Where(_ => _.CanRead && _.GetIndexParameters().Length == 0)
-                .Select(_ => (_.Name, TypeHelper.GetTypeName(TypeHelper.UnwrapConceptType(_.PropertyType))))
+                .Select(_ => (_.Name, NullableAnnotations.For(TypeHelper.GetTypeName(TypeHelper.UnwrapConceptType(_.PropertyType)), _)))
                 .ToList();
 
             requestResponseTypes.Add((responseTypeName, properties));
@@ -448,7 +461,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             .Select(p =>
             {
                 var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
-                return (p.Name ?? "value", TypeHelper.GetTypeName(unwrapped));
+                return (p.Name ?? "value", NullableAnnotations.For(TypeHelper.GetTypeName(unwrapped), p));
             })
             .ToList();
     }
