@@ -6,6 +6,15 @@ Workbench.
 
 Everything measured here was measured — the commands are given so you can repeat them.
 
+> **This is the assessment, not the plan.** `PLAN.md` is the working document: it carries the per-area recipe, the
+> decisions taken, and what is done. Where the two disagree, `PLAN.md` is current. Phases 1 and 2 below are done,
+> and Phase 3 is under way — Jobs, EventStores, Namespaces, Security and Identities have moved.
+>
+> One thing this document got wrong that cost a pass through the work: it treats moving an area into Core as
+> finished when the artifact exists. It is not. The hand-written service in `Cratis.Chronicle.Services` is part of
+> what #2908 deletes, and until the generator emitted implementations — which it now does — moving an area only
+> relocated the work rather than removing it.
+
 ## The short version
 
 **This is a consolidation, not a re-architecture.** Most of the destination already exists, and the one blocker
@@ -121,6 +130,9 @@ Api carries **65 artifacts**; Core covers 5 of the 23 areas with 24.
 | Auditing | — | — | — | — |
 | **Total** | **24** | **21** | **20** | **24** |
 
+> The table below is the state as first measured. Jobs, EventStores, Namespaces, Security and Identities have
+> since moved; their rows are historical.
+
 **44 artifacts across 17 areas exist only in Api.** They are not new behavior — they are wrappers that call the
 gRPC contract interfaces, which are themselves generated from Core. Moving them into Core generally means
 *collapsing* two layers into one: the Api artifact and the Core grain call become one artifact.
@@ -209,18 +221,23 @@ not a domain, and should stay a view) and `Reactors`/`Reducers`/`Sinks` (facets 
 
 ## Plan
 
-**Phase 1 — unblock, without changing anything.** Fix `IsQuery` in Arc, or set `CopyLocalLockFileAssemblies` on
-Core. Add the namespace exclusion for `Contracts`. Leave `DisableProxyGenerator` alone. **Verifiable:** the
-experiment above builds clean.
+**Phase 1 — unblock, without changing anything.** ✅ Done. `CopyLocalLockFileAssemblies` is set on Core. The
+namespace exclusion for `Contracts` was not available — `ProxyGenerator.Build` 21.19.0 exposes no such property —
+so `Features/Contracts/` exists and holds the enums and payload types Core artifacts reference directly.
 
-**Phase 2 — convert the 20 controllers, in place in Api.** Model-bound `[Command]`/`[ReadModel]` records. Do this
-before moving anything: it is independently valuable, it fixes the optional-route-parameter defect, and it means
-Phase 3 moves one kind of thing instead of two. **Verifiable:** Workbench builds and its pages still work.
+**Phase 1b — generate the implementations too.** ✅ Done, and it was the real blocker. The generator emitted the
+interface and the DTOs but nothing that served them, which is why 7,233 lines of hand-written `Core/Services`
+existed. `ServiceImplementationGenerator` and `ServiceRegistrationsGenerator` close that; see `PLAN.md`.
 
-**Phase 3 — move areas into Core, one at a time.** For each, collapse the Api artifact and the grain call into one
-Core artifact with `[BelongsTo]`, delete the Api one, update the Workbench imports. Start with the five areas Core
-already covers, since those are reconciliation rather than new ground, and their renames tell you early how much
-Workbench churn to expect. **Verifiable per area:** the proxy folder regenerates and the Workbench compiles.
+**Phase 2 — convert the controllers.** In practice this folded into Phase 3: a controller and the artifact that
+replaces it are the same edit, and converting in place in Api would mean writing each one twice. Convert as you
+move the area.
+
+**Phase 3 — move areas into Core, one at a time.** For each, collapse the Api artifact, the hand-written service
+and the grain call into one Core artifact with `[BelongsTo]`; delete `Api/<Area>` *and* `Core/Services/<Area>`;
+update the Workbench imports. The full recipe, including what must not be deleted with the service and how to get
+out of the build cycle a rename causes, is in `PLAN.md`. **Verifiable per area:** the proxy folder regenerates,
+the whole solution builds, and the Workbench type-checks.
 
 **Phase 4 — flip generation to Core.** Set `DisableProxyGenerator=false` on Core, remove it from Api, delete the
 Api project and its standalone host. **Verifiable:** `Source/Workbench/Api` regenerates from Core alone and the
@@ -233,8 +250,7 @@ This is the real prize: Core becomes the single source for both the Web API and 
 compatibility gate finally compares generated output against generated output with nothing hand-maintained in
 between. See `COMPATIBILITY-REPORT.md`.
 
-Phases 1 and 2 are independent of everything else and can start now. Phase 3 is the bulk. Phase 6 is blocked on
-Observation being fully converted, which Phase 3 delivers.
+Phase 3 is the bulk. Phase 6 is blocked on Observation, which is the last area precisely because of that.
 
 ## What I did not verify
 
