@@ -1,12 +1,21 @@
 name: Publish
 
-# Keyed by the pull request, never by a value that several simultaneously-closing pull requests share.
-# Merging a consolidation closes every pull request whose commits it carries, each of those fires its own
-# pull_request:closed event, and on a shared group cancel-in-progress means the last run to start cancels
-# the rest — including the one that was supposed to cut the release.
+# One release at a time, and never cancel one.
+#
+# Deciding the next version is a read followed by a create: the run reads the latest released version
+# and creates the one after it. Two runs doing that at once read the same answer and try to create the
+# same version, so all but one fail - and a burst of them trips GitHub's secondary rate limit, which
+# comes back as a 403 on the create rather than anything that names the real problem. Merging eleven
+# pull requests in two minutes produced exactly that: five runs, all computing v16.35.7, four losing.
+#
+# Every run shares one group so they queue behind each other, and cancel-in-progress is off so queueing
+# is all that happens. A shared group used to be wrong for a different reason: with cancellation on, the
+# last run to start killed the rest, including the one meant to cut the release, which is why this was
+# keyed per pull request. Keying per pull request avoided the cancellation but bought the race instead.
+# Sharing the group without cancelling avoids both.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
