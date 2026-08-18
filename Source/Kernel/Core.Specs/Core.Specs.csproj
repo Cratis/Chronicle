@@ -4,6 +4,10 @@
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
+        <!-- PBN2013 asks for a [ProtoModel] partial class the pinned protobuf-net.Grpc runtime cannot express yet -
+             see the same suppression and its reasoning in Source/Kernel/Contracts/Contracts.csproj. It reaches this
+             project because central transitive pinning makes protobuf-net a direct dependency everywhere. -->
+        <NoWarn>$(NoWarn);PBN2013</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,5 +20,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="OrleansTestKit10" />
         <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="protobuf-net.Grpc.Reflection" />
     </ItemGroup>
 </Project>
