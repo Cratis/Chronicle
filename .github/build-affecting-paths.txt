@@ -1,0 +1,77 @@
+# Paths that must trigger a build and a test run.
+#
+# THE RULE: changing this list requires saying in the pull request what stops being covered.
+#
+# This file is a committed contract, not documentation. `.github/scripts/assert-build-affecting-paths.py`
+# reads it, reads the `paths:` filter on `.github/workflows/dotnet-build.yml`, and fails the build when a
+# path listed here is not covered by any pattern in that filter. Narrowing the filter for speed is what
+# this exists to make visible: on 2026-04-17 the trigger was scoped to `.cs`/`.csproj` (47a82ad45), and on
+# 2026-08-05 a `Directory.Packages.props` dependency bump - described in its own pull request as the
+# riskiest change in the repository - merged with no build at all (c9fbc8d99), because a change confined
+# to that file matched none of the remaining patterns. Benchmarks broke while landing green for the same
+# reason (51590103c).
+#
+# FORMAT: one entry per line. Either a literal repository-relative path, or a directory followed by `/**`.
+# Blank lines and `#` comments are ignored. Every entry is verified to exist in the repository, so the
+# list cannot rot into fiction. Each entry carries the evidence for why it is here - add nothing on taste.
+
+# Every compiled and packaged artifact. Deliberately the whole tree and not `Source/**/*.cs`: the
+# `.proto` contracts under `Source/Kernel/Protobuf` generate the C# the kernel and every client compile
+# against, and `Source/**/*.props` and `.json` files change how projects build, none of which an
+# extension-scoped filter reaches.
+Source/**
+
+# The out-of-process integration suite the build workflow hands its cache and image to.
+Integration/**
+
+# The build workflow builds both benchmark projects. Without this a broken benchmark project lands green
+# and fails on the next unrelated pull request instead - which is exactly what happened in 51590103c.
+Benchmarks/**
+
+# The build workflow runs `docker build -f Docker/Local/Dockerfile .` and the out-of-process integration
+# jobs consume the image it produces, so a Dockerfile or entrypoint change decides whether they can run
+# at all. A Docker exec-bit fix once could not cut a release because the publish trigger did not list
+# this (fd48b6471).
+Docker/**
+
+# Central package management decides what every project in the repository compiles against, so a version
+# bump here reaches further than any single project file.
+Directory.Packages.props
+
+# Imported by Directory.Packages.props for the net8.0 and net9.0 target frameworks. The build workflow
+# builds the client packages for every shipped framework, so these decide what those builds resolve.
+Directory.Packages.NET8.props
+Directory.Packages.NET9.props
+
+# Sets the properties the whole build runs under, including EnforceCodeStyleInBuild.
+Directory.Build.props
+
+# Filters which `.globalconfig` Roslyn resolves. Get this wrong and analyzer severities across the
+# repository change without a single source file being touched.
+Directory.Build.targets
+
+# Pins the SDK the entire build runs on.
+global.json
+
+# Analyzer severities under warnings-as-errors - roughly 150 and 80 entries respectively. A severity
+# change here turns the build red or green on its own.
+.globalconfig
+.editorconfig
+
+# A project added to or dropped from the solution changes what gets built and what gets tested, without
+# necessarily touching a single source file. The solution-membership assertion reads it.
+Chronicle.slnx
+
+# Passed to `dotnet test --settings` for the specs run, so it decides how the specs execute.
+specs.runsettings
+
+# The workflow definitions themselves - including the one this contract constrains. A change here is
+# precisely the class of change that silently removes coverage.
+.github/workflows/**
+
+# Scripts the build and integration workflows invoke directly: assert-solution-membership.py,
+# collect-coverage.sh, generate-integration-matrix.py, run-tests-with-retry.sh.
+.github/scripts/**
+
+# This file. Editing the contract has to re-run the check that enforces it.
+.github/build-affecting-paths.txt
