@@ -177,7 +177,7 @@ internal sealed class TestingServices(
             new EventSequences.NoOpPatternCapture()));
 
     readonly Lazy<IRecommendations> _recommendations = new(() =>
-        new KernelRecommendationsService(grainFactory, storage));
+        new KernelRecommendationsService(grainFactory, storage, NullLogger<KernelRecommendationsService>.Instance));
 
     readonly Lazy<IPatterns> _patterns = new(() =>
         new KernelPatternsService(
