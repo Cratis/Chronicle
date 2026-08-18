@@ -6,7 +6,7 @@ import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { SchemaEditor as _SE } from '@cratis/components';
 const SchemaEditor = _SE.SchemaEditor;
 import type { JsonSchema } from '@cratis/components/types';
-import { AllTypeFormats } from 'Api/TypeFormats';
+import { AllTypeFormats } from 'Features/Schemas';
 import { EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { Register } from 'Api/Events';
 import { AllEventTypeGenerations } from 'Api/EventTypes/AllEventTypeGenerations';

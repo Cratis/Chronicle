@@ -6,7 +6,7 @@ import { InputText } from 'primereact/inputtext';
 import pluralize from 'pluralize';
 import { SchemaEditor as _SE } from '@cratis/components';
 const SchemaEditor = _SE.SchemaEditor;
-import { AllTypeFormats } from 'Api/TypeFormats';
+import { AllTypeFormats } from 'Features/Schemas';
 import type { JsonSchema } from '@cratis/components/types';
 import strings from 'Strings';
 
