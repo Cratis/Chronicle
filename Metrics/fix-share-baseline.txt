@@ -1,0 +1,25 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+#
+# The fix/revert commit share per month, as measured by hand during the year-long analysis that
+# produced PLAN-reliability-program.md (section 5, task 2.4). This is a historical record, not a
+# threshold: it is the number the reliability program was argued from, kept here so that every run
+# of .github/scripts/regression-tax.py re-derives the same months and shows the difference.
+#
+# Do not edit these values to make a delta go away. A delta means the script and the published
+# analysis have stopped measuring the same thing, and that is the finding - chase the definition.
+#
+# <month> <percent>
+
+2025-09   1.8
+2025-10  12.4
+2025-11  20.7
+2025-12  15.6
+2026-01  12.9
+2026-02  19.9
+2026-03  16.5
+2026-04  24.5
+2026-05  26.3
+2026-06  24.5
+2026-07  10.6
+2026-08   9.1
