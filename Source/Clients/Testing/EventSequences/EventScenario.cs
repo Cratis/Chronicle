@@ -75,7 +75,7 @@ public class EventScenario(
     EventStoreNamespaceName namespaceName,
     ICanProvideConstraints? constraintProvider) : IDisposable
 {
-    readonly (EventLog EventLog, InProcessChronicleConnection Connection) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
+    readonly (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class.
@@ -144,12 +144,29 @@ public class EventScenario(
     /// <inheritdoc/>
     public void Dispose() => _created.Connection.Dispose();
 
-    static (EventLog EventLog, InProcessChronicleConnection Connection) CreateEventLog(
+    /// <summary>
+    /// Reads the content of an appended event exactly as the store holds it, before compliance release.
+    /// </summary>
+    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the appended event.</param>
+    /// <returns>The stored content as JSON.</returns>
+    /// <remarks>
+    /// Every read through <see cref="EventLog"/> releases compliance, which is what makes a spec see the
+    /// plaintext it appended — and also what makes it unable to tell an encrypted value from one that was
+    /// never protected. This bypasses the release so the distinction can be asserted.
+    /// </remarks>
+    internal async Task<string> ReadContentAtRest(EventSequenceNumber sequenceNumber)
+    {
+        var appendedEvent = await _created.Storage.GetEventAt((KernelConceptsNs::Events.EventSequenceNumber)(ulong)sequenceNumber);
+        return JsonSerializer.Serialize(appendedEvent.Content);
+    }
+
+    static (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) CreateEventLog(
         EventSequenceId eventSequenceId,
         EventStoreName eventStoreName,
         EventStoreNamespaceName namespaceName,
         ICanProvideConstraints? constraintProvider)
     {
+        var defaults = Defaults.Instance;
         var kernelEventSequenceId = (KernelSequenceConcepts::EventSequenceId)(string)eventSequenceId;
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)eventStoreName;
         var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)namespaceName;
@@ -161,7 +178,7 @@ public class EventScenario(
         var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
         var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
-        var eventTypesStorage = new InMemoryEventTypesStorage();
+        var eventTypesStorage = new InMemoryEventTypesStorage(defaults.EventTypes);
 
         var storage = new InMemoryStorage(
             eventSequenceStorage,
@@ -196,7 +213,6 @@ public class EventScenario(
         var services = new InProcessServices(eventSequencesService, constraintsService);
         var connection = new InProcessChronicleConnection(services);
 
-        var defaults = Defaults.Instance;
         var inProcessConstraints = new InProcessConstraints(resolvedConstraintProvider);
         inProcessConstraints.Discover().GetAwaiter().GetResult();
 
@@ -214,7 +230,7 @@ public class EventScenario(
             new BaseIdentityProvider(),
             jsonSerializerOptions);
 
-        return (eventLog, connection);
+        return (eventLog, connection, eventSequenceStorage);
     }
 
     static CompositeConstraintProvider CreateDiscoveredConstraintProvider()
