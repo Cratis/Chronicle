@@ -41,7 +41,7 @@ using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
-using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
+using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services.EventStores.EventStores;
 using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
 using KernelExternalServicesService = KernelCore::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
@@ -50,7 +50,7 @@ using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
 using KernelJsonComplianceManager = KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager;
 using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler;
 using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
-using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
+using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
@@ -160,7 +160,7 @@ internal sealed class TestingServices(
             jsonSerializerOptions));
 
     readonly Lazy<INamespaces> _namespaces = new(() =>
-        new KernelNamespacesService(grainFactory, storage));
+        new KernelNamespacesService(grainFactory, storage, NullLogger<KernelNamespacesService>.Instance));
 
     readonly Lazy<IIdentities> _identities = new(() =>
         new KernelIdentitiesService(storage));
@@ -175,16 +175,16 @@ internal sealed class TestingServices(
         new KernelConstraintsService(grainFactory));
 
     readonly Lazy<IUsers> _users = new(() =>
-        new KernelUsersService(grainFactory, storage));
+        new KernelUsersService(grainFactory, storage, NullLogger<KernelUsersService>.Instance));
 
     readonly Lazy<IApplications> _applications = new(() =>
-        new KernelApplicationsService(grainFactory, storage));
+        new KernelApplicationsService(grainFactory, storage, NullLogger<KernelApplicationsService>.Instance));
 
     readonly Lazy<IServer> _server = new(() =>
         new KernelServerService(null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
 
     readonly Lazy<IEventStores> _eventStores = new(() =>
-        new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));
+        new KernelEventStoresService(grainFactory, storage, null!, null!, NullLogger<KernelEventStoresService>.Instance));
 
     readonly Lazy<IReadModels> _readModels = new(() =>
         new KernelReadModelsService(

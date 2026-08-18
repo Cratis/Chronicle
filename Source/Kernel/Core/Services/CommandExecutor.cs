@@ -46,6 +46,35 @@ internal static class CommandExecutor
         }
     }
 
+    /// <summary>
+    /// Executes a command that produces a response by validating it and invoking the given handler, capturing the outcome.
+    /// </summary>
+    /// <param name="command">The command to execute.</param>
+    /// <param name="handle">The handler that performs the command and produces the response.</param>
+    /// <typeparam name="TCommand">Type of command to execute.</typeparam>
+    /// <typeparam name="TResponse">Type of response the command produces.</typeparam>
+    /// <returns>The <see cref="CommandResult{TResponse}"/> describing the outcome.</returns>
+    internal static async Task<CommandResult<TResponse>> Execute<TCommand, TResponse>(TCommand command, Func<TCommand, Task<TResponse>> handle)
+        where TCommand : notnull
+    {
+        var correlationId = Guid.NewGuid();
+
+        var validationResults = await Validate(command);
+        if (validationResults.Count > 0)
+        {
+            return CommandResult<TResponse>.Invalid(correlationId, validationResults);
+        }
+
+        try
+        {
+            return CommandResult<TResponse>.Success(correlationId, await handle(command));
+        }
+        catch (Exception ex)
+        {
+            return CommandResult<TResponse>.Error(correlationId, ex);
+        }
+    }
+
     static async Task<IList<ValidationResult>> Validate<TCommand>(TCommand command)
         where TCommand : notnull
     {

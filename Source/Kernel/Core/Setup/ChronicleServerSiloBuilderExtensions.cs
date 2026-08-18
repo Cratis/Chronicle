@@ -116,12 +116,16 @@ public static class ChronicleServerSiloBuilderExtensions
                     grainFactory,
                     sp.GetRequiredService<IJsonComplianceManager>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>()),
-                new Cratis.Chronicle.Services.EventStores(
+                new Cratis.Chronicle.Services.EventStores.EventStores(
                     grainFactory,
                     storage,
                     sp.GetRequiredService<IEventTypes>(),
-                    sp.GetRequiredService<Cratis.Chronicle.Observation.Reactors.Kernel.IReactors>()),
-                new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
+                    sp.GetRequiredService<Cratis.Chronicle.Observation.Reactors.Kernel.IReactors>(),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.EventStores.EventStores>>()),
+                new Cratis.Chronicle.Services.Namespaces.Namespaces(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Namespaces.Namespaces>>()),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
                 new EventSequences(
@@ -154,8 +158,14 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelsCompliance>()),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Jobs.Jobs>>()),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
-                new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
-                new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
+                new Cratis.Chronicle.Services.Security.Users(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Security.Users>>()),
+                new Cratis.Chronicle.Services.Security.Applications(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Security.Applications>>()),
                 new Cratis.Chronicle.Services.Host.Server(
                     grainFactory,
                     sp.GetRequiredService<Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>(),

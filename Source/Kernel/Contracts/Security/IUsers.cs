@@ -229,7 +229,7 @@ public class UserResponse
     /// Gets or sets the Email.
     /// </summary>
     [ProtoMember(3)]
-    public string Email { get; set; }
+    public string? Email { get; set; }
 
     /// <summary>
     /// Gets or sets the IsActive.

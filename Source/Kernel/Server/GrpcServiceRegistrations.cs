@@ -18,10 +18,12 @@ public static class GrpcServiceRegistrations
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
         services.AddCodeFirstGrpc(options => options.EnableDetailedErrors = true);
+        services.AddGeneratedGrpcServices();
 
+        // Everything below is still hand-written, either because the area has not been converted to Arc
+        // artifacts yet or because it cannot be - see NonDerivedGrpcServices in Core.csproj, and the
+        // streaming services, whose server-to-client lifetime no command or query describes.
         services.AddSingleton<Contracts.Compliance.ICompliance, Services.Compliance.ComplianceService>();
-        services.AddSingleton<Contracts.EventStores.IEventStores, Services.EventStores>();
-        services.AddSingleton<Contracts.Namespaces.INamespaces, Services.Namespaces>();
         services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();
         services.AddSingleton<Contracts.Identities.IIdentities, Services.Identities.Identities>();
         services.AddSingleton<Contracts.EventSequences.IEventSequences, Services.EventSequences.EventSequences>();
@@ -40,10 +42,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.ReadModels.IMaterializedReadModels, Services.ReadModels.MaterializedReadModels>();
-        services.AddSingleton<Contracts.Jobs.IJobs, Services.Jobs.Jobs>();
         services.AddSingleton<Contracts.Seeding.IEventSeeding, Services.Seeding.EventSeeding>();
-        services.AddSingleton<Contracts.Security.IUsers, Services.Security.Users>();
-        services.AddSingleton<Contracts.Security.IApplications, Services.Security.Applications>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
 
         return services;
@@ -58,9 +57,9 @@ public static class GrpcServiceRegistrations
     {
         app.UseEndpoints(_ =>
         {
+            _.MapGeneratedGrpcServices();
+
             _.MapGrpcService<Services.Compliance.ComplianceService>();
-            _.MapGrpcService<Services.EventStores>();
-            _.MapGrpcService<Services.Namespaces>();
             _.MapGrpcService<Services.Recommendations.Recommendations>();
             _.MapGrpcService<Services.Identities.Identities>();
             _.MapGrpcService<Services.EventSequences.EventSequences>();
@@ -79,10 +78,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.ReadModels.ReadModels>();
             _.MapGrpcService<Services.ReadModels.MaterializedReadModels>();
-            _.MapGrpcService<Services.Jobs.Jobs>();
             _.MapGrpcService<Services.Seeding.EventSeeding>();
-            _.MapGrpcService<Services.Security.Users>();
-            _.MapGrpcService<Services.Security.Applications>();
             _.MapGrpcService<Services.Host.Server>();
         });
 
