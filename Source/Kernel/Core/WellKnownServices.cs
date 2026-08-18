@@ -52,4 +52,9 @@ public static class WellKnownServices
     /// The name of the EventSeeding service.
     /// </summary>
     public const string EventSeeding = "EventSeeding";
+
+    /// <summary>
+    /// The name of the ExternalServices service.
+    /// </summary>
+    public const string ExternalServices = "ExternalServices";
 }

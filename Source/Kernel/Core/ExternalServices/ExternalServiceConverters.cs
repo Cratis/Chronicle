@@ -3,13 +3,14 @@
 
 using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.Concepts.Security;
+using AuthorizationType = Cratis.Chronicle.Contracts.Security.AuthorizationType;
 
-namespace Cratis.Chronicle.Services.ExternalServices;
+namespace Cratis.Chronicle.ExternalServices;
 
 /// <summary>
 /// Provides extension methods for converting between Kernel and contract external service representations.
 /// </summary>
-public static class ExternalServiceContractConverters
+public static class ExternalServiceConverters
 {
     /// <summary>
     /// Converts a contract external service definition to a Kernel <see cref="ExternalServiceDefinition"/>.
@@ -34,6 +35,40 @@ public static class ExternalServiceContractConverters
             Name = definition.Name,
             Endpoint = definition.Endpoint.ToContract()
         };
+
+    /// <summary>
+    /// Converts kernel external service definitions into the read model the workbench queries.
+    /// </summary>
+    /// <param name="definitions">The kernel definitions.</param>
+    /// <returns>The definitions as read models, without their secrets.</returns>
+    internal static IEnumerable<ExternalService> ToReadModel(this IEnumerable<ExternalServiceDefinition> definitions) =>
+        [.. definitions.Select(ToReadModel)];
+
+    /// <summary>
+    /// Converts a kernel external service definition into the read model the workbench queries.
+    /// </summary>
+    /// <param name="definition">The kernel definition.</param>
+    /// <returns>The definition as a read model, without its secrets.</returns>
+    internal static ExternalService ToReadModel(this ExternalServiceDefinition definition) =>
+        new(
+            definition.Id,
+            definition.Name,
+            (Contracts.ExternalServices.ExternalServiceEndpointType)definition.Endpoint.Type,
+            definition.Endpoint.Http?.Url ?? string.Empty,
+            AuthorizationTypeOf(definition.Endpoint.Http),
+            definition.Endpoint.Http?.Headers.ToDictionary(_ => _.Key, _ => _.Value) ?? new Dictionary<string, string>(),
+            definition.Endpoint.Database?.Host ?? string.Empty,
+            definition.Endpoint.Database?.Port ?? 0,
+            definition.Endpoint.Database?.Database ?? string.Empty,
+            definition.Endpoint.Database?.Username ?? string.Empty,
+            definition.Endpoint.Database?.Options.ToDictionary(_ => _.Key, _ => _.Value) ?? new Dictionary<string, string>());
+
+    static AuthorizationType AuthorizationTypeOf(HttpEndpointConfiguration? configuration) =>
+        configuration?.Authorization.Match(
+            _ => AuthorizationType.Basic,
+            _ => AuthorizationType.Bearer,
+            _ => AuthorizationType.OAuth,
+            _ => AuthorizationType.None) ?? AuthorizationType.None;
 
     static ExternalServiceEndpoint ToKernel(this Contracts.ExternalServices.ExternalServiceEndpoint endpoint) =>
         new(

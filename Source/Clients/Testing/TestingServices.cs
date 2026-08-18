@@ -136,7 +136,7 @@ internal sealed class TestingServices(
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
 
     readonly Lazy<IExternalServices> _externalServices = new(() =>
-        new KernelExternalServicesService(storage));
+        new KernelExternalServicesService(storage, NullLogger<KernelExternalServicesService>.Instance));
 
     readonly Lazy<ICaptures> _captures = new(() =>
         new KernelCapturesService(

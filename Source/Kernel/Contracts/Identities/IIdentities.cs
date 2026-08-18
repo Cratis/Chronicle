@@ -104,7 +104,7 @@ public class IdentityDetailsResponse
     /// Gets or sets the OnBehalfOf.
     /// </summary>
     [ProtoMember(4)]
-    public Identity? OnBehalfOf { get; set; }
+    public global::Cratis.Chronicle.Contracts.Identities.Identity? OnBehalfOf { get; set; }
 }
 
 /// <summary>

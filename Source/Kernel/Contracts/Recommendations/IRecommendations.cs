@@ -137,7 +137,7 @@ public class RecommendationDetailsResponse
     /// Gets or sets the Occurred.
     /// </summary>
     [ProtoMember(5)]
-    public SerializableDateTimeOffset Occurred { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
 }
 
 /// <summary>

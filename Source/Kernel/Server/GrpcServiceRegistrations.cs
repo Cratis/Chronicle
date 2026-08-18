@@ -34,7 +34,6 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.Reactors.IReactors, Services.Observation.Reactors.Reactors>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
         services.AddSingleton<Contracts.Observation.Webhooks.IWebhooks, Services.Observation.Webhooks.Webhooks>();
-        services.AddSingleton<Contracts.ExternalServices.IExternalServices, Services.ExternalServices.ExternalServices>();
         services.AddSingleton<Contracts.SequenceQueries.ISequenceQueries, Services.SequenceQueries.SequenceQueries>();
         services.AddSingleton<Contracts.Captures.ICaptures, Services.Captures.Captures>();
         services.AddSingleton<Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions, Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
@@ -68,7 +67,6 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Observation.Reactors.Reactors>();
             _.MapGrpcService<Services.Observation.Reducers.Reducers>();
             _.MapGrpcService<Services.Observation.Webhooks.Webhooks>();
-            _.MapGrpcService<Services.ExternalServices.ExternalServices>();
             _.MapGrpcService<Services.SequenceQueries.SequenceQueries>();
             _.MapGrpcService<Services.Captures.Captures>();
             _.MapGrpcService<Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
