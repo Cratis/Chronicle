@@ -22,7 +22,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Api/Api.csproj" />
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -71,7 +70,12 @@
     </ItemGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="SwaggerDark.css" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
         <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Swagger" />
     </ItemGroup>
 </Project>

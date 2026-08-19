@@ -3,7 +3,7 @@
 
 import { Column } from '@cratis/components/DataTables';
 import { DataTable } from 'Components/DataTable';
-import { ObserverInformationForEventType } from 'Api/Observation';
+import { ObserverInformationForEventType } from 'Features/Observation';
 import { getObserverRunningStateAsText } from '../../../Namespaces/Observers/getObserverRunningStateAsText';
 import { getObserverTypeAsText } from '../../../Namespaces/Observers/getObserverTypeAsText';
 import strings from 'Strings';

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AddWebhook } from 'Features/Observation/Webhooks';
-import { AllEventSequences } from 'Api/EventSequences';
+import { AllEventSequences } from 'Features/Sequences';
 import { AllEventTypes } from 'Features/EventTypes';
 import { EventType } from 'Features/Contracts/Events';
 import { AuthorizationType } from 'Features/Contracts/Security';
