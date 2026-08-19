@@ -109,6 +109,7 @@ internal sealed class Captures(
     static global::Cratis.Chronicle.Contracts.Captures.CapturedEventResponse ToCapturedEventResponse(global::Cratis.Chronicle.Captures.CapturedEvent source) =>
         new()
         {
+            Id = source.Id,
             Context = source.Context,
             Content = source.Content
         };

@@ -14,6 +14,7 @@ internal static class AppendedEventConverters
     /// <param name="appendedEvent">The contract appended event to convert.</param>
     /// <returns>The converted appended event.</returns>
     public static AppendedEvent ToApi(this Contracts.Events.AppendedEvent appendedEvent) => new(
+        appendedEvent.Context.SequenceNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
         appendedEvent.Context.ToApi(),
         appendedEvent.Content,
         appendedEvent.OriginalContent,

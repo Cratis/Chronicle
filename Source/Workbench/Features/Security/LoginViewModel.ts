@@ -3,7 +3,9 @@
 
 import { injectable } from 'tsyringe';
 import { Guid } from '@cratis/fundamentals';
-import { ChangeUserPassword, GetStatus, SetInitialAdminPassword } from 'Features/Security';
+import { ChangeUserPassword } from './ChangeUserPassword';
+import { GetStatus } from './GetStatus';
+import { SetInitialAdminPassword } from './SetInitialAdminPassword';
 import { absolutePath } from '../../Utils/basePath';
 
 @injectable()

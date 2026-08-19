@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Represents an observer that consumes a given event type, together with the namespace it runs in.
 /// </summary>
+/// <param name="Id">The identity of the pairing, which is the observer within its namespace.</param>
 /// <param name="Namespace">The namespace the observer runs in.</param>
 /// <param name="Observer">The observer.</param>
 /// <remarks>
@@ -18,7 +19,7 @@ namespace Cratis.Chronicle.Observation;
 /// answer once the namespace is carried alongside.
 /// </remarks>
 [ReadModel]
-public record ObserverInformationForEventType(string Namespace, ObserverInformation Observer)
+public record ObserverInformationForEventType(string Id, string Namespace, ObserverInformation Observer)
 {
     /// <summary>
     /// Gets every observer consuming an event type, across all namespaces in an event store.

@@ -2,4 +2,5 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 export * from './AllEventStores';
 export * from './EnsureEventStore';
+export * from './EventStoreNames';
 export * from './ObserveEventStores';

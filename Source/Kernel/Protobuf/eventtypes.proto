@@ -31,6 +31,7 @@ message EventTypeDetailsResponse {
    EventTypeOwner Owner = 2;
    EventTypeSource Source = 3;
    string Schema = 4;
+   string Id = 5;
 }
 message EventTypeGenerationDefinition {
    uint32 Generation = 1;

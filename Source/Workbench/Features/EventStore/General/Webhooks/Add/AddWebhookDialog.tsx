@@ -83,7 +83,7 @@ export const AddWebhookDialog = () => {
         { label: strings.eventStore.general.webhooks.authTypes.oauth, value: AuthorizationType.OAuth }
     ];
 
-    const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
+    const eventSequenceOptions = allEventSequences.data.map(eventSequence => ({ label: eventSequence.name, value: eventSequence.name }));
 
     const isUrlValidFormat = (urlString: string): boolean => {
         try {

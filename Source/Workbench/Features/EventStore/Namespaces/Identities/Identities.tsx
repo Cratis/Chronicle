@@ -21,7 +21,7 @@ export const Identities = () => {
             title={strings.eventStore.namespaces.identities.title}
             query={AllIdentities}
             queryArguments={queryArgs}
-            dataKey='subject'
+            dataKey='id'
             emptyMessage={strings.eventStore.namespaces.identities.empty}>
 
             <DataPage.Columns>

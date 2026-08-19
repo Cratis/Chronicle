@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <summary>
 /// Represents the read model for a webhook, providing query access to the definitions an event store holds.
 /// </summary>
+/// <param name="Id">The identity of the webhook, which is its identifier.</param>
 /// <param name="Identifier">The unique identifier of the webhook.</param>
 /// <param name="Url">Where the webhook is called.</param>
 /// <param name="EventSequenceId">The event sequence the webhook observes.</param>
@@ -28,6 +29,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 [ReadModel]
 [BelongsTo(WellKnownServices.Webhooks)]
 public record WebhookDetails(
+    string Id,
     string Identifier,
     string Url,
     string EventSequenceId,

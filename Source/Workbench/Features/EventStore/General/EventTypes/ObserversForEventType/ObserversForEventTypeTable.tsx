@@ -36,7 +36,7 @@ export const ObserversForEventTypeTable = ({ observers }: ObserversForEventTypeT
     return (
         <DataTable
             value={observers as ObserverInformationForEventType[]}
-            dataKey='observer.id'
+            dataKey='id'
             emptyMessage={strings.eventStore.general.eventTypes.observers.empty}
             scrollable
             scrollHeight='flex'

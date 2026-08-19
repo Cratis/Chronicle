@@ -279,7 +279,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
     {
         var eventStores = await _servicesAccessor.Services.EventStores.AllEventStores().EnsureSuccess();
-        return eventStores.Select(_ => (EventStoreName)_).ToArray();
+        return eventStores.Select(_ => (EventStoreName)_.Name).ToArray();
     }
 
     /// <inheritdoc/>

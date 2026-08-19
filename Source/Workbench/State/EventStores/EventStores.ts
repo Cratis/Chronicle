@@ -15,7 +15,7 @@ export class EventStores implements IEventStores {
 
     constructor(allEventStores: ObserveEventStores) {
         allEventStores.subscribe(result => {
-            this.eventStores.next(result.data);
+            this.eventStores.next(result.data.map(eventStore => eventStore.name));
         });
     }
 

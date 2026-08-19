@@ -44,7 +44,7 @@ internal static class IdentityConverters
     /// keeps the source type as its first generic argument. See EventStoreNames for what that cost the last time.
     /// </remarks>
     public static IEnumerable<IdentityDetails> ToDetails(this IEnumerable<Concepts.Identities.Identity> identities) =>
-        [.. identities.Select(_ => new IdentityDetails(_.Subject, _.Name, _.UserName, _.OnBehalfOf?.ToContract()))];
+        [.. identities.Select(_ => new IdentityDetails(_.Subject, _.Subject, _.Name, _.UserName, _.OnBehalfOf?.ToContract()))];
 
     /// <summary>
     /// Convert to Chronicle representation.
