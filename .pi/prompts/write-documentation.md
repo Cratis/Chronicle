@@ -1,0 +1,1 @@
+../../.ai/prompts/write-documentation.prompt.md

@@ -1,0 +1,107 @@
+{
+    "$comment": [
+        "Quality gates run by the Stop hook (cratis-quality-gate.sh).",
+        "Data, not code: a consuming repository overrides this file (or points CRATIS_HOOKS_GATES at",
+        "its own) without touching the script. Gates run in order and stop at the first failure.",
+        "",
+        "A gate runs only when the working tree contains a change matching one of its \"changed\" globs,",
+        "AND every entry in \"requires\" is satisfied. An unsatisfied \"requires\" makes the gate a NO-OP",
+        "with a message on stderr — that is how a repo that has no .NET or no frontend stays quiet.",
+        "",
+        "Gate fields:",
+        "  id               stable identifier, shown in failure output",
+        "  description      one line, shown in the dry-run plan",
+        "  changed          globs (repo-relative) that must match a changed file for the gate to run",
+        "  excludeChanged   globs that never count as a relevant change",
+        "  requires.commands executables that must be on PATH",
+        "  requires.paths   repo-relative paths that must exist",
+        "  workingDirectory repo-relative directory the command runs in",
+        "  command          argv array — executed directly, never through a shell (no eval)",
+        "",
+        "Commands are pinned to .ai/rules/general.md 'Quality Gates' and .ai/hooks/agent-stop.md.",
+        "Note the Release build passes -p:CratisProxiesOutputPath= per general.md so the proxy",
+        "generator does not re-run and touch already-correct generated files. That property is the",
+        "only gate: the generator's target is Condition=\"'$(CratisProxiesOutputPath)' != ''\", and",
+        "there is no DisableProxyGenerator property — MSBuild accepts unknown -p: names silently,",
+        "so passing one looks effective and does nothing. The Debug gate deliberately omits the",
+        "override because general.md makes Debug the canonical proxy-regeneration trigger.",
+        "This repository's CI (.github/workflows/planner-build.yml) uses the same split."
+    ],
+    "enabled": true,
+    "failFast": true,
+    "maxOutputLines": 60,
+    "gates": [
+        {
+            "id": "backend-build-debug",
+            "description": "dotnet build (Debug) — compiles #if DEBUG spec code and regenerates the TypeScript proxies",
+            "changed": ["**/*.cs", "**/*.csproj", "**/*.slnx", "**/*.sln", "**/*.props", "**/*.targets"],
+            "excludeChanged": ["**/obj/**", "**/bin/**"],
+            "requires": { "commands": ["dotnet"], "paths": ["Planner.slnx"] },
+            "workingDirectory": ".",
+            "command": ["dotnet", "build", "--configuration", "Debug"]
+        },
+        {
+            "id": "backend-specs",
+            "description": "dotnet test (Debug, --no-build) — zero failures",
+            "changed": ["**/*.cs", "**/*.csproj", "**/*.slnx", "**/*.sln"],
+            "excludeChanged": ["**/obj/**", "**/bin/**"],
+            "requires": { "commands": ["dotnet"], "paths": ["Planner.slnx"] },
+            "workingDirectory": ".",
+            "command": ["dotnet", "test", "--configuration", "Debug", "--no-build"]
+        },
+        {
+            "id": "backend-build-release",
+            "description": "dotnet build (Release) — build-only check, proxy generation skipped (general.md)",
+            "changed": ["**/*.cs", "**/*.csproj", "**/*.slnx", "**/*.sln", "**/*.props", "**/*.targets"],
+            "excludeChanged": ["**/obj/**", "**/bin/**"],
+            "requires": { "commands": ["dotnet"], "paths": ["Planner.slnx"] },
+            "workingDirectory": ".",
+            "command": ["dotnet", "build", "--configuration", "Release", "-p:CratisProxiesOutputPath="]
+        },
+        {
+            "id": "frontend-lint",
+            "description": "yarn lint:ci — zero errors",
+            "changed": ["Source/**/*.ts", "Source/**/*.tsx"],
+            "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**"],
+            "requires": { "commands": ["yarn"], "paths": ["Source/Planner/package.json"] },
+            "workingDirectory": "Source/Planner",
+            "command": ["yarn", "lint:ci"]
+        },
+        {
+            "id": "frontend-compile",
+            "description": "yarn g:compile — zero TypeScript errors",
+            "changed": ["Source/**/*.ts", "Source/**/*.tsx"],
+            "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**"],
+            "requires": { "commands": ["yarn"], "paths": ["Source/Planner/package.json"] },
+            "workingDirectory": "Source/Planner",
+            "command": ["yarn", "g:compile"]
+        },
+        {
+            "id": "frontend-compile-specs",
+            "description": "yarn g:compile:specs — zero TypeScript errors in specs",
+            "changed": ["Source/**/*.ts", "Source/**/*.tsx"],
+            "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**"],
+            "requires": { "commands": ["yarn"], "paths": ["Source/Planner/package.json"] },
+            "workingDirectory": "Source/Planner",
+            "command": ["yarn", "g:compile:specs"]
+        },
+        {
+            "id": "frontend-specs",
+            "description": "yarn test — zero failures",
+            "changed": ["Source/**/*.ts", "Source/**/*.tsx"],
+            "excludeChanged": ["**/node_modules/**", "**/wwwroot/**", "**/dist/**"],
+            "requires": { "commands": ["yarn"], "paths": ["Source/Planner/package.json"] },
+            "workingDirectory": "Source/Planner",
+            "command": ["yarn", "test"]
+        },
+        {
+            "id": "ai-corpus",
+            "description": "validate-ai-setup.sh — adapters, frontmatter and cross-links healthy",
+            "changed": [".ai/**", ".claude/**", ".github/**", ".agents/**", ".pi/**", "AGENTS.md"],
+            "excludeChanged": ["**/*.local.json"],
+            "requires": { "commands": ["bash"], "paths": [".ai/hooks/scripts/validate-ai-setup.sh"] },
+            "workingDirectory": ".",
+            "command": ["bash", ".ai/hooks/scripts/validate-ai-setup.sh"]
+        }
+    ]
+}

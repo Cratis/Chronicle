@@ -1,0 +1,81 @@
+{
+    "$comment": [
+        "Deterministic pattern pass for the Cratis PostToolUse hook (cratis-pattern-scan.sh).",
+        "Data, not code: a consuming repository extends or overrides this without touching the script.",
+        "  - drop a cratis-patterns.local.json next to this file to ADD patterns (merged, never replaces)",
+        "  - or point CRATIS_HOOKS_PATTERNS at a replacement file",
+        "  - set \"enabled\": false on a shipped pattern in the local file to silence it (matched by id)",
+        "",
+        "Pattern fields:",
+        "  id                    stable identifier; also the de-duplication key (fires once per file per session)",
+        "  rule                  human reference into .ai/rules (shown with the reminder)",
+        "  pattern               POSIX ERE, matched line by line",
+        "  paths                 globs the file must match (repo-relative)",
+        "  exclude_paths         globs that veto the match",
+        "  message               the one-line reminder appended to context",
+        "  join_lines            optional; match against N joined lines so a signature can wrap (default 1)",
+        "  within_type_attribute optional; only match inside a type declaration carrying [ThatAttribute]",
+        "  requires_in_file      optional EREs that must ALSO match somewhere in the file",
+        "  absent_in_file        optional EREs that must NOT match anywhere in the file",
+        "  enabled               optional; default true",
+        "",
+        "The C# patterns are application-profile only (.ai/rules/general.md). They are scoped by the",
+        "\"paths\" globs to this repository's application source root (Source/**). A framework-profile",
+        "repository (Arc, Chronicle, Fundamentals, Components) should disable them in its local file."
+    ],
+    "patterns": [
+        {
+            "id": "cratis-automap-call",
+            "rule": "general.md rule 10 [contract]",
+            "pattern": "\\.AutoMap[[:space:]]*\\(",
+            "paths": ["Source/**/*.cs"],
+            "exclude_paths": ["**/obj/**", "**/bin/**", "**/*.g.cs", "**/*.Designer.cs"],
+            "absent_in_file": ["NoAutoMap"],
+            "message": "AutoMap is on by default in Chronicle — never call `.AutoMap()`. Remove the call and match property names; use `[SetFrom<T>]` or `.Set().To()` only for genuine name differences. `.AutoMap()` is legal only inside a scope previously disabled with `.NoAutoMap()`."
+        },
+        {
+            "id": "cratis-ieventlog-in-handle",
+            "rule": "general.md rule 14 [contract]",
+            "pattern": "Handle[[:space:]]*\\([^)]*IEventLog",
+            "join_lines": 5,
+            "paths": ["Source/**/*.cs"],
+            "exclude_paths": ["**/obj/**", "**/bin/**", "**/*.g.cs"],
+            "message": "Never inject `IEventLog` into `Handle()`. Express appends through the return type — return the event, `IEnumerable<object>`, or `EventForEventSourceId` wrappers for cross-stream appends."
+        },
+        {
+            "id": "cratis-nullable-event-property",
+            "rule": "general.md rule 6 [contract]",
+            "pattern": "[A-Za-z_][A-Za-z0-9_.]*(<[^<>]*>)?\\?[[:space:]]+[A-Za-z_]",
+            "within_type_attribute": "EventType",
+            "paths": ["Source/**/*.cs"],
+            "exclude_paths": ["**/obj/**", "**/bin/**", "**/*.g.cs"],
+            "message": "Avoid nullable properties on an `[EventType]` — Chronicle's analyzer warns on them. Model the optional fact as a separate event, or resolve the nullable command input to a non-null sentinel before constructing the event."
+        },
+        {
+            "id": "cratis-route-on-readmodel",
+            "rule": "general.md rule 12 [contract]",
+            "pattern": "\\[Route[[:space:]]*\\(",
+            "within_type_attribute": "ReadModel",
+            "paths": ["Source/**/*.cs"],
+            "exclude_paths": ["**/obj/**", "**/bin/**", "**/*.g.cs"],
+            "message": "Model-bound query custom paths use `[Path(\"...\")]` (Cratis `PathAttribute`), not ASP.NET `[Route]`. `[Route]` is reserved for controller-based endpoints, which this convention avoids."
+        },
+        {
+            "id": "cratis-controller-base",
+            "rule": "general.md rule 1 [contract]",
+            "pattern": "[:,][[:space:]]*ControllerBase([^A-Za-z0-9_]|$)",
+            "requires_in_file": ["using[[:space:]]+Microsoft\\.AspNetCore\\.Mvc[[:space:]]*;"],
+            "paths": ["Source/**/*.cs"],
+            "exclude_paths": ["**/obj/**", "**/bin/**", "**/*.g.cs"],
+            "message": "Model-bound — no controllers. Commands are `[Command]` records with a public instance `Handle()`; queries are `static` methods on `[ReadModel]` records. Arc generates the HTTP surface."
+        },
+        {
+            "id": "cratis-primereact-dialog-import",
+            "rule": "general.md rule 16 [convention]",
+            "pattern": "from[[:space:]]+['\"]primereact/dialog['\"]",
+            "paths": ["**/*.ts", "**/*.tsx"],
+            "exclude_paths": ["**/node_modules/**", "**/dist/**", "**/wwwroot/**", "**/obj/**", "**/bin/**"],
+            "message": "Never import `Dialog` from `primereact/dialog` — use `CommandDialog` / `Dialog` from `@cratis/components`."
+        }
+    ]
+}
