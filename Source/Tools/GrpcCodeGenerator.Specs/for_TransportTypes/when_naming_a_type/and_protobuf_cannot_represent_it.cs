@@ -14,9 +14,19 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_TransportTypes.when_namin
 /// </remarks>
 public class and_protobuf_cannot_represent_it : Specification
 {
+    /// <summary>
+    /// The stand-in is written into a file generated one service at a time into one namespace each, and the
+    /// primitives live in another - so the name it is referred to by has to carry its own namespace.
+    /// </summary>
+    const string SerializableDateTimeOffset = $"global::{TransportTypes.PrimitivesNamespace}.{nameof(Contracts.Primitives.SerializableDateTimeOffset)}";
+
     [Fact]
     void should_stand_in_for_a_date_time_offset() =>
-        TransportTypes.NameFor(typeof(DateTimeOffset)).ShouldEqual(nameof(Contracts.Primitives.SerializableDateTimeOffset));
+        TransportTypes.NameFor(typeof(DateTimeOffset)).ShouldEqual(SerializableDateTimeOffset);
+
+    [Fact]
+    void should_qualify_the_stand_in_with_its_namespace() =>
+        TransportTypes.NameFor(typeof(DateTimeOffset))!.StartsWith($"global::{TransportTypes.PrimitivesNamespace}.", StringComparison.Ordinal).ShouldBeTrue();
 
     [Fact]
     void should_refuse_a_type_it_has_no_stand_in_for() =>
