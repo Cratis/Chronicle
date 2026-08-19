@@ -178,6 +178,7 @@ All gates pass before merging, opening a PR, or marking a slice complete — exc
 | Strongly-typed values (`ConceptAs<T>`, `EventSourceId<T>`) | `concepts.md` |
 | Shared term definitions (event, projection, reducer, reactor, observer, DCB, …) | `glossary.md` |
 | Diagnosing a misbehaving slice (read model stale, proxy missing, quarantine, …) | the **diagnose-slice** skill |
+| Inspecting or operating a **running** Chronicle store (failed partitions, replays, browsing events) with the `cratis` CLI | the **inspect-running-chronicle** skill |
 | EF Core read models / migrations | `efcore.md`, `efcore.specs.md` |
 | PRs / commits | `pull-requests.md`, `git-commits.md` |
 | Event modeling / schema migration / calling commands from code / paging / cross-cutting metadata / multi-tenancy | the matching skills |

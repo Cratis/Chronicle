@@ -15,7 +15,7 @@ Symptom → likely cause → fix for the common ways a Cratis **application** sl
 | Command rejected unexpectedly | a `CommandValidator`/`ConceptValidator` rule, or `Provide()` short-circuited with `ValidationResult.Error` | `add-business-rule`, `cratis-command` |
 | Handler returns HTTP 500 instead of rejecting | threw from `Provide()`/`Handle()` for a *business* rule (that's an exception, not a rejection) | return `Result<TEvent, ValidationResult>` — `add-business-rule` |
 | Reactor's returned events never appended | returned `EventForEventSourceId` on a Chronicle version before reactor support | return event objects, or `ReactorSideEffect` for another target — `reactors.md` |
-| Projection/reactor stops processing ("quarantined") | a handler threw; the partition paused and the observer quarantined (does **not** auto-resume) | fix the handler (make it idempotent); an operator calls `ClearObserverQuarantine()` — `reactors.md` |
+| Projection/reactor stops processing ("quarantined") | a handler threw; the partition paused and the observer quarantined (does **not** auto-resume) | read the failure off the server first — **inspect-running-chronicle**; then fix the handler (make it idempotent) and replay — `reactors.md` |
 | Duplicate side effect on replay | non-idempotent reactor without `[OnceOnly]` | mark the handler `[OnceOnly]` — `reactors.md` |
 | Chronicle analyzer warns on an event property | a nullable event property | model the optional fact as a **separate** event — `vertical-slices.md`, `event-modeling` |
 | A read model needs a field from another slice | wrong stream boundary / missing event | re-model (information completeness) — `event-modeling`; never cross-read another read model at runtime |
@@ -36,6 +36,12 @@ Symptom → likely cause → fix for the common ways a Cratis **application** sl
 | Spec code leaks into a Release build | spec not wrapped in `#if DEBUG … #endif` | wrap the file — `specs.scenarios.csharp.md` |
 | Off-by-one in event-tail assertions | sequence numbers are **zero-based** (tail of one event is `0`) | `specs.scenarios.csharp.md` |
 | Order-dependent flake on a uniqueness rule | a hardcoded value collides across tests | use a per-test value (`Guid.NewGuid()`); don't reach for `[Collection]` for collisions — `specs.scenarios.csharp.md` |
+
+## When the symptom is only visible on a running server
+
+Everything above is diagnosed from the code. When the read model is stale **in a deployed store** and the same slice behaves locally, the answer is in the server's own state rather than the source — a failed partition carrying the exception that stopped it, an observer that never registered, an event that was never appended. Use **inspect-running-chronicle**; the `cratis` CLI reads all of it.
+
+The distinction that matters: a failed partition does not retry itself, so what looks like "the projection is slow" is usually "the projection stopped, permanently, with a recorded reason nobody has read".
 
 ## When nothing here fits
 
