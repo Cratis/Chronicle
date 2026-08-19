@@ -25,6 +25,7 @@ internal static class GeneratedGrpcServices
     {
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Captures.ICaptures, global::Cratis.Chronicle.Services.Captures.Captures>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.EventStores.IEventStores, global::Cratis.Chronicle.Services.EventStores.EventStores>();
+        services.AddSingleton<global::Cratis.Chronicle.Contracts.EventTypes.IEventTypes, global::Cratis.Chronicle.Services.EventTypes.EventTypes>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.ExternalServices.IExternalServices, global::Cratis.Chronicle.Services.ExternalServices.ExternalServices>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Identities.IIdentities, global::Cratis.Chronicle.Services.Identities.Identities>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Jobs.IJobs, global::Cratis.Chronicle.Services.Jobs.Jobs>();
@@ -46,6 +47,7 @@ internal static class GeneratedGrpcServices
     {
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Captures.Captures>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.EventStores.EventStores>();
+        endpoints.MapGrpcService<global::Cratis.Chronicle.Services.EventTypes.EventTypes>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.ExternalServices.ExternalServices>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Identities.Identities>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Jobs.Jobs>();

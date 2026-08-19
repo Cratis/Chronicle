@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AllEventTypesWithSchemas } from 'Api/EventTypes';
+import { ObserveEventTypes } from 'Features/EventTypes';
 import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from '@cratis/components/types';
@@ -97,7 +97,7 @@ export const Projections = () => {
     const [pendingReadModel, setPendingReadModel] = useState<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
-    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
     const eventSchemas = useMemo(() => {
         if (!eventTypes.data) return undefined;
         const out: Record<string, JsonSchema> = {};

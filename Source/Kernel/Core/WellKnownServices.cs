@@ -62,4 +62,9 @@ public static class WellKnownServices
     /// The name of the Captures service.
     /// </summary>
     public const string Captures = "Captures";
+
+    /// <summary>
+    /// The name of the EventTypes service.
+    /// </summary>
+    public const string EventTypes = "EventTypes";
 }

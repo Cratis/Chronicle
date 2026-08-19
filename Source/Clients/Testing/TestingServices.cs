@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
@@ -42,7 +43,8 @@ using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Co
 using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services.EventStores.EventStores;
-using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
+using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
+using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.EventTypes.EventTypes;
 using KernelExternalServicesService = KernelCore::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
@@ -167,7 +169,11 @@ internal sealed class TestingServices(
         new KernelIdentitiesService(storage, NullLogger<KernelIdentitiesService>.Instance));
 
     readonly Lazy<IEventTypes> _eventTypes = new(() =>
-        new KernelEventTypesService(storage, grainFactory, new EventSequences.NoOpEventTypesCacheClient()));
+        new KernelEventTypesService(
+            storage,
+            new EventSequences.NoOpEventTypesCacheClient(),
+            new KernelEventTypeRegistrar(grainFactory),
+            NullLogger<KernelEventTypesService>.Instance));
 
     readonly Lazy<IRecommendations> _recommendations = new(() =>
         new KernelRecommendationsService(grainFactory, storage, NullLogger<KernelRecommendationsService>.Instance));
