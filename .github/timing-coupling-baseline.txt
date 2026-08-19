@@ -96,6 +96,7 @@
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_starting_twice.cs
 1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
+1 Source/Kernel/Core.Specs/ConcurrentCallGate.cs  # deadline
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
 3 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_the_catchup_trigger_faults.cs
 1 Source/Kernel/Core.Specs/Jobs/for_JobStepThrottle/when_acquiring_and_releasing_slots.cs  # knob
@@ -105,5 +106,4 @@
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_different_event_source_ids_are_acquired_concurrently.cs  # deadline
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/given/a_striped_pipeline_over_a_shared_read_model.cs  # interleave
-1 Source/Kernel/Services.Specs/ConcurrentCallGate.cs  # deadline
 1 Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs  # interleave
