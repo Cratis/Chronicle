@@ -9,17 +9,19 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_TransportTypes.when_namin
 /// </summary>
 public class and_it_reaches_the_generated_type_name : Specification
 {
+    const string SerializableDateTimeOffset = $"global::{TransportTypes.PrimitivesNamespace}.{nameof(Contracts.Primitives.SerializableDateTimeOffset)}";
+
     [Fact]
     void should_substitute_a_bare_property() =>
-        TypeHelper.GetTypeName(typeof(DateTimeOffset)).ShouldEqual("SerializableDateTimeOffset");
+        TypeHelper.GetTypeName(typeof(DateTimeOffset)).ShouldEqual(SerializableDateTimeOffset);
 
     [Fact]
     void should_substitute_a_nullable_property() =>
-        TypeHelper.GetTypeName(typeof(DateTimeOffset?)).ShouldEqual("SerializableDateTimeOffset?");
+        TypeHelper.GetTypeName(typeof(DateTimeOffset?)).ShouldEqual($"{SerializableDateTimeOffset}?");
 
     [Fact]
     void should_substitute_inside_a_collection() =>
-        TypeHelper.GetTypeName(typeof(IEnumerable<DateTimeOffset>)).ShouldEqual("IEnumerable<SerializableDateTimeOffset>");
+        TypeHelper.GetTypeName(typeof(IEnumerable<DateTimeOffset>)).ShouldEqual($"IEnumerable<{SerializableDateTimeOffset}>");
 
     [Fact]
     void should_leave_types_protobuf_handles_alone() =>
