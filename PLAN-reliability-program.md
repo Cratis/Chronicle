@@ -582,7 +582,7 @@ decision only the user can make.
 | 2.3 | Close-the-class policy | todo | | `.ai` rule, NOT the PR template (§5 gotcha) |
 | 2.4 | Regression-tax dashboard | **done** | #3771 | monthly review = the 1st-of-month commit to `Metrics/regression-tax.md`, seeded to Jul'26: passes volume and fix-share (9.9%), fails patch share (56.8%) and reverts (5) |
 | 8.a | Regenerate-and-diff gate | scoped | | measured, not estimated: 133 tracked generated files (all `Source/Workbench/Api`, not the 154 the audit guessed) and 23 protos. Proxy half is ready to build — regeneration is already byte-identical. Proto half is **blocked on #3734**, which is what makes generation work at all; gRPC contracts must stay excluded. See the note under §8 |
-| 8.b | Public-API zero-coverage ratchet | scoped | | measured: **9** genuinely zero-covered public types in `Cratis.Chronicle.Testing`, not the 20 the audit reports. **Tier 1 as specified must not be built** — name-grep calls 5 fully-exercised types uncovered. Go straight to Tier 2 (cobertura). See the note under §8 |
+| 8.b | Public-API zero-coverage ratchet | **done** | | Tier 2 built directly, skipping the specified Tier 1. Reads the cobertura the `specs` job already collects, so it costs a file parse rather than a second test run; baselined at the 9 genuinely zero-covered types, verified against the full 24-report suite. See the note under §8 |
 | 8.c | Kernel-facing analysis | todo | | the CHR family is consumer-only today |
 | 8.d | Timing-coupling ratchet + rule | **done** | #3765 | 67 governing / 25 legitimate sleeps; unannotated baseline entries are 2.1 work |
 | 8.e | Silent-stub sibling comparison | todo | | |
@@ -751,6 +751,29 @@ a later refinement; the cheap step is the one that produces false accusations. T
 already exists in CI (`dotnet-build.yml` collects it and publishes `Documentation/statistics`), so the
 ratchet should consume that artifact from the start — baseline the 9, fail on a new zero-covered
 public type, and normalize generic arity. Cost is a parse of a file CI already produces.
+
+**Built, and what the build changed (2026-08-19).** `.github/scripts/assert-public-api-coverage-ratchet.py`
+runs as a step in the existing `specs` job, reading the cobertura reports that job already produces.
+Two things only showed up once it was real:
+
+- **A namespace filter is not a visibility filter.** Seeding from `Cratis.Chronicle.Testing.*` gave 13
+  entries, not 9. Four of them - `InMemoryEventCursor`, `InMemoryKernelEventTypes`,
+  `InProcessNoOpConstraintsService`, `NoOpEventTypesCacheClient` - are `internal sealed`. Cobertura
+  instruments them and reports them under a shipped namespace, so the ratchet was about to demand
+  consumer-facing specs for types no consumer can reference. `.github/public-api-surface.txt`, generated
+  from source by `report-public-api-surface.py` and asserted current by a spec, is what separates the
+  two. Reflecting over the built assembly would have been more direct, but `MetadataLoadContext` is not
+  in `Directory.Packages.props` and adding a package to satisfy a CI script is the worse trade; the scan
+  was checked against the assembly and finds all 35 exported types.
+- **Coverage has to be unioned across reports.** Each spec project writes its own cobertura file, and
+  **53 `Testing` types are covered in one report and zero in another**. Judging per report would have
+  produced a large pile of confident false accusations.
+
+Baselined at the 9, and the seed is not an artifact of the project it was taken from: re-running the
+full CI filter across all 24 reports reproduces the same 9 byte-for-byte. Proven non-vacuous three ways -
+removing the surface filter, breaking generic-arity normalization, and drifting the surface list each
+fail the specs; missing coverage and a missing surface file both fail loudly rather than passing while
+measuring nothing.
 
 **8.g — the body half, built and measured (2026-08-19).** `.github/workflows/pull-request-body.yml`
 runs `assert-pull-request-body.py` on every pull request, and on `edited` as well as pushes, because

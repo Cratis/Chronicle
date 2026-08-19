@@ -1,0 +1,23 @@
+# Public types in shipped client packages that no spec covers a single line of.
+#
+# Seeded 2026-08-19 from a real coverage run, not from a name grep. Entries may only be REMOVED:
+# a new public type with no coverage fails the build. Removing one means a spec now exercises it.
+#
+# The entry that matters is AppendedEventWithResultShouldExtensions - 36 lines of assertion helper
+# shipped for consumers to call, with nothing verifying any of it. Most of the rest are exception
+# types whose only uncovered lines are a constructor, which is why this is a baseline to work down
+# rather than a bug list to fix at once.
+#
+# Regenerate with:
+#   python3 .github/scripts/assert-public-api-coverage-ratchet.py --report
+# and the surface list it is filtered against with:
+#   python3 .github/scripts/report-public-api-surface.py > .github/public-api-surface.txt
+Cratis.Chronicle.Testing.Auditing.CausationManagerForTesting
+Cratis.Chronicle.Testing.DateAndTimeExtensions
+Cratis.Chronicle.Testing.EventSequences.AppendResultAssertionException
+Cratis.Chronicle.Testing.EventSequences.AppendedEventWithResultShouldExtensions
+Cratis.Chronicle.Testing.EventSequences.EventSequenceAssertionException
+Cratis.Chronicle.Testing.Reactors.CannotSeedReadModelWithExplicitEventStore
+Cratis.Chronicle.Testing.Reactors.ReactorSideEffectAssertionException
+Cratis.Chronicle.Testing.ReadModels.NoReadModelHandlerFound
+Cratis.Chronicle.Testing.ReadModels.ProjectionDefinitionBuildFailed
