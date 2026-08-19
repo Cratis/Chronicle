@@ -59,7 +59,7 @@ export const Webhooks = () => {
                 title={strings.eventStore.general.webhooks.title}
                 query={GetWebhooks}
                 queryArguments={{ eventStore: params.eventStore! }}
-                dataKey='id'
+                dataKey='identifier'
                 emptyMessage={strings.eventStore.general.webhooks.empty}
                 detailsComponent={WebhookDetails}
                 selection={selectedWebhook}
