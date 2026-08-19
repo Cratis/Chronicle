@@ -5,14 +5,16 @@ using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.when_registering;
 
-internal class and_upcast_references_invalid_property : given.all_dependencies
+public class and_upcast_references_invalid_property : given.all_dependencies
 {
     Exception _exception;
     const string SchemaGen1 = """{"type":"object","properties":{"name":{"type":"string"}}}""";
     const string SchemaGen2 = """{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"integer"}}}""";
 
     async Task Because() =>
-        _exception = await Catch.Exception(async () => await _subject.Register("test-store", [
+        _exception = await Catch.Exception(async () => await _subject.Register(
+            "test-store",
+            [
                 new EventTypeRegistration
                 {
                     Type = new() { Id = "some-event", Generation = 2 },
@@ -33,7 +35,10 @@ internal class and_upcast_references_invalid_property : given.all_dependencies
                         new EventTypeGenerationDefinition { Generation = 2, Schema = SchemaGen2 }
                     }
                 }
-            ], false, _storage, _eventTypesCacheClient));
+            ],
+            false,
+            _storage,
+            _eventTypesCacheClient));
 
     [Fact] void should_throw_invalid_migration_property() => _exception.ShouldBeOfExactType<InvalidMigrationPropertyForEventType>();
 }

@@ -9,7 +9,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.given;
 
-internal class all_dependencies : Specification
+public class all_dependencies : Specification
 {
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
