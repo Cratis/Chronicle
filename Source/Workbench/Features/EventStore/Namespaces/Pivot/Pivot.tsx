@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { PivotDimension, PivotFilter, PivotViewer } from '@cratis/components/PivotViewer';
-import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
+import { AppendedEvents, AppendedEventsParameters } from 'Features/Sequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
-import { AppendedEvent } from 'Api/Events';
+import { AppendedEvent } from 'Features/Sequences';
 import { ObjectContentEditor as _OCE } from '@cratis/components';
 const ObjectContentEditor = _OCE.ObjectContentEditor;
 import { ObserveEventTypes } from 'Features/EventTypes';

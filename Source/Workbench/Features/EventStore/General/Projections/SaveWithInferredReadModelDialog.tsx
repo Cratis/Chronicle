@@ -4,7 +4,7 @@
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
-import { SaveProjectionWithInferredReadModel } from 'Api/Projections';
+import { SaveProjectionWithInferredReadModel } from 'Features/ProjectionEditor';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';

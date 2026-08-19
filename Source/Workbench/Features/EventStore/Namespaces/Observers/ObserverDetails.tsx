@@ -4,8 +4,8 @@
 import { Column } from '@cratis/components/DataTables';
 import { DataTable } from 'Components/DataTable';
 import { Tabs, TabPanel } from 'Components/Tabs';
-import { ObserverInformation } from 'Api/Observation/ObserverInformation';
-import { ObserverOwner } from 'Api/Observation';
+import { ObserverInformation } from 'Features/Observation';
+import { ObserverOwner } from 'Features/Contracts/Observation';
 import { ConnectedClientDetails, ConnectedClientsForObserver } from 'Features/Clients';
 import strings from 'Strings';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';

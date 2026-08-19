@@ -33,7 +33,7 @@ public record ObserverInformation(
     string EventSequenceId,
     ObserverType Type,
     ObserverOwner Owner,
-    IEnumerable<string> EventTypes,
+    IEnumerable<Contracts.Events.EventType> EventTypes,
     ulong NextEventSequenceNumber,
     ulong LastHandledEventSequenceNumber,
     ulong TailEventSequenceNumber,
@@ -54,6 +54,33 @@ public record ObserverInformation(
         var definitions = await storage.GetEventStore(eventStore).Observers.GetAll();
         var states = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.GetAll();
         return ObserverInformationConverters.Join(definitions, states);
+    }
+
+    /// <summary>
+    /// Gets the replayable observers in a namespace that consume any of a set of event types.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The namespace within the event store.</param>
+    /// <param name="eventTypes">The identifiers of the event types to find observers for.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read observers from.</param>
+    /// <returns>A collection of observer information.</returns>
+    /// <remarks>
+    /// The join is an inner one on purpose: an observer that has never run has nothing to replay, so unlike the
+    /// all-observers listing it must not appear here.
+    /// </remarks>
+    internal static async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(
+        string eventStore,
+        string @namespace,
+        IEnumerable<string> eventTypes,
+        IStorage storage)
+    {
+        var types = eventTypes.Select(eventType => new Concepts.Events.EventType(eventType, Concepts.Events.EventTypeGeneration.First, false));
+        var definitions = await storage.GetEventStore(eventStore).Observers.GetReplayableObserversForEventTypes(types);
+        var states = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.GetAll();
+
+        return from definition in definitions
+               join state in states on definition.Identifier equals state.Identifier
+               select ObserverInformationConverters.ToObserverInformation(definition, state);
     }
 
     /// <summary>
