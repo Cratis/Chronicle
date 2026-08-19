@@ -564,7 +564,7 @@ decision only the user can make.
 | 8.e | Silent-stub sibling comparison | todo | | |
 | 8.f | Path-filter completeness meta-check | **done** | #3761 | |
 | 8.g | PR-body and commit lint | todo | | heading allowlist, not a denylist |
-| 8.h | SQL provider on PR runs | in review | #3764 | SQLite added. Neither of the 2 non-Mongo regressions blocks it any more: the projections failure was `JobStateConverter`, fixed in v16.36.1 and retested clean; the `for_Reactors` flake is #3778. Only `verify` is red, and a `git merge origin/main` clears it — see the note under §8 |
+| 8.h | SQL provider on PR runs | **done** | #3764 | every pull request now runs SQLite alongside MongoDB — 51 client-integration jobs, 17 shards × 3 configurations. Merged once both blocking shards were green on `main`; see the note under §8 for what SQLite does and does not catch |
 
 **Session log — 2026-08-18.** Seventeen pull requests merged: the whole of Phase 0 except 0.6 and
 the rest of 0.7, the core of 1.1, half of 1.2 and 1.4, and audit items 8.d and 8.f. Two things worth
@@ -682,15 +682,36 @@ Observation artifacts in Core cannot yet reproduce the hand-written
 those artifacts are converted. A gate that regenerated them would either fail permanently or destroy
 the surface.
 
-**8.h — where it actually stands (2026-08-19).** #3764 adds SQLite alongside MongoDB on pull requests
-and is still open, but the board's old reason for holding it — "blocked on 2 live non-Mongo
-regressions on main" — no longer describes reality. The first, the `when_renaming_read_model`
-projections failure on SQLite and PostgreSQL, was root-caused to `JobStateConverter`, fixed, and
-released in **v16.36.1**; retested afterwards it is 3/3 clean on SQLite and 1/1 on PostgreSQL and
-MongoDB. The second is the `for_Reactors` disconnected-state flake, now filed and understood as
-**#3778**, which is the observer running-state flap parked behind task 2.1. What is left is
-procedural: #3764's only remaining red check is `verify`, because its branch predates #3771's updated
-`verify-semver-label.yml` and so does not yet recognize `no-release`; a `git merge origin/main`
-clears it. **It must not merge until that `verify` is green and the `for_Reactors` situation is
-understood**, or it lands a permanently red check on arrival — the alarm-fatigue failure mode task
-0.5 exists to catch, reintroduced by the very task meant to widen coverage.
+**8.h — landed, and what it is actually worth (2026-08-19).** #3764 merged: every pull request now runs
+SQLite beside MongoDB, 51 client-integration jobs against the previous 34, for about +54 runner-minutes
+and ~2 minutes of wall clock that is not on the critical path.
+
+It was held back for a real reason and released only once that reason expired. The review set the
+condition plainly — *landing a gate that is red on arrival is how gates get disabled* — because two
+shards were failing on non-Mongo backends. Both are now green on `main`, confirmed on the
+all-providers nightly [32210036217](https://github.com/Cratis/Chronicle/actions/runs/32210036217) at
+**99/99 jobs**, with `Projections 3of4` and `for_Reactors 1of2` passing on all five configurations.
+They turned out to be two different problems, not one:
+
+- `Projections 3of4 / when_renaming_read_model` was **`JobStateConverter`** not owning derived job
+  state types — fixed in `683ff0075`, released in **v16.36.1**.
+- `for_Reactors 1of2 / should_have_reactor_observer_be_in_disconnected_state` is **#3778**, the
+  observer `RunningState` flap. It is *not* fixed — it is understood and parked behind task 2.1. It
+  was judged acceptable to land on because it is green across all backends and retries now, it is
+  tracked, and MongoDB is equally exposed to it, so the SQLite widening neither causes nor worsens it.
+
+**Be honest about the coverage this buys.** Measured during review, SQLite would **not** have caught
+either of the two defects that originally broke the nightly for six nights. Row order: SQLite scans
+in rowid (insertion) order and so agrees with MongoDB — only **mssql**, with clustered-key order,
+surfaces it. Namespace provisioning: the buggy path sits behind `EnsureDatabaseExists`, which returns
+early for anything that is not PostgreSQL or SQL Server, and SQLite creates its file on connect, so
+the path never executes. What justifies it is different and stronger — it caught **two fresh
+deterministic non-Mongo regressions that had merged green**, which is exactly the class the gate
+exists for. **mssql was deliberately rejected** despite being the only backend that catches the
+row-order class: it is the slowest leg, needs a second container plus EF migrations, and failed 3 of
+the last 4 nightlies — a slow, chronically-red required check gets ignored within a week. An
+allowlist of "namespaces currently green on sqlite" was rejected too, since it rots silently.
+
+One cheap follow-up is left undone: the pre-pull step runs `docker pull mongo` unconditionally, so
+every SQLite job pulls an image its fixture never starts — 17 needless pulls per pull request, one
+conditional to fix.
