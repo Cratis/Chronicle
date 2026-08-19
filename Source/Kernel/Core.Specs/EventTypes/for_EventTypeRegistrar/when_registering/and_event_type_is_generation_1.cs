@@ -5,18 +5,23 @@ using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.when_registering;
 
-internal class and_event_type_is_generation_1 : given.all_dependencies
+public class and_event_type_is_generation_1 : given.all_dependencies
 {
     Exception _exception;
 
     async Task Because() =>
-        _exception = await Catch.Exception(async () => await _subject.Register("test-store", [
+        _exception = await Catch.Exception(async () => await _subject.Register(
+            "test-store",
+            [
                 new EventTypeRegistration
                 {
                     Type = new() { Id = "some-event", Generation = 1 },
                     Schema = "{}"
                 }
-            ], false, _storage, _eventTypesCacheClient));
+            ],
+            false,
+            _storage,
+            _eventTypesCacheClient));
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
 }

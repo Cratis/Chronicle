@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -10,7 +9,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.given;
 
-internal class all_dependencies : Specification
+public class all_dependencies : Specification
 {
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;

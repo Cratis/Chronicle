@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.EventTypes;
 /// under a generation that already exists, and a new generation is a fact the system event log records. The
 /// artifacts state what is being asked for; this decides whether it is allowed and what it means.
 /// </remarks>
-internal sealed class EventTypeRegistrar(IGrainFactory grainFactory)
+public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 {
     /// <summary>
     /// Registers event types into an event store, validating them and recording what changed.
@@ -36,7 +36,7 @@ internal sealed class EventTypeRegistrar(IGrainFactory grainFactory)
     /// <exception cref="MissingFirstGenerationForEventType">Thrown when the migration chain has no first generation.</exception>
     /// <exception cref="MissingMigrationForEventTypeGeneration">Thrown when a generation in the chain has no migration.</exception>
     /// <exception cref="EventTypeSchemaChanged">Thrown when a stored generation's schema changed under it.</exception>
-    internal async Task Register(
+    public async Task Register(
         EventStoreName eventStore,
         IEnumerable<EventTypeRegistration> types,
         bool skipValidation,
