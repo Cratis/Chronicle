@@ -27,7 +27,6 @@
         <Project Path="Source/Kernel/Core.Specs/Core.Specs.csproj" />
         <Project Path="Source/Kernel/Server/Server.csproj" />
         <Project Path="Source/Kernel/Server.Specs/Server.Specs.csproj" />
-        <Project Path="Source/Kernel/Services.Specs/Services.Specs.csproj" />
         <Project Path="Source/Kernel/Storage/Storage.csproj" />
         <Project Path="Source/Kernel/Storage.AzureKeyVault/Storage.AzureKeyVault.csproj" />
         <Project Path="Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
