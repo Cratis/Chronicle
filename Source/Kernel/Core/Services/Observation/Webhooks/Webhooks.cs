@@ -63,6 +63,7 @@ internal sealed class Webhooks(
     static global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse ToWebhookDetailsResponse(global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails source) =>
         new()
         {
+            Id = source.Id,
             Identifier = source.Identifier,
             Url = source.Url,
             EventSequenceId = source.EventSequenceId,

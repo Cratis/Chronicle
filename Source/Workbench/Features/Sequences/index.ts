@@ -8,6 +8,7 @@ export * from './AppendMany';
 export * from './Causation';
 export * from './EventContext';
 export * from './EventRevision';
+export * from './EventSequenceNames';
 export * from './EventToAppend';
 export * from './EventType';
 export * from './ExportedEvent';

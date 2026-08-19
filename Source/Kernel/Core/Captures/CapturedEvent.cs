@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Captures;
 /// <summary>
 /// Represents the read model for an event a capture ingested.
 /// </summary>
+/// <param name="Id">The identity of the event within its capture, which is its sequence number.</param>
 /// <param name="Context">The context the event was appended with.</param>
 /// <param name="Content">The JSON representation of the event.</param>
 /// <remarks>
@@ -23,7 +24,7 @@ namespace Cratis.Chronicle.Captures;
 /// </remarks>
 [ReadModel]
 [BelongsTo(WellKnownServices.Captures)]
-public record CapturedEvent(Contracts.Events.EventContext Context, string Content)
+public record CapturedEvent(string Id, Contracts.Events.EventContext Context, string Content)
 {
     /// <summary>
     /// Gets the events a capture has ingested, most recent first.
@@ -68,6 +69,7 @@ public record CapturedEvent(Contracts.Events.EventContext Context, string Conten
                 .OrderByDescending(@event => (ulong)@event.Context.SequenceNumber)
                 .Take(maxEvents <= 0 ? 200 : maxEvents)
                 .Select(@event => new CapturedEvent(
+                    ((ulong)@event.Context.SequenceNumber).ToString(System.Globalization.CultureInfo.InvariantCulture),
                     @event.Context.ToContract(),
                     JsonSerializer.Serialize(@event.Content, jsonSerializerOptions)))
         ];

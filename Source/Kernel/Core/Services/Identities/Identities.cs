@@ -44,6 +44,7 @@ internal sealed class Identities(
     static global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse ToIdentityDetailsResponse(global::Cratis.Chronicle.Identities.IdentityDetails source) =>
         new()
         {
+            Id = source.Id,
             Subject = source.Subject,
             Name = source.Name,
             UserName = source.UserName,

@@ -41,9 +41,8 @@
     </PropertyGroup>
 
     <!-- Generates the gRPC contracts under ../Contracts from this project's Arc artifacts, the classes that
-         implement them under ./Services, and the registrations for those in ../Server. Gated separately from
-         the TypeScript ProxyGenerator below - see the property group further down for why each is held back.
-         Until this is ungated, the contracts for converted services are checked in and can drift. -->
+         implement them under ./Services, and the registrations for those in ../Server. Everything named in
+         NonDerivedGrpcServices is left alone, so a hand-written contract for one of those survives a run. -->
     <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
         <Message Text="Generating gRPC contracts and service implementations from Arc artifacts" Importance="high" />
         <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts --implementations &quot;$(MSBuildThisFileDirectory)Services&quot; --implementations-namespace Cratis.Chronicle.Services --registrations &quot;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs&quot; --registrations-namespace Cratis.Chronicle.Server --exclude $(NonDerivedGrpcServices)" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
@@ -51,23 +50,14 @@
 
     <PropertyGroup>
         <!--
-            Two generators read this project and they are not ready at the same time, so they have separate
-            switches. They used to share DisableProxyGenerator, which meant turning on TypeScript proxies also
-            re-ran gRPC contract generation and silently dropped contract methods.
+            Two generators read this project, and they have separate switches so that turning one on cannot
+            silently re-run the other. They used to share DisableProxyGenerator, which meant enabling TypeScript
+            proxies also regenerated the gRPC contracts and dropped contract methods.
 
-            GenerateGrpcContracts (above) is held back because Contracts/Observation/IObservers.cs carries five
-            methods Core cannot produce yet - GetObserverInformation, GetConnectedClientsForObserver,
-            WaitForCompletion, GetReplayableObserversForEventTypes and ClearObserverQuarantine. Regenerating drops
-            them. Converting those to Core artifacts is what lifts this.
-
-            The Arc ProxyGenerator is held back because most of the Web API surface still lives in
-            Source/Clients/Api, which generates the Workbench's proxies today. See API-MIGRATION.md.
-
-            Running either by hand needs CopyLocalLockFileAssemblies=true: the ProxyGenerator resolves referenced
-            assemblies from the output directory, and a library project does not copy its NuGet runtime assets
-            there, so Orleans.Serialization is missing and generation aborts.
+            Both run by default now. Observers is the one service still hand-written - it carries methods Core has
+            no artifact for - and NonDerivedGrpcServices keeps the generator off it.
         -->
-        <DisableGrpcContractGeneration Condition="'$(DisableGrpcContractGeneration)' == ''">true</DisableGrpcContractGeneration>
+        <DisableGrpcContractGeneration Condition="'$(DisableGrpcContractGeneration)' == ''">false</DisableGrpcContractGeneration>
         <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
 
         <!-- The ProxyGenerator resolves referenced assemblies from the output directory, and a library project

@@ -57,7 +57,7 @@ export const EventsTable = ({ queryArguments, sortBy, descending, selection, onS
                     selection={selection}
                     onSelectionChange={(event: DataTableSelectionChangeEvent<AppendedEvent>) =>
                         onSelectionChange(event.value ?? null)}
-                    dataKey='context.sequenceNumber'
+                    dataKey='id'
                     emptyMessage={sequenceStrings.empty}
                     scrollable
                     scrollHeight='flex'

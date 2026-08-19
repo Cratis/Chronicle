@@ -68,6 +68,7 @@ internal sealed class EventTypes(
     static global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse ToEventTypeDetailsResponse(global::Cratis.Chronicle.EventTypes.EventTypeDetails source) =>
         new()
         {
+            Id = source.Id,
             Type = source.Type,
             Owner = source.Owner,
             Source = source.Source,

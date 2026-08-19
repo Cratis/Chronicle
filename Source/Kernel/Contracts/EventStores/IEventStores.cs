@@ -33,14 +33,14 @@ public interface IEventStores
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The query result.</returns>
     [Operation]
-    Task<QueryResult<IEnumerable<string>>> AllEventStores(CallContext callContext = default);
+    Task<QueryResult<IEnumerable<EventStoreNamesResponse>>> AllEventStores(CallContext callContext = default);
     /// <summary>
     /// Executes the ObserveEventStores query.
     /// </summary>
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The query result.</returns>
     [Operation]
-    IObservable<QueryResult<IEnumerable<string>>> ObserveEventStores(CallContext callContext = default);
+    IObservable<QueryResult<IEnumerable<EventStoreNamesResponse>>> ObserveEventStores(CallContext callContext = default);
 }
 
 /// <summary>
@@ -49,6 +49,25 @@ public interface IEventStores
 [ProtoContract]
 public class EnsureEventStoreRequest
 {
+    /// <summary>
+    /// Gets or sets the Name.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Name { get; set; }
+}
+
+/// <summary>
+/// Represents the EventStoreNamesResponse message.
+/// </summary>
+[ProtoContract]
+public class EventStoreNamesResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Id { get; set; }
+
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>

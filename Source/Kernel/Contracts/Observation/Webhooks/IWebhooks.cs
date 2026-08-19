@@ -230,6 +230,12 @@ public class RemoveWebhooksRequest
 public class WebhookDetailsResponse
 {
     /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(9)]
+    public string Id { get; set; }
+
+    /// <summary>
     /// Gets or sets the Identifier.
     /// </summary>
     [ProtoMember(1)]

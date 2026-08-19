@@ -55,7 +55,7 @@ export class Namespaces implements INamespaces {
         this._lastEventStore = this._params.eventStore;
 
         this._subscription = this._namespacesQuery.subscribe(result => {
-            this._namespaces.next(result.data);
+            this._namespaces.next(result.data.map(namespace => namespace.name));
             const namespace = this.getNamespaceFromName(this._params.namespace ?? this._localStorage.getItem('namespace'));
             if (namespace) {
                 this.setCurrentNamespace(namespace);

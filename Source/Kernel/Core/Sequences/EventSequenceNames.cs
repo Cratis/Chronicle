@@ -9,9 +9,10 @@ namespace Cratis.Chronicle.Sequences;
 /// <summary>
 /// Represents the read model for the event sequences an event store holds.
 /// </summary>
+/// <param name="Id">The identity of the event sequence, which is its name.</param>
 /// <param name="Name">The name of the event sequence.</param>
 [ReadModel]
-public record EventSequenceNames(string Name)
+public record EventSequenceNames(string Id, string Name)
 {
     const string DefaultNamespace = "Default";
 
@@ -22,7 +23,7 @@ public record EventSequenceNames(string Name)
     /// <param name="eventStore">The event store to get sequences for.</param>
     /// <param name="namespace">The namespace within the event store.</param>
     /// <returns>The names of the event sequences.</returns>
-    internal static async Task<IEnumerable<string>> AllEventSequences(
+    internal static async Task<IEnumerable<EventSequenceNames>> AllEventSequences(
         IEventSequences eventSequences,
         string eventStore,
         string @namespace = DefaultNamespace)
@@ -33,6 +34,6 @@ public record EventSequenceNames(string Name)
             Namespace = @namespace
         });
 
-        return response.EventSequenceIds;
+        return [.. response.EventSequenceIds.Select(eventSequenceId => new EventSequenceNames(eventSequenceId, eventSequenceId))];
     }
 }

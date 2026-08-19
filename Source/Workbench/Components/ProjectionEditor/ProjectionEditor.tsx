@@ -156,7 +156,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     // Update event sequences when they're loaded
     useEffect(() => {
         if (allEventSequencesResult.data) {
-            setEventSequences(allEventSequencesResult.data);
+            setEventSequences(allEventSequencesResult.data.map(eventSequence => eventSequence.name));
         }
     }, [allEventSequencesResult.data]);
 

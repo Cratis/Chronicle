@@ -83,6 +83,12 @@ public class RenameIdentityRequest
 public class IdentityDetailsResponse
 {
     /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(5)]
+    public string Id { get; set; }
+
+    /// <summary>
     /// Gets or sets the Subject.
     /// </summary>
     [ProtoMember(1)]
