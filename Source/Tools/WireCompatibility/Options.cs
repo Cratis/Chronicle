@@ -34,7 +34,7 @@ public record Options(
         "Usage: WireCompatibility --current <chronicle.desc|Contracts.dll> [options]",
         string.Empty,
         "  --major <n>              Compare against every released minor of major version n.",
-        "  --since <version>        Only treat releases at or after this version as baselines.",
+        "  --since <version>        The oldest release to compare against. Must be in the same major as --major.",
         "  --baseline <version>     Compare against an explicit released version.",
         "  --baseline-assembly <p>  Compare against a local contracts assembly.",
         "  --current <path>         The descriptor set, or contracts assembly, to check. Required.",
@@ -109,6 +109,14 @@ public record Options(
         if (since is not null && major is null)
         {
             throw new InvalidArguments("--since only means something alongside --major, which is what decides the set of baselines it narrows.");
+        }
+
+        // A floor from another major narrows nothing when it is older and everything when it is newer, and either
+        // way it reads like a working floor. Saying so here is the difference between a misconfigured gate and a
+        // silent one.
+        if (since is not null && !string.Equals(since.Split('.')[0], major?.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal))
+        {
+            throw new InvalidArguments($"--since {since} is not in major {major}, so it says nothing about which of that major's releases are baselines.");
         }
 
         return new(
