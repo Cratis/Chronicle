@@ -7,7 +7,7 @@ import Cratis.Chronicle.Contracts.Clients.ConnectionServiceGrpcKt
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import Cratis.Chronicle.Contracts.EventStores.EventStoresGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
-import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
+import Cratis.Chronicle.Contracts.EventTypes.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.Host.ServerGrpcKt
 import Cratis.Chronicle.Contracts.Identities.IdentitiesGrpcKt
 import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
