@@ -3,7 +3,7 @@
 
 import { DialogResult } from '@cratis/arc.react/dialogs';
 import { Guid } from '@cratis/fundamentals';
-import { Append } from 'Features/Sequences';
+import { Append } from 'Api/EventSequences';
 import { ObserveEventTypes } from 'Features/EventTypes';
 import { EventTypeDetails } from 'Features/EventTypes';
 import { Dialog } from '@cratis/components/Dialogs';

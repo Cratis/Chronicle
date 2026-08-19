@@ -5,14 +5,12 @@ using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.when_registering;
 
-public class and_event_type_has_gap_in_migration_chain : given.all_dependencies
+internal class and_event_type_has_gap_in_migration_chain : given.all_dependencies
 {
     Exception _exception;
 
     async Task Because() =>
-        _exception = await Catch.Exception(async () => await _subject.Register(
-            "test-store",
-            [
+        _exception = await Catch.Exception(async () => await _subject.Register("test-store", [
                 new EventTypeRegistration
                 {
                     Type = new() { Id = "some-event", Generation = 3 },
@@ -22,10 +20,7 @@ public class and_event_type_has_gap_in_migration_chain : given.all_dependencies
                         new EventTypeMigrationDefinition { FromGeneration = 1, ToGeneration = 2 }
                     }
                 }
-            ],
-            false,
-            _storage,
-            _eventTypesCacheClient));
+            ], false, _storage, _eventTypesCacheClient));
 
     [Fact] void should_throw_missing_migration_for_generation() => _exception.ShouldBeOfExactType<MissingMigrationForEventTypeGeneration>();
 }

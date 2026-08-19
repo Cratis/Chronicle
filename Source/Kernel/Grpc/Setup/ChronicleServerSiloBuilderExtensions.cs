@@ -152,6 +152,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<ICurrentPrincipalAccessor>(),
                     storage,
                     sp.GetRequiredService<IEventCompliance>(),
+                    jsonSerializerOptions),
                     jsonSerializerOptions,
                     sp.GetRequiredService<IQueryContextManager>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Sequences.EventSequences>>()),

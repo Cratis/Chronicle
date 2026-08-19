@@ -17,7 +17,7 @@ import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.
 import { ObserveCaptures, SaveCapture, StartCapture, StopCapture, DeleteCapture, ValidateCaptureDeclaration, type CaptureDetails } from 'Features/Captures';
 import { CaptureStatus, type CaptureValidationMessage } from 'Features/Contracts/Captures';
 import { GetExternalServices } from 'Features/ExternalServices';
-import { AllEventTypes } from 'Api/EventTypes';
+import { AllEventTypes } from 'Features/EventTypes';
 import { CapturedEventsView } from './CapturedEventsView';
 
 const defaultCaptureDeclaration = `capture CaptureDefinition
@@ -63,7 +63,7 @@ export const Captures = () => {
         () => (externalServicesResult.data ?? []).map(service => service.name),
         [externalServicesResult.data]);
     const eventTypeNames = useMemo(
-        () => (eventTypesResult.data ?? []).map(eventType => eventType.id),
+        () => (eventTypesResult.data ?? []).map(eventType => eventType.type.id),
         [eventTypesResult.data]);
 
     useEffect(() => {
