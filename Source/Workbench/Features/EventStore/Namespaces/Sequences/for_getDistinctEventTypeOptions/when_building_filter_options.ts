@@ -1,15 +1,22 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { EventType } from 'Api/Events';
+import { EventType, EventTypeOwner, EventTypeSource } from 'Features/Contracts/Events';
+import { EventTypeDetails } from 'Features/EventTypes';
 import { getDistinctEventTypeOptions } from '../getDistinctEventTypeOptions';
 
-const eventTypeWith = (id: string, generation: number): EventType => {
+const eventTypeWith = (id: string, generation: number): EventTypeDetails => {
     const eventType = new EventType();
     eventType.id = id;
     eventType.generation = generation;
     eventType.tombstone = false;
-    return eventType;
+
+    const details = new EventTypeDetails();
+    details.type = eventType;
+    details.owner = EventTypeOwner.client;
+    details.source = EventTypeSource.code;
+    details.schema = '{}';
+    return details;
 };
 
 describe('when building filter options from event types', () => {

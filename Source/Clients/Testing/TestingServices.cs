@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
@@ -21,7 +23,6 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
-using Cratis.Chronicle.Contracts.Patterns;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
@@ -42,10 +43,9 @@ using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Co
 using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services.EventStores.EventStores;
-using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
+using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
+using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.EventTypes.EventTypes;
 using KernelExternalServicesService = KernelCore::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
-using KernelFacetSetGenerator = KernelCore::Cratis.Chronicle.Patterns.FacetSetGenerator;
-using KernelFacetVocabulary = KernelCore::Cratis.Chronicle.Patterns.FacetVocabulary;
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
 using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
@@ -54,8 +54,6 @@ using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Co
 using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
 using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
-using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
-using KernelPatternsService = KernelCore::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
@@ -173,20 +171,12 @@ internal sealed class TestingServices(
     readonly Lazy<IEventTypes> _eventTypes = new(() =>
         new KernelEventTypesService(
             storage,
-            grainFactory,
             new EventSequences.NoOpEventTypesCacheClient(),
-            new EventSequences.NoOpPatternCapture()));
+            new KernelEventTypeRegistrar(grainFactory),
+            NullLogger<KernelEventTypesService>.Instance));
 
     readonly Lazy<IRecommendations> _recommendations = new(() =>
         new KernelRecommendationsService(grainFactory, storage, NullLogger<KernelRecommendationsService>.Instance));
-
-    readonly Lazy<IPatterns> _patterns = new(() =>
-        new KernelPatternsService(
-            storage,
-            new KernelFacetVocabulary(Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())),
-            new KernelFacetSetGenerator(),
-            new KernelPatternMatcher(),
-            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
 
     readonly Lazy<IConstraints> _constraints = new(() =>
         new KernelConstraintsService(grainFactory));
@@ -295,9 +285,6 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IRecommendations Recommendations => _recommendations.Value;
-
-    /// <inheritdoc/>
-    public IPatterns Patterns => _patterns.Value;
 
     /// <inheritdoc/>
     public IUsers Users => _users.Value;

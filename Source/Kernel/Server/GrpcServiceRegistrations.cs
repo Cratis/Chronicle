@@ -26,7 +26,6 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Compliance.ICompliance, Services.Compliance.ComplianceService>();
         services.AddSingleton<Contracts.Patterns.IPatterns, Services.Patterns.Patterns>();
         services.AddSingleton<Contracts.EventSequences.IEventSequences, Services.EventSequences.EventSequences>();
-        services.AddSingleton<Contracts.Events.IEventTypes, Services.Events.EventTypes>();
         services.AddSingleton<Contracts.Events.Constraints.IConstraints, Services.Events.Constraints.Constraints>();
         services.AddSingleton<Contracts.Clients.IConnectionService, Services.Clients.ConnectionService>();
         services.AddSingleton<Contracts.Observation.IObservers, Services.Observation.Observers>();
@@ -57,7 +56,6 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Compliance.ComplianceService>();
             _.MapGrpcService<Services.Patterns.Patterns>();
             _.MapGrpcService<Services.EventSequences.EventSequences>();
-            _.MapGrpcService<Services.Events.EventTypes>();
             _.MapGrpcService<Services.Events.Constraints.Constraints>();
             _.MapGrpcService<Services.Clients.ConnectionService>();
             _.MapGrpcService<Services.Observation.Observers>();

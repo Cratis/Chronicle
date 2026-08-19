@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventTypes;
 
 namespace Cratis.Chronicle.Events.for_EventTypes.when_registering;
 
@@ -22,7 +22,7 @@ public class and_event_type_has_multiple_generations : given.all_dependencies
         _subject = new EventTypes(_eventStore, _schemaGenerator, _clientArtifacts, _eventTypeMigrators);
 
         _eventTypesService
-            .When(_ => _.Register(Arg.Any<RegisterEventTypesRequest>()))
+            .When(_ => _.RegisterEventTypes(Arg.Any<RegisterEventTypesRequest>()))
             .Do(call => _capturedRequest = call.Arg<RegisterEventTypesRequest>());
     }
 
@@ -32,9 +32,9 @@ public class and_event_type_has_multiple_generations : given.all_dependencies
         await _subject.Register();
     }
 
-    [Fact] void should_send_one_registration() => _capturedRequest.Types.Count.ShouldEqual(1);
-    [Fact] void should_register_both_generation_schemas() => _capturedRequest.Types[0].Generations.Count.ShouldEqual(2);
-    [Fact] void should_include_generation_1() => _capturedRequest.Types[0].Generations.ShouldContain(_ => _.Generation == 1);
-    [Fact] void should_include_generation_2() => _capturedRequest.Types[0].Generations.ShouldContain(_ => _.Generation == 2);
-    [Fact] void should_use_latest_generation_as_type() => _capturedRequest.Types[0].Type.Generation.ShouldEqual(2u);
+    [Fact] void should_send_one_registration() => _capturedRequest.Types.Count().ShouldEqual(1);
+    [Fact] void should_register_both_generation_schemas() => _capturedRequest.Types.ElementAt(0).Generations.Count.ShouldEqual(2);
+    [Fact] void should_include_generation_1() => _capturedRequest.Types.ElementAt(0).Generations.ShouldContain(_ => _.Generation == 1);
+    [Fact] void should_include_generation_2() => _capturedRequest.Types.ElementAt(0).Generations.ShouldContain(_ => _.Generation == 2);
+    [Fact] void should_use_latest_generation_as_type() => _capturedRequest.Types.ElementAt(0).Type.Generation.ShouldEqual(2u);
 }
