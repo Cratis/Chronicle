@@ -271,32 +271,53 @@ read their own configuration and stayed on 27017, so pointing storage elsewhere 
 Seeding data with the Console sample, and clicking through the screens past the event store picker. Neither is
 reachable until Defect B is fixed, and neither means anything until Defect A is.
 
-## The state of the branch, honestly
+## The state of the branch
 
-The build is clean, the specs pass, the wire contract is derived, and **the Workbench does not run**. Step 6 above
-says why, and it is the next thing to fix — ahead of migrating any further area, because every area migrated
-under Defect A is another screen that cannot be verified.
+Done. `Source/Clients/Api` and `Source/Clients/Api.Specs` are deleted, every area is a Core Arc artifact, and the
+Workbench runs against them - verified page by page in a browser against a live kernel.
 
-## What is already done on PR #3768
-
-Whole-solution Debug build clean (0 warnings, 0 errors), `npx tsc -b` clean, 7,567 specs passing across every unit
-spec project. None of that catches either defect in Step 6.
+## What shipped
 
 - Wire compatibility gate, tool, kernel-side `CheckCompatibility`, descriptor sets in all four contracts packages.
-- `DateTimeOffset` reached the wire as an empty message on ten fields — fixed at the edge via `TransportTypes`,
+- `DateTimeOffset` reached the wire as an empty message on ten fields - fixed at the edge via `TransportTypes`,
   which now refuses any unrepresentable type rather than emitting nothing.
 - Proto generator was aborting for 22 of 23 packages while exiting 0; fixed, and it now deletes its output before
   writing so hand-patches cannot survive.
 - Two spec projects that were not in the solution (29 specs never ran) folded into the projects owning the types.
-- **Foundation:** Core generates proxies into `Features/`; the two generators are separately gated;
-  `CopyLocalLockFileAssemblies=true` on Core is required or the ProxyGenerator cannot resolve Orleans.
-- **The generator emits implementations and registrations**, so migrating an area now removes the hand-written
-  service rather than relocating it.
-- **The wire gate measures from a declared floor**, so a break that already shipped stops masking new ones.
-- **Nine conversion helpers stopped being HTTP endpoints** (`/api/jobs/to-job`, `/api/security/to-user`,
-  `/api/observation/join`, …).
-- **Migrated:** Jobs, EventStores, Namespaces, Security, Identities — hand-written services deleted, Workbench on
-  Core proxies.
+- The generator emits implementations and registrations, so migrating an area removed the hand-written service
+  rather than relocating it. Contract generation is ungated and runs on every build.
+- Nine conversion helpers stopped being HTTP endpoints (`/api/jobs/to-job`, `/api/security/to-user`, ...).
+- Every area migrated: Jobs, EventStores, Namespaces, Security, Identities, Recommendations, TypeFormats, Seeding,
+  ExternalServices, Captures, SequenceQueries, EventTypes, Webhooks, Clients, DevelopmentTools, Observation,
+  EventSequences + Events (as `Sequences`), Projections (as `ProjectionEditor`), ReadModels (as
+  `ReadModelExplorer`), ReadModelTypes (as `ReadModelDefinitions`), Auditing.
+- `SegmentsToSkipForRoute` is 2 - the third segment only ever existed to step over the Api project's namespace.
+
+## What is still hand-written, and why
+
+- **Reducers and Reactors** - they stream server to client and need custom service implementations.
+- **`ConnectionService`** - its subject is a connection lifetime, not a command or a query.
+- **`Observers`** - `NonDerivedGrpcServices` keeps the generator off it. It carries `WaitForCompletion`,
+  `GetObserverInformation` and `GetConnectedClientsForObserver`, which no Core artifact produces in that shape.
+  The Workbench does not use them; the .NET client does.
+
+## Two rules the migration surfaced
+
+Both are Arc behaviors that fail silently, and both cost a screen before they were understood:
+
+1. **A model-bound query only maps an HTTP endpoint when it returns its own read model.** A query answering with
+   `IEnumerable<string>` generates a proxy and a gRPC method but no route - requests fall through to the SPA.
+2. **A read model behind a live view needs a property literally named `Id`.** Arc's observable delta matching keys
+   on it; without one it falls back to whole-payload matching, which never sees a replacement and leaks removed
+   rows. The PrimeReact tables key off the same property, and cannot resolve a nested `dataKey`.
+
+## Known, pre-existing, and not from this work
+
+- The event-store list blanks after adding one, until reload. The SSE payload is a correct full snapshot -
+  verified against the endpoint directly - so this is client-side in `@cratis/arc`.
+- `sortBy`/`sortDirection` do not change the order of `query-events`. The parser moved over verbatim from the Api.
+- The read model property editor loops on `Maximum update depth exceeded`; the stack is entirely inside
+  `@cratis/components` and PrimeReact.
 
 ## Practical notes
 
