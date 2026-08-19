@@ -1,0 +1,48 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+# Review ownership of the hot core.
+#
+# Only the hot core is listed. Ownership over the whole repository would put a maintainer in front of
+# every documentation typo and would be routed around within a week; this file exists so that the
+# areas where a fix breaks a sibling path - and where an autofix bot has twice committed a mechanical
+# rewrite that broke the build outright (`c237e5e74`, `aedafe1bc`) - cannot change without a
+# maintainer looking at it.
+#
+# The paths below mirror `.github/hot-core-paths.txt` one for one, and
+# `.github/scripts/detect-hot-core-changes.py --verify` fails the build if they ever stop matching.
+# That script runs on every pull request, so the two contracts cannot drift in silence.
+#
+# Ownership here requests review; it does not require it. "Require review from Code Owners" is a
+# branch-protection setting and is deliberately NOT enabled, so a pull request touching these paths
+# auto-requests @Cratis/core and can still merge without their approval. What does block is the
+# `hot-core-gate` check, which runs the full out-of-process integration matrix for changes under
+# these paths. Enabling code-owner review later needs no change to this file.
+
+# area: Observer handling
+/Source/Kernel/Core/Observation/ @Cratis/core
+
+# area: Projection key resolution and the changeset pipeline
+/Source/Kernel/Core/Projections/ @Cratis/core
+
+# area: Changeset consolidation
+/Source/Infrastructure/Changes/ @Cratis/core
+
+# area: AppendedEventsQueue
+/Source/Kernel/Core/EventSequences/*AppendedEventsQueue* @Cratis/core
+
+# area: Compliance (PII and encryption)
+/Source/Kernel/Core/Compliance/ @Cratis/core
+
+# area: MongoDB sink
+/Source/Kernel/Storage.MongoDB/Sinks/ @Cratis/core
+
+# area: SQL sink
+/Source/Kernel/Storage.Sql/Sinks/ @Cratis/core
+
+# The contracts that decide all of the above. Weakening the hot-core list, the gate, or this file
+# should cost the same review as changing the code they protect.
+/.github/CODEOWNERS @Cratis/core
+/.github/hot-core-paths.txt @Cratis/core
+/.github/workflows/hot-core-gate.yml @Cratis/core
+/.github/scripts/detect-hot-core-changes.py @Cratis/core

@@ -62,10 +62,18 @@ experience. They are not optional.
   history only; `git revert` to undo.
 - **Wait for the user's approval before committing.** Prepare changes, show them, then commit on
   approval. Use the `ship-changes` skill for branch/commit/PR mechanics when told to ship.
-- **Never merge PRs yourself** — push and let the user merge (exception: docs-only PRs may merge
-  directly without waiting for CI, and carry **no** semver label).
-- Every non-docs PR needs exactly one semver label (`patch` for these infra/CI tasks unless a
-  public API changes). The `verify` job fails without one — that is expected only for docs-only PRs.
+- **Never merge PRs yourself** — push and let the user merge. No exceptions; the earlier docs-only
+  carve-out is withdrawn.
+- **Most of this program's work carries `no-release`, not a semver label.** The label is the decision
+  to ship, and almost everything here — CI workflows, scripts, gates, specs — changes nothing a
+  consumer compiles against or runs. Reserve `major`/`minor`/`patch` for a PR that genuinely alters
+  shipped behavior; labelling infra work `patch` is what turned eight of the eighteen releases on
+  2026-08-18 into releases of nothing. `no-release` is the fourth release-intent label and exactly
+  one of the four is required — leaving the label off is an omission, not a decision, and stays an
+  error. A `no-release` PR is green like any other, and every check still has to pass. See
+  `.ai/rules/pull-requests.md`.
+- **Group related tasks into one PR.** The PR is the release boundary. Several small merged PRs
+  become several releases; collect a body of work onto one branch as separate commits.
 - PR descriptions become release notes verbatim: Added/Changed/Fixed/... sections only, written for
   framework users; pure internal plumbing (most of Phase 0) gets a minimal, honest description.
 - After pushing, monitor CI via the GitHub MCP tools (`pull_request_read` → `get_check_runs`,
@@ -206,6 +214,14 @@ warnings-as-errors Release), and the bot repeatedly rewrote hot kernel files.
 **Done when:** CODEOWNERS is active on hot-core paths, and the user confirms bot direct-commit is
 off.
 
+**Status:** `.github/CODEOWNERS` exists and mirrors `.github/hot-core-paths.txt` one for one, with
+the mirroring asserted on every PR. The owner is **`@Cratis/core`** (einari, woksin, cratis-bot),
+chosen 2026-08-18 — a real team, so the rule resolves and review is auto-requested. **Code-owner
+review is deliberately not required**: "Require review from Code Owners" stays off, so these paths
+request a reviewer without blocking a merge. What blocks is the `hot-core-gate` check, which the
+user agreed to mark required — that is the remaining repository setting. Autofix-bot direct-commit
+permission is still blocked-on-user.
+
 ### Task 0.7 — Release hygiene on GitHub Releases
 **Traces to:** the releases-page evaluation in §1 — broken releases are unmarked and
 indistinguishable from good ones, so consumers (and dependency bots) keep pulling them; the
@@ -298,12 +314,17 @@ run through real kernel storage rather than parallel implementations.
 areas; two rollbacks deliberately reinstated known bugs (`b3e03dbb8`, `d1c168c7e`). The OOP
 integration matrix is the only oracle that has reliably caught this class.
 
-**Hot-core paths** (verify exact current paths before wiring):
-- `Source/Kernel/Grains/Observation/**` (esp. `Observer.Handling`)
-- Projection key resolution (`KeyResolvers`) and `Changeset`/changeset consolidation
-- `AppendedEventsQueue`
+**Hot-core paths** — now a committed contract in `.github/hot-core-paths.txt`, one pattern per area
+with its evidence, asserted on every PR to still match tracked files and to be owned in CODEOWNERS.
+The list this section originally carried had already gone stale: the observation grains live under
+`Source/Kernel/Core/Observation/**`, not `Source/Kernel/Grains/Observation/**`. The seven patterns:
+- `Source/Kernel/Core/Observation/**` (esp. `Observer.Handling.cs`)
+- `Source/Kernel/Core/Projections/**` (key resolution — `Engine/KeyResolvers.cs` — and the
+  changeset pipeline)
+- `Source/Infrastructure/Changes/**` (changeset consolidation)
+- `Source/Kernel/Core/EventSequences/*AppendedEventsQueue*`
 - `Source/Kernel/Core/Compliance/**` (PII/encryption)
-- The SQL and MongoDB sink implementations
+- `Source/Kernel/Storage.MongoDB/Sinks/**` and `Source/Kernel/Storage.Sql/Sinks/**`
 
 **Implementation**
 1. In the PR workflow, add a changed-paths condition: any PR touching these paths must run the
@@ -314,6 +335,14 @@ integration matrix is the only oracle that has reliably caught this class.
 
 **Done when:** a draft PR touching `KeyResolvers.cs` shows the OOP matrix as a required, running
 check; a PR not touching hot paths doesn't pay the cost.
+
+**Status:** `.github/workflows/hot-core-gate.yml` implements both halves — it carries no `paths:`
+filter so the `hot-core-gate` check reports on every PR, green immediately when nothing hot-core is
+touched and green only after the full matrix when something is, and it prints the matched paths
+under their area heading so the author sees why they are waiting. It is a separate workflow rather
+than a job in `dotnet-build.yml` because that workflow's own `paths:` filter would leave the check
+absent — and therefore permanently pending — on a PR it does not apply to. **Blocked-on-user:**
+marking `hot-core-gate` required is a branch-protection setting.
 
 ### Task 1.4 — History-integration guards for parallel agent work
 **Traces to:** a stale agent worktree silently reverted a sibling branch's merged compliance
@@ -356,6 +385,15 @@ core regresses siblings, which is why fixes here keep getting rolled back.
 3. This unlocks safely reattempting the fixes that were rolled back (per-event observer filter,
    the double catch-up race) — each reattempt now has a deterministic oracle.
 
+**Blocked on this:** #3778 — an observer's reported `RunningState` transiently reports `Unknown`
+while it routes, and the Workbench draws that on healthy observers in normal operation. The direct
+fix was attempted and parked, because clients infer readiness from exactly that instability:
+`WaitTillActive` polls for `Active`, so reporting only settled states hands a client a stale
+`Active` and it proceeds while the observer is still routing — a false positive traded for a false
+negative, and measured against the same base it took `for_Reactors` from 19/19 clean to 26/30. The
+attempt is preserved on `fix/observer-running-state-flap` (no pull request) and can be reattempted
+once clients await a settling fact instead of polling for a running state.
+
 **Done when:** the integration suite passes with the settling buffer set to zero.
 
 ### Task 2.2 — Release train with a soak
@@ -374,6 +412,47 @@ core regresses siblings, which is why fixes here keep getting rolled back.
    projection → PII → replay) run against the RC as part of the soak.
 3. Keep an escape hatch: a `hotfix` label or manual dispatch that releases immediately (still
    through the boot/smoke gates).
+
+**Is the full storage matrix worth running for a release? Yes — but once per train, not per merge.**
+Measured 2026-08-19. Today pull requests run **MongoDB only** (`generate-integration-matrix.py` sets
+`DEFAULT_DATABASES = {"mongodb"}`, and `dotnet-build.yml` passes
+`all-providers: ${{ github.event_name != 'pull_request' }}`); the nightly and manual dispatch run all
+five `INFRA_CONFIGS`. Meanwhile **`publish.yml` runs no tests at all** — it contains no `dotnet test`
+and no integration job — so nothing whatsoever is verified at release time. That, not matrix breadth,
+is what lets defects reach users. Breadth costs wall clock rather than money, the repository being
+public and its runners free: a pull-request run is 48 jobs / ~122 runner-minutes / 17.8 min median,
+against the full nightly's 99 jobs / ~310 runner-minutes / 26.1 min median. And the matrix is **not
+flaky**. Across the last 14 nightlies, of 20 non-MongoDB failing cells — each already past three
+retries — **19 were genuine deterministic backend-specific defects and 1 was infrastructure**, while
+MongoDB produced zero genuine product failures; ten of those 14 nightlies were red because the SQL
+backends are broken in places, not because CI is unstable. The yield is ~52 substantiated
+backend-specific defects in six months, **49 of which reached a published release**, three of them
+undetected for roughly 3 months, 3 months and 20 months. Task 1.1 does not make this redundant: the
+shared contract suite (#3749–#3752, #3754) covers **`ISink` only — 1 of 53 storage interfaces** —
+would have caught **0 of the 6** named historical defects, and its SQL harness runs in-memory SQLite
+with `IDatabase` substituted, so it can never see PostgreSQL/MSSQL dialect behavior or real
+provisioning. So: full matrix once per release train (today "per release" means per merge, 4.4 times
+a day), plus one container-free backend — SQLite, via #3764 — on pull requests. Note the caveat that
+SQLite is only a partial filter: it would not have caught the namespace-provisioning class, because
+SQLite creates its file on connect.
+
+**Residual risk, still open:** the publish-run race behind the 2026-08-18 403s is not fixed —
+`publish.yml` groups concurrency per pull request (under `pull_request`, `github.ref` is
+`refs/pull/<N>/merge`), which only guarantees a run is never cancelled, so concurrent runs still
+read the same latest version and race to create it. A constant group is not the answer: GitHub keeps
+only one pending run per group and cancels the earlier pending one, so a burst of merges would
+silently drop a release rather than fail loudly. Until this task decouples release from merge, the
+stopgap is retrying the version creation with backoff. #3771 wrote that whole reasoning into
+`publish.yml` as a comment above the `concurrency:` block so the constant-group trap is not walked
+into later; it changed no behavior, and the race is still there.
+
+**The trigger and release intent are one decision.** Releasing on `push` to `main` instead of on the
+`pull_request` closed event was attempted in #3714 — it is what would let fork contributions publish
+at all — and was closed unmerged. `no-release` states release intent as a pull request label, and a
+`push` event does not populate `github.event.pull_request`, so the `verify-published` exemption
+silently stops applying and every deliberate non-release would fail the run on `main`. Whatever this
+task settles on for the trigger has to carry release intent in something a push can read — the merge
+commit, or an API lookup of the associated pull request — at the same time.
 
 **Done when:** patch share of releases is below 40% for a full calendar month.
 
@@ -408,6 +487,34 @@ existing one.
 **Done when:** the numbers publish automatically and the Status Board below gets a monthly
 review row.
 
+**As built.** `.github/workflows/regression-tax.yml` runs on the 1st at 07:00 UTC, measures the
+month that just ended with `.github/scripts/regression-tax.py`, and commits
+`Metrics/regression-tax.md` — verdicts first, then the whole series beside the seeded baseline in
+`Metrics/fix-share-baseline.txt`. A committed file over a pinned issue: the repository already
+commits generated statistics, a file diffs (each month is a reviewable delta), and it needs no
+issue number to track or write scope on issues. A source that cannot be read is written into the
+dashboard as its reason and fails the run; it is never reported as a zero.
+
+Two definitions had to be refined to reproduce the published series, both recorded in
+`.github/scripts/regression_tax_metrics.py`:
+
+- **Fix-share matches the stem, not the word.** 1,761 subjects in this repository begin *"Fixing"*.
+  Reading step 1's "fix/revert-prefixed" literally (`^(Fix|Revert)\b`) yields 3.8% for Nov'25
+  against a published 20.7%, and a mean absolute error of 7.9 points across the eleven complete
+  months; the stem match brings that to 1.4 points.
+- **Reverts are counted by subject.** `git rev-list -i --grep=revert` searches the whole message
+  and returns 84 over Sep'25→Aug'26, but 39 of those merely *mention* reverting (a dependency bump
+  "and revert the alias workaround"). Subject-stem matching gives 45 in that window and 10 in the
+  prior year — 0.8/month, which is the ~1/month the target is set against.
+
+Unreconciled: the plan's 90-of-304 regression-language issues. The five listed phrases over the
+same window give 74 of 312, and no wider phrasing tried reaches 90. The code's definition is now
+the authority; the published figure cannot be re-derived from the phrases as stated.
+
+Every figure in the three paragraphs above was measured on 2026-08-18. The three that span an
+open window — the 84, the 74 and the 312 — keep moving until Aug'26 closes; the per-month series
+in `Metrics/regression-tax.md` is the stable record.
+
 ---
 
 ## 6. Known open sores (fix opportunistically, they're already issues)
@@ -431,21 +538,21 @@ decision only the user can make.
 
 | Task | Title | Status | PR | Notes |
 |---|---|---|---|---|
-| 0.1 | Boot gate on published images | **done** | #3735, #3758 | all 4 variants; the gate itself shipped broken (missing TLS + token certs) and blocked 8 publishes — fixed in #3758 |
+| 0.1 | Boot gate on published images | **reverted** | #3735, #3758 | shipped broken twice and blocked every production publish from 16.35.4 to 16.36.0; reverted. See the note below before rebuilding it |
 | 0.2 | Consumer smoke for packages | **done** | #3755 | starts packed Chronicle beside published Arc before push; runs, does not merely restore |
 | 0.3 | Silent-success sweep | **done** | #3737, #3762 | zero-test guards, solution-membership gate, generators exit non-zero. #3734 (proto regen) still held for Einar |
 | 0.4 | Path-filter audit | **done** | #3737, #3761 | 13 of 17 required paths were uncovered; all closed by widening, contract asserted in CI |
 | 0.5 | Red-workflow alarm | **done** | #3736 | advisory; would flag benchmarks + integration.yml today |
-| 0.6 | Autofix bots → suggesters | todo | | CODEOWNERS in-repo; bot permission is blocked-on-user |
+| 0.6 | Autofix bots → suggesters | partial | | CODEOWNERS owned by `@Cratis/core`, mirroring `.github/hot-core-paths.txt` and asserted in CI; review requested but not required by choice; bot permission is blocked-on-user |
 | 0.7 | Release hygiene on GitHub Releases | partial | | 12 broken releases warned retroactively; notes-quality gate = §8-g; NuGet deprecation blocked-on-user |
 | 1.1 | Shared storage contract suite | **done (core)** | #3749–#3752, #3754 | 9 cases × 3 sinks; found D-8, D-9, ChildRemovedFromAll. Remaining: constraints + key storage suites |
 | 1.2 | Harness convergence (finish) | partial | #3759, #3760 | WaitForCompletion no longer lies (merged); compliance wiring open. ReadModelScenario runs NO compliance — feature, not wiring |
-| 1.3 | Hot-core OOP gate + CODEOWNERS | todo | | shares CODEOWNERS with 0.6 |
+| 1.3 | Hot-core OOP gate + CODEOWNERS | **done** | #3767, #3771 | `hot-core-gate.yml` runs the full matrix on hot-core paths, no-ops green otherwise. #3767 was absorbed into #3771, so it shows as merged with no separate release. The plan's own `Source/Kernel/Grains/Observation` was stale — the grains live in `Source/Kernel/Core/Observation`. Marking the gate required is blocked-on-user; code-owner review is deliberately not required |
 | 1.4 | History-integration guards | partial | #3763 | spec-deletion tripwire merged; branch-protection/merge-queue still blocked-on-user (#439) |
 | 2.1 | Deterministic completion signals | todo | | design doc first; after 1.2/1.3 |
 | 2.2 | Release train + soak | todo | | blocked-on-user: cadence decision; use the unused prerelease flag as the RC channel |
 | 2.3 | Close-the-class policy | todo | | `.ai` rule, NOT the PR template (§5 gotcha) |
-| 2.4 | Regression-tax dashboard | todo | | seed with baseline in §5 |
+| 2.4 | Regression-tax dashboard | **done** | #3771 | monthly review = the 1st-of-month commit to `Metrics/regression-tax.md`, seeded to Jul'26: passes volume and fix-share (9.9%), fails patch share (56.8%) and reverts (5) |
 | 8.a | Regenerate-and-diff gate | todo | | |
 | 8.b | Public-API zero-coverage ratchet | todo | | |
 | 8.c | Kernel-facing analysis | todo | | the CHR family is consumer-only today |
@@ -453,7 +560,7 @@ decision only the user can make.
 | 8.e | Silent-stub sibling comparison | todo | | |
 | 8.f | Path-filter completeness meta-check | **done** | #3761 | |
 | 8.g | PR-body and commit lint | todo | | heading allowlist, not a denylist |
-| 8.h | SQL provider on PR runs | in review | #3764 | SQLite added; blocked on 2 live non-Mongo regressions on main |
+| 8.h | SQL provider on PR runs | in review | #3764 | SQLite added. Neither of the 2 non-Mongo regressions blocks it any more: the projections failure was `JobStateConverter`, fixed in v16.36.1 and retested clean; the `for_Reactors` flake is #3778. Only `verify` is red, and a `git merge origin/main` clears it — see the note under §8 |
 
 **Session log — 2026-08-18.** Seventeen pull requests merged: the whole of Phase 0 except 0.6 and
 the rest of 0.7, the core of 1.1, half of 1.2 and 1.4, and audit items 8.d and 8.f. Two things worth
@@ -463,7 +570,40 @@ so it could never have passed; it had been verified against a locally built imag
 published one. A gate is not proven by passing, only by failing when it should. Second, **merging
 eleven pull requests in two minutes raced the release job**: every run read the same latest version
 and tried to create it, and the losers got a 403 from secondary rate limiting. Nothing was lost, but
-it is the argument for 2.2 in miniature, and #3756 serializes it.
+it is the argument for 2.2 in miniature, and #3756 does not close it — see the residual risk under 2.2.
+
+**Session log — 2026-08-18, later.** The boot gate (0.1) was reverted. It failed every
+`publish-docker-production` run from 16.35.4 through 16.36.0: it starts the production image with a
+throwaway certificate mounted from a `mktemp -d` directory, and the server reported
+`No TLS certificate is configured` regardless. The configuration keys it passes are correct — they
+match `ChronicleContainerImageTags` exactly — so the certificate is not reachable inside the
+container rather than misconfigured. The likely mechanism is that `mktemp -d` creates a `0700`
+directory owned by the runner's user while the chiseled runtime image runs as UID 1654 and cannot
+traverse it; making the *file* world-readable, as the script does, is not enough. **That mechanism
+is unproven.** It reproduces in isolation on a Linux-owned volume, but an end-to-end run against the
+real production image passed in both the broken and the fixed configuration on macOS, where Docker
+does not enforce Linux bind-mount ownership. The image itself is fine — it was built from `main` and
+booted successfully.
+
+Before this gate is rebuilt, it has to be proven the way the first version was not: **failing when it
+should**, on Linux, against a genuinely broken image, not only passing against a good one. Two
+attempts have now shipped a gate that could never pass; a third that is merely believed to work is
+not worth having. Note also that this rebuild is what makes 2.2's release train more valuable, not
+less — a gate that blocks a release is exactly what wants a soak stage to fail in.
+
+**Folding #3756 into #3771 cut v16.36.2 for nothing.** The fold left `patch` on #3756, so when #3771
+merged GitHub auto-closed #3756 as merged and that fired its own publish run; `pull-requests.md` now
+says consolidating is two steps — merge the branch *and* relabel the absorbed pull request
+`no-release` (#3773).
+
+**Session log — 2026-08-18, later still.** #3771 merged, carrying five things at once: the release-intent
+rule and the `no-release` label with its machinery (`verify-semver-label.yml` now demands exactly one
+of four labels, so declining to ship is a decision the pipeline can read rather than an omission it
+has to guess at), the regression-tax dashboard, the hot-core gate, and the publish-run concurrency
+reasoning. #3767 was folded into it and therefore shows as merged with no release of its own. #3773
+merged shortly after with the relabel-the-absorbed-pull-request rule above. Tasks 1.3 and 2.4 are
+consequently **done**, not `in review` — the board carried them as in-review for a day after the fact,
+which is the drift this section exists to prevent.
 
 **Held deliberately, not forgotten:** #3734 and #3748 touch the proto surface and the gRPC gate while
 Einar is mid-investigation there; #3760 makes real schema validation run in-process, which can surface
@@ -501,3 +641,16 @@ Already covered elsewhere and deliberately **not** re-proposed: nullable event p
 examples (`client-snippets` compiles them with warnings-as-errors), and spec folder conventions
 (measured 0 violations in 4,086 files — folded into the membership gate at zero cost rather than
 built standalone).
+
+**8.h — where it actually stands (2026-08-19).** #3764 adds SQLite alongside MongoDB on pull requests
+and is still open, but the board's old reason for holding it — "blocked on 2 live non-Mongo
+regressions on main" — no longer describes reality. The first, the `when_renaming_read_model`
+projections failure on SQLite and PostgreSQL, was root-caused to `JobStateConverter`, fixed, and
+released in **v16.36.1**; retested afterwards it is 3/3 clean on SQLite and 1/1 on PostgreSQL and
+MongoDB. The second is the `for_Reactors` disconnected-state flake, now filed and understood as
+**#3778**, which is the observer running-state flap parked behind task 2.1. What is left is
+procedural: #3764's only remaining red check is `verify`, because its branch predates #3771's updated
+`verify-semver-label.yml` and so does not yet recognize `no-release`; a `git merge origin/main`
+clears it. **It must not merge until that `verify` is green and the `for_Reactors` situation is
+understood**, or it lands a permanently red check on arrival — the alarm-fatigue failure mode task
+0.5 exists to catch, reintroduced by the very task meant to widen coverage.

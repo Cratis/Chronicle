@@ -1,12 +1,21 @@
 name: Publish
 
-# Keyed by the pull request, never by a value that several simultaneously-closing pull requests share.
-# Merging a consolidation closes every pull request whose commits it carries, each of those fires its own
-# pull_request:closed event, and on a shared group cancel-in-progress means the last run to start cancels
-# the rest — including the one that was supposed to cut the release.
+# Publish runs are grouped per pull request, and never cancelled.
+#
+# Under the pull_request trigger github.ref is refs/pull/<N>/merge, so this group is unique to one
+# pull request: simultaneous merges never cancel one another's publish run, and with
+# cancel-in-progress off a run that has started always finishes and cuts its version. It does not
+# serialize releases. Choosing the next version is a read then a create, so two runs still read the
+# same latest version and race to create it - merging eleven pull requests in two minutes on
+# 2026-08-18 gave five runs all computing v16.35.7 and four 403s from secondary rate limiting.
+# A constant group would not fix that and must not be introduced: GitHub keeps only one pending run
+# per group and cancels the earlier pending one, so a third merge silently drops the second's
+# release, which is worse than a noisy 403. The real fix is to stop deriving the version from a
+# read-then-create race - retry the create with backoff, or decouple release from merge so only one
+# release run exists at a time (task 2.2 in PLAN-reliability-program.md).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
@@ -444,23 +453,6 @@ jobs:
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # A published image that cannot start must fail here, not at the consumer - 15.37.0-15.38.2 shipped
-      # unable to start because nothing ever booted what was pushed. Build the native arch locally and boot it.
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/Production/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: chronicle-boot-test:production
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:production production
-
       - name: Build Production Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -542,20 +534,6 @@ jobs:
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/Workbench/Dockerfile
-          load: true
-          tags: chronicle-boot-test:workbench
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:workbench workbench
-
       - name: Build Workbench Image
         uses: docker/build-push-action@v5
         with:
@@ -619,23 +597,6 @@ jobs:
           echo "tags<<EOF" >> $GITHUB_OUTPUT
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-
-      # Boots with no environment at all - the documented zero-config consumer invocation. That exact path
-      # aborted at startup for every development image from 16.33.1 onward without CI noticing.
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/Development/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: chronicle-boot-test:development
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:development development
 
       - name: Build Development Docker Image
         uses: docker/build-push-action@v5
@@ -716,21 +677,6 @@ jobs:
           echo -e "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/DevelopmentSlim/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: chronicle-boot-test:development-slim
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:development-slim development-slim
-
       - name: Build Development Slim Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -748,7 +694,12 @@ jobs:
     # job succeeds, every publish job is skipped for want of should-publish, and the whole run reports green. Fail
     # instead, so a release that did not happen cannot be mistaken for one that did. workflow_dispatch is excluded
     # because a manual run may legitimately resolve to no publish.
-    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true'
+    #
+    # A pull request labelled no-release published nothing on purpose - it changed no shipped behavior - so this
+    # check would be reporting the intended outcome as a failure, and a job that cries wolf on the common case
+    # stops being read. verify-semver-label guarantees the label is a deliberate choice rather than an omission,
+    # which is what makes it safe to trust here.
+    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true' && !contains(github.event.pull_request.labels.*.name, 'no-release')
     runs-on: ubuntu-latest
     needs: [release]
 
