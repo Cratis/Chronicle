@@ -8,8 +8,9 @@ name: Wire Compatibility
 # It checks two things, in order:
 #   1. The committed proto files and descriptor set still match the contracts source. A stale descriptor set would
 #      make step 2 compare against something nobody is actually running.
-#   2. The wire contract at HEAD still serves every released minor of the current major at or after the declared
-#      floor, reporting each one, so a break says which releases it breaks rather than only that something broke.
+#   2. The wire contract at HEAD still serves every released minor of the current major - at or after the declared
+#      floor, where one applies to that major - reporting each one, so a break says which releases it breaks rather
+#      than only that something broke.
 
 on:
   workflow_call:
@@ -28,7 +29,8 @@ env:
   DOTNET_VERSION: "10.0.x"
   PROTOBUF_DIRECTORY: Source/Kernel/Protobuf
 
-  # The release this gate measures from. Anything older is not compared against.
+  # The oldest release this gate measures from, and the major it applies to. Anything older in that major is not
+  # compared against; every other major is compared in full.
   #
   # 16.x already lost intra-major compatibility. From 16.34.0 the Security and Jobs surfaces stopped being
   # hand-written gRPC contracts and became generated from the Arc artifacts in Core, which renamed every method and
@@ -37,14 +39,14 @@ env:
   # the rest of the Web API surface into Core - issue #2908 - breaks the same way for the same reason.
   #
   # A gate that fails every run on a break that already shipped stops being read, and one that is turned off
-  # entirely catches nothing. So the contract is measured from a declared point instead: this names the release the
-  # conversion first ships in, everything before it is acknowledged as already broken, and every break after it is
-  # a real finding. Correct the number if the conversion ends up shipping under a different one - a floor above the
-  # actual release measures nothing, which the tool reports as a warning rather than a pass.
+  # entirely catches nothing. So 16.x is measured from where the conversion started instead: 16.34.0 and everything
+  # after it is the generated contract and has to keep working, and the releases before it are acknowledged as
+  # already broken. This is a statement about 16.x only - the major is read from the version itself, so 17 and
+  # beyond get the whole of their major compared with no floor at all, which is the behavior every major should have.
   #
   # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
   # release that does, never to make a red check go away.
-  WIRE_BASELINE_FLOOR: "16.37.0"
+  WIRE_BASELINE_FLOOR: "16.34.0"
 
 jobs:
   wire-compatibility:
@@ -102,6 +104,16 @@ jobs:
             echo "Baseline major $MAJOR, from the latest tag $LATEST_TAG."
           fi
 
+          # The floor names the major it belongs to, so it narrows that major and leaves every other one whole.
+          FLOOR_MAJOR="${WIRE_BASELINE_FLOOR%%.*}"
+          if [ "$MAJOR" = "$FLOOR_MAJOR" ]; then
+            echo "Measuring from $WIRE_BASELINE_FLOOR. Earlier $MAJOR.x releases are already broken and are not compared against."
+            echo "since=$WIRE_BASELINE_FLOOR" >> "$GITHUB_OUTPUT"
+          else
+            echo "No floor is declared for major $MAJOR, so every released minor of it is compared against."
+            echo "since=" >> "$GITHUB_OUTPUT"
+          fi
+
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
 
@@ -127,13 +139,22 @@ jobs:
 
       - name: Check the wire contract against every released minor of the major
         if: steps.baseline.outputs.skip == 'false'
+        env:
+          SINCE: ${{ steps.baseline.outputs.since }}
         run: |
           # Without pipefail the exit code below would be tee's, and every breaking change would report success.
           set -euo pipefail
 
+          # Only the major the floor names gets one; every other major is compared in full, so the argument is
+          # built rather than always passed.
+          FLOOR=()
+          if [ -n "$SINCE" ]; then
+            FLOOR=(--since "$SINCE")
+          fi
+
           dotnet run --project Source/Tools/WireCompatibility/WireCompatibility.csproj -- \
             --major "${{ steps.baseline.outputs.major }}" \
-            --since "${{ env.WIRE_BASELINE_FLOOR }}" \
+            ${FLOOR[@]+"${FLOOR[@]}"} \
             --current "${{ env.PROTOBUF_DIRECTORY }}/chronicle.desc" \
             --allow-missing-baseline \
             --github | tee wire-compatibility.txt
