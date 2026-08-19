@@ -27,15 +27,27 @@ internal sealed class EventStores(
             command => command.Handle(grainFactory, storage, eventTypes, reactors));
 
     /// <inheritdoc/>
-    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<string>>> AllEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        QueryExecutor.Execute<IEnumerable<string>>(
-            () => global::Cratis.Chronicle.EventStores.EventStoreNames.AllEventStores(storage),
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>> AllEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.EventStores.EventStoreNames.AllEventStores(storage);
+                return result.Select(ToEventStoreNamesResponse).ToList();
+            },
             exception => logger.QueryFailed(exception, "EventStores", "AllEventStores"));
 
     /// <inheritdoc/>
-    public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<string>>> ObserveEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        QueryExecutor.Execute<IEnumerable<string>>(
+    public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>> ObserveEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>(
             () => global::Cratis.Chronicle.EventStores.EventStoreNames.ObserveEventStores(storage)
-                .CompletedBy(callContext.CancellationToken),
+                .CompletedBy(callContext.CancellationToken)
+                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>)_.Select(ToEventStoreNamesResponse).ToList()),
             exception => logger.QueryFailed(exception, "EventStores", "ObserveEventStores"));
+
+    static global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse ToEventStoreNamesResponse(global::Cratis.Chronicle.EventStores.EventStoreNames source) =>
+        new()
+        {
+            Id = source.Id,
+            Name = source.Name
+        };
 }
