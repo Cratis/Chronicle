@@ -32,7 +32,7 @@ export const CapturedEventsView = ({ eventStore, captureName, refreshTrigger }: 
             <DataTable<CapturedEvent>
                 value={result.data}
                 emptyMessage={strings.eventStore.general.captures.dataView.empty}
-                dataKey="context.sequenceNumber"
+                dataKey="id"
                 className="rounded-lg overflow-hidden"
             >
                 <Column field="context.sequenceNumber" header={strings.eventStore.general.captures.dataView.columns.sequenceNumber} />

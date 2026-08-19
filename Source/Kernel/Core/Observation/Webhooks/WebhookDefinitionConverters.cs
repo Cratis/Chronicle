@@ -123,6 +123,7 @@ internal static class WebhookDefinitionConverters
         var contract = definition.ToContract();
         return new(
             contract.Identifier,
+            contract.Identifier,
             contract.Target.Url,
             contract.EventSequenceId,
             contract.EventTypes,

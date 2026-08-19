@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.EventTypes;
 /// <summary>
 /// Represents the read model for a registered event type and the schema of its latest generation.
 /// </summary>
+/// <param name="Id">The identity of the registration, which is the event type identifier.</param>
 /// <param name="Type">The event type and the generation this registration is for.</param>
 /// <param name="Owner">Who owns the event type.</param>
 /// <param name="Source">Where the event type came from.</param>
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.EventTypes;
 [ReadModel]
 [BelongsTo(WellKnownServices.EventTypes)]
 public record EventTypeDetails(
+    string Id,
     Contracts.Events.EventType Type,
     Contracts.Events.EventTypeOwner Owner,
     Contracts.Events.EventTypeSource Source,

@@ -113,7 +113,7 @@ export const EventTypes = () => {
                             selectionMode='single'
                             selection={selectedItem}
                             onSelectionChange={(event) => setSelectedItem(event.value ?? undefined)}
-                            dataKey='type.id'
+                            dataKey='id'
                             emptyMessage={strings.eventStore.general.eventTypes.empty}>
 
                             <Column field='type.id' header={strings.eventStore.general.eventTypes.columns.name} sortable />

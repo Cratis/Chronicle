@@ -3,8 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Xml;
-using System.Xml.XPath;
 using Cratis.Arc.Swagger;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Builder;
@@ -42,7 +40,11 @@ public static class WorkbenchApiExtensions
         services.AddHttpContextAccessor();
         services.AddSwaggerGen(options =>
         {
-            options.IncludeXmlComments(ReadXmlComments);
+            foreach (var documentation in XmlDocumentationFiles())
+            {
+                options.IncludeXmlComments(documentation);
+            }
+
             options.AddConcepts();
         });
 
@@ -89,12 +91,16 @@ public static class WorkbenchApiExtensions
         options.HeadContent = $"{options.HeadContent}<style>{streamReader.ReadToEnd()}</style>";
     }
 
-    static XPathDocument ReadXmlComments()
-    {
-        var type = typeof(WorkbenchApiExtensions);
-        var resourceName = $"{type.Assembly.GetName().Name}.xml";
-        using var stream = type.Assembly.GetManifestResourceStream(resourceName);
-        using var reader = XmlReader.Create(stream!);
-        return new XPathDocument(reader);
-    }
+    /// <summary>
+    /// Gets the XML documentation files describing the artifacts the Workbench calls.
+    /// </summary>
+    /// <returns>The paths of the documentation files that exist beside the running assemblies.</returns>
+    /// <remarks>
+    /// The commands and read models are the kernel's own, so their documentation lives in the kernel assembly rather
+    /// than here. A missing file is not an error - a trimmed or documentation-less publish simply gets no descriptions.
+    /// </remarks>
+    static IEnumerable<string> XmlDocumentationFiles() =>
+        Directory.Exists(AppContext.BaseDirectory)
+            ? Directory.EnumerateFiles(AppContext.BaseDirectory, "Cratis.Chronicle.*.xml")
+            : [];
 }

@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Identities;
 /// <summary>
 /// Represents the read model for an identity, providing query access to the identity store.
 /// </summary>
+/// <param name="Id">The identity of the record, which is its subject.</param>
 /// <param name="Subject">The identifier of the identity, referred to as subject.</param>
 /// <param name="Name">The name of the identity.</param>
 /// <param name="UserName">The username of the identity.</param>
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.Identities;
 [ReadModel]
 [BelongsTo(WellKnownServices.Identities)]
 public record IdentityDetails(
+    string Id,
     string Subject,
     string Name,
     string UserName,

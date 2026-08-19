@@ -175,7 +175,7 @@ export const Sequences = () => {
                                                 state={query.state}
                                                 eventStore={eventStore}
                                                 eventTypeIds={eventTypeIds}
-                                                eventSequenceIds={eventSequences.data}
+                                                eventSequenceIds={eventSequences.data.map(eventSequence => eventSequence.name)}
                                                 hasUnsavedChanges={hasUnsavedChanges(query)}
                                                 onChange={state => update(index, state)}
                                                 onSave={() => save(query.state, query.saved === null)} />

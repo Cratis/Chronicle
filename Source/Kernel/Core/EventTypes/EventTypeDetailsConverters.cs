@@ -28,6 +28,7 @@ internal static class EventTypeDetailsConverters
     /// <returns>The definition as a read model.</returns>
     internal static EventTypeDetails ToReadModel(this Concepts.EventTypes.EventTypeSchema definition) =>
         new(
+            definition.Type.Id,
             Concepts.Events.EventTypeConverters.ToContract(definition.Type),
             (Contracts.Events.EventTypeOwner)(int)definition.Owner,
             (Contracts.Events.EventTypeSource)(int)definition.Source,

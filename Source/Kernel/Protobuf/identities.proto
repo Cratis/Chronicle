@@ -29,6 +29,7 @@ message IdentityDetailsResponse {
    string Name = 2;
    string UserName = 3;
    Identity OnBehalfOf = 4;
+   string Id = 5;
 }
 message QueryResult_IEnumerable_IdentityDetailsResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000

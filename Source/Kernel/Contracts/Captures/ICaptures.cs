@@ -295,6 +295,12 @@ public class ObserveCapturesRequest
 public class CapturedEventResponse
 {
     /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Id { get; set; }
+
+    /// <summary>
     /// Gets or sets the Context.
     /// </summary>
     [ProtoMember(1)]

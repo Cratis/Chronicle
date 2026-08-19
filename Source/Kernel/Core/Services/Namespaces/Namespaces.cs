@@ -25,15 +25,27 @@ internal sealed class Namespaces(
             command => command.Handle(grainFactory));
 
     /// <inheritdoc/>
-    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<string>>> AllNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        QueryExecutor.Execute<IEnumerable<string>>(
-            () => global::Cratis.Chronicle.Namespaces.NamespaceNames.AllNamespaces(request.EventStore, storage),
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>> AllNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Namespaces.NamespaceNames.AllNamespaces(request.EventStore, storage);
+                return result.Select(ToNamespaceNamesResponse).ToList();
+            },
             exception => logger.QueryFailed(exception, "Namespaces", "AllNamespaces"));
 
     /// <inheritdoc/>
-    public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<string>>> ObserveNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        QueryExecutor.Execute<IEnumerable<string>>(
+    public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>> ObserveNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>(
             () => global::Cratis.Chronicle.Namespaces.NamespaceNames.ObserveNamespaces(request.EventStore, storage)
-                .CompletedBy(callContext.CancellationToken),
+                .CompletedBy(callContext.CancellationToken)
+                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>)_.Select(ToNamespaceNamesResponse).ToList()),
             exception => logger.QueryFailed(exception, "Namespaces", "ObserveNamespaces"));
+
+    static global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse ToNamespaceNamesResponse(global::Cratis.Chronicle.Namespaces.NamespaceNames source) =>
+        new()
+        {
+            Id = source.Id,
+            Name = source.Name
+        };
 }

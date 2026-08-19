@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <summary>
 /// Represents an event that has been appended to an event log.
 /// </summary>
+/// <param name="Id">The identity of the event within its sequence, which is its sequence number.</param>
 /// <param name="Context">The context for the event.</param>
 /// <param name="Content">The JSON representation content of the event.</param>
 /// <param name="OriginalContent">The original JSON content before any revisions. Only present when revised.</param>
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="GenerationalContent">Content for each generation stored for this event, keyed by generation number.</param>
 [ReadModel]
 public record AppendedEvent(
+    string Id,
     EventContext Context,
     string Content,
     string OriginalContent = "",

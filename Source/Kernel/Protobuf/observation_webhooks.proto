@@ -109,6 +109,7 @@ message WebhookDetailsResponse {
    map<string,string> Headers = 6;
    bool IsReplayable = 7;
    bool IsActive = 8;
+   string Id = 9;
 }
 message WebhookTarget {
    string Url = 1;

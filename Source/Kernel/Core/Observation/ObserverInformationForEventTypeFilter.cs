@@ -28,7 +28,7 @@ internal static class ObserverInformationForEventTypeFilter
         string eventTypeId) =>
         observersInNamespace
             .Where(observer => observer.EventTypes.Any(eventType => string.Equals(eventType.Id, eventTypeId, StringComparison.Ordinal)))
-            .Select(observer => new ObserverInformationForEventType(@namespace, observer));
+            .Select(observer => new ObserverInformationForEventType($"{@namespace}/{observer.Id}", @namespace, observer));
 
     /// <summary>
     /// Observes the observers consuming an event type across a set of namespaces, as one combined stream.
