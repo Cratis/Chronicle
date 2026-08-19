@@ -4,8 +4,8 @@
 import { useState, useMemo } from 'react';
 import { Tabs, TabPanel } from 'Components/Tabs';
 import { Dropdown } from '@cratis/components/Dropdown';
-import { AppendedEvent } from 'Api/Events';
-import { EventRevision } from 'Api/Events/EventRevision';
+import { AppendedEvent } from 'Features/Sequences';
+import { EventRevision } from 'Features/Sequences';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { ObserveEventTypes } from 'Features/EventTypes';
 import { AllEventTypeGenerations } from 'Features/EventTypes';

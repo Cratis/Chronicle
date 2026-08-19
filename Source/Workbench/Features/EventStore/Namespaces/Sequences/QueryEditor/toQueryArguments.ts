@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { QueryEventsParameters } from 'Api/Events/QueryEvents';
-import { SequenceHistogramParameters } from 'Api/EventSequences/SequenceHistogram';
+import { QueryEventsParameters } from 'Features/Sequences';
+import { SequenceHistogramParameters } from 'Features/Sequences';
 import { SequenceQueryState } from './SequenceQueryState';
 
 const narrowing = (state: SequenceQueryState) => ({

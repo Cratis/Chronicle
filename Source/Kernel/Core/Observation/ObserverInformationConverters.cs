@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
@@ -46,7 +47,7 @@ internal static class ObserverInformationConverters
             definition.EventSequenceId,
             (ObserverType)(int)definition.Type,
             (ObserverOwner)(int)definition.Owner,
-            definition.EventTypes.Select(et => et.Id.Value),
+            definition.EventTypes.ToContract(),
             state.NextEventSequenceNumber,
             state.LastHandledEventSequenceNumber,
             state.TailEventSequenceNumber,
