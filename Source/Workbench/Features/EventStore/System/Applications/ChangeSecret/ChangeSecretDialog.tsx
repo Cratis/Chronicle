@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ChangeApplicationSecret } from 'Api/Security';
+import { ChangeApplicationSecret } from 'Features/Security';
 import { Button } from 'Components/Button';
 import { useMemo, useState } from 'react';
 import strings from 'Strings';
