@@ -385,6 +385,15 @@ core regresses siblings, which is why fixes here keep getting rolled back.
 3. This unlocks safely reattempting the fixes that were rolled back (per-event observer filter,
    the double catch-up race) — each reattempt now has a deterministic oracle.
 
+**Blocked on this:** #3778 — an observer's reported `RunningState` transiently reports `Unknown`
+while it routes, and the Workbench draws that on healthy observers in normal operation. The direct
+fix was attempted and parked, because clients infer readiness from exactly that instability:
+`WaitTillActive` polls for `Active`, so reporting only settled states hands a client a stale
+`Active` and it proceeds while the observer is still routing — a false positive traded for a false
+negative, and measured against the same base it took `for_Reactors` from 19/19 clean to 26/30. The
+attempt is preserved on `fix/observer-running-state-flap` (no pull request) and can be reattempted
+once clients await a settling fact instead of polling for a running state.
+
 **Done when:** the integration suite passes with the settling buffer set to zero.
 
 ### Task 2.2 — Release train with a soak
