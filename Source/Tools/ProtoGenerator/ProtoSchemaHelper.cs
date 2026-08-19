@@ -112,6 +112,12 @@ internal static partial class ProtoSchemaHelper
     /// </summary>
     /// <param name="schema">The proto schema string to process.</param>
     /// <returns>The schema with enum value conflicts resolved.</returns>
+    /// <remarks>
+    /// A value's siblings are everything the package declares, not only the other enums' values - so a value named
+    /// after a message beside it collides just as surely. protobuf-net's own parser accepts that and protoc does
+    /// not, which is a schema that generates, writes and commits, then fails in whichever language build reads it
+    /// next.
+    /// </remarks>
     public static string FixEnumValueConflicts(string schema)
     {
         var enumBlockRegex = EnumBlockRegex;
@@ -138,7 +144,12 @@ internal static partial class ProtoSchemaHelper
             allEnumValues.Add(values);
         }
 
-        // Find value names that appear in more than one enum within this schema
+        // Everything the package declares shares one scope with every enum value, so a value collides with another
+        // enum's value, with a message name, and with an enum name alike.
+        var declaredNames = MessageDeclarationRegex.Matches(schema).Select(_ => _.Groups["name"].Value)
+            .Concat(enumNames)
+            .ToHashSet(StringComparer.Ordinal);
+
         var valueCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var values in allEnumValues)
         {
@@ -150,7 +161,7 @@ internal static partial class ProtoSchemaHelper
         }
 
         var conflictingNames = valueCounts
-            .Where(kv => kv.Value > 1)
+            .Where(kv => kv.Value > 1 || declaredNames.Contains(kv.Key))
             .Select(kv => kv.Key)
             .ToHashSet(StringComparer.Ordinal);
 
