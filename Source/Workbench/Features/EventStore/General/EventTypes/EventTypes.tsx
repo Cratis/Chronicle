@@ -3,14 +3,15 @@
 
 import { Column } from '@cratis/components/DataTables';
 import strings from 'Strings';
-import { AllEventTypesParameters, AllEventTypesWithSchemas } from 'Api/EventTypes';
+import { ObserveEventTypes, type ObserveEventTypesParameters } from 'Features/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { DataTable } from 'Components/DataTable';
 import { Page } from 'Components/Common/Page';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
-import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
+import { EventTypeOwner, EventTypeSource } from 'Features/Contracts/Events';
+import { EventTypeDetails } from 'Features/EventTypes';
 import { useState, useCallback, useMemo } from 'react';
 import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 import { AddEventTypeDialog } from './AddEventTypeDialog';
@@ -21,7 +22,7 @@ const renderTombstone = () => {
     return 'no';
 };
 
-const renderSource = (eventType: EventTypeRegistration) => {
+const renderSource = (eventType: EventTypeDetails) => {
     switch (eventType.source) {
         case EventTypeSource.code:
             return strings.eventStore.general.eventTypes.sources.code;
@@ -31,7 +32,7 @@ const renderSource = (eventType: EventTypeRegistration) => {
     return strings.eventStore.general.eventTypes.sources.unknown;
 };
 
-const renderOwner = (eventType: EventTypeRegistration) => {
+const renderOwner = (eventType: EventTypeDetails) => {
     switch (eventType.owner) {
         case EventTypeOwner.client:
             return strings.eventStore.general.eventTypes.owners.client;
@@ -46,15 +47,15 @@ export const EventTypes = () => {
     const [AddEventTypeDialogWrapper, showAddEventTypeDialog] = useDialog(AddEventTypeDialog);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [selectedItem, setSelectedItem] = useState<EventTypeRegistration | undefined>(undefined);
+    const [selectedItem, setSelectedItem] = useState<EventTypeDetails | undefined>(undefined);
 
-    const queryArgs: AllEventTypesParameters = {
+    const queryArgs: ObserveEventTypesParameters = {
         eventStore: params.eventStore!
     };
 
     // Use the non-paging query to load all event types
     // Note: refreshTrigger is used as a dependency to force refetch
-    const [result] = AllEventTypesWithSchemas.use(queryArgs);
+    const [result] = ObserveEventTypes.use(queryArgs);
 
     const handleAddEventType = useCallback(async () => {
         const [result] = await showAddEventTypeDialog();

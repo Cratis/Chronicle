@@ -3,8 +3,8 @@
 
 import { AddWebHook } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
-import { AllEventTypes } from 'Api/EventTypes';
-import { EventType } from 'Api/Events';
+import { AllEventTypes } from 'Features/EventTypes';
+import { EventType } from 'Features/Contracts/Events';
 import { AuthorizationType } from 'Api/Security';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { Message } from 'Components/Message';

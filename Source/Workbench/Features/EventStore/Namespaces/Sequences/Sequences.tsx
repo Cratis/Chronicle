@@ -12,7 +12,7 @@ import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { AllEventSequences } from 'Api/EventSequences/AllEventSequences';
-import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
+import { AllEventTypes } from 'Features/EventTypes';
 import { AllQueryFolders } from 'Features/SequenceQueries';
 import { AllSequenceQueries } from 'Features/SequenceQueries';
 import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';

@@ -143,10 +143,12 @@ public static class ChronicleServerSiloBuilderExtensions
                     storage,
                     sp.GetRequiredService<IEventCompliance>(),
                     jsonSerializerOptions),
-                new Cratis.Chronicle.Services.Events.EventTypes(
+                new Cratis.Chronicle.Services.EventTypes.EventTypes(
                     storage,
-                    grainFactory,
                     sp.GetRequiredService<IEventTypesCacheClient>(),
+                    sp.GetRequiredService<Cratis.Chronicle.EventTypes.EventTypeRegistrar>(),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.EventTypes.EventTypes>>()),
+                new Cratis.Chronicle.Services.Events.EventTypes(
                     sp.GetRequiredService<Cratis.Chronicle.Patterns.IPatternCapture>()),
                 new Constraints(grainFactory),
                 new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
