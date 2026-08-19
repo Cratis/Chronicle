@@ -7,12 +7,14 @@ using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.when_registering;
 
-internal class and_storage_reports_no_change : given.all_dependencies
+public class and_storage_reports_no_change : given.all_dependencies
 {
     void Establish() => StoredEventTypes(StoredEventType("some-event", (1, "{}")));
 
     async Task Because() =>
-        await _subject.Register("test-store", [
+        await _subject.Register(
+            "test-store",
+            [
                 new EventTypeRegistration
                 {
                     Type = new() { Id = "some-event", Generation = 1 },
@@ -22,7 +24,10 @@ internal class and_storage_reports_no_change : given.all_dependencies
                         new Contracts.Events.EventTypeGenerationDefinition { Generation = 1, Schema = "{}" }
                     }
                 }
-            ], false, _storage, _eventTypesCacheClient);
+            ],
+            false,
+            _storage,
+            _eventTypesCacheClient);
 
     [Fact] void should_not_invalidate_any_event_type() =>
         _eventTypesCacheClient.DidNotReceive().Invalidate(Arg.Any<EventStoreName>(), Arg.Any<EventTypeId>());

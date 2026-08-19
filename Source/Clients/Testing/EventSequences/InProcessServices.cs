@@ -4,11 +4,10 @@
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.EventTypes;
-using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.EventTypes;
+using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
