@@ -18,7 +18,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
-using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
@@ -155,7 +154,10 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
                 projections,
-                new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<Cratis.Chronicle.Security.IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>(), sp.GetRequiredService<IOptions<ChronicleOptions>>()),
+                new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(
+                    sp.GetRequiredService<Cratis.Chronicle.Observation.Webhooks.WebhookRegistrar>(),
+                    storage,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>>()),
                 new Cratis.Chronicle.Services.ExternalServices.ExternalServices(
                     storage,
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.ExternalServices.ExternalServices>>()),

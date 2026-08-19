@@ -67,4 +67,9 @@ public static class WellKnownServices
     /// The name of the EventTypes service.
     /// </summary>
     public const string EventTypes = "EventTypes";
+
+    /// <summary>
+    /// The name of the Webhooks service.
+    /// </summary>
+    public const string Webhooks = "Webhooks";
 }
