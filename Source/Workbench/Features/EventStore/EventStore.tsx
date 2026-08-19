@@ -31,7 +31,7 @@ import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
 import { ConnectedClients } from './System/ConnectedClients/ConnectedClients';
 import { DevelopmentTools } from './System/DevelopmentTools/DevelopmentTools';
-import { AreDevelopmentToolsAvailable } from 'Api/DevelopmentTools/AreDevelopmentToolsAvailable';
+import { AreDevelopmentToolsAvailable } from 'Features/DevelopmentTools';
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 import { Captures } from './General/Captures/Captures';

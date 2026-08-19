@@ -190,7 +190,7 @@ internal sealed class TestingServices(
         new KernelApplicationsService(grainFactory, storage, NullLogger<KernelApplicationsService>.Instance));
 
     readonly Lazy<IServer> _server = new(() =>
-        new KernelServerService(null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
+        new KernelServerService(null!));
 
     readonly Lazy<IEventStores> _eventStores = new(() =>
         new KernelEventStoresService(grainFactory, storage, null!, null!, NullLogger<KernelEventStoresService>.Instance));
@@ -299,12 +299,4 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
-
-    sealed class EmptyInstancesOf<T> : IInstancesOf<T>
-        where T : class
-    {
-        public IEnumerator<T> GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
-    }
 }

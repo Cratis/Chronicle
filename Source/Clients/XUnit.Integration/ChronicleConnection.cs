@@ -104,7 +104,13 @@ internal class ChronicleConnection(
             Environment.MachineName,
             ".NET");
 
-        _connectionService = new ConnectionService(grainFactory, localSiloDetails, loggerFactory.CreateLogger<ConnectionService>(), Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()));
+        var chronicleOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
+        _connectionService = new ConnectionService(
+            grainFactory,
+            localSiloDetails,
+            new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsQuery(grainFactory, chronicleOptions),
+            loggerFactory.CreateLogger<ConnectionService>(),
+            chronicleOptions);
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

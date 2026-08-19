@@ -28,7 +28,6 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
-using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -183,13 +182,11 @@ public static class ChronicleServerSiloBuilderExtensions
                     storage,
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Security.Applications>>()),
                 new Cratis.Chronicle.Services.Host.Server(
-                    grainFactory,
-                    sp.GetRequiredService<Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>(),
-                    sp.GetRequiredService<IInstancesOf<ICanPerformKernelStateReset>>(),
-                    sp.GetRequiredService<KernelBootstrapResetHandler>()),
+                    sp.GetRequiredService<Cratis.Chronicle.DevelopmentTools.KernelStateResetter>()),
                 new Cratis.Chronicle.Services.Clients.ConnectionService(
                     grainFactory,
                     sp.GetRequiredService<ILocalSiloDetails>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Clients.ConnectedClientsQuery>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>(),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>()));
         });

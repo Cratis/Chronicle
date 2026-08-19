@@ -6,7 +6,7 @@ import { DataTable } from 'Components/DataTable';
 import { Tabs, TabPanel } from 'Components/Tabs';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { ObserverOwner } from 'Api/Observation';
-import { ConnectedClient, ConnectedClientsForObserver } from 'Api/Clients';
+import { ConnectedClientDetails, ConnectedClientsForObserver } from 'Features/Clients';
 import strings from 'Strings';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
 import { getObserverTypeAsText } from './getObserverTypeAsText';
@@ -56,7 +56,7 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
         { label: detailStrings.handledEventCount, value: observer.handledEventCount.toString() }
     ];
 
-    const lastSeenColumn = (client: ConnectedClient) => <>{new Date(client.lastSeen).toLocaleString()}</>;
+    const lastSeenColumn = (client: ConnectedClientDetails) => <>{new Date(client.lastSeen).toLocaleString()}</>;
 
     return (
         <div className={css.observerDetails}>
