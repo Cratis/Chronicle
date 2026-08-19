@@ -62,7 +62,7 @@ public class when_checking_that_every_dependency_travels_with_it : Specification
             ?.Value;
 
         // Nothing packed means nothing matches, rather than everything.
-        return new(string.IsNullOrWhiteSpace(pattern) ? "(?!)" : pattern, RegexOptions.IgnoreCase);
+        return new(string.IsNullOrWhiteSpace(pattern) ? "(?!)" : pattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
     }
 
     static FileInfo ProjectFile(string relativePath)
