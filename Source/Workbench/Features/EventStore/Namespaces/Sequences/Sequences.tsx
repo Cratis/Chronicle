@@ -11,7 +11,7 @@ import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { AllEventSequences } from 'Api/EventSequences/AllEventSequences';
+import { AllEventSequences } from 'Features/Sequences';
 import { AllEventTypes } from 'Features/EventTypes';
 import { AllQueryFolders } from 'Features/SequenceQueries';
 import { AllSequenceQueries } from 'Features/SequenceQueries';

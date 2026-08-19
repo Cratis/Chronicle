@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AppendedEvent } from 'Api/Events';
-import { Revise } from 'Api/EventSequences';
+import { AppendedEvent } from 'Features/Sequences';
+import { Revise } from 'Features/Sequences';
 import { ObserveEventTypes } from 'Features/EventTypes';
 import { useState, useEffect, useMemo } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
