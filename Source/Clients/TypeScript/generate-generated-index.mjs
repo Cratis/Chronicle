@@ -17,6 +17,13 @@ import { parseSync } from '@swc/core';
 const trailingModules = ['protobuf-net/bcl', 'descriptorSet'];
 
 /**
+ * The module this script writes. It is an output, so it is never one of its own inputs - a second run in the same
+ * directory would otherwise find it and re-export it from itself, which TypeScript reports as a circular import
+ * alias rather than as the empty loop it is.
+ */
+const indexModule = 'index';
+
+/**
  * Lists the modules to re-export, in the order their symbols claim a name.
  *
  * Read from what protoc actually produced rather than listed by hand: a package that is added, renamed or dropped
@@ -28,11 +35,12 @@ const trailingModules = ['protobuf-net/bcl', 'descriptorSet'];
  */
 const listGeneratedModules = async directory =>
 {
+    const excluded = new Set([indexModule, ...trailingModules]);
     const entries = await fs.readdir(directory, { withFileTypes: true });
     const modules = entries
         .filter(entry => entry.isFile() && entry.name.endsWith('.ts'))
         .map(entry => entry.name.slice(0, -'.ts'.length))
-        .filter(name => !trailingModules.includes(name))
+        .filter(name => !excluded.has(name))
         .sort();
 
     return [...modules, ...trailingModules];
