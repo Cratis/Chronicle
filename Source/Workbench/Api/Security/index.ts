@@ -3,7 +3,6 @@ export * from './AddUser';
 export * from './AllApplications';
 export * from './AllUsers';
 export * from './Application';
-export * from './AuthorizationType';
 export * from './ChangeApplicationSecret';
 export * from './ChangePasswordForUser';
 export * from './GetStatus';

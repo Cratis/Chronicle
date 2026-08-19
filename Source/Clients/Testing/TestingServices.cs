@@ -68,6 +68,7 @@ using KernelSubscriptionsService = KernelCore::Cratis.Chronicle.Services.Observa
 using KernelUsersService = KernelCore::Cratis.Chronicle.Services.Security.Users;
 using KernelWebhookComparer = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionComparer;
 using KernelWebhookMediatorImpl = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookMediator;
+using KernelWebhookRegistrar = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookRegistrar;
 using KernelWebhooksService = KernelCore::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks;
 
 namespace Cratis.Chronicle.Testing;
@@ -121,16 +122,18 @@ internal sealed class TestingServices(
 
     readonly Lazy<IWebhooks> _webhooks = new(() =>
         new KernelWebhooksService(
-            grainFactory,
+            new KernelWebhookRegistrar(
+                grainFactory,
+                new KernelWebhookComparer(
+                    storage,
+                    new ObjectComparer(),
+                    NullLogger<KernelWebhookComparer>.Instance),
+                null!,
+                null!,
+                new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
+                Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())),
             storage,
-            new KernelWebhookComparer(
-                storage,
-                new ObjectComparer(),
-                NullLogger<KernelWebhookComparer>.Instance),
-            null!,
-            null!,
-            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
-            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+            NullLogger<KernelWebhooksService>.Instance));
 
     readonly Lazy<IExternalServices> _externalServices = new(() =>
         new KernelExternalServicesService(storage, NullLogger<KernelExternalServicesService>.Instance));
