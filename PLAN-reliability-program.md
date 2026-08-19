@@ -406,6 +406,15 @@ negative, and measured against the same base it took `for_Reactors` from 19/19 c
 attempt is preserved on `fix/observer-running-state-flap` (no pull request) and can be reattempted
 once clients await a settling fact instead of polling for a running state.
 
+**Also blocked on this:** #3787 — `for_EventStoreSubscriptionsManager.when_waiting_until_subscribed.and_subscription_is_ready`
+fails intermittently in CI. `WaitUntilSubscribed` polls on a `while (UtcNow - start < timeout)` loop with a
+10ms delay, and the spec substitutes `IsSubscribed()` to answer `false, false, true`, so it needs three
+poll iterations inside a hard 1000ms deadline. It passed 8/8 locally in Release and failed on a pull
+request that changes no C# at all. Note the ratchet gap it exposes: the sibling spec in the same folder
+is in `.github/timing-coupling-baseline.txt`, but this one is not, because its timing coupling is a
+`TimeSpan` argument rather than a `Task.Delay` the ratchet greps for — wall-clock deadlines passed to
+the API under test are the same category and are currently uncounted.
+
 **Done when:** the integration suite passes with the settling buffer set to zero.
 
 ### Task 2.2 — Release train with a soak
@@ -573,7 +582,7 @@ decision only the user can make.
 | 2.3 | Close-the-class policy | todo | | `.ai` rule, NOT the PR template (§5 gotcha) |
 | 2.4 | Regression-tax dashboard | **done** | #3771 | monthly review = the 1st-of-month commit to `Metrics/regression-tax.md`, seeded to Jul'26: passes volume and fix-share (9.9%), fails patch share (56.8%) and reverts (5) |
 | 8.a | Regenerate-and-diff gate | scoped | | measured, not estimated: 133 tracked generated files (all `Source/Workbench/Api`, not the 154 the audit guessed) and 23 protos. Proxy half is ready to build — regeneration is already byte-identical. Proto half is **blocked on #3734**, which is what makes generation work at all; gRPC contracts must stay excluded. See the note under §8 |
-| 8.b | Public-API zero-coverage ratchet | todo | | |
+| 8.b | Public-API zero-coverage ratchet | scoped | | measured: **9** genuinely zero-covered public types in `Cratis.Chronicle.Testing`, not the 20 the audit reports. **Tier 1 as specified must not be built** — name-grep calls 5 fully-exercised types uncovered. Go straight to Tier 2 (cobertura). See the note under §8 |
 | 8.c | Kernel-facing analysis | todo | | the CHR family is consumer-only today |
 | 8.d | Timing-coupling ratchet + rule | **done** | #3765 | 67 governing / 25 legitimate sleeps; unannotated baseline entries are 2.1 work |
 | 8.e | Silent-stub sibling comparison | todo | | |
@@ -696,6 +705,52 @@ Observation artifacts in Core cannot yet reproduce the hand-written
 `GetReplayableObserversForEventTypes`. Those contracts are checked in and *allowed* to drift until
 those artifacts are converted. A gate that regenerated them would either fail permanently or destroy
 the surface.
+
+**8.b — measured, and the specified Tier 1 would be wrong (2026-08-19).** The headline number is close
+but the method behind it is not, and the difference decides how this gets built.
+
+Enumerating the real public surface from the compiled assembly with `MetadataLoadContext` gives **37
+exported types** (the audit says 35), and the audit's own predicate — is the type's simple name
+mentioned anywhere in the 4,854 spec files — marks **21 of them uncovered**, which is close enough to
+the reported 20 to confirm that is the method that was used.
+
+**That predicate is wrong, and provably so.** Running the specs with `--collect:"XPlat Code Coverage"`
+and reading the cobertura output back shows that five of the types name-grep calls uncovered are in
+fact exercised, four of them at **100% line coverage**:
+
+| Type | Lines hit | Named by any spec |
+|---|---|---|
+| `EventScenarioGivenBuilder` | 4/4 | no |
+| `EventScenarioWhenBuilder` | 4/4 | no |
+| `EventSourceGivenBuilder` | 8/8 | no |
+| `EventSourceWhenBuilder` | 12/14 | no |
+| `ReadModelsForTesting` | 18/46 | no |
+
+The reason is structural rather than incidental: these are **fluent builders reached through property
+chaining**. `EventScenario.Given` returns an `EventScenarioGivenBuilder`, so all 425 `.Given` uses in
+the suite exercise the type without ever writing its name. A name-grep ratchet would demand specs for
+code that is already fully covered, and the obvious way to satisfy it — mention the type somewhere —
+adds a citation, not a test. **A gate that can be satisfied without testing anything is worse than no
+gate**, and this program has already shipped two of those.
+
+The sharp measurement, from coverage rather than names: **9 public types have zero lines hit.**
+
+- `AppendedEventWithResultShouldExtensions` — **0 of 36 lines**, and a shipped assertion helper. This
+  is the genuine version of the audit's `AppendResult` finding and the single most valuable entry.
+- `DateAndTimeExtensions` (0/12), `CausationManagerForTesting` (0/8),
+  `CannotSeedReadModelWithExplicitEventStore` (0/8), and five exception types that are 0/2 each —
+  constructor-only, so near-zero value to cover.
+
+A further 7 generic types (`ReactorScenario<>`, `ReadModelScenario<>` and their builders) produce no
+cobertura `class` entry under their open-generic name at all, so any ratchet has to normalize generic
+arity before it can say anything about them — another way a naive implementation reports confident
+nonsense.
+
+**So: skip Tier 1, build Tier 2.** The audit frames name-grep as the cheap first step and cobertura as
+a later refinement; the cheap step is the one that produces false accusations. The coverage data
+already exists in CI (`dotnet-build.yml` collects it and publishes `Documentation/statistics`), so the
+ratchet should consume that artifact from the start — baseline the 9, fail on a new zero-covered
+public type, and normalize generic arity. Cost is a parse of a file CI already produces.
 
 **8.g — the body half, built and measured (2026-08-19).** `.github/workflows/pull-request-body.yml`
 runs `assert-pull-request-body.py` on every pull request, and on `edited` as well as pushes, because
