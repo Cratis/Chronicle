@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ObserveEventTypes } from 'Features/EventTypes';
-import { AllReadModelDefinitions, ReadModelSource } from 'Features/ReadModelDefinitions';
+import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from '@cratis/components/types';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
@@ -17,8 +17,8 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTable } from 'Components/DataTable';
 import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, ProjectionWithDeclaration, SaveProjection } from 'Features/ProjectionEditor';
-import { ReadModelInstance } from 'Features/ReadModelExplorer';
+import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, ProjectionWithDeclaration, SaveProjection } from 'Api/Projections';
+import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { TimeMachineDialog, ReadModelInstances, getInstanceKey } from 'Components';
