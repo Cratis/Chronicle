@@ -5,12 +5,14 @@ using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.when_registering;
 
-internal class and_event_type_is_missing_migrator_from_first_generation : given.all_dependencies
+public class and_event_type_is_missing_migrator_from_first_generation : given.all_dependencies
 {
     Exception _exception;
 
     async Task Because() =>
-        _exception = await Catch.Exception(async () => await _subject.Register("test-store", [
+        _exception = await Catch.Exception(async () => await _subject.Register(
+            "test-store",
+            [
                 new EventTypeRegistration
                 {
                     Type = new() { Id = "some-event", Generation = 3 },
@@ -20,7 +22,10 @@ internal class and_event_type_is_missing_migrator_from_first_generation : given.
                         new EventTypeMigrationDefinition { FromGeneration = 2, ToGeneration = 3 }
                     }
                 }
-            ], false, _storage, _eventTypesCacheClient));
+            ],
+            false,
+            _storage,
+            _eventTypesCacheClient));
 
     [Fact] void should_throw_missing_first_generation() => _exception.ShouldBeOfExactType<MissingFirstGenerationForEventType>();
 }

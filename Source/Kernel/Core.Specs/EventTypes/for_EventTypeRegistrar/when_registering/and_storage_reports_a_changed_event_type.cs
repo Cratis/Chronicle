@@ -7,14 +7,16 @@ using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar.when_registering;
 
-internal class and_storage_reports_a_changed_event_type : given.all_dependencies
+public class and_storage_reports_a_changed_event_type : given.all_dependencies
 {
     void Establish() =>
         _eventTypesStorage.Register(Arg.Any<IEnumerable<EventTypeToRegister>>())
             .Returns([new EventTypeId("changed-event")]);
 
     async Task Because() =>
-        await _subject.Register("test-store", [
+        await _subject.Register(
+            "test-store",
+            [
                 new EventTypeRegistration
                 {
                     Type = new() { Id = "changed-event", Generation = 1 },
@@ -25,7 +27,10 @@ internal class and_storage_reports_a_changed_event_type : given.all_dependencies
                     Type = new() { Id = "unchanged-event", Generation = 1 },
                     Schema = "{}"
                 }
-            ], false, _storage, _eventTypesCacheClient);
+            ],
+            false,
+            _storage,
+            _eventTypesCacheClient);
 
     [Fact] void should_register_every_event_type_in_one_call() =>
         _eventTypesStorage.Received(1).Register(Arg.Is<IEnumerable<EventTypeToRegister>>(_ => _.Count() == 2));
