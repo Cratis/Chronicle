@@ -201,7 +201,7 @@ public static class TypeHelper
 
         if (type == typeof(DateTimeOffset))
         {
-            return "DateTimeOffset";
+            return "Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset";
         }
 
         if (type == typeof(DateTime))
@@ -219,7 +219,8 @@ public static class TypeHelper
 
         if (genericDef == typeof(Nullable<>))
         {
-            return $"{GetTypeName(genericArgs[0])}?";
+            var nullableTypeName = GetTypeName(genericArgs[0]);
+            return genericArgs[0] == typeof(DateTimeOffset) ? nullableTypeName : $"{nullableTypeName}?";
         }
 
         if (genericDef.FullName?.StartsWith("System.Collections.Generic.IEnumerable`", StringComparison.Ordinal) == true)
