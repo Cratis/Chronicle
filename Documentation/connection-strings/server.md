@@ -99,16 +99,25 @@ For the example above, the client queries the SRV records for
 
 Chronicle supports multiple authentication modes. The mode is determined by the credentials present in the connection string:
 
-- **None**: No credentials provided
-- **Client credentials**: Username and password supplied in the authority section
+- **Client credentials**: Username and password supplied in the authority section. This is also what a
+  connection string with *no* credentials falls back to — it performs the exchange with the development
+  credentials rather than connecting anonymously
 - **API key**: `apiKey` query parameter
+- **None**: `auth=none` query parameter — the client presents no credentials at all
 
-You cannot combine client credentials and API key authentication in the same connection string.
+You cannot combine client credentials and API key authentication in the same connection string. `auth=none`
+overrides both, so credentials left behind by a shared configuration cannot quietly turn the exchange back on.
+
+`auth=none` only works against a server running with
+[authentication turned off](../hosting/configuration/authentication.md#turning-authentication-off), which is
+meant for a Chronicle embedded alongside its own client rather than reachable over a network. Against a server
+that enforces authentication, every call fails as unauthenticated.
 
 ## Query parameters
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
+| `auth` | string | Set to `none` to connect without presenting credentials | `?auth=none` |
 | `apiKey` | string | API key for API key authentication | `?apiKey=your-api-key` |
 | `skipTlsValidation` | boolean | Connects over TLS without validating the server certificate | `?skipTlsValidation=true` |
 | `loadBalancer` | string | Load balancer strategy when multiple servers are configured | `?loadBalancer=round-robin` |
