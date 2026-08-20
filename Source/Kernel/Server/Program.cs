@@ -357,10 +357,15 @@ if (serveWorkbench)
     app.UseStaticFiles(workbenchStaticFileOptions);
 }
 
-// Add authentication and authorization middleware AFTER routing but BEFORE endpoints
-app.UseMiddleware<GrpcAuthenticationMiddleware>();
-app.UseAuthentication();
-app.UseAuthorization();
+// Add authentication and authorization middleware AFTER routing but BEFORE endpoints. With authentication off
+// there are no schemes registered for UseAuthentication to resolve, and the fallback policy authorizes
+// everything, so both are skipped rather than run against an empty stack.
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.UseMiddleware<GrpcAuthenticationMiddleware>();
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
 
 if (chronicleOptions.Features.Api)
 {
@@ -380,10 +385,14 @@ if (chronicleOptions.Features.Api)
     });
 }
 
-// Map Identity API endpoints for SPA authentication - MUST be before MapControllers
-app.MapGroup("/identity")
-    .MapIdentityApi<User>()
-    .AllowAnonymous();
+// Map Identity API endpoints for SPA authentication - MUST be before MapControllers. They are backed by the
+// ASP.NET Identity stack, which is not registered when authentication is off.
+if (chronicleOptions.Authentication.Enabled)
+{
+    app.MapGroup("/identity")
+        .MapIdentityApi<User>()
+        .AllowAnonymous();
+}
 
 // Map controllers for API and OAuth
 if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
@@ -438,7 +447,10 @@ Console.CancelKeyPress += (sender, eventArgs) =>
     eventArgs.Cancel = true;
 };
 
-logger.ServerStarted(chronicleOptions.Port);
+// Announced from ApplicationStarted, not from here. Kestrel binds during RunAsync, so logging it before the call
+// made the message arrive around half a second before the port accepted anything - and entrypoint scripts, test
+// fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
+app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
 await app.RunAsync(cancellationToken.Token);
 

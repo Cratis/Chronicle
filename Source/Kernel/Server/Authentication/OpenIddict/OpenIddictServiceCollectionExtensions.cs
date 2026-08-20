@@ -32,8 +32,9 @@ public static class OpenIddictServiceCollectionExtensions
         Configuration.ChronicleOptions chronicleOptions,
         Cratis.Chronicle.Security.IEncryptionCertificateRing encryptionCertificateRing)
     {
-        // Disable OpenIddict if using an external authority or if OAuthAuthority feature is disabled
-        if (!chronicleOptions.Features.OAuthAuthority || !chronicleOptions.Authentication.UseInternalAuthority)
+        // Disable OpenIddict if authentication is off entirely, if using an external authority, or if the
+        // OAuthAuthority feature is disabled
+        if (!chronicleOptions.Authentication.Enabled || !chronicleOptions.Features.OAuthAuthority || !chronicleOptions.Authentication.UseInternalAuthority)
         {
             return services;
         }
