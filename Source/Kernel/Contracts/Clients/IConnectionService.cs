@@ -37,6 +37,19 @@ public interface IConnectionService
     Task<DescriptorSetResponse> GetDescriptorSet();
 
     /// <summary>
+    /// Check whether the server still serves the contracts a client expects.
+    /// </summary>
+    /// <param name="request"><see cref="CompatibilityRequest"/> carrying the client's descriptor set and versions.</param>
+    /// <returns>A <see cref="Task{TResult}"/> containing the <see cref="CompatibilityResponse"/>.</returns>
+    /// <remarks>
+    /// The check lives here rather than in each client because the clients are written in four languages and the
+    /// comparison should not be four implementations that can disagree. A client sends what it expects; the server
+    /// answers with what it serves and, when those differ, with what differs.
+    /// </remarks>
+    [Operation]
+    Task<CompatibilityResponse> CheckCompatibility(CompatibilityRequest request);
+
+    /// <summary>
     /// Get all clients connected to the server, across all silos in the cluster.
     /// </summary>
     /// <param name="context">The <see cref="CallContext"/> for the call.</param>

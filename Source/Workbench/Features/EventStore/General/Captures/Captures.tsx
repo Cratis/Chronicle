@@ -14,9 +14,10 @@ import { DataTable } from 'Components/DataTable';
 import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { AllCaptures, SaveCapture, StartCapture, StopCapture, DeleteCapture, ValidateCaptureDeclaration, CaptureStatus, type Capture, type CaptureValidationMessage } from 'Api/Captures';
-import { GetExternalServices } from 'Api/ExternalServices';
-import { AllEventTypes } from 'Api/EventTypes';
+import { ObserveCaptures, SaveCapture, StartCapture, StopCapture, DeleteCapture, ValidateCaptureDeclaration, type CaptureDetails } from 'Features/Captures';
+import { CaptureStatus, type CaptureValidationMessage } from 'Features/Contracts/Captures';
+import { GetExternalServices } from 'Features/ExternalServices';
+import { AllEventTypes } from 'Features/EventTypes';
 import { CapturedEventsView } from './CapturedEventsView';
 
 const defaultCaptureDeclaration = `capture CaptureDefinition
@@ -36,7 +37,7 @@ export const Captures = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const eventStore = params.eventStore!;
 
-    const [capturesResult] = AllCaptures.use({ eventStore });
+    const [capturesResult] = ObserveCaptures.use({ eventStore });
     const [externalServicesResult] = GetExternalServices.use({ eventStore });
     const [eventTypesResult] = AllEventTypes.use({ eventStore });
     const [saveCommand] = SaveCapture.use();
@@ -62,7 +63,7 @@ export const Captures = () => {
         () => (externalServicesResult.data ?? []).map(service => service.name),
         [externalServicesResult.data]);
     const eventTypeNames = useMemo(
-        () => (eventTypesResult.data ?? []).map(eventType => eventType.id),
+        () => (eventTypesResult.data ?? []).map(eventType => eventType.type.id),
         [eventTypesResult.data]);
 
     useEffect(() => {
@@ -112,7 +113,7 @@ export const Captures = () => {
         return null;
     }, [isStarted, declarationValue, hasUnsavedChanges, hasSyntaxErrors]);
 
-    const selectCapture = (capture: Capture | null) => {
+    const selectCapture = (capture: CaptureDetails | null) => {
         setSelectedCaptureId(capture?.id ?? null);
         setIsCreatingNew(false);
         setDeclarationValue(capture?.declaration ?? '');
@@ -247,7 +248,7 @@ export const Captures = () => {
         });
     }
 
-    const statusBody = (capture: Capture) => (
+    const statusBody = (capture: CaptureDetails) => (
         <Tag
             value={capture.status === CaptureStatus.started
                 ? strings.eventStore.general.captures.status.started

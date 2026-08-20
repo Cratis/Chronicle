@@ -8,10 +8,10 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
@@ -41,8 +41,9 @@ using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
-using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
-using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
+using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services.EventStores.EventStores;
+using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
+using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.EventTypes.EventTypes;
 using KernelExternalServicesService = KernelCore::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
@@ -50,7 +51,7 @@ using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
 using KernelJsonComplianceManager = KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager;
 using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler;
 using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
-using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
+using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
@@ -67,6 +68,7 @@ using KernelSubscriptionsService = KernelCore::Cratis.Chronicle.Services.Observa
 using KernelUsersService = KernelCore::Cratis.Chronicle.Services.Security.Users;
 using KernelWebhookComparer = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionComparer;
 using KernelWebhookMediatorImpl = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookMediator;
+using KernelWebhookRegistrar = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookRegistrar;
 using KernelWebhooksService = KernelCore::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks;
 
 namespace Cratis.Chronicle.Testing;
@@ -120,26 +122,29 @@ internal sealed class TestingServices(
 
     readonly Lazy<IWebhooks> _webhooks = new(() =>
         new KernelWebhooksService(
-            grainFactory,
+            new KernelWebhookRegistrar(
+                grainFactory,
+                new KernelWebhookComparer(
+                    storage,
+                    new ObjectComparer(),
+                    NullLogger<KernelWebhookComparer>.Instance),
+                null!,
+                null!,
+                new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
+                Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())),
             storage,
-            new KernelWebhookComparer(
-                storage,
-                new ObjectComparer(),
-                NullLogger<KernelWebhookComparer>.Instance),
-            null!,
-            null!,
-            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
-            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+            NullLogger<KernelWebhooksService>.Instance));
 
     readonly Lazy<IExternalServices> _externalServices = new(() =>
-        new KernelExternalServicesService(storage));
+        new KernelExternalServicesService(storage, NullLogger<KernelExternalServicesService>.Instance));
 
     readonly Lazy<ICaptures> _captures = new(() =>
         new KernelCapturesService(
             grainFactory,
             storage,
             new KernelCaptureLanguageService(),
-            new KernelCaptureValidator(storage)));
+            new KernelCaptureValidator(storage),
+            NullLogger<KernelCapturesService>.Instance));
 
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
         new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
@@ -148,7 +153,7 @@ internal sealed class TestingServices(
         new KernelJobsService(grainFactory, storage, NullLogger<KernelJobsService>.Instance));
 
     readonly Lazy<IEventSeeding> _seeding = new(() =>
-        new KernelSeedingService(grainFactory));
+        new KernelSeedingService(grainFactory, NullLogger<KernelSeedingService>.Instance));
 
     readonly Lazy<IEventSequences> _eventSequences = new(() =>
         new KernelEventSequencesService(
@@ -160,31 +165,35 @@ internal sealed class TestingServices(
             jsonSerializerOptions));
 
     readonly Lazy<INamespaces> _namespaces = new(() =>
-        new KernelNamespacesService(grainFactory, storage));
+        new KernelNamespacesService(grainFactory, storage, NullLogger<KernelNamespacesService>.Instance));
 
     readonly Lazy<IIdentities> _identities = new(() =>
-        new KernelIdentitiesService(storage));
+        new KernelIdentitiesService(storage, NullLogger<KernelIdentitiesService>.Instance));
 
     readonly Lazy<IEventTypes> _eventTypes = new(() =>
-        new KernelEventTypesService(storage, grainFactory, new EventSequences.NoOpEventTypesCacheClient()));
+        new KernelEventTypesService(
+            storage,
+            new EventSequences.NoOpEventTypesCacheClient(),
+            new KernelEventTypeRegistrar(grainFactory),
+            NullLogger<KernelEventTypesService>.Instance));
 
     readonly Lazy<IRecommendations> _recommendations = new(() =>
-        new KernelRecommendationsService(grainFactory, storage));
+        new KernelRecommendationsService(grainFactory, storage, NullLogger<KernelRecommendationsService>.Instance));
 
     readonly Lazy<IConstraints> _constraints = new(() =>
         new KernelConstraintsService(grainFactory));
 
     readonly Lazy<IUsers> _users = new(() =>
-        new KernelUsersService(grainFactory, storage));
+        new KernelUsersService(grainFactory, storage, NullLogger<KernelUsersService>.Instance));
 
     readonly Lazy<IApplications> _applications = new(() =>
-        new KernelApplicationsService(grainFactory, storage));
+        new KernelApplicationsService(grainFactory, storage, NullLogger<KernelApplicationsService>.Instance));
 
     readonly Lazy<IServer> _server = new(() =>
-        new KernelServerService(null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
+        new KernelServerService(null!));
 
     readonly Lazy<IEventStores> _eventStores = new(() =>
-        new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));
+        new KernelEventStoresService(grainFactory, storage, null!, null!, NullLogger<KernelEventStoresService>.Instance));
 
     readonly Lazy<IReadModels> _readModels = new(() =>
         new KernelReadModelsService(
@@ -290,12 +299,4 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
-
-    sealed class EmptyInstancesOf<T> : IInstancesOf<T>
-        where T : class
-    {
-        public IEnumerator<T> GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
-    }
 }

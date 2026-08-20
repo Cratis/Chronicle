@@ -37,4 +37,39 @@ public static class WellKnownServices
     /// The name of the EventStores service.
     /// </summary>
     public const string EventStores = "EventStores";
+
+    /// <summary>
+    /// The name of the Identities service.
+    /// </summary>
+    public const string Identities = "Identities";
+
+    /// <summary>
+    /// The name of the Recommendations service.
+    /// </summary>
+    public const string Recommendations = "Recommendations";
+
+    /// <summary>
+    /// The name of the EventSeeding service.
+    /// </summary>
+    public const string EventSeeding = "EventSeeding";
+
+    /// <summary>
+    /// The name of the ExternalServices service.
+    /// </summary>
+    public const string ExternalServices = "ExternalServices";
+
+    /// <summary>
+    /// The name of the Captures service.
+    /// </summary>
+    public const string Captures = "Captures";
+
+    /// <summary>
+    /// The name of the EventTypes service.
+    /// </summary>
+    public const string EventTypes = "EventTypes";
+
+    /// <summary>
+    /// The name of the Webhooks service.
+    /// </summary>
+    public const string Webhooks = "Webhooks";
 }

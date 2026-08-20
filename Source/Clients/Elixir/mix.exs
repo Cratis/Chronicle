@@ -43,7 +43,9 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
       maintainers: ["Cratis"],
-      files: ~w(lib mix.exs README.md .formatter.exs)
+      # priv/protos/chronicle.desc only - the descriptor set a client hands the kernel on connect. The proto
+      # files beside it are build inputs, not something a consumer needs.
+      files: ~w(lib mix.exs README.md .formatter.exs priv/protos/chronicle.desc)
     ]
   end
 end

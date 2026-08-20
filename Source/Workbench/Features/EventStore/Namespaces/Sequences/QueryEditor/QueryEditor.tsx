@@ -7,7 +7,7 @@ import { Dropdown } from '@cratis/components/Dropdown';
 import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
-import { AppendedEvent } from 'Api/Events';
+import { AppendedEvent } from 'Features/Sequences';
 import { EventDetails } from '../EventDetails';
 import { EventsTable } from './EventsTable';
 import { QueryFilterBar } from './QueryFilterBar';

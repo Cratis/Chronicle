@@ -4,8 +4,10 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Compatibility;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Clients;
+using Cratis.Chronicle.Services.Host;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,16 +22,18 @@ namespace Cratis.Chronicle.Services.Clients;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo terminating the client connections.</param>
+/// <param name="connectedClientsQuery"><see cref="ConnectedClientsQuery"/> for the cluster-wide view of connected clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class ConnectionService(
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
+    ConnectedClientsQuery connectedClientsQuery,
     ILogger<ConnectionService> logger,
     IOptions<ChronicleOptions> options) : IConnectionService
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
-    readonly TimeSpan _observeConnectedClientsInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.ObserveIntervalSeconds);
+    static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
     readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.KeepAliveIntervalSeconds);
 
     /// <inheritdoc/>
@@ -106,37 +110,53 @@ internal sealed class ConnectionService(
 
     /// <inheritdoc/>
     /// <remarks>
-    /// The per-silo lookups are issued together, so a faulting silo no longer aborts the sweep before the remaining
-    /// silos are asked - every silo is queried, and the first fault surfaces once they have all settled rather than
-    /// immediately. The observable outcome is unchanged: the same exception type still propagates, and a fault still
-    /// fails the whole call rather than returning a partial cluster view.
+    /// Anonymous, because a client that cannot talk to this server should be told so plainly rather than being
+    /// turned away as unauthenticated - the whole point is to name the mismatch. The check reads nothing but the
+    /// descriptor set the caller sent and the one this server ships.
     /// </remarks>
-    public async Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default)
+    [AllowAnonymous]
+    public Task<CompatibilityResponse> CheckCompatibility(CompatibilityRequest request)
     {
-        var management = grainFactory.GetGrain<IManagementGrain>(0);
-        var hosts = await management.GetHosts(onlyActive: true);
-        var clientsPerSilo = await Task.WhenAll(hosts.Keys.Select(GetConnectedClientsForSilo));
-        return clientsPerSilo.SelectMany(clients => clients).ToList();
+        var response = new CompatibilityResponse
+        {
+            ServerVersion = ServerVersion.Version,
+            ServerProtocolVersion = Contracts.ProtocolVersion.Current
+        };
+
+        try
+        {
+            var report = WireCompatibilityChecker.Check(
+                WireContractReader.Read(request.DescriptorSet),
+                _wireContract.Value);
+
+            response.IsCompatible = report.IsCompatible;
+            response.Incompatibilities = [.. report.Incompatibilities.Select(_ => _.ToString())];
+
+            if (!report.IsCompatible)
+            {
+                logger.ClientIsIncompatible(request.ClientType, request.ClientVersion, request.ProtocolVersion, report.Incompatibilities.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            // A descriptor set that will not parse says nothing about whether the two sides agree, and refusing the
+            // connection over it would turn a malformed payload from one client into an outage for it. Report it as
+            // an incompatibility so the client can say something useful, and let the client decide.
+            logger.FailedToReadClientDescriptorSet(request.ClientType, ex);
+            response.IsCompatible = false;
+            response.Incompatibilities = [$"The descriptor set the client sent could not be read: {ex.Message}"];
+        }
+
+        return Task.FromResult(response);
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default)
-    {
-        var subject = new Subject<IEnumerable<ConnectedClient>>();
-        var subscription = Observable
-            .Timer(TimeSpan.Zero, _observeConnectedClientsInterval)
-            .SelectMany(_ => Observable.FromAsync(() => GetConnectedClients(context)))
-            .DistinctUntilChanged(ConnectedClientsComparer.Instance)
-            .Subscribe(subject);
+    public Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default) =>
+        connectedClientsQuery.GetAll();
 
-        context.CancellationToken.Register(() =>
-        {
-            subscription.Dispose();
-            subject.OnCompleted();
-        });
-
-        return subject;
-    }
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default) =>
+        connectedClientsQuery.ObserveAll(context.CancellationToken);
 
     static string GenerateSchema()
     {
@@ -152,49 +172,5 @@ internal sealed class ConnectionService(
             .Select(group => generator.GetSchema(group.ToArray()));
 
         return string.Join('\n', schemas);
-    }
-
-    async Task<IEnumerable<ConnectedClient>> GetConnectedClientsForSilo(SiloAddress silo)
-    {
-        var connectedClients = await grainFactory.GetConnectedClients(silo).GetAllConnectedClients();
-        return connectedClients.Select(client => new ConnectedClient
-        {
-            ConnectionId = client.ConnectionId,
-            Version = client.Version,
-            LastSeen = client.LastSeen,
-            IsRunningWithDebugger = client.IsRunningWithDebugger,
-            SiloAddress = silo.ToParsableString(),
-            ProcessId = client.ProcessId,
-            ProcessPath = client.ProcessPath,
-            MachineName = client.MachineName,
-            ClientType = client.ClientType
-        });
-    }
-
-    sealed class ConnectedClientsComparer : IEqualityComparer<IEnumerable<ConnectedClient>>
-    {
-        public static readonly ConnectedClientsComparer Instance = new();
-
-        public bool Equals(IEnumerable<ConnectedClient>? x, IEnumerable<ConnectedClient>? y)
-        {
-            if (x is null || y is null)
-            {
-                return ReferenceEquals(x, y);
-            }
-
-            return x.Select(Identity).Order().SequenceEqual(y.Select(Identity).Order());
-        }
-
-        public int GetHashCode(IEnumerable<ConnectedClient> obj) => 0;
-
-        /// <summary>
-        /// Gets the identity of a client, covering every value observers display - including
-        /// LastSeen, so a watching Workbench sees the last-seen time tick while a client is
-        /// connected. The comparer's suppression then only kicks in when nothing at all changed,
-        /// which in practice means no clients are connected.
-        /// </summary>
-        /// <param name="client">The <see cref="ConnectedClient"/> to get the identity for.</param>
-        /// <returns>A string identifying the client.</returns>
-        static string Identity(ConnectedClient client) => $"{client.SiloAddress}|{client.ConnectionId}|{client.Version}|{client.IsRunningWithDebugger}|{client.LastSeen}|{client.ProcessId}|{client.ProcessPath}|{client.MachineName}|{client.ClientType}";
     }
 }

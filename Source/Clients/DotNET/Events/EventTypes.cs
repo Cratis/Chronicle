@@ -5,6 +5,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
@@ -155,12 +156,12 @@ public class EventTypes : IEventTypes
             registrations.Add(registration);
         }
 
-        await _servicesAccessor.Services.EventTypes.Register(new()
+        await _servicesAccessor.Services.EventTypes.RegisterEventTypes(new()
         {
             EventStore = _eventStore.Name,
             Types = registrations,
             DisableValidation = !_enableEventTypeGenerationValidation
-        });
+        }).EnsureSuccess();
     }
 
     /// <inheritdoc/>

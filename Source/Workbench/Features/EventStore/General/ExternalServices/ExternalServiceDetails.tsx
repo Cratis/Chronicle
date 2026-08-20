@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
-import { ExternalServiceDefinition, ExternalServiceEndpointType } from 'Api/ExternalServices';
+import { ExternalService } from 'Features/ExternalServices';
+import { ExternalServiceEndpointType } from 'Features/Contracts/ExternalServices';
 import { getEndpointTypeString } from './getEndpointTypeString';
 import { getAuthorizationTypeString } from './getAuthorizationTypeString';
 import strings from 'Strings';
 
-export const ExternalServiceDetails = (props: IDetailsComponentProps<ExternalServiceDefinition>) => {
+export const ExternalServiceDetails = (props: IDetailsComponentProps<ExternalService>) => {
     const endpointTypeName = getEndpointTypeString(props.item.endpointType);
     const isHttp = props.item.endpointType === ExternalServiceEndpointType.http;
 

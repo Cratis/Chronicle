@@ -19,6 +19,7 @@ public class when_observing_event_stores : Specification
 {
     static readonly JsonSerializerOptions _serializerOptions = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters =
         {
             new EnumerableConceptAsJsonConverterFactory(),
@@ -27,7 +28,7 @@ public class when_observing_event_stores : Specification
     };
 
     IStorage _storage;
-    IEnumerable<string> _emitted;
+    IEnumerable<EventStoreNames> _emitted;
     string _json;
 
     void Establish()
@@ -44,6 +45,6 @@ public class when_observing_event_stores : Specification
         _json = JsonSerializer.Serialize<object>(_emitted, _serializerOptions);
     }
 
-    [Fact] void should_emit_the_names_as_strings() => _emitted.ShouldContainOnly(EventStoreName.System.Value, "some-store");
-    [Fact] void should_serialize_as_a_plain_string_array() => _json.ShouldEqual("""["System","some-store"]""");
+    [Fact] void should_emit_every_name() => _emitted.Select(_ => _.Name).ShouldContainOnly(EventStoreName.System.Value, "some-store");
+    [Fact] void should_serialize_the_name_of_each() => _json.ShouldEqual("""[{"id":"System","name":"System"},{"id":"some-store","name":"some-store"}]""");
 }

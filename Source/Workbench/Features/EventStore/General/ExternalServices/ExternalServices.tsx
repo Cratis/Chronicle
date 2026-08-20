@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { GetExternalServices, RemoveExternalService, type ExternalServiceDefinition } from 'Api/ExternalServices';
+import { GetExternalServices, RemoveExternalService, type ExternalService } from 'Features/ExternalServices';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
@@ -17,7 +17,7 @@ import { useDialog } from '@cratis/arc.react/dialogs';
 
 export const ExternalServices = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [selectedExternalService, setSelectedExternalService] = useState<ExternalServiceDefinition | null>(null);
+    const [selectedExternalService, setSelectedExternalService] = useState<ExternalService | null>(null);
     const [showConfirmation] = useConfirmationDialog();
     const [AddExternalServiceDialogWrapper, showAddExternalServiceDialog] = useDialog(AddExternalServiceDialog);
     const [removeExternalService] = RemoveExternalService.use();
@@ -59,7 +59,7 @@ export const ExternalServices = () => {
                 emptyMessage={strings.eventStore.general.externalServices.empty}
                 detailsComponent={ExternalServiceDetails}
                 selection={selectedExternalService}
-                onSelectionChange={(e) => setSelectedExternalService(e.value as ExternalServiceDefinition)}>
+                onSelectionChange={(e) => setSelectedExternalService(e.value as ExternalService)}>
 
                 <DataPage.MenuItems>
                     <MenuItem
@@ -83,11 +83,11 @@ export const ExternalServices = () => {
                         field='endpointType'
                         style={{ width: '200px' }}
                         header={strings.eventStore.general.externalServices.columns.endpointType}
-                        body={(externalService: ExternalServiceDefinition) => getEndpointTypeString(externalService.endpointType)} />
+                        body={(externalService: ExternalService) => getEndpointTypeString(externalService.endpointType)} />
                     <Column
                         field='url'
                         header={strings.eventStore.general.externalServices.columns.endpoint}
-                        body={(externalService: ExternalServiceDefinition) => externalService.url || externalService.host} />
+                        body={(externalService: ExternalService) => externalService.url || externalService.host} />
                 </DataPage.Columns>
             </DataPage>
             <AddExternalServiceDialogWrapper />

@@ -1,0 +1,54 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Sequences;
+
+/// <summary>
+/// Converts between <see cref="AppendedEvent"/> and its contract representation.
+/// </summary>
+internal static class AppendedEventConverters
+{
+    /// <summary>
+    /// Converts a contract <see cref="Contracts.Events.AppendedEvent"/> to an <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="appendedEvent">The contract appended event to convert.</param>
+    /// <returns>The converted appended event.</returns>
+    public static AppendedEvent ToApi(this Contracts.Events.AppendedEvent appendedEvent) => new(
+        appendedEvent.Context.SequenceNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        appendedEvent.Context.ToApi(),
+        appendedEvent.Content,
+        appendedEvent.OriginalContent,
+        appendedEvent.Revisions.Select(c => c.ToApi()).ToArray(),
+        appendedEvent.GenerationalContent.Select(kvp => new KeyValuePair<int, string>(kvp.Key, kvp.Value)).ToArray());
+
+    /// <summary>
+    /// Converts a collection of contract <see cref="Contracts.Events.AppendedEvent"/> to a collection of <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="appendedEvents">The collection of contract appended events to convert.</param>
+    /// <returns>The converted collection of appended events.</returns>
+    public static IEnumerable<AppendedEvent> ToApi(this IEnumerable<Contracts.Events.AppendedEvent> appendedEvents) =>
+        appendedEvents.Select(e => e.ToApi()).ToArray();
+
+    /// <summary>
+    /// Converts an <see cref="AppendedEvent"/> to a contract <see cref="Contracts.Events.AppendedEvent"/>.
+    /// </summary>
+    /// <param name="appendedEvent">The appended event to convert.</param>
+    /// <returns>The converted contract appended event.</returns>
+    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent appendedEvent) => new()
+    {
+        Context = appendedEvent.Context.ToContract(),
+        Content = appendedEvent.Content
+    };
+
+    /// <summary>
+    /// Converts a contract <see cref="Contracts.Events.EventRevision"/> to an <see cref="EventRevision"/>.
+    /// </summary>
+    /// <param name="revision">The contract revision to convert.</param>
+    /// <returns>The converted revision.</returns>
+    public static EventRevision ToApi(this Contracts.Events.EventRevision revision) => new(
+        revision.Generation,
+        revision.CorrelationId,
+        revision.CausedBy.ToApi(),
+        revision.Occurred,
+        revision.Content);
+}

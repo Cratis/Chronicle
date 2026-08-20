@@ -13,4 +13,10 @@ internal static partial class ConnectionServiceLogMessages
 {
     [LoggerMessage(LogLevel.Error, "Failure during keep alive for connection {ConnectionId}")]
     internal static partial void FailureDuringKeepAlive(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "A {ClientType} client at version {ClientVersion} speaking protocol {ProtocolVersion} expects {IncompatibilityCount} contract element(s) this server no longer serves")]
+    internal static partial void ClientIsIncompatible(this ILogger<ConnectionService> logger, string clientType, string clientVersion, string protocolVersion, int incompatibilityCount);
+
+    [LoggerMessage(LogLevel.Warning, "Could not read the descriptor set sent by a {ClientType} client")]
+    internal static partial void FailedToReadClientDescriptorSet(this ILogger<ConnectionService> logger, string clientType, Exception exception);
 }

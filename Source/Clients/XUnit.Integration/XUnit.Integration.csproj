@@ -88,6 +88,8 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="protobuf-net" />
+        <PackageReference Include="protobuf-net.Reflection" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="Snappier" />
     </ItemGroup>

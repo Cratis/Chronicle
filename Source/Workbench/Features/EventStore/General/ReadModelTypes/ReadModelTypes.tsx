@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { AllReadModelDefinitions, ReadModelDefinition, ReadModelOwner, ReadModelSource } from 'Api/ReadModelTypes';
+import { AllReadModelDefinitions, ReadModelDefinition, ReadModelOwner, ReadModelSource } from 'Features/ReadModelDefinitions';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { AddReadModelDialog } from './Add/AddReadModelDialog';

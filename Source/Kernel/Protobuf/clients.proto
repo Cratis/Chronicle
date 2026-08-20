@@ -2,6 +2,18 @@ syntax = "proto3";
 package Cratis.Chronicle.Contracts.Clients;
 import "google/protobuf/empty.proto";
 
+message CompatibilityRequest {
+   string ClientType = 1;
+   string ClientVersion = 2;
+   string ProtocolVersion = 3;
+   bytes DescriptorSet = 4;
+}
+message CompatibilityResponse {
+   bool IsCompatible = 1;
+   repeated string Incompatibilities = 2;
+   string ServerVersion = 3;
+   string ServerProtocolVersion = 4;
+}
 message ConnectRequest {
    string ConnectionId = 1;
    string ClientVersion = 2;
@@ -36,6 +48,7 @@ message SerializableDateTimeOffset {
    string Value = 1;
 }
 service ConnectionService {
+   rpc CheckCompatibility (CompatibilityRequest) returns (CompatibilityResponse);
    rpc Connect (ConnectRequest) returns (stream .Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive);
    rpc ConnectionKeepAlive (.Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive) returns (.google.protobuf.Empty);
    rpc GetConnectedClients (.google.protobuf.Empty) returns (IEnumerable_ConnectedClient);

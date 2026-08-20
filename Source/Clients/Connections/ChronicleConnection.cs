@@ -7,10 +7,10 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
@@ -220,37 +220,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         // Perform compatibility check before establishing connection
         if (!_skipCompatibilityCheck)
         {
-            var tempConnectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
-
-            try
-            {
-                var serverSchemaResponse = await tempConnectionService.GetDescriptorSet();
-                var clientSchema = CompatibilityValidator.GenerateClientSchema();
-                var compatibilityResult = CompatibilityValidator.Validate(
-                    clientSchema,
-                    serverSchemaResponse.SchemaDefinition,
-                    _logger);
-
-                if (!compatibilityResult.IsCompatible)
-                {
-                    var errorMessage = string.Join("; ", compatibilityResult.Errors);
-                    _logger.IncompatibleWithServer(errorMessage);
-                    throw new IncompatibleServerException($"Client is incompatible with server: {errorMessage}");
-                }
-
-                _logger.CompatibilityCheckPassed();
-            }
-            catch (IncompatibleServerException)
-            {
-                throw;
-            }
-            catch (RpcException ex)
-            {
-                _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
-
-                // Don't fail the connection if we can't retrieve the schema
-                // This allows backward compatibility with older servers that don't support this feature
-            }
+            await CheckCompatibility(callInvoker.CreateGrpcService<IConnectionService>(clientFactory));
         }
 
         _services = new Services(
@@ -300,7 +270,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ProcessId = ClientProcess.Id,
                 ProcessPath = ClientProcess.Path,
                 MachineName = ClientProcess.MachineName,
-                ClientType = ClientProcess.ClientType,
+                ClientType = ChronicleClientIdentity.Type,
             }).Subscribe(HandleConnection);
 
         try
@@ -316,6 +286,97 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         finally
         {
             _watchDog.Start();
+        }
+    }
+
+    /// <summary>
+    /// Asks the server whether it still serves what this client expects, and refuses to connect when it does not.
+    /// </summary>
+    /// <param name="connectionService">The connection service to ask.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="IncompatibleServerException">Thrown when the server no longer serves this client's contracts.</exception>
+    /// <remarks>
+    /// The comparison itself is the server's, not this client's - Chronicle has clients in four languages and only
+    /// two of those can build a descriptor set at runtime, so every client ships the one its contracts package was
+    /// built with and the server does the one comparison. See <c>Source/Kernel/Compatibility</c>.
+    /// </remarks>
+    async Task CheckCompatibility(IConnectionService connectionService)
+    {
+        CompatibilityResponse response;
+
+        try
+        {
+            response = await connectionService.CheckCompatibility(new()
+            {
+                ClientType = ChronicleClientIdentity.Type,
+                ClientVersion = ChronicleClientIdentity.Version,
+                ProtocolVersion = ChronicleClientIdentity.ProtocolVersion,
+                DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
+            });
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
+        {
+            // A server from before the check moved server-side does not have this method. Fall back to the older
+            // exchange it does have, so upgrading the client does not silently drop the check against those servers.
+            await CheckCompatibilityAgainstOlderServer(connectionService);
+            return;
+        }
+        catch (RpcException ex)
+        {
+            // Not being able to ask says nothing about whether the two sides agree, and a transport problem here
+            // would surface again on the very next call with a better message than this one could give.
+            _logger.FailedToCheckCompatibility(ex.Message);
+            return;
+        }
+
+        if (!response.IsCompatible)
+        {
+            var message = IncompatibilityMessage.Build(
+                _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                response.ServerVersion,
+                response.ServerProtocolVersion,
+                response.Incompatibilities);
+
+            _logger.IncompatibleWithServer(message);
+            throw new IncompatibleServerException(message);
+        }
+
+        _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
+    }
+
+    /// <summary>
+    /// Runs the pre-server-side compatibility check against a server too old to have <c>CheckCompatibility</c>.
+    /// </summary>
+    /// <param name="connectionService">The connection service to ask.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="IncompatibleServerException">Thrown when the server no longer serves this client's contracts.</exception>
+    async Task CheckCompatibilityAgainstOlderServer(IConnectionService connectionService)
+    {
+        try
+        {
+            var serverSchema = await connectionService.GetDescriptorSet();
+            var result = CompatibilityValidator.Validate(
+                CompatibilityValidator.GenerateClientSchema(),
+                serverSchema.SchemaDefinition,
+                _logger);
+
+            if (!result.IsCompatible)
+            {
+                var message = IncompatibilityMessage.Build(
+                    _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                    serverVersion: string.Empty,
+                    serverProtocolVersion: string.Empty,
+                    result.Errors);
+
+                _logger.IncompatibleWithServer(message);
+                throw new IncompatibleServerException(message);
+            }
+
+            _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, "unknown", "unknown");
+        }
+        catch (RpcException ex)
+        {
+            _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
         }
     }
 

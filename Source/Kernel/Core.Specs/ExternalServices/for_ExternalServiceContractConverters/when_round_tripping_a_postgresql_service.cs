@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ExternalServices;
-using Cratis.Chronicle.Services.ExternalServices;
 
 namespace Cratis.Chronicle.ExternalServices.for_ExternalServiceContractConverters;
 
