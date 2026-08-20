@@ -17,8 +17,9 @@ import { basePath as configuredBasePath } from '../Utils/basePath';
 const isDevelopment = import.meta.env.MODE === 'development';
 
 function App() {
-    // Normalized to '' at the root, so it can be concatenated everywhere without producing a double slash.
-    // The router still wants a path to match on, hence the '/' fallback for the outer route.
+    // Normalized to '' at the root, so it can be concatenated everywhere without producing a double slash -
+    // which is the same value the meta tag already yielded when unset, so the routes below are unchanged when
+    // the Workbench is served where it always has been.
     const basePath = configuredBasePath;
 
     return (
@@ -32,7 +33,7 @@ function App() {
                         <BrowserRouter>
                             <AuthProvider>
                                 <Routes>
-                                    <Route path={basePath || '/'}>
+                                    <Route path={basePath}>
                                         <Route path='login' element={<BlankLayout />}>
                                             <Route path='' element={<Login />} />
                                         </Route>
