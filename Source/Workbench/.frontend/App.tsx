@@ -12,12 +12,14 @@ import { BusyIndicatorDialog } from '@cratis/components/Dialogs';
 import { ConfirmationDialog } from 'Components/Dialogs';
 import { Arc } from '@cratis/arc.react';
 import { MVVM } from '@cratis/arc.react.mvvm';
+import { basePath as configuredBasePath } from '../Utils/basePath';
 
 const isDevelopment = import.meta.env.MODE === 'development';
 
 function App() {
-    const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;
-    const basePath = basePathElement?.content ?? '/';
+    // Normalized to '' at the root, so it can be concatenated everywhere without producing a double slash.
+    // The router still wants a path to match on, hence the '/' fallback for the outer route.
+    const basePath = configuredBasePath;
 
     return (
         <Arc
@@ -30,7 +32,7 @@ function App() {
                         <BrowserRouter>
                             <AuthProvider>
                                 <Routes>
-                                    <Route path={basePath}>
+                                    <Route path={basePath || '/'}>
                                         <Route path='login' element={<BlankLayout />}>
                                             <Route path='' element={<Login />} />
                                         </Route>
