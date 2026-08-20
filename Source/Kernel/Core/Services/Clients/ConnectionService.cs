@@ -54,6 +54,15 @@ internal sealed class ConnectionService(
 
                 try
                 {
+                    // The session is established the moment the client is registered, and the first keep-alive is
+                    // how the client learns that - it does not treat itself as connected until one arrives. Send it
+                    // straight away rather than after a first interval, or every client everywhere pays the whole
+                    // keep-alive interval before it can do anything.
+                    subject.OnNext(new ConnectionKeepAlive
+                    {
+                        ConnectionId = request.ConnectionId
+                    });
+
                     while (!context.CancellationToken.IsCancellationRequested)
                     {
                         await Task.Delay(_keepAliveInterval).ConfigureAwait(false);
