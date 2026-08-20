@@ -46,6 +46,11 @@ internal sealed class AuthenticationService(
     /// <inheritdoc/>
     public async Task EnsureDefaultAdminUser()
     {
+        if (!_options.Authentication.Enabled)
+        {
+            return;
+        }
+
         logger.CheckingForDefaultAdminUser();
 
         var existingUsers = await userStorage.GetAll();
@@ -119,6 +124,11 @@ internal sealed class AuthenticationService(
     /// <inheritdoc/>
     public async Task EnsureBootstrapClients()
     {
+        if (!_options.Authentication.Enabled)
+        {
+            return;
+        }
+
         var clients = _options.Clients;
         if (!clients.Any())
         {
@@ -162,6 +172,11 @@ internal sealed class AuthenticationService(
     /// <inheritdoc/>
     public async Task EnsureDefaultClientCredentials()
     {
+        if (!_options.Authentication.Enabled)
+        {
+            return;
+        }
+
         const string defaultClientId = "chronicle-dev-client";
         const string defaultClientSecret = "chronicle-dev-secret";
 

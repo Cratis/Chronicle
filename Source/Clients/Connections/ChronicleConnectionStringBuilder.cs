@@ -25,6 +25,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string PasswordKey = "Password";
     const string SchemeKey = "Scheme";
     const string ApiKeyKey = "apiKey";
+    const string AuthKey = "auth";
+    const string NoAuthenticationValue = "none";
     const string SkipTlsValidationKey = "skipTlsValidation";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
@@ -179,6 +181,13 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             var hasApiKey = !string.IsNullOrEmpty(ApiKey);
             var hasNoAuthentication = !hasUsername && !hasPassword && !hasApiKey;
 
+            // Asking for no authentication is deliberate and beats anything else the connection string carries -
+            // credentials left in place by a shared configuration must not quietly turn the exchange back on.
+            if (NoAuthentication)
+            {
+                return AuthenticationMode.None;
+            }
+
             if (hasClientCredentials && hasApiKey)
             {
                 throw new AmbiguousAuthenticationMode();
@@ -195,6 +204,32 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             }
 
             throw new MissingAuthentication();
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets whether the client connects without presenting any credentials, expressed as
+    /// <c>auth=none</c> in the connection string.
+    /// </summary>
+    /// <remarks>
+    /// Only works against a server running with authentication turned off
+    /// (<c>Cratis:Chronicle:Authentication:Enabled=false</c>). Note that omitting credentials entirely does
+    /// <em>not</em> mean this - a connection string with no credentials still performs a client-credentials
+    /// exchange using the development credentials, which is what it has always done.
+    /// </remarks>
+    public bool NoAuthentication
+    {
+        get => ContainsKey(AuthKey) && string.Equals((string)this[AuthKey], NoAuthenticationValue, StringComparison.OrdinalIgnoreCase);
+        set
+        {
+            if (value)
+            {
+                this[AuthKey] = NoAuthenticationValue;
+            }
+            else
+            {
+                Remove(AuthKey);
+            }
         }
     }
 

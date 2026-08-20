@@ -66,6 +66,20 @@ public static class ServiceCollectionExtensions
                 .UnprotectKeysWithAnyCertificate([.. encryptionCertificateRing.All.Select(_ => _.Certificate)]);
         }
 
+        // Everything from here on exists to authenticate callers. With authentication off there is nothing to
+        // authenticate them against, so the token authority, the identity stack and the schemes are all skipped
+        // and the fallback policy lets every request through. Data Protection above stays either way - webhook
+        // secret encryption depends on it and has nothing to do with authentication.
+        if (!chronicleOptions.Authentication.Enabled)
+        {
+            services.AddAuthorizationBuilder()
+                .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+                    .RequireAssertion(_ => true)
+                    .Build());
+
+            return services;
+        }
+
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>
             {
