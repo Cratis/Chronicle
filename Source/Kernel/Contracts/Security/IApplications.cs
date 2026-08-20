@@ -134,11 +134,11 @@ public class ApplicationResponse
     /// Gets or sets the CreatedAt.
     /// </summary>
     [ProtoMember(4)]
-    public DateTimeOffset CreatedAt { get; set; }
+    public Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// Gets or sets the LastModifiedAt.
     /// </summary>
     [ProtoMember(5)]
-    public DateTimeOffset? LastModifiedAt { get; set; }
+    public Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastModifiedAt { get; set; }
 }
