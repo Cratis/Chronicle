@@ -81,7 +81,7 @@ internal sealed class Jobs(
             Id = source.Id,
             Details = source.Details,
             Type = source.Type,
-            Status = source.Status,
+            Status = (global::Cratis.Chronicle.Contracts.Jobs.JobStatus)source.Status,
             Created = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.Created,
             StatusChanges = source.StatusChanges,
             Progress = source.Progress

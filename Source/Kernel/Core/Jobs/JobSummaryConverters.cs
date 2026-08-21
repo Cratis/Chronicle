@@ -33,7 +33,7 @@ internal static class JobSummaryConverters
             (Guid)job.Id,
             job.Details,
             job.Type,
-            (JobStatus)(int)job.Status,
+            job.Status,
             job.Created,
             job.StatusChanges.Select(ToStatusChanged),
             ToProgress(job.Progress));
