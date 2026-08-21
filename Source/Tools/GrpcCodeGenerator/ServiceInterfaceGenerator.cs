@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -54,6 +55,11 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             {
                 interfaceMembers.Add(BuildQueryMethod(method, query.ReadModelType, targetNamespace, requestResponseTypes));
             }
+        }
+
+        foreach (var keyedQuery in serviceDefinition.KeyedQueries)
+        {
+            interfaceMembers.Add(BuildKeyedQueryMethod(keyedQuery, targetNamespace, requestResponseTypes));
         }
 
         var interfaceDecl = SyntaxFactory.InterfaceDeclaration($"I{serviceDefinition.ServiceName}")
@@ -252,7 +258,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         {
             var innerType = GetObservableInnerType(returnType);
             var observed = innerType is not null ? MapToResponseType(innerType, responseTypeName) : responseTypeName;
-            returnTypeStr = $"IObservable<QueryResult<{Optional(observed, method)}>>";
+            returnTypeStr = $"IObservable<QueryResult<{Optional(observed, method.Method)}>>";
         }
         else
         {
@@ -262,7 +268,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                 queryReturnType = TypeHelper.GetOneOfSuccessType(queryReturnType);
             }
 
-            var mapped = Optional(MapToResponseType(queryReturnType, responseTypeName), method);
+            var mapped = Optional(MapToResponseType(queryReturnType, responseTypeName), method.Method);
             returnTypeStr = TypeHelper.IsVoidTask(returnType) ? "Task" : $"Task<QueryResult<{mapped}>>";
         }
 
@@ -313,6 +319,86 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     }
 
     /// <summary>
+    /// Builds the interface method for a <c>[Query]</c>-marked method on a <c>[KeyedBy&lt;TKey&gt;]</c> grain
+    /// interface - a query with no read model of its own, so its request carries the grain key's fields ahead of
+    /// its own parameters and its response type is named after the method, not a read model.
+    /// </summary>
+    /// <param name="method">The keyed query to build.</param>
+    /// <param name="targetNamespace">The namespace the generated messages live in.</param>
+    /// <param name="requestResponseTypes">The request/response DTOs accumulated for the service.</param>
+    /// <returns>The interface method declaration.</returns>
+    static MethodDeclarationSyntax BuildKeyedQueryMethod(
+        KeyedQueryDefinition method,
+        string targetNamespace,
+        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
+    {
+        var returnType = method.ReturnType;
+        var isObservable = TypeHelper.IsObservableType(returnType);
+        var responseTypeName = $"{method.Name}Response";
+
+        string returnTypeStr;
+        if (isObservable)
+        {
+            var innerType = GetObservableInnerType(returnType);
+            var observed = innerType is not null ? MapToResponseType(innerType, responseTypeName) : responseTypeName;
+            returnTypeStr = $"IObservable<QueryResult<{Optional(observed, method.Method)}>>";
+        }
+        else
+        {
+            var queryReturnType = TypeHelper.GetQueryReturnType(returnType);
+            if (TypeHelper.IsOneOfType(queryReturnType))
+            {
+                queryReturnType = TypeHelper.GetOneOfSuccessType(queryReturnType);
+            }
+
+            var mapped = Optional(MapToResponseType(queryReturnType, responseTypeName), method.Method);
+            returnTypeStr = TypeHelper.IsVoidTask(returnType) ? "Task" : $"Task<QueryResult<{mapped}>>";
+        }
+
+        var parameters = new List<ParameterSyntax>();
+        var paramDocs = new List<(string Name, string Text)>();
+
+        // The grain key's fields come first, then the method's own parameters - the implementation generator
+        // reads the same two groups in the same order to reconstruct the key and call the method.
+        var keyProps = method.KeyParameters
+            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)));
+        var methodProps = method.Parameters
+            .Where(p => !ParameterClassification.IsDependency(p.ParameterType))
+            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)));
+        var props = keyProps.Concat(methodProps).ToList();
+
+        if (props.Count > 0)
+        {
+            var requestTypeName = $"{method.Name}Request";
+            if (!requestResponseTypes.Exists(r => r.TypeName == requestTypeName))
+            {
+                requestResponseTypes.Add((requestTypeName, props));
+            }
+
+            parameters.Add(
+                SyntaxFactory.Parameter(SyntaxFactory.Identifier("request"))
+                    .WithType(SyntaxFactory.ParseTypeName(requestTypeName)));
+            paramDocs.Add(("request", "The query request parameters."));
+        }
+
+        parameters.Add(BuildCallContextParameter());
+        paramDocs.Add(("callContext", "The gRPC call context."));
+
+        return SyntaxFactory.MethodDeclaration(
+                SyntaxFactory.ParseTypeName(returnTypeStr),
+                SyntaxFactory.Identifier(method.Name))
+            .AddAttributeLists(
+                SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(
+                    SyntaxFactory.Attribute(SyntaxFactory.ParseName("Operation")))))
+            .AddParameterListParameters([.. parameters])
+            .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
+            .WithLeadingTrivia(BuildXmlDoc(
+                $"Executes the {method.Name} query.",
+                [.. paramDocs],
+                "The query result."));
+    }
+
+    /// <summary>
     /// Annotates a query's mapped result with the absence the query declares.
     /// </summary>
     /// <param name="typeName">The mapped result type name.</param>
@@ -322,8 +408,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     /// A query that can answer with nothing has to say so on the contract, or the implementation generated
     /// against that contract has nowhere to put the absence. See <see cref="QueryNullability"/>.
     /// </remarks>
-    static string Optional(string typeName, QueryMethodDefinition method) =>
-        typeName.EndsWith('?') || !QueryNullability.ResultIsNullable(method.Method) ? typeName : $"{typeName}?";
+    static string Optional(string typeName, MethodInfo method) =>
+        typeName.EndsWith('?') || !QueryNullability.ResultIsNullable(method) ? typeName : $"{typeName}?";
 
     /// <summary>
     /// Renders the type a message member carries.

@@ -54,11 +54,18 @@ public class ServiceImplementationGenerator(int skipNamespaceSegments, string co
             }
         }
 
+        foreach (var keyedQuery in serviceDefinition.KeyedQueries.OrderBy(_ => _.Name, StringComparer.Ordinal))
+        {
+            members.Add(ImplementationMethods.ForKeyedQuery(keyedQuery, serviceDefinition.ServiceName, context));
+            hasQueries |= !TypeHelper.IsVoidTask(keyedQuery.ReturnType);
+        }
+
         members.AddRange(context.Mappings.Select(mapping => ImplementationMethods.ForMapping(mapping, context)));
 
         var typeName = $"global::{implementationNamespace}.{serviceDefinition.ServiceName}";
         var contractTypeName = $"global::{contractsNamespace}.I{serviceDefinition.ServiceName}";
-        var observes = serviceDefinition.Queries.SelectMany(_ => _.Methods).Any(_ => _.IsObservable);
+        var observes = serviceDefinition.Queries.SelectMany(_ => _.Methods).Any(_ => _.IsObservable)
+            || serviceDefinition.KeyedQueries.Any(_ => _.IsObservable);
 
         var code = Header
             + Usings(serviceDefinition.Namespace, observes)

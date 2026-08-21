@@ -104,6 +104,10 @@ foreach (var (_, serviceDefinition) in serviceGroups)
     Console.WriteLine($"\nService: {serviceDefinition.ServiceName} (namespace: {serviceDefinition.Namespace})");
     Console.WriteLine($"  Commands: {serviceDefinition.Commands.Count}");
     Console.WriteLine($"  Queries: {serviceDefinition.Queries.Count}");
+    if (serviceDefinition.KeyedQueries.Count > 0)
+    {
+        Console.WriteLine($"  Keyed queries: {serviceDefinition.KeyedQueries.Count}");
+    }
 
     if (excluded.Contains(serviceDefinition.ServiceName))
     {

@@ -82,36 +82,36 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        if (TypeHelper.IsVoidTask(method.ReturnType))
-        {
-            return Method("Task", method.Name, parameters, invocation);
-        }
+        return QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context);
+    }
 
-        var logger = $"exception => logger.QueryFailed(exception, \"{serviceName}\", \"{method.Name}\")";
+    /// <summary>
+    /// Writes the method that dispatches a gRPC operation to a <c>[Query]</c>-marked grain method.
+    /// </summary>
+    /// <param name="method">The keyed query to dispatch to.</param>
+    /// <param name="serviceName">The name of the service the query belongs to.</param>
+    /// <param name="context">The generation context.</param>
+    /// <returns>The C# source for the method.</returns>
+    /// <remarks>
+    /// The grain key is reconstructed with <c>KeyHelper.Combine</c> over the request fields the key type's
+    /// constructor parameters were mapped onto - not by constructing the key type itself, so this does not depend
+    /// on the key type's own <c>ToString()</c> agreeing with how it is actually combined.
+    /// </remarks>
+    public static string ForKeyedQuery(KeyedQueryDefinition method, string serviceName, ImplementationContext context)
+    {
+        var grainFactoryName = context.Dependencies.NameFor(ResolveGrainFactoryType(method.GrainInterfaceType));
+        var keyArguments = method.KeyParameters.Select(RequestArgument);
+        var keyExpression = $"global::Cratis.Chronicle.KeyHelper.Combine({string.Join(", ", keyArguments)})";
+        var grainExpression = $"{grainFactoryName}.GetGrain<{QualifiedTypeName.For(method.GrainInterfaceType)}>({keyExpression})";
+        var methodArguments = method.Parameters.Select(RequestArgument);
+        var invocation = $"{grainExpression}.{method.Name}({string.Join(", ", methodArguments)})";
 
-        if (method.IsObservable)
-        {
-            var observed = Nullable(ImplementationDataMapping.For(ObservableElement(method), readModelType, context), method);
-            var stream = $"{invocation}\n                .CompletedBy(callContext.CancellationToken)";
-            if (!observed.IsIdentity)
-            {
-                stream += $"\n                .Select(_ => ({observed.ContractTypeName}){observed.Apply("_")})";
-            }
+        var hasRequest = method.KeyParameters.Count > 0 || method.Parameters.Count > 0;
+        var parameters = hasRequest
+            ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
+            : $"{CallContextType} callContext = default";
 
-            return Method(
-                $"IObservable<{QueryResultType}<{observed.ContractTypeName}>>",
-                method.Name,
-                parameters,
-                $"QueryExecutor.Execute<{observed.ContractTypeName}>(\n            () => {stream},\n            {logger})");
-        }
-
-        var mapping = Nullable(ImplementationDataMapping.For(TypeHelper.GetQueryReturnType(method.ReturnType), readModelType, context), method);
-
-        return Method(
-            $"Task<{QueryResultType}<{mapping.ContractTypeName}>>",
-            method.Name,
-            parameters,
-            $"QueryExecutor.Execute<{mapping.ContractTypeName}>(\n            {QueryBody(method, invocation, mapping)},\n            {logger})");
+        return QueryDispatch(method.Name, method.Method, invocation, parameters, null, serviceName, context);
     }
 
     /// <summary>
@@ -143,6 +143,52 @@ public static class ImplementationMethods
     }
 
     /// <summary>
+    /// Writes the body shared by every query-shaped dispatch - void, observable, and awaitable alike - once the
+    /// caller has worked out what expression invokes the artifact and what the request parameter list looks like.
+    /// </summary>
+    /// <param name="name">The operation name.</param>
+    /// <param name="method">The method info the operation is derived from.</param>
+    /// <param name="invocation">The expression invoking the artifact.</param>
+    /// <param name="parameters">The generated method's own parameter list.</param>
+    /// <param name="readModelType">The read model the query is declared on, or null when it is not declared on one.</param>
+    /// <param name="serviceName">The name of the service the query belongs to.</param>
+    /// <param name="context">The generation context.</param>
+    /// <returns>The C# source for the method.</returns>
+    static string QueryDispatch(string name, MethodInfo method, string invocation, string parameters, Type? readModelType, string serviceName, ImplementationContext context)
+    {
+        if (TypeHelper.IsVoidTask(method.ReturnType))
+        {
+            return Method("Task", name, parameters, invocation);
+        }
+
+        var logger = $"exception => logger.QueryFailed(exception, \"{serviceName}\", \"{name}\")";
+
+        if (TypeHelper.IsObservableType(method.ReturnType))
+        {
+            var observed = Nullable(ImplementationDataMapping.For(ObservableElement(method), readModelType, context), method);
+            var stream = $"{invocation}\n                .CompletedBy(callContext.CancellationToken)";
+            if (!observed.IsIdentity)
+            {
+                stream += $"\n                .Select(_ => ({observed.ContractTypeName}){observed.Apply("_")})";
+            }
+
+            return Method(
+                $"IObservable<{QueryResultType}<{observed.ContractTypeName}>>",
+                name,
+                parameters,
+                $"QueryExecutor.Execute<{observed.ContractTypeName}>(\n            () => {stream},\n            {logger})");
+        }
+
+        var mapping = Nullable(ImplementationDataMapping.For(TypeHelper.GetQueryReturnType(method.ReturnType), readModelType, context), method);
+
+        return Method(
+            $"Task<{QueryResultType}<{mapping.ContractTypeName}>>",
+            name,
+            parameters,
+            $"QueryExecutor.Execute<{mapping.ContractTypeName}>(\n            {QueryBody(method, invocation, mapping)},\n            {logger})");
+    }
+
+    /// <summary>
     /// Writes the lambda that produces a query's data.
     /// </summary>
     /// <param name="method">The query method.</param>
@@ -153,9 +199,9 @@ public static class ImplementationMethods
     /// The mapped forms bind the result to a local rather than mapping the invocation expression in place. A
     /// null-tolerant mapping reads its value twice, and reading an await twice would run the query twice.
     /// </remarks>
-    static string QueryBody(QueryMethodDefinition method, string invocation, ImplementationDataMapping mapping)
+    static string QueryBody(MethodInfo method, string invocation, ImplementationDataMapping mapping)
     {
-        var isSynchronous = QueryNullability.IsSynchronous(method.Method);
+        var isSynchronous = QueryNullability.IsSynchronous(method);
 
         if (mapping.IsIdentity)
         {
@@ -175,9 +221,9 @@ public static class ImplementationMethods
     /// <param name="mapping">The mapping to widen.</param>
     /// <param name="method">The query method.</param>
     /// <returns>The widened mapping.</returns>
-    static ImplementationDataMapping Nullable(ImplementationDataMapping mapping, QueryMethodDefinition method)
+    static ImplementationDataMapping Nullable(ImplementationDataMapping mapping, MethodInfo method)
     {
-        if (mapping.ContractTypeName.EndsWith('?') || !QueryNullability.ResultIsNullable(method.Method))
+        if (mapping.ContractTypeName.EndsWith('?') || !QueryNullability.ResultIsNullable(method))
         {
             return mapping;
         }
@@ -202,7 +248,39 @@ public static class ImplementationMethods
         return new(mapping.ContractTypeName, expression => $"{mapping.MethodName}({expression})", false, mapping.MethodName);
     }
 
-    static Type ObservableElement(QueryMethodDefinition method)
+    /// <summary>
+    /// Finds the loaded <c>Orleans.IGrainFactory</c> type reachable from a grain interface.
+    /// </summary>
+    /// <param name="grainInterfaceType">The grain interface to resolve from.</param>
+    /// <returns>The <c>Orleans.IGrainFactory</c> type.</returns>
+    /// <remarks>
+    /// The generator has no compile-time reference to Orleans - it processes an arbitrary assembly loaded into an
+    /// isolated context - so this has to find the type reflectively. Reflecting over the grain interface's own base
+    /// interfaces (<c>IGrainWithStringKey</c> and the like) has already forced their defining assembly to load,
+    /// which is the one that also exposes <c>IGrainFactory</c>.
+    /// </remarks>
+    /// <exception cref="UnsupportedServiceShape">Thrown when no assembly reachable from the grain interface exposes it.</exception>
+    static Type ResolveGrainFactoryType(Type grainInterfaceType)
+    {
+        var candidateAssemblies = grainInterfaceType.GetInterfaces()
+            .Select(i => i.Assembly)
+            .Distinct()
+            .Append(grainInterfaceType.Assembly);
+
+        foreach (var assembly in candidateAssemblies)
+        {
+            if (assembly.GetType("Orleans.IGrainFactory") is { } found)
+            {
+                return found;
+            }
+        }
+
+        throw new UnsupportedServiceShape(
+            grainInterfaceType.FullName ?? grainInterfaceType.Name,
+            "the generator could not resolve Orleans.IGrainFactory from any assembly the grain interface references.");
+    }
+
+    static Type ObservableElement(MethodInfo method)
     {
         var returnType = method.ReturnType;
         if (returnType.IsGenericType)
