@@ -247,7 +247,7 @@ public class UserResponse
     /// Gets or sets the LastModifiedAt.
     /// </summary>
     [ProtoMember(6)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset? LastModifiedAt { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastModifiedAt { get; set; }
 
     /// <summary>
     /// Gets or sets the HasLoggedIn.
