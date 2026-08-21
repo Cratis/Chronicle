@@ -240,14 +240,40 @@ against the generator's "no `[BelongsTo]`" skip list, which is a broader net tha
 - `Observation` top-level (`ClearObserverQuarantine` etc.) — real Contracts references, but belongs to the
   `Observers` service, which stays excluded from generation until the larger, already-deferred Observation
   migration (`PLAN.md`'s own "Step 3 of the Observation migration") lands. Not part of this phase.
-- `Reactors`/`Reducers` `Clients/` mediators — reference Contracts, but implement the reactor/reducer streaming
-  protocol, not `[Command]`/`[ReadModel]` artifacts. Plausibly a fourth legitimate hand-rolled exception, not a
-  `[BelongsTo]` case. Needs a deliberate decision.
-- `EventSequences`, `Projections`, `ReadModels` — genuine candidates, but each is its own multi-method migration
-  on the scale of an area `PLAN.md` already completed (missing Core artifacts for several contract methods,
-  method-name mismatches, and — for `Projections` specifically — every artifact currently injects
-  `Contracts.Projections.IProjections` itself as a dependency, i.e. Core calling the hand-written Grpc
-  implementation to do its own work). None of these is safe as an isolated attribute change.
+- ~~`Reactors`/`Reducers` `Clients/` mediators~~ **Resolved, not an exception after all.** Their only Contracts
+  reference turned out to be `ReplayState` (a plain enum, not the streaming protocol itself) — moved into Core
+  the same way `JobStatus` was; the two hand-written Grpc streaming implementations needed one explicit cast
+  each at the boundary. Done.
+- `EventSequences`, `Projections`, `ReadModels` — **all three share one root cause, precisely identified**: every
+  artifact in all three areas injects the corresponding hand-written `Contracts.<Area>.I<Service>` directly into
+  its `Handle()`/query method and calls back through it — `Sequences.Append`, `AppendMany`, `Redact`, `RedactMany`,
+  `Revise` all take `IEventSequences`; all 7 `ProjectionEditor` artifacts take `IProjections`; both
+  `ReadModelExplorer` and `ReadModelDefinitions` take `IReadModels`. **Checked every other "done" area for the same pattern
+  (`Jobs`/`Security`/`EventTypes` inject `IGrainFactory`/`IStorage` directly, cleanly) — it is isolated to these
+  three**, not systemic. This is why `PLAN.md`'s "state of the branch" could honestly claim these areas were
+  migrated: the Workbench works today, because the shortcut still round-trips through the old hand-written Grpc
+  service underneath. Fixing it means porting that service's actual logic (grain calls, storage cursors,
+  compliance release, paging) into the Core artifacts directly — `Grpc/EventSequences/EventSequences.cs` (310
+  lines), `Grpc/Projections/Projections.cs` (533 lines), `Grpc/ReadModels/{ReadModels,MaterializedReadModels}.cs`
+  (876 + 104 lines) are the source of truth for what each rewritten artifact must still do.
+  - **`EventSequences` also needs 3 new artifacts**, not just a rewrite of the 9 existing ones:
+    `CompleteStream`, `HasEventsForEventSourceId`, `GetForEventSourceIdAndEventTypes` have no Core artifact at
+    all today, confirmed still real, published `Cratis.Chronicle.Client` (.NET SDK) surface with its own specs —
+    not dead code safe to drop.
+  - **`RedactMany` (Core's name) already calls the contract operation `RedactForEventSource`** — the rename has
+    to go the other way (Core's command becomes `RedactForEventSource`) to keep the wire operation name stable,
+    not the reverse.
+  - **Zero existing specs target these artifacts directly** — every existing `Core.Specs` spec under
+    `EventSequences/`/`Projections/`/`ReadModels/` tests the grain or storage layer beneath them, never
+    `Sequences.Append` et al. The relevant coverage that *does* exist is `Integration/Client/for_EventSequence/*`
+    (out-of-process, exercises the real command through the real client) — **which needs Docker and cannot run on
+    this machine** (see `project_integration_specs_need_linux` — macOS can't run the Docker-backed suites at
+    all). Verification for this phase leans on: in-process `CommandScenario`/`ReadModelScenario` specs written
+    fresh as part of the rewrite (closing the coverage gap, not just borrowing existing coverage that doesn't
+    exist), full `Core.Specs`, full solution build, `WireCompatibility`, and — before calling any of these three
+    areas done — a live-kernel Workbench click-through per `PLAN.md`'s Step 6 protocol, since that is the layer
+    that actually exercises the full pipeline this rewrite touches and neither a build nor a unit spec can stand
+    in for it. CI (`Integration/Client` included) is the other real check, once this is pushed.
 
 **Decided (2026-08-21, see the directive at the top of this file): 100% purity.** Every one of these areas gets
 fully migrated — Core artifacts written for every contract method, hand-written interfaces deleted, no narrow
