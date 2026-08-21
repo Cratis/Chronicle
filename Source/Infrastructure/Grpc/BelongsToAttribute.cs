@@ -4,10 +4,11 @@
 namespace Cratis.Chronicle.Grpc;
 
 /// <summary>
-/// Attribute used to specify which gRPC service a command or query belongs to.
+/// Attribute used to specify which gRPC service a command, query, or <see cref="KeyedByAttribute{TKey}"/> grain
+/// interface belongs to.
 /// </summary>
 /// <param name="service">The name of the gRPC service.</param>
-[AttributeUsage(AttributeTargets.Class)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
 public sealed class BelongsToAttribute(string service) : Attribute
 {
     /// <summary>
