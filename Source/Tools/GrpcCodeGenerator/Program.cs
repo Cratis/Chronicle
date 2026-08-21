@@ -80,6 +80,8 @@ catch (Exception ex)
     return;
 }
 
+SharedTypeRegistry.Configure(skipNamespaces, baseNamespace);
+
 var typeDiscovery = new TypeDiscovery(assembly);
 var serviceGroups = typeDiscovery.DiscoverServices();
 
@@ -147,6 +149,33 @@ foreach (var (_, serviceDefinition) in serviceGroups)
     {
         Console.Error.WriteLine($"  ERROR implementing service '{serviceDefinition.ServiceName}': {ex.Message}");
         hasError = true;
+    }
+}
+
+if (hasError)
+{
+    Environment.Exit(1);
+}
+
+// Every service has now had a chance to reference a Core-owned shared type, but generating one can itself
+// reference another (Identity.OnBehalfOf is even self-referential) - SharedTypeRegistry.Discovered only ever
+// grows, so re-scanning it for anything not yet generated converges once nothing new turns up.
+var generatedSharedTypes = new HashSet<Type>();
+while (SharedTypeRegistry.Discovered.Keys.Except(generatedSharedTypes).ToList() is { Count: > 0 } pendingSharedTypes)
+{
+    foreach (var sharedType in pendingSharedTypes)
+    {
+        generatedSharedTypes.Add(sharedType);
+        try
+        {
+            generator.GenerateSharedType(sharedType, outputDirectory);
+            Console.WriteLine($"  Generated shared type {sharedType.Name}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"  ERROR generating shared type '{sharedType.Name}': {ex.Message}");
+            hasError = true;
+        }
     }
 }
 
