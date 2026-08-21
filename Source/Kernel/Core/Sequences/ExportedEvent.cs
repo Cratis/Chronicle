@@ -1,9 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Arc.Queries;
 using Cratis.Arc.Queries.ModelBound;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -20,6 +24,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Tags">The tags the event carries.</param>
 /// <param name="Content">The event's content, as the JSON it is stored as.</param>
 [ReadModel]
+[BelongsTo(WellKnownServices.EventSequences)]
 public record ExportedEvent(
     ulong SequenceNumber,
     string EventType,
@@ -34,7 +39,9 @@ public record ExportedEvent(
     /// <summary>
     /// Get every event matching a set of criteria, for exporting them.
     /// </summary>
-    /// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
+    /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> content is serialized with.</param>
     /// <param name="queryContextManager"><see cref="IQueryContextManager"/> for the ordering the caller asked for.</param>
     /// <param name="eventStore">Event store to export from.</param>
     /// <param name="namespace">Namespace to export from.</param>
@@ -54,7 +61,9 @@ public record ExportedEvent(
     /// walked page by page from the browser.
     /// </remarks>
     public static async Task<IEnumerable<ExportedEvent>> ExportEvents(
-        IEventSequences eventSequences,
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
         IQueryContextManager queryContextManager,
         string eventStore,
         string @namespace,
@@ -69,29 +78,30 @@ public record ExportedEvent(
         DateTimeOffset? occurredTo = default)
     {
         var (sortBy, descending) = EventSequenceQuerySortByParser.From(queryContextManager.Current.Sorting);
-        var response = await eventSequences.QueryEvents(new()
-        {
-            EventStore = eventStore,
-            Namespace = @namespace,
-            EventSequenceId = eventSequenceId,
-            Criteria = EventSequenceQueryCriteriaFactory.Create(new(
-                eventSourceId,
-                eventSourceType,
-                eventStreamType,
-                correlationId,
-                eventTypeIds,
-                tags,
-                occurredFrom,
-                occurredTo)),
-            Skip = 0,
-            Take = int.MaxValue,
-            Descending = descending,
-            SortBy = sortBy
-        });
+        var criteria = EventSequenceQueryCriteriaFactory.Create(new(
+            eventSourceId,
+            eventSourceType,
+            eventStreamType,
+            correlationId,
+            eventTypeIds,
+            tags,
+            occurredFrom,
+            occurredTo));
+
+        var (events, _) = await EventSequenceQuerying.QueryPage(
+            storage,
+            eventCompliance,
+            eventStore,
+            @namespace,
+            eventSequenceId,
+            criteria,
+            0,
+            int.MaxValue,
+            new EventSequenceQuerySort(sortBy, descending));
 
         // Projected inline rather than through a helper, because every static method on a read model
         // is published as a query of its own.
-        return response.Events.ToApi().Select(@event => new ExportedEvent(
+        return events.ToApi(jsonSerializerOptions).Select(@event => new ExportedEvent(
             @event.Context.SequenceNumber,
             @event.Context.EventType.Id,
             @event.Context.EventSourceType,

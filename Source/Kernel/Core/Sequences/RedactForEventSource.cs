@@ -3,7 +3,10 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Events.EventSequences;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -17,7 +20,8 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Reason">Why the events are being redacted.</param>
 /// <param name="EventTypes">The event types to redact. Empty redacts every type for the event source.</param>
 [Command]
-public record RedactMany(
+[BelongsTo(WellKnownServices.EventSequences)]
+public record RedactForEventSource(
     string EventStore,
     string Namespace,
     string EventSequenceId,
@@ -26,26 +30,31 @@ public record RedactMany(
     IEnumerable<string> EventTypes)
 {
     /// <summary>
-    /// Handles the command by redacting every matching event for the event source.
+    /// Handles the command by requesting the redaction of every matching event for the event source.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> to redact through.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append the redaction request through.</param>
     /// <param name="causation">The <see cref="RequestCausation"/> describing the request behind the append.</param>
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is redacting.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A reactor picks up the resulting <see cref="EventsRedactedForEventSource"/> and performs the actual
+    /// in-place replacements, rather than the redaction happening synchronously here.
+    /// </remarks>
     internal Task Handle(
-        IEventSequences eventSequences,
+        IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor) =>
-        eventSequences.RedactForEventSource(new RedactForEventSourceRequest
-        {
-            EventStore = EventStore,
-            Namespace = Namespace,
-            EventSequenceId = EventSequenceId,
-            EventSourceId = EventSourceId,
-            Reason = Reason,
-            EventTypes = [.. EventTypes.Select(eventType => new Contracts.Events.EventType { Id = eventType, Generation = 1 })],
-            CorrelationId = Guid.NewGuid(),
-            Causation = causation.GetCurrentChain(),
-            CausedBy = principalAccessor.Current.ToContract()
-        });
+        ICurrentPrincipalAccessor principalAccessor)
+    {
+        var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
+        return systemEventSequence.Append(
+            (EventSourceId)EventSequenceId,
+            new EventsRedactedForEventSource(
+                EventSequenceId,
+                (EventSourceId)EventSourceId,
+                EventTypes.Select(eventType => new Concepts.Events.EventType(eventType, 1)),
+                Reason),
+            correlationId: Guid.NewGuid(),
+            causation: causation.GetCurrentChain(),
+            causedBy: principalAccessor.Current.ToIdentity());
+    }
 }

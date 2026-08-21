@@ -5,7 +5,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Events.EventSequences;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -23,6 +26,7 @@ namespace Cratis.Chronicle.Sequences;
 /// said before stays answerable.
 /// </remarks>
 [Command]
+[BelongsTo(WellKnownServices.EventSequences)]
 public record Revise(
     string EventStore,
     string Namespace,
@@ -32,26 +36,31 @@ public record Revise(
     JsonObject Content)
 {
     /// <summary>
-    /// Handles the command by revising the event.
+    /// Handles the command by requesting the revision of the event.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> to revise through.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append the revision request through.</param>
     /// <param name="causation">The <see cref="RequestCausation"/> describing the request behind the append.</param>
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is revising.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A reactor picks up the resulting <see cref="EventRevised"/> and performs the actual in-place update, rather
+    /// than the revision happening synchronously here.
+    /// </remarks>
     internal Task Handle(
-        IEventSequences eventSequences,
+        IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor) =>
-        eventSequences.Revise(new ReviseRequest
-        {
-            EventStore = EventStore,
-            Namespace = Namespace,
-            EventSequenceId = EventSequenceId,
-            SequenceNumber = SequenceNumber,
-            EventType = EventType.ToContract(),
-            Content = JsonSerializer.Serialize(Content),
-            CorrelationId = Guid.NewGuid(),
-            Causation = causation.GetCurrentChain(),
-            CausedBy = principalAccessor.Current.ToContract()
-        });
+        ICurrentPrincipalAccessor principalAccessor)
+    {
+        var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
+        return systemEventSequence.Append(
+            (EventSourceId)EventSequenceId,
+            new EventRevised(
+                EventSequenceId,
+                SequenceNumber,
+                EventType.ToChronicle(),
+                JsonSerializer.Serialize(Content)),
+            correlationId: Guid.NewGuid(),
+            causation: causation.GetCurrentChain(),
+            causedBy: principalAccessor.Current.ToIdentity());
+    }
 }

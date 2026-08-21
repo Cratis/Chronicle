@@ -3,7 +3,10 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Events.EventSequences;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -20,6 +23,7 @@ namespace Cratis.Chronicle.Sequences;
 /// has to cope with a hole where an event used to be.
 /// </remarks>
 [Command]
+[BelongsTo(WellKnownServices.EventSequences)]
 public record Redact(
     string EventStore,
     string Namespace,
@@ -28,25 +32,27 @@ public record Redact(
     string Reason)
 {
     /// <summary>
-    /// Handles the command by redacting the event.
+    /// Handles the command by requesting the redaction of the event.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> to redact through.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append the redaction request through.</param>
     /// <param name="causation">The <see cref="RequestCausation"/> describing the request behind the append.</param>
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is redacting.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A reactor picks up the resulting <see cref="EventRedactionRequested"/> and performs the actual in-place
+    /// replacement, rather than the redaction happening synchronously here.
+    /// </remarks>
     internal Task Handle(
-        IEventSequences eventSequences,
+        IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor) =>
-        eventSequences.Redact(new RedactRequest
-        {
-            EventStore = EventStore,
-            Namespace = Namespace,
-            EventSequenceId = EventSequenceId,
-            SequenceNumber = SequenceNumber,
-            Reason = Reason,
-            CorrelationId = Guid.NewGuid(),
-            Causation = causation.GetCurrentChain(),
-            CausedBy = principalAccessor.Current.ToContract()
-        });
+        ICurrentPrincipalAccessor principalAccessor)
+    {
+        var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
+        return systemEventSequence.Append(
+            (EventSourceId)EventSequenceId,
+            new EventRedactionRequested(EventSequenceId, SequenceNumber, Reason),
+            correlationId: Guid.NewGuid(),
+            causation: causation.GetCurrentChain(),
+            causedBy: principalAccessor.Current.ToIdentity());
+    }
 }

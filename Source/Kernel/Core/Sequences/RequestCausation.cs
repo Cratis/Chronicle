@@ -37,7 +37,7 @@ public class RequestCausation(IHttpContextAccessor httpContextAccessor)
     /// Gets the causation chain for the request in flight.
     /// </summary>
     /// <returns>A chain with one entry describing the request, or empty when there is no request.</returns>
-    public IList<Contracts.Auditing.Causation> GetCurrentChain()
+    public IList<Concepts.Auditing.Causation> GetCurrentChain()
     {
         if (httpContextAccessor.HttpContext is not { } context)
         {
@@ -69,12 +69,7 @@ public class RequestCausation(IHttpContextAccessor httpContextAccessor)
 
         return
         [
-            new Contracts.Auditing.Causation
-            {
-                Occurred = DateTimeOffset.UtcNow,
-                Type = CausationType,
-                Properties = properties
-            }
+            new Concepts.Auditing.Causation(DateTimeOffset.UtcNow, CausationType, properties)
         ];
     }
 }

@@ -16,7 +16,7 @@ export * from './ExportEvents';
 export * from './Identity';
 export * from './QueryEvents';
 export * from './Redact';
-export * from './RedactMany';
+export * from './RedactForEventSource';
 export * from './Revise';
 export * from './SequenceHistogram';
 export * from './SequenceHistogramBucket';

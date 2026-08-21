@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries.ModelBound;
-
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -18,12 +19,13 @@ namespace Cratis.Chronicle.Sequences;
 /// cannot infer where a bucket ends from where the next one begins.
 /// </remarks>
 [ReadModel]
+[BelongsTo(WellKnownServices.EventSequences)]
 public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, long Count)
 {
     /// <summary>
     /// Gets the number of events per time bucket, for driving a time range picker over an event sequence.
     /// </summary>
-    /// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
     /// <param name="eventStore">Event store to get for.</param>
     /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
@@ -42,7 +44,7 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
     /// produces no rows.
     /// </remarks>
     public static async Task<IEnumerable<SequenceHistogramBucket>> SequenceHistogram(
-        IEventSequences eventSequences,
+        IStorage storage,
         string eventStore,
         string @namespace,
         string eventSequenceId,
@@ -57,24 +59,20 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
         DateTimeOffset? occurredTo = default)
     {
         var histogramResolution = ParseResolution(resolution);
-        var response = await eventSequences.GetHistogram(new()
-        {
-            EventStore = eventStore,
-            Namespace = @namespace,
-            EventSequenceId = eventSequenceId,
-            Resolution = histogramResolution,
-            Criteria = EventSequenceQueryCriteriaFactory.Create(new(
-                eventSourceId,
-                eventSourceType,
-                eventStreamType,
-                correlationId,
-                eventTypeIds,
-                tags,
-                occurredFrom,
-                occurredTo))
-        });
+        var criteria = EventSequenceQueryCriteriaFactory.Create(new(
+            eventSourceId,
+            eventSourceType,
+            eventStreamType,
+            correlationId,
+            eventTypeIds,
+            tags,
+            occurredFrom,
+            occurredTo));
 
-        return response.Buckets
+        var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+        var buckets = await eventSequence.GetHistogram(histogramResolution, criteria);
+
+        return buckets
             .Select(_ => new SequenceHistogramBucket(_.Occurred, EndOf(_.Occurred, histogramResolution), _.Count))
             .ToArray();
     }
