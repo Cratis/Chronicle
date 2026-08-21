@@ -18,8 +18,26 @@ public static class ImplementationValues
     /// <param name="expression">The expression reading the wire value.</param>
     /// <param name="declaredType">The type the artifact declares.</param>
     /// <returns>The expression to pass to the artifact.</returns>
+    /// <exception cref="UnsupportedServiceShape">
+    /// Thrown when <paramref name="declaredType"/> is a nullable value type wrapping a concept or a shared type -
+    /// there is no proven conversion shape for that as a request parameter.
+    /// </exception>
     public static string ToDomain(string expression, Type declaredType)
     {
+        // A nullable value type wrapping something that needs converting (a struct-backed concept, a nullable
+        // enum shared type) has no defined behavior here: unlike the response side's ForNullable, which special
+        // cases a transport stand-in and otherwise refuses, a request parameter is rare enough there is no
+        // proven cast/null-check shape to fall back to. Refuse rather than silently treating the wire value as
+        // already being the domain type, which is what happens when a generic type - Nullable<T> is one - falls
+        // through the checks below untouched.
+        if (Nullable.GetUnderlyingType(declaredType) is { } underlyingType &&
+            (TypeHelper.IsConceptType(underlyingType) || SharedTypeRegistry.QualifiedNameFor(underlyingType) is not null))
+        {
+            throw new UnsupportedServiceShape(
+                declaredType.Name,
+                "a nullable value type that needs converting has no defined behavior as a request parameter - use the non-nullable form.");
+        }
+
         if (TypeHelper.IsConceptType(declaredType))
         {
             return $"({QualifiedTypeName.For(declaredType)}){expression}";
