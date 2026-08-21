@@ -101,6 +101,27 @@ public record ImplementationDataMapping(string ContractTypeName, Func<string, st
     }
 
     /// <summary>
+    /// Gets the element type when a type is a sequence the wire carries as a repeated field.
+    /// </summary>
+    /// <param name="type">The type to inspect.</param>
+    /// <returns>The element type, or null when the type is not a sequence.</returns>
+    internal static Type? SequenceElement(Type type)
+    {
+        if (type == typeof(string))
+        {
+            return null;
+        }
+
+        if (type.IsGenericType &&
+            type.GetGenericTypeDefinition().FullName?.StartsWith("System.Collections.Generic.IEnumerable`", StringComparison.Ordinal) == true)
+        {
+            return type.GetGenericArguments()[0];
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Resolves the mapping for a nullable value type.
     /// </summary>
     /// <param name="underlying">The type the nullable wraps.</param>
@@ -125,26 +146,5 @@ public record ImplementationDataMapping(string ContractTypeName, Func<string, st
             : throw new UnsupportedServiceShape(
                 underlying.FullName ?? underlying.Name,
                 "a nullable of a type that needs converting has no defined null behavior on the wire - use the non-nullable form.");
-    }
-
-    /// <summary>
-    /// Gets the element type when a type is a sequence the wire carries as a repeated field.
-    /// </summary>
-    /// <param name="type">The type to inspect.</param>
-    /// <returns>The element type, or null when the type is not a sequence.</returns>
-    static Type? SequenceElement(Type type)
-    {
-        if (type == typeof(string))
-        {
-            return null;
-        }
-
-        if (type.IsGenericType &&
-            type.GetGenericTypeDefinition().FullName?.StartsWith("System.Collections.Generic.IEnumerable`", StringComparison.Ordinal) == true)
-        {
-            return type.GetGenericArguments()[0];
-        }
-
-        return null;
     }
 }

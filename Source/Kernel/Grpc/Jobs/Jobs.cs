@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using Cratis.Chronicle.Jobs;
 using System.Reactive.Linq;
 using Cratis.Reactive;
 

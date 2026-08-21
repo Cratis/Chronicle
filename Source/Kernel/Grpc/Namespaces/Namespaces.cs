@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using Cratis.Chronicle.Namespaces;
 using System.Reactive.Linq;
 using Cratis.Reactive;
 

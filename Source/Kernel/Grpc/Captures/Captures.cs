@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using Cratis.Chronicle.Captures;
 using System.Reactive.Linq;
 using Cratis.Reactive;
 

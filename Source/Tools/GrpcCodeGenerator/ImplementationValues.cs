@@ -51,6 +51,14 @@ public static class ImplementationValues
             return declaredType.IsEnum ? $"({QualifiedTypeName.For(declaredType)}){expression}" : $"{expression}.ToApi()";
         }
 
+        // A collection parameter needs its element converted the same way a scalar one would - a concept or a
+        // shared type inside the sequence is still a distinct CLR type from what the artifact declares.
+        if (ImplementationDataMapping.SequenceElement(declaredType) is { } elementType)
+        {
+            var elementConversion = ToDomain("x", elementType);
+            return elementConversion == "x" ? expression : $"{expression}.Select(x => {elementConversion})";
+        }
+
         return expression;
     }
 
