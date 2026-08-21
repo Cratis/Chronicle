@@ -50,6 +50,7 @@
         <ProjectReference Include="../../Clients/Workbench/Workbench.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Core/Core.csproj" />
+        <ProjectReference Include="../Grpc/Grpc.csproj" />
         <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
