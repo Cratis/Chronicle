@@ -193,12 +193,32 @@ predate this work).
 
 ### Phase 3 — wire up the un-discovered areas
 
-For each of `EventSequences` (Core folder `Sequences`), `Projections` (`ProjectionEditor`), `ReadModels`
-(`ReadModelExplorer` + `ReadModelDefinitions`), `Observation`'s Reactors/Reducers/EventStoreSubscriptions,
-`Compliance`, `Host`: add a `WellKnownServices` constant and `[BelongsTo]` the area's commands/read models,
-following the per-area recipe `PLAN.md` already documents (Step 3 in that file) — this part is not new, it's
-finishing what that file claims is already finished. `Observers` and `ConnectionService` are excluded, per the
-existing decision.
+**Revised after investigation (see `PROGRESS2.md` for the full per-area evidence) — this is not the quick
+`[BelongsTo]`-wiring sweep it first looked like.** Checked every candidate against its actual source rather than
+against the generator's "no `[BelongsTo]`" skip list, which is a broader net than "has this plan's problem":
+
+- `Compliance`, `Host`, `DevelopmentTools`, `EventStoreSubscriptions`, `SequenceQueries` — **not part of this
+  plan.** Zero files reference `Cratis.Chronicle.Contracts`; they lack `[BelongsTo]` because they were never meant
+  to have a gRPC surface (`Core/Schemas/TypeFormat.cs`'s own doc comment says this explicitly for the same
+  reason). Do not wire these — there is nothing to fix.
+- `Observation` top-level (`ClearObserverQuarantine` etc.) — real Contracts references, but belongs to the
+  `Observers` service, which stays excluded from generation until the larger, already-deferred Observation
+  migration (`PLAN.md`'s own "Step 3 of the Observation migration") lands. Not part of this phase.
+- `Reactors`/`Reducers` `Clients/` mediators — reference Contracts, but implement the reactor/reducer streaming
+  protocol, not `[Command]`/`[ReadModel]` artifacts. Plausibly a fourth legitimate hand-rolled exception, not a
+  `[BelongsTo]` case. Needs a deliberate decision.
+- `EventSequences`, `Projections`, `ReadModels` — genuine candidates, but each is its own multi-method migration
+  on the scale of an area `PLAN.md` already completed (missing Core artifacts for several contract methods,
+  method-name mismatches, and — for `Projections` specifically — every artifact currently injects
+  `Contracts.Projections.IProjections` itself as a dependency, i.e. Core calling the hand-written Grpc
+  implementation to do its own work). None of these is safe as an isolated attribute change.
+
+**Decision needed before continuing this phase**: is the end state 100% purity (every one of these areas fully
+migrated, Core artifacts written for every contract method, hand-written interfaces deleted), or a documented,
+narrow set of exceptions alongside `Observers`/`ConnectionService`? Whichever areas *are* pursued follow the
+per-area recipe `PLAN.md` already documents (Step 3 in that file) — write the missing Core artifacts, reconcile
+naming, delete the hand-written contract/implementation, update the three composition roots, verify — the same
+weight as migrating a new area, not a sweep.
 
 ### Phase 4 — migrate every shared type, area by area
 
