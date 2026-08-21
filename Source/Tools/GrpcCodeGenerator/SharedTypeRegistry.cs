@@ -101,6 +101,14 @@ public static class SharedTypeRegistry
             skipped = skipped.Skip(1).ToArray();
         }
 
+        // A type declared with nothing left after skipping (at the Chronicle root itself, or directly under a
+        // transparent layer with no area segment beneath it) mirrors straight into the base namespace - joining
+        // an empty segment list would otherwise leave a dangling trailing dot no namespace can parse.
+        if (skipped.Length == 0)
+        {
+            return _baseNamespace;
+        }
+
         return string.IsNullOrEmpty(_baseNamespace)
             ? string.Join('.', skipped)
             : $"{_baseNamespace}.{string.Join('.', skipped)}";
