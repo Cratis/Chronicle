@@ -17,7 +17,7 @@ public class and_it_reaches_the_generated_type_name : Specification
 
     [Fact]
     void should_substitute_a_nullable_property() =>
-        TypeHelper.GetTypeName(typeof(DateTimeOffset?)).ShouldEqual($"{SerializableDateTimeOffset}?");
+        TypeHelper.GetTypeName(typeof(DateTimeOffset?)).ShouldEqual(SerializableDateTimeOffset);
 
     [Fact]
     void should_substitute_inside_a_collection() =>
