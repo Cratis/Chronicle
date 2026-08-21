@@ -51,14 +51,58 @@ Tracks execution of `PLAN2.md`. Update as each step lands — this is a status l
 
 ## Phase 2 — generator: shared-type mirroring, proved on `JobStatus`
 
-- [ ] Add shared-type discovery pass (transitive walk, dedupe by `Type`, visited-set for cycles).
-- [ ] Generate shared-type files at the namespace-mapped location; reuse `ProtoMemberIndexReader` for classes,
-      explicit enum values for enums.
-- [ ] Move `JobStatus` into `Core/Jobs/JobStatus.cs`; repoint `JobSummary`/`JobSummaryConverters`/
-      `JobStepSummary`/`JobStepSummaryConverters`.
-- [ ] Confirm regenerated `Contracts/Jobs/JobStatus.cs` is byte-identical (modulo header) to the pre-move file.
-- [ ] Run `Source/Tools/WireCompatibility` — no new break.
-- [ ] **Checkpoint — do not proceed to Phase 3/4 until this is green.**
+- [x] Added `SharedTypeRegistry` (new file): candidacy by namespace (Chronicle-owned, not already a contract, not
+      a read model/concept/interface/generic/OneOf), memoized discovery, and a namespace mapper that treats
+      `Concepts` as a transparent layer segment (see the bug this fixes, below).
+- [x] Hooked `TypeHelper.GetTypeName`'s non-generic fallback to check the registry before assuming a type already
+      exists as a contract.
+- [x] Hooked both mapping directions: `ImplementationDataMapping.For` (Core → contract: enum cast, or `.ToContract()`
+      for a composite type) and `ImplementationValues.ToDomain` (contract → Core: enum cast, or `.ToApi()`) — the
+      composite-type calls follow the naming convention hand-written converters like `CausationConverters` already
+      established, not new generator-authored mapping code.
+- [x] Extended `ServiceInterfaceGenerator` with `GenerateSharedType`: enums render as plain C# enums (no protobuf
+      attributes — protobuf-net serializes by declared value, so copying the existing values verbatim *is* the
+      wire-stability story); classes reuse the existing `ProtoMemberIndexReader`/`BuildDtoClass` machinery so the
+      first generation reads whatever is currently on disk (the hand-written file being replaced) before
+      overwriting it.
+- [x] Wired `Program.cs`: `SharedTypeRegistry.Configure` before service generation, then a fixed-point loop after
+      (generating a shared type can itself discover another — `Identity.OnBehalfOf` will be the real test of that).
+- [x] **Real bug found and fixed during the proof, not after**: the first attempt mapped `Concepts.Jobs.JobStatus`
+      to `Contracts.Concepts.Jobs.JobStatus` (wrong — landed as a stray new file, not an overwrite of
+      `Contracts/Jobs/JobStatus.cs`), because the plain skip/base transform doesn't know a type reused from the
+      `Concepts` project sits one namespace segment deeper than a Core-declared type. Fixed by treating `Concepts`
+      as a transparent layer segment in the namespace mapper, and by making `GenerateSharedType`'s file/folder
+      path derive from the *same* mapping the reference-name computation uses (previously two separate,
+      independently-computed paths that could disagree).
+- [x] Moved `JobStatus`: reused the **existing** `Concepts.Jobs.JobStatus` (already identical, already what the
+      storage layer uses) rather than inventing a third `JobStatus` — repointed `JobSummary`/`JobSummaryConverters`
+      (dropped a now-redundant cast), left `JobStepStatus`/`JobProgress`/etc. for Phase 4 (they're not identical
+      shapes to their Concepts counterparts, so need real per-property conversion work, not a type swap).
+- [x] Regenerated `Contracts/Jobs/JobStatus.cs` — enum values `0`-`9` preserved exactly; confirmed idempotent
+      (identical SHA-256 across two consecutive builds).
+- [x] Regenerated `Source/Kernel/Protobuf/*.proto` and `chronicle.desc` (via `dotnet build Contracts.csproj -c
+      Release`) — **zero diff** against the committed versions. The wire schema is byte-identical.
+- [x] Ran `Source/Tools/WireCompatibility --major 16 --since 16.34.0 --allow-missing-baseline` before and after
+      the change (`git stash` to get the clean comparison point) — **the two reports are byte-identical, 218/218
+      lines**, zero new breaks. Every break listed is pre-existing and already documented.
+- [x] Confirmed both downstream TS pipelines reacted correctly and independently: the gRPC/Contracts proxy
+      (`Features/Contracts/Jobs/JobStatus.ts`, values unchanged, doc text generic per the established
+      generated-DTO convention) and Arc's own proxy generator, which — because `JobSummary.Status` is now
+      genuinely typed `Concepts.Jobs.JobStatus` — emitted a **new** `Features/Concepts/Jobs/JobStatus.ts` for the
+      Workbench's direct HTTP path, with real doc fidelity preserved (Arc reads the actual XML docs, unlike the
+      gRPC generator's DTO path).
+- [x] Added specs: `for_SharedTypeRegistry/` (11 specs — candidacy rules, the transparent-layer regression guard,
+      memoization). Needed an xUnit `[Collection]` — the registry's static global state is correct for the
+      real generator (a single-shot CLI process) but races under xUnit's default parallel test-class execution;
+      not a generator defect, a test-isolation requirement.
+- [x] Found and fixed 3 unrelated **pre-existing** stale specs while getting a clean run (`for_datetime_offset`,
+      `and_it_reaches_the_generated_type_name`) — confirmed pre-existing by reproducing on the clean post-Phase-1
+      baseline via `git stash` before touching them; `TransportTypes`'s `DateTimeOffset` stand-in became
+      `global::`-qualified in a commit this branch already had, and these two spec files were never updated to
+      match. Fixed as its own separate commit.
+- [x] Full generator spec suite: 53/53 passing (was 50/53 before the stale-spec fix — same 3 pre-existing
+      failures, unrelated to this phase).
+- [x] **Checkpoint reached — green. Proceeding to Phase 3.**
 
 ## Phase 3 — wire up the un-discovered areas
 
@@ -81,7 +125,8 @@ Inventory from the Phase-research Explore pass (74 non-`Services/` Core files re
 Check off as each type is moved + regenerated + wire-verified. Update this list if research turns up more once
 Phase 3's areas are wired (their Contracts.* references aren't fully catalogued yet).
 
-- [ ] `JobStatus` (the Phase 2 checkpoint — not started yet)
+- [x] `JobStatus` (done as the Phase 2 checkpoint — reused the existing `Concepts.Jobs.JobStatus`, no new type)
+- [ ] `JobStepStatus` (byte-identical to its `Concepts.Jobs` counterpart, same shape as `JobStatus` — next, cheap)
 - [ ] `Identity` (self-referential via `OnBehalfOf` — first real test of cycle handling)
 - [ ] `Causation`
 - [ ] `EventContext`
