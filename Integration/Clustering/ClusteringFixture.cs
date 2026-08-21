@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelGrpc;
 extern alias KernelConcepts;
 
 using System.Reflection;
@@ -198,7 +199,7 @@ public class ClusteringFixture : IAsyncLifetime
             })
             .ConfigureSilo((siloOptions, siloBuilder) =>
             {
-                KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
+                KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     siloBuilder,
                     chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, Constants.EventStore));
 
@@ -389,7 +390,7 @@ public class ClusteringFixture : IAsyncLifetime
     /// <param name="services">The <see cref="IServiceCollection"/> to adjust.</param>
     static void RemoveChronicleServerStartupTask(IServiceCollection services)
     {
-        var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
+        var startupTaskType = typeof(Configuration.ChronicleOptions).Assembly
             .GetType("Orleans.Hosting.ChronicleServerStartupTask");
         if (startupTaskType is not null)
         {

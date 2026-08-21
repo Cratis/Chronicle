@@ -11,10 +11,15 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
-        <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
+        <!-- Cratis.Chronicle.Server used to need this only because the generated gRPC service
+             implementations lived here and were internal. They now live in Cratis.Chronicle.Grpc,
+             which is what Server actually needs internal access to - see Grpc.csproj. The one
+             remaining reason Grpc itself needs Core internals is ChronicleServerSiloBuilderExtensions
+             (also moved to Grpc) directly registering the internal ChronicleServerStartupTask. -->
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grpc" />
     </ItemGroup>
 
     <ItemGroup>
@@ -41,11 +46,11 @@
     </PropertyGroup>
 
     <!-- Generates the gRPC contracts under ../Contracts from this project's Arc artifacts, the classes that
-         implement them under ./Services, and the registrations for those in ../Server. Everything named in
+         implement them under ../Grpc, and the registrations for those in ../Server. Everything named in
          NonDerivedGrpcServices is left alone, so a hand-written contract for one of those survives a run. -->
     <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
         <Message Text="Generating gRPC contracts and service implementations from Arc artifacts" Importance="high" />
-        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts --implementations &quot;$(MSBuildThisFileDirectory)Services&quot; --implementations-namespace Cratis.Chronicle.Services --registrations &quot;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs&quot; --registrations-namespace Cratis.Chronicle.Server --exclude $(NonDerivedGrpcServices)" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts --implementations &quot;$(MSBuildThisFileDirectory)../Grpc&quot; --implementations-namespace Cratis.Chronicle.Services --registrations &quot;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs&quot; --registrations-namespace Cratis.Chronicle.Server --exclude $(NonDerivedGrpcServices)" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
     </Target>
 
     <PropertyGroup>

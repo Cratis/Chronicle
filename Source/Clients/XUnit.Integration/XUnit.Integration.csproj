@@ -27,6 +27,12 @@
             <Aliases>KernelCore</Aliases>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <!-- AddChronicleToSilo (Orleans.Hosting.ChronicleServerSiloBuilderExtensions) lives here now,
+             not in Core - see Source/Kernel/Grpc/Grpc.csproj. -->
+        <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj">
+            <Aliases>KernelGrpc</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

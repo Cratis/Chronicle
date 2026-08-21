@@ -46,7 +46,7 @@ public static class KernelBootstrap
     /// <param name="services">The <see cref="IServiceCollection"/> to adjust.</param>
     public static void RemoveServerStartupTask(IServiceCollection services)
     {
-        var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
+        var startupTaskType = typeof(INamespaces).Assembly
             .GetType("Orleans.Hosting.ChronicleServerStartupTask");
         if (startupTaskType is null)
         {

@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Grpc;
-using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Captures;

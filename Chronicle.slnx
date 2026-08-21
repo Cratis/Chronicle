@@ -25,6 +25,7 @@
         <Project Path="Source/Kernel/Contracts/Contracts.csproj" />
         <Project Path="Source/Kernel/Core/Core.csproj" />
         <Project Path="Source/Kernel/Core.Specs/Core.Specs.csproj" />
+        <Project Path="Source/Kernel/Grpc/Grpc.csproj" />
         <Project Path="Source/Kernel/Server/Server.csproj" />
         <Project Path="Source/Kernel/Server.Specs/Server.Specs.csproj" />
         <Project Path="Source/Kernel/Storage/Storage.csproj" />
