@@ -28,13 +28,13 @@ public record AddApplication(Guid Id, string ClientId, string ClientSecret)
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
     /// <param name="storage">The <see cref="IStorage"/> to check existing applications in.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="Services.Security.ApplicationClientIdAlreadyRegistered">Thrown when an application with the same client identifier is already registered.</exception>
+    /// <exception cref="ApplicationClientIdAlreadyRegistered">Thrown when an application with the same client identifier is already registered.</exception>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         var existing = await storage.System.Applications.GetByClientId((ClientId)ClientId);
         if (existing is not null)
         {
-            throw new Services.Security.ApplicationClientIdAlreadyRegistered(ClientId);
+            throw new ApplicationClientIdAlreadyRegistered(ClientId);
         }
 
         var hashedSecret = new PasswordHasher<object>().HashPassword(null!, ClientSecret);

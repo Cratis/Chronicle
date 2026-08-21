@@ -12,7 +12,7 @@ public class and_confirmation_does_not_match : given.a_change_user_password_comm
     async Task Because() => _exception = await Catch.Exception(async () =>
         await new ChangeUserPassword(UserIdentifier, OldPassword, NewPassword, "something-else").Handle(_grainFactory, _storage));
 
-    [Fact] void should_throw_password_confirmation_mismatch() => _exception.ShouldBeOfExactType<Services.Security.PasswordConfirmationMismatch>();
+    [Fact] void should_throw_password_confirmation_mismatch() => _exception.ShouldBeOfExactType<PasswordConfirmationMismatch>();
     [Fact] void should_not_append_anything() =>
         _eventLog.DidNotReceive().Append(Arg.Any<EventSourceId>(), Arg.Any<object>());
 }

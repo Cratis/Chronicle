@@ -16,7 +16,7 @@ public class and_old_password_is_wrong : given.a_change_user_password_command
     async Task Because() => _exception = await Catch.Exception(async () =>
         await new ChangeUserPassword(UserIdentifier, "not-the-old-password", NewPassword, NewPassword).Handle(_grainFactory, _storage));
 
-    [Fact] void should_throw_invalid_old_password() => _exception.ShouldBeOfExactType<Services.Security.InvalidOldPassword>();
+    [Fact] void should_throw_invalid_old_password() => _exception.ShouldBeOfExactType<InvalidOldPassword>();
     [Fact] void should_not_append_anything() =>
         _eventLog.DidNotReceive().Append(Arg.Any<EventSourceId>(), Arg.Any<object>());
 }
