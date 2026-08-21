@@ -214,3 +214,18 @@ Phase 3's areas are wired (their Contracts.* references aren't fully catalogued 
   `[BelongsTo]`-wiring (missing Core artifacts, circular `Projections` → `IProjections` dependency). Corrected
   both plan documents with area-by-area evidence rather than pushing through a risky change. Flagged for a
   scope decision: 100% purity vs. a documented set of exceptions.
+- **2026-08-21** — While waiting on the Phase 3 decision: ran an independent review agent over the session's 9
+  commits (Phase 1 + Phase 2). Found and fixed: (1) `Jobs.tsx` still imported `JobStatus` from `Features/Contracts/Jobs`
+  after `JobSummary.status` moved to `Features/Concepts/Jobs` — compiled clean today only because the two
+  generated TS enums coincidentally have identical numeric values, a real latent trap for the next migrated
+  type; (2) a dangling-trailing-dot bug in `SharedTypeRegistry.MapNamespace` for a type with nothing left after
+  skip/transparent-layer-stripping (theoretical today, no live occurrence, but cheap to close); (3) the
+  composite (non-enum) path through `ServiceInterfaceGenerator.GenerateSharedType` had zero test coverage —
+  added specs that actually compile the generated output, not just inspect its text; (4) `ImplementationValues.ToDomain`
+  silently mistreated a nullable shared-value-type command parameter as needing no conversion (a `Nullable<T>`
+  is a generic type, so `SharedTypeRegistry` never recognizes it) — now refuses loudly, mirroring
+  `ImplementationDataMapping.ForNullable`'s existing behavior on the response side, since no current artifact
+  needs it and there's no proven cast shape yet. Also: the newly-created `Features/Concepts/Jobs/index.ts`
+  barrel was missing its license header - exactly the gotcha `PLAN.md` documents ("a newly generated index.ts
+  barrel needs the license header added once"). All fixes independently verified (full generator spec suite,
+  Core rebuild, `yarn lint:ci`, full solution build).
