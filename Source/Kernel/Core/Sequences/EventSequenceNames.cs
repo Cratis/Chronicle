@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries.ModelBound;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Id">The identity of the event sequence, which is its name.</param>
 /// <param name="Name">The name of the event sequence.</param>
 [ReadModel]
+[BelongsTo(WellKnownServices.EventSequences)]
 public record EventSequenceNames(string Id, string Name)
 {
     const string DefaultNamespace = "Default";
@@ -19,21 +21,16 @@ public record EventSequenceNames(string Id, string Name)
     /// <summary>
     /// Gets the names of every event sequence in an event store.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> to read from.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to read the event sequences with.</param>
     /// <param name="eventStore">The event store to get sequences for.</param>
     /// <param name="namespace">The namespace within the event store.</param>
     /// <returns>The names of the event sequences.</returns>
     internal static async Task<IEnumerable<EventSequenceNames>> AllEventSequences(
-        IEventSequences eventSequences,
+        IGrainFactory grainFactory,
         string eventStore,
         string @namespace = DefaultNamespace)
     {
-        var response = await eventSequences.GetEventSequences(new()
-        {
-            EventStore = eventStore,
-            Namespace = @namespace
-        });
-
-        return [.. response.EventSequenceIds.Select(eventSequenceId => new EventSequenceNames(eventSequenceId, eventSequenceId))];
+        var eventSequenceIds = await grainFactory.GetEventSequences(eventStore, @namespace).GetEventSequences();
+        return [.. eventSequenceIds.Select(id => new EventSequenceNames(id.Value, id.Value))];
     }
 }

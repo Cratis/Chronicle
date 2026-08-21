@@ -1,9 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Arc.Queries;
 using Cratis.Arc.Queries.ModelBound;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -17,6 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Revisions">The revisions applied to this event, if any.</param>
 /// <param name="GenerationalContent">Content for each generation stored for this event, keyed by generation number.</param>
 [ReadModel]
+[BelongsTo(WellKnownServices.EventSequences)]
 public record AppendedEvent(
     string Id,
     EventContext Context,
@@ -28,7 +33,9 @@ public record AppendedEvent(
     /// <summary>
     /// Query events in an event sequence, narrowed and ordered by the values a saved query carries.
     /// </summary>
-    /// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
+    /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> content is serialized with.</param>
     /// <param name="queryContextManager"><see cref="IQueryContextManager"/> for the paging the caller asked for.</param>
     /// <param name="eventStore">Event store to query.</param>
     /// <param name="namespace">Namespace to query.</param>
@@ -48,7 +55,9 @@ public record AppendedEvent(
     /// context, so the caller asks for it the same way it does on any other query.
     /// </remarks>
     public static async Task<IEnumerable<AppendedEvent>> QueryEvents(
-        IEventSequences eventSequences,
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
         IQueryContextManager queryContextManager,
         string eventStore,
         string @namespace,
@@ -65,38 +74,40 @@ public record AppendedEvent(
         var queryContext = queryContextManager.Current;
         var paging = queryContext.Paging;
         var (sortBy, descending) = EventSequenceQuerySortByParser.From(queryContext.Sorting);
+        var criteria = EventSequenceQueryCriteriaFactory.Create(new(
+            eventSourceId,
+            eventSourceType,
+            eventStreamType,
+            correlationId,
+            eventTypeIds,
+            tags,
+            occurredFrom,
+            occurredTo));
 
-        var response = await eventSequences.QueryEvents(new()
-        {
-            EventStore = eventStore,
-            Namespace = @namespace,
-            EventSequenceId = eventSequenceId,
-            Criteria = EventSequenceQueryCriteriaFactory.Create(new(
-                eventSourceId,
-                eventSourceType,
-                eventStreamType,
-                correlationId,
-                eventTypeIds,
-                tags,
-                occurredFrom,
-                occurredTo)),
-            Skip = paging.IsPaged ? paging.Page * paging.Size : 0,
-            Take = paging.IsPaged ? paging.Size : int.MaxValue,
-            Descending = descending,
-            SortBy = sortBy
-        });
+        var (events, totalCount) = await EventSequenceQuerying.QueryPage(
+            storage,
+            eventCompliance,
+            eventStore,
+            @namespace,
+            eventSequenceId,
+            criteria,
+            paging.IsPaged ? paging.Page * paging.Size : 0,
+            paging.IsPaged ? paging.Size : int.MaxValue,
+            new EventSequenceQuerySort(sortBy, descending));
 
         // Paging is over the events matching the criteria, not over the whole sequence - the tail
         // sequence number would overcount as soon as any filter is set.
-        queryContext.TotalItems = (int)response.TotalCount;
+        queryContext.TotalItems = (int)totalCount;
 
-        return response.Events.ToApi();
+        return events.ToApi(jsonSerializerOptions);
     }
 
     /// <summary>
     /// Gets a page of the events in an event sequence.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> to read from.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
+    /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> content is serialized with.</param>
     /// <param name="queryContextManager">The <see cref="IQueryContextManager"/> carrying paging.</param>
     /// <param name="eventStore">The event store the sequence belongs to.</param>
     /// <param name="namespace">The namespace within the event store.</param>
@@ -108,7 +119,9 @@ public record AppendedEvent(
     /// round trip.
     /// </remarks>
     internal static async Task<IEnumerable<AppendedEvent>> AppendedEvents(
-        IEventSequences eventSequences,
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
         IQueryContextManager queryContextManager,
         string eventStore,
         string @namespace,
@@ -116,26 +129,31 @@ public record AppendedEvent(
         string? eventSourceId = default)
     {
         var queryContext = queryContextManager.Current;
+        var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
-        var tail = await eventSequences.GetTailSequenceNumber(new()
+        var tail = await eventSequence.GetTailSequenceNumber();
+        queryContext.TotalItems = (int)tail.Value;
+
+        var paging = queryContext.Paging;
+        var from = (ulong)(paging.Page * paging.Size);
+        Concepts.Events.EventSourceId? resolvedEventSourceId = null;
+        if (!string.IsNullOrWhiteSpace(eventSourceId))
         {
-            EventStore = eventStore,
-            Namespace = @namespace,
-            EventSequenceId = eventSequenceId
-        });
-        queryContext.TotalItems = (int)tail.SequenceNumber;
+            resolvedEventSourceId = eventSourceId;
+        }
 
-        var from = (ulong)(queryContext.Paging.Page * queryContext.Paging.Size);
-        var response = await eventSequences.GetEventsFromEventSequenceNumber(new()
+        var appendedEvents = new List<Concepts.Events.AppendedEvent>();
+        using (var cursor = paging.IsPaged
+            ? await eventSequence.GetRange(from, from + (ulong)(paging.Size - 1), resolvedEventSourceId)
+            : await eventSequence.GetFromSequenceNumber(from, resolvedEventSourceId))
         {
-            EventStore = eventStore,
-            Namespace = @namespace,
-            EventSequenceId = eventSequenceId,
-            FromEventSequenceNumber = from,
-            ToEventSequenceNumber = queryContext.Paging.IsPaged ? from + (ulong)(queryContext.Paging.Size - 1) : null,
-            EventSourceId = eventSourceId
-        });
+            while (await cursor.MoveNext())
+            {
+                appendedEvents.AddRange(cursor.Current);
+            }
+        }
 
-        return response.Events.ToApi();
+        var released = await EventSequenceQuerying.ReleaseCompliance(appendedEvents, storage, eventStore, eventCompliance);
+        return released.ToApi(jsonSerializerOptions);
     }
 }

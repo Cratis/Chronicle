@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -22,6 +24,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventType">The type of event being appended.</param>
 /// <param name="Content">The content of the event.</param>
 [Command]
+[BelongsTo(WellKnownServices.EventSequences)]
 public record Append(
     string EventStore,
     string Namespace,
@@ -36,42 +39,30 @@ public record Append(
     /// <summary>
     /// Handles the command by appending the event.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> to append through.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append through.</param>
     /// <param name="causation">The <see cref="RequestCausation"/> describing the request behind the append.</param>
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is appending.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="AppendRejected">Thrown when the append is rejected by the kernel.</exception>
     internal async Task Handle(
-        IEventSequences eventSequences,
+        IGrainFactory grainFactory,
         RequestCausation causation,
         ICurrentPrincipalAccessor principalAccessor)
     {
-        var response = await eventSequences.Append(new AppendRequest
-        {
-            EventStore = EventStore,
-            Namespace = Namespace,
-            EventSequenceId = EventSequenceId,
-            CorrelationId = Guid.NewGuid(),
-            EventSourceId = EventSourceId,
-            EventSourceType = EventSourceType,
-            EventStreamType = EventStreamType,
-            EventStreamId = EventStreamId,
-            EventType = EventType.ToContract(),
-            Content = JsonSerializer.Serialize(Content),
-            Causation = causation.GetCurrentChain(),
-            CausedBy = principalAccessor.Current.ToContract(),
-            Tags = [],
-            ConcurrencyScope = new Contracts.EventSequences.Concurrency.ConcurrencyScope
-            {
-                SequenceNumber = ulong.MaxValue,
-                EventSourceId = false,
-                EventStreamType = null,
-                EventStreamId = null,
-                EventSourceType = null,
-                EventTypes = null
-            }
-        });
+        var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
+        var result = await eventSequence.Append(
+            (EventSourceType)EventSourceType,
+            EventSourceId,
+            (EventStreamType)EventStreamType,
+            (EventStreamId)EventStreamId,
+            EventType.ToChronicle(),
+            Content,
+            Guid.NewGuid(),
+            causation.GetCurrentChain(),
+            principalAccessor.Current.ToIdentity(),
+            [],
+            ConcurrencyScope.None);
 
-        AppendRejected.ThrowIfRejected(response.Errors, response.ConstraintViolations);
+        AppendRejected.ThrowIfRejected(result.Errors, result.ConstraintViolations);
     }
 }

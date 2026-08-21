@@ -131,16 +131,50 @@ led to real scope creep or a rushed, risky change. Findings, per area:**
   processes. This is plausibly a legitimate fourth exception in the shape of `Observers`/`ConnectionService`
   (inherently a wire protocol, not a command/query) rather than something `[BelongsTo]` can fix — needs a
   deliberate decision, not a default. Not attempted here.
-- **`EventSequences` (Core folder `Sequences`) — real candidate, but far larger than "add `[BelongsTo]`".**
-  9 Core artifacts (`Append`, `AppendMany`, `AppendedEvent`, `EventSequenceNames`, `ExportedEvent`, `Redact`,
-  `RedactMany`, `Revise`, `SequenceHistogramBucket`) exist and do reference Contracts directly. But
-  `IEventSequences` declares **13** methods — `GetForEventSourceIdAndEventTypes`, `HasEventsForEventSourceId`,
-  `GetEventsFromEventSequenceNumber`, `QueryEvents`, and `CompleteStream` have **no Core artifact at all**, and
-  `RedactMany` (Core's name) doesn't match `RedactForEventSource` (the contract's name for what is presumably the
-  same operation). Adding `[BelongsTo]` today would generate an interface missing 5 methods every existing SDK
-  client depends on — a real break, not a safe mechanical step. This needs the same per-area recipe `PLAN.md`
-  used for the areas it already finished (write the missing Core artifacts first, reconcile naming, *then* wire
-  `[BelongsTo]`), which is comparable in size to migrating a whole new area, not a quick win.
+- **`EventSequences` (Core folder `Sequences`) — DONE.** All 9 pre-existing artifacts (`Append`, `AppendMany`,
+  `AppendedEvent`, `EventSequenceNames`, `ExportedEvent`, `Redact`, `RedactMany`→renamed `RedactForEventSource`,
+  `Revise`, `SequenceHistogramBucket`) rewritten to call storage/grains directly (`IStorage`,
+  `IEventSequenceStorage`, `IGrainFactory` + `EventSequencesGrainFactoryExtensions`) instead of injecting
+  `Contracts.EventSequences.IEventSequences`, and wired `[BelongsTo(WellKnownServices.EventSequences)]`. New
+  hand-written converters follow the established `CausationConverters`/`IdentityConverters` pattern, targeting
+  the **new** generated `Contracts.Sequences.*` shared types (not the old hand-written `Contracts.Events.*`/
+  `Contracts.Auditing.*`/`Contracts.Identities.*` ones — see the legacy-duplication finding below). Two real
+  generator bugs found and fixed along the way (both structural, affect every future area, not just this one):
+  1. `ServiceImplementationGenerator`'s generated implementation file had **zero `using` directives** for the
+     artifact's own C# namespace, so a hand-written `.ToApi()`/`.ToContract()` extension method living there
+     (the established convention for composite shared types) could never resolve — the fully-qualified
+     `global::`-everywhere generated code doesn't bring extension methods into scope. Never surfaced before
+     because Captures (the only prior area with composite shared types) never actually called a converter in its
+     generated file. Fixed: `Usings()` now always emits `using {artifactNamespace};`.
+  2. `ImplementationValues.ToDomain` had no handling for `IEnumerable<T>` where `T` is a concept or shared type
+     (only `ImplementationDataMapping.For`, the response-side twin, had the `SequenceElement` unwrap) — a command
+     parameter typed `IEnumerable<EventToAppend>` passed the wire collection through unconverted, a silent
+     identity-cast type mismatch. Fixed: `SequenceElement` promoted to `internal`, reused on the request side with
+     a `.Select(x => ...)` wrap when the element needs converting.
+  3 new Core artifacts NOT yet written (`CompleteStream`, `HasEventsForEventSourceId`,
+  `GetForEventSourceIdAndEventTypes` — present on the **old** hand-written interface, no Core artifact ever
+  existed for them). Zero direct spec coverage yet for the rewritten artifacts (Core.Specs' existing 2854 pass
+  because none of them touch this area today). Full solution build green (`Chronicle.slnx`, Debug, includes the
+  two Docker image builds) and `Core.Specs` 2854/0 (1 pre-existing skip) — both re-verified after the generator
+  fix, not just the Core project in isolation.
+
+  **Real, unplanned architectural finding — needs a decision before this area is called complete:**
+  the artifacts above live in C# namespace `Cratis.Chronicle.Sequences`, not `Cratis.Chronicle.EventSequences` —
+  a pre-existing naming choice from before this session, not something introduced now. The generator derives the
+  Contracts *folder* from the namespace segment, so wiring `[BelongsTo]` produced a **brand new**, parallel
+  `Contracts/Sequences/IEventSequences.cs` + `Grpc/Sequences/EventSequences.cs`, sitting *alongside* — not
+  replacing — the pre-existing hand-written `Contracts/EventSequences/IEventSequences.cs` (13 methods) +
+  `Grpc/EventSequences/EventSequences.cs`. Both are now live: `Server/GrpcServiceRegistrations.cs` still maps the
+  old one explicitly (with a comment literally saying EventSequences "has not been converted to Arc artifacts
+  yet" — this work is what finishes that), and `Server/GeneratedGrpcServices.cs` (auto-generated) now also maps
+  the new one. The old service is not dead weight to ignore: **`Source/Clients/Testing`** (`EventScenario.cs`,
+  `EventStoreForTesting.cs`, `TestingServices.cs` — the in-process testing SDK every downstream Cratis
+  application's specs depend on) injects `Contracts.EventSequences.IEventSequences` directly. Retiring the old
+  area for real means repointing that SDK plus deleting the hand-written `Contracts/EventSequences/*` +
+  `Grpc/EventSequences/*` + the explicit registration line — real, hard-to-reverse, externally-visible surface,
+  not a local cleanup. Left both running for now (harmless — different C# types/namespaces, no routing
+  collision, build and specs green either way) and raised the decision explicitly rather than deleting live
+  client-facing wire surface unilaterally.
 - **`Projections` (`ProjectionEditor`) — not just unwired, structurally circular.** All 7 Core artifacts
   (`GenerateDeclarativeCode`, `GenerateModelBoundCode`, `Projection`, `PreviewProjection`,
   `ProjectionWithDeclaration`, `SaveProjection`, `SaveProjectionWithInferredReadModel`) inject

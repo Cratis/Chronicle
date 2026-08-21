@@ -72,4 +72,9 @@ public static class WellKnownServices
     /// The name of the Webhooks service.
     /// </summary>
     public const string Webhooks = "Webhooks";
+
+    /// <summary>
+    /// The name of the EventSequences service.
+    /// </summary>
+    public const string EventSequences = "EventSequences";
 }

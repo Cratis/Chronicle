@@ -4,16 +4,16 @@
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Converters between <see cref="EventType"/> and its contract representation.
+/// Converters between <see cref="EventType"/> and its contract and storage representations.
 /// </summary>
 internal static class EventTypeConverters
 {
     /// <summary>
-    /// Converts an <see cref="EventType"/> to a <see cref="Contracts.Events.EventType"/>.
+    /// Converts an <see cref="EventType"/> to a <see cref="Contracts.Sequences.EventType"/>.
     /// </summary>
     /// <param name="eventType">The event type to convert.</param>
     /// <returns>The converted event type.</returns>
-    public static Contracts.Events.EventType ToContract(this EventType eventType) =>
+    public static Contracts.Sequences.EventType ToContract(this EventType eventType) =>
         new()
         {
             Id = eventType.Id,
@@ -22,26 +22,26 @@ internal static class EventTypeConverters
         };
 
     /// <summary>
-    /// Converts a collection of <see cref="EventType"/> to a <see cref="Contracts.Events.EventType"/>.
-    /// </summary>
-    /// <param name="eventTypes">The collection of event types to convert.</param>
-    /// <returns>The converted collection of event types.</returns>
-    public static IEnumerable<Contracts.Events.EventType> ToContract(this IEnumerable<EventType> eventTypes) =>
-        eventTypes.Select(ToContract).ToArray();
-
-    /// <summary>
-    /// Converts a <see cref="Contracts.Events.EventType"/> to an <see cref="EventType"/>.
+    /// Converts a <see cref="Contracts.Sequences.EventType"/> to an <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType">The event type to convert.</param>
     /// <returns>The converted event type.</returns>
-    public static EventType ToApi(this Contracts.Events.EventType eventType) =>
+    public static EventType ToApi(this Contracts.Sequences.EventType eventType) =>
         new(eventType.Id, eventType.Generation, eventType.Tombstone);
 
     /// <summary>
-    /// Converts a collection of <see cref="Contracts.Events.EventType"/> to an <see cref="EventType"/>.
+    /// Converts a storage <see cref="Concepts.Events.EventType"/> to an <see cref="EventType"/>.
     /// </summary>
-    /// <param name="eventTypes">The collection of event types to convert.</param>
-    /// <returns>The converted collection of event types.</returns>
-    public static IEnumerable<EventType> ToApi(this IEnumerable<Contracts.Events.EventType> eventTypes) =>
-        eventTypes.Select(ToApi).ToArray();
+    /// <param name="eventType">The event type to convert.</param>
+    /// <returns>The converted event type.</returns>
+    public static EventType ToApi(this Concepts.Events.EventType eventType) =>
+        new(eventType.Id, eventType.Generation, eventType.Tombstone);
+
+    /// <summary>
+    /// Converts an <see cref="EventType"/> to a storage <see cref="Concepts.Events.EventType"/>.
+    /// </summary>
+    /// <param name="eventType">The event type to convert.</param>
+    /// <returns>The converted event type.</returns>
+    public static Concepts.Events.EventType ToChronicle(this EventType eventType) =>
+        new(eventType.Id, eventType.Generation, eventType.Tombstone);
 }

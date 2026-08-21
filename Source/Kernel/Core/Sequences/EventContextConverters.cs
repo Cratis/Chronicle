@@ -4,34 +4,16 @@
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Converts between contracts and API models for event context.
+/// Converts between <see cref="EventContext"/> and its contract and storage representations.
 /// </summary>
 internal static class EventContextConverters
 {
     /// <summary>
-    /// Converts a contract <see cref="Contracts.Events.EventContext"/> to an <see cref="EventContext"/>.
-    /// </summary>
-    /// <param name="context">The contract <see cref="Contracts.Events.EventContext"/> to convert.</param>
-    /// <returns>The converted <see cref="EventContext"/>.</returns>
-    public static EventContext ToApi(this Contracts.Events.EventContext context) => new(
-        context.EventType.ToApi(),
-        context.EventSourceType,
-        context.EventSourceId,
-        context.SequenceNumber,
-        context.EventStreamType,
-        context.EventStreamId,
-        context.Occurred,
-        context.CorrelationId,
-        context.Causation.Select(c => new Causation(c.Occurred, c.Type, c.Properties)),
-        new Identity(context.CausedBy.Subject, context.CausedBy.Name, context.CausedBy.UserName, null),
-        context.Tags);
-
-    /// <summary>
-    /// Converts an <see cref="EventContext"/> to a contract <see cref="Contracts.Events.EventContext"/>.
+    /// Converts an <see cref="EventContext"/> to a contract <see cref="Contracts.Sequences.EventContext"/>.
     /// </summary>
     /// <param name="context">The <see cref="EventContext"/> to convert.</param>
-    /// <returns>The converted <see cref="Contracts.Events.EventContext"/>.</returns>
-    public static Contracts.Events.EventContext ToContract(this EventContext context) => new()
+    /// <returns>The converted <see cref="Contracts.Sequences.EventContext"/>.</returns>
+    public static Contracts.Sequences.EventContext ToContract(this EventContext context) => new()
     {
         EventType = context.EventType.ToContract(),
         EventSourceType = context.EventSourceType,
@@ -45,4 +27,22 @@ internal static class EventContextConverters
         CausedBy = context.CausedBy.ToContract(),
         Tags = context.Tags.ToList()
     };
+
+    /// <summary>
+    /// Converts a storage <see cref="Concepts.Events.EventContext"/> to an <see cref="EventContext"/>.
+    /// </summary>
+    /// <param name="context">The storage <see cref="Concepts.Events.EventContext"/> to convert.</param>
+    /// <returns>The converted <see cref="EventContext"/>.</returns>
+    public static EventContext ToApi(this Concepts.Events.EventContext context) => new(
+        context.EventType.ToApi(),
+        context.EventSourceType,
+        context.EventSourceId,
+        context.SequenceNumber,
+        context.EventStreamType,
+        context.EventStreamId,
+        context.Occurred,
+        context.CorrelationId,
+        context.Causation.ToApi(),
+        context.CausedBy.ToApi(),
+        context.Tags.Select(tag => tag.Value));
 }

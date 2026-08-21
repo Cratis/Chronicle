@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events.Constraints;
+using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -19,10 +20,12 @@ public class AppendRejected(IEnumerable<string> reasons)
     /// <param name="constraintViolations">The constraint violations the append reported.</param>
     /// <exception cref="AppendRejected">Thrown when there is anything to report.</exception>
     internal static void ThrowIfRejected(
-        IEnumerable<string> errors,
+        IEnumerable<AppendError> errors,
         IEnumerable<ConstraintViolation> constraintViolations)
     {
-        var reasons = errors.Concat(constraintViolations.Select(violation => violation.Message)).ToArray();
+        var reasons = errors.Select(error => error.Value)
+            .Concat(constraintViolations.Select(violation => violation.Message.Value))
+            .ToArray();
 
         if (reasons.Length == 0)
         {
