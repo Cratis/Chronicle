@@ -106,16 +106,62 @@ Tracks execution of `PLAN2.md`. Update as each step lands — this is a status l
 
 ## Phase 3 — wire up the un-discovered areas
 
-Add `WellKnownServices` + `[BelongsTo]` for each (currently: no `[BelongsTo]` at all → generator silently skips them):
+**Corrected after investigation — the original checklist here conflated "missing `[BelongsTo]`" with "has the
+Core-depends-on-Contracts problem." They are not the same thing, and treating them as the same thing would have
+led to real scope creep or a rushed, risky change. Findings, per area:**
 
-- [ ] `EventSequences` (Core folder `Sequences`)
-- [ ] `Projections` (`ProjectionEditor`)
-- [ ] `ReadModels` (`ReadModelExplorer` + `ReadModelDefinitions`)
-- [ ] `Observation` — Reactors
-- [ ] `Observation` — Reducers
-- [ ] `Observation` — EventStoreSubscriptions
-- [ ] `Compliance`
-- [ ] `Host`
+- **`Compliance`, `Host`, `DevelopmentTools`, `EventStoreSubscriptions`, `SequenceQueries` — remove from this
+  phase entirely.** None of these has a single file under `Core/` referencing `Cratis.Chronicle.Contracts`
+  (verified by grep, not assumed). They lack `[BelongsTo]` because they were never meant to have a gRPC surface —
+  `Core/Schemas/TypeFormat.cs` says exactly this in its own doc comment ("nothing on the gRPC surface asks for
+  them"). Wiring `[BelongsTo]` onto these would be inventing a new gRPC operation nobody asked for, not fixing
+  Core's Contracts dependency — there is nothing here for this plan to fix.
+- **`Observation` top-level** (`ClearObserverQuarantine`, `FailedPartitionDetails`,
+  `ObserverInformationForEventType`) — genuinely has the problem (`ObserverInformation.cs` /
+  `ObserverInformationConverters.cs` reference Contracts directly), but these three belong to the **`Observers`**
+  service, which `NonDerivedGrpcServices` deliberately excludes from generation (see `Core.csproj`). Adding
+  `[BelongsTo(WellKnownServices.Observers)]` would not cause them to generate — the whole `Observers` group is
+  skipped regardless. Fixing this requires finishing what `PLAN.md` already scoped as its own, larger, explicitly
+  deferred step ("Removing it from this list is what Step 3 of the Observation migration means" — 5 hand-written
+  `IObservers` methods with no Core artifact and renamed rpcs). Not attempted here; tracked as its own follow-up,
+  not folded into this phase.
+- **`Reactors`/`Reducers` `Clients/` mediators** (`ReactorMediator.cs`, `ReducerMediator.cs`,
+  `ReducerReplayObserver.cs`) — reference Contracts, but are not `[Command]`/`[ReadModel]` artifacts at all; they
+  implement the bidirectional streaming protocol the kernel uses to talk to connected reactor/reducer client
+  processes. This is plausibly a legitimate fourth exception in the shape of `Observers`/`ConnectionService`
+  (inherently a wire protocol, not a command/query) rather than something `[BelongsTo]` can fix — needs a
+  deliberate decision, not a default. Not attempted here.
+- **`EventSequences` (Core folder `Sequences`) — real candidate, but far larger than "add `[BelongsTo]`".**
+  9 Core artifacts (`Append`, `AppendMany`, `AppendedEvent`, `EventSequenceNames`, `ExportedEvent`, `Redact`,
+  `RedactMany`, `Revise`, `SequenceHistogramBucket`) exist and do reference Contracts directly. But
+  `IEventSequences` declares **13** methods — `GetForEventSourceIdAndEventTypes`, `HasEventsForEventSourceId`,
+  `GetEventsFromEventSequenceNumber`, `QueryEvents`, and `CompleteStream` have **no Core artifact at all**, and
+  `RedactMany` (Core's name) doesn't match `RedactForEventSource` (the contract's name for what is presumably the
+  same operation). Adding `[BelongsTo]` today would generate an interface missing 5 methods every existing SDK
+  client depends on — a real break, not a safe mechanical step. This needs the same per-area recipe `PLAN.md`
+  used for the areas it already finished (write the missing Core artifacts first, reconcile naming, *then* wire
+  `[BelongsTo]`), which is comparable in size to migrating a whole new area, not a quick win.
+- **`Projections` (`ProjectionEditor`) — not just unwired, structurally circular.** All 7 Core artifacts
+  (`GenerateDeclarativeCode`, `GenerateModelBoundCode`, `Projection`, `PreviewProjection`,
+  `ProjectionWithDeclaration`, `SaveProjection`, `SaveProjectionWithInferredReadModel`) inject
+  `Contracts.Projections.IProjections` — the gRPC service interface itself — directly into their `Handle()`/query
+  methods as a dependency (verified: every one of the 7 files does this, not a subset). That is Core calling the
+  hand-written Grpc implementation to do its own work, the exact opposite of the target direction. Fixing this
+  means rewriting all 7 to call the grains/storage the current `Projections : IProjections` implementation itself
+  uses, not adding an attribute. `[BelongsTo]` is the last step here, not the fix.
+- **`ReadModels` (`ReadModelExplorer` + `ReadModelDefinitions`)** — 6 Core artifact files against **11**
+  `IReadModels` methods (plus a second interface, `IMaterializedReadModels`, not yet even compared). Same
+  mismatch shape as `EventSequences` — not verified past the count mismatch; needs the same per-method
+  reconciliation before it's safe to touch.
+
+**Net effect: nothing in this phase was safe to implement as a quick, low-risk step once actually checked against
+the source.** Every real candidate needs the full per-area migration recipe `PLAN.md` already documents (write
+missing Core artifacts, reconcile method naming, delete the hand-written contract/implementation, update the three
+composition roots, full verification) — comparable in size to migrating a new area from scratch, not a sweep.
+This is a scope/effort finding worth a decision from the person driving this, not something to push through
+solo mid-loop: is the goal 100% purity (every one of these gets fully migrated), or is a documented, narrow set of
+exceptions (`Observers`, `ConnectionService`, and now plausibly the reactor/reducer mediators) an acceptable
+end state, the same way `PLAN.md` already accepted two?
 
 (`Observers`, `ConnectionService` intentionally excluded — stay hand-rolled, per `PLAN.md`.)
 
@@ -161,3 +207,10 @@ Phase 3's areas are wired (their Contracts.* references aren't fully catalogued 
   unplanned but necessary extension (`ChronicleServerSiloBuilderExtensions.cs` and its callers) discovered
   mid-execution. Independently re-verified build + reference count. Next: Phase 2 (generator shared-type
   mirroring, proved on `JobStatus`).
+- **2026-08-21** — Phase 2 complete: built `SharedTypeRegistry`, proved it end-to-end on `JobStatus` with rigorous
+  wire-compatibility verification (byte-identical `.proto` output, byte-identical `WireCompatibility` report
+  before/after). Started Phase 3 and found the original checklist was wrong: most "un-discovered" areas either
+  have no Contracts dependency at all (nothing to fix) or are substantially larger migrations than
+  `[BelongsTo]`-wiring (missing Core artifacts, circular `Projections` → `IProjections` dependency). Corrected
+  both plan documents with area-by-area evidence rather than pushing through a risky change. Flagged for a
+  scope decision: 100% purity vs. a documented set of exceptions.
