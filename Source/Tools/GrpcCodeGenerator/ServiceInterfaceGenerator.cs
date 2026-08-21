@@ -109,6 +109,96 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         return code;
     }
 
+    /// <summary>
+    /// Generates the contract mirror of a Core-owned shared type - an enum, or a plain record/class referenced
+    /// by more than one command or read model, discovered via <see cref="SharedTypeRegistry"/> while generating
+    /// the services that reference it.
+    /// </summary>
+    /// <param name="type">The Core-owned type to mirror.</param>
+    /// <param name="outputDirectory">The output directory contracts are written under.</param>
+    /// <returns>The generated C# source code.</returns>
+    public string GenerateSharedType(Type type, string outputDirectory)
+    {
+        // Namespace mapping goes through the registry, not BuildTargetNamespace/BuildFolderPath below - a shared
+        // type reused from a project Core depends on (Concepts.Jobs.JobStatus, say) does not necessarily sit at
+        // the same relative namespace depth a service's own artifacts do, and the registry is what already
+        // resolved that once, when this type was first referenced. Deriving the folder from anything else risks
+        // the two disagreeing about where the file belongs.
+        var targetNamespace = SharedTypeRegistry.MapNamespace(type.Namespace ?? string.Empty);
+        var relativeNamespace = targetNamespace.StartsWith($"{baseNamespace}.", StringComparison.Ordinal)
+            ? targetNamespace[(baseNamespace.Length + 1)..]
+            : targetNamespace;
+        var folderPath = Path.Combine([outputDirectory, .. relativeNamespace.Split('.')]);
+
+        Directory.CreateDirectory(folderPath);
+
+        var fileName = GetSafeFileName($"{type.Name}.cs");
+        var filePath = Path.Combine(folderPath, fileName);
+
+        MemberDeclarationSyntax typeDecl;
+        UsingDirectiveSyntax[] usings;
+
+        if (type.IsEnum)
+        {
+            typeDecl = BuildSharedEnum(type);
+            usings = [];
+        }
+        else
+        {
+            // The file being read here is whatever is already on disk at this path - the first time a type is
+            // mirrored, that is the hand-written contract this move is replacing, so the very first generation
+            // reproduces its exact [ProtoMember] numbers with no extra bookkeeping. See ProtoMemberIndexReader.
+            var existingIndexes = ProtoMemberIndexReader.ReadExistingIndexes(filePath, type.Name);
+            var properties = type.GetProperties()
+                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                .Select(p => (p.Name, NullableAnnotations.For(MemberTypeName(p.PropertyType, targetNamespace), p)))
+                .ToList();
+
+            typeDecl = BuildDtoClass(type.Name, properties, existingIndexes);
+            usings = [SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("ProtoBuf"))];
+        }
+
+        var namespaceDecl = SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(targetNamespace))
+            .AddMembers(typeDecl);
+
+        var compilationUnit = SyntaxFactory.CompilationUnit()
+            .AddUsings(usings)
+            .AddMembers(namespaceDecl)
+            .NormalizeWhitespace(indentation: "    ", eol: "\n");
+
+        var code = CopyrightHeader + compilationUnit.ToFullString();
+
+        File.WriteAllText(filePath, code);
+
+        return code;
+    }
+
+    static EnumDeclarationSyntax BuildSharedEnum(Type type)
+    {
+        // protobuf-net serializes an enum by its declared numeric value, so copying every member's existing
+        // value verbatim - not renumbering by declaration order - is the entire wire-stability story for a
+        // shared enum. Rendered as an int literal to match every hand-written enum in this codebase (the
+        // underlying type of a C# enum defaults to int, and nothing here declares otherwise); Convert.ToInt64
+        // would compile too, but as a spurious "0L" no hand-written enum in the codebase ever writes.
+        var members = Enum.GetValues(type)
+            .Cast<object>()
+            .Select(value =>
+            {
+                var name = Enum.GetName(type, value) ?? throw new UnsupportedServiceShape(type.Name, "an enum value has no name.");
+                return SyntaxFactory.EnumMemberDeclaration(SyntaxFactory.Identifier(name))
+                    .WithEqualsValue(SyntaxFactory.EqualsValueClause(
+                        SyntaxFactory.LiteralExpression(
+                            SyntaxKind.NumericLiteralExpression,
+                            SyntaxFactory.Literal(Convert.ToInt32(value)))))
+                    .WithLeadingTrivia(BuildXmlDoc($"Represents the {name} value."));
+            });
+
+        return SyntaxFactory.EnumDeclaration(type.Name)
+            .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+            .WithLeadingTrivia(BuildXmlDoc($"Represents the {type.Name} value."))
+            .AddMembers([.. members]);
+    }
+
     static MethodDeclarationSyntax BuildCommandMethod(CommandDefinition command, string? requestTypeName, string? responseTypeName)
     {
         var parameters = new List<ParameterSyntax>();

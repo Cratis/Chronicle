@@ -212,7 +212,7 @@ public static class TypeHelper
 
         if (!type.IsGenericType)
         {
-            return Qualified(type);
+            return SharedTypeRegistry.QualifiedNameFor(type) ?? Qualified(type);
         }
 
         var genericDef = type.GetGenericTypeDefinition();

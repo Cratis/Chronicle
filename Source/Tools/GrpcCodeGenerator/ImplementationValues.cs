@@ -18,10 +18,23 @@ public static class ImplementationValues
     /// <param name="expression">The expression reading the wire value.</param>
     /// <param name="declaredType">The type the artifact declares.</param>
     /// <returns>The expression to pass to the artifact.</returns>
-    public static string ToDomain(string expression, Type declaredType) =>
-        TypeHelper.IsConceptType(declaredType)
-            ? $"({QualifiedTypeName.For(declaredType)}){expression}"
-            : expression;
+    public static string ToDomain(string expression, Type declaredType)
+    {
+        if (TypeHelper.IsConceptType(declaredType))
+        {
+            return $"({QualifiedTypeName.For(declaredType)}){expression}";
+        }
+
+        // The wire value is the generated mirror, a distinct CLR type from the Core type the artifact declares -
+        // see SharedTypeRegistry. An enum converts with a cast; anything else is expected to carry a hand-written
+        // ToApi() extension, the same convention CausationConverters/IdentityConverters already established.
+        if (SharedTypeRegistry.QualifiedNameFor(declaredType) is not null)
+        {
+            return declaredType.IsEnum ? $"({QualifiedTypeName.For(declaredType)}){expression}" : $"{expression}.ToApi()";
+        }
+
+        return expression;
+    }
 
     /// <summary>
     /// Renders handing a domain value to the wire.

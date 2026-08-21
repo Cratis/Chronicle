@@ -85,6 +85,18 @@ public record ImplementationDataMapping(string ContractTypeName, Func<string, st
             return new(transportTypeName, expression => $"({transportTypeName}){expression}", false);
         }
 
+        // A Core-owned shared type has a generated mirror that is a distinct CLR type, even though the two agree
+        // on wire shape - so the value it carries is never identity, it always has to travel through an explicit
+        // conversion. An enum converts with a cast; anything else is expected to carry a hand-written
+        // ToContract() extension, the same convention CausationConverters/IdentityConverters already established
+        // before this existed. See SharedTypeRegistry.
+        if (SharedTypeRegistry.QualifiedNameFor(type) is { } sharedContractTypeName)
+        {
+            return type.IsEnum
+                ? new(sharedContractTypeName, expression => $"({sharedContractTypeName}){expression}", false)
+                : new(sharedContractTypeName, expression => $"{expression}.ToContract()", false);
+        }
+
         return new(QualifiedTypeName.For(type), expression => expression, true);
     }
 
