@@ -235,6 +235,36 @@ Phase 3's areas are wired (their Contracts.* references aren't fully catalogued 
 
 ## Log
 
+- **2026-08-22** — EventSequences (Phase 3's real candidate) fully rewritten off Contracts: all 9 pre-existing
+  artifacts plus 3 new ones (`CompleteStream`, `EventSequenceLookups`, `AppendedEvent.ForEventSourceIdAndEventTypes`/
+  `FromSequenceNumber`) now call storage/grains directly. Built and proved a new generator capability,
+  `[KeyedBy<TKey>]`/`[Query]` (Chronicle-local attributes in `Cratis.Chronicle.Grpc`, not Arc — the project owner's
+  explicit call), for the narrow case of a genuine grain-state read with no read model or storage equivalent —
+  proven end to end on `IEventSequence.IsStreamCompleted`. `Append`/`AppendMany` gained real parity
+  (`CorrelationId`, `Tags`, `Occurred`, `Subject`) short of `ConcurrencyScope`, deliberately deferred (see below).
+  Two structural generator bugs found and fixed along the way (missing `using` for the artifact namespace in
+  generated implementations; `ImplementationValues.ToDomain` not handling sequences of shared/concept types) —
+  both affect every service, not just this one.
+  **Two real near-misses, both caught before commit, both documented in `PLAN2.md` in detail:** (1) wiring
+  `IEventSequence`'s `[BelongsTo]` to the same service name as its own C# namespace made the generator overwrite
+  the still-in-use hand-written `Contracts/EventSequences/IEventSequences.cs` + its service implementation in
+  place — resolved by giving the new keyed-query service a distinct name (`EventSequenceQueries`) so it generates
+  alongside, not over, the hand-written one. (2) adding a `ConcurrencyScope` parameter to `Append` triggered
+  `SharedTypeRegistry`'s transitive discovery to also mirror `Concepts.Events.EventType` — landing on and
+  overwriting `Contracts/Events/EventType.cs`, a hand-written file used throughout the *entire* `Contracts.Events.*`
+  area, not just EventSequences, and cascading into a proto-generator failure that deleted `chronicle.desc`.
+  Reverted before commit; `ConcurrencyScope` deferred with an inline `<remarks>` explaining why.
+  Full retirement of the hand-written `EventSequences` service turned out to need a third consumer nobody had
+  mapped yet — `Contracts.Services`/`IServices`, the aggregate the production client SDK and
+  `Cratis.Chronicle.Testing`'s in-process helpers both go through — and specifically, DI dependencies
+  (`ICurrentPrincipalAccessor`, `IQueryContextManager`, `IHttpContextAccessor`) that nothing in the in-process
+  test wiring currently needs, so whether they resolve there can't be verified without a live/Docker environment
+  this machine doesn't have. Rather than push that in blind, retirement is deferred as its own follow-up (concrete
+  7-step recipe in `PLAN2.md`) — the hand-written service was fully reverted back to its original, working state.
+  **End state: full solution build green (`Chronicle.slnx`), `Core.Specs` 2854/0 (1 pre-existing skip), nothing
+  half-migrated** — the old service works exactly as before, the new `Contracts.Sequences.IEventSequences` is
+  real and generated but not yet consumed by anything, `EventSequenceQueries` is real, generated, and proven.
+
 - **2026-08-21** — Researched the problem (Explore agent inventory of Core→Contracts references; read the
   generator source directly). Rebased onto origin/main. Wrote `PLAN2.md`. Starting Phase 1.
 - **2026-08-21** — Phase 1 complete: `Core/Services/**` extracted into `Cratis.Chronicle.Grpc`, including an

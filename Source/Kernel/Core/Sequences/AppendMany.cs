@@ -4,7 +4,6 @@
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
 
@@ -18,6 +17,13 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventSequenceId">The event sequence to append to.</param>
 /// <param name="EventSourceId">The event source every event belongs to.</param>
 /// <param name="Events">The events to append.</param>
+/// <param name="CorrelationId">Optional correlation identifier. Defaults to a new one when not provided.</param>
+/// <param name="Tags">The tags to associate with every event in the batch.</param>
+/// <remarks>
+/// Deliberately has no concurrency scope parameter yet - see the <c>Append</c> command's remarks for why
+/// mirroring <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/> is a separate, more carefully
+/// verified piece of work than this parity pass.
+/// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendMany(
@@ -25,7 +31,9 @@ public record AppendMany(
     string Namespace,
     string EventSequenceId,
     string EventSourceId,
-    IEnumerable<EventToAppend> Events)
+    IEnumerable<EventToAppend> Events,
+    Guid? CorrelationId = default,
+    IEnumerable<string>? Tags = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -41,22 +49,29 @@ public record AppendMany(
         ICurrentPrincipalAccessor principalAccessor)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
+        var tags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
         var events = Events.Select(@event => new EventSequences.EventToAppend(
             EventSourceType.Default,
             EventSourceId,
             EventStreamType.All,
             EventStreamId.Default,
             @event.EventType.ToChronicle(),
-            [],
+            tags,
             @event.Content,
             Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject)));
 
+        var concurrencyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(
+            new Dictionary<EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope>
+            {
+                [EventSourceId] = Concepts.EventSequences.Concurrency.ConcurrencyScope.None
+            });
+
         var result = await eventSequence.AppendMany(
             events,
-            Guid.NewGuid(),
+            CorrelationId ?? Guid.NewGuid(),
             causation.GetCurrentChain(),
             principalAccessor.Current.ToIdentity(),
-            new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+            concurrencyScopes);
 
         AppendRejected.ThrowIfRejected(result.Errors, result.ConstraintViolations);
     }

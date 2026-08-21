@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
 
@@ -23,6 +22,19 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventStreamId">The stream within the stream type.</param>
 /// <param name="EventType">The type of event being appended.</param>
 /// <param name="Content">The content of the event.</param>
+/// <param name="CorrelationId">Optional correlation identifier. Defaults to a new one when not provided.</param>
+/// <param name="Tags">The tags to associate with the event.</param>
+/// <param name="Occurred">Optional occurred time. If null, the server sets it to approximately the time of append.</param>
+/// <param name="Subject">Optional subject identifying the compliance target for the event. Defaults to the event source.</param>
+/// <remarks>
+/// Deliberately has no concurrency scope parameter yet: <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/>
+/// nests <c>IEnumerable&lt;Concepts.Events.EventType&gt;</c>, and mirroring that composite shape through
+/// <c>SharedTypeRegistry</c> regenerates <c>Contracts.Events.EventType</c> and
+/// <c>Contracts.EventSequences.Concurrency.ConcurrencyScope</c> in place - the same hand-written files every other
+/// still-hand-written Contracts area (and the production client SDK's own converters) currently depend on. Wiring
+/// it needs the same verification rigor Phase 2 applied to <c>JobStatus</c> (proto diff, WireCompatibility, every
+/// consumer checked) before it is safe, not a parameter addition alongside the rest of this parity pass.
+/// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Append(
@@ -34,7 +46,11 @@ public record Append(
     string EventStreamType,
     string EventStreamId,
     EventType EventType,
-    JsonObject Content)
+    JsonObject Content,
+    Guid? CorrelationId = default,
+    IEnumerable<string>? Tags = default,
+    DateTimeOffset? Occurred = default,
+    string? Subject = default)
 {
     /// <summary>
     /// Handles the command by appending the event.
@@ -57,11 +73,13 @@ public record Append(
             (EventStreamId)EventStreamId,
             EventType.ToChronicle(),
             Content,
-            Guid.NewGuid(),
+            CorrelationId ?? Guid.NewGuid(),
             causation.GetCurrentChain(),
             principalAccessor.Current.ToIdentity(),
-            [],
-            ConcurrencyScope.None);
+            (Tags ?? []).Select(tag => (Tag)tag),
+            Concepts.EventSequences.Concurrency.ConcurrencyScope.None,
+            Occurred,
+            string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject));
 
         AppendRejected.ThrowIfRejected(result.Errors, result.ConstraintViolations);
     }

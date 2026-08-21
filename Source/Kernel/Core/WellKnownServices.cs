@@ -77,4 +77,15 @@ public static class WellKnownServices
     /// The name of the EventSequences service.
     /// </summary>
     public const string EventSequences = "EventSequences";
+
+    /// <summary>
+    /// The name of the service exposing <c>[KeyedBy&lt;TKey&gt;]</c> grain queries for event sequences.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately distinct from <see cref="EventSequences"/> - both live in the same generated
+    /// <c>Contracts/EventSequences</c> folder (the grain interface's own C# namespace), and sharing a service name
+    /// would generate the same file the hand-written <c>Contracts.EventSequences.IEventSequences</c> contract still
+    /// occupies. See PLAN2.md's "near-miss" section.
+    /// </remarks>
+    public const string EventSequenceQueries = "EventSequenceQueries";
 }
