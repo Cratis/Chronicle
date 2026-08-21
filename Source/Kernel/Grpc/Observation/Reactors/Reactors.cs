@@ -140,7 +140,7 @@ internal sealed class Reactors(
                     registration.ConnectionId,
                     registration.EventStore,
                     registration.Namespace,
-                    (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = replayState }));
+                    (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
                 using (var span = activitySource.Register())
                 {
