@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using Cratis.Chronicle.EventTypes;
 using System.Reactive.Linq;
 using Cratis.Reactive;
 

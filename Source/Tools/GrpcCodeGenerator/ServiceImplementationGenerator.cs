@@ -61,7 +61,7 @@ public class ServiceImplementationGenerator(int skipNamespaceSegments, string co
         var observes = serviceDefinition.Queries.SelectMany(_ => _.Methods).Any(_ => _.IsObservable);
 
         var code = Header
-            + Usings(observes)
+            + Usings(serviceDefinition.Namespace, observes)
             + $"namespace {implementationNamespace};\n\n"
             + "/// <summary>\n"
             + $"/// Represents the generated implementation of <see cref=\"{contractTypeName}\"/>.\n"
@@ -79,14 +79,19 @@ public class ServiceImplementationGenerator(int skipNamespaceSegments, string co
         return new(serviceDefinition.ServiceName, contractTypeName, typeName, path);
     }
 
-    static string Usings(bool observes)
+    static string Usings(string artifactsNamespace, bool observes)
     {
-        if (!observes)
+        // The artifact namespace is always imported so hand-written converters (ToApi/ToContract) sitting
+        // alongside the Arc artifacts resolve as extension methods - the generated code below calls them by
+        // fluent syntax, and a fully-qualified call site does not bring extension methods into scope.
+        var usings = $"using {artifactsNamespace};\n";
+
+        if (observes)
         {
-            return string.Empty;
+            usings += "using System.Reactive.Linq;\nusing Cratis.Reactive;\n";
         }
 
-        return "using System.Reactive.Linq;\nusing Cratis.Reactive;\n\n";
+        return usings + "\n";
     }
 
     static string Declaration(string serviceName, string typeName, string contractTypeName, ImplementationContext context, bool hasQueries)

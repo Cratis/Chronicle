@@ -5,6 +5,8 @@
 
 #nullable enable
 
+using Cratis.Chronicle.Seeding;
+
 namespace Cratis.Chronicle.Services.Seeding;
 
 /// <summary>

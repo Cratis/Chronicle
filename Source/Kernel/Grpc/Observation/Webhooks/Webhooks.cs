@@ -5,6 +5,7 @@
 
 #nullable enable
 
+using Cratis.Chronicle.Observation.Webhooks;
 using System.Reactive.Linq;
 using Cratis.Reactive;
 
