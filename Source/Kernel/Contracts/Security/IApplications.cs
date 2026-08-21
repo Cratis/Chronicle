@@ -143,5 +143,5 @@ public class ApplicationResponse
     /// Gets or sets the LastModifiedAt.
     /// </summary>
     [ProtoMember(5)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset? LastModifiedAt { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastModifiedAt { get; set; }
 }
