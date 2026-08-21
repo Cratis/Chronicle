@@ -334,6 +334,207 @@ one commit; keep genuinely independent types in separate commits per `git-commit
    Vite dev server on 9000) — click through every screen the shared-type moves touch, since a wire-shape mistake
    here is exactly the kind of thing a build and a spec run won't catch.
 
+## The `[KeyedBy<T>]`/`[Query]` mechanism and retiring the hand-written `EventSequences` service
+
+**Directive from the project owner (2026-08-22):** not an Arc concern — these attributes are Chronicle-local
+(same home as `[BelongsTo]`, `Source/Infrastructure/Grpc/`), for `GrpcCodeGenerator`'s own discovery only. Named
+`[KeyedBy<TKey>]`, not `[GrainKey<TKey>]`. The generator reconstructs the grain key with `KeyHelper.Combine()`
+over `TKey`'s constructor parameters in declaration order — never by constructing `TKey` and trusting its own
+`ToString()` to agree with how it actually combines.
+
+**Why this exists.** Finishing `EventSequences` surfaced a real gap the `[Command]`/`[ReadModel]` convention
+doesn't cover: a handful of operations the production client SDK needs (`IsStreamCompleted`) are genuine
+grain-state reads with no read model and no storage-layer equivalent — there is nothing to inject and query
+against except the live grain. Forcing them onto an unrelated `[ReadModel]` (the way `SequenceHistogramBucket.
+EndOf`/`ParseResolution` already do, pre-dating this session) works mechanically but is dishonest about what the
+operation is — Arc ties a query to the read model it's declared on, and these don't belong to one. Most of the
+"missing" EventSequences operations turned out **not** to need this at all (`HasEventsForEventSourceId`,
+`GetForEventSourceIdAndEventTypes`, the filtered `GetTailSequenceNumber` all route through `IEventSequenceStorage`,
+not the grain — they're ordinary `[ReadModel]` static methods on a plainly-named lookup type, no new mechanism
+needed). `[KeyedBy<T>]`/`[Query]` is reserved for the genuine remainder.
+
+**Shape:**
+```csharp
+[KeyedBy<EventSequenceKey>]
+[BelongsTo(WellKnownServices.EventSequences)]
+public interface IEventSequence : IGrainWithStringKey
+{
+    [Query]
+    Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId);
+}
+```
+`TypeDiscovery` now has a second pass (interfaces are otherwise skipped entirely — the existing loop only visits
+classes) that finds `[KeyedBy<T>]` interfaces, requires `[BelongsTo]` on them the same way commands/read models
+do, and collects `[Query]`-marked methods into a new `KeyedQueryDefinition` per method. `ServiceInterfaceGenerator`
+gained `BuildKeyedQueryMethod` (a `BuildQueryMethod` twin with no read-model response reuse — response type is
+named after the method, like a command's). `ImplementationMethods` gained `ForKeyedQuery`; the query-shaped
+dispatch body (void/observable/awaitable, nullability, response mapping) was extracted into a shared
+`QueryDispatch` so both `ForQuery` and `ForKeyedQuery` use the identical logic — only how the invocation
+expression and request parameters are built differs. `ImplementationDependencies` didn't need a new capability;
+`IGrainFactory`'s reflected `Type` is resolved from whatever assembly the grain interface's own base interfaces
+(`IGrainWithStringKey` etc.) already forced to load — the generator has no compile-time Orleans reference and
+never will.
+
+Proven end to end on `IsStreamCompleted`: Core builds 0 errors/0 warnings, generated contract/implementation
+correct. **Full generator spec suite not yet extended to cover this** — do that before calling the mechanism done
+(repo convention: no public generator capability ships without a spec that compiles the generated output, per
+the Phase 2 postmortem).
+
+### The near-miss: folder collision with the hand-written contract
+
+`IEventSequence`'s C# namespace is `Cratis.Chronicle.EventSequences` — which, skip-2, is exactly
+`WellKnownServices.EventSequences`'s own name. The generator derives the **output folder** from the artifact's
+*namespace* (not the service name string), so wiring `[BelongsTo(WellKnownServices.EventSequences)]` onto
+`IEventSequence` made the generator write straight into `Contracts/EventSequences/IEventSequences.cs` and
+`Grpc/EventSequences/EventSequences.cs` — the **exact path** the pre-existing hand-written contract and service
+already occupy. One `dotnet build Core.csproj` silently shrank the hand-written 13-method interface to 1 method.
+Caught in the build output before anything was committed; reverted with `git checkout --`.
+
+**Resolution, and why it does *not* require merging `Cratis.Chronicle.Sequences` and `Cratis.Chronicle.
+EventSequences` into one namespace:** merging was the first instinct, but the two namespaces have real, non-
+renameable collisions today — `EventToAppend` exists in both, with genuinely different shapes for genuinely
+different layers (the grain-facing one carries full per-event stream addressing for `AppendMany`; the wire-facing
+one is deliberately minimal, sourced from the command's own properties). Merging would be a straight compile
+error, not a mechanical rename. The actual requirement — "everything generated, nothing hand-written" — does
+**not** require one C# interface. Two separately-generated services (`Contracts.Sequences.IEventSequences` for
+the command/read-model-shaped operations, `Contracts.EventSequences.IEventSequences` for the narrow grain-only
+remainder) both being fully generator-derived satisfies it exactly as well as one merged interface would, and the
+client SDK depending on two generated service interfaces instead of one is unremarkable.
+
+**Which means retiring the hand-written service is still real, sequenced work — not a rename:**
+1. Add the missing Core artifacts in the `Cratis.Chronicle.Sequences` namespace (no collision risk there): a
+   `CompleteStream` command (mirrors `Redact`/`Revise` — inject `IGrainFactory`, call the grain directly); a small,
+   honestly-named lookup type (not `AppendedEvent`, not `SequenceHistogramBucket`) for `HasEventsForEventSourceId`
+   and `GetTailSequenceNumber`'s full filter set; extend `AppendedEvent`'s existing methods (or add
+   `GetForEventSourceIdAndEventTypes` alongside them, since it returns `IEnumerable<AppendedEvent>` — the read
+   model's own shape, a legitimate fit unlike the scalar-returning ones) to close the filter gap against what
+   `GetEventsFromEventSequenceNumber` currently supports.
+2. Expand `Append`/`AppendMany` to carry what the production client needs and the Workbench-oriented shape
+   doesn't yet: concurrency scope, subject, occurred override, tags. One unified command surface, not two Append
+   operations — the Workbench simply doesn't populate the richer optional fields.
+3. Re-derive `IEventSequence`'s `[Query]` set fully (`IsStreamCompleted` proven; decide if anything else genuinely
+   belongs there once the storage-backed operations move out).
+4. Rebuild Core — this **will** shrink/regenerate `Contracts/EventSequences/IEventSequences.cs` and
+   `Grpc/EventSequences/EventSequences.cs` again, this time deliberately. Immediately follow with:
+5. Delete `Grpc/EventSequences/EventSequences.cs` + its private converters (`AppendResultConverters.cs`,
+   `CompleteStreamConverters.cs`) — replaced by the generated implementation.
+6. Remove the explicit `Contracts.EventSequences.IEventSequences`/`Services.EventSequences.EventSequences`
+   registration lines from `Server/GrpcServiceRegistrations.cs` (now auto-registered via `GeneratedGrpcServices.cs`).
+7. Repoint the production client SDK (`Source/Clients/DotNET/EventSequences/EventSequence.cs` + its converters) to
+   call `Contracts.Sequences.IEventSequences` for most operations and `Contracts.EventSequences.IEventSequences`
+   for the keyed-grain remainder.
+8. Repoint `Cratis.Chronicle.Testing` (`TestingServices.cs`, `EventSequences/EventScenario.cs`,
+   `EventSequences/InProcessServices.cs`, `Events/EventStoreForTesting.cs`) the same way.
+9. Fix or delete stale specs: `Core.Specs/Services/EventSequences/**` (tests the hand-written converters that no
+   longer exist), `Clients/DotNET.Specs/EventSequences/**` (tests the old client shape — check what actually
+   changes before deciding fix vs. delete per file).
+10. Full solution build + `Core.Specs` + `Testing.Specs` + `Clients/DotNET.Specs` + `Server.Specs` green before
+    calling this done. `WireCompatibility` against the declared baseline — this is the first change in the whole
+    branch that's a genuine behavioral wire change (new service split), not a mechanical mirror, so expect real
+    entries in that report and read them, don't wave them through.
+
+**Do not run `dotnet build` on `Core.csproj` again mid-way through steps 1-3 without finishing steps 4-8 in the
+same sitting** — an intermediate build leaves `Grpc.csproj`/`Server.csproj`/the client SDKs red until the
+consumers are repointed, which is expected during this pass but must not be left committed or handed off
+half-done.
+
+## A second, more severe collision: shared-type mirroring can cascade outside the area being migrated
+
+**Directive from the project owner (2026-08-22):** expand `Append`/`AppendMany` to full production parity
+(concurrency scope, subject, occurred, tags) as part of retiring the hand-written service. Attempting the
+concurrency-scope piece surfaced a second, more severe version of the folder-collision problem above — this one
+reaches **outside** the EventSequences area entirely.
+
+**What happened:** adding a `Concepts.EventSequences.Concurrency.ConcurrencyScope?` parameter to `Append` made
+`SharedTypeRegistry`'s fixed-point discovery loop mirror `ConcurrencyScope` (as designed — this is the exact
+Phase 2 mechanism, working correctly). But `ConcurrencyScope.EventTypes` is `IEnumerable<Concepts.Events.
+EventType>?` - a **nested** reference - so the same loop then discovered `Concepts.Events.EventType` needs
+mirroring too. Both mapped namespaces (`Concepts.EventSequences.Concurrency` → `Contracts.EventSequences.
+Concurrency`, `Concepts.Events` → `Contracts.Events`) landed exactly on **pre-existing hand-written files that
+dozens of other things still depend on**: `Contracts/Events/EventType.cs` (used throughout the whole `Contracts.
+Events.*` area - `AppendedEvent`, `EventRevision`, the production client SDK's own converters) and `Contracts/
+EventSequences/Concurrency/ConcurrencyScope.cs` (the old hand-written service's own concurrency handling). The
+build got as far as regenerating the C# files, then failed downstream in `ProtoGenerator` with a proto-level name
+collision (`sequences.proto(85,9,85,18): error: name 'EventType' is already in use`) and **deleted `chronicle.
+desc`** before failing. Caught before anything was committed; reverted with `git checkout --` (10 files: the two
+Contracts files, both regenerated `IEventSequences.cs` interfaces, both `EventSequences.cs` implementations,
+`GeneratedGrpcServices.cs`, and all three touched `Protobuf/*` files).
+
+**This is not a bug — it is Phase 2's mechanism working exactly as designed, which is precisely why it's
+dangerous.** `SharedTypeRegistry` overwriting a hand-written file in place, preserving its `[ProtoMember]` indexes,
+is the whole point (it is exactly how `JobStatus` was migrated successfully). The risk is that the fixed-point
+discovery loop follows nested references **transitively**, with no visibility into how widely-used or
+not-yet-migrated the discovered type's *existing* hand-written mirror is. A type referenced from one command in
+one area can silently pull in and regenerate a completely unrelated area's hand-written contract, mid-build, with
+no warning beyond a downstream proto-compile failure if two now-touched files happen to collide by message name -
+and if they *don't* collide, there is no signal at all beyond a diff nobody was looking for.
+
+**Resolution taken:** removed the `ConcurrencyScope` parameter from `Append`/`AppendMany` for this pass. Both
+commands still gained real parity - `CorrelationId`, `Tags`, `Occurred`, `Subject` on `Append`; `CorrelationId`,
+`Tags` on `AppendMany` - none of which touch `SharedTypeRegistry` (concepts convert via a plain cast;
+`DateTimeOffset` via the existing `TransportTypes` stand-in). Concurrency scope stays hard-coded to `.None`
+(no check performed), matching original behavior exactly - not a regression, a deferred addition. Documented
+inline on both records (`<remarks>`) so the gap is visible at the point someone would next reach for it, not just
+in this plan file.
+
+**Before wiring `ConcurrencyScope` (or migrating any other still-hand-written `Contracts.Events.*`/`Contracts.
+EventSequences.*` type) for real:** enumerate every current consumer of the specific file(s) about to be
+regenerated first - grep `Contracts.Events.EventType` and `Contracts.EventSequences.Concurrency.ConcurrencyScope`
+repo-wide, not just within Core - and apply the same rigor Phase 2 used for `JobStatus` (proto diff,
+`WireCompatibility`, confirm every consumer either doesn't break or is migrated in the same commit). Do **not**
+add a shared-type-referencing parameter to any command as a routine, low-risk change again - check its nested
+reference graph for pre-existing hand-written collisions first.
+
+### Final resolution for this pass: keep both `EventSequences` services, don't retire the hand-written one yet
+
+Pushing further into "retire the hand-written service" surfaced a third consumer that hadn't been accounted for:
+`Contracts.Services`/`IServices` (the hand-written aggregate every `IChronicleServicesAccessor.Services.X` call
+goes through - the production client SDK's `EventSequence.cs`, `ChronicleConnection.cs`'s real gRPC construction,
+**and** `ChronicleServerSiloBuilderExtensions.AddChronicleServicesAsInMemory`'s in-process construction, which
+`Cratis.Chronicle.Testing`'s in-process scenario helpers depend on). Retiring the old service for real means:
+adding a `Sequences` slot to that aggregate, repointing the client SDK's ~13 call sites (several to genuinely
+different Core method names - `GetTailSequenceNumber` → `TailSequenceNumber`, `GetEventsFromEventSequenceNumber` →
+`FromSequenceNumber`, etc.), and - the part that made this unsafe to push through blind - verifying that
+`ICurrentPrincipalAccessor`/`IQueryContextManager`/`IHttpContextAccessor` (which the generated `Sequences` service
+needs and nothing in the in-process wiring currently uses) actually resolve in that DI container, which cannot be
+checked here (Docker/live-kernel specs don't run on this machine - see `project_integration_specs_need_linux` in
+memory). Pushing ahead without being able to run a single spec against it would be exactly the kind of
+unverified, high-blast-radius change these instructions say to stop and check on.
+
+**What shipped instead:** `IEventSequence`'s `[KeyedBy<EventSequenceKey>]`/`[Query] IsStreamCompleted` wiring was
+kept - proven, real, additive - but pointed at a **new** service name, `WellKnownServices.EventSequenceQueries`
+(not `EventSequences`), so it generates `Contracts/EventSequences/IEventSequenceQueries.cs` +
+`Grpc/EventSequences/EventSequenceQueries.cs` as **separate files alongside**, not overwriting, the hand-written
+`IEventSequences.cs`/`EventSequences.cs` the old service still occupies. The old hand-written `EventSequences`
+service, its converters, and its `GrpcServiceRegistrations.cs` entries are all back to their original, untouched
+state - fully reverted, nothing left half-migrated. `Contracts.Sequences.IEventSequences` (Append, AppendMany,
+Redact, Revise, RedactForEventSource, CompleteStream, the read-side queries, `EventSequenceLookups`) is real,
+generated, and unused by anything yet - it exists but nothing points a client at it. Full solution build green
+(`Chronicle.slnx`, all 0 errors) and `Core.Specs` 2854/0 (1 pre-existing skip) with this final shape.
+
+**What retiring the hand-written service for real still needs, as its own follow-up:**
+1. Add a `Sequences` slot to `Contracts.Services`/`IServices` (mechanical - both are ordered records/interfaces,
+   every positional construction site - `ChronicleConnection.cs`, `ChronicleServerSiloBuilderExtensions.cs` -
+   has to add the new argument at the matching position).
+2. In `ChronicleConnection.cs` (the real gRPC path): `callInvoker.CreateGrpcService<Contracts.Sequences.
+   IEventSequences>(clientFactory)` - mechanical, code-first gRPC clients need no hand-written implementation.
+3. In `ChronicleServerSiloBuilderExtensions.cs` (the in-process/testing path): construct `Services.Sequences.
+   EventSequences` directly (it's `internal`, same assembly) - **first confirm** `ICurrentPrincipalAccessor`,
+   `IQueryContextManager`, and `IHttpContextAccessor` are resolvable from `sp` in this container, since nothing
+   currently registered there needs them.
+4. Rewrite `Source/Clients/DotNET/EventSequences/EventSequence.cs` to call `Services.Sequences.X` for every
+   operation instead of `Services.EventSequences.X`, renaming call sites to match Core's method names where they
+   differ.
+5. Repoint `Cratis.Chronicle.Testing` (`TestingServices.cs`, `EventSequences/EventScenario.cs`,
+   `EventSequences/InProcessServices.cs`, `Events/EventStoreForTesting.cs`) the same way.
+6. Only then: delete the hand-written `Grpc/EventSequences/EventSequences.cs` + its converters, remove the
+   `GrpcServiceRegistrations.cs` entries, rename `EventSequenceQueries` back to `EventSequences` (or fold
+   `IsStreamCompleted` into the `Sequences` service if it turns out not to need `[KeyedBy]` after all - revisit
+   once the rest is settled), and delete/fix the stale `Core.Specs`/`Clients/DotNET.Specs` spec folders for the
+   old converters.
+7. `WireCompatibility` against the declared baseline, and a live-kernel Workbench click-through - this is the
+   first genuinely behavioral wire change in the whole branch, not a mechanical mirror.
+
 ## Open questions worth a deliberate answer, not a default
 
 - **`Grpc` as the project/namespace name.** Reasonable, not load-bearing — a naming call, change it if a better

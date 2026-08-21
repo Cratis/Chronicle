@@ -31,7 +31,20 @@ public static class EventSequenceQueryCriteriaFactory
             OccurredFrom: narrowing.OccurredFrom,
             OccurredTo: narrowing.OccurredTo);
 
-    static string? Trimmed(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    /// <summary>
+    /// Splits a comma separated list of event type identifiers into <see cref="Concepts.Events.EventType"/>.
+    /// </summary>
+    /// <param name="value">The comma separated event type identifiers, or null/blank for none.</param>
+    /// <returns>The event types.</returns>
+    internal static IEnumerable<Concepts.Events.EventType> SplitEventTypes(string? value) =>
+        Split(value).Select(id => new Concepts.Events.EventType(id, 1));
+
+    /// <summary>
+    /// Trims a value, treating a blank value as absent.
+    /// </summary>
+    /// <param name="value">The value to trim.</param>
+    /// <returns>The trimmed value, or null when the value was blank.</returns>
+    internal static string? Trimmed(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     static string[] Split(string? value) =>
         string.IsNullOrWhiteSpace(value)

@@ -36,6 +36,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult> AppendMany(AppendManyRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the CompleteStream command.
+    /// </summary>
+    /// <param name = "request">The CompleteStream request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<global::System.UInt64>> CompleteStream(CompleteStreamRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the Redact command.
     /// </summary>
     /// <param name = "request">The Redact request.</param>
@@ -75,6 +83,38 @@ public interface IEventSequences
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<AppendedEventResponse>>> AppendedEvents(AppendedEventsRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the ForEventSourceIdAndEventTypes query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<AppendedEventResponse>>> ForEventSourceIdAndEventTypes(ForEventSourceIdAndEventTypesRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the FromSequenceNumber query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumber(FromSequenceNumberRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the HasEventsForEventSourceId query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<bool>> HasEventsForEventSourceId(HasEventsForEventSourceIdRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the TailSequenceNumber query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<global::System.UInt64>> TailSequenceNumber(TailSequenceNumberRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the AllEventSequences query.
     /// </summary>
@@ -176,6 +216,30 @@ public class AppendRequest
     /// </summary>
     [ProtoMember(9)]
     public global::System.Text.Json.Nodes.JsonObject Content { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(10)]
+    public Guid? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Tags.
+    /// </summary>
+    [ProtoMember(11)]
+    public IEnumerable<string>? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Occurred.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(13)]
+    public string? Subject { get; set; }
 }
 
 /// <summary>
@@ -213,6 +277,55 @@ public class AppendManyRequest
     /// </summary>
     [ProtoMember(5)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventToAppend> Events { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(6)]
+    public Guid? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Tags.
+    /// </summary>
+    [ProtoMember(7)]
+    public IEnumerable<string>? Tags { get; set; }
+}
+
+/// <summary>
+/// Represents the CompleteStreamRequest message.
+/// </summary>
+[ProtoContract]
+public class CompleteStreamRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamType.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventStreamId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string EventStreamId { get; set; }
 }
 
 /// <summary>
@@ -495,6 +608,196 @@ public class AppendedEventsRequest
     /// </summary>
     [ProtoMember(5)]
     public string? EventSourceId { get; set; }
+}
+
+/// <summary>
+/// Represents the ForEventSourceIdAndEventTypesRequest message.
+/// </summary>
+[ProtoContract]
+public class ForEventSourceIdAndEventTypesRequest
+{
+    /// <summary>
+    /// Gets or sets the jsonSerializerOptions.
+    /// </summary>
+    [ProtoMember(1)]
+    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(2)]
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventTypeIds.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventTypeIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamType.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamId.
+    /// </summary>
+    [ProtoMember(8)]
+    public string? EventStreamId { get; set; }
+}
+
+/// <summary>
+/// Represents the FromSequenceNumberRequest message.
+/// </summary>
+[ProtoContract]
+public class FromSequenceNumberRequest
+{
+    /// <summary>
+    /// Gets or sets the jsonSerializerOptions.
+    /// </summary>
+    [ProtoMember(1)]
+    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(2)]
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the fromEventSequenceNumber.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::System.UInt64 FromEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventTypeIds.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventTypeIds { get; set; }
+}
+
+/// <summary>
+/// Represents the HasEventsForEventSourceIdRequest message.
+/// </summary>
+[ProtoContract]
+public class HasEventsForEventSourceIdRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventSourceId { get; set; }
+}
+
+/// <summary>
+/// Represents the TailSequenceNumberRequest message.
+/// </summary>
+[ProtoContract]
+public class TailSequenceNumberRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventTypeIds.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventTypeIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceType.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamId.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? EventStreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamType.
+    /// </summary>
+    [ProtoMember(8)]
+    public string? EventStreamType { get; set; }
 }
 
 /// <summary>

@@ -90,7 +90,7 @@ message ConcurrencyViolation {
    uint64 ActualSequenceNumber = 3;
 }
 enum ConstraintType {
-   Unknown = 0;
+   CONSTRAINT_TYPE_Unknown = 0;
    Unique = 1;
    UniqueEventType = 2;
    Schema = 3;
@@ -250,6 +250,13 @@ message Identity {
    string UserName = 3;
    Identity OnBehalfOf = 4;
 }
+message IsStreamCompletedRequest {
+   string EventSequenceId = 1;
+   string EventStore = 2;
+   string Namespace = 3;
+   string EventStreamType = 4;
+   string EventStreamId = 5;
+}
 message QueryEventsRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -263,6 +270,14 @@ message QueryEventsRequest {
 message QueryEventsResponse {
    repeated AppendedEvent Events = 1;
    uint64 TotalCount = 2;
+}
+message QueryResult_Boolean {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   bool Data = 6;
 }
 message RedactForEventSourceRequest {
    string EventStore = 1;
@@ -301,6 +316,20 @@ message ReviseRequest {
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
+}
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   VALIDATION_RESULT_SEVERITY_Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
+service EventSequenceQueries {
+   rpc IsStreamCompleted (IsStreamCompletedRequest) returns (QueryResult_Boolean);
 }
 service EventSequences {
    rpc Append (AppendRequest) returns (AppendResponse);

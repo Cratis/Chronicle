@@ -12,6 +12,8 @@ message AppendManyRequest {
    string EventSequenceId = 3;
    string EventSourceId = 4;
    repeated EventToAppend Events = 5;
+   .bcl.Guid CorrelationId = 6;
+   repeated string Tags = 7;
 }
 message AppendRequest {
    string EventStore = 1;
@@ -23,6 +25,10 @@ message AppendRequest {
    string EventStreamId = 7;
    EventType EventType = 8;
    map<string,JsonNode> Content = 9;
+   .bcl.Guid CorrelationId = 10;
+   repeated string Tags = 11;
+   SerializableDateTimeOffset Occurred = 12;
+   string Subject = 13;
 }
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -31,6 +37,22 @@ message CommandResult {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
+}
+message CommandResult_UInt64 {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   uint64 Response = 7;
+}
+message CompleteStreamRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventStreamType = 4;
+   string EventStreamId = 5;
 }
 message EndOfRequest {
    SerializableDateTimeOffset Start = 1;
@@ -50,6 +72,12 @@ message EventType {
    uint32 Generation = 2;
    bool Tombstone = 3;
 }
+message HasEventsForEventSourceIdRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+}
 enum HistogramResolution {
    Minute = 0;
    Hour = 1;
@@ -61,6 +89,14 @@ message JsonNode {
 }
 message ParseResolutionRequest {
    string Resolution = 1;
+}
+message QueryResult_Boolean {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   bool Data = 6;
 }
 message QueryResult_HistogramResolution {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -93,6 +129,14 @@ message QueryResult_SerializableDateTimeOffset {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    SerializableDateTimeOffset Data = 6;
+}
+message QueryResult_UInt64 {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   uint64 Data = 6;
 }
 message RedactForEventSourceRequest {
    string EventStore = 1;
@@ -140,6 +184,16 @@ message SequenceHistogramRequest {
 message SerializableDateTimeOffset {
    string Value = 1;
 }
+message TailSequenceNumberRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventTypeIds = 4;
+   string EventSourceId = 5;
+   string EventSourceType = 6;
+   string EventStreamId = 7;
+   string EventStreamType = 8;
+}
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
    string Message = 2;
@@ -155,10 +209,13 @@ service EventSequences {
    rpc AllEventSequences (AllEventSequencesRequest) returns (QueryResult_IEnumerable_EventSequenceNamesResponse);
    rpc Append (AppendRequest) returns (CommandResult);
    rpc AppendMany (AppendManyRequest) returns (CommandResult);
+   rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_UInt64);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
+   rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_Boolean);
    rpc ParseResolution (ParseResolutionRequest) returns (QueryResult_HistogramResolution);
    rpc Redact (RedactRequest) returns (CommandResult);
    rpc RedactForEventSource (RedactForEventSourceRequest) returns (CommandResult);
    rpc Revise (ReviseRequest) returns (CommandResult);
    rpc SequenceHistogram (SequenceHistogramRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);
+   rpc TailSequenceNumber (TailSequenceNumberRequest) returns (QueryResult_UInt64);
 }

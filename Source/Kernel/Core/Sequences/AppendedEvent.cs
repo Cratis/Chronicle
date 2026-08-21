@@ -156,4 +156,77 @@ public record AppendedEvent(
         var released = await EventSequenceQuerying.ReleaseCompliance(appendedEvents, storage, eventStore, eventCompliance);
         return released.ToApi(jsonSerializerOptions);
     }
+
+    /// <summary>
+    /// Gets every event for a specific event source, optionally narrowed to specific event types.
+    /// </summary>
+    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
+    /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> content is serialized with.</param>
+    /// <param name="eventStore">Event store to read from.</param>
+    /// <param name="namespace">Namespace to read from.</param>
+    /// <param name="eventSequenceId">Event sequence to read from.</param>
+    /// <param name="eventSourceId">The event source to get events for.</param>
+    /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
+    /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
+    /// <param name="eventStreamId">Optional event stream to narrow to.</param>
+    /// <returns>Every matching event, unpaged.</returns>
+    internal static Task<IEnumerable<AppendedEvent>> ForEventSourceIdAndEventTypes(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        string eventStore,
+        string @namespace,
+        string eventSequenceId,
+        string eventSourceId,
+        string? eventTypeIds = default,
+        string? eventStreamType = default,
+        string? eventStreamId = default) =>
+        EventSequenceQuerying.ReadFromSequenceNumber(
+            storage,
+            eventCompliance,
+            jsonSerializerOptions,
+            eventStore,
+            @namespace,
+            eventSequenceId,
+            Concepts.Events.EventSequenceNumber.First,
+            eventSourceId,
+            eventTypeIds,
+            eventStreamType,
+            eventStreamId);
+
+    /// <summary>
+    /// Gets every event from a specific sequence number onward, optionally narrowed to an event source and event
+    /// types.
+    /// </summary>
+    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
+    /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> content is serialized with.</param>
+    /// <param name="eventStore">Event store to read from.</param>
+    /// <param name="namespace">Namespace to read from.</param>
+    /// <param name="eventSequenceId">Event sequence to read from.</param>
+    /// <param name="fromEventSequenceNumber">The sequence number to start reading from, inclusive.</param>
+    /// <param name="eventSourceId">Optional event source to narrow to.</param>
+    /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
+    /// <returns>Every matching event, unpaged.</returns>
+    internal static Task<IEnumerable<AppendedEvent>> FromSequenceNumber(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        string eventStore,
+        string @namespace,
+        string eventSequenceId,
+        ulong fromEventSequenceNumber,
+        string? eventSourceId = default,
+        string? eventTypeIds = default) =>
+        EventSequenceQuerying.ReadFromSequenceNumber(
+            storage,
+            eventCompliance,
+            jsonSerializerOptions,
+            eventStore,
+            @namespace,
+            eventSequenceId,
+            fromEventSequenceNumber,
+            eventSourceId,
+            eventTypeIds);
 }

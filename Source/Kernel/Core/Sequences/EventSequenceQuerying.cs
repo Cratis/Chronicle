@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -51,6 +52,73 @@ internal static class EventSequenceQuerying
 
         var released = await ReleaseCompliance(appendedEvents, storage, eventStore, eventCompliance);
         return (released, totalCount);
+    }
+
+    /// <summary>
+    /// Reads every event from a specific sequence number onward, optionally narrowed to an event source, event
+    /// stream, and event types, with PII content released.
+    /// </summary>
+    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
+    /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> content is serialized with.</param>
+    /// <param name="eventStore">Event store to read from.</param>
+    /// <param name="namespace">Namespace to read from.</param>
+    /// <param name="eventSequenceId">Event sequence to read from.</param>
+    /// <param name="fromEventSequenceNumber">The sequence number to start reading from, inclusive.</param>
+    /// <param name="eventSourceId">Optional event source to narrow to.</param>
+    /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
+    /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
+    /// <param name="eventStreamId">Optional event stream to narrow to.</param>
+    /// <returns>Every matching event, unpaged.</returns>
+    internal static async Task<IEnumerable<AppendedEvent>> ReadFromSequenceNumber(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        string eventStore,
+        string @namespace,
+        string eventSequenceId,
+        Concepts.Events.EventSequenceNumber fromEventSequenceNumber,
+        string? eventSourceId = default,
+        string? eventTypeIds = default,
+        string? eventStreamType = default,
+        string? eventStreamId = default)
+    {
+        var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+
+        Concepts.Events.EventSourceId? resolvedEventSourceId = null;
+        if (EventSequenceQueryCriteriaFactory.Trimmed(eventSourceId) is { } trimmedEventSourceId)
+        {
+            resolvedEventSourceId = trimmedEventSourceId;
+        }
+
+        Concepts.Events.EventStreamType? resolvedEventStreamType = null;
+        if (EventSequenceQueryCriteriaFactory.Trimmed(eventStreamType) is { } trimmedEventStreamType)
+        {
+            resolvedEventStreamType = trimmedEventStreamType;
+        }
+
+        Concepts.Events.EventStreamId? resolvedEventStreamId = null;
+        if (EventSequenceQueryCriteriaFactory.Trimmed(eventStreamId) is { } trimmedEventStreamId)
+        {
+            resolvedEventStreamId = trimmedEventStreamId;
+        }
+
+        var appendedEvents = new List<Concepts.Events.AppendedEvent>();
+        using (var cursor = await eventSequence.GetFromSequenceNumber(
+            fromEventSequenceNumber,
+            resolvedEventSourceId,
+            resolvedEventStreamType,
+            resolvedEventStreamId,
+            EventSequenceQueryCriteriaFactory.SplitEventTypes(eventTypeIds)))
+        {
+            while (await cursor.MoveNext())
+            {
+                appendedEvents.AddRange(cursor.Current);
+            }
+        }
+
+        var released = await ReleaseCompliance(appendedEvents, storage, eventStore, eventCompliance);
+        return released.ToApi(jsonSerializerOptions);
     }
 
     /// <summary>
