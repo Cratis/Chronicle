@@ -12,6 +12,42 @@ does not mention: `Source/Kernel/Core/Core.csproj` carries a `ProjectReference` 
 
 > Core should not know there is such a thing as gRPC or Protobuf.
 
+**Directive from the project owner (2026-08-21), settling the scope question Phase 3 raised — record this so it
+never gets re-litigated:**
+
+> Contracts reference in Core should be gone. Contracts folder in Workbench should be gone. Types that we need to
+> expose — enums, DTOs, read models — should sit in Core, not in Contracts. We should then generate C# proxies
+> with reliable incremental contracts into Contracts, wire-wise backwards compatible — that's what the tool needs
+> to do properly. Frontend proxies should be generated using Arc's proxy generator, landing in folders matching
+> the structure of Core.
+
+This is **100% purity, not a documented set of exceptions.** Every one of the areas Phase 3 flagged as "larger
+than a `[BelongsTo]` change" still needs to happen — the directive settles *that it happens*, not that it's
+optional. Consequences, stated plainly so they don't get re-derived later:
+
+- **`Features/Contracts/**` in the Workbench is a symptom, not a separate task.** It exists only because Arc's
+  proxy generator (which walks Core's own assembly) currently encounters `Contracts.*`-typed properties on Core
+  artifacts and has to emit something for them. Once no Core artifact references a `Contracts.*` type, this
+  folder stops being generated on its own — nothing needs to specially "remove" it beyond deleting what's left
+  stale after the last reference moves. Its continued existence at any point is a direct, checkable signal that
+  Core→Contracts references remain.
+- **The `Observers`/`ConnectionService` hand-rolled exception still stands** — but only because those
+  *implementations* already live in `Grpc`, not Core, since Phase 1. The directive is about Core, not about
+  whether every gRPC service is generator-derived. If a *type* those areas need (e.g. `ObserverInformation`) can
+  become Core-owned via the Phase 2 mechanism independent of whether the *service* interface itself is ever
+  generated, do that — the type-level fix and the service-level `[BelongsTo]` fix are separable, and the
+  directive requires the former unconditionally.
+- **The `Reactors`/`Reducers` `Clients/` mediators are not exempt by virtue of being protocol code.** If they can
+  be moved to `Grpc` (they are not `[Command]`/`[ReadModel]` artifacts, so nothing about them requires living in
+  Core), do that, the same move Phase 1 already made for the rest of the boundary layer. Only keep something
+  Contracts-shaped in Core if it is genuinely impossible to relocate — and that needs to be demonstrated, not
+  assumed.
+- **The generator has to become a complete, reliable, incrementally-wire-stable tool** — not a mechanism proved
+  once on `JobStatus` and left there. Every area Phase 3 found with missing Core artifacts (`EventSequences`'
+  five uncovered `IEventSequences` methods, `Projections`' circular `IProjections` injection, `ReadModels`' gap)
+  needs those artifacts actually written, following `PLAN.md`'s existing per-area recipe, so `[BelongsTo]` has
+  something real to generate from.
+
 Contracts is generated **from** Core, not referenced **by** it. Two separate things currently violate that, and
 both have to be fixed for `Core.csproj` to drop the `ProjectReference` to `Contracts.csproj` at all:
 
@@ -213,12 +249,12 @@ against the generator's "no `[BelongsTo]`" skip list, which is a broader net tha
   `Contracts.Projections.IProjections` itself as a dependency, i.e. Core calling the hand-written Grpc
   implementation to do its own work). None of these is safe as an isolated attribute change.
 
-**Decision needed before continuing this phase**: is the end state 100% purity (every one of these areas fully
-migrated, Core artifacts written for every contract method, hand-written interfaces deleted), or a documented,
-narrow set of exceptions alongside `Observers`/`ConnectionService`? Whichever areas *are* pursued follow the
-per-area recipe `PLAN.md` already documents (Step 3 in that file) — write the missing Core artifacts, reconcile
-naming, delete the hand-written contract/implementation, update the three composition roots, verify — the same
-weight as migrating a new area, not a sweep.
+**Decided (2026-08-21, see the directive at the top of this file): 100% purity.** Every one of these areas gets
+fully migrated — Core artifacts written for every contract method, hand-written interfaces deleted, no narrow
+exception carved out beyond `Observers`/`ConnectionService` (which already live in `Grpc`, not Core — see the
+directive's consequences). Each area follows the per-area recipe `PLAN.md` already documents (Step 3 in that
+file) — write the missing Core artifacts, reconcile naming, delete the hand-written contract/implementation,
+update the three composition roots, verify — the same weight as migrating a new area, not a sweep.
 
 ### Phase 4 — migrate every shared type, area by area
 
@@ -261,10 +297,9 @@ one commit; keep genuinely independent types in separate commits per `git-commit
   one surfaces during Phase 1.
 - **Whether `--implementations-namespace` should also change** away from `Cratis.Chronicle.Services` now that the
   namespace no longer lives in Core. Cosmetic; do it only if it's free once Phase 1 lands, don't block on it.
-- **Whether every one of the ~15-20 shared types is worth moving, or whether a few are small enough to just leave
-  as an accepted, narrow, documented exception** (the same shape of decision `PLAN.md` made for `Observers` /
-  `ConnectionService`). Default to moving everything; only carve out an exception with a stated reason, the same
-  way `PLAN.md` did.
+- ~~Whether every shared type is worth moving, or whether a few are small enough to leave as an accepted
+  exception.~~ **Resolved by the directive: move everything.** No new exception gets carved out without it being
+  demonstrated impossible to relocate, not just inconvenient.
 
 ## Practical notes carried forward from `PLAN.md`
 
