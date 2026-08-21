@@ -26,7 +26,7 @@ public record JobSummary(
     Guid Id,
     string Details,
     string Type,
-    JobStatus Status,
+    Concepts.Jobs.JobStatus Status,
     DateTimeOffset Created,
     IEnumerable<JobStatusChanged> StatusChanges,
     JobProgress Progress)
