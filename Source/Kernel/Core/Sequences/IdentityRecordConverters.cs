@@ -31,4 +31,26 @@ internal static class IdentityRecordConverters
             identity.Name,
             identity.UserName,
             identity.OnBehalfOf?.ToApi());
+
+    /// <summary>
+    /// Converts a contract identity to an API identity.
+    /// </summary>
+    /// <param name="identity"><see cref="Contracts.Sequences.Identity"/> to convert.</param>
+    /// <returns>Converted <see cref="Identity"/>.</returns>
+    public static Identity ToApi(this Contracts.Sequences.Identity identity) => new(
+        identity.Subject,
+        identity.Name,
+        identity.UserName,
+        identity.OnBehalfOf?.ToApi());
+
+    /// <summary>
+    /// Converts an API identity to a storage identity.
+    /// </summary>
+    /// <param name="identity"><see cref="Identity"/> to convert.</param>
+    /// <returns>Converted <see cref="Concepts.Identities.Identity"/>.</returns>
+    public static Concepts.Identities.Identity ToChronicle(this Identity identity) => new(
+        identity.Subject,
+        identity.Name,
+        identity.UserName,
+        identity.OnBehalfOf?.ToChronicle());
 }

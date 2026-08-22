@@ -24,13 +24,13 @@ internal sealed class EventSequences(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Append(global::Cratis.Chronicle.Contracts.Sequences.AppendRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Sequences.Append(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.EventType.ToApi(), request.Content, request.CorrelationId, request.Tags, request.Occurred, request.Subject),
+            new global::Cratis.Chronicle.Sequences.Append(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.EventType.ToApi(), request.Content, request.CorrelationId, request.Tags, request.Occurred, request.Subject, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
             command => command.Handle(grainFactory, requestCausation, currentPrincipalAccessor));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AppendMany(global::Cratis.Chronicle.Contracts.Sequences.AppendManyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Sequences.AppendMany(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags),
+            new global::Cratis.Chronicle.Sequences.AppendMany(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
             command => command.Handle(grainFactory, requestCausation, currentPrincipalAccessor));
 
     /// <inheritdoc/>
@@ -42,19 +42,19 @@ internal sealed class EventSequences(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Redact(global::Cratis.Chronicle.Contracts.Sequences.RedactRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Sequences.Redact(request.EventStore, request.Namespace, request.EventSequenceId, request.SequenceNumber, request.Reason),
+            new global::Cratis.Chronicle.Sequences.Redact(request.EventStore, request.Namespace, request.EventSequenceId, request.SequenceNumber, request.Reason, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
             command => command.Handle(grainFactory, requestCausation, currentPrincipalAccessor));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RedactForEventSource(global::Cratis.Chronicle.Contracts.Sequences.RedactForEventSourceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Sequences.RedactForEventSource(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.Reason, request.EventTypes),
+            new global::Cratis.Chronicle.Sequences.RedactForEventSource(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.Reason, request.EventTypes, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
             command => command.Handle(grainFactory, requestCausation, currentPrincipalAccessor));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Revise(global::Cratis.Chronicle.Contracts.Sequences.ReviseRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Sequences.Revise(request.EventStore, request.Namespace, request.EventSequenceId, request.SequenceNumber, request.EventType.ToApi(), request.Content),
+            new global::Cratis.Chronicle.Sequences.Revise(request.EventStore, request.Namespace, request.EventSequenceId, request.SequenceNumber, request.EventType.ToApi(), request.Content, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
             command => command.Handle(grainFactory, requestCausation, currentPrincipalAccessor));
 
     /// <inheritdoc/>

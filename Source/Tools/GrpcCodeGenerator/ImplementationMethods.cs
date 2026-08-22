@@ -296,7 +296,10 @@ public static class ImplementationMethods
     }
 
     static string RequestArgument(ParameterInfo parameter) =>
-        ImplementationValues.ToDomain($"request.{ImplementationValues.PropertyName(parameter.Name ?? "value")}", parameter.ParameterType);
+        ImplementationValues.ToDomain(
+            $"request.{ImplementationValues.PropertyName(parameter.Name ?? "value")}",
+            parameter.ParameterType,
+            NullableAnnotations.IsNullable(parameter));
 
     static string Method(string returnType, string name, string parameters, string body)
     {
