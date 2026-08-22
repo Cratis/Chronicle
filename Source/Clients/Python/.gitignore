@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+dist/
+src/cratis_chronicle_contracts/*_pb2.py
+src/cratis_chronicle_contracts/*_pb2.pyi
+src/cratis_chronicle_contracts/*_pb2_grpc.py
+src/cratis_chronicle_contracts/protobuf_net/

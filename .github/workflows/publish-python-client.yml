@@ -1,0 +1,89 @@
+name: Publish Python Contracts
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build contracts
+        working-directory: Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate proto files
+        run: |
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+            Source/Kernel/Protobuf
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: Source/Clients/Python/pyproject.toml
+
+      - name: Install package tooling
+        working-directory: Source/Clients/Python
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Generate Python contracts
+        working-directory: Source/Clients/Python
+        run: python generate.py --proto-root ../../Kernel/Protobuf
+
+      - name: Test generated contracts
+        working-directory: Source/Clients/Python
+        run: pytest
+
+      - name: Build distributions
+        working-directory: Source/Clients/Python
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ inputs.version }}
+        run: python build_package.py
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-contract-distributions
+          path: Source/Clients/Python/dist/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi-python-contracts
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-contract-distributions
+          path: dist/
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
