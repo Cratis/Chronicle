@@ -68,6 +68,8 @@
   href: workbench/toc.yml
 - name: Hosting
   href: hosting/toc.yml
+- name: Building a Client
+  href: building-a-client/toc.yml
 - name: Contributing
   href: contributing/toc.yml
 - name: Statistics
