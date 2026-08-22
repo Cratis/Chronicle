@@ -42,17 +42,24 @@ TypeScript, Elixir, and Kotlin's contracts packages, for your language. Concrete
    whole release on a wire-compatibility check, so a contracts package can never ship out of step
    with the server it talks to.
 
-This is precisely how it happened for the three clients that exist today:
+This is precisely how it happened for every contracts package that exists today:
 
 | Language | Contracts package | Registry |
 |---|---|---|
 | TypeScript | `@cratis/chronicle.contracts` | npm |
 | Kotlin/Java | `io.cratis:chronicle-contracts` | Maven Central |
 | Elixir | `cratis_chronicle_contracts` | Hex |
+| Python | `cratis-chronicle-contracts` | PyPI |
 
-None of those three client repos generate or own their own contracts — the packages are built and
-published from three parallel jobs in Chronicle's own `publish.yml`, all consuming the same
-`.proto` artifact, all gated behind the same `wire-compatibility` check. See
+Python is the newest addition, and it's worth noticing what stage it's at: the contracts package
+exists and publishes on its own, but there's no idiomatic `Chronicle.Python` repo built on top of
+it yet. That's expected — [layering an idiomatic client](./layering-an-idiomatic-client.md) on top
+of the contracts package is a separate, later step, not something that has to land in the same
+change as the contracts package itself.
+
+None of these client repos generate or own their own contracts — the packages are built and
+published from parallel jobs in Chronicle's own `publish.yml`, all consuming the same `.proto`
+artifact, all gated behind the same `wire-compatibility` check. See
 [the client history](./client-history.md) for how quickly this actually happened once the
 generator existed: Elixir's idiomatic client already depended on a published, versioned contracts
 package (`{:cratis_chronicle_contracts, ">= 0.1.0"}`) in its very first commit.
