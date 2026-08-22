@@ -58,15 +58,7 @@ The password argument is optional, but supply it: Chronicle reads the file as PK
 
 `WithEncryptionCertificate` sets the **active** certificate. Chronicle also accepts previously active certificates, kept for decryption only, so a rotation needs no downtime — see [Rotating the certificate](./encryption-certificate.md#rotating-the-certificate). There is no builder method for that list yet; mount the previous certificate and point the configuration at it directly:
 
-```csharp
-var chronicle = builder
-    .AddCratisChronicle(configure: chronicle => chronicle
-        .WithTlsCertificate("certs/chronicle.pfx", "YourPassword")
-        .WithEncryptionCertificate("certs/encryption-2026.pfx", "YourNewPassword"))
-    .WithBindMount("certs/encryption-2025.pfx", "/certs/encryption-previous.pfx", isReadOnly: true)
-    .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePath", "/certs/encryption-previous.pfx")
-    .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePassword", "YourOldPassword");
-```
+<ChronicleClientTabs snippet="hosting/aspire/rotation-previous-certificate" />
 
 `AddCratisChronicle` returns the resource builder, so `WithBindMount` and `WithEnvironment` chain straight onto it. The bind mount is what `WithEncryptionCertificate` would have done for you: the path in the environment variable is the path *inside* the container, so a host path handed straight to Chronicle names a file it cannot see.
 
@@ -163,13 +155,7 @@ For development, drop the whole callback. The development image brings its own M
 
 Both tags above float. `AddCratisChronicle` picks the tag for you, so a production deployment tracks whatever `cratis/chronicle:latest` happens to be at pull time — two deployments of the same AppHost can land on different Chronicle versions. Pin an exact version by chaining `WithImageTag` after the call:
 
-```csharp
-var chronicle = builder
-    .AddCratisChronicle(configure: chronicle => chronicle
-        .WithTlsCertificate("certs/chronicle.pfx", "YourPassword")
-        .WithEncryptionCertificate("certs/encryption.pfx", "YourPassword"))
-    .WithImageTag("16.26.0");
-```
+<ChronicleClientTabs snippet="hosting/aspire/pin-image" />
 
 `WithImageTag` overrides the tag the integration selected while leaving the image and registry alone, and it does not change which image *class* is used — a `configure` callback still selects the production image. Pin to a released Chronicle version, and treat the upgrade as a deliberate change.
 

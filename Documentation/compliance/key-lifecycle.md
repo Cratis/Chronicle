@@ -70,10 +70,7 @@ The fence is not a ban on the subject identifier. Ada's D98 ruling settled that 
 
 A subscription copies a subject's key across event stores, but never across namespaces — the namespace is the tenancy boundary and the copy always stays inside it. So the set of places a key can have reached is exactly *every event store, in the namespace you erased in*, and that is the set a single erasure now covers:
 
-```csharp
-var eventStore = await chronicleClient.GetEventStore("Sales");
-await eventStore.PII.DeleteEncryptionKeyFor("person-42");
-```
+<ChronicleClientTabs snippet="compliance/erasure/delete-key" />
 
 That one call now runs in three phases:
 
@@ -100,10 +97,7 @@ The fence is written even in event stores that never held a key for the subject.
 
 When a person who was erased has a lawful basis to be protected again, authorize a new key explicitly:
 
-```csharp
-var eventStore = await chronicleClient.GetEventStore("Sales");
-await eventStore.PII.AllowNewEncryptionKeyFor("person-42");
-```
+<ChronicleClientTabs snippet="compliance/erasure/allow-new-key" />
 
 Like erasure, this reaches every event store in the namespace, and like erasure it is a deliberate, explicit act rather than something ordinary traffic can cause. It does **not** create a key. It sets `NewKeyAllowed` on the fence, and the next `[PII]` value appended for that subject mints a fresh key at revision `ErasedThrough + 1`.
 
