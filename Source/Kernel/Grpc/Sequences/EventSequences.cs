@@ -34,6 +34,12 @@ internal sealed class EventSequences(
             async command => ToAppendManyResponse((await command.Handle(grainFactory, requestCausation, currentPrincipalAccessor))));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>> AppendManyForEventSources(global::Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.AppendManyForEventSources, global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>(
+            new global::Cratis.Chronicle.Sequences.AppendManyForEventSources(request.EventStore, request.Namespace, request.EventSequenceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
+            async command => ToAppendManyResponse((await command.Handle(grainFactory, requestCausation, currentPrincipalAccessor))));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<ulong>> CompleteStream(global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.CompleteStream, ulong>(
             new global::Cratis.Chronicle.Sequences.CompleteStream(request.EventStore, request.Namespace, request.EventSequenceId, request.EventStreamType, request.EventStreamId),

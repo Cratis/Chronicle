@@ -36,6 +36,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult<AppendManyResponse>> AppendMany(AppendManyRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the AppendManyForEventSources command.
+    /// </summary>
+    /// <param name = "request">The AppendManyForEventSources request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<AppendManyResponse>> AppendManyForEventSources(AppendManyForEventSourcesRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the CompleteStream command.
     /// </summary>
     /// <param name = "request">The CompleteStream request.</param>
@@ -447,6 +455,61 @@ public class AppendManyResponse
     /// </summary>
     [ProtoMember(10)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyViolation> ConcurrencyViolations { get; set; }
+}
+
+/// <summary>
+/// Represents the AppendManyForEventSourcesRequest message.
+/// </summary>
+[ProtoContract]
+public class AppendManyForEventSourcesRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Events.
+    /// </summary>
+    [ProtoMember(4)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId> Events { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(5)]
+    public Guid? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Tags.
+    /// </summary>
+    [ProtoMember(6)]
+    public IEnumerable<string>? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Causation.
+    /// </summary>
+    [ProtoMember(7)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation>? Causation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CausedBy.
+    /// </summary>
+    [ProtoMember(8)]
+    public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
 }
 
 /// <summary>

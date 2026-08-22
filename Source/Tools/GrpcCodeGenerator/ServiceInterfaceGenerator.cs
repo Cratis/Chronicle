@@ -40,12 +40,13 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         Directory.CreateDirectory(folderPath);
 
         var requestResponseTypes = new List<(string TypeName, List<(string PropName, string PropType)> Properties)>();
+        var responseTypeNamesByClrType = new Dictionary<Type, string>();
 
         var interfaceMembers = new List<MemberDeclarationSyntax>();
         foreach (var command in serviceDefinition.Commands)
         {
             var requestTypeName = GenerateCommandRequestType(command, targetNamespace, requestResponseTypes);
-            var responseTypeName = GenerateCommandResponseType(command, targetNamespace, requestResponseTypes);
+            var responseTypeName = GenerateCommandResponseType(command, targetNamespace, requestResponseTypes, responseTypeNamesByClrType);
             interfaceMembers.Add(BuildCommandMethod(command, requestTypeName, responseTypeName));
         }
 
@@ -573,7 +574,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     static string? GenerateCommandResponseType(
         CommandDefinition command,
         string targetNamespace,
-        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
+        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes,
+        Dictionary<Type, string> responseTypeNamesByClrType)
     {
         if (command.ResponseType is not { } responseType)
         {
@@ -588,6 +590,15 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             return TypeHelper.GetTypeName(unwrapped);
         }
 
+        // Two commands can share one CLR response type (AppendMany / AppendManyForEventSources both answer with
+        // AppendManyResult) - the implementation generator's ImplementationContext.MappingForCommandResponse
+        // dedupes by that CLR type, reusing whichever name it saw first, so the interface has to agree on the same
+        // name or the two generators emit a mismatched contract the implementation cannot satisfy.
+        if (responseTypeNamesByClrType.TryGetValue(responseType, out var existingResponseTypeName))
+        {
+            return existingResponseTypeName;
+        }
+
         var responseTypeName = $"{command.Name}Response";
         if (!requestResponseTypes.Exists(_ => _.TypeName == responseTypeName))
         {
@@ -599,6 +610,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             requestResponseTypes.Add((responseTypeName, properties));
         }
 
+        responseTypeNamesByClrType[responseType] = responseTypeName;
         return responseTypeName;
     }
 
