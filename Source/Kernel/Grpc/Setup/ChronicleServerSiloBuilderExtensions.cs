@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Arc.Authorization;
+using Cratis.Arc.Queries;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Compliance;
@@ -28,6 +30,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -141,6 +144,14 @@ public static class ChronicleServerSiloBuilderExtensions
                     storage,
                     sp.GetRequiredService<IEventCompliance>(),
                     jsonSerializerOptions),
+                new Cratis.Chronicle.Services.Sequences.EventSequences(
+                    grainFactory,
+                    new Cratis.Chronicle.Sequences.RequestCausation(sp.GetRequiredService<IHttpContextAccessor>()),
+                    sp.GetRequiredService<ICurrentPrincipalAccessor>(),
+                    storage,
+                    sp.GetRequiredService<IEventCompliance>(),
+                    sp.GetRequiredService<IQueryContextManager>(),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Sequences.EventSequences>>()),
                 new Cratis.Chronicle.Services.EventTypes.EventTypes(
                     storage,
                     sp.GetRequiredService<IEventTypesCacheClient>(),

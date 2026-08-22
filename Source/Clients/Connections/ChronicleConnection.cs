@@ -231,6 +231,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<Contracts.Patterns.IPatterns>(clientFactory),
             callInvoker.CreateGrpcService<IIdentities>(clientFactory),
             callInvoker.CreateGrpcService<IEventSequences>(clientFactory),
+            callInvoker.CreateGrpcService<Contracts.Sequences.IEventSequences>(clientFactory),
             callInvoker.CreateGrpcService<IEventTypes>(clientFactory),
             callInvoker.CreateGrpcService<IConstraints>(clientFactory),
             callInvoker.CreateGrpcService<IObservers>(clientFactory),

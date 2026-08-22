@@ -63,7 +63,9 @@ using KernelReadModelsService = KernelGrpc::Cratis.Chronicle.Services.ReadModels
 using KernelRecommendationsService = KernelGrpc::Cratis.Chronicle.Services.Recommendations.Recommendations;
 using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
 using KernelReducersService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reducers.Reducers;
+using KernelRequestCausation = KernelCore::Cratis.Chronicle.Sequences.RequestCausation;
 using KernelSeedingService = KernelGrpc::Cratis.Chronicle.Services.Seeding.EventSeeding;
+using KernelSequencesService = KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences;
 using KernelServerService = KernelGrpc::Cratis.Chronicle.Services.Host.Server;
 using KernelSubscriptionsService = KernelGrpc::Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions;
 using KernelUsersService = KernelGrpc::Cratis.Chronicle.Services.Security.Users;
@@ -164,6 +166,18 @@ internal sealed class TestingServices(
                 new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
                 new ExpandoObjectConverter(new TypeFormats())),
             jsonSerializerOptions));
+
+    readonly Lazy<Contracts.Sequences.IEventSequences> _sequences = new(() =>
+        new KernelSequencesService(
+            grainFactory,
+            new KernelRequestCausation(new Microsoft.AspNetCore.Http.HttpContextAccessor()),
+            new EventSequences.InProcessCurrentPrincipalAccessor(),
+            storage,
+            new KernelEventCompliance(
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+                new ExpandoObjectConverter(new TypeFormats())),
+            new EventSequences.InProcessQueryContextManager(),
+            NullLogger<KernelSequencesService>.Instance));
 
     readonly Lazy<INamespaces> _namespaces = new(() =>
         new KernelNamespacesService(grainFactory, storage, NullLogger<KernelNamespacesService>.Instance));
@@ -273,6 +287,9 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IEventSequences EventSequences => _eventSequences.Value;
+
+    /// <inheritdoc/>
+    public Contracts.Sequences.IEventSequences Sequences => _sequences.Value;
 
     /// <inheritdoc/>
     public IEventStores EventStores => _eventStores.Value;
