@@ -38,9 +38,7 @@ The client always connects over TLS, but by default it does **not** validate the
 
 Once you run against a server whose certificate is verifiable, turn validation on with `skipTlsValidation=false` in the connection string:
 
-```csharp
-var options = ChronicleOptions.FromConnectionString("chronicle://my-server:35000?skipTlsValidation=false");
-```
+<ChronicleClientTabs snippet="configuration/tls/validation-enabled" />
 
 You can also set it on the client's TLS options as `SkipCertificateValidation = false`. **Either setting alone is enough** — the two combine so that whichever one asks for validation wins, and an omitted second setting can never silently turn validation back off.
 

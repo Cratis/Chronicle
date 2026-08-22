@@ -10,10 +10,7 @@ A right-to-erasure request arrives naming one person, and Chronicle gives you ex
 
 Erasure in Chronicle is the deletion of an encryption key. Every `[PII]` value is encrypted at append time under a key held for the event's [subject](../concepts/subject), so deleting that key makes every PII value for that subject unreadable at once, without touching the append-only log:
 
-```csharp
-var eventStore = await chronicleClient.GetEventStore("Sales");
-await eventStore.PII.DeleteEncryptionKeyFor("person-42");
-```
+<ChronicleClientTabs snippet="compliance/erasure/delete-key" />
 
 `IEventStore.PII` is an `IPIIManager`. `DeleteEncryptionKeyFor` removes every revision of the key, evicts it from every silo's cache, and records the erasure so that nothing puts the key back afterwards.
 
@@ -59,10 +56,7 @@ The practical consequence is worth knowing before you erase:
 
 If the same person later has a lawful basis to be protected again, say so:
 
-```csharp
-var eventStore = await chronicleClient.GetEventStore("Sales");
-await eventStore.PII.AllowNewEncryptionKeyFor("person-42");
-```
+<ChronicleClientTabs snippet="compliance/erasure/allow-new-key" />
 
 That creates no key. It authorizes the next `[PII]` value written for the subject to provision a fresh, independent one — which protects data written from then on and can decrypt nothing that came before. The erased key itself never comes back. Like the erasure, the authorization covers every event store in the namespace.
 
