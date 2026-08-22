@@ -69,6 +69,11 @@ jobs:
       - name: Assert every spec project is in the solution
         run: python3 .github/scripts/assert-solution-membership.py
 
+      # The publish workflow's Docker verification logic is release-only, so this checkout-only spec run is
+      # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
+      - name: Spec the published Docker tag verifier
+        run: python3 .github/scripts/test-verify-published-docker-tags.py
+
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
@@ -126,7 +131,7 @@ jobs:
       - name: Build client packages for every shipped framework
         run: |
           set -e
-          for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
+          find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
             dotnet build "$project" --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           done
           dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
@@ -406,7 +411,7 @@ jobs:
           mkdir -p ./coverage-reports
           
           # Find all coverage.cobertura.xml files from artifacts and copy them
-          find ./all-coverage-results -name "coverage.cobertura.xml" -type f | while read file; do
+          find ./all-coverage-results -name "coverage.cobertura.xml" -type f | while IFS= read -r file; do
             echo "Found coverage file: $file"
             # Create unique directory for each coverage file
             dirname_hash=$(echo "$file" | md5sum | cut -d' ' -f1)
@@ -443,13 +448,16 @@ jobs:
           echo "key=coverage-cache-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Collect coverage statistics
+        env:
+          COVERAGE_REF_NAME: ${{ github.head_ref || github.ref_name }}
+          COVERAGE_MESSAGE: ${{ github.event.head_commit.message || format('Coverage update for {0}', github.head_ref || github.ref_name) }}
         run: |
           .github/scripts/collect-coverage.sh \
             "./coverage-reports" \
             "./Documentation/statistics/coverage-data.js" \
-            "${{ github.head_ref || github.ref_name }}" \
+            "$COVERAGE_REF_NAME" \
             "${{ github.sha }}" \
-            "${{ github.event.head_commit.message || format('Coverage update for {0}', github.head_ref || github.ref_name) }}"
+            "$COVERAGE_MESSAGE"
 
   # Running the benchmarks takes ~13 minutes and sits on the critical path behind dotnet-build, which made it
   # the single thing deciding how long a pull request takes to go green. It cannot fail a build either
