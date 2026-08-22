@@ -67,13 +67,10 @@ code; they import `@cratis/chronicle`, which happens to depend on it.
 
 The idiomatic client — on its own, with no convenience package — is a complete, general-purpose
 client. It's what you reach for in a console tool, a script, a background worker, or a test
-project. Every one of the four existing clients treats this as the default entry point:
+project. Every one of the four existing clients treats this as the default entry point — create
+the client, get an event store, append an event:
 
-```typescript
-const client = new ChronicleClient(ChronicleOptions.development());
-const store = await client.getEventStore('MyStore');
-await store.eventLog.append('employee-123', new EmployeeHired('Jane', 'Doe'));
-```
+<ChronicleClientTabs snippet="get-started/client-flow" />
 
 ## Convenience packages sit above that, and are optional
 

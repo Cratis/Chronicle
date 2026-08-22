@@ -35,14 +35,14 @@ flowchart TB
 - **[Two ways to start](./starting-points.md)** — use the `.proto` files directly, or ask the
   Cratis team to generate and publish a contracts package for your language. Most clients so far
   took the second path.
-- **[Layering an idiomatic client](./layering-an-idiomatic-client.md)** — why the generated
+- **[Layering an idiomatic client](./layering-an-idiomatic-client)** — why the generated
   contracts are deliberately not the client developers use, and how a raw client and optional
   convenience packages sit on top of them.
 - **[Authentication and bearer tokens](./authentication-and-bearer-tokens.md)** — how a client
   turns connection-string credentials into a bearer token on every call, and keeps it fresh.
 - **[Clustering and the connection lifecycle](./clustering-and-connection-lifecycle.md)** — what
   a client has to implement to be a good citizen of a multi-server Chronicle cluster.
-- **[Connection string elements](./connection-string-elements.md)** — the object model a client
+- **[Connection string elements](./connection-string-elements)** — the object model a client
   SDK typically wraps around the connection string grammar.
 - **[Documentation and snippets](./documentation-and-snippets.md)** — how a new client repo's
   `Documentation/` folder plugs into the shared Chronicle docs site.

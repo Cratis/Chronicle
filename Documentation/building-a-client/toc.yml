@@ -5,12 +5,12 @@
 - name: Two ways to start
   href: starting-points.md
 - name: Layering an idiomatic client
-  href: layering-an-idiomatic-client.md
+  href: layering-an-idiomatic-client.mdx
 - name: Authentication and bearer tokens
   href: authentication-and-bearer-tokens.md
 - name: Clustering and the connection lifecycle
   href: clustering-and-connection-lifecycle.md
 - name: Connection string elements
-  href: connection-string-elements.md
+  href: connection-string-elements.mdx
 - name: Documentation and snippets
   href: documentation-and-snippets.md

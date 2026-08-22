@@ -103,5 +103,5 @@ keep-alive stream and a client-side watchdog:
 - Run a keep-alive watchdog with capped exponential backoff, reusing the same connect path for
   reconnects that the initial connect uses.
 
-Next: [Connection string elements](./connection-string-elements.md) covers the object model most
+Next: [Connection string elements](./connection-string-elements) covers the object model most
 clients wrap around the string itself.
