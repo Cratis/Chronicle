@@ -44,4 +44,20 @@ internal static class CausationConverters
     /// <returns>Converted <see cref="Causation"/>.</returns>
     internal static Causation ToClient(this Contracts.Auditing.Causation causation) =>
         new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
+
+    /// <summary>
+    /// Convert to Chronicle representation.
+    /// </summary>
+    /// <param name="causations">Collection of <see cref="Contracts.Sequences.Causation"/> to convert from.</param>
+    /// <returns>Converted collection of <see cref="Causation"/>.</returns>
+    internal static IEnumerable<Causation> ToClient(this IEnumerable<Contracts.Sequences.Causation> causations) =>
+        causations.Select(c => c.ToClient()).ToArray();
+
+    /// <summary>
+    /// Convert to Chronicle representation.
+    /// </summary>
+    /// <param name="causation"><see cref="Contracts.Sequences.Causation"/> to convert from.</param>
+    /// <returns>Converted <see cref="Causation"/>.</returns>
+    internal static Causation ToClient(this Contracts.Sequences.Causation causation) =>
+        new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
 }

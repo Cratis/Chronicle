@@ -28,4 +28,12 @@ internal static class IdentityConverters
     /// <returns>Converted <see cref="Identity"/>.</returns>
     internal static Identity ToClient(this Contracts.Identities.Identity identity) =>
         new(identity.Subject, identity.Name, identity.UserName, identity.OnBehalfOf?.ToClient());
+
+    /// <summary>
+    /// Convert to Chronicle representation.
+    /// </summary>
+    /// <param name="identity"><see cref="Contracts.Sequences.Identity"/> to convert from.</param>
+    /// <returns>Converted <see cref="Identity"/>.</returns>
+    internal static Identity ToClient(this Contracts.Sequences.Identity identity) =>
+        new(identity.Subject, identity.Name, identity.UserName, identity.OnBehalfOf?.ToClient());
 }
