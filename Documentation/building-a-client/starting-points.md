@@ -59,10 +59,9 @@ change as the contracts package itself.
 
 None of these client repos generate or own their own contracts — the packages are built and
 published from parallel jobs in Chronicle's own `publish.yml`, all consuming the same `.proto`
-artifact, all gated behind the same `wire-compatibility` check. See
-[the client history](./client-history.md) for how quickly this actually happened once the
-generator existed: Elixir's idiomatic client already depended on a published, versioned contracts
-package (`{:cratis_chronicle_contracts, ">= 0.1.0"}`) in its very first commit.
+artifact, all gated behind the same `wire-compatibility` check. It happens fast, too: Elixir's
+idiomatic client already depended on a published, versioned contracts package
+(`{:cratis_chronicle_contracts, ">= 0.1.0"}`) in its very first commit.
 
 ### Why this is worth asking for
 

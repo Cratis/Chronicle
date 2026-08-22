@@ -84,5 +84,5 @@ See the full parameter table in
 [Connection Strings → Server support](../connection-strings/server.md#query-parameters) for every
 name, type, and example.
 
-Next: [How TypeScript, Elixir, and Kotlin were built](./client-history.md) puts all of this in the
-order it actually happened.
+Next: [Documentation and snippets](./documentation-and-snippets.md) covers the last thing a new
+client needs before it's ready for other people to use.
