@@ -105,6 +105,7 @@ experience. They are not optional.
 Six independent tasks, each a small PR. No dependencies between them; do in any order.
 
 ### Task 0.1 — Boot gate on every published Docker image
+
 **Traces to:** images 15.37.0–15.38.2 unbootable (exec bit stripped by `actions/upload-artifact`
 on the publish→docker hand-off, commit `716150a73`); every *development* image since 16.33.1
 aborting at startup (a rebase reintroduced a runtime env-var check DEVELOPMENT-symbol images
@@ -130,6 +131,7 @@ publish workflow at the boot gate (verify once via `workflow_dispatch` on a fork
 replicate the gate step locally with `act`-style dry run + a local `docker run` proof).
 
 ### Task 0.2 — Consumer smoke for published packages
+
 **Traces to:** #3598 — the published `Cratis.Chronicle.Testing` package baked in
 Screenplay.Secrets types, so **every consumer's specs failed** against Screenplay 2.0.0; all of
 16.15.0–16.19.2 affected. Packing succeeded, publish succeeded, every consumer broke.
@@ -148,6 +150,7 @@ Screenplay.Secrets types, so **every consumer's specs failed** against Screenpla
 fails the smoke and blocks publish.
 
 ### Task 0.3 — Silent-success sweep
+
 **Traces to:** proto generation failed **22 of 23 packages, printed the errors, and exited 0** for
 months — Kotlin/TS/Elixir clients were published from stale schemas (`889a9c546`/`ea4f7680a`,
 whose own fix was reverted within hours — this area is still open, see churn note in §6); the
@@ -168,6 +171,7 @@ proto reserved-fields generator lived in **no solution**, so no gate ever compil
 whose filter matches nothing turns the job red.
 
 ### Task 0.4 — Path-filter audit
+
 **Traces to:** `47a82ad45` (2026-04-17) narrowed triggers to `.cs`/`.csproj` for speed; on
 2026-08-05 a Fundamentals bump via `Directory.Packages.props` — "the riskiest change in the
 repository" — **merged with no build at all** (`c9fbc8d99`). Benchmarks broke while landing green
@@ -186,6 +190,7 @@ verify it's still there).
 workflow.
 
 ### Task 0.5 — Red-workflow alarm
+
 **Traces to:** the PR-prerelease pipeline was dead for 3+ months — **319 consecutive failed runs,
 every job skipped, zero artifacts** — and nobody reacted (`a73449bbd`). Alarm fatigue, not a
 blind spot.
@@ -200,6 +205,7 @@ blind spot.
 (test by temporarily lowering the threshold or against the historical prerelease workflow data).
 
 ### Task 0.6 — Autofix bots become suggesters
+
 **Traces to:** Copilot Autofix committed 96 mechanical rewrites this year; two broke the build
 outright (`c237e5e74` LINQ autofix vs the build's own analyzers; `aedafe1bc` IDE0037 vs
 warnings-as-errors Release), and the bot repeatedly rewrote hot kernel files.
@@ -223,6 +229,7 @@ user agreed to mark required — that is the remaining repository setting. Autof
 permission is still blocked-on-user.
 
 ### Task 0.7 — Release hygiene on GitHub Releases
+
 **Traces to:** the releases-page evaluation in §1 — broken releases are unmarked and
 indistinguishable from good ones, so consumers (and dependency bots) keep pulling them; the
 prerelease channel sits unused; internal template sections leak into the public notes that
@@ -256,6 +263,7 @@ containing `## Test plan` is rejected by the gate.
 ## 4. Phase 1 — weeks 2–4: green must mean correct
 
 ### Task 1.1 — Shared behavioral contract suite for storage
+
 **Traces to:** in-memory event-sequence storage treated the "do not narrow" sentinels
 (`EventSourceId.Unspecified`, `EventSourceType.Unspecified`, `EventStreamType.All`,
 `EventStreamId.Default`, empty event-type set) **as values to match** — every read returned
@@ -287,6 +295,7 @@ migrated content stamped with the old generation where persistent providers repo
 on a branch, fails the shared suite's in-memory run.
 
 ### Task 1.2 — Finish harness convergence onto the real engine
+
 **Traces to:** the in-process harness diverged from the kernel for months; specs green,
 production wrong. Known fidelity list (each was a real incident): PII apply/release handling,
 `ChildRemoved`, children-path exclusion, child-key resolution (`7ffb04fd9`), string-concept-keyed
@@ -310,6 +319,7 @@ immediately exposed the Task-1.1 divergences — finish that direction.
 run through real kernel storage rather than parallel implementations.
 
 ### Task 1.3 — Contain the hot core
+
 **Traces to:** 20 of 73 incidents are fixes that broke a sibling path, concentrated in five
 areas; two rollbacks deliberately reinstated known bugs (`b3e03dbb8`, `d1c168c7e`). The OOP
 integration matrix is the only oracle that has reliably caught this class.
@@ -345,6 +355,7 @@ absent — and therefore permanently pending — on a PR it does not apply to. *
 marking `hot-core-gate` required is a branch-protection setting.
 
 ### Task 1.4 — History-integration guards for parallel agent work
+
 **Traces to:** a stale agent worktree silently reverted a sibling branch's merged compliance
 hardening — **CI stayed green because the specs were deleted along with the code**
 (`9404b2b42` → restored `b1b0e1553`); a main-merge dropped the SQL OpenIddict storage layer
@@ -371,6 +382,7 @@ the tripwire; the user confirms the branch-protection setting.
 ## 5. Phase 2 — this quarter: dismantle the regression factory
 
 ### Task 2.1 — Deterministic completion signals in the observer/projection core
+
 **Traces to:** category G (20/73). `63cf43e38` admits integration tests depend on "the implicit
 50ms settling buffer" — the tests encode timing coupling, so any latency-shifting change in the
 core regresses siblings, which is why fixes here keep getting rolled back.
@@ -394,9 +406,19 @@ negative, and measured against the same base it took `for_Reactors` from 19/19 c
 attempt is preserved on `fix/observer-running-state-flap` (no pull request) and can be reattempted
 once clients await a settling fact instead of polling for a running state.
 
+**Also blocked on this:** #3787 — `for_EventStoreSubscriptionsManager.when_waiting_until_subscribed.and_subscription_is_ready`
+fails intermittently in CI. `WaitUntilSubscribed` polls on a `while (UtcNow - start < timeout)` loop with a
+10ms delay, and the spec substitutes `IsSubscribed()` to answer `false, false, true`, so it needs three
+poll iterations inside a hard 1000ms deadline. It passed 8/8 locally in Release and failed on a pull
+request that changes no C# at all. Note the ratchet gap it exposes: the sibling spec in the same folder
+is in `.github/timing-coupling-baseline.txt`, but this one is not, because its timing coupling is a
+`TimeSpan` argument rather than a `Task.Delay` the ratchet greps for — wall-clock deadlines passed to
+the API under test are the same category and are currently uncounted.
+
 **Done when:** the integration suite passes with the settling buffer set to zero.
 
 ### Task 2.2 — Release train with a soak
+
 **Traces to:** 303 patch releases; 8 patches the day after 15.0.0; 16.12.0's next-day shim
 (16.13.2) itself never ran (#3615); 16.13.4 produced three same-week production incident reports
 (#3570, #3571, #3591).
@@ -457,6 +479,7 @@ commit, or an API lookup of the associated pull request — at the same time.
 **Done when:** patch share of releases is below 40% for a full calendar month.
 
 ### Task 2.3 — Close-the-class policy
+
 **Traces to:** the mechanism that already bent the curve — 45 CHR analyzer diagnostics, and the
 2026-H2 idiom of landing every regression fix with a "pinning spec" because the broken behavior
 "had no coverage at all, which is how the flip shipped silently" (`092584131`, `9f0d73062`,
@@ -474,6 +497,7 @@ commit, or an API lookup of the associated pull request — at the same time.
 existing one.
 
 ### Task 2.4 — Regression-tax dashboard
+
 **Implementation**
 1. Scheduled monthly workflow computing, for the trailing month: revert count
    (`git rev-list --count -i --grep=revert`), patch share of tags, regression-language issue rate
@@ -558,12 +582,12 @@ decision only the user can make.
 | 2.3 | Close-the-class policy | todo | | `.ai` rule, NOT the PR template (§5 gotcha) |
 | 2.4 | Regression-tax dashboard | **done** | #3771 | monthly review = the 1st-of-month commit to `Metrics/regression-tax.md`, seeded to Jul'26: passes volume and fix-share (9.9%), fails patch share (56.8%) and reverts (5) |
 | 8.a | Regenerate-and-diff gate | scoped | | measured, not estimated: 133 tracked generated files (all `Source/Workbench/Api`, not the 154 the audit guessed) and 23 protos. Proxy half is ready to build — regeneration is already byte-identical. Proto half is **blocked on #3734**, which is what makes generation work at all; gRPC contracts must stay excluded. See the note under §8 |
-| 8.b | Public-API zero-coverage ratchet | todo | | |
+| 8.b | Public-API zero-coverage ratchet | **done** | | Tier 2 built directly, skipping the specified Tier 1. Reads the cobertura the `specs` job already collects, so it costs a file parse rather than a second test run; baselined at the 9 genuinely zero-covered types, verified against the full 24-report suite. See the note under §8 |
 | 8.c | Kernel-facing analysis | todo | | the CHR family is consumer-only today |
 | 8.d | Timing-coupling ratchet + rule | **done** | #3765 | 67 governing / 25 legitimate sleeps; unannotated baseline entries are 2.1 work |
 | 8.e | Silent-stub sibling comparison | todo | | |
 | 8.f | Path-filter completeness meta-check | **done** | #3761 | |
-| 8.g | PR-body and commit lint | todo | | heading allowlist, not a denylist |
+| 8.g | PR-body and commit lint | **body done** | | `pull-request-body.yml` checks every body, including on `edited`. Allowlist (`Summary` + the five changelog sections), empty-section, closing-keyword and agent-residue rules; 45 of the last 400 releases would have failed it. Commit-subject lint not built — see the note under §8 |
 | 8.h | SQL provider on PR runs | **done** | #3764 | every pull request now runs SQLite alongside MongoDB — 51 client-integration jobs, 17 shards × 3 configurations. Merged once both blocking shards were green on `main`; see the note under §8 for what SQLite does and does not catch |
 
 **Session log — 2026-08-18.** Seventeen pull requests merged: the whole of Phase 0 except 0.6 and
@@ -681,6 +705,103 @@ Observation artifacts in Core cannot yet reproduce the hand-written
 `GetReplayableObserversForEventTypes`. Those contracts are checked in and *allowed* to drift until
 those artifacts are converted. A gate that regenerated them would either fail permanently or destroy
 the surface.
+
+**8.b — measured, and the specified Tier 1 would be wrong (2026-08-19).** The headline number is close
+but the method behind it is not, and the difference decides how this gets built.
+
+Enumerating the real public surface from the compiled assembly with `MetadataLoadContext` gives **37
+exported types** (the audit says 35), and the audit's own predicate — is the type's simple name
+mentioned anywhere in the 4,854 spec files — marks **21 of them uncovered**, which is close enough to
+the reported 20 to confirm that is the method that was used.
+
+**That predicate is wrong, and provably so.** Running the specs with `--collect:"XPlat Code Coverage"`
+and reading the cobertura output back shows that five of the types name-grep calls uncovered are in
+fact exercised, four of them at **100% line coverage**:
+
+| Type | Lines hit | Named by any spec |
+|---|---|---|
+| `EventScenarioGivenBuilder` | 4/4 | no |
+| `EventScenarioWhenBuilder` | 4/4 | no |
+| `EventSourceGivenBuilder` | 8/8 | no |
+| `EventSourceWhenBuilder` | 12/14 | no |
+| `ReadModelsForTesting` | 18/46 | no |
+
+The reason is structural rather than incidental: these are **fluent builders reached through property
+chaining**. `EventScenario.Given` returns an `EventScenarioGivenBuilder`, so all 425 `.Given` uses in
+the suite exercise the type without ever writing its name. A name-grep ratchet would demand specs for
+code that is already fully covered, and the obvious way to satisfy it — mention the type somewhere —
+adds a citation, not a test. **A gate that can be satisfied without testing anything is worse than no
+gate**, and this program has already shipped two of those.
+
+The sharp measurement, from coverage rather than names: **9 public types have zero lines hit.**
+
+- `AppendedEventWithResultShouldExtensions` — **0 of 36 lines**, and a shipped assertion helper. This
+  is the genuine version of the audit's `AppendResult` finding and the single most valuable entry.
+- `DateAndTimeExtensions` (0/12), `CausationManagerForTesting` (0/8),
+  `CannotSeedReadModelWithExplicitEventStore` (0/8), and five exception types that are 0/2 each —
+  constructor-only, so near-zero value to cover.
+
+A further 7 generic types (`ReactorScenario<>`, `ReadModelScenario<>` and their builders) produce no
+cobertura `class` entry under their open-generic name at all, so any ratchet has to normalize generic
+arity before it can say anything about them — another way a naive implementation reports confident
+nonsense.
+
+**So: skip Tier 1, build Tier 2.** The audit frames name-grep as the cheap first step and cobertura as
+a later refinement; the cheap step is the one that produces false accusations. The coverage data
+already exists in CI (`dotnet-build.yml` collects it and publishes `Documentation/statistics`), so the
+ratchet should consume that artifact from the start — baseline the 9, fail on a new zero-covered
+public type, and normalize generic arity. Cost is a parse of a file CI already produces.
+
+**Built, and what the build changed (2026-08-19).** `.github/scripts/assert-public-api-coverage-ratchet.py`
+runs as a step in the existing `specs` job, reading the cobertura reports that job already produces.
+Two things only showed up once it was real:
+
+- **A namespace filter is not a visibility filter.** Seeding from `Cratis.Chronicle.Testing.*` gave 13
+  entries, not 9. Four of them - `InMemoryEventCursor`, `InMemoryKernelEventTypes`,
+  `InProcessNoOpConstraintsService`, `NoOpEventTypesCacheClient` - are `internal sealed`. Cobertura
+  instruments them and reports them under a shipped namespace, so the ratchet was about to demand
+  consumer-facing specs for types no consumer can reference. `.github/public-api-surface.txt`, generated
+  from source by `report-public-api-surface.py` and asserted current by a spec, is what separates the
+  two. Reflecting over the built assembly would have been more direct, but `MetadataLoadContext` is not
+  in `Directory.Packages.props` and adding a package to satisfy a CI script is the worse trade; the scan
+  was checked against the assembly and finds all 35 exported types.
+- **Coverage has to be unioned across reports.** Each spec project writes its own cobertura file, and
+  **53 `Testing` types are covered in one report and zero in another**. Judging per report would have
+  produced a large pile of confident false accusations.
+
+Baselined at the 9, and the seed is not an artifact of the project it was taken from: re-running the
+full CI filter across all 24 reports reproduces the same 9 byte-for-byte. Proven non-vacuous three ways -
+removing the surface filter, breaking generic-arity normalization, and drifting the surface list each
+fail the specs; missing coverage and a missing surface file both fail loudly rather than passing while
+measuring nothing.
+
+**8.g — the body half, built and measured (2026-08-19).** `.github/workflows/pull-request-body.yml`
+runs `assert-pull-request-body.py` on every pull request, and on `edited` as well as pushes, because
+the body is the artifact under review and it changes without a commit. It fails on four things, each
+drawn from something that actually published: a heading outside the sanctioned set, a sanctioned
+section declared and left empty, an issue-closing keyword, and agent-transcript residue.
+
+**Measured against the last 400 published releases: 45 would have failed** — 35 for headings, 24 for
+tool footers or transcript blocks, 7 for empty sections, 4 for closing keywords. Every flagged
+heading is either internal detail (`Test plan`, `Root cause`, `Files affected`, `Suggested regression
+test`) or a near-miss of a real section (`Fixes` and `Fix` for `Fixed`), which is exactly what an
+allowlist catches and a denylist does not.
+
+**The audit's evidence for this item was wrong, and worth correcting.** §1 and the 8.g row both say
+v16.13.4 shipped an *empty* `## Test plan` heading. It did not — that release's `## Test plan` has
+five populated checklist items. The real defect is that the section is internal detail published to
+consumers at all, not that it was empty. Empty sections are a separate, genuine class: 10 of the last
+400 releases have one, `v15.33.0` shipping three.
+
+`## Summary` is **allowed**, and the first draft of this check was wrong to reject it. It fired on 108
+of 400 releases — far above any real defect count — and `pull-requests.md` explicitly sanctions a
+summary "if there is a cohesive theme across the changes". 101 of those 108 pair it with a proper
+changelog section, and it was used as recently as 2026-08-18. The allowlist encodes the rule as
+written; a check that contradicts the rule it enforces just teaches people to route around it.
+
+**Not built: the commit-subject half.** The task pairs body lint with commit-subject rules, and only
+the body is done here. The body is what publishes, so it is where the leverage is; commit subjects
+are worth a separate pass rather than a hurried one bolted onto this.
 
 **8.h — landed, and what it is actually worth (2026-08-19).** #3764 merged: every pull request now runs
 SQLite beside MongoDB, 51 client-integration jobs against the previous 34, for about +54 runner-minutes

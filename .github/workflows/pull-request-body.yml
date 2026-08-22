@@ -1,0 +1,36 @@
+name: Pull Request Body
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# The body publishes verbatim as the GitHub release note, so this check runs on `edited` as well as
+# the usual events: the body is the artifact under review, and it changes without a push. Without
+# `edited`, fixing a flagged body would leave the red cross behind until an unrelated commit cleared
+# it - the shape that trains people to ignore a check.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# Its own workflow rather than a step in dotnet-build, for the same reason as the timing-coupling
+# ratchet: it needs nothing but the event payload, and dotnet-build's `paths:` filter would leave the
+# check absent - and so permanently pending - on a pull request that filter does not match. A body
+# is not a compile step and must be judged on every pull request that can cut a release.
+jobs:
+  pull-request-body:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify the body check
+        run: python3 .github/scripts/test-assert-pull-request-body.py
+
+      - name: Assert the body reads as a release note
+        run: python3 .github/scripts/assert-pull-request-body.py "$GITHUB_EVENT_PATH"

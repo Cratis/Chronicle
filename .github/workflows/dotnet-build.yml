@@ -241,6 +241,15 @@ jobs:
           path: ./coverage-results
           name: The specs job
 
+      # Reads the coverage the step above already collected, so it costs a file parse rather than a
+      # second test run. It has to sit here, after the run and before the upload, because that is the
+      # only point where the cobertura reports exist on disk.
+      - name: Verify the public API coverage ratchet
+        run: python3 .github/scripts/test-assert-public-api-coverage-ratchet.py
+
+      - name: Assert no shipped public type lost all coverage
+        run: python3 .github/scripts/assert-public-api-coverage-ratchet.py
+
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
