@@ -8,9 +8,13 @@ load-balancing across a cluster of servers, reconnecting when a connection drops
 server whose contract has drifted instead of silently sending it garbage.
 
 None of that is domain logic. It's the same plumbing whether the client ends up written in Go,
-Python, Rust, or Java — and it's exactly the plumbing Chronicle's own team has already built,
-three times over, for TypeScript, Elixir, and Kotlin. This section is that experience written
-down, so a fourth client doesn't have to rediscover it.
+Python, Rust, or Java — and it's exactly the plumbing Chronicle's own team has already built more
+than once, for TypeScript, Elixir, and Kotlin. This section is that experience written down as a
+checklist, so a new client doesn't have to rediscover it one gap at a time.
+
+**Start with [The checklist](./checklist.md).** It's the whole section distilled into one page —
+work through it while you build, and come back to it whenever you're not sure what's left. The
+rest of the pages exist to explain the *why* behind each item.
 
 ## The shape of every Chronicle client so far
 
@@ -27,6 +31,7 @@ flowchart TB
     proto --> contracts --> idiomatic --> convenience
 ```
 
+- **[The checklist](./checklist.md)** — every item below, pulled into one page to work through.
 - **[Two ways to start](./starting-points.md)** — use the `.proto` files directly, or ask the
   Cratis team to generate and publish a contracts package for your language. Most clients so far
   took the second path.
@@ -39,19 +44,17 @@ flowchart TB
   a client has to implement to be a good citizen of a multi-server Chronicle cluster.
 - **[Connection string elements](./connection-string-elements.md)** — the object model a client
   SDK typically wraps around the connection string grammar.
-- **[How TypeScript, Elixir, and Kotlin were built](./client-history.md)** — the real history,
-  including what worked, what didn't, and what's still incomplete.
 - **[Documentation and snippets](./documentation-and-snippets.md)** — how a new client repo's
   `Documentation/` folder plugs into the shared Chronicle docs site.
 
 ## Talk to us first
 
 Before generating anything yourself, get in touch with the Cratis team. Every contracts package
-Chronicle has shipped so far — TypeScript, Elixir, and Kotlin — was generated from the kernel's
-own `.proto` files and published to the right registry (npm, Hex, Maven Central) from Chronicle's
-own release pipeline, version-locked to the kernel release it matches. That pipeline already
-exists; turning it on for a new language is normally a matter of days, not the weeks it takes to
-build a `protoc` toolchain from scratch and get the packaging right. See
+Chronicle has shipped so far — TypeScript, Elixir, Kotlin, and Python — was generated from the
+kernel's own `.proto` files and published to the right registry (npm, Hex, Maven Central, PyPI)
+from Chronicle's own release pipeline, version-locked to the kernel release it matches. That
+pipeline already exists; turning it on for a new language is normally a matter of days, not the
+weeks it takes to build a `protoc` toolchain from scratch and get the packaging right. See
 [Two ways to start](./starting-points.md) for what that conversation looks like and what you get
 out of it.
 
