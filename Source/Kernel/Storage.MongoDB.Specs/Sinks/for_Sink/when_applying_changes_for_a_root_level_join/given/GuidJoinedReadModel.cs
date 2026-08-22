@@ -3,4 +3,4 @@
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_for_a_root_level_join.given;
 
-public record GuidJoinedReadModel(string Id, Guid JoinedOn, string Stamped);
+public record GuidJoinedReadModel(string Id, Guid JoinedOn, string Stamped, string OrdinaryRootProperty);
