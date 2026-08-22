@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cratis-chronicle-contracts"
+dynamic = ["version"]
+description = "Generated Python gRPC contracts for Cratis Chronicle"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Cratis", email = "post@cratis.io" }]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "grpcio>=1.83.0,<2",
+    "protobuf>=7.35.1,<8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "grpcio-tools==1.83.0",
+    "pytest",
+    "ruff",
+    "twine",
+]
+
+[project.urls]
+Repository = "https://github.com/Cratis/Chronicle.git"
+Issues = "https://github.com/Cratis/Chronicle/issues"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+fallback_version = "0.0.0"
+
+[tool.hatch.build]
+artifacts = [
+    "src/cratis_chronicle_contracts/*_pb2.py",
+    "src/cratis_chronicle_contracts/*_pb2.pyi",
+    "src/cratis_chronicle_contracts/*_pb2_grpc.py",
+    "src/cratis_chronicle_contracts/protobuf_net/**",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cratis_chronicle_contracts"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
