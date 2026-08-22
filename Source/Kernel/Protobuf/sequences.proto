@@ -6,6 +6,16 @@ message AllEventSequencesRequest {
    string EventStore = 1;
    string Namespace = 2;
 }
+message AppendManyForEventSourcesRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   repeated EventForEventSourceId Events = 4;
+   .bcl.Guid CorrelationId = 5;
+   repeated string Tags = 6;
+   repeated Causation Causation = 7;
+   Identity CausedBy = 8;
+}
 message AppendManyRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -128,6 +138,17 @@ message ConstraintViolation {
 message EndOfRequest {
    SerializableDateTimeOffset Start = 1;
    HistogramResolution Resolution = 2;
+}
+message EventForEventSourceId {
+   string EventSourceId = 1;
+   string EventSourceType = 2;
+   string EventStreamType = 3;
+   string EventStreamId = 4;
+   EventType EventType = 5;
+   map<string,JsonNode> Content = 6;
+   repeated string Tags = 7;
+   SerializableDateTimeOffset Occurred = 8;
+   string Subject = 9;
 }
 message EventSequenceNamesResponse {
    string Id = 1;
@@ -292,6 +313,7 @@ service EventSequences {
    rpc AllEventSequences (AllEventSequencesRequest) returns (QueryResult_IEnumerable_EventSequenceNamesResponse);
    rpc Append (AppendRequest) returns (CommandResult_AppendResponse);
    rpc AppendMany (AppendManyRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendManyForEventSources (AppendManyForEventSourcesRequest) returns (CommandResult_AppendManyResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_UInt64);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_Boolean);
