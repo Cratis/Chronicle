@@ -22,6 +22,10 @@ public record TypeWithEventSequenceAttribute([Key] Guid Id, string Name);
 [Passive]
 public record TypeWithPassiveAttribute([Key] Guid Id, string Name);
 
+[Passive]
+[FromEvent<SomeEvent>]
+public record TypeWithPassiveAndFromEventAttribute([Key] Guid Id, string Name);
+
 [NotRewindable]
 public record TypeWithNotRewindableAttribute([Key] Guid Id, string Name);
 

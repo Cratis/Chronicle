@@ -3,11 +3,11 @@
 
 namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionsExtensions.when_checking_has_model_bound_projection_attributes;
 
-public class with_passive_attribute : Specification
+public class with_passive_attribute_and_from_event_attribute : Specification
 {
     bool _result;
 
-    void Because() => _result = typeof(TypeWithPassiveAttribute).HasModelBoundProjectionAttributes();
+    void Because() => _result = typeof(TypeWithPassiveAndFromEventAttribute).HasModelBoundProjectionAttributes();
 
-    [Fact] void should_return_false() => _result.ShouldBeFalse();
+    [Fact] void should_return_true() => _result.ShouldBeTrue();
 }
