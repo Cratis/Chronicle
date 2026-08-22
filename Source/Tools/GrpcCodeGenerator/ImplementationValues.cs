@@ -17,12 +17,16 @@ public static class ImplementationValues
     /// </summary>
     /// <param name="expression">The expression reading the wire value.</param>
     /// <param name="declaredType">The type the artifact declares.</param>
+    /// <param name="isNullable">
+    /// Whether the artifact declares this value as optional - a nullable value type is already discoverable from
+    /// <paramref name="declaredType"/> alone, but a nullable reference type is not, so the caller has to say.
+    /// </param>
     /// <returns>The expression to pass to the artifact.</returns>
     /// <exception cref="UnsupportedServiceShape">
     /// Thrown when <paramref name="declaredType"/> is a nullable value type wrapping a concept or a shared type -
     /// there is no proven conversion shape for that as a request parameter.
     /// </exception>
-    public static string ToDomain(string expression, Type declaredType)
+    public static string ToDomain(string expression, Type declaredType, bool isNullable = false)
     {
         // A nullable value type wrapping something that needs converting (a struct-backed concept, a nullable
         // enum shared type) has no defined behavior here: unlike the response side's ForNullable, which special
@@ -45,10 +49,17 @@ public static class ImplementationValues
 
         // The wire value is the generated mirror, a distinct CLR type from the Core type the artifact declares -
         // see SharedTypeRegistry. An enum converts with a cast; anything else is expected to carry a hand-written
-        // ToApi() extension, the same convention CausationConverters/IdentityConverters already established.
+        // ToApi() extension, the same convention CausationConverters/IdentityConverters already established. A
+        // nullable reference type - a Type alone cannot say so, hence isNullable - guards the call: the artifact
+        // declared this optional, so a missing value has to stay missing, not throw inside ToApi().
         if (SharedTypeRegistry.QualifiedNameFor(declaredType) is not null)
         {
-            return declaredType.IsEnum ? $"({QualifiedTypeName.For(declaredType)}){expression}" : $"{expression}.ToApi()";
+            if (declaredType.IsEnum)
+            {
+                return $"({QualifiedTypeName.For(declaredType)}){expression}";
+            }
+
+            return isNullable ? $"{expression}?.ToApi()" : $"{expression}.ToApi()";
         }
 
         // A collection parameter needs its element converted the same way a scalar one would - a concept or a
@@ -56,7 +67,14 @@ public static class ImplementationValues
         if (ImplementationDataMapping.SequenceElement(declaredType) is { } elementType)
         {
             var elementConversion = ToDomain("x", elementType);
-            return elementConversion == "x" ? expression : $"{expression}.Select(x => {elementConversion})";
+            if (elementConversion == "x")
+            {
+                return expression;
+            }
+
+            return isNullable
+                ? $"{expression}?.Select(x => {elementConversion})"
+                : $"{expression}.Select(x => {elementConversion})";
         }
 
         return expression;

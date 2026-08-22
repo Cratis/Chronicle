@@ -26,6 +26,8 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Tags">The tags to associate with the event.</param>
 /// <param name="Occurred">Optional occurred time. If null, the server sets it to approximately the time of append.</param>
 /// <param name="Subject">Optional subject identifying the compliance target for the event. Defaults to the event source.</param>
+/// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
+/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <remarks>
 /// Deliberately has no concurrency scope parameter yet: <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/>
 /// nests <c>IEnumerable&lt;Concepts.Events.EventType&gt;</c>, and mirroring that composite shape through
@@ -50,7 +52,9 @@ public record Append(
     Guid? CorrelationId = default,
     IEnumerable<string>? Tags = default,
     DateTimeOffset? Occurred = default,
-    string? Subject = default)
+    string? Subject = default,
+    IEnumerable<Causation>? Causation = default,
+    Identity? CausedBy = default)
 {
     /// <summary>
     /// Handles the command by appending the event.
@@ -74,8 +78,8 @@ public record Append(
             EventType.ToChronicle(),
             Content,
             CorrelationId ?? Guid.NewGuid(),
-            causation.GetCurrentChain(),
-            principalAccessor.Current.ToIdentity(),
+            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
+            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
             (Tags ?? []).Select(tag => (Tag)tag),
             Concepts.EventSequences.Concurrency.ConcurrencyScope.None,
             Occurred,

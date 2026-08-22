@@ -14,6 +14,8 @@ message AppendManyRequest {
    repeated EventToAppend Events = 5;
    .bcl.Guid CorrelationId = 6;
    repeated string Tags = 7;
+   repeated Causation Causation = 8;
+   Identity CausedBy = 9;
 }
 message AppendRequest {
    string EventStore = 1;
@@ -29,6 +31,13 @@ message AppendRequest {
    repeated string Tags = 11;
    SerializableDateTimeOffset Occurred = 12;
    string Subject = 13;
+   repeated Causation Causation = 14;
+   Identity CausedBy = 15;
+}
+message Causation {
+   SerializableDateTimeOffset Occurred = 1;
+   string Type = 2;
+   map<string,string> Properties = 3;
 }
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -84,6 +93,12 @@ enum HistogramResolution {
    Day = 2;
    Week = 3;
    Month = 4;
+}
+message Identity {
+   string Subject = 1;
+   string Name = 2;
+   string UserName = 3;
+   Identity OnBehalfOf = 4;
 }
 message JsonNode {
 }
@@ -145,6 +160,8 @@ message RedactForEventSourceRequest {
    string EventSourceId = 4;
    string Reason = 5;
    repeated string EventTypes = 6;
+   repeated Causation Causation = 7;
+   Identity CausedBy = 8;
 }
 message RedactRequest {
    string EventStore = 1;
@@ -152,6 +169,8 @@ message RedactRequest {
    string EventSequenceId = 3;
    uint64 SequenceNumber = 4;
    string Reason = 5;
+   repeated Causation Causation = 6;
+   Identity CausedBy = 7;
 }
 message ReviseRequest {
    string EventStore = 1;
@@ -160,6 +179,8 @@ message ReviseRequest {
    uint64 SequenceNumber = 4;
    EventType EventType = 5;
    map<string,JsonNode> Content = 6;
+   repeated Causation Causation = 7;
+   Identity CausedBy = 8;
 }
 message SequenceHistogramBucketResponse {
    SerializableDateTimeOffset From = 1;

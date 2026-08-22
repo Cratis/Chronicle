@@ -19,6 +19,8 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventSourceId">The event source whose events are redacted.</param>
 /// <param name="Reason">Why the events are being redacted.</param>
 /// <param name="EventTypes">The event types to redact. Empty redacts every type for the event source.</param>
+/// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
+/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record RedactForEventSource(
@@ -27,7 +29,9 @@ public record RedactForEventSource(
     string EventSequenceId,
     string EventSourceId,
     string Reason,
-    IEnumerable<string> EventTypes)
+    IEnumerable<string> EventTypes,
+    IEnumerable<Causation>? Causation = default,
+    Identity? CausedBy = default)
 {
     /// <summary>
     /// Handles the command by requesting the redaction of every matching event for the event source.
@@ -54,7 +58,7 @@ public record RedactForEventSource(
                 EventTypes.Select(eventType => new Concepts.Events.EventType(eventType, 1)),
                 Reason),
             correlationId: Guid.NewGuid(),
-            causation: causation.GetCurrentChain(),
-            causedBy: principalAccessor.Current.ToIdentity());
+            causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
+            causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());
     }
 }

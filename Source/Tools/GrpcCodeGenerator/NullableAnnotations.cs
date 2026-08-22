@@ -29,6 +29,33 @@ public static class NullableAnnotations
         Annotate(typeName, parameter.ParameterType, () => _context.Create(parameter).ReadState);
 
     /// <summary>
+    /// Determines whether a parameter's own declared reference type is nullable.
+    /// </summary>
+    /// <param name="parameter">The parameter to check.</param>
+    /// <returns>True when the parameter's reference type is annotated nullable.</returns>
+    /// <remarks>
+    /// A nullable value type is already discoverable from <see cref="Type"/> alone via <see cref="Nullable.GetUnderlyingType"/>
+    /// - this exists for the reference-type case, where the annotation lives only in this metadata.
+    /// </remarks>
+    public static bool IsNullable(ParameterInfo parameter)
+    {
+        if (parameter.ParameterType.IsValueType)
+        {
+            return Nullable.GetUnderlyingType(parameter.ParameterType) is not null;
+        }
+
+        try
+        {
+            return _context.Create(parameter).ReadState == NullabilityState.Nullable;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  WARNING: Could not read the nullability of '{parameter.Name}': {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Annotates a rendered type name with the nullability a property declares.
     /// </summary>
     /// <param name="typeName">The rendered type name.</param>

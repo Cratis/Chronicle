@@ -19,6 +19,8 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Events">The events to append.</param>
 /// <param name="CorrelationId">Optional correlation identifier. Defaults to a new one when not provided.</param>
 /// <param name="Tags">The tags to associate with every event in the batch.</param>
+/// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
+/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <remarks>
 /// Deliberately has no concurrency scope parameter yet - see the <c>Append</c> command's remarks for why
 /// mirroring <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/> is a separate, more carefully
@@ -33,7 +35,9 @@ public record AppendMany(
     string EventSourceId,
     IEnumerable<EventToAppend> Events,
     Guid? CorrelationId = default,
-    IEnumerable<string>? Tags = default)
+    IEnumerable<string>? Tags = default,
+    IEnumerable<Causation>? Causation = default,
+    Identity? CausedBy = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -69,8 +73,8 @@ public record AppendMany(
         var result = await eventSequence.AppendMany(
             events,
             CorrelationId ?? Guid.NewGuid(),
-            causation.GetCurrentChain(),
-            principalAccessor.Current.ToIdentity(),
+            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
+            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
             concurrencyScopes);
 
         AppendRejected.ThrowIfRejected(result.Errors, result.ConstraintViolations);
