@@ -62,15 +62,18 @@ public record Append(
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append through.</param>
     /// <param name="causation">The <see cref="RequestCausation"/> describing the request behind the append.</param>
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is appending.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <exception cref="AppendRejected">Thrown when the append is rejected by the kernel.</exception>
-    internal async Task Handle(
+    /// <returns>The <see cref="AppendResult"/> describing the outcome, successful or not.</returns>
+    /// <remarks>
+    /// A rejected append (constraint or concurrency violation) is a normal, expected outcome of appending - not an
+    /// exceptional condition - so it is reported on the returned <see cref="AppendResult"/> rather than thrown.
+    /// </remarks>
+    internal Task<AppendResult> Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
         ICurrentPrincipalAccessor principalAccessor)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
-        var result = await eventSequence.Append(
+        return eventSequence.Append(
             (EventSourceType)EventSourceType,
             EventSourceId,
             (EventStreamType)EventStreamType,
@@ -84,7 +87,5 @@ public record Append(
             Concepts.EventSequences.Concurrency.ConcurrencyScope.None,
             Occurred,
             string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject));
-
-        AppendRejected.ThrowIfRejected(result.Errors, result.ConstraintViolations);
     }
 }

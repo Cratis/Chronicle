@@ -22,16 +22,16 @@ internal sealed class EventSequences(
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Sequences.EventSequences> logger) : global::Cratis.Chronicle.Contracts.Sequences.IEventSequences
 {
     /// <inheritdoc/>
-    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Append(global::Cratis.Chronicle.Contracts.Sequences.AppendRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        CommandExecutor.Execute(
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>> Append(global::Cratis.Chronicle.Contracts.Sequences.AppendRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.Append, global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>(
             new global::Cratis.Chronicle.Sequences.Append(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.EventType.ToApi(), request.Content, request.CorrelationId, request.Tags, request.Occurred, request.Subject, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
-            command => command.Handle(grainFactory, requestCausation, currentPrincipalAccessor));
+            async command => ToAppendResponse((await command.Handle(grainFactory, requestCausation, currentPrincipalAccessor))));
 
     /// <inheritdoc/>
-    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AppendMany(global::Cratis.Chronicle.Contracts.Sequences.AppendManyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        CommandExecutor.Execute(
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>> AppendMany(global::Cratis.Chronicle.Contracts.Sequences.AppendManyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.AppendMany, global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>(
             new global::Cratis.Chronicle.Sequences.AppendMany(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
-            command => command.Handle(grainFactory, requestCausation, currentPrincipalAccessor));
+            async command => ToAppendManyResponse((await command.Handle(grainFactory, requestCausation, currentPrincipalAccessor))));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<ulong>> CompleteStream(global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
@@ -158,6 +158,36 @@ internal sealed class EventSequences(
                 return result.Select(ToSequenceHistogramBucketResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventSequences", "SequenceHistogram"));
+
+    static global::Cratis.Chronicle.Contracts.Sequences.AppendResponse ToAppendResponse(global::Cratis.Chronicle.EventSequences.AppendResult source) =>
+        new()
+        {
+            CorrelationId = (global::System.Guid)source.CorrelationId,
+            SequenceNumber = (ulong)source.SequenceNumber,
+            IsSuccess = source.IsSuccess,
+            HasConstraintViolations = source.HasConstraintViolations,
+            HasConcurrencyViolations = source.HasConcurrencyViolations,
+            HasErrors = source.HasErrors,
+            ConcurrencyCheckPerformed = source.ConcurrencyCheckPerformed,
+            ConstraintViolations = source.ConstraintViolations.Select(element0 => element0.ToContract()).ToList(),
+            Errors = source.Errors.Select(element0 => (string)element0).ToList(),
+            ConcurrencyViolation = source.ConcurrencyViolation is null ? null : source.ConcurrencyViolation.ToContract()
+        };
+
+    static global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse ToAppendManyResponse(global::Cratis.Chronicle.EventSequences.AppendManyResult source) =>
+        new()
+        {
+            CorrelationId = (global::System.Guid)source.CorrelationId,
+            SequenceNumbers = source.SequenceNumbers.Select(element0 => (ulong)element0).ToList(),
+            IsSuccess = source.IsSuccess,
+            HasConstraintViolations = source.HasConstraintViolations,
+            HasConcurrencyViolations = source.HasConcurrencyViolations,
+            HasErrors = source.HasErrors,
+            ConcurrencyCheckPerformed = source.ConcurrencyCheckPerformed,
+            ConstraintViolations = source.ConstraintViolations.Select(element0 => element0.ToContract()).ToList(),
+            Errors = source.Errors.Select(element0 => (string)element0).ToList(),
+            ConcurrencyViolations = source.ConcurrencyViolations.Select(element0 => element0.ToContract()).ToList()
+        };
 
     static global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse ToAppendedEventResponse(global::Cratis.Chronicle.Sequences.AppendedEvent source) =>
         new()
