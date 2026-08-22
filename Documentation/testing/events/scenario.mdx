@@ -54,6 +54,12 @@ The returned value is an `AppendResult`, so every [append assertion](assertions)
 
 <ChronicleClientTabs snippet="testing/events/scenario/append-many" />
 
+## PII compliance
+
+Compliance is real here. A `[PII]` value on an appended event is encrypted by the same handler a deployed Chronicle uses, under a key minted for the event's compliance subject, and released again when the event is read back — so a spec that appends and reads sees its plaintext, while what sits in the store does not. That makes `EventScenario` the in-process tier where a `[PII]` marking can actually be verified rather than assumed.
+
+The keys live in an in-memory key store scoped to the scenario instance. Nothing is shared with another scenario, and everything is gone when it is — so a spec can encrypt and release freely without reaching another spec's subjects.
+
 ## Isolation
 
 Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero.

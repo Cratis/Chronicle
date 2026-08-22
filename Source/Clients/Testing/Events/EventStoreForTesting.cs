@@ -22,7 +22,6 @@ using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -32,6 +31,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Testing.EventSequences;
 using Cratis.Chronicle.Testing.ReadModels;
 using Cratis.Chronicle.Transactions;
@@ -67,6 +67,7 @@ namespace Cratis.Chronicle.Testing.Events;
 public class EventStoreForTesting : IEventStore
 {
     readonly ReadModelsForTesting _readModelsForTesting;
+    readonly InProcessCompliance _compliance = new();
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly EventTypes _eventTypes;
@@ -109,10 +110,18 @@ public class EventStoreForTesting : IEventStore
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
         ClientArtifactsProvider = clientArtifactsProvider;
         _namingPolicy = new CamelCaseNamingPolicy();
+
+        var loggerFactory = new NullLoggerFactory();
+        _artifactActivator = new ClientArtifactsActivator(_serviceProvider, loggerFactory);
+
+        // The compliance metadata providers have to be the discovered ones. Resolving with none - which this
+        // used to do - leaves every generated schema without compliance metadata, and the schema is the gate
+        // the kernel checks before it encrypts anything, so a [PII] marker would be silently inert no matter
+        // how the compliance manager itself was wired.
         JsonSchemaGenerator = new JsonSchemaGenerator(
             new ComplianceMetadataResolver(
-                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
-                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
+                new KnownInstancesOf<ICanProvideComplianceMetadataForType>([.. Activate<ICanProvideComplianceMetadataForType>(ClientArtifactsProvider.ComplianceForTypesProviders)]),
+                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([.. Activate<ICanProvideComplianceMetadataForProperty>(ClientArtifactsProvider.ComplianceForPropertiesProviders)])),
             _namingPolicy);
 
         var topLevelGrainFactory = new TestingGrainFactory();
@@ -120,10 +129,8 @@ public class EventStoreForTesting : IEventStore
             (KernelConceptsNs::EventStoreName)(string)Name,
             (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace,
             KernelSequenceConcepts::EventSequenceId.Log));
-        Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _jsonSerializerOptions);
+        Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _compliance, _jsonSerializerOptions);
 
-        var loggerFactory = new NullLoggerFactory();
-        _artifactActivator = new ClientArtifactsActivator(_serviceProvider, loggerFactory);
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, _serviceProvider);
 
         _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators);
@@ -367,7 +374,7 @@ public class EventStoreForTesting : IEventStore
         var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var constraintsStorage = new InMemoryConstraintsStorage(_constraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
-        var eventTypesStorage = new InMemoryEventTypesStorage();
+        var eventTypesStorage = new InMemoryEventTypesStorage(_eventTypes);
 
         var storage = new InMemoryStorage(
             eventSequenceStorage,
@@ -382,19 +389,15 @@ public class EventStoreForTesting : IEventStore
             storage,
             kernelEventSequenceId,
             kernelEventStoreName,
-            kernelNamespaceName).GetAwaiter().GetResult();
+            kernelNamespaceName,
+            _compliance).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
-        var eventCompliance = new KernelCore::Cratis.Chronicle.Events.EventCompliance(
-            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>(),
-                NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
-            new ExpandoObjectConverter(new TypeFormats()));
 
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            eventCompliance,
+            _compliance.CreateEventCompliance(),
             _jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();
@@ -438,6 +441,20 @@ public class EventStoreForTesting : IEventStore
             new BaseIdentityProvider(),
             _jsonSerializerOptions);
     }
+
+    /// <summary>
+    /// Activates the discovered artifact types of a given kind, skipping any that cannot be constructed.
+    /// </summary>
+    /// <typeparam name="T">The contract the artifacts implement.</typeparam>
+    /// <param name="artifactTypes">The discovered artifact types.</param>
+    /// <returns>The instances that could be activated.</returns>
+    T[] Activate<T>(IEnumerable<Type> artifactTypes)
+        where T : class =>
+        artifactTypes
+            .Select(_artifactActivator.ActivateNonDisposable<T>)
+            .Where(activated => !activated.TryGetException(out _))
+            .Select(activated => activated.AsT0)
+            .ToArray();
 
     CompositeConstraintProvider CreateConstraintProvider(IClientArtifactsActivator artifactActivator) =>
         new(
