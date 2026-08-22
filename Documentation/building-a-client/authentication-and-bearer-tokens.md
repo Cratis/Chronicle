@@ -29,7 +29,7 @@ Supplying both client credentials and an API key in the same connection string i
 (`AmbiguousAuthenticationMode`); supplying neither and not asking for `auth=none` is also an error
 (`MissingAuthentication`) — except that an *empty* connection string is treated as client
 credentials rather than an error, because of the development default below. See
-[Connection string elements](./connection-string-elements.md) for the full grammar.
+[Connection string elements](./connection-string-elements) for the full grammar.
 
 ## Client credentials really means OAuth client-credentials
 
@@ -113,7 +113,7 @@ than failing — a cache is an optimization, never a dependency.
   library exposes.
 - Cache the token, refresh it proactively ahead of expiry, and retry once on a 401.
 - Never log a raw connection string or a raw token — see
-  [Connection string elements](./connection-string-elements.md#never-log-the-unredacted-form) for
+  [Connection string elements](./connection-string-elements#never-log-the-unredacted-form) for
   why and how the .NET client avoids it.
 
 Next: [Clustering and the connection lifecycle](./clustering-and-connection-lifecycle.md) covers

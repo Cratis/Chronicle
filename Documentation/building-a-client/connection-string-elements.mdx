@@ -34,16 +34,10 @@ present" cases wrong, and it can never drift out of sync with the fields it's de
 Constructing a connection string by hand — string-formatting a host, a port, and a pile of query
 parameters — is exactly the kind of thing that quietly produces an invalid or ambiguous string
 (wrong separator, double `?`, an unescaped credential). A fluent builder that knows the grammar is
-worth offering alongside the parser. The shape worth matching:
+worth offering alongside the parser. The shape worth matching — the .NET client's own builder,
+used to construct a connection string from discrete settings:
 
-```csharp
-new ChronicleConnectionStringBuilder()
-    .WithHost("chronicle.production.example.com")
-    .WithPort(35000)
-    .WithCredentials(username, password)
-    .WithLoadBalancer("round-robin")
-    .Build();
-```
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/fluent-builder" />
 
 with equivalents for `WithServerAddresses(...)` (multiple hosts), `WithDevelopmentCredentials()`,
 `WithApiKey(...)`, `WithoutAuthentication()` (`auth=none`), `WithTlsValidationSkipped()`, and

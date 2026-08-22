@@ -53,7 +53,7 @@ This is precisely how it happened for every contracts package that exists today:
 
 Python is the newest addition, and it's worth noticing what stage it's at: the contracts package
 exists and publishes on its own, but there's no idiomatic `Chronicle.Python` repo built on top of
-it yet. That's expected — [layering an idiomatic client](./layering-an-idiomatic-client.md) on top
+it yet. That's expected — [layering an idiomatic client](./layering-an-idiomatic-client) on top
 of the contracts package is a separate, later step, not something that has to land in the same
 change as the contracts package itself.
 
@@ -79,4 +79,4 @@ idiomatic client already depended on a published, versioned contracts package
 
 Reach out to the Cratis team to start that conversation. Once the contracts package exists and is
 publishing on its own release cadence, move on to
-[layering an idiomatic client on top of it](./layering-an-idiomatic-client.md).
+[layering an idiomatic client on top of it](./layering-an-idiomatic-client).
