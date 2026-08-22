@@ -1,0 +1,16 @@
+- name: Overview
+  href: index.md
+- name: Two ways to start
+  href: starting-points.md
+- name: Layering an idiomatic client
+  href: layering-an-idiomatic-client.md
+- name: Authentication and bearer tokens
+  href: authentication-and-bearer-tokens.md
+- name: Clustering and the connection lifecycle
+  href: clustering-and-connection-lifecycle.md
+- name: Connection string elements
+  href: connection-string-elements.md
+- name: How TypeScript, Elixir, and Kotlin were built
+  href: client-history.md
+- name: Documentation and snippets
+  href: documentation-and-snippets.md
