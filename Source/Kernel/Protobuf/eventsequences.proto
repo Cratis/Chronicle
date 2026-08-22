@@ -3,14 +3,6 @@ package Cratis.Chronicle.Contracts.EventSequences;
 import "google/protobuf/empty.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
-// NOTE: The three fields marked "hand-applied" below were added by hand rather than by
-// Source/Kernel/Protobuf/generate-protos.sh, because the generator currently cannot emit this package at all -
-// it aborts for Cratis.Chronicle.Contracts.EventSequences (and 21 other packages) on a reserved-field error
-// raised for Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition, and exits 0
-// while doing so, which is why CI never reported it. Tracked as Cratis/Chronicle#3712. Each hand-applied field
-// matches what protobuf-net would emit for its [ProtoMember] in Source/Kernel/Contracts/EventSequences.
-// Re-run the generator and drop these comments once #3712 is fixed.
-
 message AppendManyRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -27,7 +19,7 @@ message AppendManyResponse {
    repeated ConstraintViolation ConstraintViolations = 3;
    repeated string Errors = 4;
    repeated ConcurrencyViolation ConcurrencyViolations = 5;
-   bool ConcurrencyCheckPerformed = 6; // hand-applied, see note at the top of this file
+   bool ConcurrencyCheckPerformed = 6;
 }
 message AppendRequest {
    string EventStore = 1;
@@ -53,7 +45,7 @@ message AppendResponse {
    repeated ConstraintViolation ConstraintViolations = 3;
    repeated string Errors = 4;
    ConcurrencyViolation ConcurrencyViolation = 5;
-   bool ConcurrencyCheckPerformed = 6; // hand-applied, see note at the top of this file
+   bool ConcurrencyCheckPerformed = 6;
 }
 message AppendedEvent {
    EventContext Context = 1;
@@ -90,7 +82,7 @@ message ConcurrencyScope {
    string EventStreamId = 4;
    string EventSourceType = 5;
    repeated EventType EventTypes = 6;
-   bool ExpectsNoMatchingEvent = 7; // hand-applied, see note at the top of this file
+   bool ExpectsNoMatchingEvent = 7;
 }
 message ConcurrencyViolation {
    string EventSourceId = 1;
@@ -111,6 +103,8 @@ message ConstraintViolation {
    string ConstraintName = 4;
    string Message = 5;
    map<string,string> Details = 6;
+}
+message DateTimeOffset {
 }
 message EventContext {
    EventType EventType = 1;
@@ -144,6 +138,22 @@ message EventRevision {
    SerializableDateTimeOffset Occurred = 4;
    string Content = 5;
 }
+message EventSequenceQueryCriteria {
+   string EventSourceId = 1;
+   repeated EventType EventTypes = 2;
+   repeated string Tags = 3;
+   DateTimeOffset OccurredFrom = 4;
+   DateTimeOffset OccurredTo = 5;
+   string EventSourceType = 6;
+   string EventStreamType = 7;
+   .bcl.Guid CorrelationId = 8;
+}
+enum EventSequenceQuerySortBy {
+   SequenceNumber = 0;
+   Occurred = 1;
+   EVENT_SEQUENCE_QUERY_SORT_BY_EventType = 2;
+   EventSourceId = 3;
+}
 message EventToAppend {
    string EventSourceType = 1;
    string EventSourceId = 2;
@@ -159,6 +169,13 @@ message EventType {
    string Id = 1;
    uint32 Generation = 2;
    bool Tombstone = 3;
+}
+message GetEventSequencesRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
+message GetEventSequencesResponse {
+   repeated string EventSequenceIds = 1;
 }
 message GetForEventSourceIdAndEventTypesRequest {
    string EventStore = 1;
@@ -186,6 +203,16 @@ message GetFromEventSequenceNumberRequest {
 message GetFromEventSequenceNumberResponse {
    repeated AppendedEvent Events = 1;
 }
+message GetHistogramRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   EventSequenceQueryCriteria Criteria = 4;
+   HistogramResolution Resolution = 5;
+}
+message GetHistogramResponse {
+   repeated HistogramBucket Buckets = 1;
+}
 message GetTailSequenceNumberRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -208,11 +235,36 @@ message HasEventsForEventSourceIdRequest {
 message HasEventsForEventSourceIdResponse {
    bool HasEvents = 1;
 }
+message HistogramBucket {
+   DateTimeOffset Occurred = 1;
+   int64 Count = 2;
+}
+enum HistogramResolution {
+   Minute = 0;
+   Hour = 1;
+   Day = 2;
+   Week = 3;
+   Month = 4;
+}
 message Identity {
    string Subject = 1;
    string Name = 2;
    string UserName = 3;
    Identity OnBehalfOf = 4;
+}
+message QueryEventsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   EventSequenceQueryCriteria Criteria = 4;
+   int32 Skip = 5;
+   int32 Take = 6;
+   bool Descending = 7;
+   EventSequenceQuerySortBy SortBy = 8;
+}
+message QueryEventsResponse {
+   repeated AppendedEvent Events = 1;
+   uint64 TotalCount = 2;
 }
 message RedactForEventSourceRequest {
    string EventStore = 1;
@@ -256,10 +308,13 @@ service EventSequences {
    rpc Append (AppendRequest) returns (AppendResponse);
    rpc AppendMany (AppendManyRequest) returns (AppendManyResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CompleteStreamResponse);
+   rpc GetEventSequences (GetEventSequencesRequest) returns (GetEventSequencesResponse);
    rpc GetEventsFromEventSequenceNumber (GetFromEventSequenceNumberRequest) returns (GetFromEventSequenceNumberResponse);
    rpc GetForEventSourceIdAndEventTypes (GetForEventSourceIdAndEventTypesRequest) returns (GetForEventSourceIdAndEventTypesResponse);
+   rpc GetHistogram (GetHistogramRequest) returns (GetHistogramResponse);
    rpc GetTailSequenceNumber (GetTailSequenceNumberRequest) returns (GetTailSequenceNumberResponse);
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (HasEventsForEventSourceIdResponse);
+   rpc QueryEvents (QueryEventsRequest) returns (QueryEventsResponse);
    rpc Redact (RedactRequest) returns (RedactResponse);
    rpc RedactForEventSource (RedactForEventSourceRequest) returns (.google.protobuf.Empty);
    rpc Revise (ReviseRequest) returns (.google.protobuf.Empty);
