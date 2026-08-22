@@ -148,12 +148,26 @@ public static class TypeHelper
     }
 
     /// <summary>
+    /// Gets the closed <see cref="IDictionary{TKey, TValue}"/> a type implements, if any.
+    /// </summary>
+    /// <param name="type">The type to check.</param>
+    /// <returns>The closed <c>IDictionary&lt;,&gt;</c> interface, or null when the type does not implement it.</returns>
+    public static Type? GetDictionaryInterface(Type type) =>
+        type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>));
+
+    /// <summary>
     /// Gets the C# type name suitable for use in generated code.
     /// </summary>
     /// <param name="type">The type.</param>
     /// <returns>The C# type name string.</returns>
     public static string GetTypeName(Type type)
     {
+        // Every top-level caller already unwraps a concept before calling in, but a concept reached through a
+        // nested position - the element of an IEnumerable<T>, the argument of a Nullable<T>/Task<T> - recurses
+        // back into this method directly and would otherwise render as the concept's own (unmirrored) type name
+        // instead of the primitive it wraps. Unwrapping again here is a no-op for every type that already was.
+        type = UnwrapConceptType(type);
+
         if (type == typeof(void))
         {
             return "void";
@@ -208,6 +222,21 @@ public static class TypeHelper
         if (type == typeof(DateTime))
         {
             return "DateTime";
+        }
+
+        // A Chronicle-owned concrete class deriving from Dictionary<TKey, TValue>
+        // (Core.EventSequences.ConstraintViolationDetails, say) is a map, not a shared type to mirror - reflecting
+        // its own properties would walk Keys/Values, whose types are compiler-synthesized nested collection types
+        // (Dictionary<,>.KeyCollection) that render as invalid C# once qualified generically. Represent it by the
+        // dictionary interface it already is, the same way every hand-written contract with a details bag already
+        // does. Scoped to Chronicle's own types - a BCL/third-party dictionary-like type (System.Text.Json.Nodes.
+        // JsonObject implements IDictionary<string, JsonNode>) is never a mirror candidate in the first place and
+        // must keep its own identity on the wire.
+        var isChronicleOwned = type.Namespace == "Cratis.Chronicle" || type.Namespace?.StartsWith("Cratis.Chronicle.", StringComparison.Ordinal) == true;
+        if (isChronicleOwned && !type.IsInterface && GetDictionaryInterface(type) is { } dictionaryInterface)
+        {
+            var dictionaryArgs = dictionaryInterface.GetGenericArguments();
+            return $"IDictionary<{GetTypeName(dictionaryArgs[0])}, {GetTypeName(dictionaryArgs[1])}>";
         }
 
         if (!type.IsGenericType)

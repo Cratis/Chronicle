@@ -26,7 +26,7 @@ public interface IEventSequences
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The command result.</returns>
     [Operation]
-    Task<CommandResult> Append(AppendRequest request, CallContext callContext = default);
+    Task<CommandResult<AppendResponse>> Append(AppendRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the AppendMany command.
     /// </summary>
@@ -34,7 +34,7 @@ public interface IEventSequences
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The command result.</returns>
     [Operation]
-    Task<CommandResult> AppendMany(AppendManyRequest request, CallContext callContext = default);
+    Task<CommandResult<AppendManyResponse>> AppendMany(AppendManyRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the CompleteStream command.
     /// </summary>
@@ -255,6 +255,73 @@ public class AppendRequest
 }
 
 /// <summary>
+/// Represents the AppendResponse message.
+/// </summary>
+[ProtoContract]
+public class AppendResponse
+{
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(1)]
+    public Guid CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SequenceNumber.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::System.UInt64 SequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IsSuccess.
+    /// </summary>
+    [ProtoMember(3)]
+    public bool IsSuccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HasConstraintViolations.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool HasConstraintViolations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HasConcurrencyViolations.
+    /// </summary>
+    [ProtoMember(5)]
+    public bool HasConcurrencyViolations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HasErrors.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool HasErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyCheckPerformed.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool ConcurrencyCheckPerformed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConstraintViolations.
+    /// </summary>
+    [ProtoMember(8)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.Constraints.ConstraintViolation> ConstraintViolations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Errors.
+    /// </summary>
+    [ProtoMember(9)]
+    public IEnumerable<string> Errors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyViolation.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyViolation? ConcurrencyViolation { get; set; }
+}
+
+/// <summary>
 /// Represents the AppendManyRequest message.
 /// </summary>
 [ProtoContract]
@@ -313,6 +380,73 @@ public class AppendManyRequest
     /// </summary>
     [ProtoMember(9)]
     public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+}
+
+/// <summary>
+/// Represents the AppendManyResponse message.
+/// </summary>
+[ProtoContract]
+public class AppendManyResponse
+{
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(1)]
+    public Guid CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SequenceNumbers.
+    /// </summary>
+    [ProtoMember(2)]
+    public IEnumerable<global::System.UInt64> SequenceNumbers { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IsSuccess.
+    /// </summary>
+    [ProtoMember(3)]
+    public bool IsSuccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HasConstraintViolations.
+    /// </summary>
+    [ProtoMember(4)]
+    public bool HasConstraintViolations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HasConcurrencyViolations.
+    /// </summary>
+    [ProtoMember(5)]
+    public bool HasConcurrencyViolations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HasErrors.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool HasErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyCheckPerformed.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool ConcurrencyCheckPerformed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConstraintViolations.
+    /// </summary>
+    [ProtoMember(8)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.Constraints.ConstraintViolation> ConstraintViolations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Errors.
+    /// </summary>
+    [ProtoMember(9)]
+    public IEnumerable<string> Errors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyViolations.
+    /// </summary>
+    [ProtoMember(10)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyViolation> ConcurrencyViolations { get; set; }
 }
 
 /// <summary>

@@ -17,6 +17,18 @@ message AppendManyRequest {
    repeated Causation Causation = 8;
    Identity CausedBy = 9;
 }
+message AppendManyResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   repeated uint64 SequenceNumbers = 2 [packed = false];
+   bool IsSuccess = 3;
+   bool HasConstraintViolations = 4;
+   bool HasConcurrencyViolations = 5;
+   bool HasErrors = 6;
+   bool ConcurrencyCheckPerformed = 7;
+   repeated ConstraintViolation ConstraintViolations = 8;
+   repeated string Errors = 9;
+   repeated ConcurrencyViolation ConcurrencyViolations = 10;
+}
 message AppendRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -34,6 +46,18 @@ message AppendRequest {
    repeated Causation Causation = 14;
    Identity CausedBy = 15;
 }
+message AppendResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   uint64 SequenceNumber = 2;
+   bool IsSuccess = 3;
+   bool HasConstraintViolations = 4;
+   bool HasConcurrencyViolations = 5;
+   bool HasErrors = 6;
+   bool ConcurrencyCheckPerformed = 7;
+   repeated ConstraintViolation ConstraintViolations = 8;
+   repeated string Errors = 9;
+   ConcurrencyViolation ConcurrencyViolation = 10;
+}
 message Causation {
    SerializableDateTimeOffset Occurred = 1;
    string Type = 2;
@@ -46,6 +70,24 @@ message CommandResult {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
+}
+message CommandResult_AppendManyResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   AppendManyResponse Response = 7;
+}
+message CommandResult_AppendResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   AppendResponse Response = 7;
 }
 message CommandResult_UInt64 {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -62,6 +104,26 @@ message CompleteStreamRequest {
    string EventSequenceId = 3;
    string EventStreamType = 4;
    string EventStreamId = 5;
+}
+message ConcurrencyViolation {
+   string EventSourceId = 1;
+   uint64 ExpectedSequenceNumber = 2;
+   uint64 ActualSequenceNumber = 3;
+}
+enum ConstraintType {
+   CONSTRAINT_TYPE_Unknown = 0;
+   Unique = 1;
+   UniqueEventType = 2;
+   Schema = 3;
+   StreamClosed = 4;
+}
+message ConstraintViolation {
+   string EventTypeId = 1;
+   uint64 SequenceNumber = 2;
+   ConstraintType ConstraintType = 3;
+   string ConstraintName = 4;
+   string Message = 5;
+   map<string,string> Details = 6;
 }
 message EndOfRequest {
    SerializableDateTimeOffset Start = 1;
@@ -221,15 +283,15 @@ message ValidationResult {
    repeated string Members = 3;
 }
 enum ValidationResultSeverity {
-   Unknown = 0;
+   VALIDATION_RESULT_SEVERITY_Unknown = 0;
    Information = 1;
    Warning = 2;
    Error = 3;
 }
 service EventSequences {
    rpc AllEventSequences (AllEventSequencesRequest) returns (QueryResult_IEnumerable_EventSequenceNamesResponse);
-   rpc Append (AppendRequest) returns (CommandResult);
-   rpc AppendMany (AppendManyRequest) returns (CommandResult);
+   rpc Append (AppendRequest) returns (CommandResult_AppendResponse);
+   rpc AppendMany (AppendManyRequest) returns (CommandResult_AppendManyResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_UInt64);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_Boolean);
