@@ -37,6 +37,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Patterns"><see cref="IPatterns"/> instance.</param>
 /// <param name="Identities"><see cref="IIdentities"/> instance.</param>
 /// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
+/// <param name="Sequences"><see cref="Sequences.IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
 /// <param name="Constraints"><see cref="IConstraints"/> instance.</param>
 /// <param name="Observers"><see cref="IObservers"/> instance.</param>
@@ -64,6 +65,7 @@ public sealed record Services(
     IPatterns Patterns,
     IIdentities Identities,
     IEventSequences EventSequences,
+    Sequences.IEventSequences Sequences,
     IEventTypes EventTypes,
     IConstraints Constraints,
     IObservers Observers,

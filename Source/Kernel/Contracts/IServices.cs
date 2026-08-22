@@ -68,6 +68,11 @@ public interface IServices
     IEventSequences EventSequences { get; }
 
     /// <summary>
+    /// Gets the <see cref="Sequences.IEventSequences"/> service.
+    /// </summary>
+    Sequences.IEventSequences Sequences { get; }
+
+    /// <summary>
     /// Gets the <see cref="IEventTypes"/> service.
     /// </summary>
     IEventTypes EventTypes { get; }
