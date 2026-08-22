@@ -16,6 +16,15 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventSequenceId">The event sequence holding the stream.</param>
 /// <param name="EventStreamType">The stream type to complete.</param>
 /// <param name="EventStreamId">The stream within the stream type to complete.</param>
+/// <remarks>
+/// Handle() still throws for a business rejection (already completed, or the default stream) rather than
+/// returning a result - the more correct shape used for <c>Append</c>/<c>AppendMany</c>. Wiring that up would
+/// require <see cref="Cratis.Chronicle.EventSequences.CompleteStreamError"/> to become a generator-mirrored shared
+/// type, and it mirrors by simple type name into <c>Contracts.EventSequences</c> - the exact path the still-active,
+/// hand-written <c>Contracts.EventSequences.CompleteStreamError</c> already occupies for the old service. Mirroring
+/// it renumbers that enum's wire values out from under every client still talking to the old service. Revisit once
+/// that service is deleted and the collision is moot.
+/// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record CompleteStream(
