@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_MigrationGenerationEventTypeIdAnalyzer.given;
+namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_EventTypeGenerationForAnalyzer.given;
 
-public class a_migration_generation_event_type_id_analyzer : Specification
+public class an_event_type_generation_for_analyzer : Specification
 {
     protected static string CreateSource(string usage)
     {
@@ -11,7 +11,6 @@ public class a_migration_generation_event_type_id_analyzer : Specification
         [
             "using System;",
             "using Cratis.Chronicle.Events;",
-            "using Cratis.Chronicle.Events.Migrations;",
             "",
             "namespace System.Runtime.CompilerServices",
             "{",
@@ -39,11 +38,6 @@ public class a_migration_generation_event_type_id_analyzer : Specification
             "        public EventTypeGenerationForAttribute(uint generation) : base(generation) { }",
             "        public override Type EventTypeClrType => typeof(TEventType);",
             "    }",
-            "}",
-            "",
-            "namespace Cratis.Chronicle.Events.Migrations",
-            "{",
-            "    public abstract class EventTypeMigration<TUpgrade, TPrevious> { }",
             "}",
             "",
             "namespace Sample",
