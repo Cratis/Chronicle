@@ -18,7 +18,7 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Traces;
-using ContractCompleteStreamError = Cratis.Chronicle.Contracts.EventSequences.CompleteStreamError;
+using ContractCompleteStreamError = Cratis.Chronicle.Contracts.Sequences.CompleteStreamError;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -525,16 +525,14 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
     {
-        // Deliberately still on the old EventSequences service - see CompleteStream.cs on the kernel side for why
-        // mirroring its error enum is a separate, more carefully verified piece of work than this migration.
-        var response = await _servicesAccessor.Services.EventSequences.CompleteStream(new()
+        var response = await _servicesAccessor.Services.Sequences.CompleteStream(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventStreamType = eventStreamType,
             EventStreamId = eventStreamId
-        });
+        }).EnsureSuccess();
 
         if (response.IsSuccess)
         {

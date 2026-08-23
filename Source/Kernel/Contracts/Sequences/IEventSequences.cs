@@ -50,7 +50,7 @@ public interface IEventSequences
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The command result.</returns>
     [Operation]
-    Task<CommandResult<global::System.UInt64>> CompleteStream(CompleteStreamRequest request, CallContext callContext = default);
+    Task<CommandResult<CompleteStreamResponse>> CompleteStream(CompleteStreamRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the Redact command.
     /// </summary>
@@ -565,6 +565,31 @@ public class CompleteStreamRequest
     /// </summary>
     [ProtoMember(5)]
     public string EventStreamId { get; set; }
+}
+
+/// <summary>
+/// Represents the CompleteStreamResponse message.
+/// </summary>
+[ProtoContract]
+public class CompleteStreamResponse
+{
+    /// <summary>
+    /// Gets or sets the IsSuccess.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool IsSuccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SequenceNumber.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::System.UInt64 SequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Error.
+    /// </summary>
+    [ProtoMember(3)]
+    public global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamError Error { get; set; }
 }
 
 /// <summary>

@@ -41,10 +41,10 @@ internal sealed class EventSequences(
             async command => ToAppendManyResponse((await command.Handle(grainFactory, requestCausation, currentPrincipalAccessor))));
 
     /// <inheritdoc/>
-    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<ulong>> CompleteStream(global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.CompleteStream, ulong>(
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>> CompleteStream(global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.CompleteStream, global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>(
             new global::Cratis.Chronicle.Sequences.CompleteStream(request.EventStore, request.Namespace, request.EventSequenceId, request.EventStreamType, request.EventStreamId),
-            async command => (ulong)(await command.Handle(grainFactory)));
+            async command => ToCompleteStreamResponse((await command.Handle(grainFactory))));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Redact(global::Cratis.Chronicle.Contracts.Sequences.RedactRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
@@ -194,6 +194,14 @@ internal sealed class EventSequences(
             ConstraintViolations = source.ConstraintViolations.Select(element0 => element0.ToContract()).ToList(),
             Errors = source.Errors.Select(element0 => (string)element0).ToList(),
             ConcurrencyViolations = source.ConcurrencyViolations.Select(element0 => element0.ToContract()).ToList()
+        };
+
+    static global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse ToCompleteStreamResponse(global::Cratis.Chronicle.Sequences.CompleteStreamOutcome source) =>
+        new()
+        {
+            IsSuccess = source.IsSuccess,
+            SequenceNumber = (ulong)source.SequenceNumber,
+            Error = (global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamError)source.Error
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse ToAppendedEventResponse(global::Cratis.Chronicle.Sequences.AppendedEvent source) =>
