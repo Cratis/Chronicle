@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -20,8 +20,8 @@ public class many_known_events_with_explicit_subject : given.an_event_sequence
     IEnumerable<Causation> _causation;
     Identity _causedBy;
     ConcurrencyScope _scope;
-    AppendManyRequest _command;
-    AppendManyResponse _response;
+    Contracts.Sequences.AppendManyRequest _command;
+    Contracts.Sequences.AppendManyResponse _response;
     Subject _subject;
 
     void Establish()
@@ -39,9 +39,9 @@ public class many_known_events_with_explicit_subject : given.an_event_sequence
         _scope = new(42UL, _eventSourceId);
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
-        _eventSequences
-            .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+        _sequences
+            .When(_ => _.AppendMany(Arg.Any<Contracts.Sequences.AppendManyRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendManyRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
         _concurrencyScopeStrategy.GetScope(_eventSourceId, EventStreamType.All, EventStreamId.Default, EventSourceType.Default, default).Returns(Task.FromResult(_scope));
         _identityProvider.GetCurrent().Returns(_causedBy);
@@ -50,13 +50,15 @@ public class many_known_events_with_explicit_subject : given.an_event_sequence
             CorrelationId = Guid.NewGuid(),
             SequenceNumbers = [42, 43],
             ConstraintViolations = [],
-            Errors = []
+            Errors = [],
+            ConcurrencyViolations = []
         };
-        _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(_response);
+        _sequences.AppendMany(Arg.Any<Contracts.Sequences.AppendManyRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => await _eventSequence.AppendMany(_eventSourceId, _events, subject: _subject);
 
-    [Fact] void should_append_first_event_with_explicit_subject() => _command.Events[0].Subject.ShouldEqual(_subject.Value);
-    [Fact] void should_append_second_event_with_explicit_subject() => _command.Events[1].Subject.ShouldEqual(_subject.Value);
+    [Fact] void should_append_first_event_with_explicit_subject() => _command.Events.ElementAt(0).Subject.ShouldEqual(_subject.Value);
+    [Fact] void should_append_second_event_with_explicit_subject() => _command.Events.ElementAt(1).Subject.ShouldEqual(_subject.Value);
 }

@@ -25,6 +25,7 @@ public class all_dependencies : Specification
     protected IChronicleConnection _connection;
     internal IChronicleServicesAccessor _serviceAccessor;
     internal IEventSequences _eventSequences;
+    internal Contracts.Sequences.IEventSequences _sequences;
     internal IServices services;
     protected ICorrelationIdAccessor _correlationIdAccessor;
     protected IConcurrencyScopeStrategies _concurrencyScopeStrategies;
@@ -43,9 +44,11 @@ public class all_dependencies : Specification
         _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
         _serviceAccessor = _connection as IChronicleServicesAccessor;
         _eventSequences = Substitute.For<IEventSequences>();
+        _sequences = Substitute.For<Contracts.Sequences.IEventSequences>();
         services = Substitute.For<IServices>();
         _serviceAccessor.Services.Returns(services);
         services.EventSequences.Returns(_eventSequences);
+        services.Sequences.Returns(_sequences);
         _correlationIdAccessor = Substitute.For<ICorrelationIdAccessor>();
         _correlationIdAccessor.Current.Returns((CorrelationId)Guid.Empty);
         _concurrencyScopeStrategies = Substitute.For<IConcurrencyScopeStrategies>();

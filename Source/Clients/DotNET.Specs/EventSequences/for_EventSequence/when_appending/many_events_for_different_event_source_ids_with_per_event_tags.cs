@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using ProtoBuf.Grpc;
@@ -16,8 +16,8 @@ public class many_events_for_different_event_source_ids_with_per_event_tags : gi
     List<EventForEventSourceId> _events;
     EventType _eventType;
     JsonObject _eventContext;
-    AppendManyRequest _command;
-    AppendManyResponse _response;
+    Contracts.Sequences.AppendManyForEventSourcesRequest _command;
+    Contracts.Sequences.AppendManyResponse _response;
 
     void Establish()
     {
@@ -33,9 +33,9 @@ public class many_events_for_different_event_source_ids_with_per_event_tags : gi
 
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
-        _eventSequences
-            .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+        _sequences
+            .When(_ => _.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendManyForEventSourcesRequest>());
         _causationManager.GetCurrentChain().Returns(ImmutableList<Causation>.Empty);
         _identityProvider.GetCurrent().Returns(Identity.NotSet);
 
@@ -44,15 +44,17 @@ public class many_events_for_different_event_source_ids_with_per_event_tags : gi
             CorrelationId = Guid.NewGuid(),
             SequenceNumbers = [42, 43],
             ConstraintViolations = [],
-            Errors = []
+            Errors = [],
+            ConcurrencyViolations = []
         };
 
-        _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(_response);
+        _sequences.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => await _eventSequence.AppendMany(_events);
 
-    [Fact] void should_apply_the_first_events_tags() => _command.Events[0].Tags.ShouldContainOnly(["first", "shared"]);
-    [Fact] void should_apply_the_second_events_tags() => _command.Events[^1].Tags.ShouldContainOnly(["second"]);
-    [Fact] void should_not_bleed_tags_across_events() => _command.Events[^1].Tags.ShouldNotContain("first");
+    [Fact] void should_apply_the_first_events_tags() => _command.Events.ElementAt(0).Tags.ShouldContainOnly(["first", "shared"]);
+    [Fact] void should_apply_the_second_events_tags() => _command.Events.Last().Tags.ShouldContainOnly(["second"]);
+    [Fact] void should_not_bleed_tags_across_events() => _command.Events.Last().Tags.ShouldNotContain("first");
 }
