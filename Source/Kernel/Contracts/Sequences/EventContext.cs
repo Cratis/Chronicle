@@ -66,7 +66,7 @@ public class EventContext
     /// Gets or sets the Causation.
     /// </summary>
     [ProtoMember(9)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation> Causation { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation> Causation { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the CausedBy.
@@ -78,5 +78,5 @@ public class EventContext
     /// Gets or sets the Tags.
     /// </summary>
     [ProtoMember(11)]
-    public IEnumerable<string> Tags { get; set; }
+    public IEnumerable<string> Tags { get; set; } = [];
 }

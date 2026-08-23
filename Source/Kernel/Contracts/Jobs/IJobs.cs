@@ -178,7 +178,7 @@ public class JobStepSummaryResponse
     /// Gets or sets the StatusChanges.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged> StatusChanges { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStepStatusChanged> StatusChanges { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the Progress.
@@ -252,7 +252,7 @@ public class JobSummaryResponse
     /// Gets or sets the StatusChanges.
     /// </summary>
     [ProtoMember(6)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStatusChanged> StatusChanges { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStatusChanged> StatusChanges { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the Progress.

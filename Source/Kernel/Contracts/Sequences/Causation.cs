@@ -30,5 +30,5 @@ public class Causation
     /// Gets or sets the Properties.
     /// </summary>
     [ProtoMember(3)]
-    public global::System.Collections.Generic.IDictionary<string, string> Properties { get; set; }
+    public global::System.Collections.Generic.IDictionary<string, string> Properties { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
 }

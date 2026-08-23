@@ -320,13 +320,13 @@ public class AppendResponse
     /// Gets or sets the ConstraintViolations.
     /// </summary>
     [ProtoMember(8)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.Constraints.ConstraintViolation> ConstraintViolations { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.Constraints.ConstraintViolation> ConstraintViolations { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the Errors.
     /// </summary>
     [ProtoMember(9)]
-    public IEnumerable<string> Errors { get; set; }
+    public IEnumerable<string> Errors { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the ConcurrencyViolation.
@@ -369,7 +369,7 @@ public class AppendManyRequest
     /// Gets or sets the Events.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventToAppend> Events { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventToAppend> Events { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the CorrelationId.
@@ -418,7 +418,7 @@ public class AppendManyResponse
     /// Gets or sets the SequenceNumbers.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<global::System.UInt64> SequenceNumbers { get; set; }
+    public IEnumerable<global::System.UInt64> SequenceNumbers { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the IsSuccess.
@@ -454,19 +454,19 @@ public class AppendManyResponse
     /// Gets or sets the ConstraintViolations.
     /// </summary>
     [ProtoMember(8)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.Constraints.ConstraintViolation> ConstraintViolations { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.Constraints.ConstraintViolation> ConstraintViolations { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the Errors.
     /// </summary>
     [ProtoMember(9)]
-    public IEnumerable<string> Errors { get; set; }
+    public IEnumerable<string> Errors { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the ConcurrencyViolations.
     /// </summary>
     [ProtoMember(10)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyViolation> ConcurrencyViolations { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.EventSequences.Concurrency.ConcurrencyViolation> ConcurrencyViolations { get; set; } = [];
 }
 
 /// <summary>
@@ -497,7 +497,7 @@ public class AppendManyForEventSourcesRequest
     /// Gets or sets the Events.
     /// </summary>
     [ProtoMember(4)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId> Events { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventForEventSourceId> Events { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the CorrelationId.
@@ -681,7 +681,7 @@ public class RedactForEventSourceRequest
     /// Gets or sets the EventTypes.
     /// </summary>
     [ProtoMember(6)]
-    public IEnumerable<string> EventTypes { get; set; }
+    public IEnumerable<string> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the Causation.
@@ -1166,7 +1166,7 @@ public class ExportedEventResponse
     /// Gets or sets the Tags.
     /// </summary>
     [ProtoMember(8)]
-    public IEnumerable<string> Tags { get; set; }
+    public IEnumerable<string> Tags { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the Content.
