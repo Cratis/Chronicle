@@ -33,4 +33,25 @@ internal static class ConcurrencyScopeConverters
         EventSourceType = scope.EventSourceType?.Value,
         EventTypes = scope.EventTypes?.ToContract()
     };
+
+    /// <summary>
+    /// Convert to the <see cref="Contracts.Sequences.ConcurrencyScope"/> contract representation.
+    /// </summary>
+    /// <param name="scope"><see cref="ConcurrencyScope"/> to convert.</param>
+    /// <returns>Converted <see cref="Contracts.Sequences.ConcurrencyScope"/>.</returns>
+    /// <remarks>
+    /// Named distinctly from <see cref="ToContract"/> - both take a <see cref="ConcurrencyScope"/> receiver, so
+    /// only the return type would tell them apart, and overload resolution cannot do that. See its remarks for why
+    /// <see cref="EventSequenceNumber.BeforeFirst"/> never goes on the wire directly.
+    /// </remarks>
+    internal static Contracts.Sequences.ConcurrencyScope ToSequencesContract(this ConcurrencyScope scope) => new()
+    {
+        SequenceNumber = scope.ExpectsNoMatchingEvent ? EventSequenceNumber.Unavailable.Value : scope.SequenceNumber.Value,
+        ExpectsNoMatchingEvent = scope.ExpectsNoMatchingEvent,
+        EventSourceId = scope.EventSourceId is not null,
+        EventStreamType = scope.EventStreamType?.Value,
+        EventStreamId = scope.EventStreamId?.Value,
+        EventSourceType = scope.EventSourceType?.Value,
+        EventTypes = scope.EventTypes?.Select(_ => _.ToSequencesContract())
+    };
 }
