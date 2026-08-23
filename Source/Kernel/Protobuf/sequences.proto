@@ -116,14 +116,19 @@ message CommandResult_AppendResponse {
    string AuthorizationFailureReason = 6;
    AppendResponse Response = 7;
 }
-message CommandResult_UInt64 {
+message CommandResult_CompleteStreamResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2; // default value could not be applied: True
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
-   uint64 Response = 7;
+   CompleteStreamResponse Response = 7;
+}
+enum CompleteStreamError {
+   None = 0;
+   AlreadyCompleted = 1;
+   DefaultStreamCannotBeCompleted = 2;
 }
 message CompleteStreamRequest {
    string EventStore = 1;
@@ -131,6 +136,11 @@ message CompleteStreamRequest {
    string EventSequenceId = 3;
    string EventStreamType = 4;
    string EventStreamId = 5;
+}
+message CompleteStreamResponse {
+   bool IsSuccess = 1;
+   uint64 SequenceNumber = 2;
+   CompleteStreamError Error = 3;
 }
 message ConcurrencyScope {
    uint64 SequenceNumber = 1;
@@ -439,7 +449,7 @@ service EventSequences {
    rpc AppendedEvents (AppendedEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc AppendMany (AppendManyRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSources (AppendManyForEventSourcesRequest) returns (CommandResult_AppendManyResponse);
-   rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_UInt64);
+   rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_CompleteStreamResponse);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
    rpc ExportEvents (ExportEventsRequest) returns (QueryResult_IEnumerable_ExportedEventResponse);
    rpc ForEventSourceIdAndEventTypes (ForEventSourceIdAndEventTypesRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);

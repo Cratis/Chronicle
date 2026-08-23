@@ -16,15 +16,6 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventSequenceId">The event sequence holding the stream.</param>
 /// <param name="EventStreamType">The stream type to complete.</param>
 /// <param name="EventStreamId">The stream within the stream type to complete.</param>
-/// <remarks>
-/// Handle() still throws for a business rejection (already completed, or the default stream) rather than
-/// returning a result - the more correct shape used for <c>Append</c>/<c>AppendMany</c>. Wiring that up would
-/// require <see cref="Cratis.Chronicle.EventSequences.CompleteStreamError"/> to become a generator-mirrored shared
-/// type, and it mirrors by simple type name into <c>Contracts.EventSequences</c> - the exact path the still-active,
-/// hand-written <c>Contracts.EventSequences.CompleteStreamError</c> already occupies for the old service. Mirroring
-/// it renumbers that enum's wire values out from under every client still talking to the old service. Revisit once
-/// that service is deleted and the collision is moot.
-/// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record CompleteStream(
@@ -38,13 +29,26 @@ public record CompleteStream(
     /// Handles the command by completing the stream.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to complete the stream through.</param>
-    /// <returns>The tail <see cref="EventSequenceNumber"/> at the moment of completion.</returns>
-    /// <exception cref="StreamCannotBeCompleted">Thrown when the stream cannot be completed.</exception>
-    internal async Task<EventSequenceNumber> Handle(IGrainFactory grainFactory)
+    /// <returns>The <see cref="CompleteStreamOutcome"/> describing the outcome, successful or not.</returns>
+    /// <remarks>
+    /// A stream that cannot be completed (already completed, or the default stream) is a normal, expected outcome
+    /// - not an exceptional condition - so it is reported on the returned <see cref="CompleteStreamOutcome"/>
+    /// rather than thrown.
+    /// </remarks>
+    internal async Task<CompleteStreamOutcome> Handle(IGrainFactory grainFactory)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var result = await eventSequence.CompleteStream(EventStreamType, EventStreamId);
 
-        return result.TryGetError(out var error) ? throw new StreamCannotBeCompleted(error) : result.AsT0;
+        return result.TryGetError(out var error)
+            ? new CompleteStreamOutcome(false, EventSequenceNumber.Unavailable, ToLocalError(error))
+            : new CompleteStreamOutcome(true, result.AsT0, CompleteStreamError.None);
     }
+
+    static CompleteStreamError ToLocalError(Cratis.Chronicle.EventSequences.CompleteStreamError error) => error switch
+    {
+        Cratis.Chronicle.EventSequences.CompleteStreamError.AlreadyCompleted => CompleteStreamError.AlreadyCompleted,
+        Cratis.Chronicle.EventSequences.CompleteStreamError.DefaultStreamCannotBeCompleted => CompleteStreamError.DefaultStreamCannotBeCompleted,
+        _ => CompleteStreamError.None
+    };
 }

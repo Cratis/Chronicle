@@ -8,6 +8,8 @@ export * from './AppendMany';
 export * from './AppendManyForEventSources';
 export * from './Causation';
 export * from './CompleteStream';
+export * from './CompleteStreamError';
+export * from './CompleteStreamOutcome';
 export * from './ConcurrencyScope';
 export * from './EventContext';
 export * from './EventForEventSourceId';
