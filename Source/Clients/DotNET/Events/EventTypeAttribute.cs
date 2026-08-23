@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Events;
 /// </remarks>
 /// <param name="id">Optional identifier of the event type, if not used it will default to the type name.</param>
 /// <param name="generation"><see cref="EventTypeGeneration"/> represented as <see cref="uint"/>.</param>
+/// <remarks>
+/// When evolving an event type to a new generation, prefer marking the previous generation's record with
+/// <see cref="EventTypeGenerationForAttribute{TEventType}"/> instead of a second <see cref="EventTypeAttribute"/> -
+/// it resolves the event type id from the current generation directly, so the two can never drift apart.
+/// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public sealed class EventTypeAttribute(string id = "", uint generation = EventTypeGeneration.FirstValue) : Attribute
 {
