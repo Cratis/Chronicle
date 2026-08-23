@@ -28,6 +28,7 @@ message AppendManyRequest {
    repeated Causation Causation = 8;
    Identity CausedBy = 9;
    ConcurrencyScope ConcurrencyScope = 10;
+   SerializableDateTimeOffset Occurred = 11;
 }
 message AppendManyResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000

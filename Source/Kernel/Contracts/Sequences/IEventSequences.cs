@@ -384,6 +384,12 @@ public class AppendManyRequest
     public IEnumerable<string>? Tags { get; set; }
 
     /// <summary>
+    /// Gets or sets the Occurred.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+
+    /// <summary>
     /// Gets or sets the Causation.
     /// </summary>
     [ProtoMember(8)]
