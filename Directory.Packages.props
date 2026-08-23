@@ -16,12 +16,12 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.18.1" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.18.1" />
-    <PackageVersion Include="Cratis.Arc" Version="22.0.1" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.0.1" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.0.1" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.0.1" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.0.1" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.0.1" />
+    <PackageVersion Include="Cratis.Arc" Version="22.1.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.1.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.1.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.1.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.1.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.1.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.2.1" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
