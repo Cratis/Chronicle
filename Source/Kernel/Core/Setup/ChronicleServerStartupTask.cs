@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
@@ -17,6 +18,10 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+using ProjectionDefinitionRegistrationFailed = Cratis.Chronicle.Projections.Engine.ProjectionDefinitionRegistrationFailed;
 
 namespace Orleans.Hosting;
 
@@ -29,14 +34,36 @@ namespace Orleans.Hosting;
 /// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
+/// <param name="logger">The logger.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
     IEventTypes eventTypes,
     IReactors reactors,
     IProjectionsServiceClient projectionsServiceClient,
     IGrainFactory grainFactory,
-    IAuthenticationService authenticationService) : ILifecycleParticipant<ISiloLifecycle>
+    IAuthenticationService authenticationService,
+    ILogger<ChronicleServerStartupTask> logger) : ILifecycleParticipant<ISiloLifecycle>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleServerStartupTask"/> class without logging.
+    /// </summary>
+    /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
+    /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
+    /// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
+    /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+    /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
+    internal ChronicleServerStartupTask(
+        IStorage storage,
+        IEventTypes eventTypes,
+        IReactors reactors,
+        IProjectionsServiceClient projectionsServiceClient,
+        IGrainFactory grainFactory,
+        IAuthenticationService authenticationService)
+        : this(storage, eventTypes, reactors, projectionsServiceClient, grainFactory, authenticationService, NullLogger<ChronicleServerStartupTask>.Instance)
+    {
+    }
+
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
     {
@@ -80,7 +107,7 @@ internal sealed class ChronicleServerStartupTask(
             await capturesManager.Ensure();
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
-            await projectionsServiceClient.Register(eventStore, projectionDefinitions);
+            await RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions);
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
@@ -99,6 +126,33 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await authenticationService.EnsureDefaultClientCredentials();
 #endif
+    }
+
+    async Task RegisterPersistedProjectionDefinitions(EventStoreName eventStore, IEnumerable<ProjectionDefinition> projectionDefinitions)
+    {
+        var definitions = projectionDefinitions.ToArray();
+        try
+        {
+            await projectionsServiceClient.Register(eventStore, definitions);
+            return;
+        }
+        catch (Exception exception) when (ProjectionDefinitionRegistrationFailed.TryFindIdentifier(exception, out _))
+        {
+            // A stored client definition can be incompatible with a newer server. Retry definitions individually so
+            // compatible projections are restored while stale ones wait for the client to replace them after startup.
+        }
+
+        foreach (var definition in definitions)
+        {
+            try
+            {
+                await projectionsServiceClient.Register(eventStore, [definition]);
+            }
+            catch (Exception exception) when (ProjectionDefinitionRegistrationFailed.TryFindIdentifier(exception, out var identifier))
+            {
+                logger.FailedRegisteringPersistedProjectionDefinition(exception, identifier);
+            }
+        }
     }
 
     async Task RehydrateReducerAndReactorObservers(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
