@@ -776,12 +776,6 @@ public class AppendedEventResponse
 public class QueryEventsRequest
 {
     /// <summary>
-    /// Gets or sets the jsonSerializerOptions.
-    /// </summary>
-    [ProtoMember(1)]
-    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
-
-    /// <summary>
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(2)]
@@ -855,12 +849,6 @@ public class QueryEventsRequest
 public class AppendedEventsRequest
 {
     /// <summary>
-    /// Gets or sets the jsonSerializerOptions.
-    /// </summary>
-    [ProtoMember(1)]
-    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
-
-    /// <summary>
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(2)]
@@ -891,12 +879,6 @@ public class AppendedEventsRequest
 [ProtoContract]
 public class ForEventSourceIdAndEventTypesRequest
 {
-    /// <summary>
-    /// Gets or sets the jsonSerializerOptions.
-    /// </summary>
-    [ProtoMember(1)]
-    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
-
     /// <summary>
     /// Gets or sets the eventStore.
     /// </summary>
@@ -946,12 +928,6 @@ public class ForEventSourceIdAndEventTypesRequest
 [ProtoContract]
 public class FromSequenceNumberRequest
 {
-    /// <summary>
-    /// Gets or sets the jsonSerializerOptions.
-    /// </summary>
-    [ProtoMember(1)]
-    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
-
     /// <summary>
     /// Gets or sets the eventStore.
     /// </summary>
@@ -1180,12 +1156,6 @@ public class ExportedEventResponse
 [ProtoContract]
 public class ExportEventsRequest
 {
-    /// <summary>
-    /// Gets or sets the jsonSerializerOptions.
-    /// </summary>
-    [ProtoMember(1)]
-    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
-
     /// <summary>
     /// Gets or sets the eventStore.
     /// </summary>

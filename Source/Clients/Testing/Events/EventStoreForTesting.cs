@@ -403,6 +403,7 @@ public class EventStoreForTesting : IEventStore
             new InProcessCurrentPrincipalAccessor(),
             storage,
             eventCompliance,
+            _jsonSerializerOptions,
             new InProcessQueryContextManager(),
             NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 

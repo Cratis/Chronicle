@@ -19,6 +19,7 @@ internal sealed class Captures(
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService languageService,
     global::Cratis.Chronicle.Captures.Engine.ICaptureValidator captureValidator,
+    global::System.Text.Json.JsonSerializerOptions jsonSerializerOptions,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Captures.Captures> logger) : global::Cratis.Chronicle.Contracts.Captures.ICaptures
 {
     /// <inheritdoc/>
@@ -74,7 +75,7 @@ internal sealed class Captures(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CapturedEventResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Captures.CapturedEvent.CapturedEvents(request.EventStore, request.CaptureName, request.Namespace, request.MaxEvents, storage, request.JsonSerializerOptions);
+                var result = await global::Cratis.Chronicle.Captures.CapturedEvent.CapturedEvents(request.EventStore, request.CaptureName, request.Namespace, request.MaxEvents, storage, jsonSerializerOptions);
                 return result.Select(ToCapturedEventResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Captures", "CapturedEvents"));

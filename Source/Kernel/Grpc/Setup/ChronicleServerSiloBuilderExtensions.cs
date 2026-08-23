@@ -150,6 +150,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<ICurrentPrincipalAccessor>(),
                     storage,
                     sp.GetRequiredService<IEventCompliance>(),
+                    jsonSerializerOptions,
                     sp.GetRequiredService<IQueryContextManager>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Sequences.EventSequences>>()),
                 new Cratis.Chronicle.Services.EventTypes.EventTypes(
@@ -183,6 +184,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     storage,
                     sp.GetRequiredService<Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(),
                     sp.GetRequiredService<Cratis.Chronicle.Captures.Engine.ICaptureValidator>(),
+                    jsonSerializerOptions,
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Captures.Captures>>()),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage, sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<Cratis.Chronicle.Projections.IProjectionChangesetMediator>(), sp.GetRequiredService<Orleans.Runtime.ILocalSiloDetails>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<IEventCompliance>(), sp.GetRequiredService<IMaterializedReadModelStore>(), jsonSerializerOptions),

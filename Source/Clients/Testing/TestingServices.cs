@@ -147,6 +147,7 @@ internal sealed class TestingServices(
             storage,
             new KernelCaptureLanguageService(),
             new KernelCaptureValidator(storage),
+            jsonSerializerOptions,
             NullLogger<KernelCapturesService>.Instance));
 
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
@@ -176,6 +177,7 @@ internal sealed class TestingServices(
             new KernelEventCompliance(
                 new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
                 new ExpandoObjectConverter(new TypeFormats())),
+            jsonSerializerOptions,
             new EventSequences.InProcessQueryContextManager(),
             NullLogger<KernelSequencesService>.Instance));
 

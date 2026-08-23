@@ -342,10 +342,4 @@ public class CapturedEventsRequest
     /// </summary>
     [ProtoMember(4)]
     public int MaxEvents { get; set; }
-
-    /// <summary>
-    /// Gets or sets the jsonSerializerOptions.
-    /// </summary>
-    [ProtoMember(5)]
-    public global::System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; set; }
 }
