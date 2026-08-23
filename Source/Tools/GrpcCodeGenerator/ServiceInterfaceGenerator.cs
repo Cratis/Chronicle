@@ -468,8 +468,9 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             .AddMembers([.. propertyMembers]);
     }
 
-    static PropertyDeclarationSyntax BuildDtoProperty(string propName, string propType, int protoMemberIndex) =>
-        SyntaxFactory.PropertyDeclaration(
+    static PropertyDeclarationSyntax BuildDtoProperty(string propName, string propType, int protoMemberIndex)
+    {
+        var property = SyntaxFactory.PropertyDeclaration(
                 SyntaxFactory.ParseTypeName(propType),
                 SyntaxFactory.Identifier(ToPascalCase(propName)))
             .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
@@ -489,6 +490,45 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                 SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
                     .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)))
             .WithLeadingTrivia(BuildXmlDoc($"Gets or sets the {propName}."));
+
+        // A non-nullable IEnumerable<T>/IDictionary<TKey,TValue> property left unset by a caller - or carrying zero
+        // elements on the wire - deserializes as null rather than empty, because protobuf-net only ever assigns
+        // through the setter when elements are actually present. Defaulting it matches what Core's own non-nullable
+        // annotation promises callers: always present, never null.
+        var initializer = BuildDtoPropertyInitializer(propType);
+        return initializer is null
+            ? property
+            : property.WithInitializer(initializer).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+    }
+
+    static EqualsValueClauseSyntax? BuildDtoPropertyInitializer(string propType)
+    {
+        if (IsNonNullableCollection(propType))
+        {
+            return SyntaxFactory.EqualsValueClause(SyntaxFactory.CollectionExpression());
+        }
+
+        if (IsNonNullableDictionary(propType))
+        {
+            // IDictionary<TKey,TValue> has no natural collection-expression target type, so the concrete
+            // Dictionary<TKey,TValue> is spelled out instead. The interface can render either short ("IDictionary<...>")
+            // or fully qualified ("global::System.Collections.Generic.IDictionary<...>") depending on how GetTypeName
+            // reached it - swapping just the "IDictionary<" token keeps whichever prefix and the (possibly
+            // nested-generic) key/value arguments intact without having to parse them apart.
+            var concreteType = propType.Replace("IDictionary<", "Dictionary<", StringComparison.Ordinal);
+            return SyntaxFactory.EqualsValueClause(
+                SyntaxFactory.ObjectCreationExpression(SyntaxFactory.ParseTypeName(concreteType))
+                    .WithArgumentList(SyntaxFactory.ArgumentList()));
+        }
+
+        return null;
+    }
+
+    static bool IsNonNullableCollection(string propType) =>
+        propType.StartsWith("IEnumerable<", StringComparison.Ordinal) && !propType.EndsWith('?');
+
+    static bool IsNonNullableDictionary(string propType) =>
+        propType.Contains("IDictionary<", StringComparison.Ordinal) && !propType.EndsWith('?');
 
     static ParameterSyntax BuildCallContextParameter() =>
         SyntaxFactory.Parameter(SyntaxFactory.Identifier("callContext"))

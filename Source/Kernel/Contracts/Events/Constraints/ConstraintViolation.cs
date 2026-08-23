@@ -48,5 +48,5 @@ public class ConstraintViolation
     /// Gets or sets the Details.
     /// </summary>
     [ProtoMember(6)]
-    public IDictionary<string, string> Details { get; set; }
+    public IDictionary<string, string> Details { get; set; } = new Dictionary<string, string>();
 }

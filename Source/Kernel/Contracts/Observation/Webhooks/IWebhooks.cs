@@ -103,7 +103,7 @@ public class AddWebhookRequest
     /// Gets or sets the EventTypes.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the AuthorizationType.
@@ -151,7 +151,7 @@ public class AddWebhookRequest
     /// Gets or sets the Headers.
     /// </summary>
     [ProtoMember(13)]
-    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; }
+    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
 
     /// <summary>
     /// Gets or sets the IsReplayable.
@@ -182,7 +182,7 @@ public class AddWebhooksRequest
     /// Gets or sets the Webhooks.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition> Webhooks { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition> Webhooks { get; set; } = [];
 }
 
 /// <summary>
@@ -220,7 +220,7 @@ public class RemoveWebhooksRequest
     /// Gets or sets the Webhooks.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<string> Webhooks { get; set; }
+    public IEnumerable<string> Webhooks { get; set; } = [];
 }
 
 /// <summary>
@@ -257,7 +257,7 @@ public class WebhookDetailsResponse
     /// Gets or sets the EventTypes.
     /// </summary>
     [ProtoMember(4)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the AuthorizationType.
@@ -269,7 +269,7 @@ public class WebhookDetailsResponse
     /// Gets or sets the Headers.
     /// </summary>
     [ProtoMember(6)]
-    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; }
+    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
 
     /// <summary>
     /// Gets or sets the IsReplayable.

@@ -151,7 +151,7 @@ public class AddExternalServiceRequest
     /// Gets or sets the Headers.
     /// </summary>
     [ProtoMember(13)]
-    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; }
+    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
 
     /// <summary>
     /// Gets or sets the Host.
@@ -187,7 +187,7 @@ public class AddExternalServiceRequest
     /// Gets or sets the Options.
     /// </summary>
     [ProtoMember(19)]
-    public global::System.Collections.Generic.IDictionary<string, string> Options { get; set; }
+    public global::System.Collections.Generic.IDictionary<string, string> Options { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
 }
 
 /// <summary>
@@ -206,7 +206,7 @@ public class AddExternalServicesRequest
     /// Gets or sets the ExternalServices.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition> ExternalServices { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition> ExternalServices { get; set; } = [];
 }
 
 /// <summary>
@@ -244,7 +244,7 @@ public class RemoveExternalServicesRequest
     /// Gets or sets the ExternalServices.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<string> ExternalServices { get; set; }
+    public IEnumerable<string> ExternalServices { get; set; } = [];
 }
 
 /// <summary>
@@ -287,7 +287,7 @@ public class ExternalServiceResponse
     /// Gets or sets the Headers.
     /// </summary>
     [ProtoMember(6)]
-    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; }
+    public global::System.Collections.Generic.IDictionary<string, string> Headers { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
 
     /// <summary>
     /// Gets or sets the Host.
@@ -317,7 +317,7 @@ public class ExternalServiceResponse
     /// Gets or sets the Options.
     /// </summary>
     [ProtoMember(11)]
-    public global::System.Collections.Generic.IDictionary<string, string> Options { get; set; }
+    public global::System.Collections.Generic.IDictionary<string, string> Options { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
 }
 
 /// <summary>
