@@ -21,11 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Tags">The tags to associate with every event in the batch.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
-/// <remarks>
-/// Deliberately has no concurrency scope parameter yet - see the <c>Append</c> command's remarks for why
-/// mirroring <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/> is a separate, more carefully
-/// verified piece of work than this parity pass.
-/// </remarks>
+/// <param name="ConcurrencyScope">Optional concurrency scope to validate the append against. Defaults to no check when not provided.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendMany(
@@ -37,7 +33,8 @@ public record AppendMany(
     Guid? CorrelationId = default,
     IEnumerable<string>? Tags = default,
     IEnumerable<Causation>? Causation = default,
-    Identity? CausedBy = default)
+    Identity? CausedBy = default,
+    ConcurrencyScope? ConcurrencyScope = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -70,7 +67,7 @@ public record AppendMany(
         var concurrencyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(
             new Dictionary<EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope>
             {
-                [EventSourceId] = Concepts.EventSequences.Concurrency.ConcurrencyScope.None
+                [EventSourceId] = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None
             });
 
         return eventSequence.AppendMany(

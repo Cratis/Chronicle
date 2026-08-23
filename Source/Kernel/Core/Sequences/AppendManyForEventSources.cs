@@ -20,11 +20,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Tags">The tags to associate with every event in the batch, in addition to each event's own tags.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
-/// <remarks>
-/// Deliberately has no concurrency scope parameter yet - see the <c>Append</c> command's remarks for why
-/// mirroring <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/> is a separate, more carefully
-/// verified piece of work than this parity pass.
-/// </remarks>
+/// <param name="ConcurrencyScopes">Optional concurrency scopes to validate the append against, one per event source. An event source with no entry gets no check.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyForEventSources(
@@ -35,7 +31,8 @@ public record AppendManyForEventSources(
     Guid? CorrelationId = default,
     IEnumerable<string>? Tags = default,
     IEnumerable<Causation>? Causation = default,
-    Identity? CausedBy = default)
+    Identity? CausedBy = default,
+    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -67,17 +64,11 @@ public record AppendManyForEventSources(
             @event.Occurred,
             Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject)));
 
-        var concurrencyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(
-            eventsList
-                .Select(@event => (EventSourceId)@event.EventSourceId)
-                .Distinct()
-                .ToDictionary(eventSourceId => eventSourceId, _ => Concepts.EventSequences.Concurrency.ConcurrencyScope.None));
-
         return eventSequence.AppendMany(
             events,
             CorrelationId ?? Guid.NewGuid(),
             Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
-            concurrencyScopes);
+            (ConcurrencyScopes ?? []).ToChronicle());
     }
 }

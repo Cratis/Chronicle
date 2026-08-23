@@ -260,6 +260,12 @@ public class AppendRequest
     /// </summary>
     [ProtoMember(15)]
     public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyScope.
+    /// </summary>
+    [ProtoMember(16)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
 }
 
 /// <summary>
@@ -388,6 +394,12 @@ public class AppendManyRequest
     /// </summary>
     [ProtoMember(9)]
     public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyScope.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
 }
 
 /// <summary>
@@ -510,6 +522,12 @@ public class AppendManyForEventSourcesRequest
     /// </summary>
     [ProtoMember(8)]
     public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyScopes.
+    /// </summary>
+    [ProtoMember(9)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope>? ConcurrencyScopes { get; set; }
 }
 
 /// <summary>

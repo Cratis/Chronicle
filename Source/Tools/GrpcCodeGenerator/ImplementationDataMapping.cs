@@ -122,6 +122,22 @@ public record ImplementationDataMapping(string ContractTypeName, Func<string, st
     }
 
     /// <summary>
+    /// Gets the value type when a type is an <see cref="IDictionary{TKey, TValue}"/> the wire carries as a map.
+    /// </summary>
+    /// <param name="type">The type to inspect.</param>
+    /// <returns>The value type, or null when the type is not an <see cref="IDictionary{TKey, TValue}"/>.</returns>
+    internal static Type? DictionaryValueElement(Type type)
+    {
+        if (type.IsGenericType &&
+            type.GetGenericTypeDefinition().FullName?.StartsWith("System.Collections.Generic.IDictionary`2", StringComparison.Ordinal) == true)
+        {
+            return type.GetGenericArguments()[1];
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Resolves the mapping for a nullable value type.
     /// </summary>
     /// <param name="underlying">The type the nullable wraps.</param>

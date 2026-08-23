@@ -28,15 +28,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Subject">Optional subject identifying the compliance target for the event. Defaults to the event source.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
-/// <remarks>
-/// Deliberately has no concurrency scope parameter yet: <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/>
-/// nests <c>IEnumerable&lt;Concepts.Events.EventType&gt;</c>, and mirroring that composite shape through
-/// <c>SharedTypeRegistry</c> regenerates <c>Contracts.Events.EventType</c> and
-/// <c>Contracts.EventSequences.Concurrency.ConcurrencyScope</c> in place - the same hand-written files every other
-/// still-hand-written Contracts area (and the production client SDK's own converters) currently depend on. Wiring
-/// it needs the same verification rigor Phase 2 applied to <c>JobStatus</c> (proto diff, WireCompatibility, every
-/// consumer checked) before it is safe, not a parameter addition alongside the rest of this parity pass.
-/// </remarks>
+/// <param name="ConcurrencyScope">Optional concurrency scope to validate the append against. Defaults to no check when not provided.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Append(
@@ -54,7 +46,8 @@ public record Append(
     DateTimeOffset? Occurred = default,
     string? Subject = default,
     IEnumerable<Causation>? Causation = default,
-    Identity? CausedBy = default)
+    Identity? CausedBy = default,
+    ConcurrencyScope? ConcurrencyScope = default)
 {
     /// <summary>
     /// Handles the command by appending the event.
@@ -84,7 +77,7 @@ public record Append(
             Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
             (Tags ?? []).Select(tag => (Tag)tag),
-            Concepts.EventSequences.Concurrency.ConcurrencyScope.None,
+            ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None,
             Occurred,
             string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject));
     }

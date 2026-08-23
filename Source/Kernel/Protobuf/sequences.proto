@@ -15,6 +15,7 @@ message AppendManyForEventSourcesRequest {
    repeated string Tags = 6;
    repeated Causation Causation = 7;
    Identity CausedBy = 8;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
 }
 message AppendManyRequest {
    string EventStore = 1;
@@ -26,6 +27,7 @@ message AppendManyRequest {
    repeated string Tags = 7;
    repeated Causation Causation = 8;
    Identity CausedBy = 9;
+   ConcurrencyScope ConcurrencyScope = 10;
 }
 message AppendManyResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -55,6 +57,7 @@ message AppendRequest {
    string Subject = 13;
    repeated Causation Causation = 14;
    Identity CausedBy = 15;
+   ConcurrencyScope ConcurrencyScope = 16;
 }
 message AppendResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -115,6 +118,15 @@ message CompleteStreamRequest {
    string EventStreamType = 4;
    string EventStreamId = 5;
 }
+message ConcurrencyScope {
+   uint64 SequenceNumber = 1;
+   bool EventSourceId = 2;
+   string EventStreamType = 3;
+   string EventStreamId = 4;
+   string EventSourceType = 5;
+   repeated EventType EventTypes = 6;
+   bool ExpectsNoMatchingEvent = 7;
+}
 message ConcurrencyViolation {
    string EventSourceId = 1;
    uint64 ExpectedSequenceNumber = 2;
@@ -153,6 +165,10 @@ message EventForEventSourceId {
 message EventSequenceNamesResponse {
    string Id = 1;
    string Name = 2;
+}
+message EventSourceConcurrencyScope {
+   string EventSourceId = 1;
+   ConcurrencyScope Scope = 2;
 }
 message EventToAppend {
    EventType EventType = 1;

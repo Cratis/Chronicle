@@ -77,6 +77,15 @@ public static class ImplementationValues
                 : $"{expression}.Select(x => {elementConversion})";
         }
 
+        // A dictionary whose value needs converting has no single-element lambda shape LINQ's ToDictionary can
+        // express as cleanly as Select does for a sequence, so - like a non-sequence shared type - it is expected
+        // to carry a hand-written ToApi() extension over the whole dictionary rather than an inlined projection.
+        if (ImplementationDataMapping.DictionaryValueElement(declaredType) is { } dictionaryValueType &&
+            (TypeHelper.IsConceptType(dictionaryValueType) || SharedTypeRegistry.QualifiedNameFor(dictionaryValueType) is not null))
+        {
+            return isNullable ? $"{expression}?.ToApi()" : $"{expression}.ToApi()";
+        }
+
         return expression;
     }
 
