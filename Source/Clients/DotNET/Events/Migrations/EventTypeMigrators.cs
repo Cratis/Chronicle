@@ -19,6 +19,9 @@ public class EventTypeMigrators(IClientArtifactsProvider clientArtifactsProvider
     public IEnumerable<Type> AllMigrators => clientArtifactsProvider.EventTypeMigrators;
 
     /// <inheritdoc/>
+    /// <exception cref="MultipleMigratorsForSameEventTypeGeneration">
+    /// Thrown when more than one discovered migrator bridges the same pair of generations for <paramref name="eventType"/>.
+    /// </exception>
     public IEnumerable<IEventTypeMigration> GetMigratorsFor(Type eventType)
     {
         if (!_migratorsByEventType.TryGetValue(eventType, out var migrators))
@@ -31,6 +34,18 @@ public class EventTypeMigrators(IClientArtifactsProvider clientArtifactsProvider
             {
                 var migrator = (IEventTypeMigration)ActivatorUtilities.CreateInstance(serviceProvider, migratorType);
                 migrators.Add(migrator);
+            }
+
+            var duplicate = migrators
+                .GroupBy(_ => (_.From, _.To))
+                .FirstOrDefault(_ => _.Count() > 1);
+            if (duplicate is not null)
+            {
+                throw new MultipleMigratorsForSameEventTypeGeneration(
+                    eventType.GetEventType(),
+                    duplicate.Key.From,
+                    duplicate.Key.To,
+                    duplicate.Select(_ => _.GetType()));
             }
 
             _migratorsByEventType[eventType] = migrators;

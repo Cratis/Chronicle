@@ -6,9 +6,10 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// <summary>
 /// Abstract base class for type-safe event type migrations between two generations.
 /// Extracts <see cref="IEventTypeMigration.From"/> and <see cref="IEventTypeMigration.To"/>
-/// from the <see cref="EventTypeAttribute"/> on <typeparamref name="TUpgrade"/> and
-/// <typeparamref name="TPrevious"/>, and validates that the upgrade generation is exactly
-/// one more than the previous generation.
+/// from <typeparamref name="TUpgrade"/> and <typeparamref name="TPrevious"/> - each resolved via
+/// <see cref="EventTypeAttribute"/> or <see cref="EventTypeGenerationForAttribute{TEventType}"/> -
+/// validates that both resolve to the same event type id, and that the upgrade generation is
+/// exactly one more than the previous generation.
 /// </summary>
 /// <typeparam name="TUpgrade">The upgraded (newer generation) event type.</typeparam>
 /// <typeparam name="TPrevious">The previous (older generation) event type.</typeparam>
@@ -17,6 +18,10 @@ public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrat
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypeMigration{TUpgrade, TPrevious}"/> class.
     /// </summary>
+    /// <exception cref="MigrationGenerationsMustShareEventTypeId">
+    /// Thrown when <typeparamref name="TUpgrade"/> and <typeparamref name="TPrevious"/> resolve to
+    /// different event type ids.
+    /// </exception>
     /// <exception cref="InvalidMigrationGenerationGap">
     /// Thrown when <typeparamref name="TUpgrade"/>'s generation is not exactly one more
     /// than <typeparamref name="TPrevious"/>'s generation.
@@ -25,6 +30,11 @@ public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrat
     {
         var previousEventType = typeof(TPrevious).GetEventType();
         var upgradeEventType = typeof(TUpgrade).GetEventType();
+
+        if (previousEventType.Id != upgradeEventType.Id)
+        {
+            throw new MigrationGenerationsMustShareEventTypeId(typeof(TPrevious), typeof(TUpgrade), previousEventType.Id, upgradeEventType.Id);
+        }
 
         From = previousEventType.Generation;
         To = upgradeEventType.Generation;
