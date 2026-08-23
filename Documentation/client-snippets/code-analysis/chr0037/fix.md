@@ -3,15 +3,15 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
 [EventType("Customer.Renamed", generation: 2)]
-public record CustomerRegisteredV2(string FirstName, string LastName);
+public record Chr0037FixCustomerRegisteredV2(string FirstName, string LastName);
 
-[EventTypeGenerationFor<CustomerRegisteredV2>(1)]
-public record CustomerRegisteredV1(string Name);
+[EventTypeGenerationFor<Chr0037FixCustomerRegisteredV2>(1)]
+public record Chr0037FixCustomerRegisteredV1(string Name);
 
-public class CustomerRegisteredMigration
-    : EventTypeMigration<CustomerRegisteredV2, CustomerRegisteredV1>
+public class Chr0037FixCustomerRegisteredMigration
+    : EventTypeMigration<Chr0037FixCustomerRegisteredV2, Chr0037FixCustomerRegisteredV1>
 {
-    public override void Upcast(IEventMigrationBuilder<CustomerRegisteredV2, CustomerRegisteredV1> builder) { }
-    public override void Downcast(IEventMigrationBuilder<CustomerRegisteredV1, CustomerRegisteredV2> builder) { }
+    public override void Upcast(IEventMigrationBuilder<Chr0037FixCustomerRegisteredV2, Chr0037FixCustomerRegisteredV1> builder) { }
+    public override void Downcast(IEventMigrationBuilder<Chr0037FixCustomerRegisteredV1, Chr0037FixCustomerRegisteredV2> builder) { }
 }
 ```

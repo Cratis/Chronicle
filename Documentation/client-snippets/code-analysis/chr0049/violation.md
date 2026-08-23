@@ -1,10 +1,11 @@
 ```csharp
 using Cratis.Chronicle.Events;
 
-public record CustomerRegisteredV2(string FirstName, string LastName);
+public record Chr0049ViolationCustomerRegisteredV2(string FirstName, string LastName);
 
-// Error CHR0049: 'CustomerRegisteredV1' declares itself as a generation for
-// 'CustomerRegisteredV2', but 'CustomerRegisteredV2' is not marked with [EventType].
-[EventTypeGenerationFor<CustomerRegisteredV2>(1)]
-public record CustomerRegisteredV1(string Name);
+// Error CHR0049: 'Chr0049ViolationCustomerRegisteredV1' declares itself as a generation for
+// 'Chr0049ViolationCustomerRegisteredV2', but 'Chr0049ViolationCustomerRegisteredV2' is not
+// marked with [EventType].
+[EventTypeGenerationFor<Chr0049ViolationCustomerRegisteredV2>(1)]
+public record Chr0049ViolationCustomerRegisteredV1(string Name);
 ```
