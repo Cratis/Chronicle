@@ -3,7 +3,7 @@
   "default": true,
   "MD013": false,
   "MD033": {
-    "allowed_elements": ["antml:function_calls", "antml:invoke", "antml:parameter", "a", "div", "img", "h3", "p", "br", "strong"]
+    "allowed_elements": ["antml:function_calls", "antml:invoke", "antml:parameter", "a", "div", "img", "h3", "p", "br", "strong", "ChronicleClientTabs"]
   },
   "MD051": false,
   "MD041": false,

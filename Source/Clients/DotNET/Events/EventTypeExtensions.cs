@@ -80,10 +80,19 @@ public static class EventTypeExtensions
     /// Validate if a type is an event type.
     /// </summary>
     /// <param name="type">Type to validate.</param>
-    /// <exception cref="TypeIsNotAnEventType">Thrown if the type is not an event type.</exception>
+    /// <exception cref="TypeIsNotAnEventType">Thrown if the type is neither marked with <see cref="EventTypeAttribute"/> nor <see cref="EventTypeGenerationForAttribute"/>.</exception>
+    /// <exception cref="EventTypeGenerationForCannotBeCombinedWithEventType">Thrown if the type is marked with both attributes.</exception>
     public static void ValidateEventType(this Type type)
     {
-        if (!Attribute.IsDefined(type, typeof(EventTypeAttribute)))
+        var hasEventType = Attribute.IsDefined(type, typeof(EventTypeAttribute));
+        var hasGenerationFor = Attribute.IsDefined(type, typeof(EventTypeGenerationForAttribute));
+
+        if (hasEventType && hasGenerationFor)
+        {
+            throw new EventTypeGenerationForCannotBeCombinedWithEventType(type);
+        }
+
+        if (!hasEventType && !hasGenerationFor)
         {
             throw new TypeIsNotAnEventType(type);
         }
@@ -95,16 +104,28 @@ public static class EventTypeExtensions
     /// <param name="type"><see cref="Type"/> to get for. </param>
     /// <returns>The <see cref="EventType"/>.</returns>
     /// <exception cref="TypeIsNotAnEventType">Thrown if the type is not an event type.</exception>
+    /// <exception cref="EventTypeGenerationForCannotBeCombinedWithEventType">Thrown if the type is marked with both <see cref="EventTypeAttribute"/> and <see cref="EventTypeGenerationForAttribute"/>.</exception>
+    /// <exception cref="EventTypeGenerationReferencesNonEventType">Thrown if a <see cref="EventTypeGenerationForAttribute"/> references a type that is not marked with <see cref="EventTypeAttribute"/>.</exception>
     public static EventType GetEventType(this Type type)
     {
         type.ValidateEventType();
 
-        var attribute = type.GetCustomAttribute<EventTypeAttribute>()!;
-        var id = attribute.Id.Value switch
+        if (type.GetCustomAttribute<EventTypeGenerationForAttribute>() is { } generationFor)
         {
-            "" => type.Name,
-            _ => attribute.Id.Value
-        };
-        return new EventType(new EventTypeId(id), attribute.Generation);
+            var referencedType = generationFor.EventTypeClrType;
+            var referencedAttribute = referencedType.GetCustomAttribute<EventTypeAttribute>() ??
+                throw new EventTypeGenerationReferencesNonEventType(type, referencedType);
+
+            return new EventType(ResolveId(referencedType, referencedAttribute), generationFor.Generation);
+        }
+
+        var attribute = type.GetCustomAttribute<EventTypeAttribute>()!;
+        return new EventType(ResolveId(type, attribute), attribute.Generation);
     }
+
+    static EventTypeId ResolveId(Type type, EventTypeAttribute attribute) => attribute.Id.Value switch
+    {
+        "" => type.Name,
+        _ => attribute.Id.Value
+    };
 }

@@ -2,11 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsDotnetClientRenamedFromCustomerRegisteredV1(string EmailAddress);
-
 [EventType("dotnet-client-customer-registered", generation: 2)]
 public record MigrationsDotnetClientRenamedFromCustomerRegistered(string Email);
+
+[EventTypeGenerationFor<MigrationsDotnetClientRenamedFromCustomerRegistered>(1)]
+public record MigrationsDotnetClientRenamedFromCustomerRegisteredV1(string EmailAddress);
 
 public class MigrationsDotnetClientRenamedFromCustomerRegisteredMigration : EventTypeMigration<MigrationsDotnetClientRenamedFromCustomerRegistered, MigrationsDotnetClientRenamedFromCustomerRegisteredV1>
 {

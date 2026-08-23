@@ -88,6 +88,15 @@ Alternatively, set it in `appsettings.json` under the `Cratis:Chronicle` section
 
 This value is forwarded to the Kernel as part of the event-type registration request. The Kernel only honours it when running the **development image** — the production image always validates unconditionally regardless of what the client sends. This makes it impossible to accidentally disable validation in a production deployment.
 
+## Client-side checks, before anything reaches the Kernel
+
+The rules above are all enforced by the Kernel during registration. Two further checks run entirely in your own process, the moment a migrator is constructed or discovered — before a registration request is ever sent:
+
+- **`MigrationGenerationsMustShareEventTypeId`** — thrown from `EventTypeMigration<TUpgrade, TPrevious>`'s constructor if `TUpgrade` and `TPrevious` resolve to different event type ids. This is what catches the classic mistake with the old, explicit-id style: an id omitted on the previous generation (silently defaulting to the CLR type name) or a typo that makes the two ids differ. Marking the previous generation with [`[EventTypeGenerationFor<T>]`](../concepts/event-type-migrations) instead removes the mistake structurally, since there is no independent id to mistype in the first place.
+- **`MultipleMigratorsForSameEventTypeGeneration`** — thrown when discovering migrators if two different migrator classes both claim to bridge the same generation pair for one event type. Exactly one migrator may own a given transition.
+
+The [code analysis](../code-analysis/index.md) rules [CHR0037](../code-analysis/CHR0037) and [CHR0049](../code-analysis/CHR0049) catch the same class of mistake at compile time, before you even run the application.
+
 ## What happens when validation fires
 
 Validation runs on the Kernel during `Register()`, which is called when the client connects to Chronicle. If validation fails the server throws an exception that the client receives as an `RpcException`. This is intentional — failing fast at startup is far better than discovering a broken migration chain at runtime.

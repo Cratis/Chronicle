@@ -1,11 +1,12 @@
 ```csharp
 using Cratis.Chronicle.Events;
 
-// Generation 1 (original) — no explicit generation needed, defaults to 1
-[EventType]
-public record MigrationsDotnetClientAuthorRegisteredV1(string Name);
-
-// Generation 2 — Name has been split into FirstName and LastName
+// Generation 2 (current) — Name has been split into FirstName and LastName
 [EventType("dotnet-client-author-registered", generation: 2)]
 public record MigrationsDotnetClientAuthorRegistered(string FirstName, string LastName);
+
+// Generation 1 (original) — marked as a previous generation of the current record above,
+// instead of carrying its own [EventType]
+[EventTypeGenerationFor<MigrationsDotnetClientAuthorRegistered>(1)]
+public record MigrationsDotnetClientAuthorRegisteredV1(string Name);
 ```

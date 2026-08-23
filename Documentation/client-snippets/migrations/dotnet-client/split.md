@@ -2,11 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsDotnetClientSplitPersonRegisteredV1(string FullName);
-
 [EventType("dotnet-client-person-registered", generation: 2)]
 public record MigrationsDotnetClientSplitPersonRegistered(string FirstName, string LastName);
+
+[EventTypeGenerationFor<MigrationsDotnetClientSplitPersonRegistered>(1)]
+public record MigrationsDotnetClientSplitPersonRegisteredV1(string FullName);
 
 public class MigrationsDotnetClientSplitPersonRegisteredMigration : EventTypeMigration<MigrationsDotnetClientSplitPersonRegistered, MigrationsDotnetClientSplitPersonRegisteredV1>
 {

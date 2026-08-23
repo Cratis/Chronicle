@@ -242,4 +242,15 @@ public static class DiagnosticIds
     /// A clear is declared for a read model member that cannot hold null.
     /// </summary>
     public const string ClearOnNonNullableMember = "CHR0048";
+
+    /// <summary>
+    /// A type marked with [EventTypeGenerationFor&lt;T&gt;] references a type that is not itself marked with
+    /// [EventType].
+    /// </summary>
+    public const string EventTypeGenerationForMustReferenceEventType = "CHR0049";
+
+    /// <summary>
+    /// A type is marked with both [EventType] and [EventTypeGenerationFor&lt;T&gt;].
+    /// </summary>
+    public const string EventTypeGenerationForCannotCombineWithEventType = "CHR0050";
 }

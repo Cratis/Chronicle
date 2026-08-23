@@ -22,6 +22,12 @@ To define a migration, extend the `EventTypeMigration<TUpgrade, TPrevious>` base
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/defining-migrations" />
 
+The previous generation, `MigrationsAuthorRegisteredV1`, carries `[EventTypeGenerationFor<MigrationsAuthorRegistered>(1)]` instead of its own `[EventType]`. The event type id it resolves to comes straight from `MigrationsAuthorRegistered`'s own `[EventType]` — it is never independently typed on the previous-generation record, so the two generations cannot drift apart by a hand-typed, mismatched id.
+
+:::note[The old style still works]
+You can still put an explicit, matching `[EventType("id", generation: N)]` on every generation — this is fully backward compatible, not deprecated. But both ids must be **identical, explicit strings**. Omit the id on a previous generation and it silently defaults to the CLR type name (`"MigrationsAuthorRegisteredV1"`), which Chronicle then treats as an entirely unrelated event type — the migration never applies, and registration fails at kernel startup with a confusing `EventTypeSchemaChanged` error. `[EventTypeGenerationFor<T>]` removes this failure mode structurally, which is why it is the recommended default for any new previous generation.
+:::
+
 ## Migration Operations
 
 The migration builder supports the following operations:
@@ -75,10 +81,20 @@ Chronicle will:
 2. Build migration definitions with JmesPath transformations
 3. Send the definitions to the kernel during event type registration
 
+## Catching Misuse Early
+
+Two runtime checks and two [code analysis](../code-analysis/index.md) rules exist specifically to stop a broken migration before it ever reaches a real event log:
+
+- **`MigrationGenerationsMustShareEventTypeId`** — thrown from `EventTypeMigration<TUpgrade, TPrevious>`'s constructor the moment `TUpgrade` and `TPrevious` resolve to different event type ids. This turns the old style's classic mistake — an omitted or mismatched id on the previous generation — into a loud failure at application startup instead of a confusing, silent rejection at the kernel.
+- **`MultipleMigratorsForSameEventTypeGeneration`** — thrown by `EventTypeMigrators.GetMigratorsFor` when two different migrator classes both claim to bridge the same generation pair for one event type. Exactly one migrator may own a generation transition.
+- **[CHR0037](../code-analysis/CHR0037)** flags a migration whose two generations don't resolve to the same event type at compile time — including validating, for the new attribute, that `[EventTypeGenerationFor<T>]`'s `T` really is the migration's `TUpgrade`.
+- **[CHR0049](../code-analysis/CHR0049)** flags `[EventTypeGenerationFor<T>]` when `T` isn't itself marked with `[EventType]` — the referenced type must carry the real identity directly, not another generation marker.
+
 ## Best Practices
 
-1. **Incremental generations**: Always migrate between consecutive generations (1→2, 2→3, not 1→3)
-2. **Reversible transformations**: Ensure downcast can recreate the original structure where possible
-3. **Default values**: Use `DefaultValue()` for new properties that didn't exist in older generations
-4. **Test migrations**: Verify both upcast and downcast transformations work correctly
-5. **Document changes**: Keep track of what changed between generations in your event types
+1. **Mark previous generations with `[EventTypeGenerationFor<T>]`**: it resolves the event type id from the current generation's own `[EventType]`, so the two can never drift apart the way a hand-typed id on both generations can
+2. **Incremental generations**: Always migrate between consecutive generations (1→2, 2→3, not 1→3)
+3. **Reversible transformations**: Ensure downcast can recreate the original structure where possible
+4. **Default values**: Use `DefaultValue()` for new properties that didn't exist in older generations
+5. **Test migrations**: Verify both upcast and downcast transformations work correctly
+6. **Document changes**: Keep track of what changed between generations in your event types

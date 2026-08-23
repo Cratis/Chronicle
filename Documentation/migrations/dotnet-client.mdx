@@ -9,11 +9,15 @@ This guide covers how to declare event type migrations in a .NET client, the ope
 
 ## Marking event types with generations
 
-Every `[EventType]` that has evolved past its first version must declare its current generation. You keep both the old and new record types in your codebase — Chronicle identifies them by the shared event type identifier, not the C# class name.
+Every `[EventType]` that has evolved past its first version must declare its current generation. You keep both the old and new record types in your codebase — Chronicle identifies them as the same event type by a shared event type id, not by C# class name.
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/generations" />
 
-Both records carry the same event type identifier (derived from the type name base). The generation number is what tells Chronicle how to route migrations.
+The current generation, `MigrationsDotnetClientAuthorRegistered`, carries the real `[EventType]` with its explicit id. The previous generation, `MigrationsDotnetClientAuthorRegisteredV1`, carries `[EventTypeGenerationFor<MigrationsDotnetClientAuthorRegistered>(1)]` instead — it has no independent id of its own at all. Its event type id is resolved directly from the current generation's `[EventType]`, so the two can never end up with different ids no matter how the records are renamed later.
+
+:::note[The old, explicit-id style still works]
+You can still mark every generation with its own `[EventType]`, as long as you pass the **exact same explicit id string** on all of them and vary only `generation:`. This is fully backward compatible — it is not deprecated. What it no longer is, is the recommended default: an id left off a previous generation silently falls back to the CLR type name rather than being "derived from the type name base" in any way that stays in sync with the current generation, and Chronicle then treats the two records as unrelated event types entirely. `[EventTypeGenerationFor<T>]` removes that failure mode by construction.
+:::
 
 ## Defining a migrator
 
@@ -21,9 +25,9 @@ Extend `EventTypeMigration<TUpgrade, TPrevious>` where `TUpgrade` is the **newer
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/migrator" />
 
-The `From` and `To` generation numbers are read automatically from the `[EventType]` attributes on `TPrevious` and `TUpgrade`. You do not declare them yourself, and the base class validates at construction time that `To == From + 1`, preventing accidental generation gaps.
+The `From` and `To` generation numbers are read automatically — from `TPrevious`'s `[EventTypeGenerationFor<T>]` (or its `[EventType]`, if you're using the old style) and from `TUpgrade`'s `[EventType]`. You do not declare them yourself. The base class constructor also validates, at that point, that both generations resolve to the **same event type id** (throwing `MigrationGenerationsMustShareEventTypeId` immediately if they don't) and that `To == From + 1` (throwing `InvalidMigrationGenerationGap` otherwise), preventing both an accidental identity mismatch and a generation gap.
 
-Migrators are discovered automatically at startup — no explicit registration is needed.
+Migrators are discovered automatically at startup — no explicit registration is needed. If two different migrator classes both claim to bridge the same generation pair for one event type, `EventTypeMigrators.GetMigratorsFor` throws `MultipleMigratorsForSameEventTypeGeneration` — exactly one migrator may own a given transition.
 
 ## Migration operations
 

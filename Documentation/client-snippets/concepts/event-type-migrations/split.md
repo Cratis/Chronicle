@@ -2,11 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsSplitPersonRegisteredV1(string FullName);
-
 [EventType("person-registered", generation: 2)]
 public record MigrationsSplitPersonRegistered(string FirstName, string LastName);
+
+[EventTypeGenerationFor<MigrationsSplitPersonRegistered>(1)]
+public record MigrationsSplitPersonRegisteredV1(string FullName);
 
 public class MigrationsSplitPersonRegisteredMigration : EventTypeMigration<MigrationsSplitPersonRegistered, MigrationsSplitPersonRegisteredV1>
 {
