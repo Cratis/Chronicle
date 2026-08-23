@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the registration was for.</param>
 /// <param name="failures">The failure per <see cref="ProjectionId"/> that did not register.</param>
+[GenerateSerializer]
 public class SomeProjectionDefinitionsFailedToRegister(
     EventStoreName eventStore,
     IReadOnlyDictionary<ProjectionId, Exception> failures) : Exception(
@@ -25,5 +26,6 @@ public class SomeProjectionDefinitionsFailedToRegister(
     /// <summary>
     /// Gets the failure per <see cref="ProjectionId"/> that did not register.
     /// </summary>
+    [Id(0)]
     public IReadOnlyDictionary<ProjectionId, Exception> Failures { get; } = failures;
 }

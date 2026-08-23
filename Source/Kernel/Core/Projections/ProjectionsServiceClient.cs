@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Projections.Engine;
 using Orleans.Runtime.Services;
 
 namespace Cratis.Chronicle.Projections;
@@ -20,30 +22,40 @@ public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvid
     /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
-        var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
+        var definitionList = definitions.ToList();
+        var failures = new ConcurrentDictionary<ProjectionId, ProjectionDefinitionRegistrationFailed>();
+        await ForEachGrainService(async service =>
         {
-            await GetGrainService(host).Register(eventStore, definitions);
+            try
+            {
+                await service.Register(eventStore, definitionList);
+            }
+            catch (Exception exception) when (ProjectionDefinitionsRegistrationFailed.TryFindFailures(exception, out var serviceFailures))
+            {
+                foreach (var (identifier, failure) in serviceFailures)
+                {
+                    failures.TryAdd(identifier, failure);
+                }
+            }
+        });
+
+        if (!failures.IsEmpty)
+        {
+            throw new ProjectionDefinitionsRegistrationFailed(failures);
         }
     }
 
     /// <inheritdoc/>
-    public async Task Unregister(EventStoreName eventStore, ProjectionId projectionId)
-    {
-        var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
-        {
-            await GetGrainService(host).Unregister(eventStore, projectionId);
-        }
-    }
+    public async Task Unregister(EventStoreName eventStore, ProjectionId projectionId) =>
+        await ForEachGrainService(service => service.Unregister(eventStore, projectionId));
 
     /// <inheritdoc/>
-    public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        await ForEachGrainService(service => service.NamespaceAdded(eventStore, @namespace));
+
+    async Task ForEachGrainService(Func<IProjectionsService, Task> callback)
     {
         var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
-        {
-            await GetGrainService(host).NamespaceAdded(eventStore, @namespace);
-        }
+        await Task.WhenAll(hosts.Keys.Select(host => callback(GetGrainService(host))));
     }
 }

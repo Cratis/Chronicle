@@ -20,50 +20,49 @@ namespace Cratis.Chronicle.Projections.Engine;
 [Singleton]
 public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage) : IProjectionsManager
 {
-    readonly ConcurrentDictionary<string, ProjectionDefinition> _definitions = new();
-    readonly ConcurrentDictionary<string, IProjection> _projections = new();
+    readonly ConcurrentDictionary<string, RegisteredProjection> _projections = new();
 
     /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         var definitionList = definitions.ToList();
+        var readModelDefinitionsByIdentifier = readModelDefinitions.ToDictionary(readModel => readModel.Identifier);
+        var availableReadModelIdentifiers = string.Join(", ", readModelDefinitionsByIdentifier.Keys.Select(identifier => $"'{identifier.Value}'"));
         var namespaceList = namespaces.ToList();
-
-        foreach (var definition in definitionList)
-        {
-            var definitionKey = GetKeyFor(eventStore, definition.Identifier);
-            _definitions[definitionKey] = definition;
-        }
-
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        var failures = new ConcurrentDictionary<ProjectionId, ProjectionDefinitionRegistrationFailed>();
 
-        // Every definition is registered, and the batch still fails when any of them does. Attributing the failure to
-        // the definition that produced it is the only thing this wrapping changes - without it the batch reports a
-        // single root cause against every identifier it was asked to register.
         await Task.WhenAll(definitionList.Select(async definition =>
         {
             try
             {
-                var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
-                if (readModelDefinition is null)
+                if (!readModelDefinitionsByIdentifier.TryGetValue(definition.ReadModel, out var readModelDefinition))
                 {
-                    var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
-                    throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
+                    throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableReadModelIdentifiers}]");
                 }
 
-                await Task.WhenAll(namespaceList.Select(async @namespace =>
+                var projectionsByNamespace = await Task.WhenAll(namespaceList.Select(async @namespace =>
                 {
                     var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModelDefinition, eventTypeSchemas);
-                    var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
-                    _projections[key] = projection;
+                    return KeyValuePair.Create(@namespace, projection);
                 }));
+
+                _projections[GetKeyFor(eventStore, definition.Identifier)] = new(
+                    definition,
+                    new ConcurrentDictionary<EventStoreNamespaceName, IProjection>(projectionsByNamespace));
             }
-            catch (Exception exception) when (exception is not ProjectionDefinitionRegistrationFailed)
+            catch (Exception exception)
             {
-                throw new ProjectionDefinitionRegistrationFailed(definition.Identifier, exception);
+                failures[definition.Identifier] = exception as ProjectionDefinitionRegistrationFailed ??
+                    new ProjectionDefinitionRegistrationFailed(definition.Identifier, exception);
             }
         }));
+
+        if (!failures.IsEmpty)
+        {
+            throw new ProjectionDefinitionsRegistrationFailed(failures);
+        }
     }
 
     /// <inheritdoc/>
@@ -71,31 +70,35 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
     {
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-        foreach (var definition in _definitions.Where(kvp => kvp.Key.StartsWith($"{eventStore}{KeyHelper.Separator}")).Select(kvp => kvp.Value))
+        var readModelDefinitionsByIdentifier = readModelDefinitions.ToDictionary(readModel => readModel.Identifier);
+        foreach (var registeredProjection in _projections.Where(keyValuePair => keyValuePair.Key.StartsWith($"{eventStore}{KeyHelper.Separator}")).Select(keyValuePair => keyValuePair.Value))
         {
-            var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
-            var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
-            if (!_projections.ContainsKey(key))
+            var readModel = readModelDefinitionsByIdentifier[registeredProjection.Definition.ReadModel];
+            if (!registeredProjection.Projections.ContainsKey(@namespace))
             {
-                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
+                registeredProjection.Projections[@namespace] = await projectionFactory.Create(eventStore, @namespace, registeredProjection.Definition, readModel, eventTypeSchemas);
             }
         }
     }
 
     /// <inheritdoc/>
-    public bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection) =>
-        _projections.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out projection);
-
-    /// <inheritdoc/>
-    public void Evict(EventStoreName eventStore, ProjectionId id)
+    public bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection)
     {
-        _definitions.TryRemove(GetKeyFor(eventStore, id), out _);
-
-        foreach (var key in _projections.Keys.Where(k => k.Contains($"{KeyHelper.Separator}{id}")).ToList())
+        if (_projections.TryGetValue(GetKeyFor(eventStore, id), out var registeredProjection))
         {
-            _projections.TryRemove(key, out _);
+            return registeredProjection.Projections.TryGetValue(@namespace, out projection);
         }
+
+        projection = null;
+        return false;
     }
 
+    /// <inheritdoc/>
+    public void Evict(EventStoreName eventStore, ProjectionId id) => _projections.TryRemove(GetKeyFor(eventStore, id), out _);
+
     string GetKeyFor(EventStoreName eventStore, ProjectionId id) => KeyHelper.Combine(eventStore, id);
+
+    sealed record RegisteredProjection(
+        ProjectionDefinition Definition,
+        ConcurrentDictionary<EventStoreNamespaceName, IProjection> Projections);
 }

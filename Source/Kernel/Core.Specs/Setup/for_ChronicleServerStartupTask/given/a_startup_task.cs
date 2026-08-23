@@ -30,6 +30,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 
@@ -101,7 +102,8 @@ public class a_startup_task : Specification
             _reactors,
             _projectionsServiceClient,
             _grainFactory,
-            _authenticationService);
+            _authenticationService,
+            NullLogger<ChronicleServerStartupTask>.Instance);
 
         _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([_eventStore]));
         _storage.GetEventStore(_eventStore).Returns(_eventStoreStorage);
