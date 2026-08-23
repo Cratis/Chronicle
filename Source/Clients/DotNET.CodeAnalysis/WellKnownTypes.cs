@@ -204,6 +204,11 @@ public static class WellKnownTypes
     public const string KernelEventSourceIdGenericDisplay = "Cratis.Chronicle.Concepts.Events.EventSourceId<T>";
 
     /// <summary>
+    /// The open-generic display string of the EventTypeGenerationFor&lt;TEventType&gt; attribute.
+    /// </summary>
+    public const string EventTypeGenerationForAttributeGenericDisplay = "Cratis.Chronicle.Events.EventTypeGenerationForAttribute<TEventType>";
+
+    /// <summary>
     /// Check whether a type is, or derives from, the strongly-typed <c>EventSourceId&lt;T&gt;</c>.
     /// </summary>
     /// <param name="type">The type symbol to check.</param>
@@ -297,6 +302,32 @@ public static class WellKnownTypes
                    attributeName == ClientEventTypeAttributeName;
         });
     }
+
+    /// <summary>
+    /// Get the <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute data from a type, if present.
+    /// </summary>
+    /// <param name="type">The type symbol to inspect.</param>
+    /// <returns>The <see cref="AttributeData"/> for the attribute, or <see langword="null"/> when the type has none.</returns>
+    public static AttributeData? GetEventTypeGenerationForAttributeData(ITypeSymbol type) =>
+        type.GetAttributes().FirstOrDefault(attribute =>
+            attribute.AttributeClass is { IsGenericType: true } attributeClass &&
+            attributeClass.OriginalDefinition.ToDisplayString() == EventTypeGenerationForAttributeGenericDisplay);
+
+    /// <summary>
+    /// Check if a type has the <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <returns>True if the type has the attribute, false otherwise.</returns>
+    public static bool HasEventTypeGenerationForAttribute(ITypeSymbol typeSymbol) =>
+        GetEventTypeGenerationForAttributeData(typeSymbol) is not null;
+
+    /// <summary>
+    /// Get the event type referenced by an <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute's type argument.
+    /// </summary>
+    /// <param name="attributeData">The <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute data.</param>
+    /// <returns>The referenced type symbol, or <see langword="null"/> if it could not be resolved.</returns>
+    public static ITypeSymbol? GetEventTypeGenerationForTarget(AttributeData attributeData) =>
+        attributeData.AttributeClass?.TypeArguments.FirstOrDefault();
 
     /// <summary>
     /// Check if a type implements IReactor.
