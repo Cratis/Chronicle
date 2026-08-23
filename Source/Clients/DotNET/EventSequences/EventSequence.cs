@@ -239,6 +239,7 @@ public class EventSequence(
             Events = eventsToAppend,
             CorrelationId = resolvedCorrelationId,
             Tags = allTags,
+            Occurred = ToWireOccurred(occurred),
             Causation = causation.ToSequencesContract(),
             CausedBy = identity.ToSequencesContract(),
             ConcurrencyScope = concurrencyScope.ToSequencesContract()

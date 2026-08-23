@@ -31,7 +31,7 @@ internal sealed class EventSequences(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>> AppendMany(global::Cratis.Chronicle.Contracts.Sequences.AppendManyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.AppendMany, global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>(
-            new global::Cratis.Chronicle.Sequences.AppendMany(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScope?.ToApi()),
+            new global::Cratis.Chronicle.Sequences.AppendMany(request.EventStore, request.Namespace, request.EventSequenceId, request.EventSourceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Occurred, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScope?.ToApi()),
             async command => ToAppendManyResponse((await command.Handle(grainFactory, requestCausation, currentPrincipalAccessor))));
 
     /// <inheritdoc/>
