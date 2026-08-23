@@ -2,14 +2,14 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsDotnetClientMultiGenPersonRegisteredV1(string EmailAddress, string Name);
-
-[EventType("dotnet-client-multi-gen-person-registered", generation: 2)]
-public record MigrationsDotnetClientMultiGenPersonRegisteredV2(string Email, string Name);
-
 [EventType("dotnet-client-multi-gen-person-registered", generation: 3)]
 public record MigrationsDotnetClientMultiGenPersonRegistered(string Email, string FirstName, string LastName);
+
+[EventTypeGenerationFor<MigrationsDotnetClientMultiGenPersonRegistered>(2)]
+public record MigrationsDotnetClientMultiGenPersonRegisteredV2(string Email, string Name);
+
+[EventTypeGenerationFor<MigrationsDotnetClientMultiGenPersonRegistered>(1)]
+public record MigrationsDotnetClientMultiGenPersonRegisteredV1(string EmailAddress, string Name);
 
 // Generation 1 → 2: rename EmailAddress to Email
 public class MigrationsDotnetClientMultiGenPersonRegisteredV1ToV2 : EventTypeMigration<MigrationsDotnetClientMultiGenPersonRegisteredV2, MigrationsDotnetClientMultiGenPersonRegisteredV1>

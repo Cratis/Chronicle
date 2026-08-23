@@ -62,7 +62,7 @@
   href: CHR0035.mdx
 - name: CHR0036 - Reducer must not have mutable state
   href: CHR0036.mdx
-- name: CHR0037 - Event type migration generations must share one explicit [EventType] id
+- name: CHR0037 - Event type migration generations must belong to one event type
   href: CHR0037.mdx
 - name: CHR0039 - Assertion result is discarded and can never fail
   href: CHR0039.mdx
@@ -82,3 +82,5 @@
   href: CHR0047.mdx
 - name: CHR0048 - A clear is declared for a member that cannot hold null
   href: CHR0048.mdx
+- name: CHR0049 - [EventTypeGenerationFor<T>] must reference a type marked with [EventType]
+  href: CHR0049.mdx

@@ -29,12 +29,17 @@ Generation 1 (stored) → Migration 1→2 → Migration 2→3 → Current (Gener
 
 ### 1. Keep the prior record and bump the generation on the new one
 
-Keep the old shape available to the migration as `TPrevious`, and mark the current record's generation:
+Keep the old shape available to the migration as `TPrevious`. Mark the current record's generation with `[EventType(generation: N)]` as always, and mark the prior record with **`[EventTypeGenerationFor<TCurrent>(N-1)]`** instead of its own `[EventType]` — its event type id is then resolved from the current record's `[EventType]`, so the two can never end up with mismatched ids:
 
 ```csharp
 [EventType(generation: 2)]
 public record OrderPlaced(OrderId OrderId, Currency Currency);   // generation 2 (current)
+
+[EventTypeGenerationFor<OrderPlaced>(1)]
+public record OrderPlacedV1(OrderId OrderId);   // generation 1 (prior)
 ```
+
+> **Older style, still supported:** you can instead give `OrderPlacedV1` its own `[EventType("order-placed", generation: 1)]`, as long as the id string is explicit and **identical** to the id on `OrderPlaced`. This is not deprecated, but prefer `[EventTypeGenerationFor<T>]` for anything new — an omitted or mismatched id on this older style silently defaults to the CLR type name, which Chronicle then treats as a wholly unrelated event type, and the migration never applies. Two analyzers (`CHR0037`, `CHR0049`) and a constructor-time exception (`MigrationGenerationsMustShareEventTypeId`) catch this mistake for both styles.
 
 ### 2. Write the migration
 
@@ -64,6 +69,7 @@ For three generations, write two migrations (`1→2`, `2→3`) — each only kno
 | Pitfall | Why it breaks |
 |---|---|
 | Editing the stored event record without bumping `generation` | Old events still carry the old schema; Chronicle won't migrate them |
+| Giving the prior record its own `[EventType]` with no id, or an id that doesn't exactly match the current generation's | Chronicle treats the two as unrelated event types and the migration never applies; use `[EventTypeGenerationFor<T>]` so there's no id to mismatch |
 | Adding a nullable value type to handle "missing old data" | Analyzer-flagged anti-pattern; use a migration default |
 | A migration that throws on a null/missing old field | Old events may lack fields entirely — null-coalesce / default |
 | Splitting one event into two inside `Upcast` | `Upcast` returns one event; model a split as a reactor/command, not a schema migration |

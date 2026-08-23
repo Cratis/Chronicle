@@ -1,0 +1,36 @@
+# CHR0049: [EventTypeGenerationFor<T>] must reference a type marked with [EventType]
+
+## Rule Description
+
+`[EventTypeGenerationFor<T>]` marks a record as a previous generation of the event type `T` represents. Chronicle resolves the shared event type id directly from `T`'s own `[EventType]` attribute — so `T` must carry `[EventType]` directly.
+
+This is reported whenever `T`:
+
+- has no `[EventType]` attribute at all, or
+- is itself marked with `[EventTypeGenerationFor<T>]` instead — chaining generation markers is rejected for the same reason: there is still no `[EventType]` at the end of the chain to resolve an id from.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0049/violation" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0049/fix" />
+
+## Why This Rule Exists
+
+`[EventTypeGenerationFor<T>]` exists so a previous-generation record never carries its own, independently-typed event type id — the id comes from `T` instead, so the two can never drift apart. That only works if `T` actually has an id to give: a type with no `[EventType]` attribute has none, and neither does a type that is itself only a generation marker.
+
+Without this check, a record marked `[EventTypeGenerationFor<T>]` where `T` isn't an event type compiles cleanly but fails only when the client connects to Chronicle, throwing `EventTypeGenerationReferencesNonEventType` at startup. This rule surfaces the same mistake at compile time instead.
+
+The same analyzer class also reports **CHR0050** (`EventTypeGenerationForCannotCombineWithEventType`, Error) when a type carries both `[EventType]` and `[EventTypeGenerationFor<T>]` at once. A type is either the current generation or a previous one — never both — and combining them throws `EventTypeGenerationForCannotBeCombinedWithEventType` at runtime for the same reason this rule's violation does: Chronicle can no longer tell which attribute owns the id.
+
+## Related Rules
+
+- [CHR0037](CHR0037): Event type migration generations must belong to one event type — validates that a migration's `[EventTypeGenerationFor<T>]` points at the migration's own upgrade type, once it already resolves to an event type.

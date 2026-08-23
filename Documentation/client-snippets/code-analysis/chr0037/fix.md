@@ -2,14 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-// Warning CHR0037: Event type generations 'CustomerRegisteredV2' and 'CustomerRegisteredV1'
-// referenced by migration 'CustomerRegisteredMigration' must resolve to the same event type
-// and differ only by generation.
-[EventType("Customer.Registered", generation: 1)]
-public record CustomerRegisteredV1(string Name);
-
 [EventType("Customer.Renamed", generation: 2)]
 public record CustomerRegisteredV2(string FirstName, string LastName);
+
+[EventTypeGenerationFor<CustomerRegisteredV2>(1)]
+public record CustomerRegisteredV1(string Name);
 
 public class CustomerRegisteredMigration
     : EventTypeMigration<CustomerRegisteredV2, CustomerRegisteredV1>

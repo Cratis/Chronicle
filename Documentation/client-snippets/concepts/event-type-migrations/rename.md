@@ -2,11 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsRenamePaymentProcessedV1(decimal OldAmount);
-
 [EventType("payment-processed", generation: 2)]
 public record MigrationsRenamePaymentProcessed(decimal Amount);
+
+[EventTypeGenerationFor<MigrationsRenamePaymentProcessed>(1)]
+public record MigrationsRenamePaymentProcessedV1(decimal OldAmount);
 
 public class MigrationsRenamePaymentProcessedMigration : EventTypeMigration<MigrationsRenamePaymentProcessed, MigrationsRenamePaymentProcessedV1>
 {
