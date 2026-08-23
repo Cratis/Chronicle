@@ -35,18 +35,21 @@ env:
   # 16.x already lost intra-major compatibility. From 16.34.0 the Security and Jobs surfaces stopped being
   # hand-written gRPC contracts and became generated from the Arc artifacts in Core, which renamed every method and
   # moved every query payload behind a result envelope; COMPATIBILITY-REPORT.md measures exactly what that cost and
-  # concludes it cannot be undone without freezing a pre-Arc response shape into the generator permanently. Moving
-  # the rest of the Web API surface into Core - issue #2908 - breaks the same way for the same reason.
+  # concludes it cannot be undone without freezing a pre-Arc response shape into the generator permanently. Issue
+  # #2908 finished that conversion: every remaining hand-written service (EventSequences, EventTypes, Captures,
+  # ExternalServices, Identities, Observation/Webhooks, Recommendations, Seeding, and the rest of the Web API
+  # surface) moved onto the same generated path, for the same reason, and broke the same way.
   #
   # A gate that fails every run on a break that already shipped stops being read, and one that is turned off
-  # entirely catches nothing. So 16.x is measured from where the conversion started instead: 16.34.0 and everything
-  # after it is the generated contract and has to keep working, and the releases before it are acknowledged as
-  # already broken. This is a statement about 16.x only - the major is read from the version itself, so 17 and
-  # beyond get the whole of their major compared with no floor at all, which is the behavior every major should have.
+  # entirely catches nothing. So 16.x is measured from where the conversion finished instead: 16.38.0 and
+  # everything after it is the generated contract and has to keep working, and the releases before it - including
+  # 16.34.0 through 16.37.2, which only had *part* of the conversion - are acknowledged as already broken. This is
+  # a statement about 16.x only - the major is read from the version itself, so 17 and beyond get the whole of
+  # their major compared with no floor at all, which is the behavior every major should have.
   #
   # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
   # release that does, never to make a red check go away.
-  WIRE_BASELINE_FLOOR: "16.34.0"
+  WIRE_BASELINE_FLOOR: "16.38.0"
 
 jobs:
   wire-compatibility:
