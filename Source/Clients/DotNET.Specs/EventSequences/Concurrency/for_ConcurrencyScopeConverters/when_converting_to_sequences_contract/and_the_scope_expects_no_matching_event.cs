@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_contract;
+namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_sequences_contract;
 
 /// <summary>
 /// <para>
@@ -23,14 +23,14 @@ namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConver
 public class and_the_scope_expects_no_matching_event : Specification
 {
     ConcurrencyScope _scope;
-    Contracts.EventSequences.Concurrency.ConcurrencyScope _result;
+    Contracts.Sequences.ConcurrencyScope _result;
 
     void Establish() => _scope = new ConcurrencyScope(
         EventSequenceNumber.BeforeFirst,
         new EventSourceId("some-event-source-id"),
         EventSourceType: new EventSourceType("Customer"));
 
-    void Because() => _result = _scope.ToContract();
+    void Because() => _result = _scope.ToSequencesContract();
 
     [Fact] void should_declare_the_expectation_in_its_own_field() => _result.ExpectsNoMatchingEvent.ShouldBeTrue();
     [Fact] void should_send_the_number_an_older_kernel_declines_to_validate() => _result.SequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable.Value);

@@ -5,7 +5,6 @@ using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -36,7 +35,6 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Recommendations"><see cref="IRecommendations"/> instance.</param>
 /// <param name="Patterns"><see cref="IPatterns"/> instance.</param>
 /// <param name="Identities"><see cref="IIdentities"/> instance.</param>
-/// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
 /// <param name="Sequences"><see cref="Sequences.IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
 /// <param name="Constraints"><see cref="IConstraints"/> instance.</param>
@@ -64,7 +62,6 @@ public sealed record Services(
     IRecommendations Recommendations,
     IPatterns Patterns,
     IIdentities Identities,
-    IEventSequences EventSequences,
     Sequences.IEventSequences Sequences,
     IEventTypes EventTypes,
     IConstraints Constraints,

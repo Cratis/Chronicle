@@ -5,7 +5,6 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -31,21 +30,16 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// Represents an in-process implementation of <see cref="IServices"/> for test scenarios.
 /// </summary>
 /// <remarks>
-/// Only <see cref="EventSequences"/>, <see cref="Sequences"/> and <see cref="Constraints"/> are provided with real
+/// Only <see cref="Sequences"/> and <see cref="Constraints"/> are provided with real
 /// implementations. All other service properties throw <see cref="NotSupportedException"/>
 /// since they are not needed for event-sequence testing.
 /// </remarks>
-/// <param name="eventSequences">The <see cref="IEventSequences"/> service.</param>
 /// <param name="sequences">The <see cref="Contracts.Sequences.IEventSequences"/> service.</param>
 /// <param name="constraints">The <see cref="IConstraints"/> service.</param>
 internal sealed class InProcessServices(
-    IEventSequences eventSequences,
     Contracts.Sequences.IEventSequences sequences,
     IConstraints constraints) : IServices
 {
-    /// <inheritdoc/>
-    public IEventSequences EventSequences => eventSequences;
-
     /// <inheritdoc/>
     public Contracts.Sequences.IEventSequences Sequences => sequences;
 
