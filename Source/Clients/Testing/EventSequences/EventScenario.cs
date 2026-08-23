@@ -194,6 +194,7 @@ public class EventScenario(
             new InProcessCurrentPrincipalAccessor(),
             storage,
             eventCompliance,
+            jsonSerializerOptions,
             new InProcessQueryContextManager(),
             NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 

@@ -28,6 +28,24 @@ public static class ParameterClassification
     ];
 
     /// <summary>
+    /// Full names of well-known framework types that are DI-registered singletons even though they are concrete,
+    /// sealed classes rather than interfaces - System.Text.Json.JsonSerializerOptions is the one this generator's
+    /// own artifacts already take as a query parameter.
+    /// </summary>
+    /// <remarks>
+    /// Treating it as wire data instead of a dependency does not fail loudly: protobuf-net.Grpc's SchemaGenerator
+    /// silently drops the RPC method (and its request/response messages) it cannot model a field for, rather than
+    /// throwing, so the method simply never reaches the wire. See
+    /// <c>Cratis.Chronicle.Sequences.AppendedEvent.QueryEvents</c> and its siblings.
+    /// <para>
+    /// Matched by full name, not by <c>typeof()</c> equality - the artifact assembly is loaded via reflection from
+    /// a path rather than referenced, so its copy of System.Text.Json is not guaranteed to be the same
+    /// <see cref="Type"/> instance this generator's own compiled reference to the same assembly would produce.
+    /// </para>
+    /// </remarks>
+    static readonly HashSet<string> _knownDependencyTypeNames = ["System.Text.Json.JsonSerializerOptions"];
+
+    /// <summary>
     /// Determines whether a parameter is resolved from the service container rather than carried on the wire.
     /// </summary>
     /// <param name="type">The parameter type.</param>
@@ -44,7 +62,7 @@ public static class ParameterClassification
             return false;
         }
 
-        return type.IsInterface || type.IsAbstract;
+        return type.IsInterface || type.IsAbstract || _knownDependencyTypeNames.Contains(type.FullName ?? string.Empty);
     }
 
     /// <summary>

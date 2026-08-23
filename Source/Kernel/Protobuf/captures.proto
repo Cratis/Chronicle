@@ -17,6 +17,22 @@ message CaptureValidationMessage {
    int32 Line = 2;
    int32 Column = 3;
 }
+message CapturedEventResponse {
+   EventContext Context = 1;
+   string Content = 2;
+   string Id = 3;
+}
+message CapturedEventsRequest {
+   string EventStore = 1;
+   string CaptureName = 2;
+   string Namespace = 3;
+   int32 MaxEvents = 4;
+}
+message Causation {
+   SerializableDateTimeOffset Occurred = 1;
+   string Type = 2;
+   map<string,string> Properties = 3;
+}
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2; // default value could not be applied: True
@@ -56,8 +72,44 @@ message DeleteCaptureRequest {
    string EventStore = 1;
    string CaptureId = 2;
 }
+message EventContext {
+   EventType EventType = 1;
+   string EventSourceType = 2;
+   string EventSourceId = 3;
+   uint64 SequenceNumber = 4;
+   string EventStreamType = 5;
+   string EventStreamId = 6;
+   SerializableDateTimeOffset Occurred = 7;
+   string EventStore = 8;
+   string Namespace = 9;
+   .bcl.Guid CorrelationId = 10; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   repeated Causation Causation = 11;
+   Identity CausedBy = 12;
+   EventObservationState ObservationState = 13;
+   repeated string Tags = 14;
+   string Hash = 15;
+}
+enum EventObservationState {
+   // this is a composite/flags enumeration
+   None = 0;
+   Initial = 1;
+   HeadOfReplay = 2;
+   Replay = 4;
+   TailOfReplay = 8;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
 message GetCapturesRequest {
    string EventStore = 1;
+}
+message Identity {
+   string Subject = 1;
+   string Name = 2;
+   string UserName = 3;
+   Identity OnBehalfOf = 4;
 }
 message ObserveCapturesRequest {
    string EventStore = 1;
@@ -70,6 +122,14 @@ message QueryResult_IEnumerable_CaptureDetailsResponse {
    string ExceptionStackTrace = 5;
    repeated CaptureDetailsResponse Data = 6;
 }
+message QueryResult_IEnumerable_CapturedEventResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated CapturedEventResponse Data = 6;
+}
 message SaveCaptureRequest {
    string EventStore = 1;
    string Id = 2;
@@ -78,6 +138,10 @@ message SaveCaptureRequest {
 message SaveCaptureResponse {
    CaptureDetailsResponse Capture = 1;
    repeated CaptureValidationMessage Messages = 2;
+}
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
+message SerializableDateTimeOffset {
+   string Value = 1;
 }
 message StartCaptureRequest {
    string EventStore = 1;
@@ -109,6 +173,7 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service Captures {
+   rpc CapturedEvents (CapturedEventsRequest) returns (QueryResult_IEnumerable_CapturedEventResponse);
    rpc DeleteCapture (DeleteCaptureRequest) returns (CommandResult);
    rpc GetCaptures (GetCapturesRequest) returns (QueryResult_IEnumerable_CaptureDetailsResponse);
    rpc ObserveCaptures (ObserveCapturesRequest) returns (stream QueryResult_IEnumerable_CaptureDetailsResponse);
