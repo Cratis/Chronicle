@@ -3,12 +3,12 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_contract;
+namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_sequences_contract;
 
 public class and_all_properties_are_set : Specification
 {
     ConcurrencyScope _scope;
-    Contracts.EventSequences.Concurrency.ConcurrencyScope _result;
+    Contracts.Sequences.ConcurrencyScope _result;
     EventType _eventType;
     EventType _anotherEventType;
 
@@ -28,7 +28,7 @@ public class and_all_properties_are_set : Specification
             ]);
     }
 
-    void Because() => _result = _scope.ToContract();
+    void Because() => _result = _scope.ToSequencesContract();
 
     [Fact] void should_set_sequence_number() => _result.SequenceNumber.ShouldEqual(42ul);
     [Fact] void should_set_event_source_id_to_true() => _result.EventSourceId.ShouldBeTrue();
@@ -37,5 +37,5 @@ public class and_all_properties_are_set : Specification
     [Fact] void should_set_event_source_type() => _result.EventSourceType.ShouldEqual("SomeSourceType");
     [Fact] void should_set_event_types() => _result.EventTypes.ShouldContain(et => et.Id == _eventType.Id && et.Generation == _eventType.Generation);
     [Fact] void should_set_all_event_types() => _result.EventTypes.ShouldContain(et => et.Id == _anotherEventType.Id && et.Generation == _anotherEventType.Generation);
-    [Fact] void should_have_correct_event_types_count() => _result.EventTypes.Count.ShouldEqual(2);
+    [Fact] void should_have_correct_event_types_count() => _result.EventTypes.Count().ShouldEqual(2);
 }

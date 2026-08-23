@@ -8,7 +8,6 @@ using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -230,7 +229,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IRecommendations>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.Patterns.IPatterns>(clientFactory),
             callInvoker.CreateGrpcService<IIdentities>(clientFactory),
-            callInvoker.CreateGrpcService<IEventSequences>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.Sequences.IEventSequences>(clientFactory),
             callInvoker.CreateGrpcService<IEventTypes>(clientFactory),
             callInvoker.CreateGrpcService<IConstraints>(clientFactory),

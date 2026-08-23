@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_contract;
+namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_sequences_contract;
 
 /// <summary>
 /// The other side of the same rule. Rewriting the number field is confined to the before-first expectation - an
@@ -13,13 +13,13 @@ namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConver
 public class and_the_scope_expects_an_actual_sequence_number : Specification
 {
     ConcurrencyScope _scope;
-    Contracts.EventSequences.Concurrency.ConcurrencyScope _result;
+    Contracts.Sequences.ConcurrencyScope _result;
 
     void Establish() => _scope = new ConcurrencyScope(
         new EventSequenceNumber(42),
         new EventSourceId("some-event-source-id"));
 
-    void Because() => _result = _scope.ToContract();
+    void Because() => _result = _scope.ToSequencesContract();
 
     [Fact] void should_send_the_expected_sequence_number() => _result.SequenceNumber.ShouldEqual(42UL);
     [Fact] void should_not_declare_the_expectation() => _result.ExpectsNoMatchingEvent.ShouldBeFalse();

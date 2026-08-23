@@ -24,7 +24,6 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events.Constraints;
-using Cratis.Chronicle.Services.EventSequences;
 using Cratis.Chronicle.Services.Observation;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
@@ -139,11 +138,6 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Identities.Identities(
                     storage,
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Identities.Identities>>()),
-                new EventSequences(
-                    grainFactory,
-                    storage,
-                    sp.GetRequiredService<IEventCompliance>(),
-                    jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Sequences.EventSequences(
                     grainFactory,
                     new Cratis.Chronicle.Sequences.RequestCausation(sp.GetRequiredService<IHttpContextAccessor>()),

@@ -3,12 +3,12 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_contract;
+namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_sequences_contract;
 
 public class and_event_stream_id_is_null : Specification
 {
     ConcurrencyScope _scope;
-    Contracts.EventSequences.Concurrency.ConcurrencyScope _result;
+    Contracts.Sequences.ConcurrencyScope _result;
     EventType _eventType;
 
     void Establish()
@@ -23,7 +23,7 @@ public class and_event_stream_id_is_null : Specification
             [_eventType]);
     }
 
-    void Because() => _result = _scope.ToContract();
+    void Because() => _result = _scope.ToSequencesContract();
 
     [Fact] void should_set_event_stream_id_to_null() => _result.EventStreamId.ShouldBeNull();
     [Fact] void should_set_sequence_number() => _result.SequenceNumber.ShouldEqual(42ul);

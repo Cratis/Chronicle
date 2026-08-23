@@ -3,14 +3,14 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_contract;
+namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyScopeConverters.when_converting_to_sequences_contract;
 
 public class with_special_sequence_numbers : Specification
 {
     ConcurrencyScope _scopeMax;
     ConcurrencyScope _scopeUnavailable;
-    Contracts.EventSequences.Concurrency.ConcurrencyScope _resultMax;
-    Contracts.EventSequences.Concurrency.ConcurrencyScope _resultUnavailable;
+    Contracts.Sequences.ConcurrencyScope _resultMax;
+    Contracts.Sequences.ConcurrencyScope _resultUnavailable;
 
     void Establish()
     {
@@ -20,8 +20,8 @@ public class with_special_sequence_numbers : Specification
 
     void Because()
     {
-        _resultMax = _scopeMax.ToContract();
-        _resultUnavailable = _scopeUnavailable.ToContract();
+        _resultMax = _scopeMax.ToSequencesContract();
+        _resultUnavailable = _scopeUnavailable.ToSequencesContract();
     }
 
     [Fact] void should_set_max_sequence_number_correctly() => _resultMax.SequenceNumber.ShouldEqual(EventSequenceNumber.Max.Value);

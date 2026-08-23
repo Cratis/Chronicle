@@ -392,11 +392,6 @@ public class EventStoreForTesting : IEventStore
                 NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
 
-        var eventSequencesService = new KernelGrpc::Cratis.Chronicle.Services.EventSequences.EventSequences(
-            grainFactory,
-            storage,
-            eventCompliance,
-            _jsonSerializerOptions);
         var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
             grainFactory,
             new KernelCore::Cratis.Chronicle.Sequences.RequestCausation(new Microsoft.AspNetCore.Http.HttpContextAccessor()),
@@ -408,7 +403,7 @@ public class EventStoreForTesting : IEventStore
             NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 
         var constraintsService = new InProcessNoOpConstraintsService();
-        var services = new InProcessServices(eventSequencesService, sequencesService, constraintsService);
+        var services = new InProcessServices(sequencesService, constraintsService);
 #pragma warning disable CA2000 // Dispose objects before losing scope — EventLog/EventSequence takes ownership
         var connection = new InProcessChronicleConnection(services);
 #pragma warning restore CA2000

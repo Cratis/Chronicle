@@ -10,7 +10,6 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
@@ -41,7 +40,6 @@ using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.Capt
 using KernelComplianceService = KernelGrpc::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelGrpc::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
-using KernelEventSequencesService = KernelGrpc::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelGrpc::Cratis.Chronicle.Services.EventStores.EventStores;
 using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
 using KernelEventTypesService = KernelGrpc::Cratis.Chronicle.Services.EventTypes.EventTypes;
@@ -158,15 +156,6 @@ internal sealed class TestingServices(
 
     readonly Lazy<IEventSeeding> _seeding = new(() =>
         new KernelSeedingService(grainFactory, NullLogger<KernelSeedingService>.Instance));
-
-    readonly Lazy<IEventSequences> _eventSequences = new(() =>
-        new KernelEventSequencesService(
-            grainFactory,
-            storage,
-            new KernelEventCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                new ExpandoObjectConverter(new TypeFormats())),
-            jsonSerializerOptions));
 
     readonly Lazy<Contracts.Sequences.IEventSequences> _sequences = new(() =>
         new KernelSequencesService(
@@ -286,9 +275,6 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IEventSeeding Seeding => _seeding.Value;
-
-    /// <inheritdoc/>
-    public IEventSequences EventSequences => _eventSequences.Value;
 
     /// <inheritdoc/>
     public Contracts.Sequences.IEventSequences Sequences => _sequences.Value;
