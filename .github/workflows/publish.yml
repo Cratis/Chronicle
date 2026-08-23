@@ -346,6 +346,13 @@ jobs:
       version: ${{ needs.release.outputs.version }}
       protos-artifact: proto-files
 
+  # The development kernel is built Release, like the release kernel - the development part is the DEVELOPMENT
+  # symbol passed below, not the configuration. Nothing is lost by optimizing it: DefineConstants resolves to
+  # DEVELOPMENT alone in both configurations (the global property overrides the DEBUG the Debug configuration
+  # would otherwise add), and there is no #if DEBUG, Debug.Assert or [Conditional("DEBUG")] anywhere in Source,
+  # so no conditional code changes - only Optimize. It was built Debug until the unoptimized kernel showed up as
+  # startup cost in every container based on this image: the kernel's boot is serial and CPU-bound, so it lands
+  # directly on time-to-ready on slower cloud vCPUs.
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -366,7 +373,7 @@ jobs:
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
+          dotnet publish -c Release -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
 
       - name: Upload x64 development kernel output
         uses: actions/upload-artifact@v4
@@ -394,7 +401,7 @@ jobs:
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
+          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
 
       - name: Upload arm64 development kernel output
         uses: actions/upload-artifact@v4
