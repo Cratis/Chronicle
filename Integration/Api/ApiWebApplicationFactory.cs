@@ -10,7 +10,13 @@ public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoo
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
-        builder.ConfigureTestServices(services => services.Configure<ChronicleAspNetCoreOptions>(options =>
+
+        // Overrides the base factory's bare connection string with the out-of-process
+        // container's real dev credentials. Configuring ChronicleClientOptions - not
+        // ChronicleAspNetCoreOptions - because that's the type AddCratisChronicleClient
+        // actually reads; the two are separate IOptions<T> registrations even though
+        // ChronicleAspNetCoreOptions derives from it.
+        builder.ConfigureTestServices(services => services.Configure<ChronicleClientOptions>(options =>
         {
             options.EventStore = Constants.EventStore;
             options.ConnectionString = new ChronicleConnectionStringBuilder()
