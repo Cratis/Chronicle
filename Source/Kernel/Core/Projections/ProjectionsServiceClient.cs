@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
+using Cratis.Monads;
 using Orleans.Runtime.Services;
 
 namespace Cratis.Chronicle.Projections;
@@ -20,29 +20,26 @@ public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvid
     readonly IManagementGrain _managementGrain = grainFactory.GetGrain<IManagementGrain>(1);
 
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
+    public async Task<Result<ProjectionRegistrationError>> Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
         var definitionList = definitions.ToList();
-        var failures = new ConcurrentDictionary<ProjectionId, ProjectionDefinitionRegistrationFailed>();
-        await ForEachGrainService(async service =>
+        var hosts = await _managementGrain.GetHosts(true);
+        var results = await Task.WhenAll(hosts.Keys.Select(host => GetGrainService(host).Register(eventStore, definitionList)));
+        var failures = new Dictionary<ProjectionId, Exception>();
+        foreach (var result in results)
         {
-            try
+            if (result.TryGetError(out var error))
             {
-                await service.Register(eventStore, definitionList);
-            }
-            catch (Exception exception) when (ProjectionDefinitionsRegistrationFailed.TryFindFailures(exception, out var serviceFailures))
-            {
-                foreach (var (identifier, failure) in serviceFailures)
+                foreach (var (identifier, failure) in error.Failures)
                 {
                     failures.TryAdd(identifier, failure);
                 }
             }
-        });
-
-        if (!failures.IsEmpty)
-        {
-            throw new ProjectionDefinitionsRegistrationFailed(failures);
         }
+
+        return failures.Count == 0
+            ? Result<ProjectionRegistrationError>.Success()
+            : Result.Failed(new ProjectionRegistrationError(failures));
     }
 
     /// <inheritdoc/>

@@ -8,6 +8,7 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using IEngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
 
@@ -32,27 +33,19 @@ public class ProjectionsService(
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
+    public async Task<Result<ProjectionRegistrationError>> Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
         var definitionList = definitions.ToList();
         var readModelDefinitions = await grainFactory.GetReadModelsManager(eventStore).GetDefinitions();
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
         var allNamespaces = (await namespaces.GetAll()).ToList();
+        var result = await projections.Register(eventStore, definitionList, readModelDefinitions, allNamespaces);
+        var registeredDefinitions = result.TryGetError(out var error)
+            ? definitionList.Where(definition => !error.Failures.ContainsKey(definition.Identifier))
+            : definitionList;
 
-        try
-        {
-            await projections.Register(eventStore, definitionList, readModelDefinitions, allNamespaces);
-        }
-        catch (ProjectionDefinitionsRegistrationFailed exception)
-        {
-            EvictProjectionPipelines(
-                eventStore,
-                definitionList.Where(definition => !exception.Failures.ContainsKey(definition.Identifier)),
-                allNamespaces);
-            throw;
-        }
-
-        EvictProjectionPipelines(eventStore, definitionList, allNamespaces);
+        EvictProjectionPipelines(eventStore, registeredDefinitions, allNamespaces);
+        return result;
     }
 
     /// <inheritdoc/>

@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
-using NSubstitute.ExceptionExtensions;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 
@@ -19,20 +18,17 @@ public class and_one_of_two_persisted_projection_definitions_is_rejected : given
         _acceptedDefinition = CreateProjectionDefinition("accepted-projection", "accepted-read-model");
         _rejectedDefinition = CreateProjectionDefinition("rejected-projection", "rejected-read-model");
         _projectionsManager.GetProjectionDefinitions().Returns([_acceptedDefinition, _rejectedDefinition]);
-        var failure = new ProjectionDefinitionRegistrationFailed(
-            _rejectedDefinition.Identifier,
-            new MissingChildCollectionInReadModelSchema(
+        var error = new ProjectionRegistrationError(new Dictionary<ProjectionId, Exception>
+        {
+            [_rejectedDefinition.Identifier] = new MissingChildCollectionInReadModelSchema(
                 _rejectedDefinition.Identifier,
                 "children",
                 _rejectedDefinition.ReadModel,
-                []));
+                [])
+        });
         _projectionsServiceClient
             .Register(_eventStore, Arg.Any<IEnumerable<ProjectionDefinition>>())
-            .ThrowsAsync(new ProjectionDefinitionsRegistrationFailed(
-                new Dictionary<ProjectionId, ProjectionDefinitionRegistrationFailed>
-                {
-                    [_rejectedDefinition.Identifier] = failure
-                }));
+            .Returns(Cratis.Monads.Result.Failed(error));
     }
 
     async Task Because() => _exception = await Catch.Exception(Execute);

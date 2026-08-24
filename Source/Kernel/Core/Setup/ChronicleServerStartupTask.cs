@@ -20,8 +20,6 @@ using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
-using ProjectionDefinitionsRegistrationFailed = Cratis.Chronicle.Projections.Engine.ProjectionDefinitionsRegistrationFailed;
-
 namespace Orleans.Hosting;
 
 /// <summary>
@@ -109,13 +107,10 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task RegisterPersistedProjectionDefinitions(EventStoreName eventStore, IEnumerable<ProjectionDefinition> projectionDefinitions)
     {
-        try
+        var result = await projectionsServiceClient.Register(eventStore, projectionDefinitions);
+        if (result.TryGetError(out var error))
         {
-            await projectionsServiceClient.Register(eventStore, projectionDefinitions);
-        }
-        catch (Exception exception) when (ProjectionDefinitionsRegistrationFailed.TryFindFailures(exception, out var failures))
-        {
-            foreach (var (identifier, failure) in failures)
+            foreach (var (identifier, failure) in error.Failures)
             {
                 logger.FailedRegisteringPersistedProjectionDefinition(failure, identifier);
             }

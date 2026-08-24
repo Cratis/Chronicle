@@ -57,11 +57,6 @@ public class ProjectionRegistrationFailed : Exception
             return new ProjectionRegistrationFailed(eventStore, partialRegistrationFailures.Keys, innerException);
         }
 
-        if (ProjectionDefinitionsRegistrationFailed.TryFindFailures(innerException, out var engineFailures))
-        {
-            return new ProjectionRegistrationFailed(eventStore, engineFailures.Keys, innerException);
-        }
-
         return ProjectionDefinitionRegistrationFailed.TryFindIdentifier(innerException, out var identifier)
             ? new ProjectionRegistrationFailed(eventStore, identifier, innerException)
             : new ProjectionRegistrationFailed(eventStore, projectionIds, innerException);

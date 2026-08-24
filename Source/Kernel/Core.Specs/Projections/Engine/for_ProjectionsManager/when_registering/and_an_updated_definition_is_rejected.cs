@@ -12,7 +12,7 @@ public class and_an_updated_definition_is_rejected : given.a_projections_manager
 {
     IProjection _projectionBeforeUpdate;
     IProjection _projectionAfterUpdate;
-    Exception _exception;
+    ProjectionRegistrationError _error;
 
     async Task Because()
     {
@@ -32,14 +32,15 @@ public class and_an_updated_definition_is_rejected : given.a_projections_manager
                 Arg.Any<IEnumerable<EventTypeSchema>>())
             .ThrowsAsync(new InvalidOperationException("Failed to create the updated projection"));
 
-        _exception = await Catch.Exception(() => _manager.Register(
+        var result = await _manager.Register(
             _eventStore,
             [_firstDefinition],
             [_firstReadModelDefinition],
-            [_namespace]));
+            [_namespace]);
+        result.TryGetError(out _error);
         _manager.TryGet(_eventStore, _namespace, _firstDefinition.Identifier, out _projectionAfterUpdate);
     }
 
-    [Fact] void should_fail_the_update() => _exception.ShouldBeOfExactType<ProjectionDefinitionsRegistrationFailed>();
+    [Fact] void should_report_the_failed_update() => _error.ShouldNotBeNull();
     [Fact] void should_preserve_the_registered_projection() => _projectionAfterUpdate.ShouldEqual(_projectionBeforeUpdate);
 }

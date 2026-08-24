@@ -240,21 +240,19 @@ public partial class ProjectionsManager(
 
     async Task<IReadOnlyList<ProjectionDefinition>> RegisterWithEngine(IReadOnlyList<ProjectionDefinition> definitions, Dictionary<ProjectionId, Exception> failures)
     {
-        try
+        var result = await projectionsService.Register(_eventStoreName, definitions);
+        if (!result.TryGetError(out var error))
         {
-            await projectionsService.Register(_eventStoreName, definitions);
             return definitions;
         }
-        catch (Exception exception) when (ProjectionDefinitionsRegistrationFailed.TryFindFailures(exception, out var registrationFailures))
-        {
-            foreach (var (identifier, failure) in registrationFailures)
-            {
-                failures[identifier] = failure;
-                logger.FailedRegisteringProjectionWithEngine(failure, identifier);
-            }
 
-            return definitions.Where(definition => !registrationFailures.ContainsKey(definition.Identifier)).ToList();
+        foreach (var (identifier, failure) in error.Failures)
+        {
+            failures[identifier] = failure;
+            logger.FailedRegisteringProjectionWithEngine(failure, identifier);
         }
+
+        return definitions.Where(definition => !error.Failures.ContainsKey(definition.Identifier)).ToList();
     }
 
     void MergeIntoState(IEnumerable<ProjectionDefinition> definitions)

@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.Engine;
 
@@ -23,7 +24,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
     readonly ConcurrentDictionary<string, RegisteredProjection> _projections = new();
 
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces)
+    public async Task<Result<ProjectionRegistrationError>> Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         var definitionList = definitions.ToList();
         var readModelDefinitionsByIdentifier = readModelDefinitions.ToDictionary(readModel => readModel.Identifier);
@@ -31,7 +32,7 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
         var namespaceList = namespaces.ToList();
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-        var failures = new ConcurrentDictionary<ProjectionId, ProjectionDefinitionRegistrationFailed>();
+        var failures = new ConcurrentDictionary<ProjectionId, Exception>();
 
         await Task.WhenAll(definitionList.Select(async definition =>
         {
@@ -59,10 +60,9 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
             }
         }));
 
-        if (!failures.IsEmpty)
-        {
-            throw new ProjectionDefinitionsRegistrationFailed(failures);
-        }
+        return failures.IsEmpty
+            ? Result<ProjectionRegistrationError>.Success()
+            : Result.Failed(new ProjectionRegistrationError(failures));
     }
 
     /// <inheritdoc/>

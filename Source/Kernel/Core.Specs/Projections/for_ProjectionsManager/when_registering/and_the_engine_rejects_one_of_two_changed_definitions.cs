@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
-using NSubstitute.ExceptionExtensions;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_registering;
 
@@ -30,16 +29,13 @@ public class and_the_engine_rejects_one_of_two_changed_definitions : given.a_pro
             .Compare(Arg.Any<ProjectionKey>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ProjectionDefinition>())
             .Returns(ProjectionDefinitionCompareResult.New);
 
-        var failure = new ProjectionDefinitionRegistrationFailed(
-            _rejected.Identifier,
-            new InvalidOperationException("Failed to compile projection definition"));
+        var error = new ProjectionRegistrationError(new Dictionary<ProjectionId, Exception>
+        {
+            [_rejected.Identifier] = new InvalidOperationException("Failed to compile projection definition")
+        });
         _projectionsServiceClient
             .Register((EventStoreName)EventStore, Arg.Any<IEnumerable<ProjectionDefinition>>())
-            .ThrowsAsync(new ProjectionDefinitionsRegistrationFailed(
-                new Dictionary<ProjectionId, ProjectionDefinitionRegistrationFailed>
-                {
-                    [_rejected.Identifier] = failure
-                }));
+            .Returns(Cratis.Monads.Result.Failed(error));
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _grain.Register([_accepted, _rejected]));

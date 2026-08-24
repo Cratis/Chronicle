@@ -32,6 +32,8 @@ using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using ProjectionRegistrationError = Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError;
+
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 
 public class a_startup_task : Specification
@@ -132,7 +134,7 @@ public class a_startup_task : Specification
         _eventTypes.DiscoverAndRegister(_eventStore).Returns(Task.CompletedTask);
         _reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default).Returns(Task.CompletedTask);
         _reactors.DiscoverAndRegister(_eventStore, _namespace).Returns(Task.CompletedTask);
-        _projectionsServiceClient.Register(_eventStore, Arg.Any<IEnumerable<ProjectionDefinition>>()).Returns(Task.CompletedTask);
+        _projectionsServiceClient.Register(_eventStore, Arg.Any<IEnumerable<ProjectionDefinition>>()).Returns(Task.FromResult(Cratis.Monads.Result<ProjectionRegistrationError>.Success()));
 
         _grainFactory.GetGrain<IPatchManager>(0).Returns(_patchManager);
         _grainFactory.GetGrain<INamespaces>(EventStoreName.System).Returns(_systemNamespaces);
