@@ -5,8 +5,10 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using IEngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
 
@@ -31,14 +33,19 @@ public class ProjectionsService(
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IProjectionsService
 {
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
+    public async Task<Result<ProjectionRegistrationError>> Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
+        var definitionList = definitions.ToList();
         var readModelDefinitions = await grainFactory.GetReadModelsManager(eventStore).GetDefinitions();
         var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
-        var allNamespaces = await namespaces.GetAll();
-        EvictProjections(eventStore, definitions, allNamespaces);
+        var allNamespaces = (await namespaces.GetAll()).ToList();
+        var result = await projections.Register(eventStore, definitionList, readModelDefinitions, allNamespaces);
+        var registeredDefinitions = result.TryGetError(out var error)
+            ? definitionList.Where(definition => !error.Failures.ContainsKey(definition.Identifier))
+            : definitionList;
 
-        await projections.Register(eventStore, definitions, readModelDefinitions, allNamespaces);
+        EvictProjectionPipelines(eventStore, registeredDefinitions, allNamespaces);
+        return result;
     }
 
     /// <inheritdoc/>
@@ -61,12 +68,10 @@ public class ProjectionsService(
         await projections.AddNamespace(eventStore, @namespace, readModelDefinitions);
     }
 
-    void EvictProjections(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> allNamespaces)
+    void EvictProjectionPipelines(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<EventStoreNamespaceName> allNamespaces)
     {
         foreach (var definition in definitions)
         {
-            projections.Evict(eventStore, definition.Identifier);
-
             foreach (var @namespace in allNamespaces)
             {
                 projectionPipelines.EvictFor(eventStore, @namespace, definition.Identifier);

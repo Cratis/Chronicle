@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Projections.Engine;
+using Cratis.Monads;
 using Orleans.Services;
 
 namespace Cratis.Chronicle.Projections;
@@ -18,8 +20,8 @@ public interface IProjectionsService : IGrainService
     /// </summary>
     /// <param name="eventStore">Name of the event store.</param>
     /// <param name="definitions">A collection of <see cref="ProjectionDefinition"/>.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions);
+    /// <returns>The registration result, containing any definitions rejected while the rest of the batch was applied.</returns>
+    Task<Result<ProjectionRegistrationError>> Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions);
 
     /// <summary>
     /// Unregister a projection from the engine, evicting it and its pipelines in every namespace.

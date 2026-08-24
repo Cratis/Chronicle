@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Projections.Engine;
+using Cratis.Monads;
 using Orleans.Runtime.Services;
 
 namespace Cratis.Chronicle.Projections;
@@ -18,32 +20,39 @@ public class ProjectionsServiceClient(IGrainFactory grainFactory, IServiceProvid
     readonly IManagementGrain _managementGrain = grainFactory.GetGrain<IManagementGrain>(1);
 
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
+    public async Task<Result<ProjectionRegistrationError>> Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions)
     {
+        var definitionList = definitions.ToList();
         var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
+        var results = await Task.WhenAll(hosts.Keys.Select(host => GetGrainService(host).Register(eventStore, definitionList)));
+        var failures = new Dictionary<ProjectionId, Exception>();
+        foreach (var result in results)
         {
-            await GetGrainService(host).Register(eventStore, definitions);
+            if (result.TryGetError(out var error))
+            {
+                foreach (var (identifier, failure) in error.Failures)
+                {
+                    failures.TryAdd(identifier, failure);
+                }
+            }
         }
+
+        return failures.Count == 0
+            ? Result<ProjectionRegistrationError>.Success()
+            : Result.Failed(new ProjectionRegistrationError(failures));
     }
 
     /// <inheritdoc/>
-    public async Task Unregister(EventStoreName eventStore, ProjectionId projectionId)
-    {
-        var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
-        {
-            await GetGrainService(host).Unregister(eventStore, projectionId);
-        }
-    }
+    public async Task Unregister(EventStoreName eventStore, ProjectionId projectionId) =>
+        await ForEachGrainService(service => service.Unregister(eventStore, projectionId));
 
     /// <inheritdoc/>
-    public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    public async Task NamespaceAdded(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        await ForEachGrainService(service => service.NamespaceAdded(eventStore, @namespace));
+
+    async Task ForEachGrainService(Func<IProjectionsService, Task> callback)
     {
         var hosts = await _managementGrain.GetHosts(true);
-        foreach (var host in hosts.Keys)
-        {
-            await GetGrainService(host).NamespaceAdded(eventStore, @namespace);
-        }
+        await Task.WhenAll(hosts.Keys.Select(host => callback(GetGrainService(host))));
     }
 }

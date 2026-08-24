@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.Engine;
 
@@ -21,8 +22,8 @@ public interface IProjectionsManager
     /// <param name="definitions"><see cref="IEnumerable{T}"/> of <see cref="ProjectionDefinition"/> to register.</param>
     /// <param name="readModelDefinitions"><see cref="IEnumerable{T}"/> of <see cref="ReadModelDefinition"/> for the projections.</param>
     /// <param name="namespaces"><see cref="IEnumerable{T}"/> of <see cref="EventStoreNamespaceName"/> the projection is for.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces);
+    /// <returns>The registration result, containing any definitions rejected while the rest of the batch was applied.</returns>
+    Task<Result<ProjectionRegistrationError>> Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces);
 
     /// <summary>
     /// Add a namespace to the system.

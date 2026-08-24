@@ -19,9 +19,6 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-
-using ProjectionDefinitionRegistrationFailed = Cratis.Chronicle.Projections.Engine.ProjectionDefinitionRegistrationFailed;
 
 namespace Orleans.Hosting;
 
@@ -44,26 +41,6 @@ internal sealed class ChronicleServerStartupTask(
     IAuthenticationService authenticationService,
     ILogger<ChronicleServerStartupTask> logger) : ILifecycleParticipant<ISiloLifecycle>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleServerStartupTask"/> class without logging.
-    /// </summary>
-    /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
-    /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
-    /// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-    /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
-    internal ChronicleServerStartupTask(
-        IStorage storage,
-        IEventTypes eventTypes,
-        IReactors reactors,
-        IProjectionsServiceClient projectionsServiceClient,
-        IGrainFactory grainFactory,
-        IAuthenticationService authenticationService)
-        : this(storage, eventTypes, reactors, projectionsServiceClient, grainFactory, authenticationService, NullLogger<ChronicleServerStartupTask>.Instance)
-    {
-    }
-
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
     {
@@ -130,27 +107,12 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task RegisterPersistedProjectionDefinitions(EventStoreName eventStore, IEnumerable<ProjectionDefinition> projectionDefinitions)
     {
-        var definitions = projectionDefinitions.ToArray();
-        try
+        var result = await projectionsServiceClient.Register(eventStore, projectionDefinitions);
+        if (result.TryGetError(out var error))
         {
-            await projectionsServiceClient.Register(eventStore, definitions);
-            return;
-        }
-        catch (Exception exception) when (ProjectionDefinitionRegistrationFailed.TryFindIdentifier(exception, out _))
-        {
-            // A stored client definition can be incompatible with a newer server. Retry definitions individually so
-            // compatible projections are restored while stale ones wait for the client to replace them after startup.
-        }
-
-        foreach (var definition in definitions)
-        {
-            try
+            foreach (var (identifier, failure) in error.Failures)
             {
-                await projectionsServiceClient.Register(eventStore, [definition]);
-            }
-            catch (Exception exception) when (ProjectionDefinitionRegistrationFailed.TryFindIdentifier(exception, out var identifier))
-            {
-                logger.FailedRegisteringPersistedProjectionDefinition(exception, identifier);
+                logger.FailedRegisteringPersistedProjectionDefinition(failure, identifier);
             }
         }
     }
