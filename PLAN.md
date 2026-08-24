@@ -62,9 +62,10 @@ Three things came out of building it that are worth knowing before touching it a
    `COMPATIBILITY-REPORT.md`), and a gate that fails every run on a break that already shipped is a gate nobody
    reads. A floor that excludes every baseline reports a **warning**, never a clean run.
 
-   **The floor currently says `16.38.0`** — the release this conversion is expected to first ship in. (It was
-   `16.37.0` when this line was first written; 16.37.0 through 16.37.2 shipped before this PR merged, so the floor
-   moved forward to the next open version.) If it ships under a different number, correct it; a floor above the
+   **The floor currently says `16.39.0`** — the release this conversion is expected to first ship in. (It was
+   `16.37.0`, then `16.38.0`, when this line was first written and next corrected; each time, more of the 16.x
+   line shipped — unrelated work — before this PR merged, moving the floor forward again. Check the latest
+   released tag before trusting this number.) If it ships under a different number, correct it; a floor above the
    actual release measures nothing.
 
 ## Step 2 — ungate contract generation

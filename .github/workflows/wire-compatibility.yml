@@ -41,15 +41,19 @@ env:
   # surface) moved onto the same generated path, for the same reason, and broke the same way.
   #
   # A gate that fails every run on a break that already shipped stops being read, and one that is turned off
-  # entirely catches nothing. So 16.x is measured from where the conversion finished instead: 16.38.0 and
+  # entirely catches nothing. So 16.x is measured from where the conversion finished instead: 16.39.0 and
   # everything after it is the generated contract and has to keep working, and the releases before it - including
-  # 16.34.0 through 16.37.2, which only had *part* of the conversion - are acknowledged as already broken. This is
+  # 16.34.0 through 16.38.2, which only had *part* of the conversion - are acknowledged as already broken. This is
   # a statement about 16.x only - the major is read from the version itself, so 17 and beyond get the whole of
   # their major compared with no floor at all, which is the behavior every major should have.
   #
   # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
   # release that does, never to make a red check go away.
-  WIRE_BASELINE_FLOOR: "16.38.0"
+  #
+  # This floor has already moved once mid-PR: it was set to 16.38.0, and 16.38.0-16.38.2 shipped (unrelated work)
+  # before this PR merged, so the number it names is never a version already released by the time this line is
+  # read - re-check the latest tag before trusting it.
+  WIRE_BASELINE_FLOOR: "16.39.0"
 
 jobs:
   wire-compatibility:
