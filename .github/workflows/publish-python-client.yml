@@ -21,22 +21,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Build contracts
-        working-directory: Source/Kernel/Contracts
-        run: dotnet build -c Release
-
-      - name: Generate proto files
-        run: |
-          dotnet run \
-            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-            Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
-            Source/Kernel/Protobuf
-
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
