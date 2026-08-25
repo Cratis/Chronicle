@@ -3,8 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
-import { SchemaEditor as _SE } from '@cratis/components';
-const SchemaEditor = _SE.SchemaEditor;
+import { SchemaEditor } from '@cratis/components/SchemaEditor';
 import type { JsonSchema } from '@cratis/components/types';
 import { AllTypeFormats } from 'Api/TypeFormats';
 import { EventTypeRegistration, EventTypeSource } from 'Api/Events';
