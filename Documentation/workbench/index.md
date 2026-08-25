@@ -1,4 +1,7 @@
-# Workbench
+---
+title: Workbench
+description: Bundled local browser inspection and supported projection-preview boundaries for Chronicle.
+---
 
 Chronicle Workbench provides a bundled local browser surface for authorized
 inspection of Chronicle runtime state and preview of supported projection
