@@ -1,5 +1,5 @@
 ---
-title: Workbench
+title: Chronicle Workbench
 description: Bundled local browser inspection and supported projection-preview boundaries for Chronicle.
 ---
 
@@ -33,20 +33,32 @@ import TopicHero from '@components/TopicHero.astro';
      cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
    ```
 
-2. Open `https://localhost:35000` in a browser and follow the local
-   authentication flow presented by the development profile. The endpoint uses
-   a development certificate; browser handling varies by environment.
+2. Wait for the local health endpoint to report readiness. The reviewed
+   development profile uses a development certificate, so this command disables
+   certificate verification only for this local check.
 
-3. Select the event store and namespace you are authorized to inspect.
+   ```bash
+   curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 \
+     https://localhost:35000/health
+   ```
 
-4. Review only the runtime state and projection-preview paths needed for the
+   Continue when the response prints `Healthy`.
+
+3. Open `https://localhost:35000` in a browser and follow the local
+   authentication flow presented by the development profile. Browser handling
+   of the development certificate varies by environment.
+
+4. Select the event store and namespace you are authorized to inspect.
+
+5. Review only the runtime state and projection-preview paths needed for the
    evaluation.
 
-5. Stop and remove the container when finished.
+6. Stop and remove the container when finished.
 
    ```bash
    docker rm -f chronicle
    ```
+
 </Steps>
 
 ## What to inspect

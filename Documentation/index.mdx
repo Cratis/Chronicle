@@ -49,11 +49,17 @@ multi-platform OCI manifest digest.
      cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
    ```
 
-2. Confirm the container is running.
+2. Wait for the local health endpoint to report readiness. The reviewed
+   development profile uses a development certificate, so this command disables
+   certificate verification only for this local check.
 
    ```bash
-   docker ps --filter name=chronicle
+   curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 \
+     https://localhost:35000/health
    ```
+
+   A successful response prints `Healthy`. At that point the kernel is ready for
+   the next local evaluation step.
 
 3. Stop and remove it when the evaluation is complete.
 
