@@ -1,15 +1,54 @@
 # Workbench
 
-The Workbench is a web-based tool built into the Chronicle Kernel that lets you inspect and interact with your event store directly in a browser.
+Chronicle Workbench provides a bundled local browser surface for authorized
+inspection of Chronicle runtime state and preview of supported projection
+behavior.
 
-## Connected clients
+Chronicle and its bundled local Workbench are available as MIT-licensed
+self-hosted software; authorized local use is separate from paid Cratis support,
+hosted coordination, or managed operational responsibility.
 
-From the front page - alongside the event stores - the Workbench has a **Connected Clients** page
-showing every client connected to the server, across all nodes in the cluster: which server node
-each client is connected to, its connection identifier, version, when it was last seen, and
-whether it is running with a debugger attached. The list is live and updates as clients connect
-and disconnect.
+## Start locally
 
-## Topics
+Start the reviewed Chronicle 16.38.2 development image by its multi-platform OCI
+manifest digest:
 
-- **[Development](development.md)** — accessing the Workbench when running the Development or Development-slim images, including login credentials
+```bash
+docker run --rm -d --name chronicle \
+  -p 27017:27017 -p 35000:35000 \
+  cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
+```
+
+Open `https://localhost:35000` in a browser and follow the current local
+authentication flow presented by the development profile. The local endpoint
+uses a development certificate; browser handling varies by environment.
+
+Stop and remove the evaluation container when finished:
+
+```bash
+docker rm -f chronicle
+```
+
+## Current scope
+
+- Workbench is bundled with Chronicle as a local browser surface.
+- Access must be authorized for the exact Chronicle runtime scope.
+- The surface supports runtime-state inspection and preview of supported
+  projection behavior.
+
+## Current limits
+
+This scope does not imply complete administration, governed or production-ready
+mutation, client parity, Hub/federation, managed service, support, an SLA,
+security, compatibility, or production suitability.
+
+Use the exact released Chronicle/Workbench profile and its documented
+configuration when evaluating the surface. Do not infer mutation authority from
+the ability to inspect runtime state.
+
+- [Chronicle overview](/chronicle/)
+- [Chronicle architecture](/chronicle/architecture/)
+- [Cratis CLI](/cli/)
+- [Workbench source](https://github.com/Cratis/Chronicle/tree/main/Source/Workbench)
+- [Chronicle releases](https://github.com/Cratis/Chronicle/releases)
+- [Chronicle license](https://github.com/Cratis/Chronicle/blob/main/LICENSE)
