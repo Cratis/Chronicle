@@ -1,0 +1,92 @@
+---
+title: Workbench
+description: Bundled local browser inspection and supported projection-preview boundaries for Chronicle.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+import SimpleCard from '@components/SimpleCard.astro';
+import TopicHero from '@components/TopicHero.astro';
+
+<TopicHero
+  icon="laptop"
+  eyebrow="Chronicle Workbench"
+  title="Inspect Chronicle from a local browser"
+>
+  Chronicle Workbench provides a bundled local browser surface for authorized
+  inspection of Chronicle runtime state and preview of supported projection
+  behavior.
+
+  Chronicle and its bundled local Workbench are available as MIT-licensed
+  self-hosted software; authorized local use is separate from paid Cratis
+  support, hosted coordination, or managed operational responsibility.
+</TopicHero>
+
+## Start locally
+
+<Steps>
+1. Start the reviewed Chronicle 16.38.2 development image by its multi-platform
+   OCI manifest digest.
+
+   ```bash
+   docker run --rm -d --name chronicle \
+     -p 27017:27017 -p 35000:35000 \
+     cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
+   ```
+
+2. Open `https://localhost:35000` in a browser and follow the local
+   authentication flow presented by the development profile. The endpoint uses
+   a development certificate; browser handling varies by environment.
+
+3. Select the event store and namespace you are authorized to inspect.
+
+4. Review only the runtime state and projection-preview paths needed for the
+   evaluation.
+
+5. Stop and remove the container when finished.
+
+   ```bash
+   docker rm -f chronicle
+   ```
+</Steps>
+
+## What to inspect
+
+<CardGrid>
+  <Card title="Connected clients" icon="node">
+    Review the clients currently represented by the selected local runtime scope.
+  </Card>
+  <Card title="Stores and namespaces" icon="seti:db">
+    Confirm the exact event store and namespace before interpreting runtime state.
+  </Card>
+  <Card title="Observer state" icon="list-format">
+    Inspect the status presented for observers and recorded failed partitions.
+  </Card>
+  <Card title="Read models" icon="laptop">
+    Inspect the read-model instances exposed by the selected runtime scope.
+  </Card>
+  <Card title="Projection preview" icon="puzzle">
+    Preview only the supported projection behavior documented by the current profile.
+  </Card>
+</CardGrid>
+
+:::danger[Inspection does not authorize mutation]
+Do not infer authority to append, revise, redact, replay, recover, control jobs,
+or perform another mutation from the ability to inspect runtime state. Complete
+administration, governed/production-ready mutation, federation, managed service,
+support, SLA, security, compatibility, and production suitability are outside
+this page's claim scope.
+:::
+
+## Continue
+
+<CardGrid>
+  <SimpleCard title="Chronicle overview" icon="seti:db" link="/chronicle/">
+    Start the reviewed local profile and understand the current product boundary.
+  </SimpleCard>
+  <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
+    Locate the kernel, protocol surfaces, stores, namespaces, and subscriptions.
+  </SimpleCard>
+  <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
+    Use terminal inspection and diagnostic workflows.
+  </SimpleCard>
+</CardGrid>

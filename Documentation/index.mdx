@@ -3,55 +3,71 @@ title: Chronicle
 description: Kernel, protocol, storage, subscription, and local inspection boundaries for Chronicle.
 ---
 
-Chronicle uses a .NET/Orleans actor-based kernel behind gRPC/HTTP surfaces and
-supports multiple event stores, namespaces, and persistent event-store
-subscriptions with outbox/inbox sequences.
+import { CardGrid, Steps } from '@astrojs/starlight/components';
+import SimpleCard from '@components/SimpleCard.astro';
+import TopicHero from '@components/TopicHero.astro';
 
-Use this page to start the self-hosted development profile and understand its
-current kernel, store, namespace, subscription, and local inspection boundaries.
+<TopicHero
+  icon="seti:db"
+  eyebrow="Chronicle"
+  title="Self-hosted Chronicle runtime boundaries"
+>
+  Chronicle uses a .NET/Orleans actor-based kernel behind gRPC/HTTP surfaces and
+  supports multiple event stores, namespaces, and persistent event-store
+  subscriptions with outbox/inbox sequences.
 
-Chronicle and its bundled local Workbench are available as MIT-licensed
-self-hosted software; authorized local use is separate from paid Cratis support,
-hosted coordination, or managed operational responsibility.
+  Chronicle and its bundled local Workbench are available as MIT-licensed
+  self-hosted software; authorized local use is separate from paid Cratis
+  support, hosted coordination, or managed operational responsibility.
+</TopicHero>
 
-## Current product boundary
+## Start here
 
-- the kernel runs on .NET and Orleans behind gRPC/HTTP surfaces;
-- event stores and namespaces are separate runtime scopes;
-- persistent event-store subscriptions use outbox/inbox sequences; and
-- the bundled local Workbench and separate CLI provide bounded inspection
-  surfaces.
+<CardGrid>
+  <SimpleCard title="Evaluate locally" icon="rocket" link="#evaluate-locally">
+    Start the reviewed development image, confirm it is running, and clean it up.
+  </SimpleCard>
+  <SimpleCard title="Understand the architecture" icon="puzzle" link="/chronicle/architecture/">
+    Locate the protocol surfaces, kernel, runtime scopes, and persistent subscriptions.
+  </SimpleCard>
+  <SimpleCard title="Inspect with Workbench" icon="laptop" link="/chronicle/workbench/">
+    Use the bundled local browser inspection and projection-preview boundary.
+  </SimpleCard>
+</CardGrid>
 
-This page does not define client/provider parity, compatibility with every
-product version, a supported topology, scale, durability, compliance, or managed
-service.
-
-## Start the reviewed development profile
+## Evaluate locally
 
 The command below pins the reviewed Chronicle 16.38.2 development image by its
-multi-platform OCI manifest digest. It starts Chronicle with the development
-database profile on the local Chronicle and MongoDB ports.
+multi-platform OCI manifest digest.
 
-```bash
-docker run --rm -d --name chronicle \
-  -p 27017:27017 -p 35000:35000 \
-  cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
-```
+<Steps>
+1. Start Chronicle on the local Chronicle and MongoDB ports.
 
-Confirm the container is running:
+   ```bash
+   docker run --rm -d --name chronicle \
+     -p 27017:27017 -p 35000:35000 \
+     cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
+   ```
 
-```bash
-docker ps --filter name=chronicle
-```
+2. Confirm the container is running.
 
-Stop and remove it when the evaluation is complete:
+   ```bash
+   docker ps --filter name=chronicle
+   ```
 
-```bash
-docker rm -f chronicle
-```
+3. Stop and remove it when the evaluation is complete.
 
+   ```bash
+   docker rm -f chronicle
+   ```
+</Steps>
+
+:::caution[Keep the result bounded]
 This startup result does not establish production suitability, support, scale,
-security, durability, compatibility, or a managed service.
+security, durability, compatibility, or a managed service. This page also does
+not define client/provider parity, compatibility with every product version, or
+a supported topology.
+:::
 
 ## Independent-use boundary
 
@@ -73,14 +89,17 @@ mutation, client parity, federation, managed service, support, or an SLA.
 
 ## Continue
 
-- [Architecture](/chronicle/architecture/) — the current kernel, protocol,
-  store, namespace, and subscription boundary.
-- [Workbench](/chronicle/workbench/) — the bundled local browser inspection and
-  projection-preview boundary.
-- [Cratis CLI](/cli/) — terminal inspection and diagnosis for Chronicle.
-- [Chronicle source](https://github.com/Cratis/Chronicle/tree/main/Source) —
-  owning kernel, client, Workbench, and package source.
-- [Chronicle releases](https://github.com/Cratis/Chronicle/releases) — release
-  records and artifacts.
-- [Chronicle license](https://github.com/Cratis/Chronicle/blob/main/LICENSE) —
-  repository license text.
+<CardGrid>
+  <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
+    The current kernel, protocol, store, namespace, and subscription boundary.
+  </SimpleCard>
+  <SimpleCard title="Workbench" icon="laptop" link="/chronicle/workbench/">
+    The bundled local browser inspection and projection-preview boundary.
+  </SimpleCard>
+  <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
+    Terminal inspection and diagnosis for Chronicle.
+  </SimpleCard>
+  <SimpleCard title="Chronicle source" icon="seti:folder" link="https://github.com/Cratis/Chronicle/tree/main/Source">
+    Owning kernel, client, Workbench, and package source.
+  </SimpleCard>
+</CardGrid>
