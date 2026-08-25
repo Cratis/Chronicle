@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import argparse
-import re
 import shutil
 import tempfile
 from importlib import import_module
@@ -14,6 +13,7 @@ from importlib.resources import files
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).parent / "src" / "cratis_chronicle_contracts"
+PACKAGE_NAME = PACKAGE_ROOT.name
 GENERATED_SUFFIXES = ("_pb2.py", "_pb2.pyi", "_pb2_grpc.py")
 
 
@@ -34,26 +34,22 @@ def _clean_generated_files() -> None:
 
 
 def _prepare_proto_tree(source: Path, destination: Path) -> list[Path]:
+    # Proto files are rooted under a directory named after the installed package so that protoc computes
+    # fully-qualified, already-correct imports (e.g. `from cratis_chronicle_contracts import events_pb2`)
+    # instead of the bare top-level imports it would otherwise emit for messages defined in other files.
     proto_files: list[Path] = []
+    package_directory = destination / PACKAGE_NAME
     for source_file in sorted(source.rglob("*.proto")):
         relative_path = source_file.relative_to(source)
         normalized_path = Path(*("protobuf_net" if part == "protobuf-net" else part for part in relative_path.parts))
-        destination_file = destination / normalized_path
+        destination_file = package_directory / normalized_path
         destination_file.parent.mkdir(parents=True, exist_ok=True)
-        contents = source_file.read_text().replace('"protobuf-net/bcl.proto"', '"protobuf_net/bcl.proto"')
+        contents = source_file.read_text().replace(
+            '"protobuf-net/bcl.proto"', f'"{PACKAGE_NAME}/protobuf_net/bcl.proto"'
+        )
         destination_file.write_text(contents)
-        proto_files.append(normalized_path)
+        proto_files.append(Path(PACKAGE_NAME) / normalized_path)
     return proto_files
-
-
-def _rewrite_imports(path: Path) -> None:
-    contents = path.read_text()
-    if path.parent == PACKAGE_ROOT:
-        contents = re.sub(r"^import ([A-Za-z0-9_]+_pb2) as ", r"from . import \1 as ", contents, flags=re.MULTILINE)
-        contents = contents.replace("from protobuf_net import bcl_pb2 as", "from .protobuf_net import bcl_pb2 as")
-    else:
-        contents = contents.replace("from protobuf_net import bcl_pb2 as", "from . import bcl_pb2 as")
-    path.write_text(contents)
 
 
 def generate(proto_root: Path) -> None:
@@ -72,9 +68,9 @@ def generate(proto_root: Path) -> None:
             "grpc_tools.protoc",
             f"-I{normalized_root}",
             f"-I{grpc_include_root}",
-            f"--python_out={PACKAGE_ROOT}",
-            f"--pyi_out={PACKAGE_ROOT}",
-            f"--grpc_python_out={PACKAGE_ROOT}",
+            f"--python_out={PACKAGE_ROOT.parent}",
+            f"--pyi_out={PACKAGE_ROOT.parent}",
+            f"--grpc_python_out={PACKAGE_ROOT.parent}",
             *(str(path) for path in proto_files),
         ]
         protoc = import_module("grpc_tools.protoc")
@@ -88,10 +84,6 @@ def generate(proto_root: Path) -> None:
         "# Copyright (c) Cratis. All rights reserved.\n"
         "# Licensed under the MIT license. See LICENSE file in the project root for full license information.\n"
     )
-
-    for generated_file in PACKAGE_ROOT.rglob("*.py"):
-        if generated_file.name.endswith(("_pb2.py", "_pb2_grpc.py")):
-            _rewrite_imports(generated_file)
 
 
 if __name__ == "__main__":
