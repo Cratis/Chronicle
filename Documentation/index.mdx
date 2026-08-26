@@ -43,11 +43,12 @@ matters, pin a released version in your application or deployment configuration
 rather than copying an image digest into a getting-started command.
 
 <Steps>
-1. Start Chronicle on the local Chronicle and MongoDB ports.
+1. Pull and start the current development image with Chronicle available only
+   on this machine. MongoDB remains internal to the container.
 
    ```bash
-   docker run --rm -d --name chronicle \
-     -p 27017:27017 -p 35000:35000 \
+   docker run --pull=always --rm -d --name chronicle \
+     -p 127.0.0.1:35000:35000 \
      cratis/chronicle:latest-development
    ```
 

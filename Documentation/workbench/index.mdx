@@ -24,13 +24,13 @@ import TopicHero from '@components/TopicHero.astro';
 ## Start locally
 
 <Steps>
-1. Start Chronicle's local development image. The floating tag is convenient
-   for evaluation; pin a released version in project-owned configuration when
-   repeatability matters.
+1. Pull and start the current development image with Chronicle available only
+   on this machine. MongoDB remains internal to the container. Pin a released
+   version in project-owned configuration when repeatability matters.
 
    ```bash
-   docker run --rm -d --name chronicle \
-     -p 27017:27017 -p 35000:35000 \
+   docker run --pull=always --rm -d --name chronicle \
+     -p 127.0.0.1:35000:35000 \
      cratis/chronicle:latest-development
    ```
 
