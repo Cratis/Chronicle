@@ -62,6 +62,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     readonly IChronicleSetupFixture _fixture = fixture;
 
     /// <inheritdoc/>
+    protected override bool RegistersOwnChronicleClient => true;
+
+    /// <inheritdoc/>
     protected override IHostBuilder CreateHostBuilder()
     {
         var builder = Host.CreateDefaultBuilder();
