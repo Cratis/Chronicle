@@ -68,9 +68,6 @@ internal static class EventContextConverters
     /// <remarks>
     /// The event store and namespace are not carried on <see cref="Contracts.Sequences.EventContext"/> - the
     /// caller already knows which event sequence it queried, so they are supplied rather than round-tripped.
-    /// <see cref="EventHash"/> and <see cref="EventObservationState"/> are likewise not part of this read path;
-    /// they default to <see cref="EventHash.NotSet"/> and <see cref="EventObservationState.Initial"/>, the same
-    /// defaults <see cref="EventContext.From"/> uses.
     /// </remarks>
     internal static EventContext ToClient(this Contracts.Sequences.EventContext context, EventStoreName eventStore, EventStoreNamespaceName @namespace) => new(
         context.EventType.ToClient(),
@@ -86,7 +83,7 @@ internal static class EventContextConverters
         context.Causation.ToClient(),
         context.CausedBy.ToClient(),
         context.Tags.Select(_ => (Tag)_).ToArray(),
-        EventHash.NotSet,
-        EventObservationState.Initial,
+        context.Hash ?? EventHash.NotSet,
+        context.ObservationState.ToClient(),
         Subject: new Subject(context.EventSourceId));
 }
