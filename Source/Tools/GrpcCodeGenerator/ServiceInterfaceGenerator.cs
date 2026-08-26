@@ -537,7 +537,16 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     {
         if (IsNonNullableCollection(propType))
         {
-            return SyntaxFactory.EqualsValueClause(SyntaxFactory.CollectionExpression());
+            // A `[]` collection expression targeting the IEnumerable<T> interface has no natural mutable
+            // implementation, so the compiler lowers it to an empty array. protobuf-net.Grpc's server-side
+            // deserializer reuses whatever instance the getter already returns to populate a repeated field -
+            // via ICollection<T>.Add - rather than replacing it, and arrays report ICollection<T>.IsReadOnly
+            // as true, so any incoming payload that actually carries elements throws. Seed a concrete List<T>
+            // instead so the property stays both non-null and mutable.
+            var concreteType = propType.Replace("IEnumerable<", "List<", StringComparison.Ordinal);
+            return SyntaxFactory.EqualsValueClause(
+                SyntaxFactory.ObjectCreationExpression(SyntaxFactory.ParseTypeName(concreteType))
+                    .WithArgumentList(SyntaxFactory.ArgumentList()));
         }
 
         if (IsNonNullableDictionary(propType))

@@ -206,7 +206,7 @@ public class AddExternalServicesRequest
     /// Gets or sets the ExternalServices.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition> ExternalServices { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition> ExternalServices { get; set; } = new List<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition>();
 }
 
 /// <summary>
@@ -244,7 +244,7 @@ public class RemoveExternalServicesRequest
     /// Gets or sets the ExternalServices.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<string> ExternalServices { get; set; } = [];
+    public IEnumerable<string> ExternalServices { get; set; } = new List<string>();
 }
 
 /// <summary>

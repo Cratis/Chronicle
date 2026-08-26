@@ -145,7 +145,7 @@ public class SaveCaptureResponse
     /// Gets or sets the Messages.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage> Messages { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage> Messages { get; set; } = new List<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage>();
 }
 
 /// <summary>
@@ -177,7 +177,7 @@ public class StartCaptureResponse
     /// Gets or sets the Messages.
     /// </summary>
     [ProtoMember(1)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage> Messages { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage> Messages { get; set; } = new List<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage>();
 }
 
 /// <summary>
@@ -228,7 +228,7 @@ public class ValidateCaptureDeclarationResponse
     /// Gets or sets the Messages.
     /// </summary>
     [ProtoMember(1)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage> Messages { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage> Messages { get; set; } = new List<global::Cratis.Chronicle.Contracts.Captures.CaptureValidationMessage>();
 }
 
 /// <summary>
