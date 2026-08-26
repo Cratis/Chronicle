@@ -12,6 +12,26 @@
    on should use the `--cratis-*` tokens directly. */
 @import '@cratis/components/primereact-v10-palette';
 
+/* The palette above resolves its semantic tokens through `var(--p-*-token, <lara-dark-blue
+   literal>)` - the literal only applies when the active preset leaves that `--p-*` token
+   unset. `styledMode()` always supplies a preset (CratisPreset), so for most tokens that is
+   exactly the point: they follow the preset. But CratisPreset computes six of them as solid
+   grays rather than the lara-dark-blue theme's translucent-white/black formulas, so every
+   card, table, dialog and hover picks up a harder, more visible border/hover, brighter body
+   text, a washed-out label on primary-colored buttons, and a darker dialog backdrop than the
+   look this app's ~30 stylesheets were written against - confirmed by diffing computed
+   custom properties against a `@cratis/components` 2.x / PrimeReact 10 checkout side by side.
+   Force these six back to the literal lara-dark-blue values so the preset still drives
+   button/tab/input behavior while the load-bearing surface tokens match the original look. */
+.cratis-dark {
+  --text-color: rgba(255, 255, 255, 0.87);
+  --text-color-secondary: rgba(255, 255, 255, 0.6);
+  --surface-border: rgba(255, 255, 255, 0.1);
+  --surface-hover: rgba(255, 255, 255, 0.03);
+  --maskbg: rgba(0, 0, 0, 0.4);
+  --primary-color-text: #030712;
+}
+
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 12px;
