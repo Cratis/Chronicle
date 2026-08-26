@@ -312,3 +312,6 @@ certificates/
 .env
 .env.local
 !.env.example
+
+# Local AI work artifacts (plans, handovers, session notes) — never tracked
+.ai-work/
