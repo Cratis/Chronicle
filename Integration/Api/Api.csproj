@@ -27,15 +27,25 @@
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
 
+    <!-- When building on macOS the publish must target linux-arm64 so the Docker image gets a
+         valid Linux binary. On Linux the default RID is already linux-arm64 or linux-x64. -->
+    <PropertyGroup Condition="'$(DisableDockerBuild)' != 'true'">
+        <_IsOSX>$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))</_IsOSX>
+        <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64'">linux-arm64</_DockerPublishRid>
+        <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">linux-amd64</_DockerPublishRid>
+        <_DockerRidArg Condition="'$(_DockerPublishRid)' != ''">-r $(_DockerPublishRid) --self-contained false</_DockerRidArg>
+    </PropertyGroup>
+
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
+        <!-- Wipe the publish output before each build. `dotnet publish` merges into the target
+             directory rather than replacing it, so a previous publish with different args
+             (e.g. without -r, leaving a RID-specific subfolder) can shadow the RID-targeted
+             assemblies the current publish produces - see Integration/Client/Client.csproj, which
+             this target mirrors. A plain bin-output copy (this target's previous approach) carries
+             the host's own architecture, not the container's, and made the Linux image fail with
+             "exec format error" on any non-Linux-x64 build host. -->
         <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <MakeDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <ItemGroup>
-            <_ServerFiles Include="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/**/*"
-                          Exclude="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/out/**" />
-        </ItemGroup>
-        <Copy SourceFiles="@(_ServerFiles)"
-              DestinationFolder="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/%(RecursiveDir)" />
+        <Exec Command="dotnet publish $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj -c Debug -p:DefineConstants=DEVELOPMENT --no-restore $(_DockerRidArg) -o $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 
