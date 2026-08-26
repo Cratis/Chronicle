@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
+
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
@@ -17,6 +19,8 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">A collection of causation for what caused the event.</param>
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
 /// <param name="Tags">A collection of tags associated with the event.</param>
+/// <param name="Hash">The hash of the event's content.</param>
+/// <param name="ObservationState">The state relevant for the observer observing the event.</param>
 public record EventContext(
     EventType EventType,
     string EventSourceType,
@@ -28,4 +32,6 @@ public record EventContext(
     Guid CorrelationId,
     IEnumerable<Causation> Causation,
     Identity CausedBy,
-    IEnumerable<string> Tags);
+    IEnumerable<string> Tags,
+    EventHash Hash,
+    EventObservationState ObservationState);

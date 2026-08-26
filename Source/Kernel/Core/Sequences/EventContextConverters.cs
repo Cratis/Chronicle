@@ -25,7 +25,9 @@ internal static class EventContextConverters
         CorrelationId = context.CorrelationId,
         Causation = context.Causation.ToContract(),
         CausedBy = context.CausedBy.ToContract(),
-        Tags = context.Tags.ToList()
+        Tags = context.Tags.ToList(),
+        Hash = context.Hash,
+        ObservationState = context.ObservationState.ToContract()
     };
 
     /// <summary>
@@ -44,5 +46,14 @@ internal static class EventContextConverters
         context.CorrelationId,
         context.Causation.ToApi(),
         context.CausedBy.ToApi(),
-        context.Tags.Select(tag => tag.Value));
+        context.Tags.Select(tag => tag.Value),
+        context.Hash,
+        context.ObservationState);
+
+    static Contracts.Events.EventObservationState ToContract(this Concepts.Events.EventObservationState state) => state switch
+    {
+        Concepts.Events.EventObservationState.Initial => Contracts.Events.EventObservationState.Initial,
+        Concepts.Events.EventObservationState.Replay => Contracts.Events.EventObservationState.Replay,
+        _ => Contracts.Events.EventObservationState.None
+    };
 }

@@ -127,7 +127,7 @@ message CommandResult_CompleteStreamResponse {
    CompleteStreamResponse Response = 7;
 }
 enum CompleteStreamError {
-   None = 0;
+   COMPLETE_STREAM_ERROR_None = 0;
    AlreadyCompleted = 1;
    DefaultStreamCannotBeCompleted = 2;
 }
@@ -188,6 +188,8 @@ message EventContext {
    repeated Causation Causation = 9;
    Identity CausedBy = 10;
    repeated string Tags = 11;
+   string Hash = 12;
+   EventObservationState ObservationState = 13;
 }
 message EventForEventSourceId {
    string EventSourceId = 1;
@@ -199,6 +201,11 @@ message EventForEventSourceId {
    repeated string Tags = 7;
    SerializableDateTimeOffset Occurred = 8;
    string Subject = 9;
+}
+enum EventObservationState {
+   EVENT_OBSERVATION_STATE_None = 0;
+   Initial = 1;
+   Replay = 2;
 }
 message EventRevision {
    uint32 Generation = 1;
