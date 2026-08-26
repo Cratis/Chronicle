@@ -103,7 +103,7 @@ public class AddWebhookRequest
     /// Gets or sets the EventTypes.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; } = new List<global::Cratis.Chronicle.Contracts.Events.EventType>();
 
     /// <summary>
     /// Gets or sets the AuthorizationType.
@@ -182,7 +182,7 @@ public class AddWebhooksRequest
     /// Gets or sets the Webhooks.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition> Webhooks { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition> Webhooks { get; set; } = new List<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition>();
 }
 
 /// <summary>
@@ -220,7 +220,7 @@ public class RemoveWebhooksRequest
     /// Gets or sets the Webhooks.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<string> Webhooks { get; set; } = [];
+    public IEnumerable<string> Webhooks { get; set; } = new List<string>();
 }
 
 /// <summary>
@@ -257,7 +257,7 @@ public class WebhookDetailsResponse
     /// Gets or sets the EventTypes.
     /// </summary>
     [ProtoMember(4)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventType> EventTypes { get; set; } = new List<global::Cratis.Chronicle.Contracts.Events.EventType>();
 
     /// <summary>
     /// Gets or sets the AuthorizationType.

@@ -24,7 +24,7 @@ public class CompatibilityResponse
     /// Gets or sets the ways in which the server no longer serves the client, one sentence each.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<string> Incompatibilities { get; set; } = [];
+    public IEnumerable<string> Incompatibilities { get; set; } = new List<string>();
 
     /// <summary>
     /// Gets or sets the version of the running server.

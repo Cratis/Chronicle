@@ -104,7 +104,7 @@ public class RegisterEventTypesRequest
     /// Gets or sets the Types.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration> Types { get; set; } = [];
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration> Types { get; set; } = new List<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration>();
 
     /// <summary>
     /// Gets or sets the DisableValidation.
