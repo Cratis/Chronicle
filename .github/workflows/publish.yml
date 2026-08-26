@@ -37,6 +37,11 @@ on:
         required: true
         default: 'No release notes'
         type: string
+      validate_only:
+        description: 'Validate the workflow graph without releasing'
+        required: true
+        default: true
+        type: boolean
       logLevel:
         description: 'Log level'
         required: true
@@ -80,7 +85,7 @@ jobs:
   release:
     # A pull request closed without merging has nothing to release. Skipping early also keeps those runs from
     # doing any work at all, on top of the concurrency key above keeping them out of each other's way.
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    if: inputs.validate_only != true && (github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
