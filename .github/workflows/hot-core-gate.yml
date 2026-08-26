@@ -41,6 +41,7 @@ env:
 jobs:
   detect:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
       touched: ${{ steps.detect.outputs.touched }}
 
@@ -83,6 +84,7 @@ jobs:
     needs: [detect]
     if: needs.detect.outputs.touched == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -182,6 +184,7 @@ jobs:
     needs: [detect, build, full-out-of-process-matrix]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Decide

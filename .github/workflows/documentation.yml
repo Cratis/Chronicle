@@ -18,6 +18,7 @@ permissions:
 jobs:
   trigger:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Trigger Documentation Build
         uses: peter-evans/repository-dispatch@v3
