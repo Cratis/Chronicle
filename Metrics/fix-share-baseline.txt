@@ -1,8 +1,8 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #
-# The fix/revert commit share per month, as measured by hand during the year-long analysis that
-# produced PLAN-reliability-program.md (section 5, task 2.4). This is a historical record, not a
+# The fix/revert commit share per month, as measured by hand during the year-long analysis behind
+# the reliability program plan (section 5, task 2.4). This is a historical record, not a
 # threshold: it is the number the reliability program was argued from, kept here so that every run
 # of .github/scripts/regression-tax.py re-derives the same months and shows the difference.
 #
