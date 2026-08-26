@@ -6,14 +6,14 @@ concurrency:
 # This is where the benchmark series lives. Pull requests only check that the benchmark projects still
 # build (the `benchmarks-build` job in dotnet-build.yml) - running them there added ~13 minutes to the
 # critical path for a result that could never fail the build.
+# Benchmarks moved from per-push to nightly: shared hosted runners make per-commit
+# numbers noisy anyway, and each push-triggered run competed for the organization's
+# 20 concurrent job slots. The nightly run benchmarks the day's accumulated changes;
+# workflow_dispatch remains for benchmarking a specific ref on demand.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'Benchmarks/**'
-      - 'Source/**'
+  schedule:
+    - cron: '37 1 * * *'
 
 permissions:
   # `comment-on-alert` posts a commit comment on push events (it posts a PR
