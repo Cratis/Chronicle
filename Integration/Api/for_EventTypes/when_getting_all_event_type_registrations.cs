@@ -14,7 +14,7 @@ public class when_getting_all_event_type_registrations(context context) : Given<
     public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.an_http_client(fixture)
     {
         public QueryResult Result;
-        public IEnumerable<EventTypeRegistration> Data;
+        public IEnumerable<EventTypeDetails> Data;
 
         async Task Establish()
         {
@@ -41,8 +41,8 @@ public class when_getting_all_event_type_registrations(context context) : Given<
 
         async Task Because()
         {
-            Result = await Client.ExecuteQuery<IEnumerable<EventTypeDetails>>("/api/event-types/all-event-type-registrations?eventStore=test-store-registrations");
-            Data = Result.Data as IEnumerable<EventTypeRegistration>;
+            Result = await Client.ExecuteQuery<IEnumerable<EventTypeDetails>>("/api/event-types/all-event-types?eventStore=test-store-registrations");
+            Data = Result.Data as IEnumerable<EventTypeDetails>;
         }
     }
 
