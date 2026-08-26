@@ -1,4 +1,5 @@
 name: Publish
+# Closed-unmerged trigger probe; this branch is never merged.
 
 # Publish runs are grouped per pull request, and never cancelled.
 #
