@@ -1,20 +1,11 @@
 name: Publish
 
-# Publish runs are grouped per pull request, and never cancelled.
-#
-# Under the pull_request trigger github.ref is refs/pull/<N>/merge, so this group is unique to one
-# pull request: simultaneous merges never cancel one another's publish run, and with
-# cancel-in-progress off a run that has started always finishes and cuts its version. It does not
-# serialize releases. Choosing the next version is a read then a create, so two runs still read the
-# same latest version and race to create it - merging eleven pull requests in two minutes on
-# 2026-08-18 gave five runs all computing v16.35.7 and four 403s from secondary rate limiting.
-# A constant group would not fix that and must not be introduced: GitHub keeps only one pending run
-# per group and cancels the earlier pending one, so a third merge silently drops the second's
-# release, which is worse than a noisy 403. The real fix is to stop deriving the version from a
-# read-then-create race - retry the create with backoff, or decouple release from merge so only one
-# release run exists at a time (task 2.2 in PLAN-reliability-program.md).
+# Publish is triggered by each accepted merge commit reaching main. The release action resolves the merged pull
+# request from the commit SHA, so release labels and notes remain PR-owned while avoiding reliance on a
+# pull_request: closed event that GitHub did not deliver for Chronicle PR #3833. Each SHA has its own concurrency
+# group: releases are not cancelled, but version creation remains subject to the existing read/create race controls.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: false
 
 env:
@@ -45,14 +36,9 @@ on:
         - info
         - warning
         - debug
-  pull_request:
-    types: [closed]
-    # Only a pull request into main releases. On "**" every base branch released, so merging one pull
-    # request into another one's branch - the ordinary way to stack work - cut and published a version
-    # from a branch that was still in review. That is how Cratis.Fundamentals v7.17.0 came to be
-    # published from the head of an open pull request, carrying every unmerged change on that branch
-    # under release notes describing only the one that had just merged. A release must come from the
-    # branch that is released.
+  push:
+    # Only accepted commits on main release. The release action resolves the merged PR from github.sha;
+    # stacked feature-branch merges never reach this trigger.
     branches:
       - main
     paths:
@@ -79,13 +65,14 @@ jobs:
   release:
     # A pull request closed without merging has nothing to release. Skipping early also keeps those runs from
     # doing any work at all, on top of the concurrency key above keeping them out of each other's way.
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
       prerelease: ${{ steps.release.outputs.prerelease }}
+      reason: ${{ steps.release.outputs.reason }}
 
     steps:
       - name: Checkout code
@@ -773,7 +760,7 @@ jobs:
     # check would be reporting the intended outcome as a failure, and a job that cries wolf on the common case
     # stops being read. verify-semver-label guarantees the label is a deliberate choice rather than an omission,
     # which is what makes it safe to trust here.
-    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true' && !contains(github.event.pull_request.labels.*.name, 'no-release')
+    if: always() && github.event_name == 'push' && needs.release.result == 'success' && contains(fromJSON('["no-label", "error"]'), needs.release.outputs.reason)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [release]
