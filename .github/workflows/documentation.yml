@@ -1,5 +1,7 @@
 name: Trigger documentation build
 
+# Thin caller of the organization-wide documentation dispatcher in
+# Cratis/Workflows/.github/workflows/trigger-documentation-build.yml.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -17,12 +19,6 @@ permissions:
 
 jobs:
   trigger:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Trigger Documentation Build
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.PAT_DOCUMENTATION }}
-          repository: Cratis/Documentation
-          event-type: build-docs
+    uses: Cratis/Workflows/.github/workflows/trigger-documentation-build.yml@main
+    secrets:
+      PAT_DOCUMENTATION: ${{ secrets.PAT_DOCUMENTATION }}
