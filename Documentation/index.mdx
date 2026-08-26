@@ -24,8 +24,8 @@ import TopicHero from '@components/TopicHero.astro';
 ## Start here
 
 <CardGrid>
-  <SimpleCard title="Evaluate locally" icon="rocket" link="#evaluate-locally">
-    Start the reviewed development image, confirm it is running, and clean it up.
+  <SimpleCard title="Run Chronicle locally" icon="rocket" link="#run-chronicle-locally">
+    Start the development image, wait for readiness, and clean it up.
   </SimpleCard>
   <SimpleCard title="Understand the architecture" icon="puzzle" link="/chronicle/architecture/">
     Locate the protocol surfaces, kernel, runtime scopes, and persistent subscriptions.
@@ -35,10 +35,12 @@ import TopicHero from '@components/TopicHero.astro';
   </SimpleCard>
 </CardGrid>
 
-## Evaluate locally
+## Run Chronicle locally
 
-The command below pins the reviewed Chronicle 16.38.2 development image by its
-multi-platform OCI manifest digest.
+For the shortest local path, use `latest-development`. It bundles Chronicle and
+MongoDB and tracks the newest published development image. When repeatability
+matters, pin a released version in your application or deployment configuration
+rather than copying an image digest into a getting-started command.
 
 <Steps>
 1. Start Chronicle on the local Chronicle and MongoDB ports.
@@ -46,12 +48,12 @@ multi-platform OCI manifest digest.
    ```bash
    docker run --rm -d --name chronicle \
      -p 27017:27017 -p 35000:35000 \
-     cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
+     cratis/chronicle:latest-development
    ```
 
-2. Wait for the local health endpoint to report readiness. The reviewed
-   development profile uses a development certificate, so this command disables
-   certificate verification only for this local check.
+2. Wait for the local health endpoint to report readiness. The development
+   image uses a self-signed certificate, so this command disables certificate
+   verification only for this local check.
 
    ```bash
    curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 \
@@ -68,18 +70,18 @@ multi-platform OCI manifest digest.
    ```
 </Steps>
 
-:::caution[Keep the result bounded]
-This startup result does not establish production suitability, support, scale,
-security, durability, compatibility, or a managed service. This page also does
-not define client/provider parity, compatibility with every product version, or
-a supported topology.
+:::caution[What this local start proves]
+A `Healthy` response proves that this local development container started. It
+does not establish production suitability, support, scale, security, durability,
+compatibility, a managed service, client/provider parity, or support for every
+topology.
 :::
 
 ## Independent-use boundary
 
 The self-hosted Chronicle kernel and bundled Workbench can be started without
-Arc or Components. Applications and clients still require their own exact
-package, protocol, version, configuration, and compatibility evidence.
+Arc or Components. Applications and clients still need compatible packages,
+protocols, and configuration for the Chronicle server they connect to.
 
 ## Inspection surfaces
 
@@ -97,10 +99,10 @@ mutation, client parity, federation, managed service, support, or an SLA.
 
 <CardGrid>
   <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
-    The current kernel, protocol, store, namespace, and subscription boundary.
+    Understand the kernel, protocol, store, namespace, and subscription boundaries.
   </SimpleCard>
   <SimpleCard title="Workbench" icon="laptop" link="/chronicle/workbench/">
-    The bundled local browser inspection and projection-preview boundary.
+    Inspect Chronicle from the bundled local browser application.
   </SimpleCard>
   <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
     Terminal inspection and diagnosis for Chronicle.

@@ -24,18 +24,19 @@ import TopicHero from '@components/TopicHero.astro';
 ## Start locally
 
 <Steps>
-1. Start the reviewed Chronicle 16.38.2 development image by its multi-platform
-   OCI manifest digest.
+1. Start Chronicle's local development image. The floating tag is convenient
+   for evaluation; pin a released version in project-owned configuration when
+   repeatability matters.
 
    ```bash
    docker run --rm -d --name chronicle \
      -p 27017:27017 -p 35000:35000 \
-     cratis/chronicle@sha256:bc4d23570d29fdfb31a8f5ae689f6538e74ff2db7807e981438473d2283f4b07
+     cratis/chronicle:latest-development
    ```
 
-2. Wait for the local health endpoint to report readiness. The reviewed
-   development profile uses a development certificate, so this command disables
-   certificate verification only for this local check.
+2. Wait for the local health endpoint to report readiness. The development
+   image uses a self-signed certificate, so this command disables certificate
+   verification only for this local check.
 
    ```bash
    curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 \
@@ -44,9 +45,9 @@ import TopicHero from '@components/TopicHero.astro';
 
    Continue when the response prints `Healthy`.
 
-3. Open `https://localhost:35000` in a browser and follow the local
-   authentication flow presented by the development profile. Browser handling
-   of the development certificate varies by environment.
+3. Open `https://localhost:35000` in a browser and follow the authentication
+   flow shown by the local development image. Browser handling of its self-signed
+   certificate varies by environment.
 
 4. Select the event store and namespace you are authorized to inspect.
 
@@ -77,7 +78,7 @@ import TopicHero from '@components/TopicHero.astro';
     Inspect the read-model instances exposed by the selected runtime scope.
   </Card>
   <Card title="Projection preview" icon="puzzle">
-    Preview only the supported projection behavior documented by the current profile.
+    Preview the projection behavior supported by the running Chronicle image.
   </Card>
 </CardGrid>
 
@@ -93,7 +94,7 @@ this page's claim scope.
 
 <CardGrid>
   <SimpleCard title="Chronicle overview" icon="seti:db" link="/chronicle/">
-    Start the reviewed local profile and understand the current product boundary.
+    Start Chronicle locally and understand the product boundary.
   </SimpleCard>
   <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
     Locate the kernel, protocol surfaces, stores, namespaces, and subscriptions.
