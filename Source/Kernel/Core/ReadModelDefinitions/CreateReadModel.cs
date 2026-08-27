@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
@@ -18,8 +20,8 @@ namespace Cratis.Chronicle.ReadModelDefinitions;
 /// <param name="Schema">Optional schema. An empty object schema is used when not supplied.</param>
 [Command]
 public record CreateReadModel(
-    string EventStore,
-    string Identifier,
+    EventStoreName EventStore,
+    ReadModelIdentifier Identifier,
     string DisplayName,
     string ContainerName,
     string? Schema = null)

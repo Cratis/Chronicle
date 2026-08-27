@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.ReadModels;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
 namespace Cratis.Chronicle.ReadModelDefinitions;
@@ -17,8 +19,8 @@ namespace Cratis.Chronicle.ReadModelDefinitions;
 /// <param name="Indexes">The property paths that should be indexed.</param>
 [Command]
 public record UpdateReadModelDefinition(
-    string EventStore,
-    string Identifier,
+    EventStoreName EventStore,
+    ReadModelIdentifier Identifier,
     string ContainerName,
     uint Generation,
     string Schema,
