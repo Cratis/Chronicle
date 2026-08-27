@@ -15,39 +15,39 @@ namespace Cratis.Chronicle.Services.Security;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Security.IUsers"/>.
 /// </summary>
 internal sealed class Users(
-    global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Security.Users> logger) : global::Cratis.Chronicle.Contracts.Security.IUsers
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddUser(global::Cratis.Chronicle.Contracts.Security.AddUserRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.AddUser(request.UserId, request.Username, request.Email, request.Password),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.AddUser((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId, (global::Cratis.Chronicle.Concepts.Security.Username)request.Username, (global::Cratis.Chronicle.Concepts.Security.UserEmail)request.Email, (global::Cratis.Chronicle.Concepts.Security.Password)request.Password));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> ChangeUserPassword(global::Cratis.Chronicle.Contracts.Security.ChangeUserPasswordRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.ChangeUserPassword(request.UserId, request.OldPassword, request.Password, request.ConfirmedPassword),
-            command => command.Handle(grainFactory, storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.ChangeUserPassword((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId, (global::Cratis.Chronicle.Concepts.Security.Password)request.OldPassword, (global::Cratis.Chronicle.Concepts.Security.Password)request.Password, (global::Cratis.Chronicle.Concepts.Security.Password)request.ConfirmedPassword));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RemoveUser(global::Cratis.Chronicle.Contracts.Security.RemoveUserRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.RemoveUser(request.UserId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.RemoveUser((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RequirePasswordChange(global::Cratis.Chronicle.Contracts.Security.RequirePasswordChangeRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.RequirePasswordChange(request.UserId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.RequirePasswordChange((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetInitialAdminPassword(global::Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.SetInitialAdminPassword(request.UserId, request.Password, request.ConfirmedPassword),
-            command => command.Handle(grainFactory, storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.SetInitialAdminPassword((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId, (global::Cratis.Chronicle.Concepts.Security.Password)request.Password, (global::Cratis.Chronicle.Concepts.Security.Password)request.ConfirmedPassword));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse>> GetStatus(global::ProtoBuf.Grpc.CallContext callContext = default) =>

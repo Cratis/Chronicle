@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ConfirmedPassword">Confirmation of the new password; must match <paramref name="Password"/>.</param>
 [Command]
 [BelongsTo(WellKnownServices.Users)]
-public record ChangeUserPassword(Guid UserId, string OldPassword, string Password, string ConfirmedPassword)
+public record ChangeUserPassword(UserId UserId, Password OldPassword, Password Password, Password ConfirmedPassword)
 {
     /// <summary>
     /// Handles the command by verifying the old password and appending a <see cref="UserPasswordChanged"/> event.
