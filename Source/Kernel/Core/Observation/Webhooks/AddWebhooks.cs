@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -14,7 +15,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 [Command]
 [BelongsTo(WellKnownServices.Webhooks)]
 public record AddWebhooks(
-    string EventStore,
+    EventStoreName EventStore,
     IEnumerable<Contracts.Observation.Webhooks.WebhookDefinition> Webhooks)
 {
     /// <summary>

@@ -15,33 +15,33 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks"/>.
 /// </summary>
 internal sealed class Webhooks(
-    global::Cratis.Chronicle.Observation.Webhooks.WebhookRegistrar webhookRegistrar,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks> logger) : global::Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddWebhook(global::Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Observation.Webhooks.AddWebhook(request.EventStore, request.Name, request.Url, request.EventSequenceId, request.EventTypes, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.IsReplayable, request.IsActive),
-            command => command.Handle(webhookRegistrar));
+            commandPipeline,
+            new global::Cratis.Chronicle.Observation.Webhooks.AddWebhook((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId)request.Name, request.Url, request.EventSequenceId, request.EventTypes, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.IsReplayable, request.IsActive));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Observation.Webhooks.AddWebhooks(request.EventStore, request.Webhooks),
-            command => command.Handle(webhookRegistrar));
+            commandPipeline,
+            new global::Cratis.Chronicle.Observation.Webhooks.AddWebhooks((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Webhooks));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RemoveWebhook(global::Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhookRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Observation.Webhooks.RemoveWebhook(request.EventStore, request.WebhookId),
-            command => command.Handle(webhookRegistrar));
+            commandPipeline,
+            new global::Cratis.Chronicle.Observation.Webhooks.RemoveWebhook((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId)request.WebhookId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RemoveWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.RemoveWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Observation.Webhooks.RemoveWebhooks(request.EventStore, request.Webhooks),
-            command => command.Handle(webhookRegistrar));
+            commandPipeline,
+            new global::Cratis.Chronicle.Observation.Webhooks.RemoveWebhooks((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Webhooks.Select(x => (global::Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId)x)));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>> GetWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
