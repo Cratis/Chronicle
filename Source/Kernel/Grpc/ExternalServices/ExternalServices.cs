@@ -15,32 +15,33 @@ namespace Cratis.Chronicle.Services.ExternalServices;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.ExternalServices.IExternalServices"/>.
 /// </summary>
 internal sealed class ExternalServices(
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.ExternalServices.ExternalServices> logger) : global::Cratis.Chronicle.Contracts.ExternalServices.IExternalServices
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddExternalService(global::Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.ExternalServices.AddExternalService(request.EventStore, request.Id, request.Name, request.EndpointType, request.Url, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.Host, request.Port, request.Database, request.Username, request.Password, request.Options),
-            command => command.Handle(storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.ExternalServices.AddExternalService((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.ExternalServices.ExternalServiceId)request.Id, request.Name, request.EndpointType, request.Url, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.Host, request.Port, request.Database, request.Username, request.Password, request.Options));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddExternalServices(global::Cratis.Chronicle.Contracts.ExternalServices.AddExternalServicesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.ExternalServices.AddExternalServices(request.EventStore, request.ExternalServices),
-            command => command.Handle(storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.ExternalServices.AddExternalServices((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.ExternalServices));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RemoveExternalService(global::Cratis.Chronicle.Contracts.ExternalServices.RemoveExternalServiceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.ExternalServices.RemoveExternalService(request.EventStore, request.ExternalServiceId),
-            command => command.Handle(storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.ExternalServices.RemoveExternalService((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.ExternalServices.ExternalServiceId)request.ExternalServiceId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RemoveExternalServices(global::Cratis.Chronicle.Contracts.ExternalServices.RemoveExternalServicesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.ExternalServices.RemoveExternalServices(request.EventStore, request.ExternalServices),
-            command => command.Handle(storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.ExternalServices.RemoveExternalServices((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.ExternalServices.Select(x => (global::Cratis.Chronicle.Concepts.ExternalServices.ExternalServiceId)x)));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>> GetExternalServices(global::Cratis.Chronicle.Contracts.ExternalServices.GetExternalServicesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>

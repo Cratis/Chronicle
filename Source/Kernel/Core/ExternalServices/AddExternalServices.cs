@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 
@@ -15,7 +16,7 @@ namespace Cratis.Chronicle.ExternalServices;
 [Command]
 [BelongsTo(WellKnownServices.ExternalServices)]
 public record AddExternalServices(
-    string EventStore,
+    EventStoreName EventStore,
     IEnumerable<Contracts.ExternalServices.ExternalServiceDefinition> ExternalServices)
 {
     /// <summary>

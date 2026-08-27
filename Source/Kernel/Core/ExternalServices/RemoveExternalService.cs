@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -15,7 +16,7 @@ namespace Cratis.Chronicle.ExternalServices;
 /// <param name="ExternalServiceId">The identifier of the external service to remove.</param>
 [Command]
 [BelongsTo(WellKnownServices.ExternalServices)]
-public record RemoveExternalService(string EventStore, string ExternalServiceId)
+public record RemoveExternalService(EventStoreName EventStore, ExternalServiceId ExternalServiceId)
 {
     /// <summary>
     /// Handles the command by deleting the definition from the event store's external service storage.
@@ -23,5 +24,5 @@ public record RemoveExternalService(string EventStore, string ExternalServiceId)
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IStorage storage) =>
-        storage.GetEventStore(EventStore).ExternalServices.Delete(new ExternalServiceId(ExternalServiceId));
+        storage.GetEventStore(EventStore).ExternalServices.Delete(ExternalServiceId);
 }
