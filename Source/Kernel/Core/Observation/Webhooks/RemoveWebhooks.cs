@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -13,12 +15,12 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="Webhooks">The identifiers of the webhooks to remove.</param>
 [Command]
 [BelongsTo(WellKnownServices.Webhooks)]
-public record RemoveWebhooks(string EventStore, IEnumerable<string> Webhooks)
+public record RemoveWebhooks(EventStoreName EventStore, IEnumerable<WebhookId> Webhooks)
 {
     /// <summary>
     /// Handles the command by appending a removal for each webhook.
     /// </summary>
     /// <param name="registrar">The <see cref="WebhookRegistrar"/> that appends them.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(WebhookRegistrar registrar) => registrar.Remove(EventStore, Webhooks);
+    internal Task Handle(WebhookRegistrar registrar) => registrar.Remove(EventStore, Webhooks.Select(_ => _.Value));
 }
