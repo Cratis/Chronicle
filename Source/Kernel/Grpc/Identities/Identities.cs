@@ -15,14 +15,15 @@ namespace Cratis.Chronicle.Services.Identities;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Identities.IIdentities"/>.
 /// </summary>
 internal sealed class Identities(
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Identities.Identities> logger) : global::Cratis.Chronicle.Contracts.Identities.IIdentities
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RenameIdentity(global::Cratis.Chronicle.Contracts.Identities.RenameIdentityRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Identities.RenameIdentity(request.EventStore, request.Namespace, request.Subject, request.Name),
-            command => command.Handle(storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.Identities.RenameIdentity((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Security.Subject)request.Subject, request.Name));
 
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>> AllIdentities(global::Cratis.Chronicle.Contracts.Identities.AllIdentitiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
