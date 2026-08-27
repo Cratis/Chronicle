@@ -1,0 +1,29 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Arc.Commands;
+using Cratis.Arc.Testing.Commands;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Contracts.ExternalServices;
+using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Cratis.Chronicle.ExternalServices.for_AddExternalService.when_validating;
+
+public class and_all_values_are_provided : Specification
+{
+    readonly CommandScenario<AddExternalService> _scenario = new();
+    CommandResult _result;
+
+    void Establish()
+    {
+        var storage = Substitute.For<IStorage>();
+        storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
+        _scenario.Services.AddSingleton(storage);
+    }
+
+    async Task Because() => _result = await _scenario.Validate(new AddExternalService("some-event-store", "some-id", "some-service", ExternalServiceEndpointType.Http, "https://example.com", AuthorizationType.None, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, new Dictionary<string, string>(), string.Empty, 0, string.Empty, string.Empty, string.Empty, new Dictionary<string, string>()));
+
+    [Fact] void should_be_valid() => _result.ShouldBeValid();
+}
