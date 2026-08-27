@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Grpc;
 
@@ -17,7 +18,7 @@ namespace Cratis.Chronicle.Seeding;
 [Command]
 [BelongsTo(WellKnownServices.EventSeeding)]
 public record SeedEvents(
-    string EventStore,
+    EventStoreName EventStore,
     IEnumerable<Contracts.Seeding.EventTypeSeedEntries> GlobalByEventType,
     IEnumerable<Contracts.Seeding.EventSourceSeedEntries> GlobalByEventSource,
     IEnumerable<Contracts.Seeding.NamespacedSeedEntries> NamespacedEntries)
