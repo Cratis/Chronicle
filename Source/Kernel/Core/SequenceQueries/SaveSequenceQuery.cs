@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
 using Cratis.Chronicle.Storage;
 
@@ -34,12 +35,12 @@ namespace Cratis.Chronicle.SequenceQueries;
 /// </remarks>
 [Command]
 public record SaveSequenceQuery(
-    string EventStore,
-    string Id,
+    EventStoreName EventStore,
+    SequenceQueryId Id,
     string Name,
     SequenceQueryScope Scope,
     string Folder,
-    string Namespace,
+    EventStoreNamespaceName Namespace,
     string EventSequenceId,
     string EventSourceId,
     string EventSourceType,
