@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 
@@ -16,7 +18,7 @@ namespace Cratis.Chronicle.Identities;
 /// <param name="Name">The new display name.</param>
 [Command]
 [BelongsTo(WellKnownServices.Identities)]
-public record RenameIdentity(string EventStore, string Namespace, string Subject, string Name)
+public record RenameIdentity(EventStoreName EventStore, EventStoreNamespaceName Namespace, Subject Subject, string Name)
 {
     /// <summary>
     /// Handles the command by renaming the identity in the identity store.
