@@ -6,9 +6,9 @@
   <h3 align="center">Cratis Chronicle</h3>
 
   <p align="center">
-    An Event Sourcing database for .NET — built with ease of use, productivity, compliance, and maintainability in mind.
+    An open-source (MIT) event-sourcing database and runtime — Orleans-based .NET kernel, pluggable storage (MongoDB default; PostgreSQL, SQL Server, SQLite, in-memory), and language-agnostic gRPC contracts with clients for .NET, TypeScript, Kotlin/Java, and Elixir (Python coming soon).
     <br />
-    <a href="https://cratis.io"><strong>Explore the docs »</strong></a>
+    <a href="https://www.cratis.io/chronicle/"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/cratis/samples">View Samples</a>
@@ -44,15 +44,16 @@
 
 ---
 
-## 📖 Table of Contents
+## 📑 Table of Contents
 
-- [📖 Table of Contents](#-table-of-contents)
-- [🧭 About](#-about)
+- [📑 Table of Contents](#-table-of-contents)
+- [📖 About](#-about)
 - [✨ Key Features](#-key-features)
-  - [🏗️ Event Sourcing Foundation](#️-event-sourcing-foundation)
-  - [🎯 Real-time Processing](#-real-time-processing)
-  - [🛡️ Enterprise Ready](#️-enterprise-ready)
-  - [🚀 Developer Experience](#-developer-experience)
+  - [🧱 Event Sourcing Foundation](#-event-sourcing-foundation)
+  - [⚡ Real-time Processing](#-real-time-processing)
+  - [🔒 Data Integrity & Compliance](#-data-integrity--compliance)
+  - [💻 Developer Experience](#-developer-experience)
+- [🌍 Clients](#-clients)
 - [🚀 Getting Started](#-getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -63,8 +64,9 @@
     - [React to events (Reactor)](#react-to-events-reactor)
     - [Build read models (Reducer)](#build-read-models-reducer)
     - [Declarative projections](#declarative-projections)
-- [🏛️ Architecture](#️-architecture)
+- [📐 Architecture](#-architecture)
 - [📚 Documentation](#-documentation)
+- [🧩 The Cratis ecosystem](#-the-cratis-ecosystem)
 - [🤝 Contributing](#-contributing)
 - [💬 Support](#-support)
 - [📊 Repository Stats](#-repository-stats)
@@ -73,17 +75,22 @@
 
 ---
 
-## 🧭 About
+## 📖 About
 
-Cratis Chronicle is an **Event Sourcing database** that captures every state change in your system as an immutable sequence of events — rather than storing only the current state.
+Cratis Chronicle is an event-sourcing database and processing runtime with a first-class .NET SDK and additional TypeScript, Kotlin/Java (JVM), and Elixir clients — with a Python client coming soon — plus pluggable storage-provider implementations including MongoDB (default), PostgreSQL, SQL Server, and SQLite.
+
+Chronicle captures every state change in your system as an immutable sequence of events — rather than storing only the current state.
 This unlocks powerful capabilities like full audit trails, time-travel debugging, and event-driven architectures without the usual complexity.
+Chronicle is free to use and MIT licensed.
 
 Chronicle ships with:
 
-- 🖥️ **Chronicle Kernel** — the server that manages event storage, processing, and querying
-- 📦 **.NET Client SDK** — a rich C# library for interacting with Chronicle from any .NET application
-- 🌐 **Web Workbench** — a built-in management dashboard for monitoring, browsing events, and administration
-- 🗄️ **MongoDB Backend** — optimized storage layer with an extensible model for other data stores
+- ⚙️ **Chronicle Kernel** — the server that manages event storage, processing, and querying, built on [Microsoft Orleans](https://github.com/dotnet/orleans) for distributed, stateful processing
+- 🧩 **.NET Client SDK** — a rich C# library for interacting with Chronicle from any .NET application
+- 🌍 **Language-agnostic gRPC contracts** — protobuf contracts that any language can implement, with clients for [TypeScript](https://github.com/Cratis/Chronicle.TypeScript), [Kotlin/Java](https://github.com/Cratis/Chronicle.Kotlin), and [Elixir](https://github.com/Cratis/Chronicle.Elixir), and a [Python](https://github.com/Cratis/Chronicle.Python) client coming soon
+- 🗄️ **Pluggable storage** — MongoDB (default), PostgreSQL, SQL Server, SQLite, and in-memory providers
+- 🖥️ **Web Workbench** — a built-in management dashboard for monitoring, browsing events, and administration
+- ⌨️ **CLI** — the [Cratis CLI](https://github.com/Cratis/cli) brings event, observer, projection, and read-model inspection to the terminal
 
 > For core values and principles, read our [core values and principles](https://github.com/Cratis/.github/blob/main/profile/README.md).
 
@@ -91,7 +98,7 @@ Chronicle ships with:
 
 ## ✨ Key Features
 
-### 🏗️ Event Sourcing Foundation
+### 🧱 Event Sourcing Foundation
 
 | | |
 |---|---|
@@ -100,7 +107,7 @@ Chronicle ships with:
 | **Schema Evolution** | Strongly-typed event definitions with support for evolving schemas over time |
 | **Rich Metadata** | Timestamps, correlation IDs, causation IDs, and custom tags on every event |
 
-### 🎯 Real-time Processing
+### ⚡ Real-time Processing
 
 | | |
 |---|---|
@@ -109,7 +116,7 @@ Chronicle ships with:
 | **Projections** | Declarative, fluent read-model builders with join, set, and remove support |
 | **Observers** | Low-level event subscriptions with guaranteed delivery |
 
-### 🛡️ Enterprise Ready
+### 🔒 Data Integrity & Compliance
 
 | | |
 |---|---|
@@ -118,7 +125,7 @@ Chronicle ships with:
 | **Compliance** | Full audit trails and data lineage for regulatory requirements |
 | **Revision** | Built-in support for correcting past events |
 
-### 🚀 Developer Experience
+### 💻 Developer Experience
 
 | | |
 |---|---|
@@ -126,6 +133,22 @@ Chronicle ships with:
 | **DI Native** | First-class support for ASP.NET Core dependency injection |
 | **Strong Typing** | End-to-end C# types from events through projections to read models |
 | **Testing Utilities** | In-memory providers and test helpers for unit and integration testing |
+
+---
+
+## 🌍 Clients
+
+Chronicle's boundary is a set of language-agnostic gRPC/protobuf contracts — any language with a gRPC implementation can talk to the kernel.
+
+| Language | Package | Repository |
+|---|---|---|
+| **.NET (C#)** | [`Cratis.Chronicle` on NuGet](https://www.nuget.org/packages/Cratis.Chronicle) | This repository |
+| **TypeScript / Node.js** | [`@cratis/chronicle` on npm](https://www.npmjs.com/package/@cratis/chronicle) | [Chronicle.TypeScript](https://github.com/Cratis/Chronicle.TypeScript) |
+| **Kotlin / Java (JVM)** | [`io.cratis:chronicle` on Maven Central](https://central.sonatype.com/artifact/io.cratis/chronicle) | [Chronicle.Kotlin](https://github.com/Cratis/Chronicle.Kotlin) |
+| **Elixir** | [`cratis_chronicle` on Hex](https://hex.pm/packages/cratis_chronicle) | [Chronicle.Elixir](https://github.com/Cratis/Chronicle.Elixir) |
+| **Python** | Coming soon (pre-alpha, not yet published) | [Chronicle.Python](https://github.com/Cratis/Chronicle.Python) |
+
+Building a client for another language? The [building a client](https://www.cratis.io/chronicle/building-a-client/) guide distills everything the existing clients learned along the way.
 
 ---
 
@@ -250,26 +273,29 @@ public class BorrowedBooksProjection : IProjectionFor<BorrowedBook>
 
 ---
 
-## 🏛️ Architecture
+## 📐 Architecture
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│                  Your .NET Application                   │
+│                     Your Application                     │
+│         .NET · TypeScript · Kotlin/Java · Elixir         │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐  │
 │  │  Events · Reactors · Reducers · Projections        │  │
 │  └────────────────────────────────────────────────────┘  │
 │                                                          │
-│                   Chronicle Client SDK                   │
+│                     Chronicle Client                     │
 └─────────────────────────────┬────────────────────────────┘
-                              │  gRPC
+                              │  gRPC (language-agnostic contracts)
 ┌─────────────────────────────┴────────────────────────────┐
-│                     Chronicle Kernel                     │
+│              Chronicle Kernel (Orleans-based)            │
 │                                                          │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────┐  │
 │  │  Event Store   │  │   Projection   │  │    Web     │  │
-│  │   (MongoDB)    │  │   Engine       │  │ Workbench  │  │
+│  │                │  │   Engine       │  │ Workbench  │  │
 │  └────────────────┘  └────────────────┘  └────────────┘  │
+│                                                          │
+│      MongoDB · PostgreSQL · SQL Server · SQLite          │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -277,24 +303,42 @@ Chronicle follows a **client-server** model:
 
 | Component | Description |
 |---|---|
-| **Chronicle Kernel** | Server that manages event storage, observer dispatch, projection processing, and querying |
-| **Client SDK** | .NET libraries (`Cratis.Chronicle` / `Cratis.Chronicle.AspNetCore`) that connect your app to the Kernel |
-| **MongoDB Backend** | Default event and read-model storage; extensible to other providers |
+| **Chronicle Kernel** | Server that manages event storage, observer dispatch, projection processing, and querying — built on Microsoft Orleans for distributed, stateful processing |
+| **Client SDK** | .NET libraries (`Cratis.Chronicle` / `Cratis.Chronicle.AspNetCore`) that connect your app to the Kernel; TypeScript, Kotlin/Java, and Elixir clients speak the same gRPC contracts |
+| **Pluggable storage** | MongoDB (default), PostgreSQL, SQL Server, SQLite, and in-memory providers for the event store and read models |
 | **Web Workbench** | Browser-based dashboard available at `https://localhost:35000` when running the development image |
 
 ---
 
 ## 📚 Documentation
 
-Full documentation is available at **[https://cratis.io](https://cratis.io)**.
+Full documentation is available at **[https://www.cratis.io/chronicle/](https://www.cratis.io/chronicle/)**.
 
 | Section | Description |
 |---|---|
-| [Get Started](https://cratis.io/docs/Guides/index.html) | Quick-start guides for Console, Worker Service, and ASP.NET Core |
-| [Concepts](https://cratis.io/docs/Chronicle/concepts) | Events, projections, reactors, reducers, constraints, and more |
-| [Hosting](https://cratis.io/docs/Chronicle/hosting) | Production and development deployment options |
-| [Configuration](https://cratis.io/docs/Chronicle/configuration) | Client and server configuration reference |
+| [Get Started](https://www.cratis.io/chronicle/get-started/) | Quick-start guides for Console, Worker Service, and ASP.NET Core |
+| [Concepts](https://www.cratis.io/chronicle/concepts/) | Events, projections, reactors, reducers, constraints, and more |
+| [Architecture](https://www.cratis.io/chronicle/architecture/) | How the kernel, clients, storage, and read models fit together |
+| [Hosting](https://www.cratis.io/chronicle/hosting/) | Production and development deployment options |
+| [Building a Client](https://www.cratis.io/chronicle/building-a-client/) | Implement the gRPC contract in a new language |
 | [Contributing](./Documentation/contributing/index.md) | How to build and contribute to Chronicle |
+
+---
+
+## 🧩 The Cratis ecosystem
+
+This project is part of [Cratis](https://www.cratis.io) — free, MIT-licensed tools for building event-sourced and CQRS applications.
+
+- **[Chronicle](https://github.com/Cratis/Chronicle)** — event-sourcing database and runtime. Orleans-based kernel, pluggable storage (MongoDB default; PostgreSQL, SQL Server, SQLite, in-memory), language-agnostic gRPC contracts. [Docs](https://www.cratis.io/chronicle/)
+- **Chronicle clients** — first-class [.NET SDK](https://github.com/Cratis/Chronicle), plus [TypeScript](https://github.com/Cratis/Chronicle.TypeScript), [Kotlin/Java](https://github.com/Cratis/Chronicle.Kotlin), and [Elixir](https://github.com/Cratis/Chronicle.Elixir); [Python](https://github.com/Cratis/Chronicle.Python) coming soon (pre-alpha). AI agents connect through the [Chronicle MCP server](https://github.com/Cratis/Chronicle.Mcp).
+- **[Arc](https://github.com/Cratis/Arc)** — opinionated CQRS framework for ASP.NET Core with commands, queries, validation, authorization, and TypeScript proxy generation. Works without event sourcing. [Docs](https://www.cratis.io/arc/)
+- **[Components](https://github.com/Cratis/Components)** — React components aligned with Arc patterns. [Docs](https://www.cratis.io/components/)
+- **[CLI](https://github.com/Cratis/cli) + Workbench** — inspect and diagnose Chronicle from the terminal or the browser. [Docs](https://www.cratis.io/cli/)
+- **Model-first layer (experimental)** — [Studio](https://github.com/Cratis/Studio), [Screenplay](https://github.com/Cratis/Screenplay), [Stage](https://github.com/Cratis/Stage), [Scene](https://github.com/Cratis/Scene), [Prologue](https://github.com/Cratis/Prologue)
+- **Supporting** — [Fundamentals](https://github.com/Cratis/Fundamentals), [Specifications](https://github.com/Cratis/Specifications), [Synopsis](https://github.com/Cratis/Synopsis), [Lens](https://github.com/Cratis/Lens), [Narrator](https://github.com/Cratis/Narrator), and free [AI tooling](https://github.com/Cratis/AI) (preview); [Ensemble](https://github.com/Cratis/Ensemble) coming soon (pre-release)
+- **[Samples](https://github.com/Cratis/Samples)** — runnable event sourcing and CQRS samples for the whole stack
+
+Everything Cratis publishes today is MIT licensed and free to use.
 
 ---
 

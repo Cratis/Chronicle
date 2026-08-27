@@ -3,7 +3,7 @@ title: Architecture
 description: How Chronicle's pieces fit together at runtime — the gRPC client boundary, Orleans-based kernel, storage backends, Workbench/CLI tooling, and how an event becomes a read model.
 ---
 
-Chronicle is a **client–server** event platform. Your application talks to a small **kernel** through gRPC/protobuf contracts; the kernel owns the event store and runs the processing that turns events into read models. The .NET client is the first-class, most mature experience, but the boundary is not .NET-only: the repository also ships TypeScript and Elixir clients/contracts generated from the same protocol.
+Chronicle is a **client–server** event platform. Your application talks to a small **kernel** through gRPC/protobuf contracts; the kernel owns the event store and runs the processing that turns events into read models. The .NET client is the first-class experience, but the boundary is not .NET-only: TypeScript, Kotlin/Java (JVM), and Elixir clients build on the same protocol, and a Python client is coming soon.
 
 Understanding this shape makes the rest of the docs click into place: client language, storage engine, processing runtime, and operating tools are separate choices that still share one event model.
 
@@ -12,7 +12,7 @@ Understanding this shape makes the rest of the docs click into place: client lan
 ```mermaid
 flowchart TB
     subgraph App["Your application"]
-        SDK["Chronicle clients — .NET · TypeScript · Elixir"]
+        SDK["Chronicle clients — .NET · TypeScript · Kotlin/Java · Elixir"]
     end
     subgraph Kernel["Chronicle kernel"]
         ORL[".NET Orleans runtime"]
@@ -37,7 +37,7 @@ flowchart TB
     Kernel -.-> OTEL
 ```
 
-- **Client boundary** — gRPC/protobuf contracts. The .NET client is the main developer experience; TypeScript and Elixir clients/contracts let other runtimes talk to the same kernel.
+- **Client boundary** — gRPC/protobuf contracts. The .NET client is the main developer experience; TypeScript, Kotlin/Java, and Elixir clients let other runtimes talk to the same kernel, with a Python client coming soon.
 - **Kernel** — the server. It validates and stores events, and runs the [observers](./concepts/observer-patterns.md) (projections, reducers, reactors) that react to them.
 - **Orleans runtime** — the kernel is built on .NET Orleans, using grains for stateful, distributed processing such as event sequences, observer state, jobs, reminders, and recovery.
 - **Storage** — the event log and read models persist here; MongoDB is the default, with PostgreSQL, Microsoft SQL Server, and SQLite available through the SQL storage implementation.
@@ -49,7 +49,7 @@ flowchart TB
 
 The event log is often the system's longest-lived asset. Chronicle keeps that boundary explicit:
 
-- **Client language is a choice.** .NET is first-class and receives the richest API, analyzers, hosting integration, and testing helpers. The gRPC/protobuf contract keeps Chronicle accessible from other runtimes too; the repository currently ships TypeScript and Elixir clients/contracts generated from that protocol.
+- **Client language is a choice.** .NET is first-class and receives the richest API, analyzers, hosting integration, and testing helpers. The gRPC/protobuf contract keeps Chronicle accessible from other runtimes too; TypeScript, Kotlin/Java, and Elixir clients build on that protocol today, and a Python client is coming soon.
 - **Storage is a deployment choice.** You can run MongoDB locally by default, or configure PostgreSQL, Microsoft SQL Server, or SQLite when that fits your platform better. The event model above the storage layer does not change.
 - **Operations are part of the model.** Observers track their position, failed partitions are recorded, jobs have state, recommendations can be listed and performed, and replay is a first-class operation.
 
