@@ -15,21 +15,21 @@ namespace Cratis.Chronicle.Services.Recommendations;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Recommendations.IRecommendations"/>.
 /// </summary>
 internal sealed class Recommendations(
-    global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Recommendations.Recommendations> logger) : global::Cratis.Chronicle.Contracts.Recommendations.IRecommendations
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> IgnoreRecommendation(global::Cratis.Chronicle.Contracts.Recommendations.IgnoreRecommendationRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Recommendations.IgnoreRecommendation(request.EventStore, request.Namespace, request.RecommendationId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Recommendations.IgnoreRecommendation((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Recommendations.RecommendationId)request.RecommendationId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> PerformRecommendation(global::Cratis.Chronicle.Contracts.Recommendations.PerformRecommendationRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Recommendations.PerformRecommendation(request.EventStore, request.Namespace, request.RecommendationId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Recommendations.PerformRecommendation((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Recommendations.RecommendationId)request.RecommendationId));
 
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> AllRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
