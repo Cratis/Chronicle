@@ -1,0 +1,39 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Text.Json.Nodes;
+using Cratis.Arc.Commands;
+using Cratis.Arc.Testing.Commands;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Cratis.Chronicle.Sequences.for_AppendManyForEventSources.when_validating;
+
+public class and_an_event_is_missing_its_event_source : Specification
+{
+    readonly CommandScenario<AppendManyForEventSources> _scenario = new();
+    CommandResult _result;
+
+    void Establish()
+    {
+        var storage = Substitute.For<IStorage>();
+        storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
+        _scenario.Services.AddSingleton(storage);
+    }
+
+    async Task Because() => _result = await _scenario.Validate(new AppendManyForEventSources(
+        "some-event-store",
+        "some-namespace",
+        "event-log",
+        [new EventForEventSourceId(
+            string.Empty,
+            "Default",
+            "All",
+            "Default",
+            new EventType("SomeEvent", 1, false),
+            new JsonObject())]));
+
+    [Fact] void should_not_be_successful() => _result.ShouldNotBeSuccessful();
+    [Fact] void should_have_validation_errors() => _result.ShouldHaveValidationErrors();
+}
