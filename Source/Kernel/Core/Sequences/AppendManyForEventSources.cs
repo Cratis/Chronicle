@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
@@ -24,9 +25,9 @@ namespace Cratis.Chronicle.Sequences;
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyForEventSources(
-    string EventStore,
-    string Namespace,
-    string EventSequenceId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
+    Concepts.EventSequences.EventSequenceId EventSequenceId,
     IEnumerable<EventForEventSourceId> Events,
     Guid? CorrelationId = default,
     IEnumerable<string>? Tags = default,

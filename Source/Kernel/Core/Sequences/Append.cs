@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
@@ -32,13 +33,13 @@ namespace Cratis.Chronicle.Sequences;
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Append(
-    string EventStore,
-    string Namespace,
-    string EventSequenceId,
-    string EventSourceId,
-    string EventSourceType,
-    string EventStreamType,
-    string EventStreamId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
+    Concepts.EventSequences.EventSequenceId EventSequenceId,
+    EventSourceId EventSourceId,
+    EventSourceType EventSourceType,
+    EventStreamType EventStreamType,
+    EventStreamId EventStreamId,
     EventType EventType,
     JsonObject Content,
     Guid? CorrelationId = default,
@@ -67,10 +68,10 @@ public record Append(
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         return eventSequence.Append(
-            (EventSourceType)EventSourceType,
+            EventSourceType,
             EventSourceId,
-            (EventStreamType)EventStreamType,
-            (EventStreamId)EventStreamId,
+            EventStreamType,
+            EventStreamId,
             EventType.ToChronicle(),
             Content,
             CorrelationId ?? Guid.NewGuid(),

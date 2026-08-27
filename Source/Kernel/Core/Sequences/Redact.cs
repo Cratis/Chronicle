@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.EventSequences;
@@ -27,9 +28,9 @@ namespace Cratis.Chronicle.Sequences;
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Redact(
-    string EventStore,
-    string Namespace,
-    string EventSequenceId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
+    Concepts.EventSequences.EventSequenceId EventSequenceId,
     ulong SequenceNumber,
     string Reason,
     IEnumerable<Causation>? Causation = default,
@@ -53,7 +54,7 @@ public record Redact(
     {
         var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
         return systemEventSequence.Append(
-            (EventSourceId)EventSequenceId,
+            (EventSourceId)EventSequenceId.Value,
             new EventRedactionRequested(EventSequenceId, SequenceNumber, Reason),
             correlationId: Guid.NewGuid(),
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),

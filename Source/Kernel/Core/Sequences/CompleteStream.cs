@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
@@ -19,11 +20,11 @@ namespace Cratis.Chronicle.Sequences;
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record CompleteStream(
-    string EventStore,
-    string Namespace,
-    string EventSequenceId,
-    string EventStreamType,
-    string EventStreamId)
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
+    Concepts.EventSequences.EventSequenceId EventSequenceId,
+    EventStreamType EventStreamType,
+    EventStreamId EventStreamId)
 {
     /// <summary>
     /// Handles the command by completing the stream.

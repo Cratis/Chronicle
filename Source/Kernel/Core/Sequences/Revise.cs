@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.EventSequences;
@@ -30,9 +31,9 @@ namespace Cratis.Chronicle.Sequences;
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Revise(
-    string EventStore,
-    string Namespace,
-    string EventSequenceId,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
+    Concepts.EventSequences.EventSequenceId EventSequenceId,
     ulong SequenceNumber,
     EventType EventType,
     JsonObject Content,
@@ -57,7 +58,7 @@ public record Revise(
     {
         var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
         return systemEventSequence.Append(
-            (EventSourceId)EventSequenceId,
+            (EventSourceId)EventSequenceId.Value,
             new EventRevised(
                 EventSequenceId,
                 SequenceNumber,
