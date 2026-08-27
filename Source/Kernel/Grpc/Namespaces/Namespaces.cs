@@ -15,15 +15,15 @@ namespace Cratis.Chronicle.Services.Namespaces;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Namespaces.INamespaces"/>.
 /// </summary>
 internal sealed class Namespaces(
-    global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Namespaces.Namespaces> logger) : global::Cratis.Chronicle.Contracts.Namespaces.INamespaces
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> EnsureNamespace(global::Cratis.Chronicle.Contracts.Namespaces.EnsureNamespaceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Namespaces.EnsureNamespace(request.EventStore, request.Namespace),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Namespaces.EnsureNamespace((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>> AllNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>

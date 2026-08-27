@@ -15,17 +15,15 @@ namespace Cratis.Chronicle.Services.EventStores;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.EventStores.IEventStores"/>.
 /// </summary>
 internal sealed class EventStores(
-    global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
-    global::Cratis.Chronicle.EventTypes.IEventTypes eventTypes,
-    global::Cratis.Chronicle.Observation.Reactors.Kernel.IReactors reactors,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.EventStores.EventStores> logger) : global::Cratis.Chronicle.Contracts.EventStores.IEventStores
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> EnsureEventStore(global::Cratis.Chronicle.Contracts.EventStores.EnsureEventStoreRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.EventStores.EnsureEventStore(request.Name),
-            command => command.Handle(grainFactory, storage, eventTypes, reactors));
+            commandPipeline,
+            new global::Cratis.Chronicle.EventStores.EnsureEventStore((global::Cratis.Chronicle.Concepts.EventStoreName)request.Name));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>> AllEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
