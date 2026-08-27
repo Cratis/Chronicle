@@ -15,27 +15,28 @@ namespace Cratis.Chronicle.Services.Jobs;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Jobs.IJobs"/>.
 /// </summary>
 internal sealed class Jobs(
-    global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
+    global::Orleans.IGrainFactory grainFactory,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Jobs.Jobs> logger) : global::Cratis.Chronicle.Contracts.Jobs.IJobs
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> DeleteJob(global::Cratis.Chronicle.Contracts.Jobs.DeleteJobRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Jobs.DeleteJob(request.EventStore, request.Namespace, request.JobId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Jobs.DeleteJob((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Jobs.JobId)request.JobId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> ResumeJob(global::Cratis.Chronicle.Contracts.Jobs.ResumeJobRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Jobs.ResumeJob(request.EventStore, request.Namespace, request.JobId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Jobs.ResumeJob((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Jobs.JobId)request.JobId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> StopJob(global::Cratis.Chronicle.Contracts.Jobs.StopJobRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Jobs.StopJob(request.EventStore, request.Namespace, request.JobId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Jobs.StopJob((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Jobs.JobId)request.JobId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse>>> GetJobSteps(global::Cratis.Chronicle.Contracts.Jobs.GetJobStepsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>

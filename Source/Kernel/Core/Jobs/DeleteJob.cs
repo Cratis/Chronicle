@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="JobId">The unique identifier of the job to delete.</param>
 [Command]
 [BelongsTo(WellKnownServices.Jobs)]
-public record DeleteJob(string EventStore, string Namespace, Guid JobId)
+public record DeleteJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Concepts.Jobs.JobId JobId)
 {
     /// <summary>
     /// Handles the command by invoking <see cref="IJobsManager.Delete"/> on the jobs manager grain.

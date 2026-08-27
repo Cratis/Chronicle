@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="JobId">The unique identifier of the job to stop.</param>
 [Command]
 [BelongsTo(WellKnownServices.Jobs)]
-public record StopJob(string EventStore, string Namespace, Guid JobId)
+public record StopJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Concepts.Jobs.JobId JobId)
 {
     /// <summary>
     /// Handles the command by invoking <see cref="IJobsManager.Stop"/> on the jobs manager grain.

@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="JobId">The unique identifier of the job to resume.</param>
 [Command]
 [BelongsTo(WellKnownServices.Jobs)]
-public record ResumeJob(string EventStore, string Namespace, Guid JobId)
+public record ResumeJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Concepts.Jobs.JobId JobId)
 {
     /// <summary>
     /// Handles the command by invoking <see cref="IJobsManager.Resume"/> on the jobs manager grain.
