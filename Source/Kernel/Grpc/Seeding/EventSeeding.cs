@@ -13,20 +13,21 @@ namespace Cratis.Chronicle.Services.Seeding;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Seeding.IEventSeeding"/>.
 /// </summary>
 internal sealed class EventSeeding(
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Orleans.IGrainFactory grainFactory,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Seeding.EventSeeding> logger) : global::Cratis.Chronicle.Contracts.Seeding.IEventSeeding
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddSeedEntry(global::Cratis.Chronicle.Contracts.Seeding.AddSeedEntryRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Seeding.AddSeedEntry(request.EventStore, request.Namespace, request.EventSourceId, request.EventTypeId, request.Content, request.IsGlobal),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Seeding.AddSeedEntry((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, (global::Cratis.Chronicle.Concepts.Events.EventTypeId)request.EventTypeId, request.Content, request.IsGlobal));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SeedEvents(global::Cratis.Chronicle.Contracts.Seeding.SeedEventsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Seeding.SeedEvents(request.EventStore, request.GlobalByEventType, request.GlobalByEventSource, request.NamespacedEntries),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Seeding.SeedEvents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.GlobalByEventType, request.GlobalByEventSource, request.NamespacedEntries));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>> GetGlobalSeedData(global::Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
