@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Schemas;
@@ -16,7 +17,7 @@ namespace Cratis.Chronicle.EventTypes;
 /// <param name="Type">The event type to register.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventTypes)]
-public record RegisterSingleEventType(string EventStore, Contracts.Events.EventTypeRegistration Type)
+public record RegisterSingleEventType(EventStoreName EventStore, Contracts.Events.EventTypeRegistration Type)
 {
     /// <summary>
     /// Handles the command by writing the registration and evicting the cache when it changed anything.

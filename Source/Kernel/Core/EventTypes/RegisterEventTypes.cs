@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 
@@ -16,7 +17,7 @@ namespace Cratis.Chronicle.EventTypes;
 [Command]
 [BelongsTo(WellKnownServices.EventTypes)]
 public record RegisterEventTypes(
-    string EventStore,
+    EventStoreName EventStore,
     IEnumerable<Contracts.Events.EventTypeRegistration> Types,
     bool DisableValidation)
 {
