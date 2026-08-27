@@ -70,7 +70,7 @@ message CommandResult_ValidateCaptureDeclarationResponse {
 }
 message DeleteCaptureRequest {
    string EventStore = 1;
-   string CaptureId = 2;
+   .bcl.Guid CaptureId = 2; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
 message EventContext {
    EventType EventType = 1;
@@ -129,7 +129,7 @@ message QueryResult_IEnumerable_CapturedEventResponse {
 }
 message SaveCaptureRequest {
    string EventStore = 1;
-   string Id = 2;
+   .bcl.Guid Id = 2; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Declaration = 3;
 }
 message SaveCaptureResponse {
@@ -142,14 +142,14 @@ message SerializableDateTimeOffset {
 }
 message StartCaptureRequest {
    string EventStore = 1;
-   string CaptureId = 2;
+   .bcl.Guid CaptureId = 2; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
 message StartCaptureResponse {
    repeated CaptureValidationMessage Messages = 1;
 }
 message StopCaptureRequest {
    string EventStore = 1;
-   string CaptureId = 2;
+   .bcl.Guid CaptureId = 2; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
 message ValidateCaptureDeclarationRequest {
    string EventStore = 1;

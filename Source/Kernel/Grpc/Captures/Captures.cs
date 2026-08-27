@@ -15,42 +15,43 @@ namespace Cratis.Chronicle.Services.Captures;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Captures.ICaptures"/>.
 /// </summary>
 internal sealed class Captures(
-    global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
-    global::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService languageService,
-    global::Cratis.Chronicle.Captures.Engine.ICaptureValidator captureValidator,
     global::System.Text.Json.JsonSerializerOptions jsonSerializerOptions,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Captures.Captures> logger) : global::Cratis.Chronicle.Contracts.Captures.ICaptures
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> DeleteCapture(global::Cratis.Chronicle.Contracts.Captures.DeleteCaptureRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Captures.DeleteCapture(request.EventStore, request.CaptureId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Captures.DeleteCapture((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Captures.CaptureId)request.CaptureId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Captures.SaveCaptureResponse>> SaveCapture(global::Cratis.Chronicle.Contracts.Captures.SaveCaptureRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        CommandExecutor.Execute<global::Cratis.Chronicle.Captures.SaveCapture, global::Cratis.Chronicle.Contracts.Captures.SaveCaptureResponse>(
-            new global::Cratis.Chronicle.Captures.SaveCapture(request.EventStore, request.Id, request.Declaration),
-            async command => ToSaveCaptureResponse((await command.Handle(storage, languageService, captureValidator))));
+        CommandExecutor.Execute<global::Cratis.Chronicle.Captures.SaveCaptureResult, global::Cratis.Chronicle.Contracts.Captures.SaveCaptureResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Captures.SaveCapture((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Captures.CaptureId)request.Id, request.Declaration),
+            response => ToSaveCaptureResponse(response));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Captures.StartCaptureResponse>> StartCapture(global::Cratis.Chronicle.Contracts.Captures.StartCaptureRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        CommandExecutor.Execute<global::Cratis.Chronicle.Captures.StartCapture, global::Cratis.Chronicle.Contracts.Captures.StartCaptureResponse>(
-            new global::Cratis.Chronicle.Captures.StartCapture(request.EventStore, request.CaptureId),
-            async command => ToStartCaptureResponse((await command.Handle(grainFactory))));
+        CommandExecutor.Execute<global::Cratis.Chronicle.Captures.StartCaptureResult, global::Cratis.Chronicle.Contracts.Captures.StartCaptureResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Captures.StartCapture((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Captures.CaptureId)request.CaptureId),
+            response => ToStartCaptureResponse(response));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> StopCapture(global::Cratis.Chronicle.Contracts.Captures.StopCaptureRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Captures.StopCapture(request.EventStore, request.CaptureId),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Captures.StopCapture((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Captures.CaptureId)request.CaptureId));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Captures.ValidateCaptureDeclarationResponse>> ValidateCaptureDeclaration(global::Cratis.Chronicle.Contracts.Captures.ValidateCaptureDeclarationRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
-        CommandExecutor.Execute<global::Cratis.Chronicle.Captures.ValidateCaptureDeclaration, global::Cratis.Chronicle.Contracts.Captures.ValidateCaptureDeclarationResponse>(
-            new global::Cratis.Chronicle.Captures.ValidateCaptureDeclaration(request.EventStore, request.Declaration),
-            async command => ToValidateCaptureDeclarationResponse((await command.Handle(languageService, captureValidator))));
+        CommandExecutor.Execute<global::Cratis.Chronicle.Captures.ValidateCaptureDeclarationResult, global::Cratis.Chronicle.Contracts.Captures.ValidateCaptureDeclarationResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Captures.ValidateCaptureDeclaration((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Declaration),
+            response => ToValidateCaptureDeclarationResponse(response));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>> GetCaptures(global::Cratis.Chronicle.Contracts.Captures.GetCapturesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
