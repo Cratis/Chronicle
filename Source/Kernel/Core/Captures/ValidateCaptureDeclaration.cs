@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Captures.Engine;
 using Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Captures;
@@ -18,7 +19,7 @@ namespace Cratis.Chronicle.Captures;
 /// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.Captures)]
-public record ValidateCaptureDeclaration(string EventStore, string Declaration)
+public record ValidateCaptureDeclaration(EventStoreName EventStore, string Declaration)
 {
     /// <summary>
     /// Handles the command by compiling the declaration and validating what it describes.

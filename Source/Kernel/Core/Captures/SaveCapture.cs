@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Captures.Engine;
 using Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 using Capture = Cratis.Chronicle.Concepts.Captures.Capture;
@@ -23,7 +24,7 @@ namespace Cratis.Chronicle.Captures;
 /// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.Captures)]
-public record SaveCapture(string EventStore, string Id, string Declaration)
+public record SaveCapture(EventStoreName EventStore, Concepts.Captures.CaptureId Id, string Declaration)
 {
     /// <summary>
     /// Handles the command by compiling the declaration and saving the capture it describes.

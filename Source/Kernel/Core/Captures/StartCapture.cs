@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Captures;
@@ -13,7 +14,7 @@ namespace Cratis.Chronicle.Captures;
 /// <param name="CaptureId">The unique identifier of the capture.</param>
 [Command]
 [BelongsTo(WellKnownServices.Captures)]
-public record StartCapture(string EventStore, string CaptureId)
+public record StartCapture(EventStoreName EventStore, Concepts.Captures.CaptureId CaptureId)
 {
     /// <summary>
     /// Handles the command by asking the captures manager grain to start the capture.
@@ -22,7 +23,7 @@ public record StartCapture(string EventStore, string CaptureId)
     /// <returns>What validating the capture had to say before it started.</returns>
     internal async Task<StartCaptureResult> Handle(IGrainFactory grainFactory)
     {
-        var messages = await grainFactory.GetGrain<ICapturesManager>(EventStore).Start(CaptureConverters.ResolveCaptureId(CaptureId));
+        var messages = await grainFactory.GetGrain<ICapturesManager>(EventStore).Start(CaptureId);
         return new(messages.ToContract());
     }
 }

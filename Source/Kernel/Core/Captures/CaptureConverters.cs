@@ -70,6 +70,6 @@ public static class CaptureConverters
     /// </summary>
     /// <param name="id">The supplied identifier.</param>
     /// <returns>The capture identifier.</returns>
-    internal static Concepts.Captures.CaptureId ResolveCaptureId(string id) =>
-        Guid.TryParse(id, out var guid) && guid != Guid.Empty ? new Concepts.Captures.CaptureId(guid) : Concepts.Captures.CaptureId.New();
+    internal static Concepts.Captures.CaptureId ResolveCaptureId(Concepts.Captures.CaptureId id) =>
+        id == Concepts.Captures.CaptureId.NotSet ? Concepts.Captures.CaptureId.New() : id;
 }
