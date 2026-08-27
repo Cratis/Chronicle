@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.ProjectionEditor;
@@ -16,8 +17,8 @@ namespace Cratis.Chronicle.ProjectionEditor;
 /// <param name="ReadModelDisplayName">The display name for the read model type to be created.</param>
 [Command]
 public record SaveProjectionWithInferredReadModel(
-    string EventStore,
-    string Namespace,
+    EventStoreName EventStore,
+    EventStoreNamespaceName Namespace,
     string Declaration,
     string ReadModelDisplayName)
 {

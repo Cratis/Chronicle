@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.ProjectionEditor;
@@ -14,7 +15,7 @@ namespace Cratis.Chronicle.ProjectionEditor;
 /// <param name="Declaration">The projection declaration language representation of the projection.</param>
 /// <param name="DraftReadModel">Optional draft read model definition to save along with the projection.</param>
 [Command]
-public record SaveProjection(string EventStore, string Namespace, string Declaration, DraftReadModel? DraftReadModel = null)
+public record SaveProjection(EventStoreName EventStore, EventStoreNamespaceName Namespace, string Declaration, DraftReadModel? DraftReadModel = null)
 {
     /// <summary>
     /// Handles the save projection request.
