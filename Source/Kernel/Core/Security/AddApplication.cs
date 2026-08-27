@@ -2,13 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 using Microsoft.AspNetCore.Identity;
-using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
-using ClientId = Cratis.Chronicle.Concepts.Security.ClientId;
-using ClientSecret = Cratis.Chronicle.Concepts.Security.ClientSecret;
 
 namespace Cratis.Chronicle.Security;
 
@@ -20,7 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ClientSecret">The plain-text client secret to be hashed and stored.</param>
 [Command]
 [BelongsTo(WellKnownServices.Applications)]
-public record AddApplication(Guid Id, string ClientId, string ClientSecret)
+public record AddApplication(Concepts.Security.ApplicationId Id, ClientId ClientId, ClientSecret ClientSecret)
 {
     /// <summary>
     /// Handles the command by appending an <see cref="ApplicationAdded"/> event to the event log.
@@ -31,15 +29,15 @@ public record AddApplication(Guid Id, string ClientId, string ClientSecret)
     /// <exception cref="ApplicationClientIdAlreadyRegistered">Thrown when an application with the same client identifier is already registered.</exception>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
-        var existing = await storage.System.Applications.GetByClientId((ClientId)ClientId);
+        var existing = await storage.System.Applications.GetByClientId(ClientId);
         if (existing is not null)
         {
             throw new ApplicationClientIdAlreadyRegistered(ClientId);
         }
 
         var hashedSecret = new PasswordHasher<object>().HashPassword(null!, ClientSecret);
-        var @event = new ApplicationAdded((ClientId)ClientId, (ClientSecret)hashedSecret);
+        var @event = new ApplicationAdded(ClientId, (ClientSecret)hashedSecret);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((ApplicationId)Id, @event);
+        await eventSequence.Append(Id, @event);
     }
 }

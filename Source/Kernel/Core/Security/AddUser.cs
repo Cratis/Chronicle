@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Password">The plain-text password to be hashed and stored.</param>
 [Command]
 [BelongsTo(WellKnownServices.Users)]
-public record AddUser(Guid UserId, string Username, string Email, string Password)
+public record AddUser(UserId UserId, Username Username, UserEmail Email, Password Password)
 {
     /// <summary>
     /// Handles the command by appending a <see cref="UserAdded"/> event to the event log.
@@ -29,7 +29,7 @@ public record AddUser(Guid UserId, string Username, string Email, string Passwor
     {
         var passwordHasher = new PasswordHasher<object>();
         var passwordHash = passwordHasher.HashPassword(null!, Password);
-        var @event = new UserAdded((Username)Username, (UserEmail)Email, (UserPassword)passwordHash);
+        var @event = new UserAdded(Username, Email, (UserPassword)passwordHash);
         var eventSequence = grainFactory.GetEventLog();
         await eventSequence.Append(UserId, @event);
     }

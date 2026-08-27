@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ConfirmedPassword">Confirmation of the password; must match <paramref name="Password"/>.</param>
 [Command]
 [BelongsTo(WellKnownServices.Users)]
-public record SetInitialAdminPassword(Guid UserId, string Password, string ConfirmedPassword)
+public record SetInitialAdminPassword(UserId UserId, Password Password, Password ConfirmedPassword)
 {
     /// <summary>
     /// Handles the command by verifying the user has not yet logged in and appending a <see cref="UserPasswordChanged"/> event.

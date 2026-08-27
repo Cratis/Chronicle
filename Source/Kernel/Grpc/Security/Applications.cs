@@ -15,27 +15,27 @@ namespace Cratis.Chronicle.Services.Security;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.Security.IApplications"/>.
 /// </summary>
 internal sealed class Applications(
-    global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Security.Applications> logger) : global::Cratis.Chronicle.Contracts.Security.IApplications
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddApplication(global::Cratis.Chronicle.Contracts.Security.AddApplicationRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.AddApplication(request.Id, request.ClientId, request.ClientSecret),
-            command => command.Handle(grainFactory, storage));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.AddApplication((global::Cratis.Chronicle.Concepts.Security.ApplicationId)request.Id, (global::Cratis.Chronicle.Concepts.Security.ClientId)request.ClientId, (global::Cratis.Chronicle.Concepts.Security.ClientSecret)request.ClientSecret));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> ChangeApplicationSecret(global::Cratis.Chronicle.Contracts.Security.ChangeApplicationSecretRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.ChangeApplicationSecret(request.Id, request.ClientSecret),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.ChangeApplicationSecret((global::Cratis.Chronicle.Concepts.Security.ApplicationId)request.Id, (global::Cratis.Chronicle.Concepts.Security.ClientSecret)request.ClientSecret));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RemoveApplication(global::Cratis.Chronicle.Contracts.Security.RemoveApplicationRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.Security.RemoveApplication(request.Id),
-            command => command.Handle(grainFactory));
+            commandPipeline,
+            new global::Cratis.Chronicle.Security.RemoveApplication((global::Cratis.Chronicle.Concepts.Security.ApplicationId)request.Id));
 
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Security.ApplicationResponse>>> AllApplications(global::ProtoBuf.Grpc.CallContext callContext = default) =>
