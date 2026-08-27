@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -19,7 +21,7 @@ namespace Cratis.Chronicle.EventTypes;
 /// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.EventTypes)]
-public record CreateEventType(string EventStore, string Name)
+public record CreateEventType(EventStoreName EventStore, EventTypeId Name)
 {
     /// <summary>
     /// Handles the command by registering an empty first generation for the named event type.
@@ -29,14 +31,14 @@ public record CreateEventType(string EventStore, string Name)
     /// <returns>Awaitable task.</returns>
     internal async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient)
     {
-        var eventType = new Concepts.Events.EventType(Name, Concepts.Events.EventTypeGeneration.First, false);
+        var eventType = new Concepts.Events.EventType(Name, EventTypeGeneration.First, false);
         var mutated = await storage
             .GetEventStore(EventStore).EventTypes
             .Register(
                 eventType,
                 new JsonSchema { Type = JsonObjectType.Object },
-                Concepts.Events.EventTypeOwner.Client,
-                Concepts.Events.EventTypeSource.User);
+                EventTypeOwner.Client,
+                EventTypeSource.User);
 
         if (mutated)
         {

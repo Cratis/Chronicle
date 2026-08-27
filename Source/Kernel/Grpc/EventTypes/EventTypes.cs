@@ -15,28 +15,27 @@ namespace Cratis.Chronicle.Services.EventTypes;
 /// Represents the generated implementation of <see cref="global::Cratis.Chronicle.Contracts.EventTypes.IEventTypes"/>.
 /// </summary>
 internal sealed class EventTypes(
+    global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
-    global::Cratis.Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient,
-    global::Cratis.Chronicle.EventTypes.EventTypeRegistrar eventTypeRegistrar,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.EventTypes.EventTypes> logger) : global::Cratis.Chronicle.Contracts.EventTypes.IEventTypes
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> CreateEventType(global::Cratis.Chronicle.Contracts.EventTypes.CreateEventTypeRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.EventTypes.CreateEventType(request.EventStore, request.Name),
-            command => command.Handle(storage, eventTypesCacheClient));
+            commandPipeline,
+            new global::Cratis.Chronicle.EventTypes.CreateEventType((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Events.EventTypeId)request.Name));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RegisterEventTypes(global::Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.EventTypes.RegisterEventTypes(request.EventStore, request.Types, request.DisableValidation),
-            command => command.Handle(storage, eventTypeRegistrar, eventTypesCacheClient));
+            commandPipeline,
+            new global::Cratis.Chronicle.EventTypes.RegisterEventTypes((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Types, request.DisableValidation));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RegisterSingleEventType(global::Cratis.Chronicle.Contracts.EventTypes.RegisterSingleEventTypeRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
-            new global::Cratis.Chronicle.EventTypes.RegisterSingleEventType(request.EventStore, request.Type),
-            command => command.Handle(storage, eventTypesCacheClient));
+            commandPipeline,
+            new global::Cratis.Chronicle.EventTypes.RegisterSingleEventType((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Type));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>> AllEventTypeGenerations(global::Cratis.Chronicle.Contracts.EventTypes.AllEventTypeGenerationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
