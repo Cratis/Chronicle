@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Recommendations;
 /// <param name="RecommendationId">The unique identifier of the recommendation to ignore.</param>
 [Command]
 [BelongsTo(WellKnownServices.Recommendations)]
-public record IgnoreRecommendation(string EventStore, string Namespace, Guid RecommendationId)
+public record IgnoreRecommendation(EventStoreName EventStore, EventStoreNamespaceName Namespace, Concepts.Recommendations.RecommendationId RecommendationId)
 {
     /// <summary>
     /// Handles the command by asking the recommendations manager grain to ignore the recommendation.
@@ -24,5 +24,5 @@ public record IgnoreRecommendation(string EventStore, string Namespace, Guid Rec
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetRecommendationsManager(new EventStoreAndNamespace(EventStore, Namespace))
-            .Ignore((Concepts.Recommendations.RecommendationId)RecommendationId);
+            .Ignore(RecommendationId);
 }

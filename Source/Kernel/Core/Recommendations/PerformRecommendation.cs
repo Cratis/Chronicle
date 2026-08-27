@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Recommendations;
 /// <param name="RecommendationId">The unique identifier of the recommendation to perform.</param>
 [Command]
 [BelongsTo(WellKnownServices.Recommendations)]
-public record PerformRecommendation(string EventStore, string Namespace, Guid RecommendationId)
+public record PerformRecommendation(EventStoreName EventStore, EventStoreNamespaceName Namespace, Concepts.Recommendations.RecommendationId RecommendationId)
 {
     /// <summary>
     /// Handles the command by asking the recommendations manager grain to perform the recommendation.
@@ -24,5 +24,5 @@ public record PerformRecommendation(string EventStore, string Namespace, Guid Re
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetRecommendationsManager(new EventStoreAndNamespace(EventStore, Namespace))
-            .Perform((Concepts.Recommendations.RecommendationId)RecommendationId);
+            .Perform(RecommendationId);
 }
