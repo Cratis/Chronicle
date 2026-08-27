@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.ProjectionEditor;
@@ -15,7 +16,7 @@ namespace Cratis.Chronicle.ProjectionEditor;
 /// <param name="Declaration">The projection declaration language representation of the projection.</param>
 /// <param name="DraftReadModel">Optional draft read model definition to use for preview.</param>
 [Command]
-public record PreviewProjection(string EventStore, string Namespace, string Declaration, DraftReadModel? DraftReadModel = null)
+public record PreviewProjection(EventStoreName EventStore, EventStoreNamespaceName Namespace, string Declaration, DraftReadModel? DraftReadModel = null)
 {
     /// <summary>
     /// Handles the preview projection request.
