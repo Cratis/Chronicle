@@ -20,6 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cratis.Arc.Testing" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="OrleansTestKit10" />
         <PackageReference Include="protobuf-net.Grpc" />

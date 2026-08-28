@@ -27,11 +27,11 @@ public static class ExecutorStubs
 
         internal static class CommandExecutor
         {
-            internal static Task<CommandResult> Execute<TCommand>(TCommand command, Func<TCommand, Task> handle)
-                where TCommand : notnull => throw new NotSupportedException();
+            internal static Task<CommandResult> Execute(Cratis.Arc.Commands.ICommandPipeline pipeline, object command) =>
+                throw new NotSupportedException();
 
-            internal static Task<CommandResult<TResponse>> Execute<TCommand, TResponse>(TCommand command, Func<TCommand, Task<TResponse>> handle)
-                where TCommand : notnull => throw new NotSupportedException();
+            internal static Task<CommandResult<TResponse>> Execute<TDomainResponse, TResponse>(Cratis.Arc.Commands.ICommandPipeline pipeline, object command, Func<TDomainResponse, TResponse> mapResponse) =>
+                throw new NotSupportedException();
         }
 
         internal static class QueryExecutor
