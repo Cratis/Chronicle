@@ -342,6 +342,8 @@ This project is part of [Cratis](https://www.cratis.io) — free, MIT-licensed t
 
 Everything Cratis publishes today is MIT licensed and free to use.
 
+Blog: [blog.cratis.io](https://blog.cratis.io)
+
 ---
 
 ## 🤝 Contributing
