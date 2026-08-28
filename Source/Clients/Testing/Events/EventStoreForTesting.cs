@@ -3,7 +3,6 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
-
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -24,6 +23,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -85,6 +85,7 @@ public class EventStoreForTesting : IEventStore
     readonly Lazy<IJobs> _jobs;
     readonly Lazy<IUnitOfWorkManager> _unitOfWorkManager;
     readonly Lazy<IEventSeeding> _seeding;
+    readonly Lazy<IPatterns> _patterns;
     readonly Lazy<IPIIManager> _pii;
     readonly Lazy<IIdentityManager> _identities;
 
@@ -229,6 +230,8 @@ public class EventStoreForTesting : IEventStore
         _failedPartitions = new Lazy<IFailedPartitions>(() => new FailedPartitionsImpl(this));
         _jobs = new Lazy<IJobs>(() => new JobsImpl(this));
         _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this));
+        _patterns = new Lazy<IPatterns>(() => new Patterns.Patterns(this));
+
         _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
             Name,
             Connection,
@@ -296,6 +299,13 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IEventSeeding Seeding => _seeding.Value;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Backed by the real client implementation, so a scenario that asks what a scope usually does gets the answer
+    /// the in-process services hold rather than an exception from a surface it is exercising.
+    /// </remarks>
+    public IPatterns Patterns => _patterns.Value;
 
     /// <inheritdoc/>
     public IPIIManager PII => _pii.Value;

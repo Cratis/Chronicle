@@ -22,6 +22,7 @@ using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -250,6 +251,8 @@ public class EventStore : IEventStore
             artifactActivator,
             loggerFactory.CreateLogger<EventSeeding>());
 
+        Patterns = new Patterns.Patterns(this);
+
         PII = new Compliance.GDPR.PIIManager(eventStoreName, @namespace, connection);
         Identities = new IdentityManager(eventStoreName, @namespace, connection);
 
@@ -312,6 +315,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventSeeding Seeding { get; }
+
+    /// <inheritdoc/>
+    public IPatterns Patterns { get; }
 
     /// <inheritdoc/>
     public Compliance.GDPR.IPIIManager PII { get; }

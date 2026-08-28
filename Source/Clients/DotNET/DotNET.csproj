@@ -35,6 +35,7 @@
 
     <ItemGroup>
         <Compile Include="../../Kernel/Concepts/Captures/*.cs" Link="Concepts/Captures/%(Filename)%(Extension)" />
+        <Compile Include="../../Kernel/Concepts/Patterns/*.cs" Link="Concepts/Patterns/%(Filename)%(Extension)" />
     </ItemGroup>
 
     <Target Name="GrpcClients" BeforeTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(NoBuild)' != 'true' ">
