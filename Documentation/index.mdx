@@ -1,9 +1,9 @@
 ---
 title: Chronicle
-description: The event sourcing platform with a gRPC boundary, first-class .NET client, TypeScript, Elixir, and Kotlin clients/contracts, storage backends for MongoDB/PostgreSQL/SQL Server/SQLite, and rich tooling.
+description: Kernel, protocol, storage, subscription, and local inspection boundaries for Chronicle.
 ---
 
-import { CardGrid } from '@astrojs/starlight/components';
+import { CardGrid, Steps } from '@astrojs/starlight/components';
 import SimpleCard from '@components/SimpleCard.astro';
 import TopicHero from '@components/TopicHero.astro';
 
@@ -14,78 +14,91 @@ For information systems, this is the default architecture we recommend: store **
 ## Start here
 
 <CardGrid>
-  <SimpleCard title="Why event sourcing" icon="approve-check" link="/chronicle/why-event-sourcing/">
-    Why we see full history as the default for information systems — audit, time-travel, many read models from one source of truth — and where the exceptions are.
+  <SimpleCard title="Run Chronicle locally" icon="rocket" link="#run-chronicle-locally">
+    Start the development image, wait for readiness, and clean it up.
   </SimpleCard>
-  <SimpleCard title="Get started" icon="rocket" link="/chronicle/get-started/">
-    Scaffold a project from a template and watch one event flow through a projection and a reactor — in minutes.
+  <SimpleCard title="Understand the architecture" icon="puzzle" link="/chronicle/architecture/">
+    Locate the protocol surfaces, kernel, runtime scopes, and persistent subscriptions.
   </SimpleCard>
-  <SimpleCard title="Choose an application host model" icon="puzzle" link="/chronicle/get-started/choose-hosting-model/">
-    Compare console, worker, and ASP.NET Core hosts — with Arc as a layer on top — and run the kernel locally or under Aspire.
-  </SimpleCard>
-  <SimpleCard title="Build the library tutorial" icon="open-book" link="/chronicle/tutorial/">
-    Learn the model by building a small event-sourced system one concept at a time.
+  <SimpleCard title="Inspect with Workbench" icon="laptop" link="/chronicle/workbench/">
+    Use the bundled local browser inspection and projection-preview boundary.
   </SimpleCard>
 </CardGrid>
 
-## Architecture wins
+## Run Chronicle locally
 
-<CardGrid>
-  <SimpleCard title="gRPC at the boundary" icon="puzzle" link="/chronicle/architecture/">
-    Chronicle is a client-server kernel with gRPC/protobuf contracts. The .NET client is first-class and most mature; TypeScript and Elixir clients/contracts and a gRPC-level Kotlin client are generated from the same protocol.
-  </SimpleCard>
-  <SimpleCard title="Storage agnostic" icon="seti:db" link="/chronicle/hosting/configuration/storage/">
-    Run the event store over MongoDB, PostgreSQL, Microsoft SQL Server, or SQLite, with the same event model above it.
-  </SimpleCard>
-  <SimpleCard title="Processing lives in the kernel" icon="rocket" link="/chronicle/architecture/">
-    Distributed, stateful processing is the kernel's job: event sequences, observers, jobs, and recovery run inside the runtime, not in your application code.
-  </SimpleCard>
-  <SimpleCard title="Observable and operable" icon="approve-check" link="/cli/chronicle/">
-    Workbench, CLI, OpenTelemetry, recommendations, read-model inspection, failed partitions, jobs, and replay make the running store visible.
-  </SimpleCard>
-</CardGrid>
+For the shortest local path, use `latest-development`. It bundles Chronicle and
+MongoDB and tracks the newest published development image. When repeatability
+matters, pin a released version in your application or deployment configuration
+rather than copying an image digest into a getting-started command.
 
-## Understand the model
+<Steps>
+1. Pull and start the current development image with Chronicle available only
+   on this machine. MongoDB remains internal to the container.
+
+   ```bash
+   docker run --pull=always --rm -d --name chronicle \
+     -p 127.0.0.1:35000:35000 \
+     cratis/chronicle:latest-development
+   ```
+
+2. Wait for the local health endpoint to report readiness. The development
+   image uses a self-signed certificate, so this command disables certificate
+   verification only for this local check.
+
+   ```bash
+   curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 \
+     https://localhost:35000/health
+   ```
+
+   A successful response prints `Healthy`. At that point the kernel is ready for
+   the next local evaluation step.
+
+3. Stop and remove it when the evaluation is complete.
+
+   ```bash
+   docker rm -f chronicle
+   ```
+</Steps>
+
+:::caution[What this local start proves]
+A `Healthy` response proves that this local development container started. It
+does not establish production suitability, support, scale, security, durability,
+compatibility, a managed service, client/provider parity, or support for every
+topology.
+:::
+
+## Independent-use boundary
+
+The self-hosted Chronicle kernel and bundled Workbench can be started without
+Arc or Components. Applications and clients still need compatible packages,
+protocols, and configuration for the Chronicle server they connect to.
+
+## Inspection surfaces
+
+Chronicle Workbench provides a bundled local browser surface for authorized
+inspection of Chronicle runtime state and preview of supported projection
+behavior.
+
+The Cratis CLI provides terminal workflows for inspecting and diagnosing
+Chronicle.
+
+Inspection capability does not imply complete administration, production-ready
+mutation, client parity, federation, managed service, support, or an SLA.
+
+## Continue
 
 <CardGrid>
   <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
-    How the kernel, client, storage, and read models fit together.
+    Understand the kernel, protocol, store, namespace, and subscription boundaries.
   </SimpleCard>
-  <SimpleCard title="Concepts & glossary" icon="open-book" link="/chronicle/concepts/">
-    Events, event sources, projections, and the rest of the vocabulary — defined once.
+  <SimpleCard title="Workbench" icon="laptop" link="/chronicle/workbench/">
+    Inspect Chronicle from the bundled local browser application.
   </SimpleCard>
-  <SimpleCard title="CRUD, EF Core, and Chronicle" icon="right-arrow" link="/chronicle/coming-from-crud/">
-    Maps tables, rows, and `SaveChanges` onto events so the shift makes sense.
+  <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
+    Terminal inspection and diagnosis for Chronicle.
   </SimpleCard>
-</CardGrid>
-
-## Build with the core pieces
-
-<CardGrid>
-  <SimpleCard title="Events" icon="approve-check" link="/chronicle/events/">
-    The immutable facts at the heart of everything — how to model and append them.
-  </SimpleCard>
-  <SimpleCard title="Projections" icon="seti:db" link="/chronicle/projections/">
-    Declare read models that stay in sync as events arrive — no update code.
-  </SimpleCard>
-  <SimpleCard title="Choose a read-model style" icon="list-format" link="/chronicle/projections/choosing-a-read-model-style/">
-    See model-bound projections, declarative projections, and reducers build the same read model.
-  </SimpleCard>
-  <SimpleCard title="Reactors" icon="rocket" link="/chronicle/reactors/">
-    Do something when an event happens — notify, integrate, or trigger a command.
-  </SimpleCard>
-  <SimpleCard title="Read models" icon="laptop" link="/chronicle/read-models/">
-    The queryable state your application reads, derived from the event log.
-  </SimpleCard>
-  <SimpleCard title="Reducers" icon="seti:folder" link="/chronicle/reducers/">
-    Fold events into state imperatively when a projection isn't enough.
-  </SimpleCard>
-  <SimpleCard title="Data integrity" icon="approve-check" link="/chronicle/understanding-constraints/">
-    Enforce uniqueness with kernel-side constraints and guard racing appends with concurrency scopes — both checked before commit.
-  </SimpleCard>
-  <SimpleCard title="Scenarios" icon="heart" link="/chronicle/scenarios/">
-    Task-oriented recipes — rebuild a read model, enforce uniqueness, react to an event.
+  <SimpleCard title="Chronicle source" icon="seti:folder" link="https://github.com/Cratis/Chronicle/tree/main/Source">
+    Owning kernel, client, Workbench, and package source.
   </SimpleCard>
 </CardGrid>
-
-Chronicle stands on its own — run it from any .NET host, with no other Cratis product required. When you want a typed full-stack app on top, [Arc](/arc/) adds the CQRS boundary and [Components](/components/) renders it. CQRS and event sourcing fit naturally together, but neither depends on the other. See [Why developers choose Cratis](/why-cratis/) for how the pieces fit.

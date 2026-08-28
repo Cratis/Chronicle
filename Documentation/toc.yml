@@ -17,7 +17,7 @@
 - name: Concepts
   href: concepts/toc.yml
 - name: Architecture
-  href: architecture.md
+  href: architecture.mdx
 - name: Dynamic Consistency Boundary
   href: dynamic-consistency-boundary/toc.yml
 - name: Events
