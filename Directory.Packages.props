@@ -14,7 +14,7 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.18.2-conceptjsonfix.1" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.18.2" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.18.1" />
     <PackageVersion Include="Cratis.Arc" Version="22.3.0" />
     <PackageVersion Include="Cratis.Arc.Core" Version="22.3.0" />
