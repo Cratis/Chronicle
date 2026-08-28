@@ -101,7 +101,7 @@ public class DeleteCaptureRequest
     /// Gets or sets the CaptureId.
     /// </summary>
     [ProtoMember(2)]
-    public string CaptureId { get; set; }
+    public Guid CaptureId { get; set; }
 }
 
 /// <summary>
@@ -120,7 +120,7 @@ public class SaveCaptureRequest
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(2)]
-    public string Id { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the Declaration.
@@ -164,7 +164,7 @@ public class StartCaptureRequest
     /// Gets or sets the CaptureId.
     /// </summary>
     [ProtoMember(2)]
-    public string CaptureId { get; set; }
+    public Guid CaptureId { get; set; }
 }
 
 /// <summary>
@@ -196,7 +196,7 @@ public class StopCaptureRequest
     /// Gets or sets the CaptureId.
     /// </summary>
     [ProtoMember(2)]
-    public string CaptureId { get; set; }
+    public Guid CaptureId { get; set; }
 }
 
 /// <summary>
