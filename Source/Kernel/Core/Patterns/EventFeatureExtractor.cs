@@ -53,15 +53,17 @@ public class EventFeatureExtractor(ITimeBucketResolver timeBucketResolver) : IEv
     /// <remarks>
     /// The causation chain is ordered from the root outwards, so the last named link is what directly produced the
     /// event and the one before it is a level up. Links the client stack could not name - <see cref="CausationType.Root"/>
-    /// and <see cref="CausationType.Unknown"/> - carry no behavior worth mining and are skipped. When nothing above
-    /// the event named itself, the event type stands in: in an event-sourced store the fact that was recorded is
-    /// itself the action.
+    /// and <see cref="CausationType.Unknown"/> - carry no behavior worth mining and are skipped. A link that names
+    /// the command it stands for is read by that name rather than by its causation type, because every command
+    /// shares one type and mining by it would put every command in the store under a single value. When nothing
+    /// above the event named itself, the event type stands in: in an event-sourced store the fact that was recorded
+    /// is itself the action.
     /// </remarks>
     static (FacetValue CommandType, FacetValue CausedByCommand) GetCommandTypes(EventContext context)
     {
         var named = context.Causation?
             .Where(causation => IsNamed(causation.Type))
-            .Select(causation => causation.Type.Value)
+            .Select(NameOf)
             .ToArray() ?? [];
 
         FacetValue commandType = named.Length > 0 ? named[^1] : context.EventType.Id.Value;
@@ -69,6 +71,13 @@ public class EventFeatureExtractor(ITimeBucketResolver timeBucketResolver) : IEv
 
         return (commandType, causedByCommand);
     }
+
+    static string NameOf(Causation causation) =>
+        causation.Properties is not null &&
+        causation.Properties.TryGetValue(WellKnownCausationProperties.CommandType, out var commandType) &&
+        !string.IsNullOrEmpty(commandType)
+            ? commandType
+            : causation.Type.Value;
 
     static bool IsNamed(CausationType type) =>
         !string.IsNullOrEmpty(type?.Value) && type != CausationType.Root && type != CausationType.Unknown;
