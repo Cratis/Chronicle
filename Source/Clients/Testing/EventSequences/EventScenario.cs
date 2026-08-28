@@ -184,13 +184,12 @@ public class EventScenario(
                 NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
         var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
-            grainFactory,
-            new KernelCore::Cratis.Chronicle.Sequences.RequestCausation(new Microsoft.AspNetCore.Http.HttpContextAccessor()),
-            new InProcessCurrentPrincipalAccessor(),
+            InProcessCommandPipeline.Create(grainFactory, storage, jsonSerializerOptions),
             storage,
             eventCompliance,
             jsonSerializerOptions,
             new InProcessQueryContextManager(),
+            grainFactory,
             NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 
         var constraintsService = new InProcessNoOpConstraintsService();
