@@ -1,7 +1,18 @@
 {
     "name": "@cratis/chronicle.contracts",
     "version": "0.0.0",
-    "description": "TypeScript gRPC contracts for Chronicle",
+    "description": "TypeScript gRPC client contracts for Cratis Chronicle - the open-source event-sourcing database",
+    "keywords": [
+        "event-sourcing",
+        "eventsourcing",
+        "event-store",
+        "eventstore",
+        "cqrs",
+        "grpc",
+        "chronicle",
+        "cratis"
+    ],
+    "homepage": "https://www.cratis.io/chronicle/",
     "author": "Cratis",
     "license": "MIT",
     "repository": {
