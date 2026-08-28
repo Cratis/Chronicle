@@ -18,6 +18,7 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Contracts.Patterns;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
@@ -57,6 +58,9 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public IRecommendations Recommendations => throw new NotSupportedException("Recommendations is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public IPatterns Patterns => throw new NotSupportedException("Patterns is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public IIdentities Identities => throw new NotSupportedException("Identities is not supported in test scenarios.");

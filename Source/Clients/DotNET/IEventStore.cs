@@ -11,6 +11,7 @@ using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
@@ -116,6 +117,11 @@ public interface IEventStore
     /// Gets the <see cref="IEventSeeding"/> for the event store.
     /// </summary>
     IEventSeeding Seeding { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IPatterns"/> for the event store.
+    /// </summary>
+    IPatterns Patterns { get; }
 
     /// <summary>
     /// Gets the <see cref="IPIIManager"/> for managing PII encryption keys (GDPR right-to-erasure) for the event store.

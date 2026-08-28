@@ -16,12 +16,14 @@ using Cratis.Chronicle.Storage.InMemory.Identities;
 using Cratis.Chronicle.Storage.InMemory.Jobs;
 using Cratis.Chronicle.Storage.InMemory.Keys;
 using Cratis.Chronicle.Storage.InMemory.Observation;
+using Cratis.Chronicle.Storage.InMemory.Patterns;
 using Cratis.Chronicle.Storage.InMemory.Projections;
 using Cratis.Chronicle.Storage.InMemory.Recommendations;
 using Cratis.Chronicle.Storage.InMemory.Seeding;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Patterns;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
@@ -76,6 +78,9 @@ public sealed class EventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new RecommendationStorage();
+
+    /// <inheritdoc/>
+    public IBehaviorPatternStorage Patterns { get; } = new BehaviorPatternStorage();
 
     /// <inheritdoc/>
     public IObserverKeyIndexes ObserverKeyIndexes { get; } = new ObserverKeyIndexes();

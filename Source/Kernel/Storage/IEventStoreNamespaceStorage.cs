@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Patterns;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
@@ -66,6 +67,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IRecommendationStorage"/> for the event store namespace.
     /// </summary>
     IRecommendationStorage Recommendations { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IBehaviorPatternStorage"/> for the event store namespace.
+    /// </summary>
+    IBehaviorPatternStorage Patterns { get; }
 
     /// <summary>
     /// Gets the <see cref="IObserverKeyIndexes"/>  for the event store namespace.
