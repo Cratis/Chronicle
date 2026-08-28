@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
-
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Contracts;
@@ -22,6 +21,7 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Contracts.Patterns;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
@@ -44,6 +44,8 @@ using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventS
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
 using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
 using KernelExternalServicesService = KernelCore::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
+using KernelFacetSetGenerator = KernelCore::Cratis.Chronicle.Patterns.FacetSetGenerator;
+using KernelFacetVocabulary = KernelCore::Cratis.Chronicle.Patterns.FacetVocabulary;
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
 using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
@@ -52,6 +54,8 @@ using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Co
 using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
 using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
+using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
+using KernelPatternsService = KernelCore::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
@@ -171,6 +175,14 @@ internal sealed class TestingServices(
     readonly Lazy<IRecommendations> _recommendations = new(() =>
         new KernelRecommendationsService(grainFactory, storage));
 
+    readonly Lazy<IPatterns> _patterns = new(() =>
+        new KernelPatternsService(
+            storage,
+            new KernelFacetVocabulary(Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())),
+            new KernelFacetSetGenerator(),
+            new KernelPatternMatcher(),
+            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+
     readonly Lazy<IConstraints> _constraints = new(() =>
         new KernelConstraintsService(grainFactory));
 
@@ -278,6 +290,9 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IRecommendations Recommendations => _recommendations.Value;
+
+    /// <inheritdoc/>
+    public IPatterns Patterns => _patterns.Value;
 
     /// <inheritdoc/>
     public IUsers Users => _users.Value;

@@ -18,6 +18,7 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Contracts.Patterns;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
@@ -50,6 +51,11 @@ public interface IServices
     /// Gets the <see cref="IRecommendations"/> service.
     /// </summary>
     IRecommendations Recommendations { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IPatterns"/> service.
+    /// </summary>
+    IPatterns Patterns { get; }
 
     /// <summary>
     /// Gets the <see cref="IIdentities"/> service.

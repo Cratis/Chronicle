@@ -1,0 +1,45 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Patterns;
+
+// NOTE: This file was written by hand rather than by Source/Kernel/Protobuf/generate-protos.sh, because the
+// generator currently cannot emit this package at all - it aborts for Cratis.Chronicle.Contracts.Patterns (and 21
+// other packages) on a reserved-field error raised for
+// Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition, and exits 0 while doing so,
+// which is why CI never reported it. Tracked as Cratis/Chronicle#3712. Every message below matches what
+// protobuf-net would emit for the [ProtoMember] declarations in Source/Kernel/Contracts/Patterns.
+// Re-run the generator and drop this comment once #3712 is fixed.
+
+message GetPatternsForScopeRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string GroupingKey = 3;
+}
+message GetPatternsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string GroupingKey = 3;
+   map<string,string> Context = 4;
+   double MinimumConfidence = 5;
+   int32 MaximumResults = 6;
+}
+message IEnumerable_Pattern {
+   repeated Pattern items = 1;
+}
+message Pattern {
+   string GroupingKey = 1;
+   map<string,string> Facets = 2;
+   double Confidence = 3;
+   double Support = 4;
+   int64 Occurrences = 5;
+   double Weight = 6;
+   SerializableDateTimeOffset FirstSeen = 7;
+   SerializableDateTimeOffset LastSeen = 8;
+}
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
+message SerializableDateTimeOffset {
+   string Value = 1;
+}
+service Patterns {
+   rpc GetPatterns (GetPatternsRequest) returns (IEnumerable_Pattern);
+   rpc GetPatternsForScope (GetPatternsForScopeRequest) returns (IEnumerable_Pattern);
+}

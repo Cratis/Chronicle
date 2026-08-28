@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelConcepts;
-
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -11,12 +10,14 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Patterns;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Testing.EventSequences;
+using InMemoryBehaviorPatternStorage = Cratis.Chronicle.Storage.InMemory.Patterns.BehaviorPatternStorage;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
@@ -66,6 +67,13 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Backed by the real in-memory storage rather than left unsupported, so a specification can query the patterns
+    /// a scenario mined instead of getting an exception from the surface it is exercising.
+    /// </remarks>
+    public IBehaviorPatternStorage Patterns { get; } = new InMemoryBehaviorPatternStorage();
 
     /// <inheritdoc/>
     public IObserverKeyIndexes ObserverKeyIndexes => throw new NotSupportedException();

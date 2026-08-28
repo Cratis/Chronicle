@@ -18,6 +18,7 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Contracts.Patterns;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
@@ -33,6 +34,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="EventStores"><see cref="IEventStores"/> instance.</param>
 /// <param name="Namespaces"><see cref="INamespaces"/> instance.</param>
 /// <param name="Recommendations"><see cref="IRecommendations"/> instance.</param>
+/// <param name="Patterns"><see cref="IPatterns"/> instance.</param>
 /// <param name="Identities"><see cref="IIdentities"/> instance.</param>
 /// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
@@ -59,6 +61,7 @@ public sealed record Services(
     IEventStores EventStores,
     INamespaces Namespaces,
     IRecommendations Recommendations,
+    IPatterns Patterns,
     IIdentities Identities,
     IEventSequences EventSequences,
     IEventTypes EventTypes,

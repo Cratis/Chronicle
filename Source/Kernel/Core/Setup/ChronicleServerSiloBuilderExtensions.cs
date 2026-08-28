@@ -123,6 +123,12 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<Cratis.Chronicle.Observation.Reactors.Kernel.IReactors>()),
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
+                new Cratis.Chronicle.Services.Patterns.Patterns(
+                    storage,
+                    sp.GetRequiredService<Cratis.Chronicle.Patterns.IFacetVocabulary>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Patterns.IFacetSetGenerator>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Patterns.IPatternMatcher>(),
+                    sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
                 new EventSequences(
                     grainFactory,
