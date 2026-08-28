@@ -46,18 +46,18 @@
         "prepare": "yarn clean && yarn build"
     },
     "dependencies": {
-        "@bufbuild/protobuf": "^2.0.0",
-        "@grpc/grpc-js": "^1.12.4",
-        "nice-grpc": "^2.1.0"
+        "@bufbuild/protobuf": "^2.14.0",
+        "@grpc/grpc-js": "^1.14.4",
+        "nice-grpc": "^2.1.17"
     },
     "devDependencies": {
-        "@swc/core": "^1.15.43",
-        "@types/node": "^25.5.0",
-        "rollup": "^4.60.1",
+        "@swc/core": "^1.16.1",
+        "@types/node": "^26.3.0",
+        "rollup": "^4.63.0",
         "rollup-plugin-commonjs": "^10.1.0",
         "rollup-plugin-peer-deps-external": "^2.2.4",
         "rollup-plugin-typescript2": "^0.37.0",
-        "ts-proto": "^2.11.6",
+        "ts-proto": "^2.12.1",
         "typescript": "^7.0.2",
         "typescript-legacy": "npm:typescript@^6.0.2"
     }
