@@ -21,15 +21,21 @@ public static class ImplementationMethods
     /// <param name="command">The command to dispatch to.</param>
     /// <param name="context">The generation context.</param>
     /// <returns>The C# source for the method.</returns>
+    /// <remarks>
+    /// Dispatch goes through the Arc <c>ICommandPipeline</c> - the same authorization, validation, and
+    /// handler pipeline the HTTP surface runs - so the generated method only constructs the command and
+    /// maps the response. The pipeline resolves the Handle method's parameters from its own per-execution
+    /// service scope, which is why none of them become constructor dependencies here.
+    /// </remarks>
     /// <exception cref="UnsupportedServiceShape">Thrown when the command has no Handle method to dispatch to.</exception>
     public static string ForCommand(CommandDefinition command, ImplementationContext context)
     {
-        var handle = command.Handle
+        _ = command.Handle
             ?? throw new UnsupportedServiceShape(command.Type.FullName ?? command.Name, "it has no Handle method to dispatch to.");
 
         var hasRequest = command.Parameters.Count > 0;
         var construction = $"new {QualifiedTypeName.For(command.Type)}({string.Join(", ", command.Parameters.Select(RequestArgument))})";
-        var invocation = $"command.Handle({string.Join(", ", handle.GetParameters().Select(p => context.Dependencies.NameFor(p.ParameterType)))})";
+        var pipeline = context.Dependencies.NameFor(ResolveCommandPipelineType(command.Type));
 
         var parameters = hasRequest
             ? $"global::{context.ContractsNamespace}.{command.Name}Request request, {CallContextType} callContext = default"
@@ -37,28 +43,21 @@ public static class ImplementationMethods
 
         if (command.ResponseType is not { } responseType)
         {
-            var handler = handle.ReturnType == typeof(void)
-                ? $"command => {{ {invocation}; return Task.CompletedTask; }}"
-                : $"command => {invocation}";
-
             return Method(
                 $"Task<{CommandResultType}>",
                 command.Name,
                 parameters,
-                $"CommandExecutor.Execute(\n            {construction},\n            {handler})");
+                $"CommandExecutor.Execute(\n            {pipeline},\n            {construction})");
         }
 
         var mapping = MappingFor(responseType, command.Name, context);
-        var isAsync = handle.ReturnType.IsGenericType && handle.ReturnType.GetGenericTypeDefinition() == typeof(Task<>);
-        var responseHandler = isAsync
-            ? $"async command => {mapping.Apply($"(await {invocation})")}"
-            : $"command => Task.FromResult({mapping.Apply(invocation)})";
+        var mapped = mapping.Apply("response");
 
         return Method(
             $"Task<{CommandResultType}<{mapping.ContractTypeName}>>",
             command.Name,
             parameters,
-            $"CommandExecutor.Execute<{QualifiedTypeName.For(command.Type)}, {mapping.ContractTypeName}>(\n            {construction},\n            {responseHandler})");
+            $"CommandExecutor.Execute<{QualifiedTypeName.For(responseType)}, {mapping.ContractTypeName}>(\n            {pipeline},\n            {construction},\n            response => {mapped})");
     }
 
     /// <summary>
@@ -246,6 +245,29 @@ public static class ImplementationMethods
 
         var mapping = context.MappingForCommandResponse(responseType, commandName);
         return new(mapping.ContractTypeName, expression => $"{mapping.MethodName}({expression})", false, mapping.MethodName);
+    }
+
+    /// <summary>
+    /// Finds the loaded <c>Cratis.Arc.Commands.ICommandPipeline</c> type reachable from a command.
+    /// </summary>
+    /// <param name="commandType">The command to resolve from.</param>
+    /// <returns>The <c>Cratis.Arc.Commands.ICommandPipeline</c> type.</returns>
+    /// <remarks>
+    /// The generator has no compile-time reference to Arc - it processes an arbitrary assembly loaded into an
+    /// isolated context - so this has to find the type reflectively. The command was discovered by its
+    /// <c>[Command]</c> attribute, and the assembly defining that attribute is the one that also exposes
+    /// <c>ICommandPipeline</c>.
+    /// </remarks>
+    /// <exception cref="UnsupportedServiceShape">Thrown when the pipeline type cannot be resolved from the command's attributes.</exception>
+    static Type ResolveCommandPipelineType(Type commandType)
+    {
+        var commandAttributeType = commandType.GetCustomAttributesData()
+            .FirstOrDefault(a => a.AttributeType.Name == "CommandAttribute")?.AttributeType;
+
+        return commandAttributeType?.Assembly.GetType("Cratis.Arc.Commands.ICommandPipeline")
+            ?? throw new UnsupportedServiceShape(
+                commandType.FullName ?? commandType.Name,
+                "the generator could not resolve Cratis.Arc.Commands.ICommandPipeline from the assembly defining its [Command] attribute.");
     }
 
     /// <summary>
