@@ -6,6 +6,9 @@
   <ItemGroup>
     <!-- System -->
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
+    <!-- net8.0 only: the client compiles against System.Collections.Immutable 10.0.0 transitively, but the SDK
+         prunes it from declared dependencies. Declare it explicitly so consumers do not hit missing types. -->
+    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.11" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
