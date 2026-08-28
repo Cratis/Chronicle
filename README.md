@@ -393,3 +393,5 @@ Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for full detai
 - [Microsoft Orleans](https://github.com/dotnet/orleans) — distributed actor framework used in the Chronicle Kernel
 - [Louis3797/awesome-readme-template](https://github.com/Louis3797/awesome-readme-template) — README inspiration
 - All our [contributors](https://github.com/cratis/chronicle/graphs/contributors) and the open-source community ❤️
+
+Release notes and announcements: the [Cratis blog](https://blog.cratis.io).
