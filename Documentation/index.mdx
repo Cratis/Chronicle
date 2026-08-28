@@ -7,18 +7,8 @@ import { CardGrid, Steps } from '@astrojs/starlight/components';
 import SimpleCard from '@components/SimpleCard.astro';
 import TopicHero from '@components/TopicHero.astro';
 
-<TopicHero
-  icon="seti:db"
-  eyebrow="Chronicle"
-  title="Self-hosted Chronicle runtime boundaries"
->
-  Chronicle uses a .NET/Orleans actor-based kernel behind gRPC/HTTP surfaces and
-  supports multiple event stores, namespaces, and persistent event-store
-  subscriptions with outbox/inbox sequences.
-
-  Chronicle and its bundled local Workbench are available as MIT-licensed
-  self-hosted software; authorized local use is separate from paid Cratis
-  support, hosted coordination, or managed operational responsibility.
+<TopicHero icon="seti:db" eyebrow="Chronicle" title="Event sourcing, the productive way">
+For information systems, this is the default architecture we recommend: store **every meaningful change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. Chronicle gives that event log a gRPC boundary, database-agnostic storage — MongoDB, PostgreSQL, Microsoft SQL Server, or SQLite — and tools you can actually operate. [Get started →](/chronicle/get-started/) · [Architecture →](/chronicle/architecture/)
 </TopicHero>
 
 ## Start here

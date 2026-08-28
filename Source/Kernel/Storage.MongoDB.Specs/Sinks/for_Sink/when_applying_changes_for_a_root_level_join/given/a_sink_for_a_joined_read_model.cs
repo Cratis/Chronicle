@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -77,7 +78,7 @@ public abstract class a_sink_for_a_joined_read_model<TReadModel>(MongoDBFixture 
         var typeFormats = new TypeFormats();
         _expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         var collections = new SinkCollections(readModel, _client.GetDatabase(_databaseName));
-        _mongoDBConverter = new MongoDBConverter(_expandoObjectConverter, typeFormats, readModel);
+        _mongoDBConverter = new MongoDBConverter(_expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, _mongoDBConverter, collections, _expandoObjectConverter);
         _sink = new Sink(readModel, _mongoDBConverter, collections, changesetConverter, _expandoObjectConverter);
         _collection = collections.GetCollection();

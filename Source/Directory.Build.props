@@ -14,6 +14,10 @@
         <RepositoryUrl>https://github.com/Cratis/Chronicle</RepositoryUrl>
         <PackageProjectUrl>https://github.com/Cratis/Chronicle</PackageProjectUrl>
 
+        <!-- Default NuGet metadata - individual projects can override -->
+        <Description>Cratis Chronicle - an open-source (MIT) event-sourcing database and processing runtime with an Orleans-based kernel, pluggable storage (MongoDB default; PostgreSQL, SQL Server, SQLite, in-memory), and language-agnostic gRPC contracts.</Description>
+        <PackageTags>event-sourcing;event-store;cqrs;orleans;dotnet;grpc;mongodb;postgresql;sqlserver;sqlite</PackageTags>
+
         <GenerateAssemblyTitleAttribute>true</GenerateAssemblyTitleAttribute>
         <GenerateAssemblyDescriptionAttribute>true</GenerateAssemblyDescriptionAttribute>
 

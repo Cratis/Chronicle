@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
+        <Description>The .NET client SDK for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Typed events, projections, reducers, reactors, constraints, and read models over a gRPC boundary.</Description>
         <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
         <!-- The net8.0/net9.0 analyzers raise IDE0301 on `FrozenDictionary<K,V>.Empty` and suggest `[]`,
              which does not compile for FrozenDictionary (CS0144). Only surfaces when `dotnet pack`

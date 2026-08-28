@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
@@ -35,7 +36,7 @@ public class MongoSinkHarness : ISinkHarness
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         var collections = new SinkCollections(definition, database);
-        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, definition);
+        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, definition, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(definition, mongoDBConverter, collections, expandoObjectConverter);
 
         return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);

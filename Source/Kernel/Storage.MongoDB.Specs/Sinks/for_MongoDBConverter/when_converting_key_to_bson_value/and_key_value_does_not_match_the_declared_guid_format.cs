@@ -11,7 +11,12 @@ using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_key_to_bson_value;
 
-public class and_read_model_schema_has_no_properties : a_mongodb_converter
+/// <summary>
+/// Reproduces #3844 - a read model whose key property schema reports the "guid" format (a plain
+/// Guid-typed Id, the same shape a ConceptAs&lt;string&gt; key ends up with) must not crash the partition
+/// when the actual key value, such as an organization name, is not a Guid.
+/// </summary>
+public class and_key_value_does_not_match_the_declared_guid_format : a_mongodb_converter
 {
     BsonValue _result;
     Key _key;
@@ -19,9 +24,9 @@ public class and_read_model_schema_has_no_properties : a_mongodb_converter
     void Establish()
     {
         _model = new ReadModelDefinition(
-            "empty-model",
-            "empty-model",
-            "empty-model",
+            "string-keyed-model",
+            "string-keyed-model",
+            "string-keyed-model",
             ReadModelOwner.Client,
             ReadModelSource.Code,
             ReadModelObserverType.Projection,
@@ -29,15 +34,16 @@ public class and_read_model_schema_has_no_properties : a_mongodb_converter
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                { ReadModelGeneration.First, new JsonSchema() }
+                { ReadModelGeneration.First, JsonSchema.FromType<GuidKeyedReadModel>() }
             },
             []);
+        _typeFormats = new TypeFormats();
         _converter = new(_expandoObjectConverter, _typeFormats, _model, _logger);
-        _key = new Key("key-value", ArrayIndexers.NoIndexers);
+        _key = new Key("Powerworks", ArrayIndexers.NoIndexers);
     }
 
     void Because() => _result = _converter.ToBsonValue(_key);
 
     [Fact] void should_return_a_bson_value() => _result.ShouldNotBeNull();
-    [Fact] void should_return_string_representation_of_key() => _result.AsString.ShouldEqual("key-value");
+    [Fact] void should_fall_back_to_the_untyped_string_representation() => _result.AsString.ShouldEqual("Powerworks");
 }

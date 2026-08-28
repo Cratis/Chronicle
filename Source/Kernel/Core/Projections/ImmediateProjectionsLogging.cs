@@ -18,6 +18,9 @@ internal static partial class ImmediateProjectionsLogMessages
     [LoggerMessage(LogLevel.Trace, "Using cached model instance for projection.")]
     internal static partial void UsingCachedModelInstance(this ILogger<ImmediateProjection> logger);
 
+    [LoggerMessage(LogLevel.Trace, "Projection definition has not been set yet; resolving as no read model.")]
+    internal static partial void NoDefinitionSetYet(this ILogger<ImmediateProjection> logger);
+
     [LoggerMessage(LogLevel.Error, "Failed getting model instance for projection.")]
     internal static partial void FailedGettingModelInstance(this ILogger<ImmediateProjection> logger, Exception exception);
 }

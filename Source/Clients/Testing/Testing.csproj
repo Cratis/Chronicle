@@ -4,6 +4,8 @@
         <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.Testing</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Testing</RootNamespace>
+        <Description>Testing helpers for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. In-process kernel and in-memory storage for testing event-sourced applications.</Description>
+        <PackageTags>event-sourcing;event-store;cqrs;testing;dotnet;chronicle</PackageTags>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
 
