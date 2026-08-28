@@ -43,7 +43,8 @@ public class SinkFactory(
         var mongoDBConverter = new MongoDBConverter(
             expandoObjectConverter,
             typeFormats,
-            readModel);
+            readModel,
+            serviceProvider.GetRequiredService<ILogger<MongoDBConverter>>());
 
         var mongoDBSinkCollections = new SinkCollections(
             readModel,

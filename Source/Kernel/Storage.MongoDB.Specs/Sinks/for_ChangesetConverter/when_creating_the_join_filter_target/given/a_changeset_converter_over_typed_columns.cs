@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ChangesetConverter.when_creating_the_join_filter_target.given;
 
@@ -49,7 +50,7 @@ public class a_changeset_converter_over_typed_columns : Specification
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         _converter = new ChangesetConverter(
             readModel,
-            new MongoDBConverter(expandoObjectConverter, typeFormats, readModel),
+            new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance),
             Substitute.For<ISinkCollections>(),
             expandoObjectConverter);
     }

@@ -82,7 +82,12 @@ public class ImmediateProjection(
         {
             if (State.ReadModel is null)
             {
-                throw new ProjectionDefinitionNotSet(new ProjectionKey(_projectionKey!.ProjectionId, _projectionKey.EventStore));
+                // A passive projection's definition is set lazily, from the first event of its kind observed
+                // anywhere in the store, rather than eagerly at startup. Before that has happened, this is
+                // indistinguishable from "no matching event for this key yet" - the documented null contract
+                // for a read model that was never created - so it resolves the same way instead of throwing.
+                logger.NoDefinitionSetYet();
+                return ProjectionResult.Empty;
             }
 
             var readModelKey = new ReadModelGrainKey(State.ReadModel, _projectionKey.EventStore);

@@ -16,6 +16,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -98,7 +99,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
         _inMemorySink = new InMemorySink(readModel, typeFormats);
 
         var collections = new SinkCollections(readModel, database);
-        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel);
+        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
         _mongoSink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
 
