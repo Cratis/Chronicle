@@ -393,13 +393,12 @@ public class EventStoreForTesting : IEventStore
             new ExpandoObjectConverter(new TypeFormats()));
 
         var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
-            grainFactory,
-            new KernelCore::Cratis.Chronicle.Sequences.RequestCausation(new Microsoft.AspNetCore.Http.HttpContextAccessor()),
-            new InProcessCurrentPrincipalAccessor(),
+            InProcessCommandPipeline.Create(grainFactory, storage, _jsonSerializerOptions),
             storage,
             eventCompliance,
             _jsonSerializerOptions,
             new InProcessQueryContextManager(),
+            grainFactory,
             NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 
         var constraintsService = new InProcessNoOpConstraintsService();
