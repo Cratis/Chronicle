@@ -323,6 +323,7 @@ Full documentation is available at **[https://www.cratis.io/chronicle/](https://
 | [Architecture](https://www.cratis.io/chronicle/architecture/) | How the kernel, clients, storage, and read models fit together |
 | [Hosting](https://www.cratis.io/chronicle/hosting/) | Production and development deployment options |
 | [Building a Client](https://www.cratis.io/chronicle/building-a-client/) | Implement the gRPC contract in a new language |
+| [How Chronicle compares](https://www.cratis.io/compare-event-sourcing-dotnet/) | Version-pinned, source-cited comparison of event sourcing options for .NET |
 | [Contributing](./Documentation/contributing/index.md) | How to build and contribute to Chronicle |
 
 ---
