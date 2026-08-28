@@ -36,8 +36,8 @@
     <a href="https://github.com/Cratis/Chronicle/actions/workflows/publish.yml">
       <img src="https://github.com/cratis/Chronicle/actions/workflows/publish.yml/badge.svg" alt="Publish">
     </a>
-    <a href="https://github.com/Cratis/Documentation/actions/workflows/pages.yml">
-      <img src="https://github.com/Cratis/Documentation/actions/workflows/pages.yml/badge.svg" alt="Documentation site">
+    <a href="https://github.com/Cratis/Documentation/actions/workflows/docs-site.yml">
+      <img src="https://github.com/Cratis/Documentation/actions/workflows/docs-site.yml/badge.svg" alt="Documentation site">
     </a>
   </p>
 </div>
