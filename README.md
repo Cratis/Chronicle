@@ -83,6 +83,8 @@ Chronicle captures every state change in your system as an immutable sequence of
 This unlocks powerful capabilities like full audit trails, time-travel debugging, and event-driven architectures without the usual complexity.
 Chronicle is free to use and MIT licensed.
 
+Chronicle is built on a simple conviction: event sourcing is worth it for almost any system dealing with information and business flows — so it should feel like the code you already write. Events, reactors, reducers, and projections are plain, idiomatic types, familiar even if you have never event-sourced before, with conventions designed to remove friction and boilerplate. That intent — productivity, quality, and reliability in one deliberately simple ecosystem, AI-friendly by design and with free [AI skills](https://github.com/Cratis/AI) — runs through everything Cratis ships.
+
 Chronicle ships with:
 
 - ⚙️ **Chronicle Kernel** — the server that manages event storage, processing, and querying, built on [Microsoft Orleans](https://github.com/dotnet/orleans) for distributed, stateful processing
