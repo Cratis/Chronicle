@@ -54,6 +54,12 @@
         <PackageReference Include="System.Reactive" />
     </ItemGroup>
 
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+        <!-- On net8.0 the package otherwise ships without declaring System.Collections.Immutable, while the
+             assembly is compiled against version 10.0.0. Declare it explicitly so consumers get the types. -->
+        <PackageReference Include="System.Collections.Immutable" />
+    </ItemGroup>
+
     <ItemGroup>
       <PackageReference Include="Cratis.Metrics.Roslyn" />
       <PackageReference Include="OpenTelemetry" />
