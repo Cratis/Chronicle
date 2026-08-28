@@ -1,107 +1,88 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
-using Cratis.Chronicle.Contracts.Commands;
-using Cratis.Chronicle.Contracts.Validation;
-using FluentValidation;
+using Cratis.Arc.Commands;
 using ValidationResult = Cratis.Chronicle.Contracts.Validation.ValidationResult;
+using ValidationResultSeverity = Cratis.Chronicle.Contracts.Validation.ValidationResultSeverity;
 
 namespace Cratis.Chronicle.Services;
 
 /// <summary>
-/// Executes kernel commands by validating them with their discovered FluentValidation validators
-/// before invoking the handler, capturing the outcome as a <see cref="CommandResult"/>.
+/// Executes kernel commands through the Arc <see cref="ICommandPipeline"/> - the same authorization,
+/// validation, and handler pipeline the HTTP surface runs - and maps the outcome onto the wire-level
+/// <see cref="Contracts.Commands.CommandResult"/>.
 /// </summary>
+/// <remarks>
+/// The pipeline owns validator discovery and resolution, so a <c>CommandValidator&lt;T&gt;</c> with
+/// constructor dependencies behaves identically on both transports. Each execution uses the pipeline's
+/// scope-free form, which creates and disposes a dedicated service scope per invocation - the handler's
+/// parameters resolve from that scope exactly as they do for an HTTP request.
+/// </remarks>
 internal static class CommandExecutor
 {
-    static readonly ConcurrentDictionary<Type, IValidator[]> _validatorsByCommandType = new();
-
     /// <summary>
-    /// Executes a command by validating it and invoking the given handler, capturing the outcome.
+    /// Executes a command through the pipeline, capturing the outcome.
     /// </summary>
+    /// <param name="pipeline">The <see cref="ICommandPipeline"/> to execute through.</param>
     /// <param name="command">The command to execute.</param>
-    /// <param name="handle">The handler that performs the command.</param>
-    /// <typeparam name="TCommand">Type of command to execute.</typeparam>
-    /// <returns>The <see cref="CommandResult"/> describing the outcome.</returns>
-    internal static async Task<CommandResult> Execute<TCommand>(TCommand command, Func<TCommand, Task> handle)
-        where TCommand : notnull
+    /// <returns>The <see cref="Contracts.Commands.CommandResult"/> describing the outcome.</returns>
+    internal static async Task<Contracts.Commands.CommandResult> Execute(ICommandPipeline pipeline, object command)
     {
-        var correlationId = Guid.NewGuid();
-
-        var validationResults = await Validate(command);
-        if (validationResults.Count > 0)
+        var result = await pipeline.Execute(command);
+        return new Contracts.Commands.CommandResult
         {
-            return CommandResult.Invalid(correlationId, validationResults);
-        }
-
-        try
-        {
-            await handle(command);
-            return CommandResult.Success(correlationId);
-        }
-        catch (Exception ex)
-        {
-            return CommandResult.Error(correlationId, ex);
-        }
+            CorrelationId = result.CorrelationId,
+            IsAuthorized = result.IsAuthorized,
+            AuthorizationFailureReason = result.AuthorizationFailureReason ?? string.Empty,
+            ValidationResults = [.. result.ValidationResults.Select(ToContract)],
+            ExceptionMessages = [.. result.ExceptionMessages],
+            ExceptionStackTrace = result.ExceptionStackTrace ?? string.Empty
+        };
     }
 
     /// <summary>
-    /// Executes a command that produces a response by validating it and invoking the given handler, capturing the outcome.
+    /// Executes a command that produces a response through the pipeline, capturing the outcome.
     /// </summary>
+    /// <param name="pipeline">The <see cref="ICommandPipeline"/> to execute through.</param>
     /// <param name="command">The command to execute.</param>
-    /// <param name="handle">The handler that performs the command and produces the response.</param>
-    /// <typeparam name="TCommand">Type of command to execute.</typeparam>
-    /// <typeparam name="TResponse">Type of response the command produces.</typeparam>
-    /// <returns>The <see cref="CommandResult{TResponse}"/> describing the outcome.</returns>
-    internal static async Task<CommandResult<TResponse>> Execute<TCommand, TResponse>(TCommand command, Func<TCommand, Task<TResponse>> handle)
-        where TCommand : notnull
+    /// <param name="mapResponse">Maps the domain response the handler produced onto its contract shape.</param>
+    /// <typeparam name="TDomainResponse">Type of response the command's handler produces.</typeparam>
+    /// <typeparam name="TResponse">Type of contract response the command produces.</typeparam>
+    /// <returns>The <see cref="Contracts.Commands.CommandResult{TResponse}"/> describing the outcome.</returns>
+    internal static async Task<Contracts.Commands.CommandResult<TResponse>> Execute<TDomainResponse, TResponse>(
+        ICommandPipeline pipeline,
+        object command,
+        Func<TDomainResponse, TResponse> mapResponse)
     {
-        var correlationId = Guid.NewGuid();
+        var result = await pipeline.Execute<TDomainResponse>(command);
+        var contractResult = new Contracts.Commands.CommandResult<TResponse>
+        {
+            CorrelationId = result.CorrelationId,
+            IsAuthorized = result.IsAuthorized,
+            AuthorizationFailureReason = result.AuthorizationFailureReason ?? string.Empty,
+            ValidationResults = [.. result.ValidationResults.Select(ToContract)],
+            ExceptionMessages = [.. result.ExceptionMessages],
+            ExceptionStackTrace = result.ExceptionStackTrace ?? string.Empty
+        };
 
-        var validationResults = await Validate(command);
-        if (validationResults.Count > 0)
+        if (result.Response is not null)
         {
-            return CommandResult<TResponse>.Invalid(correlationId, validationResults);
+            contractResult.Response = mapResponse(result.Response);
         }
 
-        try
-        {
-            return CommandResult<TResponse>.Success(correlationId, await handle(command));
-        }
-        catch (Exception ex)
-        {
-            return CommandResult<TResponse>.Error(correlationId, ex);
-        }
+        return contractResult;
     }
 
-    static async Task<IList<ValidationResult>> Validate<TCommand>(TCommand command)
-        where TCommand : notnull
+    static ValidationResult ToContract(Arc.Validation.ValidationResult result) => new()
     {
-        var validators = _validatorsByCommandType.GetOrAdd(typeof(TCommand), DiscoverValidators);
-        var results = new List<ValidationResult>();
-
-        foreach (var validator in validators.Cast<IValidator<TCommand>>())
+        Severity = result.Severity switch
         {
-            var result = await validator.ValidateAsync(command);
-            results.AddRange(result.Errors.Select(failure => new ValidationResult
-            {
-                Severity = failure.Severity switch
-                {
-                    Severity.Warning => ValidationResultSeverity.Warning,
-                    Severity.Info => ValidationResultSeverity.Information,
-                    _ => ValidationResultSeverity.Error
-                },
-                Message = failure.ErrorMessage,
-                Members = [failure.PropertyName]
-            }));
-        }
-
-        return results;
-    }
-
-    static IValidator[] DiscoverValidators(Type commandType) =>
-        [.. commandType.Assembly.GetTypes()
-            .Where(type => !type.IsAbstract && typeof(IValidator<>).MakeGenericType(commandType).IsAssignableFrom(type))
-            .Select(type => (IValidator)Activator.CreateInstance(type)!)];
+            Arc.Validation.ValidationResultSeverity.Information => ValidationResultSeverity.Information,
+            Arc.Validation.ValidationResultSeverity.Warning => ValidationResultSeverity.Warning,
+            Arc.Validation.ValidationResultSeverity.Error => ValidationResultSeverity.Error,
+            _ => ValidationResultSeverity.Unknown
+        },
+        Message = result.Message,
+        Members = [.. result.Members]
+    };
 }
