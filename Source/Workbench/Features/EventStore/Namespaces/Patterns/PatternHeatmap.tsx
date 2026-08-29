@@ -11,7 +11,9 @@ import { PatternScopeSelector } from './PatternScopeSelector';
 import { ConfidenceBar } from './ConfidenceBar';
 import {
     Slot,
+    busiestSlot,
     days,
+    intensityOf,
     patternsInSlot as patternsFor,
     slotFor,
     slotKey,
@@ -19,16 +21,9 @@ import {
     timeBucketLabels,
     timeBuckets
 } from './PatternHeatmapState';
+import { colorFor, labelColorFor, legendStops, toCss } from './heatmapScale';
 
-const cellColor = (confidence: number | undefined) => {
-    if (confidence === undefined) {
-        return 'var(--surface-100)';
-    }
-
-    // One hue at varying strength rather than a rainbow ramp: the quantity is one-dimensional, and lightness of a
-    // single hue stays readable for anyone who cannot separate hues.
-    return `color-mix(in srgb, var(--primary-color) ${Math.round(confidence * 100)}%, var(--surface-100))`;
-};
+const emptyCellColor = 'color-mix(in srgb, var(--surface-border) 45%, transparent)';
 
 
 export const PatternHeatmap = () => {
@@ -52,6 +47,7 @@ export const PatternHeatmap = () => {
     const all = useMemo(() => patterns.data ?? [], [patterns.data]);
 
     const strongestBySlot = useMemo(() => strongestPerSlot(all), [all]);
+    const busiest = useMemo(() => busiestSlot(strongestBySlot), [strongestBySlot]);
 
     const nowSlot = slotFor(new Date());
     const nowPattern = strongestBySlot.get(slotKey(nowSlot));
@@ -98,24 +94,33 @@ export const PatternHeatmap = () => {
                                             const strongest = strongestBySlot.get(slotKey({ day, timeBucket: bucket }));
                                             const isSelected = selectedSlot?.day === day && selectedSlot?.timeBucket === bucket;
                                             const isNow = nowSlot.day === day && nowSlot.timeBucket === bucket;
+                                            const intensity = intensityOf(strongest, busiest);
+                                            const color = intensity === undefined ? undefined : colorFor(intensity);
 
                                             return (
                                                 <td key={bucket} className="p-0">
                                                     <button
                                                         type="button"
-                                                        aria-label={`${day} ${timeBucketLabels[bucket]}${strongest ? `, ${Math.round(strongest.confidence * 100)}% confident` : ', nothing established'}`}
+                                                        aria-label={`${day} ${timeBucketLabels[bucket]}${strongest
+                                                            ? `, ${strongest.occurrences} occurrences, ${Math.round(strongest.confidence * 100)}% confident`
+                                                            : ', nothing established'}`}
                                                         aria-pressed={isSelected}
+                                                        title={strongest
+                                                            ? `${strongest.facets?.['CommandType'] ?? ''} · ${strongest.occurrences} × · ${Math.round(strongest.confidence * 100)}%`
+                                                            : undefined}
                                                         onClick={() => setSelectedSlot({ day, timeBucket: bucket })}
-                                                        className="w-16 h-12 rounded cursor-pointer border"
+                                                        className="w-16 h-12 rounded cursor-pointer border transition-transform hover:scale-105"
                                                         style={{
-                                                            backgroundColor: cellColor(strongest?.confidence),
+                                                            backgroundColor: color ? toCss(color) : emptyCellColor,
                                                             borderColor: isSelected
                                                                 ? 'var(--primary-color)'
                                                                 : isNow ? 'var(--text-color)' : 'transparent',
                                                             borderWidth: isSelected || isNow ? '2px' : '1px'
                                                         }}>
-                                                        <span className="text-xs tabular-nums">
-                                                            {strongest ? `${Math.round(strongest.confidence * 100)}%` : ''}
+                                                        <span
+                                                            className="text-xs tabular-nums font-medium"
+                                                            style={{ color: color ? labelColorFor(color) : 'transparent' }}>
+                                                            {strongest ? strongest.occurrences : ''}
                                                         </span>
                                                     </button>
                                                 </td>
@@ -125,6 +130,20 @@ export const PatternHeatmap = () => {
                                 ))}
                             </tbody>
                         </table>
+
+                        {busiest > 0 && (
+                            <div className="flex items-center gap-2 mt-3 ml-2">
+                                <span className="text-xs opacity-70">{strings.patterns.lessActive}</span>
+                                <div className="flex rounded overflow-hidden" aria-hidden="true">
+                                    {legendStops(10).map((stop, index) => (
+                                        <div key={index} className="w-5 h-3" style={{ backgroundColor: toCss(stop) }} />
+                                    ))}
+                                </div>
+                                <span className="text-xs opacity-70">
+                                    {strings.patterns.moreActive} ({busiest})
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex-1 min-w-0 overflow-auto">

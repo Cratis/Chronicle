@@ -52,11 +52,22 @@ export const isInSlot = (pattern: BehaviorPattern, slot: Slot) =>
     pattern.facets?.['Day'] === slot.day && pattern.facets?.['TimeBucket'] === slot.timeBucket;
 
 /**
- * The strongest pattern in each slot, keyed by slot.
+ * Whether one pattern outranks another as the one that speaks for its slot.
  *
- * A slot can hold several patterns, and the grid has one cell per slot to say how strongly it is established.
- * Confidence decides which one speaks for the slot; a pattern constraining no day or time belongs to no cell and
- * is left out rather than being drawn somewhere arbitrary.
+ * Occurrences lead because that is what the grid shades by, and because confidence saturates: a scope that
+ * reliably does something every Monday morning has a hundred percent confidence in every slot it acts in, so
+ * ranking on confidence alone would pick arbitrarily among ties. Confidence breaks the tie.
+ */
+const outranks = (candidate: BehaviorPattern, current: BehaviorPattern) =>
+    candidate.occurrences !== current.occurrences
+        ? candidate.occurrences > current.occurrences
+        : candidate.confidence > current.confidence;
+
+/**
+ * The pattern that speaks for each slot, keyed by slot.
+ *
+ * A pattern constraining no day or time belongs to no cell and is left out rather than being drawn somewhere
+ * arbitrary - it is still in the pivot view, which is the one that shows everything.
  */
 export const strongestBySlot = (patterns: BehaviorPattern[]): Map<string, BehaviorPattern> => {
     const strongest = new Map<string, BehaviorPattern>();
@@ -70,13 +81,40 @@ export const strongestBySlot = (patterns: BehaviorPattern[]): Map<string, Behavi
 
         const key = slotKey({ day, timeBucket });
         const current = strongest.get(key);
-        if (!current || pattern.confidence > current.confidence) {
+        if (!current || outranks(pattern, current)) {
             strongest.set(key, pattern);
         }
     }
 
     return strongest;
 };
+
+/**
+ * How busy the busiest slot is, which the shading is scaled against.
+ *
+ * Scaling against the scope rather than a fixed number is what makes the grid readable for everyone: a person
+ * with a few hundred occurrences and one with a few thousand both get the full range of the scale, and the
+ * question the grid answers - when is this scope most active - is about that scope, not about how it compares to
+ * the busiest person in the store.
+ */
+export const busiestSlot = (strongest: Map<string, BehaviorPattern>) =>
+    [...strongest.values()].reduce((most, pattern) => Math.max(most, pattern.occurrences), 0);
+
+/**
+ * How strongly a slot should be shaded, from 0 to 1.
+ *
+ * Scaled by square root rather than straight proportion. Activity is heavily skewed - a habit tends to be an order
+ * of magnitude busier than the incidental activity around it - and against a linear scale that one slot takes the
+ * whole top of the range while every other slot collapses into the darkest step, hiding the difference between a
+ * slot somebody visits regularly and one they barely touch. The square root lifts the quiet end enough to read
+ * while still leaving the busiest slot clearly on its own.
+ *
+ * @param pattern The pattern speaking for the slot, if any.
+ * @param busiest The occurrence count of the busiest slot in the scope.
+ * @returns The intensity, or undefined when the slot holds nothing.
+ */
+export const intensityOf = (pattern: BehaviorPattern | undefined, busiest: number) =>
+    pattern === undefined || busiest <= 0 ? undefined : Math.sqrt(pattern.occurrences / busiest);
 
 export const patternsInSlot = (patterns: BehaviorPattern[], slot: Slot): BehaviorPattern[] =>
     patterns

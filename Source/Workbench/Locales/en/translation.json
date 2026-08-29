@@ -821,6 +821,8 @@
         "day": "Day",
         "timeBucket": "Time of day",
         "aggregateType": "Aggregate",
-        "causedByCommand": "Caused by"
+        "causedByCommand": "Caused by",
+        "lessActive": "Less active",
+        "moreActive": "More active"
     }
 }
