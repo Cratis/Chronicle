@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { PivotDimension, PivotFilter, PivotViewer } from '@cratis/components/PivotViewer';
+import { PivotDimension, PivotFilter, PivotGroup, PivotViewer } from '@cratis/components/PivotViewer';
 import { AllPatternScopes, PatternsForScope } from 'Api/Patterns';
 import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -12,59 +12,44 @@ import strings from 'Strings';
 import { PatternScopeSelector } from './PatternScopeSelector';
 import { ConfidenceBar } from './ConfidenceBar';
 
+// A pattern only constrains the facets it is about, so a missing facet is not missing data — it means the pattern
+// holds whatever that facet's value is. Saying "Any" keeps that readable as a pivot value.
 const facet = (pattern: BehaviorPattern, name: string) => pattern.facets?.[name] ?? 'Any';
 
+const facetAxes = [
+    { key: 'commandType', name: 'CommandType', label: strings.patterns.commandType },
+    { key: 'initiatorType', name: 'InitiatorType', label: strings.patterns.initiatorType },
+    { key: 'day', name: 'Day', label: strings.patterns.day },
+    { key: 'timeBucket', name: 'TimeBucket', label: strings.patterns.timeBucket },
+    { key: 'aggregateType', name: 'AggregateType', label: strings.patterns.aggregateType },
+    { key: 'causedByCommand', name: 'CausedByCommand', label: strings.patterns.causedByCommand },
+];
+
 const dimensions: PivotDimension<BehaviorPattern>[] = [
-    {
-        key: 'commandType',
-        label: 'Command',
-        getValue: (pattern) => facet(pattern, 'CommandType'),
-        sort: (a, b) => b.items.length - a.items.length,
-    },
-    {
-        key: 'initiatorType',
-        label: 'Initiator',
-        getValue: (pattern) => facet(pattern, 'InitiatorType'),
-        sort: (a, b) => a.label.localeCompare(b.label),
-    },
-    {
-        key: 'day',
-        label: 'Day',
-        getValue: (pattern) => facet(pattern, 'Day'),
-        sort: (a, b) => a.label.localeCompare(b.label),
-    },
-    {
-        key: 'timeBucket',
-        label: 'Time of day',
-        getValue: (pattern) => facet(pattern, 'TimeBucket'),
-        sort: (a, b) => a.label.localeCompare(b.label),
-    },
-    {
-        key: 'aggregateType',
-        label: 'Aggregate',
-        getValue: (pattern) => facet(pattern, 'AggregateType'),
-        sort: (a, b) => a.label.localeCompare(b.label),
-    },
-    {
-        key: 'causedByCommand',
-        label: 'Caused by',
-        getValue: (pattern) => facet(pattern, 'CausedByCommand'),
-        sort: (a, b) => a.label.localeCompare(b.label),
-    },
+    ...facetAxes.map(({ key, name, label }) => ({
+        key,
+        label,
+        getValue: (pattern: BehaviorPattern) => facet(pattern, name),
+        // Command is the axis people land on first, so its busiest values lead; the rest read better alphabetically.
+        sort: key === 'commandType'
+            ? (a: PivotGroup<BehaviorPattern>, b: PivotGroup<BehaviorPattern>) => b.items.length - a.items.length
+            : (a: PivotGroup<BehaviorPattern>, b: PivotGroup<BehaviorPattern>) => a.label.localeCompare(b.label),
+    })),
     {
         key: 'specificity',
-        label: 'Specificity',
+        label: strings.patterns.specificity,
         getValue: (pattern) => `${pattern.specificity} facet${pattern.specificity === 1 ? '' : 's'}`,
         sort: (a, b) => a.label.localeCompare(b.label),
     },
 ];
 
 const filters: PivotFilter<BehaviorPattern>[] = [
-    { key: 'commandType', label: 'Command', getValue: (pattern) => facet(pattern, 'CommandType'), multi: true },
-    { key: 'initiatorType', label: 'Initiator', getValue: (pattern) => facet(pattern, 'InitiatorType'), multi: true },
-    { key: 'day', label: 'Day', getValue: (pattern) => facet(pattern, 'Day'), multi: true },
-    { key: 'timeBucket', label: 'Time of day', getValue: (pattern) => facet(pattern, 'TimeBucket'), multi: true },
-    { key: 'aggregateType', label: 'Aggregate', getValue: (pattern) => facet(pattern, 'AggregateType'), multi: true },
+    ...facetAxes.map(({ key, name, label }) => ({
+        key,
+        label,
+        getValue: (pattern: BehaviorPattern) => facet(pattern, name),
+        multi: true,
+    })),
     { key: 'confidence', label: strings.patterns.confidence, getValue: (pattern) => Math.round(pattern.confidence * 100), type: 'number', buckets: 10 },
     { key: 'occurrences', label: strings.patterns.occurrences, getValue: (pattern) => Number(pattern.occurrences), type: 'number', buckets: 10 },
 ];
