@@ -15,17 +15,27 @@ The sample talks to a Chronicle kernel on `localhost:35000` and uses an event st
 dotnet run --project Samples/ExpenseApprovals
 ```
 
-| Key | What it does |
-| --- | --- |
-| `G` | Generate the backdated history |
-| `S` | List the scopes that have established behavior |
-| `P` | Show every pattern for a scope |
-| `N` | Ask what usually happens right now |
-| `Q` | Quit |
+| Key | Argument | What it does |
+| --- | --- | --- |
+| `G` | `generate` | Generate the backdated history |
+| `S` | `scopes` | List the scopes that have established behavior |
+| `P` | `patterns <scope>` | Show every pattern for a scope |
+| `N` | `now <scope>` | Ask what usually happens right now |
+| `Q` | | Quit |
 
-Press `G` first. It appends roughly 5,000 events across about 2,000 claims and takes a minute or so. It is
+Every command works as an argument too, so the sample can seed a demo environment from a script:
+
+```shell
+dotnet run --project Samples/ExpenseApprovals -- generate
+dotnet run --project Samples/ExpenseApprovals -- patterns dana.reeves
+```
+
+Run `generate` first. It appends **5,610 events across 2,106 claims** and takes a minute or so. It is
 **re-runnable**: claim ids are derived from a fixed seed, and a uniqueness constraint on the submission rejects any
 claim already in the store, so a second run skips what it already created rather than doubling the history.
+
+It connects to `localhost:35000` with TLS validation skipped, which a local kernel's development certificate needs.
+Set `CHRONICLE_CONNECTION_STRING` to point it somewhere else.
 
 Patterns do not appear the instant the events land — the pattern observer has to work through the history, and a
 behavior only becomes a pattern once it clears the support and confidence thresholds.
@@ -45,10 +55,19 @@ Five actors, four with a habit and one without:
 Sam matters as much as the other four. A miner that reports patterns for Sam is finding structure in noise, and the
 sample is as much a demonstration of that restraint as of the discovery.
 
+Running it bears this out. Dana ends up with 92 patterns, among them
+`CommandType=ApproveExpenseReport;Day=Monday` at 100% confidence over 338 occurrences. Sam ends up with 13, and his
+strongest day-and-time pattern is 65% over 13 occurrences — the difference between a habit and a coincidence, which
+is exactly the distinction the thresholds exist to make.
+
+Dana's numbers also show the delegation working: of her 650 approvals, 260 carry `InitiatorType=User` and the
+remaining 390 are the assistant acting for her. Both count toward Dana, neither establishes a habit for the agent.
+
 Two further things are in the data on purpose:
 
 - **The reimbursement run.** Approved claims are paid out by the system in the small hours of the following
-  Tuesday. It surfaces as a pattern whose `InitiatorType` is `System` rather than a person or an agent.
+  Tuesday. It surfaces under its own scope as `CommandType=ReimburseExpenseReport;Day=Tuesday;TimeBucket=Night`,
+  the one habit in the set whose initiator is neither a person nor an agent.
 - **Causation chains.** Every decision is appended as a command caused by the submission that led to it, and every
   reimbursement as one caused by the approval. That is what gives the `CausedByCommand` facet real values to mine —
   without it, the facet would be empty on every event in the store.
