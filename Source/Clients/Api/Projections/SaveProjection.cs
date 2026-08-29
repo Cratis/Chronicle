@@ -20,7 +20,7 @@ public record SaveProjection(string EventStore, string Namespace, string Declara
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>Collection of syntax errors, if any.</returns>
-    internal async Task<IEnumerable<ProjectionDeclarationSyntaxError>> Handle(IProjections projections)
+    public async Task<IEnumerable<ProjectionDeclarationSyntaxError>> Handle(IProjections projections)
     {
         var request = new SaveProjectionRequest
         {

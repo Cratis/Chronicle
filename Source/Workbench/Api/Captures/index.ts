@@ -1,6 +1,5 @@
 export * from './AllCaptures';
 export * from './Capture';
-export * from './CapturedEvents';
 export * from './CaptureStatus';
 export * from './CaptureValidationMessage';
 export * from './DeleteCapture';

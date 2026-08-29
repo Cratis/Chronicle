@@ -21,7 +21,7 @@ public record PreviewProjection(string EventStore, string Namespace, string Decl
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>The projection preview.</returns>
-    internal async Task<ProjectionPreview> Handle(IProjections projections)
+    public async Task<ProjectionPreview> Handle(IProjections projections)
     {
         var request = new PreviewProjectionRequest
         {
@@ -53,7 +53,7 @@ public record PreviewProjection(string EventStore, string Namespace, string Decl
                 new JsonObject(),
                 errors.Errors.ToApi()),
 
-            _ => throw new InvalidOperationException("Unexpected result type from Preview")
+            _ => throw new UnexpectedProjectionResult(nameof(PreviewProjection), result.GetType())
         };
     }
 }

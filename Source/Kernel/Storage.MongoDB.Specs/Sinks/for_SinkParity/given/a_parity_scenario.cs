@@ -179,11 +179,11 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
         // make every state after the first a no-op.
         var sequenceNumber = new EventSequenceNumber((ulong)_appliedStates++);
 
-        await _inMemoryPipeline.Handle(
+        await _inMemoryPipeline.Reduce(
             new ReducerContext([CreateEvent(sequenceNumber)], _key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), stateFactory())));
 
-        await _mongoPipeline.Handle(
+        await _mongoPipeline.Reduce(
             new ReducerContext([CreateEvent(sequenceNumber)], _key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(sequenceNumber), stateFactory())));
     }

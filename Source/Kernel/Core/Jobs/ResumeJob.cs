@@ -22,6 +22,6 @@ public record ResumeJob(string EventStore, string Namespace, Guid JobId)
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get jobs manager grains with.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IGrainFactory grainFactory) =>
+    public Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetJobsManager((EventStoreName)EventStore, (EventStoreNamespaceName)Namespace).Resume((Concepts.Jobs.JobId)JobId);
 }

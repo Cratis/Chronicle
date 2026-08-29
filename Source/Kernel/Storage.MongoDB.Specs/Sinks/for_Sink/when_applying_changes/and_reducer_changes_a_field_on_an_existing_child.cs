@@ -75,7 +75,7 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
 
             try
             {
-                await _pipeline.Handle(
+                await _pipeline.Reduce(
                     new ReducerContext([CreateEvent()], _key),
                     (_, _) => Task.FromResult(new ReducerSubscriberResult(
                         ObserverSubscriberResult.Ok(EventSequenceNumber.First),

@@ -21,6 +21,6 @@ public record ResetKernelState
     /// </summary>
     /// <param name="server">The <see cref="IServer"/> contract.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IServer server) => server.ResetKernelState();
+    public Task Handle(IServer server) => server.ResetKernelState();
 }
 #endif

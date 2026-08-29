@@ -53,7 +53,7 @@ public class ReducerPipeline(
     public Task EndBulk() => Sink.EndBulk();
 
     /// <inheritdoc/>
-    public async Task Handle(ReducerContext context, ReducerDelegate reducer)
+    public async Task Reduce(ReducerContext context, ReducerDelegate reducer)
     {
         var schema = ReadModel.GetSchemaForLatestGeneration();
         var initial = await Sink.FindOrDefault(context.Key);

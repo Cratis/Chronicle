@@ -8,10 +8,10 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Integration.for_EventAppendCollection;
 
 [Command]
-public class ACommandThatAppendsAnEvent
+public record ACommandThatAppendsAnEvent
 {
     public EventSourceId EventSourceId { get; init; }
 
-    async Task Handle(IEventLog eventLog) =>
+    public async Task Handle(IEventLog eventLog) =>
         await eventLog.Append(EventSourceId, new ACommandHandledEvent());
 }

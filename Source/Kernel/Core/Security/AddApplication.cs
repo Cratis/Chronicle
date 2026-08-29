@@ -29,7 +29,7 @@ public record AddApplication(Guid Id, string ClientId, string ClientSecret)
     /// <param name="storage">The <see cref="IStorage"/> to check existing applications in.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="Services.Security.ApplicationClientIdAlreadyRegistered">Thrown when an application with the same client identifier is already registered.</exception>
-    internal async Task Handle(IGrainFactory grainFactory, IStorage storage)
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         var existing = await storage.System.Applications.GetByClientId((ClientId)ClientId);
         if (existing is not null)

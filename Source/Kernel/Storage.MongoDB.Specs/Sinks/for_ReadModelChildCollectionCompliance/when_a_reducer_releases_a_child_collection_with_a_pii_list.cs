@@ -74,12 +74,12 @@ public class when_a_reducer_releases_a_child_collection_with_a_pii_list(MongoDBF
         var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace);
 
         // First reduce creates the candidate child with a coarse [PII] evaluation-scores list.
-        await pipeline.Handle(
+        await pipeline.Reduce(
             new ReducerContext([Event()], Key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), WorkSurface("Alice"))));
 
         // Second reduce reads the stored (encrypted) state and releases it before reducing again.
-        _error = await Catch.Exception(() => pipeline.Handle(
+        _error = await Catch.Exception(() => pipeline.Reduce(
             new ReducerContext([Event()], Key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), WorkSurface("Alice Smith")))));
 

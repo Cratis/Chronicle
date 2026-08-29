@@ -18,7 +18,7 @@ public record DeleteSequenceQuery(string EventStore, string Id)
     /// </summary>
     /// <param name="sequenceQueries">The <see cref="ISequenceQueries"/> contract.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(ISequenceQueries sequenceQueries) =>
+    public Task Handle(ISequenceQueries sequenceQueries) =>
         sequenceQueries.Delete(new()
         {
             EventStore = EventStore,
