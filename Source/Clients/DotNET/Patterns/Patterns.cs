@@ -59,4 +59,18 @@ public class Patterns(IEventStore eventStore) : IPatterns
 
         return patterns.ToClient();
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<PatternGroupingKey>> GetScopes(CancellationToken cancellationToken = default)
+    {
+        var scopes = await _servicesAccessor.Services.Patterns.GetScopes(
+            new()
+            {
+                EventStore = eventStore.Name,
+                Namespace = eventStore.Namespace
+            },
+            new CallContext(new CallOptions(cancellationToken: cancellationToken)));
+
+        return [.. scopes.Select(scope => new PatternGroupingKey(scope))];
+    }
 }

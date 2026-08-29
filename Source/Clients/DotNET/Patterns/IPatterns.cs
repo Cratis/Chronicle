@@ -40,4 +40,11 @@ public interface IPatterns
     Task<IEnumerable<BehaviorPattern>> GetPatternsForScope(
         PatternGroupingKey groupingKey,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the scopes that have established patterns.
+    /// </summary>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="PatternGroupingKey">scopes</see> holding patterns.</returns>
+    Task<IEnumerable<PatternGroupingKey>> GetScopes(CancellationToken cancellationToken = default);
 }
