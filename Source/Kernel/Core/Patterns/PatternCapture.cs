@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
@@ -44,6 +45,17 @@ public class PatternCapture(
     /// The identifier of the observer that captures behavior patterns.
     /// </summary>
     public const string ObserverIdentifier = "$system.patterns";
+
+    /// <inheritdoc/>
+    public async Task SubscribeAcrossNamespaces(EventStoreName eventStore)
+    {
+        var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
+
+        foreach (var @namespace in namespaces)
+        {
+            await Subscribe(eventStore, @namespace);
+        }
+    }
 
     /// <inheritdoc/>
     public async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace)

@@ -34,11 +34,7 @@ turned away and leaves the store exactly as it found it.
 It connects with TLS validation skipped, which a local kernel's development certificate needs. Set
 `CHRONICLE_CONNECTION_STRING` to point it somewhere else.
 
-> **Start the kernel *after* the store has event types registered, or restart it once after the first `generate`.**
-> Pattern capture currently subscribes only at server startup, so against a brand new store it has nothing to
-> subscribe to and mines nothing until the next restart — see
-> [#3867](https://github.com/Cratis/Chronicle/issues/3867). Give the observer a minute to work through the history
-> afterwards.
+Give the pattern observer a minute afterwards to work through the history — the scopes appear as it catches up.
 
 ## Who does what
 

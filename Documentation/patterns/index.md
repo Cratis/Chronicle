@@ -75,6 +75,10 @@ Under `Cratis:Chronicle:PatternDetection`:
 
 `Year` and `Month` are deliberately absent from `Facets`: they are kept on a surviving pattern for recency, but combining them multiplies the candidate space by every month the store has been running while splitting one behavior across all of them. Add them when a deployment wants to mine seasonality and can afford the cardinality.
 
+## When capture starts
+
+Pattern capture observes the event types an event store has registered, and re-subscribes as more are registered — so a store that gains its first event types while the server is already running starts being captured then, not at the next restart.
+
 ## Naming the command
 
 For `CommandType` and `CausedByCommand` to be meaningful, something above the event has to name the command. [Cratis Arc](/arc/) records a `Command` causation naming the executing command for the duration of that command, so nested commands produce a real "caused by" chain and sibling commands do not. Anything else appending to Chronicle can do the same by putting a `commandType` property on its causation.

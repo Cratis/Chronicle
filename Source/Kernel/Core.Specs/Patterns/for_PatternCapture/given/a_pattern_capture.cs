@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -19,6 +20,7 @@ public class a_pattern_capture : Specification
     protected IEventTypesStorage _eventTypes;
     protected IReactorDefinitionsStorage _reactors;
     protected IObserver _observer;
+    protected INamespaces _namespaces;
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
 
@@ -40,8 +42,11 @@ public class a_pattern_capture : Specification
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(SiloAddress.Zero);
 
+        _namespaces = Substitute.For<INamespaces>();
+
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
+        grainFactory.GetGrain<INamespaces>(Arg.Any<string>(), Arg.Any<string>()).Returns(_namespaces);
 
         _capture = new(storage, localSiloDetails, grainFactory, NullLogger<PatternCapture>.Instance);
     }
