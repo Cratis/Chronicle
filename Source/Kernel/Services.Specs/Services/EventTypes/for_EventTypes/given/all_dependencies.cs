@@ -19,7 +19,6 @@ public class all_dependencies : Specification
     protected IGrainFactory _grainFactory;
     protected IEventSequence _systemEventSequence;
     protected Cratis.Chronicle.EventTypes.IEventTypesCacheClient _eventTypesCacheClient;
-    protected Cratis.Chronicle.Patterns.IPatternCapture _patternCapture;
     protected IEventTypes _subject;
 
     void Establish()
@@ -35,8 +34,7 @@ public class all_dependencies : Specification
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_systemEventSequence);
         _eventTypesStorage.GetAllDefinitions().Returns([]);
         _eventTypesStorage.Register(Arg.Any<IEnumerable<Concepts.Events.EventTypeToRegister>>()).Returns([]);
-        _patternCapture = Substitute.For<Cratis.Chronicle.Patterns.IPatternCapture>();
-        _subject = new KernelEventTypes(_storage, _grainFactory, _eventTypesCacheClient, _patternCapture);
+        _subject = new KernelEventTypes(_storage, _grainFactory, _eventTypesCacheClient);
     }
 
     protected void StoredEventTypes(params Concepts.Events.EventTypeDefinition[] definitions) =>

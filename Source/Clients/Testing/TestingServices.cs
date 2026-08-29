@@ -170,11 +170,7 @@ internal sealed class TestingServices(
         new KernelIdentitiesService(storage));
 
     readonly Lazy<IEventTypes> _eventTypes = new(() =>
-        new KernelEventTypesService(
-            storage,
-            grainFactory,
-            new EventSequences.NoOpEventTypesCacheClient(),
-            new EventSequences.NoOpPatternCapture()));
+        new KernelEventTypesService(storage, grainFactory, new EventSequences.NoOpEventTypesCacheClient()));
 
     readonly Lazy<IRecommendations> _recommendations = new(() =>
         new KernelRecommendationsService(grainFactory, storage));

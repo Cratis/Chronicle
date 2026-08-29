@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
@@ -25,12 +24,10 @@ namespace Cratis.Chronicle.Services.Events;
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grain references.</param>
 /// <param name="eventTypesCacheClient">Client for evicting event type caches on every silo when a registration changes one.</param>
-/// <param name="patternCapture"><see cref="IPatternCapture"/> to keep observing every registered event type.</param>
 internal sealed class EventTypes(
     IStorage storage,
     IGrainFactory grainFactory,
-    Cratis.Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient,
-    IPatternCapture patternCapture) : IEventTypes
+    Cratis.Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient) : IEventTypes
 {
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
@@ -76,7 +73,6 @@ internal sealed class EventTypes(
         }
 
         await AppendSystemEventsForNewGenerations(request.EventStore, newGenerationsPerEventType);
-        await CapturePatternsForNewEventTypes(request.EventStore, mutated);
     }
 
     /// <inheritdoc/>
@@ -95,7 +91,6 @@ internal sealed class EventTypes(
         if (mutated)
         {
             await eventTypesCacheClient.Invalidate(request.EventStore, chronicleType.Id);
-            await patternCapture.SubscribeAcrossNamespaces(request.EventStore);
         }
     }
 
@@ -429,28 +424,6 @@ internal sealed class EventTypes(
                     new EventTypeGenerationAdded(newGenerations.EventTypeId, generation, schema));
             }
         }
-    }
-
-    /// <summary>
-    /// Re-subscribes pattern capture when a registration actually introduced something new.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> that was registered against.</param>
-    /// <param name="mutated">The event types the registration changed.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>
-    /// Pattern capture subscribes to the event types that exist at the time it subscribes, and a server starting
-    /// against a store no client has connected to yet has none - so without this, a first run captures nothing at
-    /// all until the next restart. Gated on the registration having changed something, so a client reconnecting and
-    /// re-registering the same types does not re-subscribe on every connect.
-    /// </remarks>
-    async Task CapturePatternsForNewEventTypes(EventStoreName eventStore, IEnumerable<EventTypeId> mutated)
-    {
-        if (!mutated.Any())
-        {
-            return;
-        }
-
-        await patternCapture.SubscribeAcrossNamespaces(eventStore);
     }
 
     /// <summary>
