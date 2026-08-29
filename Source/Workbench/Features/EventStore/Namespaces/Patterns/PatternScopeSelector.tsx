@@ -34,6 +34,6 @@ export const PatternScopeSelector = ({ scopes, selected, onChange }: PatternScop
                     onChange={(event) => onChange(event.value)}
                 />
             )
-            : <span className="opacity-70">{strings.patterns.noScopes}</span>}
+            : scopes.length === 0 && <span className="opacity-70">{strings.patterns.noScopes}</span>}
     </div>
 );
