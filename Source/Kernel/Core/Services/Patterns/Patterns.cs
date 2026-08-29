@@ -83,4 +83,16 @@ internal sealed class Patterns(
 
         return patterns.Select(pattern => pattern.ToContract()).ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<string>> GetScopes(Contracts.Patterns.GetPatternScopesRequest request, CallContext context = default)
+    {
+        var scopes = await storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace)
+            .Patterns
+            .GetScopes();
+
+        return [.. scopes.Select(scope => scope.Value).Order(StringComparer.Ordinal)];
+    }
 }

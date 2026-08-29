@@ -30,4 +30,17 @@ public interface IPatterns
     /// </remarks>
     [Operation]
     Task<IEnumerable<Pattern>> GetPatternsForScope(GetPatternsForScopeRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get the scopes that have established patterns.
+    /// </summary>
+    /// <param name="request">The <see cref="GetPatternScopesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns><see cref="IEnumerable{T}"/> of scope identifiers.</returns>
+    /// <remarks>
+    /// What a browsing surface needs before it can ask about anything: patterns are per scope, so a view has to
+    /// know which scopes exist before it can offer one to look at.
+    /// </remarks>
+    [Operation]
+    Task<IEnumerable<string>> GetScopes(GetPatternScopesRequest request, CallContext context = default);
 }
