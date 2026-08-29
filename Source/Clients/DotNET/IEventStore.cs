@@ -121,7 +121,14 @@ public interface IEventStore
     /// <summary>
     /// Gets the <see cref="IPatterns"/> for the event store.
     /// </summary>
-    IPatterns Patterns { get; }
+    /// <remarks>
+    /// Optional, so that an existing implementation of this interface - a test double, a scenario harness in a
+    /// consuming framework - keeps compiling and loading without change. Adding a required member to an interface
+    /// this widely implemented breaks every implementer at type-load time, before any of their code runs. The real
+    /// event store implements it; anything that does not says so by throwing rather than by quietly answering.
+    /// </remarks>
+    /// <exception cref="PatternsNotSupported">Thrown when the implementation does not support behavior patterns.</exception>
+    IPatterns Patterns => throw new PatternsNotSupported(GetType());
 
     /// <summary>
     /// Gets the <see cref="IPIIManager"/> for managing PII encryption keys (GDPR right-to-erasure) for the event store.
