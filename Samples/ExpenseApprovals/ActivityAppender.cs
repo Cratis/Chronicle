@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
