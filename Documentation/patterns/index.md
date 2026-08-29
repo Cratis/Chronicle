@@ -87,7 +87,22 @@ Ask what usually happens with the [.NET client's pattern API](/chronicle/clients
 
 - **`GetPatterns`** — given a partial context, the patterns that apply, ranked by specificity and then confidence.
 - **`GetPatternsForScope`** — everything a scope has established, unfiltered, for browsing.
+- **`GetScopes`** — the scopes that hold any patterns at all, which is what a browsing view needs before it can offer one.
 
 Specificity outranks confidence in the ranking. A pattern constraining everything you asked about answers your question; a broader, more confident one answers a question you did not ask.
 
 **Nothing clearing the confidence bar returns nothing.** An empty answer is a true statement — this scope has no established behavior for this context — and is not padded with the best of a bad set.
+
+## Seeing patterns in the Workbench
+
+Two views under an event store's namespace read the same patterns from different angles, both scoped by a selector at the top — patterns belong to a scope, and a view that quietly picked the first one would read as "this is the store's behavior" when it is one person's.
+
+**Behavior patterns** pivots everything a scope established. The facets become the dimensions and filters, so the same set can be approached from whichever direction the question comes: by command, by who initiated it, by day or part of day, by aggregate, by what caused it, or by how specific the pattern is. Each card carries a confidence bar, so a well-established habit is distinguishable from a marginal one without reading numbers.
+
+**Pattern heatmap** answers the narrower question of *when*. It is a day-by-time-of-day grid where each cell is shaded by the confidence of the strongest pattern in that slot, with the current slot outlined. Clicking a cell lists everything established for it. Above the grid, a panel names what the scope usually does *right now* — the same question [`GetPatterns`](/chronicle/clients/dotnet/patterns/) answers from code, asked with the current day and time bucket as the context.
+
+A pattern that constrains neither day nor time of day belongs to no cell and is left out of the grid rather than drawn somewhere arbitrary. It is still in the pivot view, which is the one that shows everything.
+
+## Trying it out
+
+The **ExpenseApprovals** sample in the Chronicle repository generates half a year of backdated expense activity with four deliberate habits baked into it — and one actor with none, as a control for whether mining invents structure that is not there. Its README explains what was put in, so what Chronicle establishes can be checked against it.

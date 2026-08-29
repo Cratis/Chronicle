@@ -61,6 +61,17 @@ Leave `minimumConfidence` and `maximumResults` unset to use whatever the **serve
 var everything = await eventStore.Patterns.GetPatternsForScope(userId);
 ```
 
+Which leaves the question of what to pass. A browsing view rarely knows a scope up front — it has to offer the ones that exist — and patterns are per scope, so there is nothing to show until one is chosen. `GetScopes` is that list:
+
+```csharp
+foreach (var scope in await eventStore.Patterns.GetScopes())
+{
+    var patterns = await eventStore.Patterns.GetPatternsForScope(scope);
+}
+```
+
+The scopes returned are the ones that actually hold patterns, not every identity that ever appeared in the store. A scope missing from the list has established no behavior yet — which is the same answer an empty `GetPatterns` gives, one level up.
+
 ## What you get back
 
 Each result is a `BehaviorPattern`:
