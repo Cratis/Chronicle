@@ -37,7 +37,7 @@ sealed class RecordingReactorSideEffectHandlers : IReactorSideEffectHandlers
     public bool CanHandle(ReactorContext reactorContext, IEventStore eventStore, object value) => true;
 
     /// <inheritdoc/>
-    public Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
+    Task<Result<ReactorSideEffectFailure>> IReactorSideEffectHandlers.Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         _produced.AddRange(Flatten(value));
         return Task.FromResult(Result.Success<ReactorSideEffectFailure>());

@@ -51,7 +51,7 @@ public class and_reducer_changes_a_field_on_an_existing_child : given.all_depend
 
     async Task Because()
     {
-        await _pipeline.Handle(CreateContext(EventSourceIdValue), Reducer);
+        await _pipeline.Reduce(CreateContext(EventSourceIdValue), Reducer);
 
         var propertiesChanged = _changeset.Changes.OfType<PropertiesChanged<ExpandoObject>>().Single();
         _differences = propertiesChanged.Differences.ToArray();

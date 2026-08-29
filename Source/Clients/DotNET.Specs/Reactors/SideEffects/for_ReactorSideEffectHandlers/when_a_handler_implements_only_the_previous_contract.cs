@@ -44,7 +44,7 @@ public class when_a_handler_implements_only_the_previous_contract : Specificatio
             return true;
         }
 
-        public Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
+        Task<Result<ReactorSideEffectFailure>> IReactorSideEffectHandler.Handle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
             Task.FromResult(Result.Success<ReactorSideEffectFailure>());
     }
 }

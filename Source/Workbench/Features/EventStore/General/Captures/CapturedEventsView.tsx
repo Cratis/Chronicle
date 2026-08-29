@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CapturedEvents } from 'Api/Captures';
+import { CapturedEvents } from 'Api/Events';
 import { AppendedEvent } from 'Api/Events';
 import { DataTable } from 'Components/DataTable';
 import { Column } from '@cratis/components/DataTables';

@@ -46,7 +46,7 @@ public record GenerateModelBoundCode(string EventStore, string Namespace, string
             ProjectionDeclarationParsingErrors errors => new GeneratedCodeResult(
                 string.Empty,
                 errors.Errors.ToApi()),
-            _ => throw new InvalidOperationException("Unexpected result type from GenerateModelBoundCode")
+            _ => throw new UnexpectedProjectionResult(nameof(GenerateModelBoundCode), result.GetType())
         };
     }
 }

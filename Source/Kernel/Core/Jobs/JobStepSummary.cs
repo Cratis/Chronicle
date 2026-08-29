@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -37,9 +38,9 @@ public record JobStepSummary(
     /// <param name="storage">The <see cref="IStorage"/> to read job steps from.</param>
     /// <returns>A collection of job step summaries.</returns>
     internal static async Task<IEnumerable<JobStepSummary>> GetJobSteps(
-        string eventStore,
-        string @namespace,
-        Guid jobId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        Concepts.Jobs.JobId jobId,
         IStorage storage)
     {
         var result = await storage

@@ -28,7 +28,7 @@ public record SetInitialAdminPassword(Guid UserId, string Password, string Confi
     /// <returns>Awaitable task.</returns>
     /// <exception cref="Services.Security.PasswordConfirmationMismatch">Thrown when the confirmed password does not match the password.</exception>
     /// <exception cref="Services.Security.UserNotFound">Thrown when the specified user does not exist.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the user has already logged in and has an initial password set.</exception>
+    /// <exception cref="Services.Security.InitialAdminPasswordAlreadyUsed">Thrown when the user has already logged in and has an initial password set.</exception>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
@@ -40,7 +40,7 @@ public record SetInitialAdminPassword(Guid UserId, string Password, string Confi
 
         if (user.HasLoggedIn)
         {
-            throw new InvalidOperationException("Setting the initial admin password is only allowed for users who have not yet logged in.");
+            throw new Services.Security.InitialAdminPasswordAlreadyUsed();
         }
 
         var passwordHash = new PasswordHasher<object>().HashPassword(null!, Password);

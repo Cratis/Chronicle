@@ -30,6 +30,6 @@ public class a_reactor_with_a_once_only_handler : Specification
         public int Calls { get; private set; }
 
         [OnceOnly]
-        public void Handle(MyEvent @event) => Calls++;
+        public void OnMyEvent(MyEvent @event) => Calls++;
     }
 }

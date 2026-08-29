@@ -31,7 +31,7 @@ public class a_reactor_with_a_replay_handler : Specification
 
         public int ReplayCalls { get; private set; }
 
-        public void Handle(MyEvent @event) => LiveCalls++;
+        public void OnMyEvent(MyEvent @event) => LiveCalls++;
 
         [Replay]
         public void HandleDuringReplay(MyEvent @event) => ReplayCalls++;

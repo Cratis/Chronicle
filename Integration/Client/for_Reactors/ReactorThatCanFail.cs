@@ -20,7 +20,7 @@ public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
         if (ShouldFail)
         {
             ShouldFail = false;
-            throw new Exception("Something went wrong");
+            throw new DeliberateReactorFailure();
         }
 
         Interlocked.Increment(ref HandledEvents);

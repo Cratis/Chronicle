@@ -53,7 +53,7 @@ public record PreviewProjection(string EventStore, string Namespace, string Decl
                 new JsonObject(),
                 errors.Errors.ToApi()),
 
-            _ => throw new InvalidOperationException("Unexpected result type from Preview")
+            _ => throw new UnexpectedProjectionResult(nameof(PreviewProjection), result.GetType())
         };
     }
 }

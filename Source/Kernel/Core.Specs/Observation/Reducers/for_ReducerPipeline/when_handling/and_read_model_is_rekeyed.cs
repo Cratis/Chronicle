@@ -30,7 +30,7 @@ public class and_read_model_is_rekeyed : given.all_dependencies
         _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(Task.FromResult<ExpandoObject?>(null));
     }
 
-    async Task Because() => await _pipeline.Handle(
+    async Task Because() => await _pipeline.Reduce(
         CreateContext(EventSourceIdValue, key: ResolvedKey),
         CreateReducer(_returnedState));
 

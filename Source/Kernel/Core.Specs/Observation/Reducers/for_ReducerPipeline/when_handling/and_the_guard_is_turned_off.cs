@@ -12,7 +12,7 @@ public class and_the_guard_is_turned_off : given.a_pipeline_with_a_recording_sin
 
     void Establish() => _sink.Existing = new ExpandoObject();
 
-    async Task Because() => await _pipeline.Handle(CreateContext(), CreateReducer(NewState()));
+    async Task Because() => await _pipeline.Reduce(CreateContext(), CreateReducer(NewState()));
 
     [Fact] void should_write_unconditionally() => _sink.WriteModes.Single().ShouldEqual(SinkWriteMode.Always);
 }
