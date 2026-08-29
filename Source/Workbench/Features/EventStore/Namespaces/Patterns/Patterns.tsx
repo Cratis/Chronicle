@@ -11,6 +11,7 @@ import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { PatternScopeSelector } from './PatternScopeSelector';
 import { ConfidenceBar } from './ConfidenceBar';
+import { summaryOf } from './patternSummary';
 
 // A pattern only constrains the facets it is about, so a missing facet is not missing data — it means the pattern
 // holds whatever that facet's value is. Saying "Any" keeps that readable as a pivot value.
@@ -56,7 +57,7 @@ const filters: PivotFilter<BehaviorPattern>[] = [
 
 const detailRenderer = (pattern: BehaviorPattern) => (
     <div className="p-5 h-full overflow-auto">
-        <h2 className="mt-0 mb-5">{facet(pattern, 'CommandType')}</h2>
+        <h2 className="mt-0 mb-5">{summaryOf(pattern)}</h2>
 
         <div className="mb-6 max-w-md">
             <ConfidenceBar value={pattern.confidence} label={strings.patterns.confidence} />
@@ -116,7 +117,7 @@ export const Patterns = () => {
                     filters={filters}
                     defaultDimensionKey="commandType"
                     cardRenderer={(pattern) => ({
-                        title: facet(pattern, 'CommandType'),
+                        title: summaryOf(pattern),
                         labels: [strings.patterns.confidence, strings.patterns.occurrences],
                         values: [`${Math.round(pattern.confidence * 100)}%`, String(pattern.occurrences)],
                     })}
