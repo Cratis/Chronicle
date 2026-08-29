@@ -19,14 +19,21 @@ export interface PatternScopeSelectorProps {
 export const PatternScopeSelector = ({ scopes, selected, onChange }: PatternScopeSelectorProps) => (
     <div className="flex items-center gap-2">
         <label htmlFor="pattern-scope">{strings.patterns.scope}</label>
-        <Dropdown<string>
-            id="pattern-scope"
-            value={selected}
-            options={scopes}
-            filter={scopes.length > 10}
-            placeholder={strings.patterns.scope}
-            className="min-w-[20rem]"
-            onChange={(event) => onChange(event.value)}
-        />
+        {selected
+            // Mounted only once a scope is settled on. The underlying select takes its value as uncontrolled when
+            // it first renders without one, and then ignores the value arriving a moment later - so it would sit
+            // there showing the placeholder while everything below it displayed that scope's patterns.
+            ? (
+                <Dropdown<string>
+                    id="pattern-scope"
+                    value={selected}
+                    options={scopes}
+                    filter={scopes.length > 10}
+                    placeholder={strings.patterns.scope}
+                    className="min-w-[20rem]"
+                    onChange={(event) => onChange(event.value)}
+                />
+            )
+            : <span className="opacity-70">{strings.patterns.noScopes}</span>}
     </div>
 );
