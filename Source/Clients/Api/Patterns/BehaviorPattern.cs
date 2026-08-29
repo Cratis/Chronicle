@@ -50,4 +50,42 @@ public record BehaviorPattern(
             Namespace = @namespace,
             GroupingKey = groupingKey
         })).ToApi();
+
+    /// <summary>
+    /// Get every pattern established in a namespace, across every scope.
+    /// </summary>
+    /// <param name="patterns">The <see cref="IPatternsService"/> contract.</param>
+    /// <param name="eventStore">The event store to get patterns for.</param>
+    /// <param name="namespace">The namespace to get patterns for.</param>
+    /// <returns>Collection of <see cref="BehaviorPattern"/>.</returns>
+    /// <remarks>
+    /// For a browsing surface that treats the scope as one facet among the others rather than as something chosen
+    /// before anything can be shown. Every pattern carries its <see cref="GroupingKey"/>, so which scope a pattern
+    /// belongs to becomes just another thing to filter or pivot by.
+    /// <para>
+    /// The scopes are read first and then asked for concurrently, because the engine indexes patterns by scope and
+    /// has no single read across all of them. That is a fair trade for an operator browsing a namespace, and a
+    /// reason to add a kernel-side read if a deployment ever has enough scopes for the fan-out to hurt.
+    /// </para>
+    /// </remarks>
+    public static async Task<IEnumerable<BehaviorPattern>> AllPatterns(
+        IPatternsService patterns,
+        string eventStore,
+        string @namespace)
+    {
+        var scopes = await patterns.GetScopes(new()
+        {
+            EventStore = eventStore,
+            Namespace = @namespace
+        });
+
+        var perScope = await Task.WhenAll(scopes.Select(scope => patterns.GetPatternsForScope(new()
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            GroupingKey = scope
+        })));
+
+        return perScope.SelectMany(_ => _).ToApi();
+    }
 }

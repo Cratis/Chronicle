@@ -24,11 +24,13 @@ public static class PatternConverters
     /// <param name="pattern">The pattern to convert.</param>
     /// <returns>The converted <see cref="BehaviorPattern"/>.</returns>
     /// <remarks>
-    /// The identity is the facets rendered back into their canonical key. A pattern has no identifier of its own -
-    /// it is the combination it constrains - and a view needs something stable to key a row on.
+    /// The identity is the scope followed by the facets rendered back into their canonical key. A pattern has no
+    /// identifier of its own - it is the combination it constrains - and a view needs something stable to key a row
+    /// on. The scope has to be part of it: the same combination is established independently by many scopes, so the
+    /// facet key alone repeats once a view looks at more than one of them at a time.
     /// </remarks>
     public static BehaviorPattern ToApi(this Contract.Pattern pattern) => new(
-        string.Join(';', pattern.Facets.OrderBy(facet => facet.Key, StringComparer.Ordinal).Select(facet => $"{facet.Key}={facet.Value}")),
+        $"{pattern.GroupingKey}/{string.Join(';', pattern.Facets.OrderBy(facet => facet.Key, StringComparer.Ordinal).Select(facet => $"{facet.Key}={facet.Value}"))}",
         pattern.GroupingKey,
         pattern.Facets,
         pattern.Confidence,

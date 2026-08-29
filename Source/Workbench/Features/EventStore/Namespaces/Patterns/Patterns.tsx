@@ -2,14 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { PivotDimension, PivotFilter, PivotGroup, PivotViewer } from '@cratis/components/PivotViewer';
-import { AllPatternScopes, PatternsForScope } from 'Api/Patterns';
+import { AllPatterns } from 'Api/Patterns';
 import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
-import { PatternScopeSelector } from './PatternScopeSelector';
 import { ConfidenceBar } from './ConfidenceBar';
 import { summaryOf } from './patternSummary';
 
@@ -27,6 +25,12 @@ const facetAxes = [
 ];
 
 const dimensions: PivotDimension<BehaviorPattern>[] = [
+    {
+        key: 'scope',
+        label: strings.patterns.scope,
+        getValue: (pattern) => pattern.groupingKey,
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
     ...facetAxes.map(({ key, name, label }) => ({
         key,
         label,
@@ -45,6 +49,9 @@ const dimensions: PivotDimension<BehaviorPattern>[] = [
 ];
 
 const filters: PivotFilter<BehaviorPattern>[] = [
+    // Scope leads, because "whose behavior am I looking at" is the question asked before any of the others - and
+    // being a filter rather than a control above the viewer is what lets two scopes be compared side by side.
+    { key: 'scope', label: strings.patterns.scope, getValue: (pattern) => pattern.groupingKey, multi: true },
     ...facetAxes.map(({ key, name, label }) => ({
         key,
         label,
@@ -91,26 +98,14 @@ const detailRenderer = (pattern: BehaviorPattern) => (
 
 export const Patterns = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [scope, setScope] = useState<string | undefined>(undefined);
 
-    const [scopes] = AllPatternScopes.use({ eventStore: params.eventStore!, namespace: params.namespace! });
-    const scopeIds = (scopes.data ?? []).map((_) => _.id);
-
-    useEffect(() => {
-        if (!scope && scopeIds.length > 0) {
-            setScope(scopeIds[0]);
-        }
-    }, [scope, scopeIds]);
-
-    const [patterns] = PatternsForScope
-        .when(!!scope)
-        .use({ eventStore: params.eventStore!, namespace: params.namespace!, groupingKey: scope ?? '' });
+    // Every scope's patterns are loaded together so the scope is one facet among the others rather than something
+    // that has to be chosen before anything can be seen.
+    const [patterns] = AllPatterns.use({ eventStore: params.eventStore!, namespace: params.namespace! });
 
     return (
         <Page title={strings.mainMenu.patterns} noBackground noPadding>
-            <div className="p-4 h-full flex flex-col min-h-0 gap-4">
-                <PatternScopeSelector scopes={scopeIds} selected={scope} onChange={setScope} />
-
+            <div className="p-4 h-full flex flex-col min-h-0">
                 <PivotViewer<BehaviorPattern>
                     data={patterns.data ?? []}
                     dimensions={dimensions}
@@ -128,8 +123,8 @@ export const Patterns = () => {
                         (pattern) => pattern.groupingKey
                     ]}
                     className="flex-1 min-h-0"
-                    emptyContent={<span>{scopeIds.length === 0 ? strings.patterns.noScopes : strings.patterns.noPatterns}</span>}
-                    isLoading={patterns.isPerforming || scopes.isPerforming}
+                    emptyContent={<span>{strings.patterns.noScopes}</span>}
+                    isLoading={patterns.isPerforming}
                 />
             </div>
         </Page>
