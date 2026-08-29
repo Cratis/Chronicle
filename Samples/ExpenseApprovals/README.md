@@ -40,6 +40,11 @@ Set `CHRONICLE_CONNECTION_STRING` to point it somewhere else.
 Patterns do not appear the instant the events land — the pattern observer has to work through the history, and a
 behavior only becomes a pattern once it clears the support and confidence thresholds.
 
+> **Start the kernel *after* the store has event types registered, or restart it once after the first `generate`.**
+> Pattern capture currently subscribes only at server startup, so against a brand new store it has nothing to
+> subscribe to and mines nothing until the next restart — see
+> [#3867](https://github.com/Cratis/Chronicle/issues/3867).
+
 ## What is deliberately in the data
 
 Five actors, four with a habit and one without:
