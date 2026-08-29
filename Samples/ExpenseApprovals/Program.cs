@@ -12,13 +12,42 @@ const int Seed = 20260829;
 
 using var loggerFactory = LoggerFactory.Create(static builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
+// A local kernel serves its dev certificate, which the client rejects unless told not to validate it. Overridable
+// so the sample can be pointed at a real deployment without editing it.
+var connectionString = Environment.GetEnvironmentVariable("CHRONICLE_CONNECTION_STRING")
+    ?? "chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000?skipTlsValidation=true";
+
 var identityProvider = new BaseIdentityProvider();
-var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
+var options = ChronicleOptions.FromConnectionString(connectionString);
 
 Console.WriteLine("Connecting to Chronicle...");
 using var client = new ChronicleClient(options, identityProvider: identityProvider, loggerFactory: loggerFactory);
 var store = await client.GetEventStore("ExpenseApprovals");
 var appender = new ActivityAppender(store, identityProvider, client.CausationManager);
+
+// Every command is reachable as an argument as well as a keystroke, so the sample can be driven from a script -
+// seeding a demo environment should not need somebody sitting at the keyboard.
+if (args.Length > 0)
+{
+    switch (args[0].ToLowerInvariant())
+    {
+        case "generate":
+            await GenerateHistory();
+            return 0;
+        case "scopes":
+            await ListScopes();
+            return 0;
+        case "patterns":
+            await ShowPatterns(ScopeFromArguments());
+            return 0;
+        case "now":
+            await PredictNow(ScopeFromArguments());
+            return 0;
+        default:
+            Console.WriteLine($"Unknown command '{args[0]}'. Expected generate, scopes, patterns or now.");
+            return 1;
+    }
+}
 
 WriteInstructions();
 
@@ -33,17 +62,17 @@ while (true)
             await ListScopes();
             break;
         case ConsoleKey.P:
-            await ShowPatternsForScope();
+            await ShowPatterns(await SelectScope());
             break;
         case ConsoleKey.N:
-            await PredictNow();
+            await PredictNow(await SelectScope());
             break;
         case ConsoleKey.H:
             WriteInstructions();
             break;
         case ConsoleKey.Q:
         case ConsoleKey.Escape:
-            return;
+            return 0;
     }
 }
 
@@ -84,9 +113,8 @@ async Task ListScopes()
     }
 }
 
-async Task ShowPatternsForScope()
+async Task ShowPatterns(PatternGroupingKey? scope)
 {
-    var scope = await SelectScope();
     if (scope is null)
     {
         return;
@@ -104,9 +132,8 @@ async Task ShowPatternsForScope()
 }
 
 // Asks what usually happens right now - the same question the heatmap's "right now" panel asks.
-async Task PredictNow()
+async Task PredictNow(PatternGroupingKey? scope)
 {
-    var scope = await SelectScope();
     if (scope is null)
     {
         return;
@@ -131,6 +158,17 @@ async Task PredictNow()
     {
         Console.WriteLine($"  {pattern.Confidence.Value,6:P0}  {pattern.Facets}");
     }
+}
+
+PatternGroupingKey? ScopeFromArguments()
+{
+    if (args.Length > 1)
+    {
+        return new PatternGroupingKey(args[1]);
+    }
+
+    Console.WriteLine("Name the scope to ask about, for example: dana.reeves");
+    return null;
 }
 
 async Task<PatternGroupingKey?> SelectScope()
