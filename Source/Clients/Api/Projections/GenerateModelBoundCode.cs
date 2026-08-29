@@ -20,7 +20,7 @@ public record GenerateModelBoundCode(string EventStore, string Namespace, string
     /// </summary>
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>The generated C# code or errors.</returns>
-    internal async Task<GeneratedCodeResult> Handle(IProjections projections)
+    public async Task<GeneratedCodeResult> Handle(IProjections projections)
     {
         var request = new GenerateModelBoundCodeRequest
         {

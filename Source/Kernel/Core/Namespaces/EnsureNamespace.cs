@@ -21,7 +21,7 @@ public record EnsureNamespace(string EventStore, string Namespace)
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get namespace grains with.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IGrainFactory grainFactory)
+    public async Task Handle(IGrainFactory grainFactory)
     {
         var namespaces = grainFactory.GetGrain<INamespaces>((EventStoreName)EventStore);
         await namespaces.Ensure((EventStoreNamespaceName)Namespace);

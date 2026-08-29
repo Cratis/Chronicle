@@ -19,7 +19,7 @@ public record StartCapture(string EventStore, string CaptureId)
     /// </summary>
     /// <param name="captures">The <see cref="ICapturesService"/> contract.</param>
     /// <returns>The <see cref="StartCaptureResult"/> - empty messages means the capture was started.</returns>
-    internal async Task<StartCaptureResult> Handle(ICapturesService captures)
+    public async Task<StartCaptureResult> Handle(ICapturesService captures)
     {
         var response = await captures.Start(new()
         {

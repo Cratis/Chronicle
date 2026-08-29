@@ -25,7 +25,7 @@ public record AddUser(Guid UserId, string Username, string Email, string Passwor
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IGrainFactory grainFactory)
+    public async Task Handle(IGrainFactory grainFactory)
     {
         var passwordHasher = new PasswordHasher<object>();
         var passwordHash = passwordHasher.HashPassword(null!, Password);

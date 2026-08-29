@@ -24,7 +24,7 @@ public record ChangeApplicationSecret(Guid Id, string ClientSecret)
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IGrainFactory grainFactory)
+    public async Task Handle(IGrainFactory grainFactory)
     {
         var hashedSecret = new PasswordHasher<object>().HashPassword(null!, ClientSecret);
         var @event = new ApplicationSecretChanged((ClientSecret)hashedSecret);

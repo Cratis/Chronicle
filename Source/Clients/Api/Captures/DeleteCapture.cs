@@ -18,7 +18,7 @@ public record DeleteCapture(string EventStore, string CaptureId)
     /// </summary>
     /// <param name="captures">The <see cref="ICapturesService"/> contract.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(ICapturesService captures) =>
+    public Task Handle(ICapturesService captures) =>
         captures.Delete(new()
         {
             EventStore = EventStore,

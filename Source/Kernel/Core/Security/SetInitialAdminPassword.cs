@@ -29,7 +29,7 @@ public record SetInitialAdminPassword(Guid UserId, string Password, string Confi
     /// <exception cref="Services.Security.PasswordConfirmationMismatch">Thrown when the confirmed password does not match the password.</exception>
     /// <exception cref="Services.Security.UserNotFound">Thrown when the specified user does not exist.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the user has already logged in and has an initial password set.</exception>
-    internal async Task Handle(IGrainFactory grainFactory, IStorage storage)
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
         {

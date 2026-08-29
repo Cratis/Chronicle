@@ -19,7 +19,7 @@ public record ValidateCaptureDeclaration(string EventStore, string Declaration)
     /// </summary>
     /// <param name="captures">The <see cref="ICapturesService"/> contract.</param>
     /// <returns>Collection of <see cref="CaptureValidationMessage"/> - empty when the declaration is valid.</returns>
-    internal async Task<IEnumerable<CaptureValidationMessage>> Handle(ICapturesService captures)
+    public async Task<IEnumerable<CaptureValidationMessage>> Handle(ICapturesService captures)
     {
         var response = await captures.ValidateDeclaration(new()
         {
