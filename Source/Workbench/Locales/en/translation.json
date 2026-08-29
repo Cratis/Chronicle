@@ -1,803 +1,821 @@
 {
-    "general": {
-        "buttons": {
-            "ok": "OK",
-            "cancel": "Cancel",
-            "yes": "Yes",
-            "no": "No",
-            "save": "Save"
-        },
-        "loading": "Loading…"
+  "general": {
+    "buttons": {
+      "ok": "OK",
+      "cancel": "Cancel",
+      "yes": "Yes",
+      "no": "No",
+      "save": "Save"
     },
-    "layout": {
-        "topBar": {
-            "profile": {
-                "myAccount": "My account",
-                "logout": "Logout",
-                "lightMode": "Light mode",
-                "darkMode": "Dark mode"
-            }
-        }
-    },
-    "home": {
-        "selectHeader": "Select Event Store",
-        "dialogs": {
-            "addEventStore": {
-                "title": "Add Event Store",
-                "name": "Name"
-            }
-        }
-    },
-    "connectedClients": {
-        "title": "Connected Clients",
-        "empty": "No clients are connected",
-        "columns": {
-            "server": "Server",
-            "connectionId": "Connection",
-            "clientType": "Type",
-            "version": "Version",
-            "lastSeen": "Last Seen",
-            "debugger": "Debugger",
-            "processId": "PID",
-            "processPath": "Process",
-            "machineName": "Machine"
-        },
-        "views": {
-            "flat": "Flat",
-            "bySilo": "By Silo"
-        }
-    },
-    "mainMenu": {
-        "recommendations": "Recommendations",
-        "jobs": "Jobs",
-        "sequences": "Sequences",
-        "pivot": "Pivot (experimental)",
-        "observers": "Observers",
-        "failedPartitions": "Failed partitions",
-        "readModels": "Read Models",
-        "identities": "Identities",
-        "general": {
-            "groupLabel": "General",
-            "eventTypes": "Event Types",
-            "readModelTypes": "Read Model Types",
-            "readModels": "Read Models",
-            "namespaces": "Namespaces",
-            "sequences": "Sequences",
-            "projections": "Projections",
-            "captures": "Captures",
-            "reducers": "Reducers",
-            "reactors": "Reactors",
-            "sinks": "Sinks",
-            "seedData": "Seed Data"
-        },
-        "system": {
-            "groupLabel": "System",
-            "users": "Users",
-            "applications": "Applications",
-            "connectedClients": "Connected Clients",
-            "developmentTools": "Development Tools"
-        }
-    },
-    "eventStore": {
-        "general": {
-            "eventTypes": {
-                "title": "Event Types",
-                "empty": "No types found",
-                "cannotEditReason": "Defined by code",
-                "actions": {
-                    "create": "Create"
-                },
-                "columns": {
-                    "name": "Name",
-                    "owner": "Owner",
-                    "source": "Source",
-                    "generation": "Generation",
-                    "tombstone": "Tombstone"
-                },
-                "dialogs": {
-                    "addEventType": {
-                        "title": "Add event type",
-                        "name": "Name"
-                    }
-                },
-                "owners": {
-                    "unknown": "Unknown",
-                    "client": "Client",
-                    "server": "Server"
-                },
-                "sources": {
-                    "unknown": "Unknown",
-                    "code": "Code",
-                    "user": "User"
-                },
-                "generation": "Generation {n}",
-                "latestGeneration": "Latest",
-                "tabs": {
-                    "schema": "Schema",
-                    "observers": "Observers"
-                },
-                "observers": {
-                    "empty": "No observers consume this event type",
-                    "columns": {
-                        "namespace": "Namespace",
-                        "id": "Observer",
-                        "observerType": "Type",
-                        "state": "State"
-                    }
-                }
-            },
-            "namespaces": {
-                "title": "Namespaces",
-                "empty": "No namespaces found",
-                "actions": {
-                    "create": "Create"
-                },
-                "columns": {
-                    "id": "Identifier",
-                    "name": "Name"
-                },
-                "dialogs": {
-                    "addNamespace": {
-                        "title": "Add namespace",
-                        "name": "Name"
-                    }
-                }
-            },
-            "readModels": {
-                "title": "Read Model Types",
-                "empty": "No read models found",
-                "cannotEditReason": "Defined by code",
-                "actions": {
-                    "create": "Create",
-                    "edit": "Edit",
-                    "addProperty": "Add Property",
-                    "save": "Save"
-                },
-                "columns": {
-                    "fullName": "id",
-                    "name": "Name",
-                    "containerName": "Container Name",
-                    "owner": "Owner",
-                    "source": "Source",
-                    "generation": "Generation"
-                },
-                "schema": {
-                    "propertyName": "Property Name",
-                    "type": "Type"
-                },
-                "dialogs": {
-                    "addReadModel": {
-                        "title": "Add Read Model",
-                        "name": "Name",
-                        "displayNameLabel": "Display Name",
-                        "displayNamePlaceholder": "Enter display name (e.g., Order, Customer)",
-                        "identifierLabel": "Read Model Identifier",
-                        "identifierPlaceholder": "Enter identifier (e.g., Sales.Order - prefixed with module it belongs to)",
-                        "containerNameLabel": "Container Name",
-                        "containerNamePlaceholder": "Enter container name (e.g., orders, customers) - typically the name of the database table or collection"
-                    }
-                },
-                "owners": {
-                    "unknown": "Unknown",
-                    "client": "Client",
-                    "server": "Server"
-                },
-                "sources": {
-                    "unknown": "Unknown",
-                    "code": "Code",
-                    "user": "User"
-                }
-            },
-            "webhooks": {
-                "title": "Webhooks",
-                "empty": "No webhooks found",
-                "actions": {
-                    "add": "Add",
-                    "remove": "Remove"
-                },
-                "columns": {
-                    "name": "Name",
-                    "url": "URL",
-                    "authorization": "Authorization",
-                    "active": "Active",
-                    "replayable": "Replayable"
-                },
-                "dialogs": {
-                    "addWebhook": {
-                        "title": "Add Webhook",
-                        "name": "Name",
-                        "url": "Webhook URL",
-                        "eventSequence": "Event Sequence",
-                        "eventTypes": "Event Types",
-                        "authType": "Authorization Type",
-                        "basicUsername": "Username",
-                        "basicPassword": "Password",
-                        "bearerToken": "Bearer Token",
-                        "oauthAuthority": "OAuth Authority URL",
-                        "oauthClientId": "Client ID",
-                        "oauthClientSecret": "Client Secret",
-                        "isActive": "Active",
-                        "isReplayable": "Replayable",
-                        "test": "Test",
-                        "testSuccess": "Webhook configuration is valid"
-                    },
-                    "removeWebhook": {
-                        "title": "Remove Webhook",
-                        "message": "Are you sure you want to remove the webhook '{name}'?"
-                    }
-                },
-                "authTypes": {
-                    "none": "None",
-                    "basic": "Basic",
-                    "bearer": "Bearer Token",
-                    "oauth": "OAuth (Client Credentials)"
-                }
-            },
-            "externalServices": {
-                "title": "External Services",
-                "empty": "No external services found",
-                "actions": {
-                    "add": "Add",
-                    "remove": "Remove"
-                },
-                "columns": {
-                    "name": "Name",
-                    "endpointType": "Endpoint Type",
-                    "endpoint": "Endpoint",
-                    "url": "URL",
-                    "authorization": "Authorization",
-                    "host": "Host",
-                    "port": "Port",
-                    "database": "Database",
-                    "username": "Username"
-                },
-                "dialogs": {
-                    "addExternalService": {
-                        "title": "Add External Service",
-                        "name": "Name",
-                        "endpointType": "Endpoint Type",
-                        "url": "URL",
-                        "authType": "Authorization Type",
-                        "basicUsername": "Username",
-                        "basicPassword": "Password",
-                        "bearerToken": "Bearer Token",
-                        "oauthAuthority": "OAuth Authority URL",
-                        "oauthClientId": "Client ID",
-                        "oauthClientSecret": "Client Secret",
-                        "host": "Host",
-                        "port": "Port",
-                        "database": "Database",
-                        "username": "Username",
-                        "password": "Password"
-                    },
-                    "removeExternalService": {
-                        "title": "Remove External Service",
-                        "message": "Are you sure you want to remove the external service '{name}'?"
-                    }
-                },
-                "endpointTypes": {
-                    "http": "HTTP",
-                    "msSql": "Microsoft SQL Server",
-                    "postgreSql": "PostgreSQL"
-                },
-                "authTypes": {
-                    "none": "None",
-                    "basic": "Basic",
-                    "bearer": "Bearer Token",
-                    "oauth": "OAuth (Client Credentials)"
-                }
-            },
-            "projections": {
-                "title": "Projections",
-                "empty": "No projections",
-                "actions": {
-                    "new": "New",
-                    "save": "Save",
-                    "preview": "Preview",
-                    "timeMachine": "Time Machine"
-                },
-                "saveDisabledReasons": {
-                    "emptyContent": "Editor is empty",
-                    "noChanges": "No changes to save",
-                    "validationErrors": "Fix validation errors first",
-                    "readModelOwnedByCode": "Read model is defined by code",
-                    "projectionAlreadyExists": "A projection already exists for this read model"
-                },
-                "previewDisabledReasons": {
-                    "emptyContent": "Editor is empty",
-                    "validationErrors": "Fix validation errors first"
-                },
-                "dialogs": {
-                    "unsavedChanges": {
-                        "title": "Unsaved Changes",
-                        "message": "You have unsaved changes. Do you want to continue and discard them?"
-                    },
-                    "saveWithInferredReadModel": {
-                        "title": "Create Read Model",
-                        "message": "This projection has no read model type specified. Enter a name to create one automatically from the event properties.",
-                        "readModelNameLabel": "Read Model Name"
-                    }
-                }
-            },
-            "captures": {
-                "title": "Captures",
-                "empty": "No captures",
-                "emptyEditor": "No captures. Press New to create one",
-                "columns": {
-                    "name": "Name",
-                    "status": "Status"
-                },
-                "status": {
-                    "stopped": "Stopped",
-                    "started": "Started"
-                },
-                "actions": {
-                    "new": "New",
-                    "save": "Save",
-                    "start": "Start",
-                    "stop": "Stop",
-                    "delete": "Delete",
-                    "showData": "Data",
-                    "showEditor": "Editor",
-                    "refresh": "Refresh"
-                },
-                "saveDisabledReasons": {
-                    "emptyContent": "Editor is empty",
-                    "noChanges": "No changes to save",
-                    "validationErrors": "Fix validation errors first",
-                    "started": "A started capture can not be changed - stop it first"
-                },
-                "dataView": {
-                    "empty": "No events captured yet",
-                    "columns": {
-                        "sequenceNumber": "Seq",
-                        "eventType": "Event Type",
-                        "eventSourceId": "Event Source",
-                        "occurred": "Occurred",
-                        "content": "Content"
-                    }
-                },
-                "dialogs": {
-                    "deleteCapture": {
-                        "title": "Delete capture",
-                        "message": "Are you sure you want to delete '{name}'?"
-                    }
-                }
-            }
-        },
-        "namespaces": {
-            "recommendations": {
-                "title": "Recommendations",
-                "empty": "No recommendations found",
-                "actions": {
-                    "perform": "Perform",
-                    "ignore": "Ignore"
-                },
-                "columns": {
-                    "name": "Name",
-                    "description": "Description",
-                    "type": "Type",
-                    "occurred": "Occurred at"
-                },
-                "dialogs": {
-                    "ignoreRecommendation": {
-                        "title": "Ignore Recommendation",
-                        "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
-                    }
-                }
-            },
-            "jobs": {
-                "title": "Jobs",
-                "empty": "No jobs found",
-                "actions": {
-                    "resume": "Resume",
-                    "stop": "Stop",
-                    "delete": "Delete"
-                },
-                "columns": {
-                    "type": "Type",
-                    "name": "Name",
-                    "details": "Details",
-                    "status": "Status",
-                    "progress": "Progress"
-                },
-                "status": {
-                    "none": "None",
-                    "preparingJob": "Preparing job",
-                    "preparingSteps": "Preparing steps",
-                    "startingSteps": "Starting steps",
-                    "running": "Running",
-                    "completedSuccessfully": "Completed successfully",
-                    "completedWithFailures": "Completed with failures",
-                    "stopped": "Stopped",
-                    "failed": "Failed",
-                    "removing": "Removing"
-                }
-            },
-            "sequences": {
-                "title": "Sequences",
-                "empty": "No events found",
-                "actions": {
-                    "appendEvent": "Append Event",
-                    "redact": "Redact",
-                    "revise": "Revise",
-                    "export": "Export",
-                    "run": "Run",
-                    "newQuery": "New query",
-                    "deleteQuery": "Delete query",
-                    "newFolder": "New folder",
-                    "rename": "Rename",
-                    "save": "Save",
-                    "deleteFolder": "Delete folder",
-                    "closeQuery": "Close query"
-                },
-                "columns": {
-                    "sequenceNumber": "Sequence number",
-                    "eventSourceId": "Event Source Id",
-                    "eventType": "Event Type",
-                    "occurred": "Occurred"
-                },
-                "filters": {
-                    "placeholders": {
-                        "eventType": "Event type",
-                        "eventSourceId": "Filter by event source id",
-                        "eventSourceType": "Filter by event source type",
-                        "eventStreamType": "Filter by event stream type",
-                        "correlationId": "Filter by correlation id",
-                        "tags": "Add a tag and press enter"
-                    },
-                    "title": "Filters",
-                    "noEventsToPlot": "No events to plot for the current filters.",
-                    "clearRange": "Clear time range",
-                    "groups": {
-                        "eventType": "Event type",
-                        "eventSource": "Event source",
-                        "eventSourceType": "Event source type",
-                        "eventStreamType": "Event stream type",
-                        "correlation": "Correlation",
-                        "tags": "Tags",
-                        "occurred": "Time range"
-                    }
-                },
-                "dialogs": {
-                    "appendEvent": {
-                        "title": "Append Event",
-                        "eventType": "Event Type",
-                        "selectEventType": "Select event type",
-                        "eventSourceId": "Event Source ID",
-                        "eventSourceIdPlaceholder": "Enter event source ID",
-                        "content": "Event Content",
-                        "contentPlaceholder": "Enter event content as JSON",
-                        "viewSchema": "View Schema"
-                    },
-                    "redact": {
-                        "title": "Redact Event",
-                        "reason": "Reason for redaction",
-                        "reasonPlaceholder": "Enter the reason for redacting this event",
-                        "confirmTitle": "Confirm Redaction",
-                        "confirmMessage": "Redacting an event cannot be undone. Are you sure you want to proceed?"
-                    },
-                    "revise": {
-                        "title": "Revise Event",
-                        "okLabel": "Revise",
-                        "eventType": "Event Type",
-                        "content": "Revision Content (JSON)",
-                        "confirmTitle": "Confirm Revision",
-                        "confirmMessage": "The following observers will be replayed after this revision:",
-                        "confirmNoObservers": "No observers will be replayed. Proceed with revision?"
-                    },
-                    "deleteQuery": {
-                        "title": "Delete query",
-                        "message": "Delete \"{name}\"? This cannot be undone."
-                    },
-                    "deleteFolder": {
-                        "title": "Delete folder",
-                        "empty": "Delete the folder \"{folder}\"?",
-                        "withQueries": "Delete the folder \"{folder}\" and the {count} queries filed under it? This cannot be undone."
-                    }
-                },
-                "details": {
-                    "revision": "Revision",
-                    "generation": "Generation",
-                    "originalRevision": "Original",
-                    "revisionLabel": "Revision {n}",
-                    "generationLabel": "Generation {n}",
-                    "revisionBy": "Revised by {name} at {occurred}"
-                },
-                "newQuery": "New query",
-                "queryName": "Query name",
-                "savedQueries": "Saved queries",
-                "noSavedQueries": "Nothing saved yet. Build a query and save it.",
-                "sorting": {
-                    "newestFirst": "Newest first",
-                    "oldestFirst": "Oldest first"
-                },
-                "scope": {
-                    "onlyMe": "Only me",
-                    "everyone": "Everyone"
-                },
-                "newFolder": "New folder",
-                "save": {
-                    "title": "Save query",
-                    "visibleTo": "Visible to",
-                    "folder": "Folder",
-                    "rootFolder": "No folder"
-                },
-                "eventSequence": "Event sequence"
-            },
-            "observers": {
-                "title": "Observers",
-                "empty": "No observers found",
-                "search": "Search observers...",
-                "actions": {
-                    "replay": "Replay",
-                    "clearQuarantine": "Clear quarantine"
-                },
-                "columns": {
-                    "id": "Identifier",
-                    "sequence": "Sequence",
-                    "observerType": "Observer type",
-                    "owner": "Owner",
-                    "state": "State",
-                    "nextEventSequenceNumber": "Next event sequence number",
-                    "handledEventCount": "Handled events"
-                },
-                "types": {
-                    "unknown": "Unknown",
-                    "reactor": "Reactor",
-                    "projection": "Projection",
-                    "reducer": "Reducer",
-                    "external": "External"
-                },
-                "sequenceTypes": {
-                    "eventLog": "Event log",
-                    "system": "System",
-                    "outbox": "Outbox",
-                    "inbox": "Inbox",
-                    "custom": "Custom"
-                },
-                "owners": {
-                    "none": "None",
-                    "client": "Client",
-                    "kernel": "Kernel"
-                },
-                "states": {
-                    "unknown": "Unknown",
-                    "active": "Active",
-                    "suspended": "Suspended",
-                    "replaying": "Replaying",
-                    "disconnected": "Disconnected",
-                    "quarantined": "Quarantined"
-                },
-                "details": {
-                    "tabs": {
-                        "summary": "Summary",
-                        "eventTypes": "Event Types"
-                    },
-                    "sequence": "Sequence",
-                    "observerType": "Type",
-                    "owner": "Owner",
-                    "state": "State",
-                    "nextEventSequenceNumber": "Next event sequence number",
-                    "lastHandledEventSequenceNumber": "Last handled event sequence number",
-                    "handledEventCount": "Handled events",
-                    "connectedClients": {
-                        "title": "Connected Clients",
-                        "empty": "No clients are connected to this observer",
-                        "columns": {
-                            "connectionId": "Connection",
-                            "clientType": "Type",
-                            "version": "Version",
-                            "machineName": "Machine",
-                            "processId": "PID",
-                            "processPath": "Process",
-                            "lastSeen": "Last Seen"
-                        }
-                    },
-                    "eventTypes": {
-                        "empty": "This observer does not consume any event types",
-                        "columns": {
-                            "id": "Identifier",
-                            "generation": "Generation"
-                        }
-                    }
-                }
-            },
-            "failedPartitions": {
-                "title": "Failed partitions",
-                "empty": "No failed partitions found",
-                "actions": {
-                    "retry": "Retry"
-                },
-                "columns": {
-                    "partition": "Partition",
-                    "attempts": "Attempts",
-                    "lastAttempt": "Last attempt"
-                },
-                "details": {
-                    "observer": "Observer",
-                    "partition": "Partition",
-                    "attempts": "Attempts",
-                    "sequenceNumber": "Sequence number",
-                    "messages": "Messages",
-                    "stackTrace": "Stack trace",
-                    "noStackTrace": "No stack trace available"
-                }
-            },
-            "identities": {
-                "title": "Identities",
-                "empty": "No identities",
-                "columns": {
-                    "subject": "Subject",
-                    "name": "Name",
-                    "userName": "UserName"
-                }
-            },
-            "readModels": {
-                "title": "Read Models",
-                "empty": "No instances found. Select a read model to view data.",
-                "actions": {
-                    "filter": "Filter",
-                    "query": "Perform Query",
-                    "timeMachine": "Time Machine",
-                    "navigateBack": "Navigate Back"
-                },
-                "labels": {
-                    "readModel": "Read Model",
-                    "occurrence": "Occurrence",
-                    "objectDetails": "Object Details",
-                    "root": "Root",
-                    "default": "Default",
-                    "generation": "Generation",
-                    "array": "Array",
-                    "object": "Object",
-                    "null": "null",
-                    "rowsPerPage": "Rows per page"
-                },
-                "placeholders": {
-                    "selectReadModel": "Select a Read Model",
-                    "selectOccurrence": "Select an Occurrence"
-                }
-            }
-        },
-        "system": {
-            "users": {
-                "title": "Users",
-                "empty": "No users found",
-                "actions": {
-                    "add": "Add User",
-                    "changePassword": "Change Password",
-                    "remove": "Remove User"
-                },
-                "columns": {
-                    "id": "ID",
-                    "username": "Username",
-                    "email": "Email",
-                    "active": "Active",
-                    "created": "Created",
-                    "lastModified": "Last Modified",
-                    "yes": "Yes",
-                    "no": "No"
-                },
-                "dialogs": {
-                    "addUser": {
-                        "title": "Add User",
-                        "username": "Username",
-                        "email": "Email (optional)",
-                        "password": "Password",
-                        "generatePassword": "Generate password",
-                        "showPassword": "Show password",
-                        "hidePassword": "Hide password"
-                    },
-                    "changePassword": {
-                        "title": "Change Password",
-                        "password": "New Password",
-                        "confirmPassword": "Confirm Password",
-                        "generatePassword": "Generate password",
-                        "showPassword": "Show password",
-                        "hidePassword": "Hide password"
-                    },
-                    "removeUser": {
-                        "title": "Remove User",
-                        "message": "Are you sure you want to remove user '{username}'? This action cannot be undone."
-                    }
-                }
-            },
-            "applications": {
-                "title": "Applications",
-                "empty": "No applications found",
-                "actions": {
-                    "add": "Add Application",
-                    "changeSecret": "Change Secret",
-                    "remove": "Remove Application"
-                },
-                "columns": {
-                    "id": "ID",
-                    "clientId": "Client ID",
-                    "active": "Active",
-                    "created": "Created",
-                    "lastModified": "Last Modified",
-                    "yes": "Yes",
-                    "no": "No"
-                },
-                "dialogs": {
-                    "addApplication": {
-                        "title": "Add Application",
-                        "clientId": "Client ID",
-                        "clientSecret": "Client Secret",
-                        "generateSecret": "Generate secret",
-                        "showSecret": "Show secret",
-                        "hideSecret": "Hide secret"
-                    },
-                    "changeSecret": {
-                        "title": "Change Secret",
-                        "clientSecret": "New Client Secret",
-                        "generateSecret": "Generate secret",
-                        "showSecret": "Show secret",
-                        "hideSecret": "Hide secret"
-                    },
-                    "removeApplication": {
-                        "title": "Remove Application",
-                        "message": "Are you sure you want to remove application '{clientId}'? This action cannot be undone."
-                    }
-                }
-            },
-            "developmentTools": {
-                "title": "Development Tools",
-                "reset": {
-                    "title": "Reset Chronicle",
-                    "description": "Wipes every event store and re-bootstraps the kernel. Everything in this Chronicle is deleted and cannot be recovered.",
-                    "action": "Reset everything",
-                    "confirmTitle": "Reset Chronicle",
-                    "confirmMessage": "This deletes every event store and all their events. It cannot be undone. Continue?",
-                    "done": "Chronicle was reset."
-                },
-                "unavailable": "This server was not built with development tools, so there is nothing to do here."
-            }
-        }
-    },
-    "components": {
-        "projectionEditor": {
-            "tooltips": {
-                "help": "Show Projection Declaration Language help panel"
-            },
-            "languageReference": "Projection Declaration Language Reference",
-            "hover": {
-                "projectionName": "The name of the projection",
-                "projectionKeyword": "Defines a projection that transforms events into a read model",
-                "readModel": "Read Model",
-                "readModelDraft": "Read Model (Draft)",
-                "eventType": "Event Type",
-                "properties": "Properties",
-                "property": "Property",
-                "eventProperty": "Event Property",
-                "type": "Type"
-            }
-        },
-        "captureEditor": {
-            "tooltips": {
-                "help": "Show Capture Declaration Language help panel"
-            },
-            "languageReference": "Capture Declaration Language Reference"
-        },
-        "schemaEditor": {
-            "columns": {
-                "property": "Property",
-                "type": "Type"
-            },
-            "actions": {
-                "edit": "Edit",
-                "save": "Save",
-                "cancel": "Cancel",
-                "addProperty": "Add Property",
-                "navigateBack": "Navigate Back"
-            },
-            "tooltips": {
-                "navigateToObjectProperties": "Navigate to object properties",
-                "navigateToItemDefinition": "Navigate to item definition",
-                "deleteProperty": "Delete property"
-            },
-            "emptyMessage": "No properties defined"
-        }
+    "loading": "Loading…"
+  },
+  "layout": {
+    "topBar": {
+      "profile": {
+        "myAccount": "My account",
+        "logout": "Logout",
+        "lightMode": "Light mode",
+        "darkMode": "Dark mode"
+      }
     }
+  },
+  "home": {
+    "selectHeader": "Select Event Store",
+    "dialogs": {
+      "addEventStore": {
+        "title": "Add Event Store",
+        "name": "Name"
+      }
+    }
+  },
+  "connectedClients": {
+    "title": "Connected Clients",
+    "empty": "No clients are connected",
+    "columns": {
+      "server": "Server",
+      "connectionId": "Connection",
+      "clientType": "Type",
+      "version": "Version",
+      "lastSeen": "Last Seen",
+      "debugger": "Debugger",
+      "processId": "PID",
+      "processPath": "Process",
+      "machineName": "Machine"
+    },
+    "views": {
+      "flat": "Flat",
+      "bySilo": "By Silo"
+    }
+  },
+  "mainMenu": {
+    "recommendations": "Recommendations",
+    "jobs": "Jobs",
+    "sequences": "Sequences",
+    "pivot": "Pivot (experimental)",
+    "patterns": "Behavior patterns",
+    "patternHeatmap": "Pattern heatmap",
+    "observers": "Observers",
+    "failedPartitions": "Failed partitions",
+    "readModels": "Read Models",
+    "identities": "Identities",
+    "general": {
+      "groupLabel": "General",
+      "eventTypes": "Event Types",
+      "readModelTypes": "Read Model Types",
+      "readModels": "Read Models",
+      "namespaces": "Namespaces",
+      "sequences": "Sequences",
+      "projections": "Projections",
+      "captures": "Captures",
+      "reducers": "Reducers",
+      "reactors": "Reactors",
+      "sinks": "Sinks",
+      "seedData": "Seed Data"
+    },
+    "system": {
+      "groupLabel": "System",
+      "users": "Users",
+      "applications": "Applications",
+      "connectedClients": "Connected Clients",
+      "developmentTools": "Development Tools"
+    }
+  },
+  "eventStore": {
+    "general": {
+      "eventTypes": {
+        "title": "Event Types",
+        "empty": "No types found",
+        "cannotEditReason": "Defined by code",
+        "actions": {
+          "create": "Create"
+        },
+        "columns": {
+          "name": "Name",
+          "owner": "Owner",
+          "source": "Source",
+          "generation": "Generation",
+          "tombstone": "Tombstone"
+        },
+        "dialogs": {
+          "addEventType": {
+            "title": "Add event type",
+            "name": "Name"
+          }
+        },
+        "owners": {
+          "unknown": "Unknown",
+          "client": "Client",
+          "server": "Server"
+        },
+        "sources": {
+          "unknown": "Unknown",
+          "code": "Code",
+          "user": "User"
+        },
+        "generation": "Generation {n}",
+        "latestGeneration": "Latest",
+        "tabs": {
+          "schema": "Schema",
+          "observers": "Observers"
+        },
+        "observers": {
+          "empty": "No observers consume this event type",
+          "columns": {
+            "namespace": "Namespace",
+            "id": "Observer",
+            "observerType": "Type",
+            "state": "State"
+          }
+        }
+      },
+      "namespaces": {
+        "title": "Namespaces",
+        "empty": "No namespaces found",
+        "actions": {
+          "create": "Create"
+        },
+        "columns": {
+          "id": "Identifier",
+          "name": "Name"
+        },
+        "dialogs": {
+          "addNamespace": {
+            "title": "Add namespace",
+            "name": "Name"
+          }
+        }
+      },
+      "readModels": {
+        "title": "Read Model Types",
+        "empty": "No read models found",
+        "cannotEditReason": "Defined by code",
+        "actions": {
+          "create": "Create",
+          "edit": "Edit",
+          "addProperty": "Add Property",
+          "save": "Save"
+        },
+        "columns": {
+          "fullName": "id",
+          "name": "Name",
+          "containerName": "Container Name",
+          "owner": "Owner",
+          "source": "Source",
+          "generation": "Generation"
+        },
+        "schema": {
+          "propertyName": "Property Name",
+          "type": "Type"
+        },
+        "dialogs": {
+          "addReadModel": {
+            "title": "Add Read Model",
+            "name": "Name",
+            "displayNameLabel": "Display Name",
+            "displayNamePlaceholder": "Enter display name (e.g., Order, Customer)",
+            "identifierLabel": "Read Model Identifier",
+            "identifierPlaceholder": "Enter identifier (e.g., Sales.Order - prefixed with module it belongs to)",
+            "containerNameLabel": "Container Name",
+            "containerNamePlaceholder": "Enter container name (e.g., orders, customers) - typically the name of the database table or collection"
+          }
+        },
+        "owners": {
+          "unknown": "Unknown",
+          "client": "Client",
+          "server": "Server"
+        },
+        "sources": {
+          "unknown": "Unknown",
+          "code": "Code",
+          "user": "User"
+        }
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "empty": "No webhooks found",
+        "actions": {
+          "add": "Add",
+          "remove": "Remove"
+        },
+        "columns": {
+          "name": "Name",
+          "url": "URL",
+          "authorization": "Authorization",
+          "active": "Active",
+          "replayable": "Replayable"
+        },
+        "dialogs": {
+          "addWebhook": {
+            "title": "Add Webhook",
+            "name": "Name",
+            "url": "Webhook URL",
+            "eventSequence": "Event Sequence",
+            "eventTypes": "Event Types",
+            "authType": "Authorization Type",
+            "basicUsername": "Username",
+            "basicPassword": "Password",
+            "bearerToken": "Bearer Token",
+            "oauthAuthority": "OAuth Authority URL",
+            "oauthClientId": "Client ID",
+            "oauthClientSecret": "Client Secret",
+            "isActive": "Active",
+            "isReplayable": "Replayable",
+            "test": "Test",
+            "testSuccess": "Webhook configuration is valid"
+          },
+          "removeWebhook": {
+            "title": "Remove Webhook",
+            "message": "Are you sure you want to remove the webhook '{name}'?"
+          }
+        },
+        "authTypes": {
+          "none": "None",
+          "basic": "Basic",
+          "bearer": "Bearer Token",
+          "oauth": "OAuth (Client Credentials)"
+        }
+      },
+      "externalServices": {
+        "title": "External Services",
+        "empty": "No external services found",
+        "actions": {
+          "add": "Add",
+          "remove": "Remove"
+        },
+        "columns": {
+          "name": "Name",
+          "endpointType": "Endpoint Type",
+          "endpoint": "Endpoint",
+          "url": "URL",
+          "authorization": "Authorization",
+          "host": "Host",
+          "port": "Port",
+          "database": "Database",
+          "username": "Username"
+        },
+        "dialogs": {
+          "addExternalService": {
+            "title": "Add External Service",
+            "name": "Name",
+            "endpointType": "Endpoint Type",
+            "url": "URL",
+            "authType": "Authorization Type",
+            "basicUsername": "Username",
+            "basicPassword": "Password",
+            "bearerToken": "Bearer Token",
+            "oauthAuthority": "OAuth Authority URL",
+            "oauthClientId": "Client ID",
+            "oauthClientSecret": "Client Secret",
+            "host": "Host",
+            "port": "Port",
+            "database": "Database",
+            "username": "Username",
+            "password": "Password"
+          },
+          "removeExternalService": {
+            "title": "Remove External Service",
+            "message": "Are you sure you want to remove the external service '{name}'?"
+          }
+        },
+        "endpointTypes": {
+          "http": "HTTP",
+          "msSql": "Microsoft SQL Server",
+          "postgreSql": "PostgreSQL"
+        },
+        "authTypes": {
+          "none": "None",
+          "basic": "Basic",
+          "bearer": "Bearer Token",
+          "oauth": "OAuth (Client Credentials)"
+        }
+      },
+      "projections": {
+        "title": "Projections",
+        "empty": "No projections",
+        "actions": {
+          "new": "New",
+          "save": "Save",
+          "preview": "Preview",
+          "timeMachine": "Time Machine"
+        },
+        "saveDisabledReasons": {
+          "emptyContent": "Editor is empty",
+          "noChanges": "No changes to save",
+          "validationErrors": "Fix validation errors first",
+          "readModelOwnedByCode": "Read model is defined by code",
+          "projectionAlreadyExists": "A projection already exists for this read model"
+        },
+        "previewDisabledReasons": {
+          "emptyContent": "Editor is empty",
+          "validationErrors": "Fix validation errors first"
+        },
+        "dialogs": {
+          "unsavedChanges": {
+            "title": "Unsaved Changes",
+            "message": "You have unsaved changes. Do you want to continue and discard them?"
+          },
+          "saveWithInferredReadModel": {
+            "title": "Create Read Model",
+            "message": "This projection has no read model type specified. Enter a name to create one automatically from the event properties.",
+            "readModelNameLabel": "Read Model Name"
+          }
+        }
+      },
+      "captures": {
+        "title": "Captures",
+        "empty": "No captures",
+        "emptyEditor": "No captures. Press New to create one",
+        "columns": {
+          "name": "Name",
+          "status": "Status"
+        },
+        "status": {
+          "stopped": "Stopped",
+          "started": "Started"
+        },
+        "actions": {
+          "new": "New",
+          "save": "Save",
+          "start": "Start",
+          "stop": "Stop",
+          "delete": "Delete",
+          "showData": "Data",
+          "showEditor": "Editor",
+          "refresh": "Refresh"
+        },
+        "saveDisabledReasons": {
+          "emptyContent": "Editor is empty",
+          "noChanges": "No changes to save",
+          "validationErrors": "Fix validation errors first",
+          "started": "A started capture can not be changed - stop it first"
+        },
+        "dataView": {
+          "empty": "No events captured yet",
+          "columns": {
+            "sequenceNumber": "Seq",
+            "eventType": "Event Type",
+            "eventSourceId": "Event Source",
+            "occurred": "Occurred",
+            "content": "Content"
+          }
+        },
+        "dialogs": {
+          "deleteCapture": {
+            "title": "Delete capture",
+            "message": "Are you sure you want to delete '{name}'?"
+          }
+        }
+      }
+    },
+    "namespaces": {
+      "recommendations": {
+        "title": "Recommendations",
+        "empty": "No recommendations found",
+        "actions": {
+          "perform": "Perform",
+          "ignore": "Ignore"
+        },
+        "columns": {
+          "name": "Name",
+          "description": "Description",
+          "type": "Type",
+          "occurred": "Occurred at"
+        },
+        "dialogs": {
+          "ignoreRecommendation": {
+            "title": "Ignore Recommendation",
+            "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+          }
+        }
+      },
+      "jobs": {
+        "title": "Jobs",
+        "empty": "No jobs found",
+        "actions": {
+          "resume": "Resume",
+          "stop": "Stop",
+          "delete": "Delete"
+        },
+        "columns": {
+          "type": "Type",
+          "name": "Name",
+          "details": "Details",
+          "status": "Status",
+          "progress": "Progress"
+        },
+        "status": {
+          "none": "None",
+          "preparingJob": "Preparing job",
+          "preparingSteps": "Preparing steps",
+          "startingSteps": "Starting steps",
+          "running": "Running",
+          "completedSuccessfully": "Completed successfully",
+          "completedWithFailures": "Completed with failures",
+          "stopped": "Stopped",
+          "failed": "Failed",
+          "removing": "Removing"
+        }
+      },
+      "sequences": {
+        "title": "Sequences",
+        "empty": "No events found",
+        "actions": {
+          "appendEvent": "Append Event",
+          "redact": "Redact",
+          "revise": "Revise",
+          "export": "Export",
+          "run": "Run",
+          "newQuery": "New query",
+          "deleteQuery": "Delete query",
+          "newFolder": "New folder",
+          "rename": "Rename",
+          "save": "Save",
+          "deleteFolder": "Delete folder",
+          "closeQuery": "Close query"
+        },
+        "columns": {
+          "sequenceNumber": "Sequence number",
+          "eventSourceId": "Event Source Id",
+          "eventType": "Event Type",
+          "occurred": "Occurred"
+        },
+        "filters": {
+          "placeholders": {
+            "eventType": "Event type",
+            "eventSourceId": "Filter by event source id",
+            "eventSourceType": "Filter by event source type",
+            "eventStreamType": "Filter by event stream type",
+            "correlationId": "Filter by correlation id",
+            "tags": "Add a tag and press enter"
+          },
+          "title": "Filters",
+          "noEventsToPlot": "No events to plot for the current filters.",
+          "clearRange": "Clear time range",
+          "groups": {
+            "eventType": "Event type",
+            "eventSource": "Event source",
+            "eventSourceType": "Event source type",
+            "eventStreamType": "Event stream type",
+            "correlation": "Correlation",
+            "tags": "Tags",
+            "occurred": "Time range"
+          }
+        },
+        "dialogs": {
+          "appendEvent": {
+            "title": "Append Event",
+            "eventType": "Event Type",
+            "selectEventType": "Select event type",
+            "eventSourceId": "Event Source ID",
+            "eventSourceIdPlaceholder": "Enter event source ID",
+            "content": "Event Content",
+            "contentPlaceholder": "Enter event content as JSON",
+            "viewSchema": "View Schema"
+          },
+          "redact": {
+            "title": "Redact Event",
+            "reason": "Reason for redaction",
+            "reasonPlaceholder": "Enter the reason for redacting this event",
+            "confirmTitle": "Confirm Redaction",
+            "confirmMessage": "Redacting an event cannot be undone. Are you sure you want to proceed?"
+          },
+          "revise": {
+            "title": "Revise Event",
+            "okLabel": "Revise",
+            "eventType": "Event Type",
+            "content": "Revision Content (JSON)",
+            "confirmTitle": "Confirm Revision",
+            "confirmMessage": "The following observers will be replayed after this revision:",
+            "confirmNoObservers": "No observers will be replayed. Proceed with revision?"
+          },
+          "deleteQuery": {
+            "title": "Delete query",
+            "message": "Delete \"{name}\"? This cannot be undone."
+          },
+          "deleteFolder": {
+            "title": "Delete folder",
+            "empty": "Delete the folder \"{folder}\"?",
+            "withQueries": "Delete the folder \"{folder}\" and the {count} queries filed under it? This cannot be undone."
+          }
+        },
+        "details": {
+          "revision": "Revision",
+          "generation": "Generation",
+          "originalRevision": "Original",
+          "revisionLabel": "Revision {n}",
+          "generationLabel": "Generation {n}",
+          "revisionBy": "Revised by {name} at {occurred}"
+        },
+        "newQuery": "New query",
+        "queryName": "Query name",
+        "savedQueries": "Saved queries",
+        "noSavedQueries": "Nothing saved yet. Build a query and save it.",
+        "sorting": {
+          "newestFirst": "Newest first",
+          "oldestFirst": "Oldest first"
+        },
+        "scope": {
+          "onlyMe": "Only me",
+          "everyone": "Everyone"
+        },
+        "newFolder": "New folder",
+        "save": {
+          "title": "Save query",
+          "visibleTo": "Visible to",
+          "folder": "Folder",
+          "rootFolder": "No folder"
+        },
+        "eventSequence": "Event sequence"
+      },
+      "observers": {
+        "title": "Observers",
+        "empty": "No observers found",
+        "search": "Search observers...",
+        "actions": {
+          "replay": "Replay",
+          "clearQuarantine": "Clear quarantine"
+        },
+        "columns": {
+          "id": "Identifier",
+          "sequence": "Sequence",
+          "observerType": "Observer type",
+          "owner": "Owner",
+          "state": "State",
+          "nextEventSequenceNumber": "Next event sequence number",
+          "handledEventCount": "Handled events"
+        },
+        "types": {
+          "unknown": "Unknown",
+          "reactor": "Reactor",
+          "projection": "Projection",
+          "reducer": "Reducer",
+          "external": "External"
+        },
+        "sequenceTypes": {
+          "eventLog": "Event log",
+          "system": "System",
+          "outbox": "Outbox",
+          "inbox": "Inbox",
+          "custom": "Custom"
+        },
+        "owners": {
+          "none": "None",
+          "client": "Client",
+          "kernel": "Kernel"
+        },
+        "states": {
+          "unknown": "Unknown",
+          "active": "Active",
+          "suspended": "Suspended",
+          "replaying": "Replaying",
+          "disconnected": "Disconnected",
+          "quarantined": "Quarantined"
+        },
+        "details": {
+          "tabs": {
+            "summary": "Summary",
+            "eventTypes": "Event Types"
+          },
+          "sequence": "Sequence",
+          "observerType": "Type",
+          "owner": "Owner",
+          "state": "State",
+          "nextEventSequenceNumber": "Next event sequence number",
+          "lastHandledEventSequenceNumber": "Last handled event sequence number",
+          "handledEventCount": "Handled events",
+          "connectedClients": {
+            "title": "Connected Clients",
+            "empty": "No clients are connected to this observer",
+            "columns": {
+              "connectionId": "Connection",
+              "clientType": "Type",
+              "version": "Version",
+              "machineName": "Machine",
+              "processId": "PID",
+              "processPath": "Process",
+              "lastSeen": "Last Seen"
+            }
+          },
+          "eventTypes": {
+            "empty": "This observer does not consume any event types",
+            "columns": {
+              "id": "Identifier",
+              "generation": "Generation"
+            }
+          }
+        }
+      },
+      "failedPartitions": {
+        "title": "Failed partitions",
+        "empty": "No failed partitions found",
+        "actions": {
+          "retry": "Retry"
+        },
+        "columns": {
+          "partition": "Partition",
+          "attempts": "Attempts",
+          "lastAttempt": "Last attempt"
+        },
+        "details": {
+          "observer": "Observer",
+          "partition": "Partition",
+          "attempts": "Attempts",
+          "sequenceNumber": "Sequence number",
+          "messages": "Messages",
+          "stackTrace": "Stack trace",
+          "noStackTrace": "No stack trace available"
+        }
+      },
+      "identities": {
+        "title": "Identities",
+        "empty": "No identities",
+        "columns": {
+          "subject": "Subject",
+          "name": "Name",
+          "userName": "UserName"
+        }
+      },
+      "readModels": {
+        "title": "Read Models",
+        "empty": "No instances found. Select a read model to view data.",
+        "actions": {
+          "filter": "Filter",
+          "query": "Perform Query",
+          "timeMachine": "Time Machine",
+          "navigateBack": "Navigate Back"
+        },
+        "labels": {
+          "readModel": "Read Model",
+          "occurrence": "Occurrence",
+          "objectDetails": "Object Details",
+          "root": "Root",
+          "default": "Default",
+          "generation": "Generation",
+          "array": "Array",
+          "object": "Object",
+          "null": "null",
+          "rowsPerPage": "Rows per page"
+        },
+        "placeholders": {
+          "selectReadModel": "Select a Read Model",
+          "selectOccurrence": "Select an Occurrence"
+        }
+      }
+    },
+    "system": {
+      "users": {
+        "title": "Users",
+        "empty": "No users found",
+        "actions": {
+          "add": "Add User",
+          "changePassword": "Change Password",
+          "remove": "Remove User"
+        },
+        "columns": {
+          "id": "ID",
+          "username": "Username",
+          "email": "Email",
+          "active": "Active",
+          "created": "Created",
+          "lastModified": "Last Modified",
+          "yes": "Yes",
+          "no": "No"
+        },
+        "dialogs": {
+          "addUser": {
+            "title": "Add User",
+            "username": "Username",
+            "email": "Email (optional)",
+            "password": "Password",
+            "generatePassword": "Generate password",
+            "showPassword": "Show password",
+            "hidePassword": "Hide password"
+          },
+          "changePassword": {
+            "title": "Change Password",
+            "password": "New Password",
+            "confirmPassword": "Confirm Password",
+            "generatePassword": "Generate password",
+            "showPassword": "Show password",
+            "hidePassword": "Hide password"
+          },
+          "removeUser": {
+            "title": "Remove User",
+            "message": "Are you sure you want to remove user '{username}'? This action cannot be undone."
+          }
+        }
+      },
+      "applications": {
+        "title": "Applications",
+        "empty": "No applications found",
+        "actions": {
+          "add": "Add Application",
+          "changeSecret": "Change Secret",
+          "remove": "Remove Application"
+        },
+        "columns": {
+          "id": "ID",
+          "clientId": "Client ID",
+          "active": "Active",
+          "created": "Created",
+          "lastModified": "Last Modified",
+          "yes": "Yes",
+          "no": "No"
+        },
+        "dialogs": {
+          "addApplication": {
+            "title": "Add Application",
+            "clientId": "Client ID",
+            "clientSecret": "Client Secret",
+            "generateSecret": "Generate secret",
+            "showSecret": "Show secret",
+            "hideSecret": "Hide secret"
+          },
+          "changeSecret": {
+            "title": "Change Secret",
+            "clientSecret": "New Client Secret",
+            "generateSecret": "Generate secret",
+            "showSecret": "Show secret",
+            "hideSecret": "Hide secret"
+          },
+          "removeApplication": {
+            "title": "Remove Application",
+            "message": "Are you sure you want to remove application '{clientId}'? This action cannot be undone."
+          }
+        }
+      },
+      "developmentTools": {
+        "title": "Development Tools",
+        "reset": {
+          "title": "Reset Chronicle",
+          "description": "Wipes every event store and re-bootstraps the kernel. Everything in this Chronicle is deleted and cannot be recovered.",
+          "action": "Reset everything",
+          "confirmTitle": "Reset Chronicle",
+          "confirmMessage": "This deletes every event store and all their events. It cannot be undone. Continue?",
+          "done": "Chronicle was reset."
+        },
+        "unavailable": "This server was not built with development tools, so there is nothing to do here."
+      }
+    }
+  },
+  "components": {
+    "projectionEditor": {
+      "tooltips": {
+        "help": "Show Projection Declaration Language help panel"
+      },
+      "languageReference": "Projection Declaration Language Reference",
+      "hover": {
+        "projectionName": "The name of the projection",
+        "projectionKeyword": "Defines a projection that transforms events into a read model",
+        "readModel": "Read Model",
+        "readModelDraft": "Read Model (Draft)",
+        "eventType": "Event Type",
+        "properties": "Properties",
+        "property": "Property",
+        "eventProperty": "Event Property",
+        "type": "Type"
+      }
+    },
+    "captureEditor": {
+      "tooltips": {
+        "help": "Show Capture Declaration Language help panel"
+      },
+      "languageReference": "Capture Declaration Language Reference"
+    },
+    "schemaEditor": {
+      "columns": {
+        "property": "Property",
+        "type": "Type"
+      },
+      "actions": {
+        "edit": "Edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "addProperty": "Add Property",
+        "navigateBack": "Navigate Back"
+      },
+      "tooltips": {
+        "navigateToObjectProperties": "Navigate to object properties",
+        "navigateToItemDefinition": "Navigate to item definition",
+        "deleteProperty": "Delete property"
+      },
+      "emptyMessage": "No properties defined"
+    }
+  },
+  "patterns": {
+    "scope": "Scope",
+    "noScopes": "No behavior has been established yet. Patterns appear once a scope has repeated something often enough to clear the thresholds.",
+    "noPatterns": "This scope has no established behavior yet.",
+    "confidence": "Confidence",
+    "support": "Support",
+    "occurrences": "Occurrences",
+    "weight": "Weight",
+    "lastSeen": "Last seen",
+    "firstSeen": "First seen",
+    "facets": "Facets",
+    "specificity": "Specificity",
+    "strongestInSlot": "Strongest pattern in this slot",
+    "noPatternInSlot": "Nothing established for this slot.",
+    "selectSlot": "Select a slot to see the patterns established for it."
+  }
 }
