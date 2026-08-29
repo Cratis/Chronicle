@@ -18,10 +18,10 @@
         "build-storybook": "storybook build -c .frontend/.storybook"
     },
     "dependencies": {
-        "@cratis/arc.react": "^22.3.0",
-        "@cratis/arc.react.mvvm": "^22.3.0",
-        "@cratis/arc.vite": "^22.3.0",
-        "@cratis/components": "^3.5.1",
+        "@cratis/arc.react": "^22.6.0",
+        "@cratis/arc.react.mvvm": "^22.6.0",
+        "@cratis/arc.vite": "^22.6.0",
+        "@cratis/components": "^3.6.1",
         "@cratis/screenplay-language": "^4.6.0",
         "@monaco-editor/react": "^4.7.0",
         "@primereact/core": "^11.1.0",
@@ -96,8 +96,8 @@
         "vitest": "4.1.11"
     },
     "resolutions": {
-        "@cratis/arc.react": "^22.3.0",
-        "@cratis/arc": "^22.3.0"
+        "@cratis/arc.react": "^22.6.0",
+        "@cratis/arc": "^22.6.0"
     },
     "packageManager": "yarn@4.17.1"
 }

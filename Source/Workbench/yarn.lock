@@ -208,12 +208,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc.react.mvvm@npm:^22.3.0":
-  version: 22.3.0
-  resolution: "@cratis/arc.react.mvvm@npm:22.3.0"
+"@cratis/arc.react.mvvm@npm:^22.6.0":
+  version: 22.6.0
+  resolution: "@cratis/arc.react.mvvm@npm:22.6.0"
   dependencies:
-    "@cratis/arc": "npm:22.3.0"
-    "@cratis/arc.react": "npm:22.3.0"
+    "@cratis/arc": "npm:22.6.0"
+    "@cratis/arc.react": "npm:22.6.0"
     mobx: "npm:^6.15.3"
     mobx-react: "npm:^9.2.1"
     rxjs: "npm:^7.8.2"
@@ -222,52 +222,52 @@ __metadata:
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
     react-router-dom: ^7.0.0
-  checksum: 10/4e1e5b1027c611594cae43ee166a4e7168513d74c6511088e6f47e2711f383f5d8e5f40f61d77916becc4ab0a56529b53292cc7a0610f8f776d43ced9316405a
+  checksum: 10/1b7e7521c85dac35c51e10edb2c975f4f2ca3c388609ac4e31219b27a83407bbea3f4fafc75b365a8c96274e97d3401b25d5141bb11266e1a9ade8bf968762fc
   languageName: node
   linkType: hard
 
-"@cratis/arc.react@npm:^22.3.0":
-  version: 22.3.0
-  resolution: "@cratis/arc.react@npm:22.3.0"
+"@cratis/arc.react@npm:^22.6.0":
+  version: 22.6.0
+  resolution: "@cratis/arc.react@npm:22.6.0"
   dependencies:
-    "@cratis/arc": "npm:22.3.0"
+    "@cratis/arc": "npm:22.6.0"
     "@cratis/fundamentals": "npm:^7.18.0"
     tsyringe: "npm:^4.10.0"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/41687fa4364fa4e4200efa397979c19e06982d3cf5e575ff4a9993d7b3c2fb5e394e9a1963b424881971b33514e1bae98db7eda33527cc12e5b978f03bd39ec8
+  checksum: 10/e6567c159b888424916be32d7351c814a9d024d8e5c5e5b3d3033eee64b633b78b0c0d63dcd3a0208cd2d9cc03976e3fd52c1b27dd40cc867c3d7971877f864f
   languageName: node
   linkType: hard
 
-"@cratis/arc.vite@npm:^22.3.0":
-  version: 22.3.0
-  resolution: "@cratis/arc.vite@npm:22.3.0"
+"@cratis/arc.vite@npm:^22.6.0":
+  version: 22.6.0
+  resolution: "@cratis/arc.vite@npm:22.6.0"
   dependencies:
-    "@cratis/arc": "npm:22.3.0"
+    "@cratis/arc": "npm:22.6.0"
     "@swc/core": "npm:^1.15.43"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/0a085be5338038028fce224bbbbda302cac4af09c866bea3d94efe101803397c8aa3a5d0b983200db3a1062c4340dd6a392944aff68377b237976f68bed891d7
+  checksum: 10/cdc67b0f6f7ef8871f3e31495d379d6f3cd00203a05c0f59509d13c95326fb0f23c557bb6c85ebf998900a45aa21576bd2c1e5d3127336f021658880721bee7d
   languageName: node
   linkType: hard
 
-"@cratis/arc@npm:^22.3.0":
-  version: 22.3.0
-  resolution: "@cratis/arc@npm:22.3.0"
+"@cratis/arc@npm:^22.6.0":
+  version: 22.6.0
+  resolution: "@cratis/arc@npm:22.6.0"
   dependencies:
     "@cratis/fundamentals": "npm:^7.18.0"
     rxjs: "npm:^7.8.2"
-  checksum: 10/b53abd51531852dfc18b03812ff7059561979591bde5334b2836cc994ab1c71a8c4d1c09cba52667bae4a79233596dc758228fb9752bbba4e2a17a58536f182d
+  checksum: 10/3fc7dff1012b51b53381f25b51b48cdc86ae855fd56461b0ed554b3d161ecff174dff862ee7cb574df73ada7c9cac89ec3b0e5390cd265732c3da7eb09c19e51
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^3.5.1":
-  version: 3.5.1
-  resolution: "@cratis/components@npm:3.5.1"
+"@cratis/components@npm:^3.6.1":
+  version: 3.6.1
+  resolution: "@cratis/components@npm:3.6.1"
   dependencies:
     allotment: "npm:1.20.5"
     framer-motion: "npm:13.1.1"
-    pixi.js: "npm:^8.20.0"
+    pixi.js: "npm:^8.20.1"
     react-icons: "npm:5.7.0"
     ts-deepmerge: "npm:8.0.0"
   peerDependencies:
@@ -293,7 +293,7 @@ __metadata:
       optional: true
     "@primeuix/themes":
       optional: true
-  checksum: 10/4d130190498a2be118605d49ccfde901824395de687d7837dcf205c7fbcd8ac3ff6920a8da00fe5fabe3a32295a4b0ed4dc32ab6d37d2628324d222652a7b253
+  checksum: 10/20a4554383a0a0ad303f32da0e9ccfac998d6ead5cbd1b281e5c2704129ebd4b3907963edb27a4f957fbdcc70b1a38ec3a5f62d82ce23e9868d0cbf097641d38
   languageName: node
   linkType: hard
 
@@ -2848,10 +2848,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@xmldom/xmldom@npm:^0.8.13":
-  version: 0.8.13
-  resolution: "@xmldom/xmldom@npm:0.8.13"
-  checksum: 10/f8f3d56fa91d5026885c0c5c00b07eae47647bda0d742ecbf8e51e06bb287ab30222977b20529ee15c364031606225ebca58907a8ecc76a3add6b3f10e6ddfc6
+"@xmldom/xmldom@npm:^0.8.15":
+  version: 0.8.15
+  resolution: "@xmldom/xmldom@npm:0.8.15"
+  checksum: 10/521d8e5a9798a47dddb28237d112e47637d638e4f3d60ce1eefa1f397d2439af5a00f781c956b5affc251ef8a1bbc1f8325161d32f7b27c89aacf5ff84f14cf7
   languageName: node
   linkType: hard
 
@@ -6598,21 +6598,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pixi.js@npm:^8.20.0":
-  version: 8.20.0
-  resolution: "pixi.js@npm:8.20.0"
+"pixi.js@npm:^8.20.1":
+  version: 8.20.1
+  resolution: "pixi.js@npm:8.20.1"
   dependencies:
     "@pixi/colord": "npm:^2.9.6"
     "@types/earcut": "npm:^3.0.0"
     "@webgpu/types": "npm:^0.1.69"
-    "@xmldom/xmldom": "npm:^0.8.13"
+    "@xmldom/xmldom": "npm:^0.8.15"
     earcut: "npm:^3.0.2"
     eventemitter3: "npm:^5.0.1"
     gifuct-js: "npm:^2.1.2"
     ismobilejs: "npm:^1.1.1"
     parse-svg-path: "npm:^0.2.0"
     tiny-lru: "npm:^11.4.7"
-  checksum: 10/5560370a3436f21709f760c8736d04cd17219b36bc61a2b041d38389ea54425c38e46dae88856b5f7c498a2d92350d571eb922faa4133177d6c5053c84ad1b51
+  checksum: 10/66951b184fc456070653d4f38fadea15627a708df3a2e70a4a70b2ba3669d2d918987640cc47d2739c9a986b57bd02ab4ccd34900eab4193bfa57898a5f75ac0
   languageName: node
   linkType: hard
 
@@ -8558,10 +8558,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/arc.react": "npm:^22.3.0"
-    "@cratis/arc.react.mvvm": "npm:^22.3.0"
-    "@cratis/arc.vite": "npm:^22.3.0"
-    "@cratis/components": "npm:^3.5.1"
+    "@cratis/arc.react": "npm:^22.6.0"
+    "@cratis/arc.react.mvvm": "npm:^22.6.0"
+    "@cratis/arc.vite": "npm:^22.6.0"
+    "@cratis/components": "npm:^3.6.1"
     "@cratis/screenplay-language": "npm:^4.6.0"
     "@eslint/eslintrc": "npm:3.3.6"
     "@eslint/js": "npm:10.0.1"
