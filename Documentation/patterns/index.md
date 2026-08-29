@@ -18,7 +18,7 @@ A **behavior pattern** is a combination of facets that recurred often enough and
 | **Weight** | Recency-weighted strength — decays as the behavior goes unseen |
 | **First seen / last seen** | When it was first and last observed |
 
-A pattern such as `{ Day: Monday, TimeBucket: Morning, CommandType: ApproveExpenseReport }` with a confidence of `0.9` reads as: *on Monday mornings, this person approves expense reports nine times out of ten.*
+A pattern such as `{ Day: Monday, TimeBucket: EarlyMorning, CommandType: PackShipment }` with a confidence of `0.9` reads as: *first thing on a Monday, this person packs shipments nine times out of ten.*
 
 ## Facets
 
@@ -95,14 +95,16 @@ Specificity outranks confidence in the ranking. A pattern constraining everythin
 
 ## Seeing patterns in the Workbench
 
-Two views under an event store's namespace read the same patterns from different angles, both scoped by a selector at the top — patterns belong to a scope, and a view that quietly picked the first one would read as "this is the store's behavior" when it is one person's.
+Two views under an event store's namespace read the same patterns from different angles.
 
-**Behavior patterns** pivots everything a scope established. The facets become the dimensions and filters, so the same set can be approached from whichever direction the question comes: by command, by who initiated it, by day or part of day, by aggregate, by what caused it, or by how specific the pattern is. Each card carries a confidence bar, so a well-established habit is distinguishable from a marginal one without reading numbers.
+**Behavior patterns** pivots every pattern in the namespace, with the scope as the first filter rather than a control above the viewer — so two people's behavior can be compared side by side instead of one being chosen before anything can be seen. The facets become the dimensions and filters, so the same set can be approached from whichever direction the question comes: by command, by who initiated it, by day or part of day, by aggregate, by what caused it, or by how specific the pattern is. Each card carries a confidence bar, so a well-established habit is distinguishable from a marginal one without reading numbers.
 
-**Pattern heatmap** answers the narrower question of *when*. It is a day-by-time-of-day grid where each cell is shaded by the confidence of the strongest pattern in that slot, with the current slot outlined. Clicking a cell lists everything established for it. Above the grid, a panel names what the scope usually does *right now* — the same question [`GetPatterns`](/chronicle/clients/dotnet/patterns/) answers from code, asked with the current day and time bucket as the context.
+**Pattern heatmap** answers the narrower question of *when*, for one scope at a time. It is a day-by-time-of-day grid where each cell is shaded by how much the scope does in that slot, with the current slot outlined. Activity rather than confidence, because confidence saturates — anything habitual sits at a hundred percent, so shading by it would make every slot a person works in look the same. Clicking a cell lists everything established for it. Above the grid, a panel names what the scope usually does *right now* — the same question [`GetPatterns`](/chronicle/clients/dotnet/patterns/) answers from code, asked with the current day and time bucket as the context.
 
 A pattern that constrains neither day nor time of day belongs to no cell and is left out of the grid rather than drawn somewhere arbitrary. It is still in the pivot view, which is the one that shows everything.
 
 ## Trying it out
 
-The **ExpenseApprovals** sample in the Chronicle repository generates half a year of backdated expense activity with four deliberate habits baked into it — and one actor with none, as a control for whether mining invents structure that is not there. Its README explains what was put in, so what Chronicle establishes can be checked against it.
+The **Storefront** sample in the Chronicle repository generates half a year of activity for an online retailer where different people do genuinely different jobs — a warehouse, a support desk, a buying office, a fraud review — plus agents acting on people's behalf, an overnight system run, and one person with no routine at all as a control.
+
+It is the quickest way to see what the views are for. Each person's heatmap looks nothing like the next one's: the picker lights up one weekday-early-morning column, the support agent lights up two — her own afternoons and her assistant's nights — and the person with no routine lights up nothing. Its README explains what was put in, so what Chronicle establishes can be checked against it.

@@ -5,7 +5,7 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Identities;
 using Microsoft.Extensions.Logging;
-using Samples.ExpenseApprovals;
+using Samples.Storefront;
 
 const int Weeks = 26;
 const int Seed = 20260829;
@@ -22,7 +22,7 @@ var options = ChronicleOptions.FromConnectionString(connectionString);
 
 Console.WriteLine("Connecting to Chronicle...");
 using var client = new ChronicleClient(options, identityProvider: identityProvider, loggerFactory: loggerFactory);
-var store = await client.GetEventStore("ExpenseApprovals");
+var store = await client.GetEventStore("Storefront");
 var appender = new ActivityAppender(store, identityProvider, client.CausationManager);
 
 // Every command is reachable as an argument as well as a keystroke, so the sample can be driven from a script -
@@ -78,7 +78,7 @@ while (true)
 
 async Task GenerateHistory()
 {
-    Console.WriteLine($"Generating {Weeks} weeks of expense activity. This appends thousands of events one at a time - give it a minute.");
+    Console.WriteLine($"Generating {Weeks} weeks of storefront activity. This appends thousands of events one at a time - give it a minute.");
 
     var lastReported = 0;
     var result = await SampleHistory.Generate(appender, Weeks, Seed, events =>
@@ -92,7 +92,13 @@ async Task GenerateHistory()
         Console.WriteLine($"  {events} events...");
     });
 
-    Console.WriteLine($"Appended {result.Events} events across {result.Reports} claims. Skipped {result.Skipped} that were already there.");
+    if (result.AlreadyGenerated)
+    {
+        Console.WriteLine("This store already holds the sample history - nothing was appended.");
+        return;
+    }
+
+    Console.WriteLine($"Appended {result.Events} events.");
     Console.WriteLine("Patterns appear once the observer has worked through the history and enough behavior clears the thresholds.");
 }
 
@@ -121,7 +127,7 @@ async Task ShowPatterns(PatternGroupingKey? scope)
     }
 
     var patterns = (await store.Patterns.GetPatternsForScope(scope))
-        .OrderByDescending(pattern => pattern.Confidence.Value)
+        .OrderByDescending(pattern => pattern.Occurrences.Value)
         .ToArray();
 
     Console.WriteLine($"\n{patterns.Length} patterns for {scope}:");
@@ -167,7 +173,7 @@ PatternGroupingKey? ScopeFromArguments()
         return new PatternGroupingKey(args[1]);
     }
 
-    Console.WriteLine("Name the scope to ask about, for example: dana.reeves");
+    Console.WriteLine("Name the scope to ask about, for example: maya.chen");
     return null;
 }
 
@@ -215,7 +221,7 @@ void WriteInstructions()
     string[] lines =
     [
         string.Empty,
-        "Expense approvals - a store with recurring behavior baked into it.",
+        "Storefront - an online retailer where different people do different jobs.",
         string.Empty,
         "  G = Generate the backdated history",
         "  S = List the scopes with established behavior",

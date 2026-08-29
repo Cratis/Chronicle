@@ -61,7 +61,7 @@
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
     </Folder>
     <Folder Name="/Samples/">
-        <Project Path="Samples/ExpenseApprovals/ExpenseApprovals.csproj" />
+        <Project Path="Samples/Storefront/Storefront.csproj" />
         <Project Path="Samples/SimpleConsole/SimpleConsole.csproj" />
     </Folder>
     <Configurations>

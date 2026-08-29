@@ -8,7 +8,41 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 
-namespace Samples.ExpenseApprovals;
+namespace Samples.Storefront;
+
+/// <summary>
+/// Represents what kind of thing an event source is.
+/// </summary>
+/// <param name="Name">The name of the kind.</param>
+/// <remarks>
+/// This becomes the aggregate a mined pattern is about, which is what lets "Lena answers tickets in the afternoon"
+/// be told apart from "Lena approves returns in the afternoon" even though both are Lena, both in the afternoon.
+/// </remarks>
+public record AggregateType(string Name)
+{
+    /// <summary>An order a customer placed.</summary>
+    public static readonly AggregateType Order = new("Order");
+
+    /// <summary>A shipment leaving the warehouse.</summary>
+    public static readonly AggregateType Shipment = new("Shipment");
+
+    /// <summary>A return a customer asked for.</summary>
+    public static readonly AggregateType Return = new("Return");
+
+    /// <summary>A support ticket.</summary>
+    public static readonly AggregateType SupportTicket = new("SupportTicket");
+
+    /// <summary>A product in the catalog.</summary>
+    public static readonly AggregateType Product = new("Product");
+
+    /// <summary>The generator's own bookkeeping.</summary>
+    public static readonly AggregateType SampleData = new("SampleData");
+
+    /// <summary>
+    /// Gets the <see cref="Cratis.Chronicle.Events.EventSourceType"/> events of this kind are appended under.
+    /// </summary>
+    public EventSourceType EventSourceType => new(Name);
+}
 
 /// <summary>
 /// Appends an event the way a command would have.
@@ -45,7 +79,7 @@ public class ActivityAppender(IEventStore store, IIdentityProvider identityProvi
     /// <param name="event">The event to append.</param>
     /// <param name="actor">The <see cref="Actor"/> carrying out the command.</param>
     /// <param name="occurred">When it happened.</param>
-    /// <param name="claimType">The <see cref="ClaimType"/> the event source is.</param>
+    /// <param name="aggregate">The <see cref="AggregateType"/> the event source is.</param>
     /// <param name="commandType">The name of the command being carried out.</param>
     /// <param name="causedByCommand">Optional name of the command that led to this one.</param>
     /// <returns>The <see cref="AppendResult"/>.</returns>
@@ -54,7 +88,7 @@ public class ActivityAppender(IEventStore store, IIdentityProvider identityProvi
         object @event,
         Actor actor,
         DateTimeOffset occurred,
-        ClaimType claimType,
+        AggregateType aggregate,
         string commandType,
         string? causedByCommand = default)
     {
@@ -68,7 +102,7 @@ public class ActivityAppender(IEventStore store, IIdentityProvider identityProvi
         return await store.EventLog.Append(
             eventSourceId,
             @event,
-            eventSourceType: claimType.EventSourceType,
+            eventSourceType: aggregate.EventSourceType,
             occurred: occurred);
     }
 
