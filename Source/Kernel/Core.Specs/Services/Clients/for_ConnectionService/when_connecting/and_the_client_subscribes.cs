@@ -41,6 +41,7 @@ public class and_the_client_subscribes : Specification
         _connectionService = new KernelConnectionService(
             grainFactory,
             localSiloDetails,
+            new ConnectedClientsQuery(grainFactory, Options.Create(options)),
             NullLogger<KernelConnectionService>.Instance,
             Options.Create(options));
     }
