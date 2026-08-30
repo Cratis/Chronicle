@@ -26,7 +26,7 @@ public record ClearObserverQuarantine(string EventStore, string Namespace, strin
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IGrainFactory grainFactory)
+    public Task Handle(IGrainFactory grainFactory)
     {
         var eventSequenceId = string.IsNullOrEmpty(EventSequenceId) ? Concepts.EventSequences.EventSequenceId.Log : (Concepts.EventSequences.EventSequenceId)EventSequenceId;
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);

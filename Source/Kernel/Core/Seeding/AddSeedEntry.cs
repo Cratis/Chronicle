@@ -33,7 +33,7 @@ public record AddSeedEntry(
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the seeding grain with.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IGrainFactory grainFactory)
+    public async Task Handle(IGrainFactory grainFactory)
     {
         var key = IsGlobal
             ? EventSeedingKey.ForGlobal(EventStore)

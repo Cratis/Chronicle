@@ -24,7 +24,7 @@ public record AddExternalServices(
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IStorage storage)
+    public async Task Handle(IStorage storage)
     {
         var externalServices = storage.GetEventStore(EventStore).ExternalServices;
         foreach (var externalService in ExternalServices)

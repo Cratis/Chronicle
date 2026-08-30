@@ -22,5 +22,5 @@ public record RemoveWebhook(EventStoreName EventStore, WebhookId WebhookId)
     /// </summary>
     /// <param name="registrar">The <see cref="WebhookRegistrar"/> that appends it.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(WebhookRegistrar registrar) => registrar.Remove(EventStore, [WebhookId]);
+    public Task Handle(WebhookRegistrar registrar) => registrar.Remove(EventStore, [WebhookId]);
 }

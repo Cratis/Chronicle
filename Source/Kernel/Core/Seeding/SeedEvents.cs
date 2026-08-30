@@ -28,7 +28,7 @@ public record SeedEvents(
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get seeding grains with.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IGrainFactory grainFactory)
+    public async Task Handle(IGrainFactory grainFactory)
     {
         // The two groupings describe the same set of entries, so they are reconciled rather than concatenated.
         var globalEntries = SeedingConverters.Reconcile(

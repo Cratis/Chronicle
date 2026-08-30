@@ -26,7 +26,7 @@ internal sealed class KernelStateResetter(
     IGrainFactory grainFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IInstancesOf<ICanPerformKernelStateReset> resetHandlers,
-    KernelBootstrapResetHandler bootstrapResetHandler)
+    KernelBootstrapResetHandler bootstrapResetHandler) : IKernelStateResetter
 {
     /// <summary>
     /// Gets a value indicating whether the server exposes development tools.
@@ -43,7 +43,7 @@ internal sealed class KernelStateResetter(
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="DevelopmentToolsNotAvailable">Thrown when the server was not built with development tools.</exception>
-    internal async Task Reset()
+    public async Task Reset()
     {
 #if DEVELOPMENT
         var managementGrain = grainFactory.GetGrain<IManagementGrain>(0);

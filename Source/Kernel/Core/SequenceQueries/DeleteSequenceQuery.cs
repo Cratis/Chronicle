@@ -21,6 +21,6 @@ public record DeleteSequenceQuery(EventStoreName EventStore, SequenceQueryId Id)
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IStorage storage) =>
+    public Task Handle(IStorage storage) =>
         storage.GetEventStore(EventStore).SequenceQueries.Delete(Id);
 }

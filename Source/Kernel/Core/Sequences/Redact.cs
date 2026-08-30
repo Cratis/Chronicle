@@ -47,7 +47,7 @@ public record Redact(
     /// A reactor picks up the resulting <see cref="EventRedactionRequested"/> and performs the actual in-place
     /// replacement, rather than the redaction happening synchronously here.
     /// </remarks>
-    internal Task Handle(
+    public Task Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
         ICurrentPrincipalAccessor principalAccessor)

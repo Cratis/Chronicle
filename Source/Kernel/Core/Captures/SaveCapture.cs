@@ -33,7 +33,7 @@ public record SaveCapture(EventStoreName EventStore, Concepts.Captures.CaptureId
     /// <param name="languageService">The <see cref="ILanguageService"/> to compile the declaration with.</param>
     /// <param name="captureValidator">The <see cref="ICaptureValidator"/> to validate the compiled capture with.</param>
     /// <returns>The saved capture, or the messages saying why it was not saved.</returns>
-    internal async Task<SaveCaptureResult> Handle(
+    public async Task<SaveCaptureResult> Handle(
         IStorage storage,
         ILanguageService languageService,
         ICaptureValidator captureValidator)

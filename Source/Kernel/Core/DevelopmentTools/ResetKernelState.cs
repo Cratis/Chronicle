@@ -15,8 +15,8 @@ public record ResetKernelState
     /// <summary>
     /// Handles the command.
     /// </summary>
-    /// <param name="resetter">The <see cref="KernelStateResetter"/> performing the reset.</param>
+    /// <param name="resetter">The <see cref="IKernelStateResetter"/> performing the reset.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(KernelStateResetter resetter) => resetter.Reset();
+    public Task Handle(IKernelStateResetter resetter) => resetter.Reset();
 }
 #endif

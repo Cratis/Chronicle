@@ -21,6 +21,6 @@ public record DeleteCapture(EventStoreName EventStore, Concepts.Captures.Capture
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the captures manager with.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IGrainFactory grainFactory) =>
+    public Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetGrain<ICapturesManager>(EventStore).Delete(CaptureId);
 }

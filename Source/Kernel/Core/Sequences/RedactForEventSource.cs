@@ -45,7 +45,7 @@ public record RedactForEventSource(
     /// A reactor picks up the resulting <see cref="EventsRedactedForEventSource"/> and performs the actual
     /// in-place replacements, rather than the redaction happening synchronously here.
     /// </remarks>
-    internal Task Handle(
+    public Task Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
         ICurrentPrincipalAccessor principalAccessor)

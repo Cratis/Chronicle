@@ -28,7 +28,7 @@ public record RegisterEventTypes(
     /// <param name="registrar">The <see cref="EventTypeRegistrar"/> that decides what a registration means.</param>
     /// <param name="eventTypesCacheClient">Client for evicting the event type cache on every silo.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(
+    public Task Handle(
         IStorage storage,
         EventTypeRegistrar registrar,
         IEventTypesCacheClient eventTypesCacheClient)
