@@ -158,9 +158,11 @@ async Task PredictNow(PatternGroupingKey? scope, DateTimeOffset? moment)
         return;
     }
 
+    // The answer names the command. What is left of the pattern once the command is taken off is the slice of the
+    // question it was established in - printed alongside, so it is visible how much of the moment each answer used.
     foreach (var pattern in patterns)
     {
-        Console.WriteLine($"  {pattern.Confidence.Value,6:P0}  {pattern.Facets}");
+        Console.WriteLine($"  {pattern.Confidence.Value,6:P0}  {pattern.Facets.ValueOf(FacetName.CommandType),-22}  ({pattern.Facets.WithoutActions()})");
     }
 }
 

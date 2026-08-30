@@ -10,8 +10,14 @@ description: Ask what a user usually does in a given context, from the .NET clie
 Most applications have one question: *what does this person normally do at this point in the week?* Every Chronicle client offers that as a single call — see [asking about a moment](/chronicle/patterns/) for the shared contract. In .NET it is `GetPatternsAt`, and it takes the scope and nothing else:
 
 ```csharp
-var patterns = await eventStore.Patterns.GetPatternsAt(userId);
+foreach (var pattern in await eventStore.Patterns.GetPatternsAt(userId))
+{
+    var command = pattern.Facets.ValueOf(FacetName.CommandType);
+    Console.WriteLine($"{command} — {pattern.Confidence.Value:P0} of the time");
+}
 ```
+
+Each answer names a **command**, and its `Confidence` is the chance of that command given the context it was established in. You get at most one answer per command, so a habit mined at several context sizes at once comes back once rather than three times.
 
 The day and the part of the day are read off the moment for you, using the same rule the engine bucketed events with when it mined them — so the answer is about the slot the behavior was actually learned in. Pass a moment to ask about a different one:
 
@@ -33,37 +39,53 @@ Derive the time bucket yourself and you own a copy of a rule the engine also own
 
 ## Asking about a context that is not a moment
 
-`GetPatterns` is the lower-level call underneath. Build a context from the facets you know and ask within a scope — normally the user whose behavior you are asking about:
+`GetUsualActions` is the call underneath. Build a context from the facets you know and ask within a scope — normally the user whose behavior you are asking about:
 
 ```csharp
 using Cratis.Chronicle.Concepts.Patterns;
 
-var patterns = await eventStore.Patterns.GetPatterns(
+var patterns = await eventStore.Patterns.GetUsualActions(
     groupingKey: userId,
     context: FacetSet.Empty
         .With(FacetName.Day, DayOfWeek.Monday.ToString())
-        .With(FacetName.TimeBucket, TimeBucket.Morning.ToString()));
+        .With(FacetName.AggregateType, "Invoice"));
 
 foreach (var pattern in patterns)
 {
-    Console.WriteLine($"{pattern.Facets} — {pattern.Confidence.Value:P0} confident, seen {pattern.Occurrences.Value} times");
+    Console.WriteLine($"{pattern.Facets.ValueOf(FacetName.CommandType)} — {pattern.Confidence.Value:P0} confident, seen {pattern.Occurrences.Value} times");
 }
 ```
 
 The context may constrain **any subset** of the facets. Facets the store does not mine are discarded rather than narrowing the lookup to nothing, so a caller can describe its situation in whatever terms it has.
 
-Results are ranked **most specific first**, then most confident. A pattern constraining everything you asked about answers your question; a broader, more confident one answers a question you did not ask.
+Results are ranked **most likely first**. Constraining `CommandType` here does nothing — it names the answer rather than the situation, and the answer is what you are asking for.
 
-:::caution
-A pattern matches when **its facets are a subset of the context you asked with**, so a query returns patterns describing the context you named — not the action taken in it. Asking about a day and a time tells you whether that slot is established; it does not yet tell you which command usually follows, because a pattern constraining `CommandType` is not a subset of a context that does not name one. Returning the action is tracked in [#3872](https://github.com/Cratis/Chronicle/issues/3872).
-:::
+## Checking whether an action is normal
+
+`GetPatterns` asks the opposite question: given a situation you can describe *completely*, including the command, which established patterns cover it? That is the check you make before flagging something as unusual, rather than the prediction above.
+
+```csharp
+var covering = await eventStore.Patterns.GetPatterns(
+    groupingKey: userId,
+    context: FacetSet.Empty
+        .With(FacetName.CommandType, "DeleteSupplier")
+        .With(FacetName.Day, DayOfWeek.Sunday.ToString())
+        .With(FacetName.TimeBucket, TimeBucket.Night.ToString()));
+
+if (!covering.Any(pattern => pattern.Facets.Constrains(FacetName.CommandType)))
+{
+    // Nothing established covers this person doing this, here.
+}
+```
+
+A pattern is returned when **its facets are a subset of the context you asked with**, so every result describes something you named. Results are ranked **most specific first**, then most confident: a pattern constraining everything you asked about describes your situation; a broader, more confident one describes a situation you did not ask about.
 
 ### An empty result is an answer
 
-`GetPatterns` returns nothing when no pattern clears the confidence bar. That is a true statement — this scope has no established behavior for this context — and it is deliberately not padded with the best of a bad set. Treat "no patterns" as "do not claim to know":
+Both calls return nothing when no pattern clears the confidence bar. That is a true statement — this scope has no established behavior for this context — and it is deliberately not padded with the best of a bad set. Treat "no patterns" as "do not claim to know":
 
 ```csharp
-var patterns = await eventStore.Patterns.GetPatterns(userId, context);
+var patterns = await eventStore.Patterns.GetUsualActions(userId, context);
 if (!patterns.Any())
 {
     return "I don't have enough history to say what usually happens here.";
@@ -73,7 +95,7 @@ if (!patterns.Any())
 ### Thresholds and limits
 
 ```csharp
-var patterns = await eventStore.Patterns.GetPatterns(
+var patterns = await eventStore.Patterns.GetUsualActions(
     groupingKey: userId,
     context: context,
     minimumConfidence: new PatternConfidence(0.8d),
@@ -85,7 +107,7 @@ Leave `minimumConfidence` and `maximumResults` unset to use whatever the **serve
 
 ## Browsing everything a scope established
 
-`GetPatternsForScope` is the listing call — everything held for a scope, unfiltered, including patterns below the confidence threshold. It is what a browsing view binds to, as opposed to `GetPatterns`, which answers a question about one situation.
+`GetPatternsForScope` is the listing call — everything held for a scope, unfiltered, including patterns below the confidence threshold. It is what a browsing view binds to, as opposed to the two calls above, which each answer a question about one situation.
 
 ```csharp
 var everything = await eventStore.Patterns.GetPatternsForScope(userId);
@@ -100,7 +122,7 @@ foreach (var scope in await eventStore.Patterns.GetScopes())
 }
 ```
 
-The scopes returned are the ones that actually hold patterns, not every identity that ever appeared in the store. A scope missing from the list has established no behavior yet — which is the same answer an empty `GetPatterns` gives, one level up.
+The scopes returned are the ones that actually hold patterns, not every identity that ever appeared in the store. A scope missing from the list has established no behavior yet — which is the same answer an empty `GetUsualActions` gives, one level up.
 
 ## What you get back
 

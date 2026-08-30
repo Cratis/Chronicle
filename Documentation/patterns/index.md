@@ -89,19 +89,28 @@ Without such a link the mined `CommandType` falls back to the event type, which 
 
 Ask what usually happens with the [.NET client's pattern API](/chronicle/clients/dotnet/patterns/), or over gRPC through the `Patterns` service:
 
-- **`GetPatterns`** — given a partial context, the patterns that apply, ranked by specificity and then confidence.
+- **`GetUsualActions`** — given a situation, what is usually *done* in it, ranked by confidence.
+- **`GetPatterns`** — given a situation, the patterns that *describe* it, ranked by specificity and then confidence.
 - **`GetPatternsForScope`** — everything a scope has established, unfiltered, for browsing.
 - **`GetScopes`** — the scopes that hold any patterns at all, which is what a browsing view needs before it can offer one.
 
-Specificity outranks confidence in the ranking. A pattern constraining everything you asked about answers your question; a broader, more confident one answers a question you did not ask.
+### Two questions, and why they are different calls
 
-A pattern matches when **its facets are a subset of the asked context**. That means a query describes the context you named rather than the action taken in it: asking about a day and a part of the day says whether that slot is established, not which command usually follows. Returning the action is tracked in [#3872](https://github.com/Cratis/Chronicle/issues/3872).
+Most applications want the first one: *what does this person usually do here?* You describe the situation you are in — a day, a part of the day, the kind of thing being worked on — and the answer is the command.
+
+The second is the opposite question: *is what I am looking at normal?* There you already know the command, and you want the established patterns that cover it — which is what you check an action against before flagging it as unusual.
+
+They cannot be one call, because they compare different halves of a pattern. A pattern like `CommandType=RegisterInvoice; Day=Monday; TimeBucket=EarlyMorning` **describes** a situation only if everything it names was named in the question. But nobody asking what usually happens on a Monday morning can name the command — naming it is what they are asking for. So `GetUsualActions` compares only the *context* half of a pattern against your question and hands back the command as the answer, while `GetPatterns` compares the whole pattern and can only ever return facets you already named.
+
+`GetUsualActions` returns **at most one answer per action**. A habit is established at several context sizes at once — on a Monday, in the early morning, and on a Monday early morning are three mined combinations describing one behavior — and returning all three says the same thing three times while pushing the second-most-likely action out of a limited result set. The one kept is the one conditioned on most of your question.
+
+Ranking differs for the same reason. `GetPatterns` leads with specificity, because the pattern covering most of what you asked describes your situation best. `GetUsualActions` leads with **confidence**, which is already the chance of that action given the context it was established in — a number that compares directly between one answer and the next, where a facet count does not.
 
 **Nothing clearing the confidence bar returns nothing.** An empty answer is a true statement — this scope has no established behavior for this context — and is not padded with the best of a bad set.
 
 ## Asking about a moment
 
-The context an application usually has is a person and a point in time, so every client offers that as a single call on top of `GetPatterns`: **give it the scope, optionally give it a moment, and it fills in the rest**. The moment defaults to now.
+The context an application usually has is a person and a point in time, so every client offers that as a single call on top of `GetUsualActions`: **give it the scope, optionally give it a moment, and it fills in the rest**. The moment defaults to now.
 
 What it fills in is the `Day` and the `TimeBucket`, derived from the moment with **the same rule the engine used when it mined the events**. That rule is the load-bearing part. A caller deriving the bucket itself owns a second copy of it, and when the two drift nothing fails loudly — the query simply asks about a slot the mining never used and comes back empty. Each client therefore exposes the bucketing rule as well, so the copy never has to exist:
 
@@ -117,7 +126,7 @@ Two views under an event store's namespace read the same patterns from different
 
 **Behavior patterns** pivots every pattern in the namespace, with the scope as the first filter rather than a control above the viewer — so two people's behavior can be compared side by side instead of one being chosen before anything can be seen. The facets become the dimensions and filters, so the same set can be approached from whichever direction the question comes: by command, by who initiated it, by day or part of day, by aggregate, by what caused it, or by how specific the pattern is. Each card carries a confidence bar, so a well-established habit is distinguishable from a marginal one without reading numbers.
 
-**Pattern heatmap** answers the narrower question of *when*, for one scope at a time. It is a day-by-time-of-day grid where each cell is shaded by how much the scope does in that slot, with the current slot outlined. Activity rather than confidence, because confidence saturates — anything habitual sits at a hundred percent, so shading by it would make every slot a person works in look the same. Clicking a cell lists everything established for it. Above the grid, a panel names what the scope usually does *right now* — the same question [`GetPatterns`](/chronicle/clients/dotnet/patterns/) answers from code, asked with the current day and time bucket as the context.
+**Pattern heatmap** answers the narrower question of *when*, for one scope at a time. It is a day-by-time-of-day grid where each cell is shaded by how much the scope does in that slot, with the current slot outlined. Activity rather than confidence, because confidence saturates — anything habitual sits at a hundred percent, so shading by it would make every slot a person works in look the same. Clicking a cell lists everything established for it. Above the grid, a panel names what the scope usually does *right now* — the same question [`GetUsualActions`](/chronicle/clients/dotnet/patterns/) answers from code, asked with the current day and time bucket as the context.
 
 A pattern that constrains neither day nor time of day belongs to no cell and is left out of the grid rather than drawn somewhere arbitrary. It is still in the pivot view, which is the one that shows everything.
 
