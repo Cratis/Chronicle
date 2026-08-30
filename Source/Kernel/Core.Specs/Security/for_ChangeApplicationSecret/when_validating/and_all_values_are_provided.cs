@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Security.for_ChangeApplicationSecret.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<ChangeApplicationSecret> _scenario = new();
+    readonly CommandScenario<ChangeApplicationSecret> _scenario = ChronicleCommandScenario.For<ChangeApplicationSecret>();
     CommandResult _result;
 
     void Establish()

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.SequenceQueries.for_DeleteSequenceQueryFolder.when_va
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<DeleteSequenceQueryFolder> _scenario = new();
+    readonly CommandScenario<DeleteSequenceQueryFolder> _scenario = ChronicleCommandScenario.For<DeleteSequenceQueryFolder>();
     CommandResult _result;
 
     void Establish()

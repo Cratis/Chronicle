@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Recommendations.for_IgnoreRecommendation.when_validat
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<IgnoreRecommendation> _scenario = new();
+    readonly CommandScenario<IgnoreRecommendation> _scenario = ChronicleCommandScenario.For<IgnoreRecommendation>();
     CommandResult _result;
 
     void Establish()

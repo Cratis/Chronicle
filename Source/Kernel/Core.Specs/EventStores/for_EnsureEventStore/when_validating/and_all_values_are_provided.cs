@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.EventStores.for_EnsureEventStore.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<EnsureEventStore> _scenario = new();
+    readonly CommandScenario<EnsureEventStore> _scenario = ChronicleCommandScenario.For<EnsureEventStore>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new EnsureEventStore("some-event-store"));

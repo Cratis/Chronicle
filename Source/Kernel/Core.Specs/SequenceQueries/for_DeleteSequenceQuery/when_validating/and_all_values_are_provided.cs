@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.SequenceQueries.for_DeleteSequenceQuery.when_validati
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<DeleteSequenceQuery> _scenario = new();
+    readonly CommandScenario<DeleteSequenceQuery> _scenario = ChronicleCommandScenario.For<DeleteSequenceQuery>();
     CommandResult _result;
 
     void Establish()

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Sequences.for_AppendManyForEventSources.when_validati
 
 public class and_an_event_is_missing_its_event_source : Specification
 {
-    readonly CommandScenario<AppendManyForEventSources> _scenario = new();
+    readonly CommandScenario<AppendManyForEventSources> _scenario = ChronicleCommandScenario.For<AppendManyForEventSources>();
     CommandResult _result;
 
     void Establish()

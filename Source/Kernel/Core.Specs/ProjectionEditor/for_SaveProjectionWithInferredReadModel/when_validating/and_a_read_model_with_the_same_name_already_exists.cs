@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.ProjectionEditor.for_SaveProjectionWithInferredReadMo
 
 public class and_a_read_model_with_the_same_name_already_exists : Specification
 {
-    readonly CommandScenario<SaveProjectionWithInferredReadModel> _scenario = new();
+    readonly CommandScenario<SaveProjectionWithInferredReadModel> _scenario = ChronicleCommandScenario.For<SaveProjectionWithInferredReadModel>();
     readonly SaveProjectionWithInferredReadModel _command =
         new("some-event-store", "some-namespace", "some declaration", "Some Read Model");
 

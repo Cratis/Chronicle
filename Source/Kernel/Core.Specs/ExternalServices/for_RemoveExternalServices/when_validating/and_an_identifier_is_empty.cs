@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ExternalServices.for_RemoveExternalServices.when_vali
 
 public class and_an_identifier_is_empty : Specification
 {
-    readonly CommandScenario<RemoveExternalServices> _scenario = new();
+    readonly CommandScenario<RemoveExternalServices> _scenario = ChronicleCommandScenario.For<RemoveExternalServices>();
     CommandResult _result;
 
     void Establish()

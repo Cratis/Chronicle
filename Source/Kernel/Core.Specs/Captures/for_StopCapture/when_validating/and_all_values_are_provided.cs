@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Captures.for_StopCapture.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<StopCapture> _scenario = new();
+    readonly CommandScenario<StopCapture> _scenario = ChronicleCommandScenario.For<StopCapture>();
     CommandResult _result;
 
     void Establish()

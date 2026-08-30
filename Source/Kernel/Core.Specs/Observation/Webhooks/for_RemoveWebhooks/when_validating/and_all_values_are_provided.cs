@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_RemoveWebhooks.when_validati
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<RemoveWebhooks> _scenario = new();
+    readonly CommandScenario<RemoveWebhooks> _scenario = ChronicleCommandScenario.For<RemoveWebhooks>();
     CommandResult _result;
 
     void Establish()

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Security.for_RequirePasswordChange.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<RequirePasswordChange> _scenario = new();
+    readonly CommandScenario<RequirePasswordChange> _scenario = ChronicleCommandScenario.For<RequirePasswordChange>();
     CommandResult _result;
 
     void Establish()

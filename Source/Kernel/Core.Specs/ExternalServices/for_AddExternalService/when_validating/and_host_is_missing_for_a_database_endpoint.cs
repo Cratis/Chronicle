@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.ExternalServices.for_AddExternalService.when_validati
 
 public class and_host_is_missing_for_a_database_endpoint : Specification
 {
-    readonly CommandScenario<AddExternalService> _scenario = new();
+    readonly CommandScenario<AddExternalService> _scenario = ChronicleCommandScenario.For<AddExternalService>();
     CommandResult _result;
 
     void Establish()

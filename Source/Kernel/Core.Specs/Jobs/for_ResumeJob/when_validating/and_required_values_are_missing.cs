@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Jobs.for_ResumeJob.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<ResumeJob> _scenario = new();
+    readonly CommandScenario<ResumeJob> _scenario = ChronicleCommandScenario.For<ResumeJob>();
     CommandResult _result;
 
     void Establish()

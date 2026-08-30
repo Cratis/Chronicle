@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Security.for_AddUser.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<AddUser> _scenario = new();
+    readonly CommandScenario<AddUser> _scenario = ChronicleCommandScenario.For<AddUser>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new AddUser(Guid.Empty, string.Empty, string.Empty, string.Empty));

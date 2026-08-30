@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventTypes.for_RegisterSingleEventType.when_validatin
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<RegisterSingleEventType> _scenario = new();
+    readonly CommandScenario<RegisterSingleEventType> _scenario = ChronicleCommandScenario.For<RegisterSingleEventType>();
     CommandResult _result;
 
     void Establish()

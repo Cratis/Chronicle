@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Sequences.for_RedactForEventSource.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<RedactForEventSource> _scenario = new();
+    readonly CommandScenario<RedactForEventSource> _scenario = ChronicleCommandScenario.For<RedactForEventSource>();
     CommandResult _result;
 
     void Establish()

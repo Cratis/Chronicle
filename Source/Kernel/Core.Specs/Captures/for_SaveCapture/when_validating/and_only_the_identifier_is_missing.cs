@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Captures.for_SaveCapture.when_validating;
 
 public class and_only_the_identifier_is_missing : Specification
 {
-    readonly CommandScenario<SaveCapture> _scenario = new();
+    readonly CommandScenario<SaveCapture> _scenario = ChronicleCommandScenario.For<SaveCapture>();
     CommandResult _result;
 
     void Establish()

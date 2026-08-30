@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Captures.for_ValidateCaptureDeclaration.when_validati
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<ValidateCaptureDeclaration> _scenario = new();
+    readonly CommandScenario<ValidateCaptureDeclaration> _scenario = ChronicleCommandScenario.For<ValidateCaptureDeclaration>();
     CommandResult _result;
 
     void Establish()

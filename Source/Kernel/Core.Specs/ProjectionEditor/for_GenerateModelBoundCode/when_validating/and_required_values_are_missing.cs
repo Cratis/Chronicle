@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ProjectionEditor.for_GenerateModelBoundCode.when_vali
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<GenerateModelBoundCode> _scenario = new();
+    readonly CommandScenario<GenerateModelBoundCode> _scenario = ChronicleCommandScenario.For<GenerateModelBoundCode>();
     CommandResult _result;
 
     void Establish()

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_ClearObserverQuarantine.when_validati
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<ClearObserverQuarantine> _scenario = new();
+    readonly CommandScenario<ClearObserverQuarantine> _scenario = ChronicleCommandScenario.For<ClearObserverQuarantine>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new ClearObserverQuarantine(string.Empty, string.Empty, string.Empty, string.Empty));

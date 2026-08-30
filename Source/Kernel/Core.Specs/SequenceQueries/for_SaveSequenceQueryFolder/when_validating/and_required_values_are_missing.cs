@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.SequenceQueries.for_SaveSequenceQueryFolder.when_vali
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<SaveSequenceQueryFolder> _scenario = new();
+    readonly CommandScenario<SaveSequenceQueryFolder> _scenario = ChronicleCommandScenario.For<SaveSequenceQueryFolder>();
     CommandResult _result;
 
     void Establish()

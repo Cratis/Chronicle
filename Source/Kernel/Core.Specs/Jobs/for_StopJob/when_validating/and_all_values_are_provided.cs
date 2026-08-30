@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Jobs.for_StopJob.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<StopJob> _scenario = new();
+    readonly CommandScenario<StopJob> _scenario = ChronicleCommandScenario.For<StopJob>();
     readonly Concepts.Jobs.JobId _jobId = Concepts.Jobs.JobId.New();
     CommandResult _result;
 

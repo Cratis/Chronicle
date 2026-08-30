@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Sequences.for_CompleteStream.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<CompleteStream> _scenario = new();
+    readonly CommandScenario<CompleteStream> _scenario = ChronicleCommandScenario.For<CompleteStream>();
     CommandResult _result;
 
     void Establish()

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ExternalServices.for_AddExternalServices.when_validat
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<AddExternalServices> _scenario = new();
+    readonly CommandScenario<AddExternalServices> _scenario = ChronicleCommandScenario.For<AddExternalServices>();
     CommandResult _result;
 
     void Establish()

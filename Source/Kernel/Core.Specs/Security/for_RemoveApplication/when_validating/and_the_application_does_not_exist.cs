@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Security.for_RemoveApplication.when_validating;
 /// </summary>
 public class and_the_application_does_not_exist : Specification
 {
-    readonly CommandScenario<RemoveApplication> _scenario = new();
+    readonly CommandScenario<RemoveApplication> _scenario = ChronicleCommandScenario.For<RemoveApplication>();
     CommandResult _result;
 
     void Establish()

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_ReplayPartition.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<ReplayPartition> _scenario = new();
+    readonly CommandScenario<ReplayPartition> _scenario = ChronicleCommandScenario.For<ReplayPartition>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new ReplayPartition(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty));

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Sequences.for_Append.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<Append> _scenario = new();
+    readonly CommandScenario<Append> _scenario = ChronicleCommandScenario.For<Append>();
     CommandResult _result;
 
     void Establish()

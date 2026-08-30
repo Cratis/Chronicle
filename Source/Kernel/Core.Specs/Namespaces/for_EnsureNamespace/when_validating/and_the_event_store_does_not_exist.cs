@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Namespaces.for_EnsureNamespace.when_validating;
 /// </summary>
 public class and_the_event_store_does_not_exist : Specification
 {
-    readonly CommandScenario<EnsureNamespace> _scenario = new();
+    readonly CommandScenario<EnsureNamespace> _scenario = ChronicleCommandScenario.For<EnsureNamespace>();
     CommandResult _result;
 
     void Establish()

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Recommendations.for_PerformRecommendation.when_valida
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<PerformRecommendation> _scenario = new();
+    readonly CommandScenario<PerformRecommendation> _scenario = ChronicleCommandScenario.For<PerformRecommendation>();
     CommandResult _result;
 
     void Establish()

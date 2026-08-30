@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Namespaces.for_EnsureNamespace.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<EnsureNamespace> _scenario = new();
+    readonly CommandScenario<EnsureNamespace> _scenario = ChronicleCommandScenario.For<EnsureNamespace>();
     CommandResult _result;
 
     void Establish()

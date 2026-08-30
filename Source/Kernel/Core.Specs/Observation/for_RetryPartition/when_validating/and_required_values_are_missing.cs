@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_RetryPartition.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<RetryPartition> _scenario = new();
+    readonly CommandScenario<RetryPartition> _scenario = ChronicleCommandScenario.For<RetryPartition>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new RetryPartition(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty));
