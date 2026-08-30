@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 
 namespace Cratis.Chronicle.Patterns;
 
