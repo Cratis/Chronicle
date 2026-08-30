@@ -3,20 +3,22 @@
 
 from importlib import import_module
 
-events_pb2 = import_module("cratis_chronicle_contracts.events_pb2")
-events_pb2_grpc = import_module("cratis_chronicle_contracts.events_pb2_grpc")
+# The event type contract is generated from the artifacts in Core, which put it under EventTypes rather than the
+# Events namespace it used to share with the constraints - so the module it lands in is eventtypes_pb2.
+eventtypes_pb2 = import_module("cratis_chronicle_contracts.eventtypes_pb2")
+eventtypes_pb2_grpc = import_module("cratis_chronicle_contracts.eventtypes_pb2_grpc")
 bcl_pb2 = import_module("cratis_chronicle_contracts.protobuf_net.bcl_pb2")
 
 
 def test_event_contract_is_importable() -> None:
-    event_type = events_pb2.EventType(Id="example", Generation=1)
+    event_type = eventtypes_pb2.EventType(Id="example", Generation=1)
 
     assert event_type.Id == "example"
     assert event_type.Generation == 1
 
 
 def test_event_service_stub_is_generated() -> None:
-    assert hasattr(events_pb2_grpc, "EventTypesStub")
+    assert hasattr(eventtypes_pb2_grpc, "EventTypesStub")
 
 
 def test_protobuf_net_contract_is_importable() -> None:
