@@ -30,7 +30,8 @@ public class and_storage_reports_a_changed_event_type : given.all_dependencies
             ],
             false,
             _storage,
-            _eventTypesCacheClient);
+            _eventTypesCacheClient,
+            _patternCapture);
 
     [Fact] void should_register_every_event_type_in_one_call() =>
         _eventTypesStorage.Received(1).Register(Arg.Is<IEnumerable<EventTypeToRegister>>(_ => _.Count() == 2));

@@ -31,7 +31,8 @@ public class and_migration_has_same_from_and_to_generation : given.all_dependenc
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
 }

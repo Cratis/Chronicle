@@ -21,7 +21,8 @@ public class and_event_type_is_generation_1 : given.all_dependencies
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
 }

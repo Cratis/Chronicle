@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -17,6 +18,7 @@ public class all_dependencies : Specification
     protected IGrainFactory _grainFactory;
     protected IEventSequence _systemEventSequence;
     protected IEventTypesCacheClient _eventTypesCacheClient;
+    protected IPatternCapture _patternCapture;
     protected EventTypeRegistrar _subject;
 
     void Establish()
@@ -27,6 +29,7 @@ public class all_dependencies : Specification
         _grainFactory = Substitute.For<IGrainFactory>();
         _systemEventSequence = Substitute.For<IEventSequence>();
         _eventTypesCacheClient = Substitute.For<IEventTypesCacheClient>();
+        _patternCapture = Substitute.For<IPatternCapture>();
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_systemEventSequence);

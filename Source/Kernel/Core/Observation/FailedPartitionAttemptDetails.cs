@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Observation;
+
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
@@ -10,8 +12,10 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="SequenceNumber">The sequence number of the event the attempt handled.</param>
 /// <param name="Messages">The messages describing why the attempt failed.</param>
 /// <param name="StackTrace">The stack trace of the failure.</param>
+/// <param name="Kind">What kind of thing went wrong on the attempt.</param>
 public record FailedPartitionAttemptDetails(
     DateTimeOffset Occurred,
     ulong SequenceNumber,
     IEnumerable<string> Messages,
-    string StackTrace);
+    string StackTrace,
+    FailureKind Kind = FailureKind.Unknown);

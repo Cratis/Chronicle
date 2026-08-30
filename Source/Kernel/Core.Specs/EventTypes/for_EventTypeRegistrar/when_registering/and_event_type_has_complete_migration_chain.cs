@@ -30,7 +30,8 @@ public class and_event_type_has_complete_migration_chain : given.all_dependencie
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
 }

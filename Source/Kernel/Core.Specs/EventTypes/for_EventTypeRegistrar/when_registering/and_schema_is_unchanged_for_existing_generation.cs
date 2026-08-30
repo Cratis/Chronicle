@@ -28,7 +28,8 @@ public class and_schema_is_unchanged_for_existing_generation : given.all_depende
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
 }

@@ -23,7 +23,8 @@ public class and_event_type_is_new : given.all_dependencies
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
     [Fact] void should_append_event_type_added_system_event() =>

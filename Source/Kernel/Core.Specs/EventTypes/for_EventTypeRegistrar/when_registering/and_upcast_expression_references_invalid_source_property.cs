@@ -38,7 +38,8 @@ public class and_upcast_expression_references_invalid_source_property : given.al
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_throw_invalid_migration_property() => _exception.ShouldBeOfExactType<InvalidMigrationPropertyForEventType>();
 }

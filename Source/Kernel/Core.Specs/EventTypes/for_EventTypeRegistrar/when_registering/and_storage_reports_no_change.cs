@@ -27,7 +27,8 @@ public class and_storage_reports_no_change : given.all_dependencies
             ],
             false,
             _storage,
-            _eventTypesCacheClient);
+            _eventTypesCacheClient,
+            _patternCapture);
 
     [Fact] void should_not_invalidate_any_event_type() =>
         _eventTypesCacheClient.DidNotReceive().Invalidate(Arg.Any<EventStoreName>(), Arg.Any<EventTypeId>());

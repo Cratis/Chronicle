@@ -21,7 +21,8 @@ public class and_event_type_has_no_migrators : given.all_dependencies
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_throw_missing_event_type_migrators() => _exception.ShouldBeOfExactType<MissingEventTypeMigrators>();
 }

@@ -34,5 +34,5 @@ internal static class FailedPartitionDetailsConverters
     /// <param name="attempt">The attempt to convert.</param>
     /// <returns>The converted attempt.</returns>
     internal static FailedPartitionAttemptDetails ToReadModel(this Concepts.Observation.FailedPartitionAttempt attempt) =>
-        new(attempt.Occurred, attempt.SequenceNumber, attempt.Messages, attempt.StackTrace);
+        new(attempt.Occurred, attempt.SequenceNumber, attempt.Messages, attempt.StackTrace, attempt.Kind);
 }

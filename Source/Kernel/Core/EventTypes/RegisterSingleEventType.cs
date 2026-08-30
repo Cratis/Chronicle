@@ -5,6 +5,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
@@ -24,8 +25,9 @@ public record RegisterSingleEventType(EventStoreName EventStore, Contracts.Event
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
     /// <param name="eventTypesCacheClient">Client for evicting the event type cache on every silo.</param>
+    /// <param name="patternCapture">The <see cref="IPatternCapture"/> to keep observing every registered event type.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient)
+    public async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient, IPatternCapture patternCapture)
     {
         var chronicleType = Type.Type.ToChronicle();
         var schema = await JsonSchema.FromJsonAsync(Type.Schema);
@@ -40,6 +42,7 @@ public record RegisterSingleEventType(EventStoreName EventStore, Contracts.Event
         if (mutated)
         {
             await eventTypesCacheClient.Invalidate(EventStore, chronicleType.Id);
+            await patternCapture.SubscribeAcrossNamespaces(EventStore);
         }
     }
 }
