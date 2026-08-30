@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.ExternalServices.for_AddExternalService.when_validati
 
 public class and_oauth_settings_are_missing_for_oauth_authorization : Specification
 {
-    readonly CommandScenario<AddExternalService> _scenario = new();
+    readonly CommandScenario<AddExternalService> _scenario = ChronicleCommandScenario.For<AddExternalService>();
     CommandResult _result;
 
     void Establish()

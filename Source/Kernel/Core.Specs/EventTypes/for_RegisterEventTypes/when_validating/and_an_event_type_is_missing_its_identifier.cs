@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventTypes.for_RegisterEventTypes.when_validating;
 
 public class and_an_event_type_is_missing_its_identifier : Specification
 {
-    readonly CommandScenario<RegisterEventTypes> _scenario = new();
+    readonly CommandScenario<RegisterEventTypes> _scenario = ChronicleCommandScenario.For<RegisterEventTypes>();
     CommandResult _result;
 
     void Establish()

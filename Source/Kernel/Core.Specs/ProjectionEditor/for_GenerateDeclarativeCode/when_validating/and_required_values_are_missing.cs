@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ProjectionEditor.for_GenerateDeclarativeCode.when_val
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<GenerateDeclarativeCode> _scenario = new();
+    readonly CommandScenario<GenerateDeclarativeCode> _scenario = ChronicleCommandScenario.For<GenerateDeclarativeCode>();
     CommandResult _result;
 
     void Establish()

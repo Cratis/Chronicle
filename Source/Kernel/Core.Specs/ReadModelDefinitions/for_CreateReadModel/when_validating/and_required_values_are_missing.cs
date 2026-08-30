@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ReadModelDefinitions.for_CreateReadModel.when_validat
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<CreateReadModel> _scenario = new();
+    readonly CommandScenario<CreateReadModel> _scenario = ChronicleCommandScenario.For<CreateReadModel>();
     CommandResult _result;
 
     void Establish()

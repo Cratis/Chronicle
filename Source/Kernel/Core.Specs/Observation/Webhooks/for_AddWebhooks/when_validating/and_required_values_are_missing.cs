@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_AddWebhooks.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<AddWebhooks> _scenario = new();
+    readonly CommandScenario<AddWebhooks> _scenario = ChronicleCommandScenario.For<AddWebhooks>();
     CommandResult _result;
 
     void Establish()

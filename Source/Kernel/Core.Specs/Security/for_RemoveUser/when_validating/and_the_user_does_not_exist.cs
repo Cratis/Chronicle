@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Security.for_RemoveUser.when_validating;
 /// </summary>
 public class and_the_user_does_not_exist : Specification
 {
-    readonly CommandScenario<RemoveUser> _scenario = new();
+    readonly CommandScenario<RemoveUser> _scenario = ChronicleCommandScenario.For<RemoveUser>();
     CommandResult _result;
 
     void Establish()

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_ReplayObserver.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<ReplayObserver> _scenario = new();
+    readonly CommandScenario<ReplayObserver> _scenario = ChronicleCommandScenario.For<ReplayObserver>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new ReplayObserver("some-event-store", "some-namespace", "some-observer", "event-log"));

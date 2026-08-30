@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ProjectionEditor.for_PreviewProjection.when_validatin
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<PreviewProjection> _scenario = new();
+    readonly CommandScenario<PreviewProjection> _scenario = ChronicleCommandScenario.For<PreviewProjection>();
     CommandResult _result;
 
     void Establish()

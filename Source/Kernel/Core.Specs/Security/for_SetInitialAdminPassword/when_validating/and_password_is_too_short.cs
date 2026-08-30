@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Security.for_SetInitialAdminPassword.when_validating;
 
 public class and_password_is_too_short : Specification
 {
-    readonly CommandScenario<SetInitialAdminPassword> _scenario = new();
+    readonly CommandScenario<SetInitialAdminPassword> _scenario = ChronicleCommandScenario.For<SetInitialAdminPassword>();
     CommandResult _result;
 
     void Establish()

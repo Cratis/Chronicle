@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Security.for_AddUser.when_validating;
 
 public class and_email_is_not_a_valid_address : Specification
 {
-    readonly CommandScenario<AddUser> _scenario = new();
+    readonly CommandScenario<AddUser> _scenario = ChronicleCommandScenario.For<AddUser>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new AddUser(Guid.NewGuid(), "some-user", "not-an-email-address", "some-password-123"));

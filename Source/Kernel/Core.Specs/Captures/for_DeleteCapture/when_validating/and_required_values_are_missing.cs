@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Captures.for_DeleteCapture.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<DeleteCapture> _scenario = new();
+    readonly CommandScenario<DeleteCapture> _scenario = ChronicleCommandScenario.For<DeleteCapture>();
     CommandResult _result;
 
     void Establish()

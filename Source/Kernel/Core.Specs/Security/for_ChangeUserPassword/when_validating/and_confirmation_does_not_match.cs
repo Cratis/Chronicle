@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Security.for_ChangeUserPassword.when_validating;
 
 public class and_confirmation_does_not_match : Specification
 {
-    readonly CommandScenario<ChangeUserPassword> _scenario = new();
+    readonly CommandScenario<ChangeUserPassword> _scenario = ChronicleCommandScenario.For<ChangeUserPassword>();
     CommandResult _result;
 
     void Establish()

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Security.for_RemoveUser.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<RemoveUser> _scenario = new();
+    readonly CommandScenario<RemoveUser> _scenario = ChronicleCommandScenario.For<RemoveUser>();
     CommandResult _result;
 
     void Establish()

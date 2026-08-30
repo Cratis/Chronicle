@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Sequences.for_AppendMany.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<AppendMany> _scenario = new();
+    readonly CommandScenario<AppendMany> _scenario = ChronicleCommandScenario.For<AppendMany>();
     CommandResult _result;
 
     void Establish()

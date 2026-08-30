@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.SequenceQueries.for_SaveSequenceQuery.when_validating
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<SaveSequenceQuery> _scenario = new();
+    readonly CommandScenario<SaveSequenceQuery> _scenario = ChronicleCommandScenario.For<SaveSequenceQuery>();
     CommandResult _result;
 
     void Establish()

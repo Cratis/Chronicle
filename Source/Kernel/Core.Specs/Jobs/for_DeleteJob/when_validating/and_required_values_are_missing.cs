@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Jobs.for_DeleteJob.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<DeleteJob> _scenario = new();
+    readonly CommandScenario<DeleteJob> _scenario = ChronicleCommandScenario.For<DeleteJob>();
     CommandResult _result;
 
     void Establish()

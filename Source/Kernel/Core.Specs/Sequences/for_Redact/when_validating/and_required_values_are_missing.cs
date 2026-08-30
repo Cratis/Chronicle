@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Sequences.for_Redact.when_validating;
 
 public class and_required_values_are_missing : Specification
 {
-    readonly CommandScenario<Redact> _scenario = new();
+    readonly CommandScenario<Redact> _scenario = ChronicleCommandScenario.For<Redact>();
     CommandResult _result;
 
     void Establish()

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Seeding.for_AddSeedEntry.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<AddSeedEntry> _scenario = new();
+    readonly CommandScenario<AddSeedEntry> _scenario = ChronicleCommandScenario.For<AddSeedEntry>();
     CommandResult _result;
 
     void Establish()

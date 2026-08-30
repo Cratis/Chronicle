@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Security.for_AddApplication.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<AddApplication> _scenario = new();
+    readonly CommandScenario<AddApplication> _scenario = ChronicleCommandScenario.For<AddApplication>();
     CommandResult _result;
 
     async Task Because() => _result = await _scenario.Validate(new AddApplication(Guid.NewGuid(), "some-client", "some-secret"));

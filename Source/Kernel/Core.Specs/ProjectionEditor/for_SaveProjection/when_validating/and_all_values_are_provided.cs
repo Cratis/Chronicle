@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ProjectionEditor.for_SaveProjection.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<SaveProjection> _scenario = new();
+    readonly CommandScenario<SaveProjection> _scenario = ChronicleCommandScenario.For<SaveProjection>();
     CommandResult _result;
 
     void Establish()

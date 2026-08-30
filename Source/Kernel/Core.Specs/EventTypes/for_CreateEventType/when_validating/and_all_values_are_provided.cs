@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.EventTypes.for_CreateEventType.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<CreateEventType> _scenario = new();
+    readonly CommandScenario<CreateEventType> _scenario = ChronicleCommandScenario.For<CreateEventType>();
     CommandResult _result;
 
     void Establish()

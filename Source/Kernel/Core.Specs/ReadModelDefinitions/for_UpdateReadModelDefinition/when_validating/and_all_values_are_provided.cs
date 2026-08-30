@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.ReadModelDefinitions.for_UpdateReadModelDefinition.wh
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<UpdateReadModelDefinition> _scenario = new();
+    readonly CommandScenario<UpdateReadModelDefinition> _scenario = ChronicleCommandScenario.For<UpdateReadModelDefinition>();
     CommandResult _result;
 
     void Establish()

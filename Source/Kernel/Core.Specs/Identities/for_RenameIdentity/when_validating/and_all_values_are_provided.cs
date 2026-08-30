@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Identities.for_RenameIdentity.when_validating;
 
 public class and_all_values_are_provided : Specification
 {
-    readonly CommandScenario<RenameIdentity> _scenario = new();
+    readonly CommandScenario<RenameIdentity> _scenario = ChronicleCommandScenario.For<RenameIdentity>();
     CommandResult _result;
 
     void Establish()
