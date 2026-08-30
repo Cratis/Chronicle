@@ -10,4 +10,5 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <param name="SequenceNumber">The sequence number for the event that caused the failure.</param>
 /// <param name="Messages">The error messages for the last error on this failed partition.</param>
 /// <param name="StackTrace">The stack trace for the last error on this failed partition.</param>
-public record FailedPartitionAttempt(DateTimeOffset Occurred, ulong SequenceNumber, IEnumerable<string> Messages, string StackTrace);
+/// <param name="Kind">What kind of thing went wrong on the attempt.</param>
+public record FailedPartitionAttempt(DateTimeOffset Occurred, ulong SequenceNumber, IEnumerable<string> Messages, string StackTrace, FailureKind Kind);

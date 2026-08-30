@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.when_performing;
 
@@ -35,5 +36,6 @@ public class and_a_partition_fails : given.a_performing_job_step
     [Fact] void should_handle_the_module_partition_first() => _handledBatches[0].Partition.ShouldEqual((Key)"module");
     [Fact] void should_attempt_the_failing_feature_partition() => _handledBatches[1].Partition.ShouldEqual((Key)"feature");
     [Fact] void should_not_dispatch_anything_after_the_failure() => _handledBatches.Count.ShouldEqual(2);
-    [Fact] void should_report_the_failing_partition() => _observer.Received(1).PartitionFailed((Key)"feature", Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
+    [Fact] void should_report_the_failing_partition() => _observer.Received(1).PartitionFailed((Key)"feature", Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<FailureKind>());
+    [Fact] void should_report_it_as_the_subscriber_failing_to_handle_the_events() => _observer.Received(1).PartitionFailed((Key)"feature", Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling);
 }

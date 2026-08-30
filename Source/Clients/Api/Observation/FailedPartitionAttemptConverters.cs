@@ -14,7 +14,12 @@ internal static class FailedPartitionAttemptConverters
     /// <param name="failedPartitionAttempt">The failed partition attempt to convert.</param>
     /// <returns>The converted failed partition attempt.</returns>
     public static FailedPartitionAttempt ToApi(this Contracts.Observation.FailedPartitionAttempt failedPartitionAttempt) =>
-        new(failedPartitionAttempt.Occurred, failedPartitionAttempt.SequenceNumber, failedPartitionAttempt.Messages, failedPartitionAttempt.StackTrace);
+        new(
+            failedPartitionAttempt.Occurred,
+            failedPartitionAttempt.SequenceNumber,
+            failedPartitionAttempt.Messages,
+            failedPartitionAttempt.StackTrace,
+            (FailureKind)(int)failedPartitionAttempt.Kind);
 
     /// <summary>
     /// Converts a collection of <see cref="Contracts.Observation.FailedPartitionAttempt"/> to a collection of <see cref="FailedPartitionAttempt"/>.

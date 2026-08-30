@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -203,7 +204,7 @@ public class HandleEventsForObserver(
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
-                        await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace);
+                        await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
@@ -353,7 +354,7 @@ public class HandleEventsForObserver(
             case ObserverSubscriberState.Disconnected:
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
-                await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty);
+                await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
                 return (
                     JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
@@ -395,7 +396,7 @@ public class HandleEventsForObserver(
 
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-        await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace);
+        await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling);
         return (
             JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                 CreateResult(lastSuccessfullyHandledEventSequenceNumber),

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition.when_performing;
 
@@ -20,5 +21,14 @@ public class and_subscriber_disconnects_with_no_prior_handled_events : given.a_p
             Arg.Any<Key>(),
             first_event_sequence_number,
             Arg.Any<IEnumerable<string>>(),
-            Arg.Any<string>());
+            Arg.Any<string>(),
+            Arg.Any<FailureKind>());
+
+    [Fact] void should_report_it_as_a_disconnection() =>
+        _observer.Received(1).PartitionFailed(
+            Arg.Any<Key>(),
+            Arg.Any<EventSequenceNumber>(),
+            Arg.Any<IEnumerable<string>>(),
+            Arg.Any<string>(),
+            FailureKind.Disconnected);
 }

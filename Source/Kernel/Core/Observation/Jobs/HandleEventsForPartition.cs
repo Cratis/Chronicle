@@ -187,6 +187,7 @@ public class HandleEventsForPartition(
             var failed = false;
             var exceptionMessages = Enumerable.Empty<string>().ToArray();
             var exceptionStackTrace = string.Empty;
+            var failureKind = FailureKind.Unknown;
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
@@ -204,6 +205,7 @@ public class HandleEventsForPartition(
                     failed = true;
                     exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                     exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
+                    failureKind = handleEventsException.ToFailureKind();
                     lastEventSequenceNumberAttempted = events.Current.First().Context.SequenceNumber;
                 }
                 else if (handleEventsResult.TryGetResult(out var handledEventsResult))
@@ -228,6 +230,7 @@ public class HandleEventsForPartition(
                             failed = true;
                             exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
+                            failureKind = FailureKind.Handling;
                             if (eventObserverResult.HandledAnyEvents)
                             {
                                 var failedEvent = handledEvents.FirstOrDefault(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation);
@@ -252,6 +255,7 @@ public class HandleEventsForPartition(
                         case ObserverSubscriberState.Disconnected:
                             failed = true;
                             exceptionMessages = [SubscriberDisconnected];
+                            failureKind = FailureKind.Disconnected;
                             lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                             logger.EventHandlerDisconnected(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
                             break;
@@ -261,7 +265,7 @@ public class HandleEventsForPartition(
                 if (failed)
                 {
                     var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace);
+                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
                 }
             }
