@@ -12,4 +12,7 @@ internal static partial class EventStoreLogMessages
 
     [LoggerMessage(LogLevel.Trace, "Register all artifacts")]
     internal static partial void RegisterAllArtifacts(this ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "Registering all artifacts failed on attempt {Attempt} of {MaxAttempts}. Waiting {Delay} before trying again")]
+    internal static partial void RetryingRegisterAllArtifacts(this ILogger logger, Exception exception, int attempt, int maxAttempts, TimeSpan delay);
 }

@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Sinks;
 
 namespace Cratis.Chronicle;
@@ -159,6 +160,11 @@ public class ChronicleOptions(
     /// </para>
     /// </remarks>
     public bool EnableEventTypeGenerationValidation { get; set; }
+
+    /// <summary>
+    /// Gets or sets how registering the client's artifacts is retried when the kernel does not accept them.
+    /// </summary>
+    public RegistrationRetryOptions RegistrationRetry { get; set; } = new RegistrationRetryOptions();
 
     /// <summary>
     /// Gets or sets the TLS configuration.

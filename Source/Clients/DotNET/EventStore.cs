@@ -59,6 +59,8 @@ public class EventStore : IEventStore
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
+    readonly RegistrationRetryOptions _registrationRetry;
+    readonly RegistrationBackoff _registrationBackoff;
     SingleFlightRegistration? _registerAllFlight;
 
     /// <summary>
@@ -105,6 +107,8 @@ public class EventStore : IEventStore
         ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
+        _registrationRetry = options.Value.RegistrationRetry;
+        _registrationBackoff = new RegistrationBackoff(_registrationRetry.InitialDelay, _registrationRetry.MaximumDelay);
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
@@ -400,30 +404,7 @@ public class EventStore : IEventStore
 
         try
         {
-            // Ensure the event store exists before registering artifacts.
-            await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
-
-            // We need to register event types and read models first, as they are used by the other artifacts
-            await Task.WhenAll(
-                EventTypes.Register(),
-                ReadModels.Register());
-
-            // Register all observers before seeding to prevent race conditions where
-            // seeded events arrive at the kernel before observers are registered
-            await Task.WhenAll(
-                Constraints.Register(),
-                Reactors.Register(),
-                Reducers.Register(),
-                Projections.Register());
-
-            // Auto-subscribe to any external event stores referenced by observers
-            await RegisterExternalEventStoreSubscriptionsAsync();
-
-            // Start watching read models for any registered read model reactors
-            ReadModelReactors.Start();
-
-            // Seed events only after all observers are registered
-            await Seeding.Register();
+            await RegisterAllArtifactsWithRetries();
 
             // Everything that could be registered has been, and the kernel calls carrying it have returned - which is
             // the first moment the outcome is a fact rather than a hope, and the only transition a consumer can
@@ -441,6 +422,66 @@ public class EventStore : IEventStore
             Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Register every artifact, retrying the whole registration when the kernel does not accept it.
+    /// </summary>
+    /// <returns>The task representing the operation.</returns>
+    /// <remarks>
+    /// Registration runs on the way up, so its failure is the host's failure. A kernel that is busy - catching up a
+    /// newly added read model over a large event log - answers late rather than wrongly, and a host that dies on that
+    /// answer restarts and re-registers, adding load to the queue it was waiting on. Waiting it out here breaks that
+    /// loop. Every step is idempotent, so a retry re-runs the whole registration rather than trying to resume a
+    /// partial one, and the outcome is only published once the attempts are spent - a waiter never sees the failure
+    /// of an attempt that a later one went on to succeed at.
+    /// </remarks>
+    async Task RegisterAllArtifactsWithRetries()
+    {
+        var attempt = 1;
+        while (true)
+        {
+            try
+            {
+                await RegisterAllArtifacts();
+                return;
+            }
+            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts)
+            {
+                var delay = _registrationBackoff.NextDelay(attempt);
+                _logger.RetryingRegisterAllArtifacts(exception, attempt, _registrationRetry.MaxAttempts, delay);
+                await Task.Delay(delay);
+                attempt++;
+            }
+        }
+    }
+
+    async Task RegisterAllArtifacts()
+    {
+        // Ensure the event store exists before registering artifacts.
+        await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
+
+        // We need to register event types and read models first, as they are used by the other artifacts
+        await Task.WhenAll(
+            EventTypes.Register(),
+            ReadModels.Register());
+
+        // Register all observers before seeding to prevent race conditions where
+        // seeded events arrive at the kernel before observers are registered
+        await Task.WhenAll(
+            Constraints.Register(),
+            Reactors.Register(),
+            Reducers.Register(),
+            Projections.Register());
+
+        // Auto-subscribe to any external event stores referenced by observers
+        await RegisterExternalEventStoreSubscriptionsAsync();
+
+        // Start watching read models for any registered read model reactors
+        ReadModelReactors.Start();
+
+        // Seed events only after all observers are registered
+        await Seeding.Register();
     }
 
     async Task RegisterExternalEventStoreSubscriptionsAsync()
