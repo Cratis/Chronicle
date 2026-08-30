@@ -37,6 +37,9 @@ internal static partial class HandleEventsForObserverLogging
     [LoggerMessage(LogLevel.Warning, "HandleEventsForObserver job step completed handling no events")]
     internal static partial void HandledNoEvents(this ILogger<HandleEventsForObserver> logger);
 
+    [LoggerMessage(LogLevel.Debug, "HandleEventsForObserver job step skipped partition {Partition} because it is already recorded as failed and is owned by its retry job")]
+    internal static partial void SkippingFailedPartition(this ILogger<HandleEventsForObserver> logger, Key partition);
+
     [LoggerMessage(LogLevel.Warning, "An error occurred for HandleEventsForObserver job step for partition {Partition}")]
     internal static partial void ErrorHandling(this ILogger<HandleEventsForObserver> logger, Exception error, Key partition);
 

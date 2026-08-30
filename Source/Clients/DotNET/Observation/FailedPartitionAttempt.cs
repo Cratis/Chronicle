@@ -12,4 +12,5 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="SequenceNumber">Event sequence number it occured at.</param>
 /// <param name="Messages">Collection of messages associated.</param>
 /// <param name="StackTrace">Associated stack trace.</param>
-public record FailedPartitionAttempt(DateTimeOffset Occurred, EventSequenceNumber SequenceNumber, IEnumerable<string> Messages, string StackTrace);
+/// <param name="Kind">What kind of thing went wrong on the attempt.</param>
+public record FailedPartitionAttempt(DateTimeOffset Occurred, EventSequenceNumber SequenceNumber, IEnumerable<string> Messages, string StackTrace, FailureKind Kind = FailureKind.Unknown);

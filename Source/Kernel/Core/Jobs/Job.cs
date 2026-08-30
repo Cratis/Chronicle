@@ -26,6 +26,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     Dictionary<JobStepId, IJobStep>? _jobStepGrains;
     ObserverManager<IJobObserver>? _observers;
     ILogger<IJob> _logger = NullLogger<IJob>.Instance;
+    IGrainTimer? _startStepsTimer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
@@ -57,6 +58,22 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// Gets a value indicating whether to keep the persisted data after the job has completed.
     /// </summary>
     protected virtual bool KeepAfterCompleted => false;
+
+    /// <summary>
+    /// Gets a value indicating whether the job's steps are prepared and started after <see cref="Start"/> has
+    /// returned rather than as part of it.
+    /// </summary>
+    /// <remarks>
+    /// A job whose step count scales with the size of the event store - one step per event source - pays a grain
+    /// activation, a prepare and a start, each a storage write, for every one of them. Doing that inside
+    /// <see cref="Start"/> bills the whole burst to whoever called it, and for an observer job that caller is
+    /// Subscribe, with the client's registration call waiting behind it under a response timeout. Against a large
+    /// enough store registration therefore timed out and took host startup down with it. Such a job overrides this
+    /// to hand the work to its own next turn instead, so <see cref="Start"/> returns as soon as the job is durable
+    /// and the steps come up behind it. The trade is that <see cref="Start"/> can no longer answer whether the
+    /// steps started - failures are logged and handled by the job rather than returned to the caller.
+    /// </remarks>
+    protected virtual bool StartStepsInBackground => false;
 
     /// <summary>
     /// Gets the job as a Grain reference.
@@ -126,12 +143,14 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         State.Details = GetJobDetails();
 
         _ = await WriteStatusChanged(JobStatus.PreparingJob);
-        var prepareAndStartRunningAllStepsResult = await PrepareAndStartRunningAllSteps(request);
-        if (prepareAndStartRunningAllStepsResult.TryGetError(out var error) && error is StartJobError.CouldNotPrepareJobSteps)
+
+        if (StartStepsInBackground)
         {
-            await OnFailedToPrepare();
+            ScheduleStartOfSteps(request);
+            return Result<StartJobError>.Success();
         }
-        return prepareAndStartRunningAllStepsResult;
+
+        return await PrepareAndStartRunningAllStepsAndHandleFailureToPrepare(request);
     }
 
     /// <inheritdoc/>
@@ -319,6 +338,52 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// </summary>
     /// <returns>The <see cref="JobDetails"/>.</returns>
     protected virtual JobDetails GetJobDetails() => JobDetails.NotSet;
+
+    /// <summary>
+    /// Schedule preparing and starting the job's steps on the grain's own next turn, so <see cref="Start"/> can
+    /// return without its caller waiting for every step to come up.
+    /// </summary>
+    /// <param name="request">The <typeparamref name="TRequest"/> the job was started with.</param>
+    /// <remarks>
+    /// A grain timer rather than a detached task: the work reads and writes grain state, which is only safe on the
+    /// activation. A zero due time means the tick is queued immediately and, being non-interleaving, runs once the
+    /// activation is free - which is after <see cref="Start"/> has answered its caller.
+    /// </remarks>
+    void ScheduleStartOfSteps(TRequest request)
+    {
+        _startStepsTimer?.Dispose();
+        _startStepsTimer = this.RegisterGrainTimer(
+            async _ =>
+            {
+                _startStepsTimer?.Dispose();
+                _startStepsTimer = null;
+
+                // Stopping or removing the job between Start answering and this tick makes the steps moot.
+                if (State.Status is not JobStatus.PreparingJob)
+                {
+                    _logger.NotStartingJobStepsForJobThatIsNoLongerPreparing(State.Status);
+                    return;
+                }
+
+                var result = await PrepareAndStartRunningAllStepsAndHandleFailureToPrepare(request);
+                if (result.TryGetError(out var error))
+                {
+                    _logger.FailedStartingJobStepsInBackground(error);
+                }
+            },
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+    }
+
+    async Task<Result<StartJobError>> PrepareAndStartRunningAllStepsAndHandleFailureToPrepare(TRequest request)
+    {
+        var result = await PrepareAndStartRunningAllSteps(request);
+        if (result.TryGetError(out var error) && error is StartJobError.CouldNotPrepareJobSteps)
+        {
+            await OnFailedToPrepare();
+        }
+
+        return result;
+    }
 
     async Task StopNonCompletedStepsAndEnsureCompletion(bool removing)
     {

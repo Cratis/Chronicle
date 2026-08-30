@@ -41,5 +41,11 @@ public class HandleEventsForObserverState : JobStepState
     /// Gets or sets the collection of <see cref="EventType"/> to process.
     /// </summary>
     public IEnumerable<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether events belonging to a partition the observer has already recorded
+    /// as failed are skipped rather than delivered.
+    /// </summary>
+    public bool SkipFailedPartitions { get; set; }
 }
 

@@ -176,7 +176,8 @@ public class ProjectionObserverSubscriber(
                             failedPartition.EventSourceId,
                             failedPartition.EventSequenceNumber,
                             [$"Bulk operation failed for partition {failedPartition.EventSourceId}"],
-                            string.Empty);
+                            string.Empty,
+                            FailureKind.Handling);
                     }
                 }
 

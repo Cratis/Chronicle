@@ -21,5 +21,17 @@ public record HandleEventsForObserverArguments(
     EventSequenceNumber StartEventSequenceNumber,
     EventSequenceNumber EndEventSequenceNumber,
     EventObservationState EventObservationState,
-    IEnumerable<EventType> EventTypes) : IObserverJobRequest;
+    IEnumerable<EventType> EventTypes) : IObserverJobRequest
+{
+    /// <summary>
+    /// Gets a value indicating whether events belonging to a partition the observer has already recorded as failed
+    /// are skipped rather than delivered.
+    /// </summary>
+    /// <remarks>
+    /// A failed partition is owned by the retry job that is working on it, so delivering its events from here as
+    /// well would hand the same events to the subscriber twice at once. Catch-up sets this because it is the path
+    /// that runs alongside retries; a replay does not, because it deliberately re-delivers everything.
+    /// </remarks>
+    public bool SkipFailedPartitions { get; init; }
+}
 

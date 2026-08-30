@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,14 @@ public class CatchUpObserver(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Catching up is reached through Subscribe, and behind Subscribe sits the client's registration call with a
+    /// response timeout on it. Enumerating the observer's event sources and bringing up their steps must therefore
+    /// not be billed to that call.
+    /// </remarks>
+    protected override bool StartStepsInBackground => true;
+
     /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
@@ -85,6 +94,15 @@ public class CatchUpObserver(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A projection catches up through a single step that walks the sequence in global order, the same way
+    /// <see cref="ReplayObserver"/> already replays one. A step per event source buys a projection no throughput:
+    /// one that joins, re-keys or builds a child collection collapses every event source onto a single subscriber
+    /// activation, so the steps queue up behind each other anyway - while each of them costs a grain activation,
+    /// a prepare and a start, every one of them a storage write. Against a store with tens of thousands of event
+    /// sources that burst runs inside the caller's call: Subscribe waits for it, and the client's registration
+    /// call waits for Subscribe, until it exceeds its response timeout and takes host startup down with it.
+    /// </remarks>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
@@ -95,9 +113,7 @@ public class CatchUpObserver(
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 
-        var steps = new List<JobStepDetails>();
-        var keysForSteps = new List<Key>();
-
+        var keysToCatchUp = new List<Key>();
         await foreach (var key in keys)
         {
             if (failedPartitionSet.Contains(key))
@@ -105,7 +121,38 @@ public class CatchUpObserver(
                 continue;
             }
 
-            steps.Add(CreateStep<IHandleEventsForPartition>(
+            keysToCatchUp.Add(key);
+        }
+
+        // The keys are registered whichever shape the steps take: live delivery is held back per partition while
+        // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
+        var steps = CreateStepsFor(request, keysToCatchUp);
+        await observer.RegisterCatchingUpPartitions(keysToCatchUp);
+        return steps;
+    }
+
+    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys)
+    {
+        if (request.ObserverType == ObserverType.Projection)
+        {
+            return
+            [
+                CreateStep<IHandleEventsForObserver>(
+                    new HandleEventsForObserverArguments(
+                        request.ObserverKey,
+                        request.ObserverType,
+                        request.FromEventSequenceNumber,
+                        EventSequenceNumber.Max,
+                        EventObservationState.None,
+                        request.EventTypes)
+                    {
+                        SkipFailedPartitions = true
+                    })
+            ];
+        }
+
+        return keys
+            .Select(key => CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
                     request.ObserverType,
@@ -113,10 +160,7 @@ public class CatchUpObserver(
                     request.FromEventSequenceNumber,
                     EventSequenceNumber.Max,
                     EventObservationState.None,
-                    request.EventTypes)));
-            keysForSteps.Add(key);
-        }
-        await observer.RegisterCatchingUpPartitions(keysForSteps);
-        return steps.ToImmutableList();
+                    request.EventTypes)))
+            .ToImmutableList();
     }
 }

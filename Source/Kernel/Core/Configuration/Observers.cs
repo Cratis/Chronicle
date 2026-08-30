@@ -14,9 +14,18 @@ public class Observers
     public int MaxConcurrentPartitions { get; init; } = 32;
 
     /// <summary>
-    /// Gets the timeout in seconds for observer calling its subscriber.
+    /// Gets how many seconds an observer waits for its subscriber to answer before giving up on the batch. Zero waits
+    /// indefinitely.
     /// </summary>
-    public int SubscriberTimeout { get; init; } = 5;
+    /// <remarks>
+    /// The default matches the response timeout the transport already imposes, so it bounds nothing new on its own -
+    /// the point of the knob is being able to bound it tighter for a subscriber that should always answer quickly.
+    /// Raising it past the transport's own timeout has no effect, because that one gives up first. Giving up abandons
+    /// the wait, not the work: the subscriber keeps processing the batch, and the events are redelivered when the
+    /// partition retries. A timeout is recorded as <c>FailureKind.Timeout</c>, which is excluded from the quarantine
+    /// thresholds below, so a congested period cannot take an otherwise healthy observer out of service.
+    /// </remarks>
+    public int SubscriberTimeout { get; init; } = 30;
 
     /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.

@@ -12,6 +12,7 @@ using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Seeding;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,12 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
     protected IProjections _projections;
     protected IClientArtifactsProvider _clientArtifacts;
     protected IChronicleServicesAccessor _servicesAccessor;
+
+    /// <summary>
+    /// The retry settings the event store registers under. A single attempt by default, so a specification about
+    /// something other than retrying sees the first failure rather than the last.
+    /// </summary>
+    protected RegistrationRetryOptions _registrationRetry = new() { MaxAttempts = 1 };
 
     void Establish()
     {
@@ -72,6 +79,10 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         SetField("_servicesAccessor", _servicesAccessor);
         SetField("_logger", Substitute.For<ILogger<EventStore>>());
         SetField("_projections", projections);
+        SetField("_registrationRetry", _registrationRetry);
+
+        // Zero delays: a specification about retrying asserts on how many attempts were made, never on the clock.
+        SetField("_registrationBackoff", new RegistrationBackoff(TimeSpan.Zero, TimeSpan.Zero));
         SetAutoProperty("Registration", Registrations.RegistrationOutcome.NotRun);
         SetAutoProperty("Name", new EventStoreName("Testing"));
         SetAutoProperty("Namespace", new EventStoreNamespaceName("default"));

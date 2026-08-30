@@ -32,4 +32,10 @@ public class FailedPartitionAttempt
     /// </summary>
     [ProtoMember(4)]
     public string StackTrace { get; set; }
+
+    /// <summary>
+    /// Gets or sets what kind of thing went wrong on the attempt.
+    /// </summary>
+    [ProtoMember(5)]
+    public FailureKind Kind { get; set; }
 }

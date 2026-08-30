@@ -12,6 +12,16 @@ Reactors use convention-based method discovery. Chronicle finds and invokes publ
 
 Event parameter types must be marked with `[EventType]`.
 
+## When more than one method matches
+
+Discovery matches on the first parameter type, so a helper you extract out of a handler for readability — say a `Task<string> Enrich(OrderPlaced @event)` that the handler awaits — matches the same event type the handler does. When that happens, Chronicle picks one method per event type, in this order:
+
+1. **A public method beats a non-public one.** Handlers are public by convention; anything else is an implementation detail, so a private helper never displaces the handler that calls it.
+2. **The richest signature wins.** Between two methods of the same accessibility, the one taking the most parameters asked for the most context, so it is the more specific handler.
+3. **Method name, ordinal**, so a genuine tie resolves the same way on every run rather than being left to reflection order.
+
+A private method is still a valid handler when nothing else handles that event type — the precedence only decides between candidates, it does not disqualify any of them. If a helper is not meant to take part in dispatch at all, give it a first parameter that is not an event type.
+
 ## Supported Signatures
 
 <ChronicleClientTabs snippet="reactors/event-processing/supported-signatures" />
