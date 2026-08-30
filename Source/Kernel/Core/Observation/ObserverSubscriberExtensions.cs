@@ -50,6 +50,10 @@ public static class ObserverSubscriberExtensions
         }
         catch (TimeoutException)
         {
+            // The call is abandoned rather than cancelled, so nothing is awaiting it any more. Observe whatever it
+            // eventually does, or a subscriber that times out and then faults raises an unobserved task exception
+            // once the task is collected.
+            _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
             throw new SubscriberCallTimedOut(partition, timeout);
         }
     }
