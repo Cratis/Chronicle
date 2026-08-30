@@ -42,6 +42,12 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while preparing and starting job steps")]
     internal static partial void ErrorPreparingJobSteps(this ILogger<IJob> logger, Exception ex);
 
+    [LoggerMessage(LogLevel.Warning, "Failed starting the job steps in the background with error {Error}")]
+    internal static partial void FailedStartingJobStepsInBackground(this ILogger<IJob> logger, StartJobError error);
+
+    [LoggerMessage(LogLevel.Debug, "Not starting the job steps because the job is no longer preparing, it is {Status}")]
+    internal static partial void NotStartingJobStepsForJobThatIsNoLongerPreparing(this ILogger<IJob> logger, JobStatus status);
+
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} successfully completed")]
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);
 

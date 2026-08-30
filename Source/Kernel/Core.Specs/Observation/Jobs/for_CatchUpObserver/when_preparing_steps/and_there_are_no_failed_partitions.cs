@@ -19,7 +19,7 @@ public class and_there_are_no_failed_partitions : given.a_catch_up_observer_job
             .Do(call => _capturedKeys = call.Arg<IEnumerable<Key>>().ToList());
     }
 
-    async Task Because() => await _job.Start(_request);
+    async Task Because() => await StartAndLetTheStepsCome();
 
     [Fact] void should_register_all_keys_for_catching_up() => _capturedKeys.ShouldNotBeNull();
     [Fact] void should_include_first_partition() => _capturedKeys.ShouldContain(_key1);
