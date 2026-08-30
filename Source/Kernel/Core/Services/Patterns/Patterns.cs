@@ -73,6 +73,41 @@ internal sealed class Patterns(
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<Pattern>> GetUsualActions(Contracts.Patterns.GetPatternsRequest request, CallContext context = default)
+    {
+        var groupingKey = new PatternGroupingKey(request.GroupingKey);
+        if (!groupingKey.IsSpecified)
+        {
+            return [];
+        }
+
+        var configuration = options.Value.PatternDetection;
+        var requested = vocabulary.Select(request.Context.ToFacetSet());
+
+        // Read the scope rather than looking up candidate keys. An answer is the asked context plus an action, and
+        // the action's value is the thing being asked for - so its key cannot be formed in advance the way
+        // GetPatterns forms its candidates. What makes the read affordable is the mining bound rather than the
+        // query: an itemset only reaches storage by holding MinimumSupport of everything the scope did, so a scope
+        // holds patterns in the hundreds no matter how many events it produced.
+        var patterns = await storage
+            .GetEventStore(request.EventStore)
+            .GetNamespace(request.Namespace)
+            .Patterns
+            .GetForScope(groupingKey);
+
+        var minimumConfidence = request.MinimumConfidence > 0d
+            ? new PatternConfidence(request.MinimumConfidence)
+            : new PatternConfidence(configuration.MinimumConfidence);
+
+        var maximumResults = request.MaximumResults > 0 ? request.MaximumResults : DefaultMaximumResults;
+
+        return matcher
+            .MatchActions(patterns, requested, minimumConfidence, maximumResults)
+            .Select(pattern => pattern.ToContract())
+            .ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<Pattern>> GetPatternsForScope(Contracts.Patterns.GetPatternsForScopeRequest request, CallContext context = default)
     {
         var patterns = await storage

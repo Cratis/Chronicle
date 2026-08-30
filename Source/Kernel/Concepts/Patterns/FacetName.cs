@@ -70,6 +70,30 @@ public record FacetName(string Value) : ConceptAs<string>(Value)
     public static readonly FacetName TimeBucket = new(nameof(TimeBucket));
 
     /// <summary>
+    /// Gets a value indicating whether the facet names the action that was taken rather than the context it was
+    /// taken in.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The distinction is what separates the question from its answer. A caller describing a situation can name
+    /// every context facet, because those are things they know - the day, the time of day, the kind of thing being
+    /// worked on. They cannot name the action, because the action is what they are asking about.
+    /// </para>
+    /// <para>
+    /// This is not a query-side convenience: confidence is already defined against it, as the frequency of an
+    /// itemset over the frequency of the same itemset with its action facets removed - the chance of the action
+    /// given the context. Naming another facet here therefore changes what confidence means for every pattern that
+    /// constrains it, so it is a modelling decision rather than a filter.
+    /// </para>
+    /// <para>
+    /// <see cref="CausedByCommand"/> is deliberately left as context. It reads as an answer to "what usually
+    /// follows this" and as context to "what does this person do on a Monday", and only one of those can be true
+    /// of a single definition.
+    /// </para>
+    /// </remarks>
+    public bool IsAction => this == CommandType;
+
+    /// <summary>
     /// Implicitly convert from a string to <see cref="FacetName"/>.
     /// </summary>
     /// <param name="name">String to convert from.</param>

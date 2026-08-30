@@ -57,6 +57,17 @@ public sealed record FacetSet
     public bool IsEmpty => Facets.Count == 0;
 
     /// <summary>
+    /// Gets a value indicating whether the set names an action rather than only the context it was taken in.
+    /// </summary>
+    public bool ConstrainsAction => Facets.Any(facet => facet.Name.IsAction);
+
+    /// <summary>
+    /// Gets the action the set names, or <see cref="FacetValue.Unspecified"/> when it names none.
+    /// </summary>
+    public FacetValue Action =>
+        Facets.FirstOrDefault(facet => facet.Name.IsAction)?.Value ?? FacetValue.Unspecified;
+
+    /// <summary>
     /// Creates a <see cref="FacetSet"/> from name and value pairs.
     /// </summary>
     /// <param name="facets">The pairs to create from.</param>
@@ -98,6 +109,17 @@ public sealed record FacetSet
     /// <param name="other">The <see cref="FacetSet"/> to check against.</param>
     /// <returns>True when this set is a subset of the other, false when not.</returns>
     public bool IsSubsetOf(FacetSet other) => Facets.All(other.Facets.Contains);
+
+    /// <summary>
+    /// Creates a copy of the set with every action facet removed, leaving the context the action was taken in.
+    /// </summary>
+    /// <returns>A new <see cref="FacetSet"/> holding only the context facets.</returns>
+    /// <remarks>
+    /// This is the half of a pattern a caller can actually describe. Comparing it against an asked context is what
+    /// lets a pattern answer a question instead of restating it - see <see cref="FacetName.IsAction"/>.
+    /// </remarks>
+    public FacetSet WithoutActions() =>
+        ConstrainsAction ? new(Facets.Where(facet => !facet.Name.IsAction)) : this;
 
     /// <summary>
     /// Gets the set as a dictionary of names to values.

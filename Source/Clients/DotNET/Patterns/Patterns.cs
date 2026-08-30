@@ -44,6 +44,29 @@ public class Patterns(IEventStore eventStore) : IPatterns
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<BehaviorPattern>> GetUsualActions(
+        PatternGroupingKey groupingKey,
+        FacetSet context,
+        PatternConfidence? minimumConfidence = default,
+        int maximumResults = 0,
+        CancellationToken cancellationToken = default)
+    {
+        var patterns = await _servicesAccessor.Services.Patterns.GetUsualActions(
+            new()
+            {
+                EventStore = eventStore.Name,
+                Namespace = eventStore.Namespace,
+                GroupingKey = groupingKey,
+                Context = context.Facets.ToDictionary(facet => facet.Name.Value, facet => facet.Value.Value),
+                MinimumConfidence = minimumConfidence?.Value ?? 0d,
+                MaximumResults = maximumResults
+            },
+            new CallContext(new CallOptions(cancellationToken: cancellationToken)));
+
+        return patterns.ToClient();
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<BehaviorPattern>> GetPatternsAt(
         PatternGroupingKey groupingKey,
         DateTimeOffset? moment = default,
@@ -55,13 +78,13 @@ public class Patterns(IEventStore eventStore) : IPatterns
         var at = moment ?? DateTimeOffset.Now;
 
         // Built on top of whatever the caller already wanted to constrain, so asking about a moment and asking
-        // about a command are the same question rather than two competing ones. With() replaces, so a caller who
-        // constrained the day themselves gets the moment's day - which is the value they asked to be asked about.
+        // about the kind of work are the same question rather than two competing ones. With() replaces, so a caller
+        // who constrained the day themselves gets the moment's day - the value they asked to be asked about.
         var context = (alsoConstraining ?? FacetSet.Empty)
             .With(FacetName.Day, at.DayOfWeek.ToString())
             .With(FacetName.TimeBucket, at.ToTimeBucket().ToString());
 
-        return GetPatterns(groupingKey, context, minimumConfidence, maximumResults, cancellationToken);
+        return GetUsualActions(groupingKey, context, minimumConfidence, maximumResults, cancellationToken);
     }
 
     /// <inheritdoc/>

@@ -107,6 +107,13 @@ jobs:
         working-directory: ./Source/Clients/TypeScript
         run: npm version ${{ inputs.version }} --no-git-tag-version
 
+      # --tag latest is explicit rather than implied. On 2026-08-25 a release accident published 17.0.0, and
+      # deleting the tag and the GitHub release put the series back on 16.x without taking the npm version with
+      # it - npm versions are immutable and the 72-hour unpublish window closed on 2026-08-28. npm refuses to
+      # move "latest" backwards implicitly, so every client publish since has failed with "Cannot implicitly
+      # apply the latest tag because previously published version 17.0.0 is higher". Naming the tag is the
+      # documented way to say the move is intended, and it is what makes `npm install` resolve to the series
+      # this repository actually releases instead of the ghost. See #3842.
       - name: Publish to npm
         working-directory: ./Source/Clients/TypeScript
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --tag latest

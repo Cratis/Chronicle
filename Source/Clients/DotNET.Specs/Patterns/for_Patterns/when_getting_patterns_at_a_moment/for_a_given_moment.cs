@@ -17,7 +17,7 @@ public class for_a_given_moment : given.a_patterns_client
 
     void Establish() =>
         _patterns
-            .GetPatterns(Arg.Do<Contract.GetPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
+            .GetUsualActions(Arg.Do<Contract.GetPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
             .Returns([]);
 
     async Task Because() => await _client.GetPatternsAt("user-42", _moment);

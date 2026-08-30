@@ -149,12 +149,12 @@ public class PatternMiner(
 
     double ConfidenceOf(LossyCountingEntry entry, LossyCountingSketch sketch, double support)
     {
-        if (!entry.Itemset.Constrains(FacetName.CommandType))
+        if (!entry.Itemset.ConstrainsAction)
         {
             return support;
         }
 
-        var context = new FacetSet(entry.Itemset.Facets.Where(facet => facet.Name != FacetName.CommandType));
+        var context = entry.Itemset.WithoutActions();
         if (context.IsEmpty)
         {
             return support;
