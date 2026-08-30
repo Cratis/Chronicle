@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-<<<<<<<< HEAD:Source/Kernel/Core/DevelopmentTools/KernelStateResetter.cs
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -11,18 +10,10 @@ using Cratis.Types;
 #pragma warning disable CS9113
 
 namespace Cratis.Chronicle.DevelopmentTools;
-========
-using Cratis.Chronicle.Contracts.Host;
-using Cratis.Chronicle.DevelopmentTools;
-using Microsoft.AspNetCore.Authorization;
-
-namespace Cratis.Chronicle.Services.Host;
->>>>>>>> 62b248ea7 (Move Clients and DevelopmentTools from Api into Core generation):Source/Kernel/Core/Services/Host/Server.cs
 
 /// <summary>
 /// Wipes the kernel back to a freshly bootstrapped state.
 /// </summary>
-<<<<<<<< HEAD:Source/Kernel/Core/DevelopmentTools/KernelStateResetter.cs
 /// <param name="grainFactory"><see cref="IGrainFactory"/> instance.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> instance.</param>
 /// <param name="resetHandlers">Storage components that wipe their backing store during a development reset.</param>
@@ -36,10 +27,6 @@ internal sealed class KernelStateResetter(
     IProjectionPipelineManager projectionPipelineManager,
     IInstancesOf<ICanPerformKernelStateReset> resetHandlers,
     KernelBootstrapResetHandler bootstrapResetHandler)
-========
-/// <param name="resetter">The <see cref="KernelStateResetter"/> performing a development reset.</param>
-internal sealed class Server(KernelStateResetter resetter) : IServer
->>>>>>>> 62b248ea7 (Move Clients and DevelopmentTools from Api into Core generation):Source/Kernel/Core/Services/Host/Server.cs
 {
     /// <summary>
     /// Gets a value indicating whether the server exposes development tools.
@@ -51,7 +38,6 @@ internal sealed class Server(KernelStateResetter resetter) : IServer
         false;
 #endif
 
-<<<<<<<< HEAD:Source/Kernel/Core/DevelopmentTools/KernelStateResetter.cs
     /// <summary>
     /// Resets the kernel state.
     /// </summary>
@@ -95,9 +81,4 @@ internal sealed class Server(KernelStateResetter resetter) : IServer
         throw new DevelopmentToolsNotAvailable();
 #endif
     }
-========
-    /// <inheritdoc/>
-    [AllowAnonymous]
-    public Task ResetKernelState() => resetter.Reset();
->>>>>>>> 62b248ea7 (Move Clients and DevelopmentTools from Api into Core generation):Source/Kernel/Core/Services/Host/Server.cs
 }
