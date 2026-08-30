@@ -25,6 +25,7 @@
     <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.6.0" />
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.6.0" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="22.6.0" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.6.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.6.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />

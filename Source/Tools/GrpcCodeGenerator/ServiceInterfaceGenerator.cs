@@ -444,38 +444,6 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         return TypeHelper.GetTypeName(unwrapped);
     }
 
-    /// <summary>
-    /// Renders the type a message member carries.
-    /// </summary>
-    /// <param name="type">The member's declared type.</param>
-    /// <param name="targetNamespace">The namespace the generated messages live in.</param>
-    /// <returns>The rendered type name.</returns>
-    /// <remarks>
-    /// A member typed as a read model carries that read model's generated message, not the Core record - which
-    /// the contracts cannot see at all. A save that answers with what it saved is exactly that shape.
-    /// </remarks>
-    static string MemberTypeName(Type type, string targetNamespace)
-    {
-        var unwrapped = TypeHelper.UnwrapConceptType(type);
-
-        if (TypeHelper.IsReadModelType(unwrapped))
-        {
-            return $"global::{targetNamespace}.{unwrapped.Name}Response";
-        }
-
-        if (unwrapped.IsGenericType &&
-            unwrapped.GetGenericTypeDefinition().FullName?.StartsWith("System.Collections.Generic.IEnumerable`", StringComparison.Ordinal) == true)
-        {
-            var element = unwrapped.GetGenericArguments()[0];
-            if (TypeHelper.IsReadModelType(TypeHelper.UnwrapConceptType(element)))
-            {
-                return $"IEnumerable<{MemberTypeName(element, targetNamespace)}>";
-            }
-        }
-
-        return TypeHelper.GetTypeName(unwrapped);
-    }
-
     static ClassDeclarationSyntax BuildDtoClass(
         string typeName,
         List<(string PropName, string PropType)> properties,
