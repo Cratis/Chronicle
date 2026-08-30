@@ -108,22 +108,6 @@ public interface IEventSequences
     [Operation]
     Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumber(FromSequenceNumberRequest request, CallContext callContext = default);
     /// <summary>
-    /// Executes the HasEventsForEventSourceId query.
-    /// </summary>
-    /// <param name = "request">The query request parameters.</param>
-    /// <param name = "callContext">The gRPC call context.</param>
-    /// <returns>The query result.</returns>
-    [Operation]
-    Task<QueryResult<bool>> HasEventsForEventSourceId(HasEventsForEventSourceIdRequest request, CallContext callContext = default);
-    /// <summary>
-    /// Executes the TailSequenceNumber query.
-    /// </summary>
-    /// <param name = "request">The query request parameters.</param>
-    /// <param name = "callContext">The gRPC call context.</param>
-    /// <returns>The query result.</returns>
-    [Operation]
-    Task<QueryResult<global::System.UInt64>> TailSequenceNumber(TailSequenceNumberRequest request, CallContext callContext = default);
-    /// <summary>
     /// Executes the AllEventSequences query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -131,6 +115,22 @@ public interface IEventSequences
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<EventSequenceNamesResponse>>> AllEventSequences(AllEventSequencesRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the TailSequenceNumber query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<EventSequenceTailResponse>> TailSequenceNumber(TailSequenceNumberRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the HasEventsForEventSourceId query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<EventSourceEventsResponse>> HasEventsForEventSourceId(HasEventsForEventSourceIdRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the ExportEvents query.
     /// </summary>
@@ -997,10 +997,29 @@ public class FromSequenceNumberRequest
 }
 
 /// <summary>
-/// Represents the HasEventsForEventSourceIdRequest message.
+/// Represents the EventSequenceNamesResponse message.
 /// </summary>
 [ProtoContract]
-public class HasEventsForEventSourceIdRequest
+public class EventSequenceNamesResponse
+{
+    /// <summary>
+    /// Gets or sets the Id.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Name.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Name { get; set; }
+}
+
+/// <summary>
+/// Represents the AllEventSequencesRequest message.
+/// </summary>
+[ProtoContract]
+public class AllEventSequencesRequest
 {
     /// <summary>
     /// Gets or sets the eventStore.
@@ -1012,19 +1031,20 @@ public class HasEventsForEventSourceIdRequest
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string? Namespace { get; set; }
+}
 
+/// <summary>
+/// Represents the EventSequenceTailResponse message.
+/// </summary>
+[ProtoContract]
+public class EventSequenceTailResponse
+{
     /// <summary>
-    /// Gets or sets the eventSequenceId.
+    /// Gets or sets the SequenceNumber.
     /// </summary>
-    [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the eventSourceId.
-    /// </summary>
-    [ProtoMember(4)]
-    public string EventSourceId { get; set; }
+    [ProtoMember(1)]
+    public global::System.UInt64 SequenceNumber { get; set; }
 }
 
 /// <summary>
@@ -1083,29 +1103,23 @@ public class TailSequenceNumberRequest
 }
 
 /// <summary>
-/// Represents the EventSequenceNamesResponse message.
+/// Represents the EventSourceEventsResponse message.
 /// </summary>
 [ProtoContract]
-public class EventSequenceNamesResponse
+public class EventSourceEventsResponse
 {
     /// <summary>
-    /// Gets or sets the Id.
+    /// Gets or sets the HasEvents.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the Name.
-    /// </summary>
-    [ProtoMember(2)]
-    public string Name { get; set; }
+    public bool HasEvents { get; set; }
 }
 
 /// <summary>
-/// Represents the AllEventSequencesRequest message.
+/// Represents the HasEventsForEventSourceIdRequest message.
 /// </summary>
 [ProtoContract]
-public class AllEventSequencesRequest
+public class HasEventsForEventSourceIdRequest
 {
     /// <summary>
     /// Gets or sets the eventStore.
@@ -1118,6 +1132,18 @@ public class AllEventSequencesRequest
     /// </summary>
     [ProtoMember(2)]
     public string Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventSourceId { get; set; }
 }
 
 /// <summary>

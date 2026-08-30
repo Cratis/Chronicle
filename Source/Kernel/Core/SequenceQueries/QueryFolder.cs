@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
 using Cratis.Chronicle.Storage;
 
@@ -36,7 +37,7 @@ public record QueryFolder(
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
     /// <returns>A collection of <see cref="QueryFolder"/>.</returns>
     public static async Task<IEnumerable<QueryFolder>> AllQueryFolders(
-        string eventStore,
+        EventStoreName eventStore,
         ICurrentPrincipalAccessor currentPrincipalAccessor,
         IStorage storage)
     {

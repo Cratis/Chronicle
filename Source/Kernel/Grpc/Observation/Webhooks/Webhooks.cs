@@ -48,7 +48,7 @@ internal sealed class Webhooks(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails.GetWebhooks(request.EventStore, storage);
+                var result = await global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails.GetWebhooks((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
                 return result.Select(ToWebhookDetailsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Webhooks", "GetWebhooks"));
@@ -56,7 +56,7 @@ internal sealed class Webhooks(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>> ObserveWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>(
-            () => global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails.ObserveWebhooks(request.EventStore, storage)
+            () => global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails.ObserveWebhooks((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>)_.Select(ToWebhookDetailsResponse).ToList()),
             exception => logger.QueryFailed(exception, "Webhooks", "ObserveWebhooks"));

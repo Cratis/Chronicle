@@ -4,6 +4,9 @@
 using System.Text.Json;
 using Cratis.Arc.Queries;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -59,10 +62,10 @@ public record AppendedEvent(
         IEventCompliance eventCompliance,
         JsonSerializerOptions jsonSerializerOptions,
         IQueryContextManager queryContextManager,
-        string eventStore,
-        string @namespace,
-        string eventSequenceId,
-        string? eventSourceId = default,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
+        EventSourceId? eventSourceId = default,
         string? eventSourceType = default,
         string? eventStreamType = default,
         string? correlationId = default,
@@ -75,7 +78,7 @@ public record AppendedEvent(
         var paging = queryContext.Paging;
         var (sortBy, descending) = EventSequenceQuerySortByParser.From(queryContext.Sorting);
         var criteria = EventSequenceQueryCriteriaFactory.Create(new(
-            eventSourceId,
+            eventSourceId?.Value,
             eventSourceType,
             eventStreamType,
             correlationId,
@@ -123,10 +126,10 @@ public record AppendedEvent(
         IEventCompliance eventCompliance,
         JsonSerializerOptions jsonSerializerOptions,
         IQueryContextManager queryContextManager,
-        string eventStore,
-        string @namespace,
-        string eventSequenceId,
-        string? eventSourceId = default)
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
+        EventSourceId? eventSourceId = default)
     {
         var queryContext = queryContextManager.Current;
         var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
@@ -136,11 +139,9 @@ public record AppendedEvent(
 
         var paging = queryContext.Paging;
         var from = (ulong)(paging.Page * paging.Size);
-        Concepts.Events.EventSourceId? resolvedEventSourceId = null;
-        if (!string.IsNullOrWhiteSpace(eventSourceId))
-        {
-            resolvedEventSourceId = eventSourceId;
-        }
+
+        // An absent narrowing arrives as an empty value rather than as null, so it has to be treated as "do not narrow".
+        var resolvedEventSourceId = string.IsNullOrWhiteSpace(eventSourceId?.Value) ? null : eventSourceId;
 
         var appendedEvents = new List<Concepts.Events.AppendedEvent>();
         using (var cursor = paging.IsPaged
@@ -175,9 +176,9 @@ public record AppendedEvent(
         IStorage storage,
         IEventCompliance eventCompliance,
         JsonSerializerOptions jsonSerializerOptions,
-        string eventStore,
-        string @namespace,
-        string eventSequenceId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
         string eventSourceId,
         string? eventTypeIds = default,
         string? eventStreamType = default,
@@ -213,11 +214,11 @@ public record AppendedEvent(
         IStorage storage,
         IEventCompliance eventCompliance,
         JsonSerializerOptions jsonSerializerOptions,
-        string eventStore,
-        string @namespace,
-        string eventSequenceId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
         ulong fromEventSequenceNumber,
-        string? eventSourceId = default,
+        EventSourceId? eventSourceId = default,
         string? eventTypeIds = default) =>
         EventSequenceQuerying.ReadFromSequenceNumber(
             storage,
@@ -227,6 +228,6 @@ public record AppendedEvent(
             @namespace,
             eventSequenceId,
             fromEventSequenceNumber,
-            eventSourceId,
+            eventSourceId?.Value,
             eventTypeIds);
 }

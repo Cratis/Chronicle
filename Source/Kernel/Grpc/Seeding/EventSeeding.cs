@@ -34,7 +34,7 @@ internal sealed class EventSeeding(
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Seeding.SeedData.GetGlobalSeedData(request.EventStore, grainFactory);
+                var result = await global::Cratis.Chronicle.Seeding.SeedData.GetGlobalSeedData((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, grainFactory);
                 return ToSeedDataResponse(result);
             },
             exception => logger.QueryFailed(exception, "EventSeeding", "GetGlobalSeedData"));
@@ -44,7 +44,7 @@ internal sealed class EventSeeding(
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Seeding.SeedData.GetNamespaceSeedData(request.EventStore, request.Namespace, grainFactory);
+                var result = await global::Cratis.Chronicle.Seeding.SeedData.GetNamespaceSeedData((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, grainFactory);
                 return ToSeedDataResponse(result);
             },
             exception => logger.QueryFailed(exception, "EventSeeding", "GetNamespaceSeedData"));

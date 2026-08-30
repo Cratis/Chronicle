@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -45,7 +46,7 @@ public record WebhookDetails(
     /// <param name="eventStore">The event store to get webhooks for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>A collection of webhooks.</returns>
-    internal static async Task<IEnumerable<WebhookDetails>> GetWebhooks(string eventStore, IStorage storage)
+    internal static async Task<IEnumerable<WebhookDetails>> GetWebhooks(EventStoreName eventStore, IStorage storage)
     {
         var definitions = await storage.GetEventStore(eventStore).Webhooks.GetAll();
         return definitions.ToReadModel();
@@ -57,6 +58,6 @@ public record WebhookDetails(
     /// <param name="eventStore">The event store to observe webhooks for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>An observable subject emitting collections of webhooks.</returns>
-    internal static ISubject<IEnumerable<WebhookDetails>> ObserveWebhooks(string eventStore, IStorage storage) =>
+    internal static ISubject<IEnumerable<WebhookDetails>> ObserveWebhooks(EventStoreName eventStore, IStorage storage) =>
         storage.GetEventStore(eventStore).Webhooks.ObserveAll().TransformSubject(_ => _.ToReadModel());
 }

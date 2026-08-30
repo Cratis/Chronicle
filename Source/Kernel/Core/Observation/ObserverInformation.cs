@@ -69,8 +69,8 @@ public record ObserverInformation(
     /// all-observers listing it must not appear here.
     /// </remarks>
     internal static async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(
-        string eventStore,
-        string @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         IEnumerable<string> eventTypes,
         IStorage storage)
     {

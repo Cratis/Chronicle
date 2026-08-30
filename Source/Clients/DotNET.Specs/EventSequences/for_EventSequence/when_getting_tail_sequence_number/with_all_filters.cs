@@ -37,7 +37,7 @@ public class with_all_filters : given.an_event_sequence
 
         _sequences
             .TailSequenceNumber(Arg.Any<Contracts.Sequences.TailSequenceNumberRequest>(), CallContext.Default)
-            .Returns(QueryResult<ulong>.Success(Guid.NewGuid(), _expectedSequenceNumber.Value));
+            .Returns(QueryResult<Contracts.Sequences.EventSequenceTailResponse>.Success(Guid.NewGuid(), new() { SequenceNumber = _expectedSequenceNumber.Value }));
     }
 
     async Task Because() => _result = await _eventSequence.GetTailSequenceNumber(

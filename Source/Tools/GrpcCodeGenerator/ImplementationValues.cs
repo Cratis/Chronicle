@@ -44,7 +44,15 @@ public static class ImplementationValues
 
         if (TypeHelper.IsConceptType(declaredType))
         {
-            return $"({QualifiedTypeName.For(declaredType)}){expression}";
+            var cast = $"({QualifiedTypeName.For(declaredType)}){expression}";
+
+            // A concept declared as an optional parameter is a nullable reference type - the check above only
+            // refuses nullable *value* types. Its wire field is a nullable string, and a concept's implicit
+            // conversion does not accept null, so casting straight through warns at every call site the
+            // generator emits. Guard it instead: absent on the wire stays absent in the domain.
+            return isNullable && !declaredType.IsValueType
+                ? $"({expression} is null ? null : {cast})"
+                : cast;
         }
 
         // The wire value is the generated mirror, a distinct CLR type from the Core type the artifact declares -

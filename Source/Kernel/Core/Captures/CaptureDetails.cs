@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 
@@ -33,7 +34,7 @@ public record CaptureDetails(
     /// <param name="eventStore">The event store to get captures for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the captures.</param>
     /// <returns>A collection of captures.</returns>
-    internal static async Task<IEnumerable<CaptureDetails>> GetCaptures(string eventStore, IStorage storage)
+    internal static async Task<IEnumerable<CaptureDetails>> GetCaptures(EventStoreName eventStore, IStorage storage)
     {
         var captures = await storage.GetEventStore(eventStore).Captures.GetAll();
         return captures.ToReadModel();
@@ -45,6 +46,6 @@ public record CaptureDetails(
     /// <param name="eventStore">The event store to observe captures for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the captures.</param>
     /// <returns>An observable subject emitting collections of captures.</returns>
-    internal static ISubject<IEnumerable<CaptureDetails>> ObserveCaptures(string eventStore, IStorage storage) =>
+    internal static ISubject<IEnumerable<CaptureDetails>> ObserveCaptures(EventStoreName eventStore, IStorage storage) =>
         storage.GetEventStore(eventStore).Captures.ObserveAll().TransformSubject(_ => _.ToReadModel());
 }
