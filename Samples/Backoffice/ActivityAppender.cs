@@ -8,32 +8,38 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 
-namespace Samples.Storefront;
+namespace Samples.Backoffice;
 
 /// <summary>
 /// Represents what kind of thing an event source is.
 /// </summary>
 /// <param name="Name">The name of the kind.</param>
 /// <remarks>
-/// This becomes the aggregate a mined pattern is about, which is what lets "Lena answers tickets in the afternoon"
-/// be told apart from "Lena approves returns in the afternoon" even though both are Lena, both in the afternoon.
+/// This becomes the aggregate a mined pattern is about, which is what lets "Ingrid enters invoices first thing"
+/// be told apart from "Ingrid matches them at midday" - same person, same week, different work.
 /// </remarks>
 public record AggregateType(string Name)
 {
-    /// <summary>An order a customer placed.</summary>
-    public static readonly AggregateType Order = new("Order");
+    /// <summary>A supplier invoice.</summary>
+    public static readonly AggregateType Invoice = new("Invoice");
 
-    /// <summary>A shipment leaving the warehouse.</summary>
-    public static readonly AggregateType Shipment = new("Shipment");
+    /// <summary>A commitment to buy something.</summary>
+    public static readonly AggregateType PurchaseOrder = new("PurchaseOrder");
 
-    /// <summary>A return a customer asked for.</summary>
-    public static readonly AggregateType Return = new("Return");
+    /// <summary>A company we buy from.</summary>
+    public static readonly AggregateType Supplier = new("Supplier");
 
-    /// <summary>A support ticket.</summary>
-    public static readonly AggregateType SupportTicket = new("SupportTicket");
+    /// <summary>An accounting period.</summary>
+    public static readonly AggregateType Ledger = new("Ledger");
 
-    /// <summary>A product in the catalog.</summary>
-    public static readonly AggregateType Product = new("Product");
+    /// <summary>A request for time off.</summary>
+    public static readonly AggregateType LeaveRequest = new("LeaveRequest");
+
+    /// <summary>Somebody applying for a job.</summary>
+    public static readonly AggregateType Candidate = new("Candidate");
+
+    /// <summary>Somebody's hours for a period.</summary>
+    public static readonly AggregateType Timesheet = new("Timesheet");
 
     /// <summary>The generator's own bookkeeping.</summary>
     public static readonly AggregateType SampleData = new("SampleData");

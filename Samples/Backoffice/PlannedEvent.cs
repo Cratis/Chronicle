@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Samples.Storefront;
+namespace Samples.Backoffice;
 
 /// <summary>
 /// An event the generator intends to append, before it knows where in the history it belongs.

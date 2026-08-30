@@ -5,7 +5,7 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Identities;
 using Microsoft.Extensions.Logging;
-using Samples.Storefront;
+using Samples.Backoffice;
 
 const int Weeks = 26;
 const int Seed = 20260829;
@@ -22,7 +22,7 @@ var options = ChronicleOptions.FromConnectionString(connectionString);
 
 Console.WriteLine("Connecting to Chronicle...");
 using var client = new ChronicleClient(options, identityProvider: identityProvider, loggerFactory: loggerFactory);
-var store = await client.GetEventStore("Storefront");
+var store = await client.GetEventStore("Backoffice");
 var appender = new ActivityAppender(store, identityProvider, client.CausationManager);
 
 // Every command is reachable as an argument as well as a keystroke, so the sample can be driven from a script -
@@ -78,7 +78,7 @@ while (true)
 
 async Task GenerateHistory()
 {
-    Console.WriteLine($"Generating {Weeks} weeks of storefront activity. This appends thousands of events one at a time - give it a minute.");
+    Console.WriteLine($"Generating {Weeks} weeks of back-office work. This appends thousands of events one at a time - give it a minute.");
 
     var lastReported = 0;
     var result = await SampleHistory.Generate(appender, Weeks, Seed, events =>
@@ -173,7 +173,7 @@ PatternGroupingKey? ScopeFromArguments()
         return new PatternGroupingKey(args[1]);
     }
 
-    Console.WriteLine("Name the scope to ask about, for example: maya.chen");
+    Console.WriteLine("Name the scope to ask about, for example: ingrid.holm");
     return null;
 }
 
@@ -221,7 +221,7 @@ void WriteInstructions()
     string[] lines =
     [
         string.Empty,
-        "Storefront - an online retailer where different people do different jobs.",
+        "Backoffice - an online retailer where different people do different jobs.",
         string.Empty,
         "  G = Generate the backdated history",
         "  S = List the scopes with established behavior",

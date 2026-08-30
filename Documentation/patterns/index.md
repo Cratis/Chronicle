@@ -18,7 +18,7 @@ A **behavior pattern** is a combination of facets that recurred often enough and
 | **Weight** | Recency-weighted strength — decays as the behavior goes unseen |
 | **First seen / last seen** | When it was first and last observed |
 
-A pattern such as `{ Day: Monday, TimeBucket: EarlyMorning, CommandType: PackShipment }` with a confidence of `0.9` reads as: *first thing on a Monday, this person packs shipments nine times out of ten.*
+A pattern such as `{ Day: Monday, TimeBucket: EarlyMorning, CommandType: RegisterInvoice }` with a confidence of `0.9` reads as: *first thing on a Monday, this person enters supplier invoices nine times out of ten.*
 
 ## Facets
 
@@ -109,6 +109,6 @@ A pattern that constrains neither day nor time of day belongs to no cell and is 
 
 ## Trying it out
 
-The **Storefront** sample in the Chronicle repository generates half a year of activity for an online retailer where different people do genuinely different jobs — a warehouse, a support desk, a buying office, a fraud review — plus agents acting on people's behalf, an overnight system run, and one person with no routine at all as a control.
+The **Backoffice** sample in the Chronicle repository generates half a year of work in the internal system a mid-size company runs on — accounts payable, the ledger, procurement, HR and payroll — plus agents acting on people's behalf, an overnight system run, and one person with no routine at all as a control.
 
-It is the quickest way to see what the views are for. Each person's heatmap looks nothing like the next one's: the picker lights up one weekday-early-morning column, the support agent lights up two — her own afternoons and her assistant's nights — and the person with no routine lights up nothing. Its README explains what was put in, so what Chronicle establishes can be checked against it.
+It is the quickest way to see what the views are for, because nobody in it does only one thing. Everybody holds three or four different jobs at different points in the week, so each person's heatmap is a different shape with several commands in it rather than one dominant block: the accounts payable clerk lights up first thing and again at lunchtime with different work in each, the controller lights up through the afternoons and twice a week at midday, and the person who covers whatever is short-handed lights up nowhere. Its README explains what was put in, so what Chronicle establishes can be checked against it.
