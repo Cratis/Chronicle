@@ -38,7 +38,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__OAuthAuthority | Enable internal OAuth authority |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
-| Cratis__Chronicle__Observers__SubscriberTimeout | Observer subscriber timeout in seconds |
+| Cratis__Chronicle__Observers__SubscriberTimeout | Reserved — not currently applied to subscriber calls |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |
@@ -114,9 +114,6 @@ Cratis__Chronicle__Storage__ConnectionDetails=mongodb://localhost:27017
 ## Observers
 
 ```bash
-# Timeout in seconds for observer subscriber calls (default: 5)
-Cratis__Chronicle__Observers__SubscriberTimeout=5
-
 # Maximum retry attempts for failed partitions (0 = infinite, default: 10)
 Cratis__Chronicle__Observers__MaxRetryAttempts=10
 

@@ -43,7 +43,7 @@ docker run -d \
   -e Cratis__Chronicle__HealthCheckEndpoint=/health \
   -e Cratis__Chronicle__Storage__Type=MongoDB \
   -e Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongo:27017 \
-  -e Cratis__Chronicle__Observers__SubscriberTimeout=10 \
+  -e Cratis__Chronicle__Observers__MaxRetryAttempts=10 \
   -p 35000:35000 \
   cratis/chronicle:latest
 ```

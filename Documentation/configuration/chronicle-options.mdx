@@ -165,6 +165,35 @@ The JWT claim type used by `ClaimsBasedNamespaceResolver` when namespace resolut
 | Type | `string` |
 | Default | `"tenant_id"` |
 
+### RegistrationRetry
+
+How registering the client's artifacts is retried when the Kernel does not accept them.
+
+| | |
+|---|---|
+| Type | `RegistrationRetryOptions` |
+| Default | Five attempts, two seconds growing to thirty |
+
+| Nested property | Type | Default | Description |
+|---|---|---|---|
+| `MaxAttempts` | `int` | `5` | How many times registering all artifacts is attempted before the failure surfaces. `1` disables retrying |
+| `InitialDelay` | `TimeSpan` | `00:00:02` | Wait after the first failed attempt. Each further attempt doubles it, jittered |
+| `MaximumDelay` | `TimeSpan` | `00:00:30` | Upper bound for the wait between attempts |
+
+Registration runs on the way up, so a registration that fails takes the host with it. A Kernel that is
+merely busy — catching a newly added read model up over a large event log, say — answers late rather
+than wrongly, and a host that dies on that answer comes back and asks again, adding its whole
+registration to the queue it was already waiting on. Retrying in place lets the client wait out a busy
+Kernel instead. Registration is idempotent, so a retry costs the Kernel only the comparison it already
+does; a Kernel that is genuinely refusing the definitions keeps failing and the host still ends up
+down, just after the attempts are spent rather than on the first.
+
+In `appsettings.json`:
+
+```json
+{ "Cratis": { "Chronicle": { "RegistrationRetry": { "MaxAttempts": 10, "MaximumDelay": "00:01:00" } } } }
+```
+
 ### Tls
 
 TLS certificate settings for the gRPC connection. TLS is active when both `CertificatePath` and `CertificatePassword` are set. See [TLS](tls) for full details.
