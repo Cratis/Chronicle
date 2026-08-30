@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { Guid } from '@cratis/fundamentals';
 import { Page } from 'Components/Common/Page';
 import { CaptureEditor, type CaptureDeclarationSyntaxError } from 'Components/CaptureEditor';
 import { ActionMenubar, Tooltip, type ActionMenuItem } from '@cratis/components/Common';
@@ -133,7 +134,7 @@ export const Captures = () => {
 
     const handleSave = async () => {
         saveCommand.eventStore = eventStore;
-        saveCommand.id = selectedCaptureId ?? '';
+        saveCommand.id = selectedCaptureId ? Guid.parse(selectedCaptureId) : Guid.empty;
         saveCommand.declaration = declarationValue;
         const result = await saveCommand.execute();
         if (!result.isSuccess) return;
@@ -153,7 +154,7 @@ export const Captures = () => {
     const handleStart = async () => {
         if (!selectedCapture) return;
         startCommand.eventStore = eventStore;
-        startCommand.captureId = selectedCapture.id;
+        startCommand.captureId = Guid.parse(selectedCapture.id);
         const result = await startCommand.execute();
         if (!result.isSuccess) return;
 
@@ -169,7 +170,7 @@ export const Captures = () => {
     const handleStop = async () => {
         if (!selectedCapture) return;
         stopCommand.eventStore = eventStore;
-        stopCommand.captureId = selectedCapture.id;
+        stopCommand.captureId = Guid.parse(selectedCapture.id);
         await stopCommand.execute();
     };
 
@@ -183,7 +184,7 @@ export const Captures = () => {
 
         if (result === DialogResult.Yes) {
             deleteCommand.eventStore = eventStore;
-            deleteCommand.captureId = selectedCapture.id;
+            deleteCommand.captureId = Guid.parse(selectedCapture.id);
             await deleteCommand.execute();
             selectCapture(null);
         }
