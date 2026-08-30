@@ -3,25 +3,26 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Patterns;
-using Pattern = Cratis.Chronicle.Contracts.Patterns.Pattern;
 
-namespace Cratis.Chronicle.Services.Patterns.for_Patterns.when_getting_usual_actions;
+namespace Cratis.Chronicle.Patterns.for_BehaviorPatternDetails.when_getting_usual_actions;
 
 /// <summary>
 /// The scope selects whose behavior is being asked about. Without one there is no question to answer, and the read
 /// this query does is per scope - so it must be turned away before it reads rather than after.
 /// </summary>
-public class without_a_scope : given.a_patterns_service
+public class without_a_scope : given.mined_patterns
 {
-    IEnumerable<Pattern> _result;
+    IEnumerable<BehaviorPatternDetails> _result;
 
-    async Task Because() => _result = await _service.GetUsualActions(new()
-    {
-        EventStore = EventStore,
-        Namespace = EventStoreNamespaceName.Default,
-        GroupingKey = PatternGroupingKey.Unspecified,
-        Context = new Dictionary<string, string> { { FacetName.Day.Value, "Monday" } }
-    });
+    async Task Because() => _result = await BehaviorPatternDetails.UsualActions(
+        EventStore,
+        EventStoreNamespaceName.Default,
+        PatternGroupingKey.Unspecified,
+        new Dictionary<string, string> { { FacetName.Day.Value, "Monday" } },
+        _storage,
+        _vocabulary,
+        _matcher,
+        _options);
 
     [Fact] void should_return_nothing() => _result.ShouldBeEmpty();
 

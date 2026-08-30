@@ -4,20 +4,23 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Patterns;
 using Microsoft.Extensions.Options;
 using KernelBehaviorPattern = Cratis.Chronicle.Concepts.Patterns.BehaviorPattern;
 
-namespace Cratis.Chronicle.Services.Patterns.for_Patterns.given;
+namespace Cratis.Chronicle.Patterns.for_BehaviorPatternDetails.given;
 
-public class a_patterns_service : Specification
+public class mined_patterns : Specification
 {
     protected const string EventStore = "some-store";
     protected const string Scope = "user-42";
 
-    private protected Chronicle.Services.Patterns.Patterns _service;
+    protected IStorage _storage;
+    protected IFacetVocabulary _vocabulary;
+    protected IFacetSetGenerator _generator;
+    protected IPatternMatcher _matcher;
+    protected IOptions<ChronicleOptions> _options;
 
     protected IBehaviorPatternStorage _patterns;
     protected KernelBehaviorPattern _mondayMorning;
@@ -59,19 +62,21 @@ public class a_patterns_service : Specification
             .Returns(call => held.Where(pattern => call.Arg<IEnumerable<FacetSetKey>>().Contains(pattern.Facets.Key)));
         _patterns.GetForScope(new PatternGroupingKey(Scope)).Returns(held);
 
-        var storage = Substitute.For<IStorage>();
+        _storage = Substitute.For<IStorage>();
         var eventStore = Substitute.For<IEventStoreStorage>();
         var @namespace = Substitute.For<IEventStoreNamespaceStorage>();
-        storage.GetEventStore(new EventStoreName(EventStore)).Returns(eventStore);
+        _storage.GetEventStore(new EventStoreName(EventStore)).Returns(eventStore);
         eventStore.GetNamespace(EventStoreNamespaceName.Default).Returns(@namespace);
         @namespace.Patterns.Returns(_patterns);
 
-        var options = Options.Create(new ChronicleOptions
+        _options = Options.Create(new ChronicleOptions
         {
             PatternDetection = new PatternDetection { MinimumConfidence = 0.5d }
         });
 
-        _service = new(storage, new FacetVocabulary(options), new FacetSetGenerator(), new PatternMatcher(), options);
+        _vocabulary = new FacetVocabulary(_options);
+        _generator = new FacetSetGenerator();
+        _matcher = new PatternMatcher();
     }
 
     static KernelBehaviorPattern Pattern(IEnumerable<Facet> facets, double confidence) =>

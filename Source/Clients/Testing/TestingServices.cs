@@ -242,7 +242,8 @@ internal sealed class TestingServices : IServices
                 new KernelFacetVocabulary(patternOptions),
                 new KernelFacetSetGenerator(),
                 new KernelPatternMatcher(),
-                patternOptions);
+                patternOptions,
+                NullLogger<KernelPatternsService>.Instance);
         });
 
         _recommendations = new(() =>

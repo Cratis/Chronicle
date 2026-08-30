@@ -3,25 +3,27 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Patterns;
-using Pattern = Cratis.Chronicle.Contracts.Patterns.Pattern;
 
-namespace Cratis.Chronicle.Services.Patterns.for_Patterns.when_getting_patterns;
+namespace Cratis.Chronicle.Patterns.for_BehaviorPatternDetails.when_matching_patterns;
 
-public class for_a_partial_context : given.a_patterns_service
+public class for_a_partial_context : given.mined_patterns
 {
-    IEnumerable<Pattern> _result;
+    IEnumerable<BehaviorPatternDetails> _result;
 
-    async Task Because() => _result = await _service.GetPatterns(new()
-    {
-        EventStore = EventStore,
-        Namespace = EventStoreNamespaceName.Default,
-        GroupingKey = Scope,
-        Context = new Dictionary<string, string>
+    async Task Because() => _result = await BehaviorPatternDetails.MatchingPatterns(
+        EventStore,
+        EventStoreNamespaceName.Default,
+        Scope,
+        new Dictionary<string, string>
         {
             { FacetName.Day.Value, "Monday" },
             { FacetName.TimeBucket.Value, "Morning" }
-        }
-    });
+        },
+        _storage,
+        _vocabulary,
+        _generator,
+        _matcher,
+        _options);
 
     [Fact] void should_return_the_patterns_clearing_the_configured_threshold() => _result.Count().ShouldEqual(2);
     [Fact] void should_rank_the_most_specific_first() => _result.First().Facets.Count.ShouldEqual(2);
@@ -30,5 +32,6 @@ public class for_a_partial_context : given.a_patterns_service
     [Fact] void should_carry_the_occurrences() => _result.First().Occurrences.ShouldEqual(10L);
     [Fact] void should_carry_the_weight() => _result.First().Weight.ShouldEqual(1d);
     [Fact] void should_carry_the_scope() => _result.First().GroupingKey.ShouldEqual(Scope);
+    [Fact] void should_carry_how_specific_it_is() => _result.First().Specificity.ShouldEqual(2);
     [Fact] void should_not_return_a_pattern_below_the_threshold() => _result.Any(_ => _.Confidence < 0.5d).ShouldBeFalse();
 }

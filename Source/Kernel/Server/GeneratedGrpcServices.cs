@@ -32,6 +32,7 @@ internal static class GeneratedGrpcServices
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Jobs.IJobs, global::Cratis.Chronicle.Services.Jobs.Jobs>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Namespaces.INamespaces, global::Cratis.Chronicle.Services.Namespaces.Namespaces>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks, global::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>();
+        services.AddSingleton<global::Cratis.Chronicle.Contracts.Patterns.IPatterns, global::Cratis.Chronicle.Services.Patterns.Patterns>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Recommendations.IRecommendations, global::Cratis.Chronicle.Services.Recommendations.Recommendations>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Security.IApplications, global::Cratis.Chronicle.Services.Security.Applications>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Security.IUsers, global::Cratis.Chronicle.Services.Security.Users>();
@@ -57,6 +58,7 @@ internal static class GeneratedGrpcServices
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Jobs.Jobs>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Namespaces.Namespaces>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>();
+        endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Patterns.Patterns>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Recommendations.Recommendations>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Security.Applications>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Security.Users>();

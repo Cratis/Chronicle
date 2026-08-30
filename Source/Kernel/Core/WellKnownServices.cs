@@ -49,6 +49,11 @@ public static class WellKnownServices
     public const string Recommendations = "Recommendations";
 
     /// <summary>
+    /// The service holding the behavior patterns mined from an event store's history.
+    /// </summary>
+    public const string Patterns = "Patterns";
+
+    /// <summary>
     /// The name of the EventSeeding service.
     /// </summary>
     public const string EventSeeding = "EventSeeding";
