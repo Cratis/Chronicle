@@ -6,6 +6,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
 
@@ -272,7 +273,10 @@ public class ReactorInvoker(
             var replayMethodsByEventType = new Dictionary<Type, MethodInfo>();
             var onceOnlyMethods = new HashSet<MethodInfo>();
 
-            foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            // Ordered so the handler that should win comes first, and claimed with TryAdd so it keeps the event
+            // type. A private helper taking the same event as its first parameter is a handler candidate too,
+            // and without this it could overwrite the real handler purely on reflection order.
+            foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ByPrecedence())
             {
                 if (!method.IsEventHandlerMethod(eventTypes))
                 {
@@ -297,7 +301,7 @@ public class ReactorInvoker(
                 var eventParameterType = method.GetParameters()[0].ParameterType;
                 foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
                 {
-                    methodsByEventType[eventType] = method;
+                    methodsByEventType.TryAdd(eventType, method);
                 }
             }
 
