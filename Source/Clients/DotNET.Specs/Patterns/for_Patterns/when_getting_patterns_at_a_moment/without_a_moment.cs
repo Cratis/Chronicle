@@ -17,7 +17,7 @@ public class without_a_moment : given.a_patterns_client
 
     void Establish() =>
         _patterns
-            .GetPatterns(Arg.Do<Contract.GetPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
+            .GetUsualActions(Arg.Do<Contract.GetPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
             .Returns([]);
 
     async Task Because()
