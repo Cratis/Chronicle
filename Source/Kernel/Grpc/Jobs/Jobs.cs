@@ -43,7 +43,7 @@ internal sealed class Jobs(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobStepSummaryResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Jobs.JobStepSummary.GetJobSteps(request.EventStore, request.Namespace, request.JobId, storage);
+                var result = await global::Cratis.Chronicle.Jobs.JobStepSummary.GetJobSteps((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Jobs.JobId)request.JobId, storage);
                 return result.Select(ToJobStepSummaryResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Jobs", "GetJobSteps"));
@@ -53,7 +53,7 @@ internal sealed class Jobs(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Jobs.JobSummary.AllJobs(request.EventStore, request.Namespace, grainFactory);
+                var result = await global::Cratis.Chronicle.Jobs.JobSummary.AllJobs((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, grainFactory);
                 return result.Select(ToJobSummaryResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Jobs", "AllJobs"));
@@ -61,7 +61,7 @@ internal sealed class Jobs(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse>>> ObserveJobs(global::Cratis.Chronicle.Contracts.Jobs.ObserveJobsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse>>(
-            () => global::Cratis.Chronicle.Jobs.JobSummary.ObserveJobs(request.EventStore, request.Namespace, storage)
+            () => global::Cratis.Chronicle.Jobs.JobSummary.ObserveJobs((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Jobs.JobSummaryResponse>)_.Select(ToJobSummaryResponse).ToList()),
             exception => logger.QueryFailed(exception, "Jobs", "ObserveJobs"));

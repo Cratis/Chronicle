@@ -16,8 +16,8 @@ internal class EnsureEventStoreValidator : CommandValidator<EnsureEventStore>
     /// </summary>
     public EnsureEventStoreValidator()
     {
-        // Name is the event store being created, not a reference to one that must already exist - the
-        // cross-cutting EventStoreNameValidator existence check does not apply here.
-        RuleFor(_ => _.Name).IgnoreConceptRules().NotEmpty().WithMessage("Event store name is required.");
+        // Name is the event store being created, not a reference to an existing one, so EventStoreNameValidator
+        // is deliberately not attached here.
+        RuleFor(_ => _.Name).NotEmpty().WithMessage("Event store name is required.");
     }
 }
