@@ -19,6 +19,21 @@ public interface IPatterns
     Task<IEnumerable<Pattern>> GetPatterns(GetPatternsRequest request, CallContext context = default);
 
     /// <summary>
+    /// Get what usually happens in a context, ranked by confidence, at most one result per action.
+    /// </summary>
+    /// <param name="request">The <see cref="GetPatternsRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns><see cref="IEnumerable{T}"/> of <see cref="Pattern"/>, empty when nothing clears the confidence bar.</returns>
+    /// <remarks>
+    /// The question <see cref="GetPatterns"/> cannot answer. That one returns patterns describing the situation the
+    /// caller named, which can confirm a context is established but never says what is done in it - a pattern naming
+    /// a command is not a subset of a context that names none. This compares only the context half of a pattern, so
+    /// the command comes back as the answer.
+    /// </remarks>
+    [Operation]
+    Task<IEnumerable<Pattern>> GetUsualActions(GetPatternsRequest request, CallContext context = default);
+
+    /// <summary>
     /// Get every pattern held for a scope.
     /// </summary>
     /// <param name="request">The <see cref="GetPatternsForScopeRequest"/>.</param>

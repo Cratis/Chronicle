@@ -23,6 +23,8 @@ public class a_patterns_service : Specification
     protected KernelBehaviorPattern _mondayMorning;
     protected KernelBehaviorPattern _monday;
     protected KernelBehaviorPattern _lowConfidence;
+    protected KernelBehaviorPattern _registersInvoicesOnMondayMornings;
+    protected KernelBehaviorPattern _matchesInvoicesOnFridays;
 
     void Establish()
     {
@@ -30,7 +32,26 @@ public class a_patterns_service : Specification
         _monday = Pattern([new Facet(FacetName.Day, "Monday")], 0.8d);
         _lowConfidence = Pattern([new Facet(FacetName.TimeBucket, "Morning")], 0.2d);
 
-        KernelBehaviorPattern[] held = [_mondayMorning, _monday, _lowConfidence];
+        _registersInvoicesOnMondayMornings = Pattern(
+            [
+                new Facet(FacetName.CommandType, "RegisterInvoice"),
+                new Facet(FacetName.Day, "Monday"),
+                new Facet(FacetName.TimeBucket, "Morning")
+            ],
+            0.95d);
+
+        _matchesInvoicesOnFridays = Pattern(
+            [new Facet(FacetName.CommandType, "MatchInvoice"), new Facet(FacetName.Day, "Friday")],
+            1d);
+
+        KernelBehaviorPattern[] held =
+        [
+            _mondayMorning,
+            _monday,
+            _lowConfidence,
+            _registersInvoicesOnMondayMornings,
+            _matchesInvoicesOnFridays
+        ];
 
         _patterns = Substitute.For<IBehaviorPatternStorage>();
         _patterns
