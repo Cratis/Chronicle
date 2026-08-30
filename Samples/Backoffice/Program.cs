@@ -41,7 +41,7 @@ if (args.Length > 0)
             await ShowPatterns(ScopeFromArguments());
             return 0;
         case "now":
-            await PredictNow(ScopeFromArguments());
+            await PredictNow(ScopeFromArguments(), MomentFromArguments());
             return 0;
         default:
             Console.WriteLine($"Unknown command '{args[0]}'. Expected generate, scopes, patterns or now.");
@@ -65,7 +65,7 @@ while (true)
             await ShowPatterns(await SelectScope());
             break;
         case ConsoleKey.N:
-            await PredictNow(await SelectScope());
+            await PredictNow(await SelectScope(), default);
             break;
         case ConsoleKey.H:
             WriteInstructions();
@@ -138,21 +138,19 @@ async Task ShowPatterns(PatternGroupingKey? scope)
 }
 
 // Asks what usually happens right now - the same question the heatmap's "right now" panel asks.
-async Task PredictNow(PatternGroupingKey? scope)
+async Task PredictNow(PatternGroupingKey? scope, DateTimeOffset? moment)
 {
     if (scope is null)
     {
         return;
     }
 
-    var now = DateTimeOffset.Now;
-    var context = FacetSet.Empty
-        .With(FacetName.Day, now.DayOfWeek.ToString())
-        .With(FacetName.TimeBucket, TimeBucketFor(now.Hour));
+    // The whole question in one call: the day and the part of the day come off the moment, bucketed the same way
+    // the engine bucketed the events it mined - so this asks about the slot the behavior was actually learned in.
+    var at = moment ?? DateTimeOffset.Now;
+    var patterns = (await store.Patterns.GetPatternsAt(scope, moment)).ToArray();
 
-    var patterns = (await store.Patterns.GetPatterns(scope, context)).ToArray();
-
-    Console.WriteLine($"\n{now.DayOfWeek}, {TimeBucketFor(now.Hour)} - for {scope}:");
+    Console.WriteLine($"\n{at.DayOfWeek}, {at.ToTimeBucket()} - for {scope}:");
 
     if (patterns.Length == 0)
     {
@@ -165,6 +163,11 @@ async Task PredictNow(PatternGroupingKey? scope)
         Console.WriteLine($"  {pattern.Confidence.Value,6:P0}  {pattern.Facets}");
     }
 }
+
+// An optional moment, so the sample can ask "what does this person usually do on a Monday morning" and not only
+// what they do right now.
+DateTimeOffset? MomentFromArguments() =>
+    args.Length > 2 && DateTimeOffset.TryParse(args[2], out var moment) ? moment : default(DateTimeOffset?);
 
 PatternGroupingKey? ScopeFromArguments()
 {
@@ -205,17 +208,6 @@ async Task<PatternGroupingKey?> SelectScope()
     return scopes[choice];
 }
 
-// Mirrors the kernel's own bucketing so the question asked here lands in the bucket the patterns were mined under.
-static string TimeBucketFor(int hour) => hour switch
-{
-    >= 5 and < 8 => nameof(TimeBucket.EarlyMorning),
-    >= 8 and < 11 => nameof(TimeBucket.Morning),
-    >= 11 and < 14 => nameof(TimeBucket.Midday),
-    >= 14 and < 17 => nameof(TimeBucket.Afternoon),
-    >= 17 and < 22 => nameof(TimeBucket.Evening),
-    _ => nameof(TimeBucket.Night)
-};
-
 void WriteInstructions()
 {
     string[] lines =
@@ -227,6 +219,7 @@ void WriteInstructions()
         "  S = List the scopes with established behavior",
         "  P = Show every pattern for a scope",
         "  N = Ask what usually happens right now",
+        "      (from the command line: now <scope> [moment], e.g. now ingrid.holm 2026-08-31T06:30)",
         "  H = Show this menu             Q = Quit",
         string.Empty
     ];

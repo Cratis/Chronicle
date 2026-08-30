@@ -95,7 +95,21 @@ Ask what usually happens with the [.NET client's pattern API](/chronicle/clients
 
 Specificity outranks confidence in the ranking. A pattern constraining everything you asked about answers your question; a broader, more confident one answers a question you did not ask.
 
+A pattern matches when **its facets are a subset of the asked context**. That means a query describes the context you named rather than the action taken in it: asking about a day and a part of the day says whether that slot is established, not which command usually follows. Returning the action is tracked in [#3872](https://github.com/Cratis/Chronicle/issues/3872).
+
 **Nothing clearing the confidence bar returns nothing.** An empty answer is a true statement — this scope has no established behavior for this context — and is not padded with the best of a bad set.
+
+## Asking about a moment
+
+The context an application usually has is a person and a point in time, so every client offers that as a single call on top of `GetPatterns`: **give it the scope, optionally give it a moment, and it fills in the rest**. The moment defaults to now.
+
+What it fills in is the `Day` and the `TimeBucket`, derived from the moment with **the same rule the engine used when it mined the events**. That rule is the load-bearing part. A caller deriving the bucket itself owns a second copy of it, and when the two drift nothing fails loudly — the query simply asks about a slot the mining never used and comes back empty. Each client therefore exposes the bucketing rule as well, so the copy never has to exist:
+
+| Client | Ask about a moment | Bucket a moment |
+| --- | --- | --- |
+| [.NET](/chronicle/clients/dotnet/patterns/) | `Patterns.GetPatternsAt(scope, moment?)` | `moment.ToTimeBucket()` |
+
+Other clients — TypeScript, Kotlin, Elixir, Python — expose the same capability in their own idiom; see the client's own page for the exact shape. The contract they share is the one above: scope required, moment optional and defaulting to now, day and time bucket derived by the engine's rule rather than the caller's.
 
 ## Seeing patterns in the Workbench
 
