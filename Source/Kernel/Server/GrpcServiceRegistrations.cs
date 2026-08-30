@@ -18,33 +18,22 @@ public static class GrpcServiceRegistrations
     public static IServiceCollection AddGrpcServices(this IServiceCollection services)
     {
         services.AddCodeFirstGrpc(options => options.EnableDetailedErrors = true);
+        services.AddGeneratedGrpcServices();
 
+        // Everything below is still hand-written, either because the area has not been converted to Arc
+        // artifacts yet or because it cannot be - see NonDerivedGrpcServices in Core.csproj, and the
+        // streaming services, whose server-to-client lifetime no command or query describes.
         services.AddSingleton<Contracts.Compliance.ICompliance, Services.Compliance.ComplianceService>();
-        services.AddSingleton<Contracts.EventStores.IEventStores, Services.EventStores>();
-        services.AddSingleton<Contracts.Namespaces.INamespaces, Services.Namespaces>();
-        services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();
-        services.AddSingleton<Contracts.Patterns.IPatterns, Services.Patterns.Patterns>();
-        services.AddSingleton<Contracts.Identities.IIdentities, Services.Identities.Identities>();
-        services.AddSingleton<Contracts.EventSequences.IEventSequences, Services.EventSequences.EventSequences>();
-        services.AddSingleton<Contracts.Events.IEventTypes, Services.Events.EventTypes>();
         services.AddSingleton<Contracts.Events.Constraints.IConstraints, Services.Events.Constraints.Constraints>();
         services.AddSingleton<Contracts.Clients.IConnectionService, Services.Clients.ConnectionService>();
         services.AddSingleton<Contracts.Observation.IObservers, Services.Observation.Observers>();
         services.AddSingleton<Contracts.Observation.IFailedPartitions, Services.Observation.FailedPartitions>();
         services.AddSingleton<Contracts.Observation.Reactors.IReactors, Services.Observation.Reactors.Reactors>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
-        services.AddSingleton<Contracts.Observation.Webhooks.IWebhooks, Services.Observation.Webhooks.Webhooks>();
-        services.AddSingleton<Contracts.ExternalServices.IExternalServices, Services.ExternalServices.ExternalServices>();
-        services.AddSingleton<Contracts.SequenceQueries.ISequenceQueries, Services.SequenceQueries.SequenceQueries>();
-        services.AddSingleton<Contracts.Captures.ICaptures, Services.Captures.Captures>();
         services.AddSingleton<Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions, Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.ReadModels.IMaterializedReadModels, Services.ReadModels.MaterializedReadModels>();
-        services.AddSingleton<Contracts.Jobs.IJobs, Services.Jobs.Jobs>();
-        services.AddSingleton<Contracts.Seeding.IEventSeeding, Services.Seeding.EventSeeding>();
-        services.AddSingleton<Contracts.Security.IUsers, Services.Security.Users>();
-        services.AddSingleton<Contracts.Security.IApplications, Services.Security.Applications>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
 
         return services;
@@ -59,32 +48,19 @@ public static class GrpcServiceRegistrations
     {
         app.UseEndpoints(_ =>
         {
+            _.MapGeneratedGrpcServices();
+
             _.MapGrpcService<Services.Compliance.ComplianceService>();
-            _.MapGrpcService<Services.EventStores>();
-            _.MapGrpcService<Services.Namespaces>();
-            _.MapGrpcService<Services.Recommendations.Recommendations>();
-            _.MapGrpcService<Services.Patterns.Patterns>();
-            _.MapGrpcService<Services.Identities.Identities>();
-            _.MapGrpcService<Services.EventSequences.EventSequences>();
-            _.MapGrpcService<Services.Events.EventTypes>();
             _.MapGrpcService<Services.Events.Constraints.Constraints>();
             _.MapGrpcService<Services.Clients.ConnectionService>();
             _.MapGrpcService<Services.Observation.Observers>();
             _.MapGrpcService<Services.Observation.FailedPartitions>();
             _.MapGrpcService<Services.Observation.Reactors.Reactors>();
             _.MapGrpcService<Services.Observation.Reducers.Reducers>();
-            _.MapGrpcService<Services.Observation.Webhooks.Webhooks>();
-            _.MapGrpcService<Services.ExternalServices.ExternalServices>();
-            _.MapGrpcService<Services.SequenceQueries.SequenceQueries>();
-            _.MapGrpcService<Services.Captures.Captures>();
             _.MapGrpcService<Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.ReadModels.ReadModels>();
             _.MapGrpcService<Services.ReadModels.MaterializedReadModels>();
-            _.MapGrpcService<Services.Jobs.Jobs>();
-            _.MapGrpcService<Services.Seeding.EventSeeding>();
-            _.MapGrpcService<Services.Security.Users>();
-            _.MapGrpcService<Services.Security.Applications>();
             _.MapGrpcService<Services.Host.Server>();
         });
 

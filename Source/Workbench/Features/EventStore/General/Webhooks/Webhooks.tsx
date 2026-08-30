@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { GetWebhooks, RemoveWebHook, type WebhookDefinition } from 'Api/Webhooks';
+import { GetWebhooks, RemoveWebhook, WebhookDetails as WebhookDetailsModel } from 'Features/Observation/Webhooks';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
@@ -21,10 +21,10 @@ const renderBoolean = (value: boolean) => {
 
 export const Webhooks = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [selectedWebhook, setSelectedWebhook] = useState<WebhookDefinition | null>(null);
+    const [selectedWebhook, setSelectedWebhook] = useState<WebhookDetailsModel | null>(null);
     const [showConfirmation] = useConfirmationDialog();
     const [AddWebhookDialogWrapper, showAddWebhookDialog] = useDialog(AddWebhookDialog);
-    const [removeWebhook] = RemoveWebHook.use();
+    const [removeWebhook] = RemoveWebhook.use();
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -32,13 +32,13 @@ export const Webhooks = () => {
         if (selectedWebhook) {
             const result = await showConfirmation(
                 strings.eventStore.general.webhooks.dialogs.removeWebhook.title,
-                strings.eventStore.general.webhooks.dialogs.removeWebhook.message.replace('{name}', selectedWebhook.name),
+                strings.eventStore.general.webhooks.dialogs.removeWebhook.message.replace('{name}', selectedWebhook.identifier),
                 DialogButtons.YesNo
             );
 
             if (result === DialogResult.Yes) {
                 removeWebhook.eventStore = params.eventStore!;
-                removeWebhook.webhookId = selectedWebhook.id;
+                removeWebhook.webhookId = selectedWebhook.identifier;
                 await removeWebhook.execute();
                 setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
             }
@@ -63,7 +63,7 @@ export const Webhooks = () => {
                 emptyMessage={strings.eventStore.general.webhooks.empty}
                 detailsComponent={WebhookDetails}
                 selection={selectedWebhook}
-                onSelectionChange={(e) => setSelectedWebhook(e.value as WebhookDefinition)}>
+                onSelectionChange={(e) => setSelectedWebhook(e.value as WebhookDetailsModel)}>
 
                 <DataPage.MenuItems>
                     <MenuItem
@@ -80,7 +80,7 @@ export const Webhooks = () => {
                 <DataPage.Columns>
                     <Column
                         style={{ width: '200px' }}
-                        field='name' header={strings.eventStore.general.webhooks.columns.name}
+                        field='identifier' header={strings.eventStore.general.webhooks.columns.name}
                         />
                     <Column
                         field='url'
@@ -89,17 +89,17 @@ export const Webhooks = () => {
                         field='authorizationType'
                         style={{ width: '150px' }}
                         header={strings.eventStore.general.webhooks.columns.authorization}
-                        body={(webhook: WebhookDefinition) => getAuthorizationTypeString(webhook.authorizationType)} />
+                        body={(webhook: WebhookDetailsModel) => getAuthorizationTypeString(webhook.authorizationType)} />
                     <Column
                         field='isActive'
                         style={{ width: '80px' }}
                         header={strings.eventStore.general.webhooks.columns.active}
-                        body={(rowData: WebhookDefinition) => renderBoolean(rowData.isActive)} />
+                        body={(rowData: WebhookDetailsModel) => renderBoolean(rowData.isActive)} />
                     <Column
                         field='isReplayable'
                         style={{ width: '100px' }}
                         header={strings.eventStore.general.webhooks.columns.replayable}
-                        body={(rowData: WebhookDefinition) => renderBoolean(rowData.isReplayable)} />
+                        body={(rowData: WebhookDetailsModel) => renderBoolean(rowData.isReplayable)} />
                 </DataPage.Columns>
             </DataPage>
             <AddWebhookDialogWrapper />

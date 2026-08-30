@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { GlobalSeedData } from 'Api/Seeding/GlobalSeedData';
-import { NamespaceSeedData } from 'Api/Seeding/NamespaceSeedData';
-import { SeedEntry } from 'Api/Seeding/SeedEntry';
+import { GetGlobalSeedData, GetNamespaceSeedData } from 'Features/Seeding';
+import { SeedingEntry } from 'Features/Contracts/Seeding';
 import { Page } from 'Components/Common/Page';
 import { Allotment } from 'allotment';
 import { Column, type DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
@@ -17,7 +16,7 @@ export interface EventsSeedingComponentProps {
     namespace?: string;
 }
 
-interface FlatSeedEntry extends SeedEntry {
+interface FlatSeedEntry extends SeedingEntry {
     _uniqueKey: string;
 }
 
@@ -26,8 +25,8 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
     const [selectedItem, setSelectedItem] = useState<FlatSeedEntry | undefined>(undefined);
 
     const [result] = namespace
-        ? NamespaceSeedData.use({ eventStore, namespace })
-        : GlobalSeedData.use({ eventStore });
+        ? GetNamespaceSeedData.use({ eventStore, namespace })
+        : GetGlobalSeedData.use({ eventStore });
 
     const byEventSource = useMemo(() => {
         const groups = result.data?.byEventSource ?? [];
@@ -53,18 +52,18 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
         setSelectedItem(e.value ?? undefined);
     };
 
-    const contentPreview = (rowData: SeedEntry) => {
+    const contentPreview = (rowData: SeedingEntry) => {
         const content = typeof rowData.content === 'string'
             ? rowData.content
             : JSON.stringify(rowData.content);
         return content.length > 50 ? content.substring(0, 50) + '...' : content;
     };
 
-    const rowGroupHeaderTemplateBySource = (data: SeedEntry) => (
+    const rowGroupHeaderTemplateBySource = (data: SeedingEntry) => (
         <span style={{ fontWeight: 'bold' }}>Event Source: {data.eventSourceId}</span>
     );
 
-    const rowGroupHeaderTemplateByType = (data: SeedEntry) => (
+    const rowGroupHeaderTemplateByType = (data: SeedingEntry) => (
         <span style={{ fontWeight: 'bold' }}>Event Type: {data.eventTypeId}</span>
     );
 

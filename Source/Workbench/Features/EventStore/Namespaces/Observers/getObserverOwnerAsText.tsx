@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { ObserverOwner } from 'Api/Observation';
+import { ObserverOwner } from 'Features/Contracts/Observation';
 
 export const getObserverOwnerAsText = (owner: ObserverOwner) => {
     switch (owner) {

@@ -395,7 +395,7 @@ public class EventStore : IEventStore
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
         var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
-        return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
+        return namespaces.Select(_ => (EventStoreNamespaceName)_.Name).ToArray();
     }
 
     async Task RegisterAllCore()

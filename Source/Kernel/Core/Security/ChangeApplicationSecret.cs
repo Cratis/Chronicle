@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
 using Microsoft.AspNetCore.Identity;
-using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
-using ClientSecret = Cratis.Chronicle.Concepts.Security.ClientSecret;
 
 namespace Cratis.Chronicle.Security;
 
@@ -17,7 +16,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ClientSecret">The new plain-text client secret to be hashed and stored.</param>
 [Command]
 [BelongsTo(WellKnownServices.Applications)]
-public record ChangeApplicationSecret(Guid Id, string ClientSecret)
+public record ChangeApplicationSecret(Concepts.Security.ApplicationId Id, ClientSecret ClientSecret)
 {
     /// <summary>
     /// Handles the command by appending an <see cref="ApplicationSecretChanged"/> event to the event log.
@@ -29,6 +28,6 @@ public record ChangeApplicationSecret(Guid Id, string ClientSecret)
         var hashedSecret = new PasswordHasher<object>().HashPassword(null!, ClientSecret);
         var @event = new ApplicationSecretChanged((ClientSecret)hashedSecret);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((ApplicationId)Id, @event);
+        await eventSequence.Append(Id, @event);
     }
 }

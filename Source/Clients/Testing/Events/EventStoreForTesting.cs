@@ -3,6 +3,8 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
+extern alias KernelGrpc;
+
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -231,7 +233,6 @@ public class EventStoreForTesting : IEventStore
         _jobs = new Lazy<IJobs>(() => new JobsImpl(this));
         _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this));
         _patterns = new Lazy<IPatterns>(() => new Patterns.Patterns(this));
-
         _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
             Name,
             Connection,
@@ -401,14 +402,17 @@ public class EventStoreForTesting : IEventStore
                 NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
 
-        var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
-            grainFactory,
+        var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
+            InProcessCommandPipeline.Create(grainFactory, storage, _jsonSerializerOptions),
             storage,
             eventCompliance,
-            _jsonSerializerOptions);
+            _jsonSerializerOptions,
+            new InProcessQueryContextManager(),
+            grainFactory,
+            NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 
         var constraintsService = new InProcessNoOpConstraintsService();
-        var services = new InProcessServices(eventSequencesService, constraintsService);
+        var services = new InProcessServices(sequencesService, constraintsService);
 #pragma warning disable CA2000 // Dispose objects before losing scope — EventLog/EventSequence takes ownership
         var connection = new InProcessChronicleConnection(services);
 #pragma warning restore CA2000

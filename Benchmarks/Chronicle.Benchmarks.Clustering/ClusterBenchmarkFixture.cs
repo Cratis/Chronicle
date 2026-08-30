@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelGrpc;
 extern alias KernelConcepts;
 
 using Cratis.Arc;
@@ -140,7 +141,7 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology) : IAsyncDi
             })
             .ConfigureSilo((siloOptions, siloBuilder) =>
             {
-                KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
+                KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     siloBuilder,
                     chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, EventStore));
 

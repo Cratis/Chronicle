@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ConfirmedPassword">Confirmation of the new password; must match <paramref name="Password"/>.</param>
 [Command]
 [BelongsTo(WellKnownServices.Users)]
-public record ChangeUserPassword(Guid UserId, string OldPassword, string Password, string ConfirmedPassword)
+public record ChangeUserPassword(UserId UserId, Password OldPassword, Password Password, Password ConfirmedPassword)
 {
     /// <summary>
     /// Handles the command by verifying the old password and appending a <see cref="UserPasswordChanged"/> event.
@@ -27,28 +27,28 @@ public record ChangeUserPassword(Guid UserId, string OldPassword, string Passwor
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
     /// <param name="storage">The <see cref="IStorage"/> to load the user record from.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="Services.Security.PasswordConfirmationMismatch">Thrown when the confirmed password does not match the new password.</exception>
-    /// <exception cref="Services.Security.UserNotFound">Thrown when the specified user does not exist.</exception>
-    /// <exception cref="Services.Security.InvalidOldPassword">Thrown when the supplied current password is incorrect.</exception>
-    /// <exception cref="Services.Security.NewPasswordMustBeDifferent">Thrown when the new password is the same as the current password.</exception>
+    /// <exception cref="PasswordConfirmationMismatch">Thrown when the confirmed password does not match the new password.</exception>
+    /// <exception cref="UserNotFound">Thrown when the specified user does not exist.</exception>
+    /// <exception cref="InvalidOldPassword">Thrown when the supplied current password is incorrect.</exception>
+    /// <exception cref="NewPasswordMustBeDifferent">Thrown when the new password is the same as the current password.</exception>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
         {
-            throw new Services.Security.PasswordConfirmationMismatch();
+            throw new PasswordConfirmationMismatch();
         }
 
-        var user = await storage.System.Users.GetById(UserId) ?? throw new Services.Security.UserNotFound(UserId);
+        var user = await storage.System.Users.GetById(UserId) ?? throw new UserNotFound(UserId);
 
         var passwordHasher = new PasswordHasher<object>();
         if (user.PasswordHash is null || passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, OldPassword) != PasswordVerificationResult.Success)
         {
-            throw new Services.Security.InvalidOldPassword();
+            throw new InvalidOldPassword();
         }
 
         if (passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, Password) == PasswordVerificationResult.Success)
         {
-            throw new Services.Security.NewPasswordMustBeDifferent();
+            throw new NewPasswordMustBeDifferent();
         }
 
         var passwordHash = passwordHasher.HashPassword(null!, Password);

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Events.Migrations;
 
 namespace Cratis.Chronicle.Events.for_EventTypes.when_registering;
@@ -31,5 +31,5 @@ public class and_event_type_has_complete_migration_chain : given.all_dependencie
     }
 
     [Fact] void should_not_throw() => true.ShouldBeTrue();
-    [Fact] void should_have_registered_event_types() => _eventTypesService.Received(1).Register(Arg.Any<RegisterEventTypesRequest>());
+    [Fact] void should_have_registered_event_types() => _eventTypesService.Received(1).RegisterEventTypes(Arg.Any<RegisterEventTypesRequest>());
 }

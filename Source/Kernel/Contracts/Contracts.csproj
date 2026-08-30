@@ -14,6 +14,16 @@
         -->
         <NoWarn>$(NoWarn);CS8618;PBN2008;PBN0022;PBN2013</NoWarn>
     </PropertyGroup>
+    <!--
+        The canonical descriptor set every Chronicle client ships and hands to the kernel on connect, so the kernel
+        can own the one and only compatibility check. It is generated from these contracts by
+        Source/Kernel/Protobuf/generate-protos.sh and committed, because only two of the four client generators keep
+        descriptors around at runtime - see Source/Kernel/Compatibility.
+    -->
+    <ItemGroup>
+        <EmbeddedResource Include="../Protobuf/chronicle.desc" LogicalName="Cratis.Chronicle.Contracts.chronicle.desc" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
@@ -24,6 +34,26 @@
         </PackageReference>
         <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
+
+    <!--
+        The proto files and the descriptor set under ../Protobuf are generated from these contracts, and generating
+        them on every build is what keeps that true. The generator deletes what was there before writing, so a
+        hand-applied edit to a generated file cannot survive a build - it is removed, not merely overwritten.
+
+        This exists because hand-patching happened: eventsequences.proto carried three fields that nothing in the
+        contracts produced, added by hand when the generator was silently failing (#3712), and the published clients
+        were generated from them. A generated file that someone can edit and keep is a second, unversioned source of
+        truth for the wire format.
+
+        Runs for one target framework only - the output does not differ per framework - and never while packing,
+        where the same files would be written three times over. Pass -p:DisableProtoGeneration=true to skip it.
+    -->
+    <Target Name="GenerateProtoFiles"
+            AfterTargets="Build"
+            Condition=" '$(TargetFramework)' == 'net10.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
+        <Message Text="Generating proto files and descriptor set from the contracts" Importance="high" />
+        <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)../../Tools/ProtoGenerator/ProtoGenerator.csproj&quot; -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Protobuf&quot;" />
+    </Target>
 
     <!-- Workaround for MSBuild GetTargetPath issue with multi-targeted projects referenced with PrivateAssets=all -->
     <Target Name="GetTargetPath" Returns="@(TargetPathWithTargetPlatformMoniker)">

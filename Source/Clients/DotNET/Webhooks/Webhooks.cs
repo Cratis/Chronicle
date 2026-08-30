@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Security;
@@ -30,29 +29,28 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
             definition.Identifier,
             definition.EventSequenceId);
 
-        var request = new AddWebhooks
+        var request = new AddWebhooksRequest
         {
             EventStore = eventStore.Name,
-            Owner = ObserverOwner.Client,
             Webhooks = [definition.ToContract()]
         };
 
-        await _servicesAccessor.Services.Webhooks.Add(request);
+        await _servicesAccessor.Services.Webhooks.AddWebhooks(request);
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<WebhookDefinition>> GetAll()
     {
         var request = new GetWebhooksRequest { EventStore = eventStore.Name };
-        var webhooks = await _servicesAccessor.Services.Webhooks.GetWebhooks(request);
+        var result = await _servicesAccessor.Services.Webhooks.GetWebhooks(request);
 
-        return webhooks.Select(w => new WebhookDefinition(
+        return result.Data.Select(w => new WebhookDefinition(
             new WebhookId(w.Identifier),
             w.EventTypes.Select(et => new EventType(new EventTypeId(et.Id), new EventTypeGeneration(et.Generation))),
             new WebhookTarget(
-                new WebhookTargetUrl(w.Target.Url),
+                new WebhookTargetUrl(w.Url),
                 OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None>.FromT3(default),
-                new Dictionary<string, string>(w.Target.Headers ?? new Dictionary<string, string>())),
+                new Dictionary<string, string>(w.Headers ?? new Dictionary<string, string>())),
             new EventSequences.EventSequenceId(w.EventSequenceId),
             w.IsReplayable,
             w.IsActive));

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Microsoft.Extensions.Logging;
 using IExternalServices = Cratis.Chronicle.Contracts.ExternalServices.IExternalServices;
@@ -22,6 +23,9 @@ public class when_registering_an_http_service : Specification
         _serviceAccessor = (IChronicleServicesAccessor)_chronicleConnection;
         _serviceAccessor.Services.Returns(Substitute.For<IServices>());
         _serviceAccessor.Services.ExternalServices.Returns(Substitute.For<IExternalServices>());
+        _serviceAccessor.Services.ExternalServices
+            .AddExternalServices(Arg.Any<AddExternalServicesRequest>())
+            .Returns(Task.FromResult(CommandResult.Success(Guid.NewGuid())));
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns(new EventStoreName("some-event-store"));
         _eventStore.Connection.Returns(_chronicleConnection);
@@ -36,10 +40,10 @@ public class when_registering_an_http_service : Specification
 
     [Fact]
     void should_add_the_external_service_for_the_event_store() => _serviceAccessor.Services.ExternalServices.Received(1)
-        .Add(Arg.Is<AddExternalServices>(_ =>
+        .AddExternalServices(Arg.Is<AddExternalServicesRequest>(_ =>
             _.EventStore == _eventStore.Name &&
-            _.ExternalServices.Count == 1 &&
-            _.ExternalServices[0].Name == "CustomersApi" &&
-            _.ExternalServices[0].Endpoint.Type == ExternalServiceEndpointType.Http &&
-            _.ExternalServices[0].Endpoint.Http!.Url == "https://api.example.com"));
+            _.ExternalServices.Count() == 1 &&
+            _.ExternalServices.First().Name == "CustomersApi" &&
+            _.ExternalServices.First().Endpoint.Type == ExternalServiceEndpointType.Http &&
+            _.ExternalServices.First().Endpoint.Http!.Url == "https://api.example.com"));
 }

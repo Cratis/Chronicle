@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventTypes;
 
 namespace Cratis.Chronicle.Events.for_EventTypes.when_registering;
 
@@ -22,7 +22,7 @@ public class and_event_type_has_event_store_attribute : given.all_dependencies
         _subject = new EventTypes(_eventStore, _schemaGenerator, _clientArtifacts, _eventTypeMigrators);
 
         _eventTypesService
-            .When(_ => _.Register(Arg.Any<RegisterEventTypesRequest>()))
+            .When(_ => _.RegisterEventTypes(Arg.Any<RegisterEventTypesRequest>()))
             .Do(call => _capturedRequest = call.Arg<RegisterEventTypesRequest>());
     }
 
@@ -33,5 +33,5 @@ public class and_event_type_has_event_store_attribute : given.all_dependencies
     }
 
     [Fact] void should_include_the_source_event_store_in_the_registration() =>
-        _capturedRequest.Types[0].EventStore.ShouldEqual(SourceEventStore);
+        _capturedRequest.Types.ElementAt(0).EventStore.ShouldEqual(SourceEventStore);
 }

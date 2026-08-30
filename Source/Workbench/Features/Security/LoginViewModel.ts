@@ -3,7 +3,9 @@
 
 import { injectable } from 'tsyringe';
 import { Guid } from '@cratis/fundamentals';
-import { ChangePasswordForUser, GetStatus, SetInitialAdminPassword } from 'Api/Security';
+import { ChangeUserPassword } from './ChangeUserPassword';
+import { GetStatus } from './GetStatus';
+import { SetInitialAdminPassword } from './SetInitialAdminPassword';
 import { absolutePath } from '../../Utils/basePath';
 
 @injectable()
@@ -20,7 +22,7 @@ export class LoginViewModel {
     userId: Guid | null = null;
 
     constructor(
-        readonly _changePassword: ChangePasswordForUser,
+        readonly _changePassword: ChangeUserPassword,
         readonly _setInitialAdminPassword: SetInitialAdminPassword,
         readonly _getStatus: GetStatus) {
     }
@@ -154,7 +156,7 @@ export class LoginViewModel {
                     this.errorMessage = 'You are not authorized to set the password.';
                 });
         } else {
-            // Use ChangePasswordForUser for regular password changes
+            // Use ChangeUserPassword for regular password changes
             this._changePassword.userId = this.userId!;
             this._changePassword.oldPassword = this.password;
             this._changePassword.password = this.newPassword;

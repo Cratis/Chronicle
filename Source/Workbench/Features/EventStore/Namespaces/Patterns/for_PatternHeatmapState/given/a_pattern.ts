@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
+import { BehaviorPatternDetails } from 'Features/Patterns/BehaviorPatternDetails';
 
-export const aPattern = (facets: Record<string, string>, confidence: number, occurrences = 10): BehaviorPattern =>
-    Object.assign(new BehaviorPattern(), {
+export const aPattern = (facets: Record<string, string>, confidence: number, occurrences = 10): BehaviorPatternDetails =>
+    Object.assign(new BehaviorPatternDetails(), {
         id: Object.entries(facets).map(([name, value]) => `${name}=${value}`).join(';'),
         groupingKey: 'user-42',
         facets,

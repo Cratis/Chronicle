@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Sequences;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendResultConverters.when_converting_to_client;
 
