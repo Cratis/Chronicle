@@ -275,6 +275,11 @@ def generate_project() -> str:
         <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">
             <Aliases>KernelStorageSql</Aliases>
         </ProjectReference>
+        <!-- AddChronicleToSilo (Orleans.Hosting.ChronicleServerSiloBuilderExtensions) lives here now,
+             not in Core - see Source/Kernel/Grpc/Grpc.csproj. -->
+        <ProjectReference Include="../../Source/Kernel/Grpc/Grpc.csproj">
+            <Aliases>KernelStorageSql</Aliases>
+        </ProjectReference>
         <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj">
             <Aliases>KernelStorageSql</Aliases>
         </ProjectReference>
