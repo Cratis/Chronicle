@@ -48,7 +48,7 @@ internal sealed class ExternalServices(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.ExternalServices.ExternalService.GetExternalServices(request.EventStore, storage);
+                var result = await global::Cratis.Chronicle.ExternalServices.ExternalService.GetExternalServices((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
                 return result.Select(ToExternalServiceResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "ExternalServices", "GetExternalServices"));
@@ -56,7 +56,7 @@ internal sealed class ExternalServices(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>> ObserveExternalServices(global::Cratis.Chronicle.Contracts.ExternalServices.ObserveExternalServicesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>(
-            () => global::Cratis.Chronicle.ExternalServices.ExternalService.ObserveExternalServices(request.EventStore, storage)
+            () => global::Cratis.Chronicle.ExternalServices.ExternalService.ObserveExternalServices((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>)_.Select(ToExternalServiceResponse).ToList()),
             exception => logger.QueryFailed(exception, "ExternalServices", "ObserveExternalServices"));

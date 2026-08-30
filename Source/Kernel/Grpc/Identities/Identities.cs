@@ -28,7 +28,7 @@ internal sealed class Identities(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>> AllIdentities(global::Cratis.Chronicle.Contracts.Identities.AllIdentitiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>(
-            () => global::Cratis.Chronicle.Identities.IdentityDetails.AllIdentities(request.EventStore, request.Namespace, storage)
+            () => global::Cratis.Chronicle.Identities.IdentityDetails.AllIdentities((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>)_.Select(ToIdentityDetailsResponse).ToList()),
             exception => logger.QueryFailed(exception, "Identities", "AllIdentities"));
@@ -38,7 +38,7 @@ internal sealed class Identities(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Identities.IdentityDetails.GetIdentities(request.EventStore, request.Namespace, storage);
+                var result = await global::Cratis.Chronicle.Identities.IdentityDetails.GetIdentities((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
                 return result.Select(ToIdentityDetailsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Identities", "GetIdentities"));

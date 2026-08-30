@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
@@ -29,7 +30,7 @@ public record ObserverInformationForEventType(string Id, string Namespace, Obser
     /// <param name="storage">The <see cref="IStorage"/> to read observers and namespaces from.</param>
     /// <returns>A collection of <see cref="ObserverInformationForEventType"/>.</returns>
     internal static async Task<IEnumerable<ObserverInformationForEventType>> GetObserversForEventType(
-        string eventStore,
+        EventStoreName eventStore,
         string eventTypeId,
         IStorage storage)
     {
@@ -53,7 +54,7 @@ public record ObserverInformationForEventType(string Id, string Namespace, Obser
     /// <param name="storage">The <see cref="IStorage"/> to read observers and namespaces from.</param>
     /// <returns>An observable subject emitting collections of <see cref="ObserverInformationForEventType"/>.</returns>
     internal static ISubject<IEnumerable<ObserverInformationForEventType>> ObserveObserversForEventType(
-        string eventStore,
+        EventStoreName eventStore,
         string eventTypeId,
         IStorage storage)
     {

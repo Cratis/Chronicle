@@ -15,7 +15,7 @@ public class and_it_has_no_events : given.an_event_sequence
     {
         _eventSourceId = Guid.NewGuid();
         _sequences.HasEventsForEventSourceId(Arg.Is<Contracts.Sequences.HasEventsForEventSourceIdRequest>(
-            req => req.EventSourceId == _eventSourceId)).Returns(Task.FromResult(QueryResult<bool>.Success(Guid.NewGuid(), false)));
+            req => req.EventSourceId == _eventSourceId)).Returns(Task.FromResult(QueryResult<Contracts.Sequences.EventSourceEventsResponse>.Success(Guid.NewGuid(), new() { HasEvents = false })));
     }
 
     async Task Because() => _result = await _eventSequence.HasEventsFor(_eventSourceId);

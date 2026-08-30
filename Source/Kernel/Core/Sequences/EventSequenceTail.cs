@@ -2,36 +2,26 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
-/// Home for event sequence lookups that answer with a single value computed on demand from storage - not a
-/// projected read model, and not naturally the shape of any other query in this service.
+/// Represents the sequence number of the tail event in an event sequence.
 /// </summary>
+/// <param name="SequenceNumber">The sequence number of the tail event.</param>
+/// <remarks>
+/// Declared as a read model for the same reason as <see cref="EventSourceEvents"/>: a query returns its own read
+/// model, and the value travels on the wire as the unwrapped primitive either way.
+/// </remarks>
 [ReadModel]
 [BelongsTo(WellKnownServices.EventSequences)]
-public record EventSequenceLookups
+public record EventSequenceTail(EventSequenceNumber SequenceNumber)
 {
-    /// <summary>
-    /// Checks whether an event source has any events in an event sequence.
-    /// </summary>
-    /// <param name="storage">The <see cref="IStorage"/> to read from.</param>
-    /// <param name="eventStore">Event store to check in.</param>
-    /// <param name="namespace">Namespace to check in.</param>
-    /// <param name="eventSequenceId">Event sequence to check in.</param>
-    /// <param name="eventSourceId">The event source to check for.</param>
-    /// <returns>True if the event source has events, false otherwise.</returns>
-    public static Task<bool> HasEventsForEventSourceId(
-        IStorage storage,
-        string eventStore,
-        string @namespace,
-        string eventSequenceId,
-        string eventSourceId) =>
-        storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId).HasEventsFor(eventSourceId);
-
     /// <summary>
     /// Gets the sequence number of the tail event in an event sequence, optionally narrowed.
     /// </summary>
@@ -45,11 +35,11 @@ public record EventSequenceLookups
     /// <param name="eventStreamId">Optional event stream to narrow to.</param>
     /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
     /// <returns>The tail sequence number.</returns>
-    public static async Task<ulong> TailSequenceNumber(
+    public static async Task<EventSequenceTail> TailSequenceNumber(
         IStorage storage,
-        string eventStore,
-        string @namespace,
-        string eventSequenceId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
         string? eventTypeIds = default,
         string? eventSourceId = default,
         string? eventSourceType = default,
@@ -89,6 +79,6 @@ public record EventSequenceLookups
             resolvedEventStreamId,
             resolvedEventStreamType);
 
-        return tail.Value;
+        return new(tail);
     }
 }

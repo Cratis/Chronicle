@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -32,7 +33,7 @@ public record EventTypeDetails(
     /// <param name="eventStore">The event store to get event types for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
     /// <returns>A collection of event type registrations.</returns>
-    internal static async Task<IEnumerable<EventTypeDetails>> AllEventTypes(string eventStore, IStorage storage)
+    internal static async Task<IEnumerable<EventTypeDetails>> AllEventTypes(EventStoreName eventStore, IStorage storage)
     {
         var eventTypes = await storage.GetEventStore(eventStore).EventTypes.GetLatestForAllEventTypes();
         return eventTypes.ToReadModel();
@@ -44,7 +45,7 @@ public record EventTypeDetails(
     /// <param name="eventStore">The event store to observe event types for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
     /// <returns>An observable subject emitting collections of event type registrations.</returns>
-    internal static ISubject<IEnumerable<EventTypeDetails>> ObserveEventTypes(string eventStore, IStorage storage) =>
+    internal static ISubject<IEnumerable<EventTypeDetails>> ObserveEventTypes(EventStoreName eventStore, IStorage storage) =>
         storage.GetEventStore(eventStore).EventTypes.ObserveLatestForAllEventTypes().TransformSubject(_ => _.ToReadModel());
 
     /// <summary>
@@ -54,7 +55,7 @@ public record EventTypeDetails(
     /// <param name="eventTypeId">The event type to get generations for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
     /// <returns>A collection of registrations, one per generation.</returns>
-    internal static async Task<IEnumerable<EventTypeDetails>> AllEventTypeGenerations(string eventStore, string eventTypeId, IStorage storage)
+    internal static async Task<IEnumerable<EventTypeDetails>> AllEventTypeGenerations(EventStoreName eventStore, EventTypeId eventTypeId, IStorage storage)
     {
         var eventType = new EventType(eventTypeId, EventTypeGeneration.First, false);
         var schemas = await storage.GetEventStore(eventStore).EventTypes.GetAllGenerationsForEventType(eventType);

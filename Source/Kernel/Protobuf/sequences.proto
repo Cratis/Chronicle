@@ -218,9 +218,15 @@ message EventSequenceNamesResponse {
    string Id = 1;
    string Name = 2;
 }
+message EventSequenceTailResponse {
+   uint64 SequenceNumber = 1;
+}
 message EventSourceConcurrencyScope {
    string EventSourceId = 1;
    ConcurrencyScope Scope = 2;
+}
+message EventSourceEventsResponse {
+   bool HasEvents = 1;
 }
 message EventToAppend {
    EventType EventType = 1;
@@ -314,13 +320,21 @@ message QueryEventsRequest {
    SerializableDateTimeOffset OccurredFrom = 11;
    SerializableDateTimeOffset OccurredTo = 12;
 }
-message QueryResult_Boolean {
+message QueryResult_EventSequenceTailResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2; // default value could not be applied: True
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
-   bool Data = 6;
+   EventSequenceTailResponse Data = 6;
+}
+message QueryResult_EventSourceEventsResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   EventSourceEventsResponse Data = 6;
 }
 message QueryResult_HistogramResolution {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -369,14 +383,6 @@ message QueryResult_SerializableDateTimeOffset {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    SerializableDateTimeOffset Data = 6;
-}
-message QueryResult_UInt64 {
-   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
-   repeated ValidationResult ValidationResults = 3;
-   repeated string ExceptionMessages = 4;
-   string ExceptionStackTrace = 5;
-   uint64 Data = 6;
 }
 message RedactForEventSourceRequest {
    string EventStore = 1;
@@ -462,12 +468,12 @@ service EventSequences {
    rpc ExportEvents (ExportEventsRequest) returns (QueryResult_IEnumerable_ExportedEventResponse);
    rpc ForEventSourceIdAndEventTypes (ForEventSourceIdAndEventTypesRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc FromSequenceNumber (FromSequenceNumberRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
-   rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_Boolean);
+   rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_EventSourceEventsResponse);
    rpc ParseResolution (ParseResolutionRequest) returns (QueryResult_HistogramResolution);
    rpc QueryEvents (QueryEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc Redact (RedactRequest) returns (CommandResult);
    rpc RedactForEventSource (RedactForEventSourceRequest) returns (CommandResult);
    rpc Revise (ReviseRequest) returns (CommandResult);
    rpc SequenceHistogram (SequenceHistogramRequest) returns (QueryResult_IEnumerable_SequenceHistogramBucketResponse);
-   rpc TailSequenceNumber (TailSequenceNumberRequest) returns (QueryResult_UInt64);
+   rpc TailSequenceNumber (TailSequenceNumberRequest) returns (QueryResult_EventSequenceTailResponse);
 }

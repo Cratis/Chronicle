@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -45,9 +47,9 @@ public record SequenceHistogramBucket(DateTimeOffset From, DateTimeOffset To, lo
     /// </remarks>
     public static async Task<IEnumerable<SequenceHistogramBucket>> SequenceHistogram(
         IStorage storage,
-        string eventStore,
-        string @namespace,
-        string eventSequenceId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
         string? resolution = default,
         string? eventSourceId = default,
         string? eventSourceType = default,

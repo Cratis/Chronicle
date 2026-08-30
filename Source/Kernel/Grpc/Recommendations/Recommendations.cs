@@ -34,7 +34,7 @@ internal sealed class Recommendations(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> AllRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
-            () => global::Cratis.Chronicle.Recommendations.RecommendationDetails.AllRecommendations(request.EventStore, request.Namespace, storage)
+            () => global::Cratis.Chronicle.Recommendations.RecommendationDetails.AllRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>)_.Select(ToRecommendationDetailsResponse).ToList()),
             exception => logger.QueryFailed(exception, "Recommendations", "AllRecommendations"));
@@ -44,7 +44,7 @@ internal sealed class Recommendations(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Recommendations.RecommendationDetails.GetRecommendations(request.EventStore, request.Namespace, storage);
+                var result = await global::Cratis.Chronicle.Recommendations.RecommendationDetails.GetRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
                 return result.Select(ToRecommendationDetailsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Recommendations", "GetRecommendations"));

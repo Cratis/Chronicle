@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
 using Cratis.Chronicle.Storage;
 
@@ -60,7 +61,7 @@ public record SequenceQuery(
     /// principal executing the call, and the caller re-reads after saving or deleting anyway.
     /// </remarks>
     public static async Task<IEnumerable<SequenceQuery>> AllSequenceQueries(
-        string eventStore,
+        EventStoreName eventStore,
         ICurrentPrincipalAccessor currentPrincipalAccessor,
         IStorage storage)
     {

@@ -380,14 +380,14 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task<bool> HasEventsFor(EventSourceId eventSourceId) =>
-        _servicesAccessor.Services.Sequences.HasEventsForEventSourceId(new()
+    public async Task<bool> HasEventsFor(EventSourceId eventSourceId) =>
+        (await _servicesAccessor.Services.Sequences.HasEventsForEventSourceId(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventSourceId = eventSourceId
-        }).EnsureSuccess();
+        }).EnsureSuccess()).HasEvents;
 
     /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(
@@ -444,7 +444,7 @@ public class EventSequence(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? filterEventTypes = default) =>
-        await _servicesAccessor.Services.Sequences.TailSequenceNumber(new()
+        (await _servicesAccessor.Services.Sequences.TailSequenceNumber(new()
         {
             EventStore = eventStoreName,
             Namespace = @namespace,
@@ -454,7 +454,7 @@ public class EventSequence(
             EventStreamType = eventStreamType?.Value,
             EventStreamId = eventStreamId?.Value,
             EventTypeIds = JoinEventTypeIds(filterEventTypes)
-        }).EnsureSuccess();
+        }).EnsureSuccess()).SequenceNumber;
 
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)

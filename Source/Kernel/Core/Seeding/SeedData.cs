@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Grpc;
 
@@ -24,7 +25,7 @@ public record SeedData(
     /// <param name="eventStore">The event store to get seed data for.</param>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the seeding grain with.</param>
     /// <returns>The global seed data.</returns>
-    internal static Task<SeedData> GetGlobalSeedData(string eventStore, IGrainFactory grainFactory) =>
+    internal static Task<SeedData> GetGlobalSeedData(EventStoreName eventStore, IGrainFactory grainFactory) =>
         SeedingConverters.Read(grainFactory, EventSeedingKey.ForGlobal(eventStore));
 
     /// <summary>
@@ -34,6 +35,6 @@ public record SeedData(
     /// <param name="namespace">The namespace to get seed data for.</param>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the seeding grain with.</param>
     /// <returns>The namespaced seed data.</returns>
-    internal static Task<SeedData> GetNamespaceSeedData(string eventStore, string @namespace, IGrainFactory grainFactory) =>
+    internal static Task<SeedData> GetNamespaceSeedData(EventStoreName eventStore, EventStoreNamespaceName @namespace, IGrainFactory grainFactory) =>
         SeedingConverters.Read(grainFactory, EventSeedingKey.ForNamespace(eventStore, @namespace));
 }

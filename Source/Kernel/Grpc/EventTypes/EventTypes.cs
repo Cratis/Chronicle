@@ -42,7 +42,7 @@ internal sealed class EventTypes(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.EventTypes.EventTypeDetails.AllEventTypeGenerations(request.EventStore, request.EventTypeId, storage);
+                var result = await global::Cratis.Chronicle.EventTypes.EventTypeDetails.AllEventTypeGenerations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Events.EventTypeId)request.EventTypeId, storage);
                 return result.Select(ToEventTypeDetailsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventTypes", "AllEventTypeGenerations"));
@@ -52,7 +52,7 @@ internal sealed class EventTypes(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.EventTypes.EventTypeDetails.AllEventTypes(request.EventStore, storage);
+                var result = await global::Cratis.Chronicle.EventTypes.EventTypeDetails.AllEventTypes((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
                 return result.Select(ToEventTypeDetailsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventTypes", "AllEventTypes"));
@@ -60,7 +60,7 @@ internal sealed class EventTypes(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>> ObserveEventTypes(global::Cratis.Chronicle.Contracts.EventTypes.ObserveEventTypesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>>(
-            () => global::Cratis.Chronicle.EventTypes.EventTypeDetails.ObserveEventTypes(request.EventStore, storage)
+            () => global::Cratis.Chronicle.EventTypes.EventTypeDetails.ObserveEventTypes((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeDetailsResponse>)_.Select(ToEventTypeDetailsResponse).ToList()),
             exception => logger.QueryFailed(exception, "EventTypes", "ObserveEventTypes"));

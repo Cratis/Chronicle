@@ -58,7 +58,7 @@ internal sealed class Captures(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Captures.CaptureDetails.GetCaptures(request.EventStore, storage);
+                var result = await global::Cratis.Chronicle.Captures.CaptureDetails.GetCaptures((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
                 return result.Select(ToCaptureDetailsResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Captures", "GetCaptures"));
@@ -66,7 +66,7 @@ internal sealed class Captures(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>> ObserveCaptures(global::Cratis.Chronicle.Contracts.Captures.ObserveCapturesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>>(
-            () => global::Cratis.Chronicle.Captures.CaptureDetails.ObserveCaptures(request.EventStore, storage)
+            () => global::Cratis.Chronicle.Captures.CaptureDetails.ObserveCaptures((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CaptureDetailsResponse>)_.Select(ToCaptureDetailsResponse).ToList()),
             exception => logger.QueryFailed(exception, "Captures", "ObserveCaptures"));
@@ -76,7 +76,7 @@ internal sealed class Captures(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Captures.CapturedEventResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Captures.CapturedEvent.CapturedEvents(request.EventStore, request.CaptureName, request.Namespace, request.MaxEvents, storage, jsonSerializerOptions);
+                var result = await global::Cratis.Chronicle.Captures.CapturedEvent.CapturedEvents((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.CaptureName, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.MaxEvents, storage, jsonSerializerOptions);
                 return result.Select(ToCapturedEventResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Captures", "CapturedEvents"));

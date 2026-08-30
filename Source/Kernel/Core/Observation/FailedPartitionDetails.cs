@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
@@ -31,8 +32,8 @@ public record FailedPartitionDetails(
     /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
     /// <returns>A collection of <see cref="FailedPartitionDetails"/>.</returns>
     internal static async Task<IEnumerable<FailedPartitionDetails>> GetFailedPartitions(
-        string eventStore,
-        string @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         string? observerId,
         IStorage storage)
     {
@@ -53,8 +54,8 @@ public record FailedPartitionDetails(
     /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
     /// <returns>An observable subject emitting collections of <see cref="FailedPartitionDetails"/>.</returns>
     internal static ISubject<IEnumerable<FailedPartitionDetails>> AllFailedPartitions(
-        string eventStore,
-        string @namespace,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         string? observerId,
         IStorage storage)
     {
