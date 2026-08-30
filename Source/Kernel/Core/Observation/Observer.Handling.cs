@@ -133,6 +133,8 @@ public partial class Observer
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
+                    var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey);
+
                     ObserverSubscriberResult result;
                     while (true)
                     {
@@ -140,7 +142,7 @@ public partial class Observer
                         var key = _subscription.GetSubscriberKeyFor(partition, target.SiloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        result = await subscriber.OnNext(partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
+                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
 
                         // A disconnected result from one client instance only removes that instance —
                         // the batch is retried against the remaining instances. Only when the last

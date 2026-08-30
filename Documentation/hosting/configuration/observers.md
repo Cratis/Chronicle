@@ -7,6 +7,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 ```json
 {
   "observers": {
+    "subscriberTimeout": 30,
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
     "exponentialBackoffDelayFactor": 2,
@@ -21,7 +22,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| subscriberTimeout | number | 5 | Reserved. Not currently applied to subscriber calls — setting it has no effect |
+| subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. `0` waits indefinitely. See [Subscriber timeout](#subscriber-timeout) |
 | maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite) |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
 | quarantineOnFailedPartitionPercentage | number | 0.0 | Quarantine the observer once this share of its observed partitions have failed (0.0 = never) |
@@ -30,6 +31,25 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | maximumBackoffDelay | number | 600 | Maximum backoff delay in seconds |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
+
+## Subscriber timeout
+
+Every path that hands events to an observer's subscriber — live delivery, catch-up and replay — waits at most
+`subscriberTimeout` seconds for an answer. When it elapses, the batch is recorded as a failed partition of kind
+`Timeout` and the partition retries with the usual backoff.
+
+Two things are worth knowing before changing it:
+
+- **Giving up abandons the wait, not the work.** The subscriber is a grain and keeps processing the batch it was
+  handed; the events are simply redelivered when the partition retries. Observers are expected to be idempotent, so
+  that is safe — but it does mean a short timeout can have a subscriber working on a batch the kernel has already
+  written off.
+- **Raising it past the transport's own response timeout has no effect**, because that one gives up first. The
+  default deliberately matches it, so the setting bounds nothing new until you lower it. Lowering it is the point:
+  a subscriber that should always answer in a second or two gets its partition back into retry quickly instead of
+  holding a job step for half a minute.
+
+Set it to `0` to wait indefinitely — the escape hatch for a subscriber whose work legitimately has no upper bound.
 
 ## What a failed partition says went wrong
 

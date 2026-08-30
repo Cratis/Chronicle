@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -27,6 +28,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains off the activation thread.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
+/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -36,6 +38,7 @@ public class HandleEventsForObserver(
     IEventCompliance eventCompliance,
     IGrainFactory grainFactory,
     IObserverSubscriberSelector subscriberSelector,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<HandleEventsForObserver> logger) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -168,6 +171,8 @@ public class HandleEventsForObserver(
                 ? [.. await _observer.GetFailedPartitionKeys()]
                 : [];
 
+            var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
+
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
             {
@@ -198,7 +203,7 @@ public class HandleEventsForObserver(
                         continue;
                     }
 
-                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents);
+                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents, subscriberTimeout);
                     if (handleEventsResult.TryGetException(out var handleEventsException))
                     {
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
@@ -407,7 +412,8 @@ public class HandleEventsForObserver(
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         Key partition,
-        AppendedEvent[] events)
+        AppendedEvent[] events,
+        TimeSpan subscriberTimeout)
     {
         try
         {
@@ -421,7 +427,7 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
-            var result = await subscriber!.OnNext(partition, decryptedEvents, subscriberContext);
+            var result = await subscriber!.OnNextWithin(subscriberTimeout, partition, decryptedEvents, subscriberContext);
             return (result, decryptedEvents);
         }
         catch (Exception ex)

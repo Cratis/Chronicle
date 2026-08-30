@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -29,6 +30,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
+/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -37,6 +39,7 @@ public class HandleEventsForPartition(
     IStorage storage,
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -183,6 +186,7 @@ public class HandleEventsForPartition(
 
             var subscriberContext = new ObserverSubscriberContext(
                 subscriberSelector.Select(subscription, currentState.Partition).ConnectedClient ?? subscription.Arguments);
+            var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
 
             var failed = false;
             var exceptionMessages = Enumerable.Empty<string>().ToArray();
@@ -199,7 +203,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, nonRedactionEventTypeIds);
+                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -354,6 +358,7 @@ public class HandleEventsForPartition(
         HandleEventsForPartitionState state,
         IEventCursor events,
         ObserverSubscriberContext subscriberContext,
+        TimeSpan subscriberTimeout,
         HashSet<EventTypeId> nonRedactionEventTypeIds)
     {
         try
@@ -363,7 +368,7 @@ public class HandleEventsForPartition(
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
-                var result = await _subscriber!.OnNext(state.Partition, decryptedEvents, subscriberContext);
+                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext);
                 return (result, decryptedEvents);
             }
 

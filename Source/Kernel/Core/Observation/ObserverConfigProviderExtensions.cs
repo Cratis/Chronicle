@@ -17,17 +17,17 @@ public static class ObserverConfigProviderExtensions
     /// <param name="provider">The configuration provider.</param>
     /// <param name="key">The observer key.</param>
     /// <returns>The timeout.</returns>
+    /// <remarks>
+    /// A configured zero - or anything below it - means waiting indefinitely, which is the escape hatch for a
+    /// subscriber whose work legitimately has no upper bound.
+    /// </remarks>
     public static async Task<TimeSpan> GetSubscriberTimeoutForObserver(
         this IConfigurationForObserverProvider provider,
         ObserverKey key)
     {
         var config = await provider.GetFor(key);
-        var timeout = TimeSpan.FromSeconds(config.SubscriberTimeout);
-        if (timeout <= TimeSpan.Zero)
-        {
-            timeout = TimeSpan.FromSeconds(5);
-        }
-
-        return timeout;
+        return config.SubscriberTimeout <= 0
+            ? TimeSpan.Zero
+            : TimeSpan.FromSeconds(config.SubscriberTimeout);
     }
 }
