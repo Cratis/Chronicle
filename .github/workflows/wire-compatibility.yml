@@ -1,0 +1,178 @@
+name: Wire Compatibility
+
+# Everything released within a major has to keep serving the first release of that major, so a client built against
+# 16.0.0 keeps talking to a 16.x server. Nothing enforced that, and 16.x shipped breaking wire changes anyway - whole
+# services renamed out from under their proto package, streaming rpcs turned unary, messages removed. This is the
+# gate that stops the next one, and it runs before anything else because there is no point building what cannot ship.
+#
+# It checks two things, in order:
+#   1. The committed proto files and descriptor set still match the contracts source. A stale descriptor set would
+#      make step 2 compare against something nobody is actually running.
+#   2. The wire contract at HEAD still serves every released minor of the current major - at or after the declared
+#      floor, where one applies to that major - reporting each one, so a break says which releases it breaks rather
+#      than only that something broke.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'The version being released. Its major decides the baseline. When empty, the major comes from the latest tag.'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      skipped:
+        description: 'Whether the check was skipped because this is a deliberate breaking change.'
+        value: ${{ jobs.wire-compatibility.outputs.skipped }}
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  PROTOBUF_DIRECTORY: Source/Kernel/Protobuf
+
+  # The oldest release this gate measures from, and the major it applies to. Anything older in that major is not
+  # compared against; every other major is compared in full.
+  #
+  # 16.x already lost intra-major compatibility. From 16.34.0 the Security and Jobs surfaces stopped being
+  # hand-written gRPC contracts and became generated from the Arc artifacts in Core, which renamed every method and
+  # moved every query payload behind a result envelope; COMPATIBILITY-REPORT.md measures exactly what that cost and
+  # concludes it cannot be undone without freezing a pre-Arc response shape into the generator permanently. Issue
+  # #2908 finished that conversion: every remaining hand-written service (EventSequences, EventTypes, Captures,
+  # ExternalServices, Identities, Observation/Webhooks, Recommendations, Seeding, and the rest of the Web API
+  # surface) moved onto the same generated path, for the same reason, and broke the same way.
+  #
+  # A gate that fails every run on a break that already shipped stops being read, and one that is turned off
+  # entirely catches nothing. So 16.x is measured from where the conversion finished instead: 16.39.0 and
+  # everything after it is the generated contract and has to keep working, and the releases before it - including
+  # 16.34.0 through 16.38.2, which only had *part* of the conversion - are acknowledged as already broken. This is
+  # a statement about 16.x only - the major is read from the version itself, so 17 and beyond get the whole of
+  # their major compared with no floor at all, which is the behavior every major should have.
+  #
+  # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
+  # release that does, never to make a red check go away.
+  #
+  # This floor keeps moving while the PR is open: it was 16.38.0, then 16.39.0, and unrelated releases have shipped
+  # past both. It names the release this change goes out as, so it is never a version already published by the time
+  # this line is read - re-check the latest tag before trusting it. Latest at the time of writing is 16.42.0.
+  WIRE_BASELINE_FLOOR: "16.43.0"
+
+jobs:
+  wire-compatibility:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      skipped: ${{ steps.baseline.outputs.skip }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # The baseline major is read from the tags when no release version is supplied, and a shallow
+          # checkout has none of them.
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Determine baseline major
+        id: baseline
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          # A pull request labeled major is declaring the break on purpose. That is the one way to change the wire
+          # contract, and refusing it here would leave no way to ever cut a major.
+          if [ -n "$LABELS" ] && [ "$(printf '%s' "$LABELS" | jq '[.[] | select(. == "major")] | length')" -gt 0 ]; then
+            echo "::notice title=Wire compatibility not checked::This pull request is labeled major, so breaking the wire contract is the declared intent."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "$RELEASE_VERSION" ]; then
+            MAJOR="${RELEASE_VERSION%%.*}"
+            echo "Baseline major $MAJOR, from the release version $RELEASE_VERSION."
+          else
+            # Read the whole list and take its first line rather than piping into head. Under pipefail, head
+            # closing the pipe kills git with SIGPIPE and the step exits 141 - intermittently, depending on
+            # whether git had finished writing, which is the worst way for a gate to fail.
+            ALL_TAGS="$(git tag --list 'v*' --sort=-v:refname)"
+            LATEST_TAG="${ALL_TAGS%%$'\n'*}"
+            if [ -z "$LATEST_TAG" ]; then
+              echo "::notice title=Wire compatibility not checked::No release tag exists yet, so there is no released contract to stay compatible with."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            MAJOR="${LATEST_TAG#v}"
+            MAJOR="${MAJOR%%.*}"
+            echo "Baseline major $MAJOR, from the latest tag $LATEST_TAG."
+          fi
+
+          # The floor names the major it belongs to, so it narrows that major and leaves every other one whole.
+          FLOOR_MAJOR="${WIRE_BASELINE_FLOOR%%.*}"
+          if [ "$MAJOR" = "$FLOOR_MAJOR" ]; then
+            echo "Measuring from $WIRE_BASELINE_FLOOR. Earlier $MAJOR.x releases are already broken and are not compared against."
+            echo "since=$WIRE_BASELINE_FLOOR" >> "$GITHUB_OUTPUT"
+          else
+            echo "No floor is declared for major $MAJOR, so every released minor of it is compared against."
+            echo "since=" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
+
+      # Building Contracts regenerates the proto files and the descriptor set - the GenerateProtoFiles target
+      # deletes the previous ones and writes them again - so this both produces what is compared below and
+      # reveals a hand-patched generated file as a diff.
+      - name: Build Contracts, regenerating the wire contract
+        if: steps.baseline.outputs.skip == 'false'
+        run: dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release
+
+      # A descriptor set that no longer describes the contracts source would make the comparison below meaningless -
+      # it would pass by comparing the released contract against a stale copy of itself. The generated files are
+      # committed precisely so that this is checkable.
+      - name: Verify the committed proto files are up to date
+        if: steps.baseline.outputs.skip == 'false'
+        run: |
+          if ! git diff --quiet -- "${{ env.PROTOBUF_DIRECTORY }}"; then
+            echo "::error title=Generated protos are stale::The contracts changed without regenerating. Run Source/Kernel/Protobuf/generate-protos.sh and commit the result."
+            git diff --stat -- "${{ env.PROTOBUF_DIRECTORY }}"
+            git diff -- "${{ env.PROTOBUF_DIRECTORY }}"
+            exit 1
+          fi
+
+      - name: Check the wire contract against every released minor of the major
+        if: steps.baseline.outputs.skip == 'false'
+        env:
+          SINCE: ${{ steps.baseline.outputs.since }}
+        run: |
+          # Without pipefail the exit code below would be tee's, and every breaking change would report success.
+          set -euo pipefail
+
+          # Only the major the floor names gets one; every other major is compared in full, so the argument is
+          # built rather than always passed.
+          FLOOR=()
+          if [ -n "$SINCE" ]; then
+            FLOOR=(--since "$SINCE")
+          fi
+
+          dotnet run --project Source/Tools/WireCompatibility/WireCompatibility.csproj -- \
+            --major "${{ steps.baseline.outputs.major }}" \
+            ${FLOOR[@]+"${FLOOR[@]}"} \
+            --current "${{ env.PROTOBUF_DIRECTORY }}/chronicle.desc" \
+            --allow-missing-baseline \
+            --github | tee wire-compatibility.txt
+
+      - name: Summarize
+        if: always() && steps.baseline.outputs.skip == 'false'
+        run: |
+          {
+            echo "### Wire compatibility"
+            echo
+            echo '```'
+            cat wire-compatibility.txt 2>/dev/null || echo "The check did not get as far as comparing."
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

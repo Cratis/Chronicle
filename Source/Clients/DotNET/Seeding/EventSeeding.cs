@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
 
@@ -106,11 +107,9 @@ public class EventSeeding(
         var globalEntries = _entries.Where(e => e.IsGlobal).ToList();
         var namespacedEntries = _entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
 
-        // Build the seed request
-        var request = new Contracts.Seeding.SeedRequest
-        {
-            EventStore = _eventStoreName
-        };
+        var globalByEventTypeEntries = new List<Contracts.Seeding.EventTypeSeedEntries>();
+        var globalByEventSourceEntries = new List<Contracts.Seeding.EventSourceSeedEntries>();
+        var namespaced = new List<Contracts.Seeding.NamespacedSeedEntries>();
 
         // Process global entries
         if (globalEntries.Count > 0)
@@ -145,17 +144,17 @@ public class EventSeeding(
                 eventSourceList.Add(contractEntry);
             }
 
-            request.GlobalByEventType = globalByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
+            globalByEventTypeEntries.AddRange(globalByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
             {
                 EventTypeId = kvp.Key.Value,
                 Entries = kvp.Value
-            }).ToList();
+            }));
 
-            request.GlobalByEventSource = globalByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
+            globalByEventSourceEntries.AddRange(globalByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
             {
                 EventSourceId = kvp.Key.Value,
                 Entries = kvp.Value
-            }).ToList();
+            }));
         }
 
         // Process namespaced entries
@@ -191,7 +190,7 @@ public class EventSeeding(
                 eventSourceList.Add(contractEntry);
             }
 
-            request.NamespacedEntries.Add(new Contracts.Seeding.NamespacedSeedEntries
+            namespaced.Add(new Contracts.Seeding.NamespacedSeedEntries
             {
                 Namespace = namespaceGroup.Key.Value,
                 ByEventType = namespacedByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
@@ -207,7 +206,13 @@ public class EventSeeding(
             });
         }
 
-        await servicesAccessor.Services.Seeding.Seed(request);
+        await servicesAccessor.Services.Seeding.SeedEvents(new Contracts.Seeding.SeedEventsRequest
+        {
+            EventStore = _eventStoreName,
+            GlobalByEventType = globalByEventTypeEntries,
+            GlobalByEventSource = globalByEventSourceEntries,
+            NamespacedEntries = namespaced
+        }).EnsureSuccess();
 
         _entries.Clear();
     }

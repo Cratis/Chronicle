@@ -3,7 +3,7 @@
 
 import { Column } from '@cratis/components/DataTables';
 import { DataTable } from 'Components/DataTable';
-import { ObserverInformationForEventType } from 'Api/Observation';
+import { ObserverInformationForEventType } from 'Features/Observation';
 import { getObserverRunningStateAsText } from '../../../Namespaces/Observers/getObserverRunningStateAsText';
 import { getObserverTypeAsText } from '../../../Namespaces/Observers/getObserverTypeAsText';
 import strings from 'Strings';
@@ -36,7 +36,7 @@ export const ObserversForEventTypeTable = ({ observers }: ObserversForEventTypeT
     return (
         <DataTable
             value={observers as ObserverInformationForEventType[]}
-            dataKey='observer.id'
+            dataKey='id'
             emptyMessage={strings.eventStore.general.eventTypes.observers.empty}
             scrollable
             scrollHeight='flex'

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Compatibility</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Compatibility</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Compatibility.Specs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- protobuf-net.Reflection defines the FileDescriptorSet contract but depends only on protobuf-net.Core,
+             which has no ProtoBuf.Serializer to read one with. -->
+        <PackageReference Include="protobuf-net" />
+        <PackageReference Include="protobuf-net.Reflection" />
+    </ItemGroup>
+</Project>

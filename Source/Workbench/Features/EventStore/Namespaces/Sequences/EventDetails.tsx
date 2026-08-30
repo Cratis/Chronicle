@@ -4,12 +4,12 @@
 import { useState, useMemo } from 'react';
 import { Tabs, TabPanel } from 'Components/Tabs';
 import { Dropdown } from '@cratis/components/Dropdown';
-import { AppendedEvent } from 'Api/Events';
-import { EventRevision } from 'Api/Events/EventRevision';
+import { AppendedEvent } from 'Features/Sequences';
+import { EventRevision } from 'Features/Sequences';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
-import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
-import { AllEventTypeGenerations } from 'Api/EventTypes/AllEventTypeGenerations';
-import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
+import { ObserveEventTypes } from 'Features/EventTypes';
+import { AllEventTypeGenerations } from 'Features/EventTypes';
+import { EventTypeDetails } from 'Features/EventTypes';
 import { ObjectContentEditor as _OCE } from '@cratis/components';
 const ObjectContentEditor = _OCE.ObjectContentEditor;
 import type { Json } from '@cratis/components/types';
@@ -31,7 +31,7 @@ interface GenerationOption {
 
 export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) => {
     const params = useParams<EventStoreParams>();
-    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
     const [allGenerations] = AllEventTypeGenerations.use({ eventStore: params.eventStore!, eventTypeId: item.context.eventType.id });
     const [selectedRevision, setSelectedRevision] = useState<number>(-1);
     const [selectedGeneration, setSelectedGeneration] = useState<number | null>(null);
@@ -122,16 +122,16 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         };
     }, [effectiveRevision, isRevised, item.context, revisions]);
 
-    // Schema: look for an exact generation match in allGenerations (historical) then in AllEventTypesWithSchemas (latest).
+    // Schema: look for an exact generation match in allGenerations (historical) then in ObserveEventTypes (latest).
     // Never fall back to a different generation — that would show wrong property labels.
     // When no schema is registered for this generation, derive a basic schema from the content keys.
     const effectiveEventType = useMemo(() => {
         const fromGenerations = allGenerations.data?.find(
-            (et: EventTypeRegistration) => et.type.generation === effectiveGeneration
+            (et: EventTypeDetails) => et.type.generation === effectiveGeneration
         );
         if (fromGenerations) return fromGenerations;
         return eventTypes.data?.find(
-            (et: EventTypeRegistration) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
+            (et: EventTypeDetails) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
         );
     }, [allGenerations.data, eventTypes.data, effectiveGeneration, item.context.eventType.id]);
 

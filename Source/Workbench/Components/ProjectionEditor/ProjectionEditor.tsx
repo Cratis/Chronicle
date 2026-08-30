@@ -13,13 +13,13 @@ import {
     disposeProjectionDefinitionLanguage,
 } from './index';
 import { JsonSchema } from '@cratis/components/types';
-import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Api/Projections';
-import { AllEventSequences } from 'Api/EventSequences';
+import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Features/ProjectionEditor';
+import { AllEventSequences } from 'Features/Sequences';
 import { Button } from 'Components/Button';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
 import Strings from 'Strings';
-import type { ReadModelDefinition } from 'Api/ReadModelTypes';
+import type { ReadModelDefinition } from 'Features/ReadModelDefinitions';
 
 export interface ProjectionEditorProps {
     value: string;
@@ -156,7 +156,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     // Update event sequences when they're loaded
     useEffect(() => {
         if (allEventSequencesResult.data) {
-            setEventSequences(allEventSequencesResult.data);
+            setEventSequences(allEventSequencesResult.data.map(eventSequence => eventSequence.name));
         }
     }, [allEventSequencesResult.data]);
 

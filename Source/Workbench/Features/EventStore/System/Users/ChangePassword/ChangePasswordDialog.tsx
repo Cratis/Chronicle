@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ChangePasswordForUser } from 'Api/Security';
+import { ChangeUserPassword } from 'Features/Security';
 import { Button } from 'Components/Button';
 import { useMemo, useState } from 'react';
 import strings from 'Strings';
@@ -23,11 +23,11 @@ interface PasswordActionsProps {
 }
 
 const PasswordActions = ({ showPassword, onToggleShow, onGenerate }: PasswordActionsProps) => {
-    const { setCommandValues } = useCommandFormContext<ChangePasswordForUser>();
+    const { setCommandValues } = useCommandFormContext<ChangeUserPassword>();
 
     const handleGenerate = () => {
         const pw = generatePassword();
-        setCommandValues({ password: pw, confirmedPassword: pw } as unknown as ChangePasswordForUser);
+        setCommandValues({ password: pw, confirmedPassword: pw } as unknown as ChangeUserPassword);
         onGenerate();
     };
 
@@ -59,7 +59,7 @@ export const ChangePasswordDialog = () => {
 
     return (
         <CommandDialog
-            command={ChangePasswordForUser}
+            command={ChangeUserPassword}
             initialValues={{ userId: request.userId, password: initialPassword, confirmedPassword: initialPassword }}
             isValid={passwordsMatch}
             title={strings.eventStore.system.users.dialogs.changePassword.title}
@@ -72,12 +72,12 @@ export const ChangePasswordDialog = () => {
             onConfirm={() => closeDialog(DialogResult.Ok)}
             onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div className="p-fluid">
-                <InputTextField<ChangePasswordForUser>
+                <InputTextField<ChangeUserPassword>
                     value={c => c.password}
                     title={strings.eventStore.system.users.dialogs.changePassword.password}
                     type={showPassword ? 'text' : 'password'}
                 />
-                <InputTextField<ChangePasswordForUser>
+                <InputTextField<ChangeUserPassword>
                     value={c => c.confirmedPassword}
                     title={strings.eventStore.system.users.dialogs.changePassword.confirmPassword}
                     type={showPassword ? 'text' : 'password'}

@@ -6,8 +6,8 @@ import { Column, type DataTableSelectionChangeEvent } from '@cratis/components/D
 import { DataTable } from 'Components/DataTable';
 import { Paginator } from 'Components/Paginator';
 import strings from 'Strings';
-import { AppendedEvent } from 'Api/Events';
-import { QueryEvents, QueryEventsParameters } from 'Api/Events/QueryEvents';
+import { AppendedEvent } from 'Features/Sequences';
+import { QueryEvents, QueryEventsParameters } from 'Features/Sequences';
 import './EventsTable.css';
 
 /** How many events one page of results holds. */
@@ -57,7 +57,7 @@ export const EventsTable = ({ queryArguments, sortBy, descending, selection, onS
                     selection={selection}
                     onSelectionChange={(event: DataTableSelectionChangeEvent<AppendedEvent>) =>
                         onSelectionChange(event.value ?? null)}
-                    dataKey='context.sequenceNumber'
+                    dataKey='id'
                     emptyMessage={sequenceStrings.empty}
                     scrollable
                     scrollHeight='flex'

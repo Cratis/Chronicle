@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ExportEvents } from 'Api/EventSequences/ExportEvents';
-import { ExportedEvent } from 'Api/EventSequences/ExportedEvent';
-import { QueryEventsParameters } from 'Api/Events/QueryEvents';
+import { ExportEvents } from 'Features/Sequences';
+import { ExportedEvent } from 'Features/Sequences';
+import { QueryEventsParameters } from 'Features/Sequences';
 
 /**
  * Build the file name an export downloads as.

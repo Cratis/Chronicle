@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
 
@@ -35,7 +35,7 @@ public class and_previous_generation_is_declared_with_the_generation_for_attribu
         _subject = new EventTypes(_eventStore, _schemaGenerator, _clientArtifacts, _eventTypeMigrators);
 
         _eventTypesService
-            .When(_ => _.Register(Arg.Any<RegisterEventTypesRequest>()))
+            .When(_ => _.RegisterEventTypes(Arg.Any<RegisterEventTypesRequest>()))
             .Do(call => _capturedRequest = call.Arg<RegisterEventTypesRequest>());
     }
 
@@ -45,12 +45,12 @@ public class and_previous_generation_is_declared_with_the_generation_for_attribu
         await _subject.Register();
     }
 
-    [Fact] void should_send_one_registration() => _capturedRequest.Types.Count.ShouldEqual(1);
-    [Fact] void should_register_both_generation_schemas() => _capturedRequest.Types[0].Generations.Count.ShouldEqual(2);
+    [Fact] void should_send_one_registration() => _capturedRequest.Types.Count().ShouldEqual(1);
+    [Fact] void should_register_both_generation_schemas() => _capturedRequest.Types.First().Generations.Count.ShouldEqual(2);
     [Fact] void should_register_the_real_generation_1_schema() =>
-        _capturedRequest.Types[0].Generations.Single(_ => _.Generation == 1).Schema.Contains("PublishedAt").ShouldBeTrue();
+        _capturedRequest.Types.First().Generations.Single(_ => _.Generation == 1).Schema.Contains("PublishedAt").ShouldBeTrue();
     [Fact] void should_not_register_an_empty_placeholder_for_generation_1() =>
-        _capturedRequest.Types[0].Generations.Single(_ => _.Generation == 1).Schema.ShouldNotEqual("{}");
+        _capturedRequest.Types.First().Generations.Single(_ => _.Generation == 1).Schema.ShouldNotEqual("{}");
     [Fact] void should_register_the_real_generation_2_schema() =>
-        _capturedRequest.Types[0].Generations.Single(_ => _.Generation == 2).Schema.Contains("GroupChatEnabled").ShouldBeTrue();
+        _capturedRequest.Types.First().Generations.Single(_ => _.Generation == 2).Schema.Contains("GroupChatEnabled").ShouldBeTrue();
 }

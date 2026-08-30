@@ -37,15 +37,5 @@ public record User(
     internal static ISubject<IEnumerable<User>> AllUsers(IStorage storage) =>
         storage.System.Users
             .ObserveAll()
-            .TransformSubject(users => users.Select(ToUser));
-
-    private static User ToUser(Storage.Security.User user) =>
-        new(
-            (Guid)user.Id,
-            user.Username,
-            user.Email is null ? null : (string)user.Email,
-            user.IsActive,
-            user.CreatedAt,
-            user.LastModifiedAt,
-            user.HasLoggedIn);
+            .TransformSubject(users => users.Select(UserConverters.ToUser));
 }

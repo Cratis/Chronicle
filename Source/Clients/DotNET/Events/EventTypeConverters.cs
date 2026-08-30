@@ -46,4 +46,24 @@ internal static class EventTypeConverters
     /// <returns>Converted collection of contract version.</returns>
     internal static IEnumerable<EventType> ToClient(this IEnumerable<Contracts.Events.EventType> types) =>
         types.Select(_ => _.ToClient()).ToArray();
+
+    /// <summary>
+    /// Convert to Chronicle representation.
+    /// </summary>
+    /// <param name="eventType"><see cref="Contracts.Sequences.EventType"/> to convert from.</param>
+    /// <returns>Converted <see cref="EventType"/>.</returns>
+    internal static EventType ToClient(this Contracts.Sequences.EventType eventType) =>
+        new(eventType.Id, eventType.Generation, eventType.Tombstone);
+
+    /// <summary>
+    /// Convert to the <see cref="Contracts.Sequences.EventType"/> contract representation.
+    /// </summary>
+    /// <param name="type"><see cref="EventType"/> to convert.</param>
+    /// <returns>Converted <see cref="Contracts.Sequences.EventType"/>.</returns>
+    internal static Contracts.Sequences.EventType ToSequencesContract(this EventType type) => new()
+    {
+        Id = type.Id,
+        Generation = type.Generation.Value,
+        Tombstone = type.Tombstone
+    };
 }

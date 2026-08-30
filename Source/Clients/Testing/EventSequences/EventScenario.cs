@@ -3,6 +3,7 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
+extern alias KernelGrpc;
 
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -182,14 +183,17 @@ public class EventScenario(
                 new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>(),
                 NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
-        var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
-            grainFactory,
+        var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
+            InProcessCommandPipeline.Create(grainFactory, storage, jsonSerializerOptions),
             storage,
             eventCompliance,
-            jsonSerializerOptions);
+            jsonSerializerOptions,
+            new InProcessQueryContextManager(),
+            grainFactory,
+            NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 
         var constraintsService = new InProcessNoOpConstraintsService();
-        var services = new InProcessServices(eventSequencesService, constraintsService);
+        var services = new InProcessServices(sequencesService, constraintsService);
         var connection = new InProcessChronicleConnection(services);
 
         var defaults = Defaults.Instance;

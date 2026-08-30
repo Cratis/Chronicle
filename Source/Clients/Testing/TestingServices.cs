@@ -2,15 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelGrpc;
+
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
@@ -32,46 +33,49 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Traces;
 using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
+using KernelApplicationsService = KernelGrpc::Cratis.Chronicle.Services.Security.Applications;
 using KernelCaptureLanguageService = KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.LanguageService;
-using KernelCapturesService = KernelCore::Cratis.Chronicle.Services.Captures.Captures;
+using KernelCapturesService = KernelGrpc::Cratis.Chronicle.Services.Captures.Captures;
 using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.CaptureValidator;
-using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
-using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
+using KernelComplianceService = KernelGrpc::Cratis.Chronicle.Services.Compliance.ComplianceService;
+using KernelConstraintsService = KernelGrpc::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
-using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
-using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
-using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
-using KernelExternalServicesService = KernelCore::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
+using KernelEventStoresService = KernelGrpc::Cratis.Chronicle.Services.EventStores.EventStores;
+using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
+using KernelEventTypesService = KernelGrpc::Cratis.Chronicle.Services.EventTypes.EventTypes;
+using KernelExternalServicesService = KernelGrpc::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
 using KernelFacetSetGenerator = KernelCore::Cratis.Chronicle.Patterns.FacetSetGenerator;
 using KernelFacetVocabulary = KernelCore::Cratis.Chronicle.Patterns.FacetVocabulary;
-using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
-using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
-using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
+using KernelFailedPartitionsService = KernelGrpc::Cratis.Chronicle.Services.Observation.FailedPartitions;
+using KernelIdentitiesService = KernelGrpc::Cratis.Chronicle.Services.Identities.Identities;
+using KernelJobsService = KernelGrpc::Cratis.Chronicle.Services.Jobs.Jobs;
 using KernelJsonComplianceManager = KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager;
 using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler;
 using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
-using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
-using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
+using KernelNamespacesService = KernelGrpc::Cratis.Chronicle.Services.Namespaces.Namespaces;
+using KernelObserversService = KernelGrpc::Cratis.Chronicle.Services.Observation.Observers;
 using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
-using KernelPatternsService = KernelCore::Cratis.Chronicle.Services.Patterns.Patterns;
+using KernelPatternsService = KernelGrpc::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
-using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
+using KernelProjectionsService = KernelGrpc::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
-using KernelReactorsService = KernelCore::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelReactorsService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
 using KernelReadModelsCompliance = KernelCore::Cratis.Chronicle.ReadModels.ReadModelsCompliance;
-using KernelReadModelsService = KernelCore::Cratis.Chronicle.Services.ReadModels.ReadModels;
-using KernelRecommendationsService = KernelCore::Cratis.Chronicle.Services.Recommendations.Recommendations;
+using KernelReadModelsService = KernelGrpc::Cratis.Chronicle.Services.ReadModels.ReadModels;
+using KernelRecommendationsService = KernelGrpc::Cratis.Chronicle.Services.Recommendations.Recommendations;
 using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
-using KernelReducersService = KernelCore::Cratis.Chronicle.Services.Observation.Reducers.Reducers;
-using KernelSeedingService = KernelCore::Cratis.Chronicle.Services.Seeding.EventSeeding;
-using KernelServerService = KernelCore::Cratis.Chronicle.Services.Host.Server;
-using KernelSubscriptionsService = KernelCore::Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions;
-using KernelUsersService = KernelCore::Cratis.Chronicle.Services.Security.Users;
+using KernelReducersService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reducers.Reducers;
+using KernelSeedingService = KernelGrpc::Cratis.Chronicle.Services.Seeding.EventSeeding;
+using KernelSequencesService = KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences;
+using KernelServerService = KernelGrpc::Cratis.Chronicle.Services.Host.Server;
+using KernelSubscriptionsService = KernelGrpc::Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions;
+using KernelUsersService = KernelGrpc::Cratis.Chronicle.Services.Security.Users;
 using KernelWebhookComparer = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionComparer;
 using KernelWebhookMediatorImpl = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookMediator;
-using KernelWebhooksService = KernelCore::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks;
+using KernelWebhookRegistrar = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookRegistrar;
+using KernelWebhooksService = KernelGrpc::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks;
 
 namespace Cratis.Chronicle.Testing;
 
@@ -81,156 +85,213 @@ namespace Cratis.Chronicle.Testing;
 /// </summary>
 /// <remarks>
 /// All gRPC service contracts are backed by the real kernel implementations from
-/// <c>Cratis.Chronicle.Services</c>.
+/// <c>Cratis.Chronicle.Services</c>. Command-dispatching implementations execute through one shared Arc
+/// command pipeline, whose service provider carries the in-memory collaborators the command handlers
+/// resolve their parameters from.
 /// </remarks>
-/// <param name="grainFactory">The <see cref="IGrainFactory"/> for grain-based operations.</param>
-/// <param name="storage">The <see cref="IStorage"/> backed by in-memory implementations.</param>
-/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
-internal sealed class TestingServices(
-    IGrainFactory grainFactory,
-    IStorage storage,
-    JsonSerializerOptions jsonSerializerOptions) : IServices
+internal sealed class TestingServices : IServices
 {
-    readonly Lazy<IObservers> _observers = new(() =>
-        new KernelObserversService(grainFactory, storage));
+    readonly Lazy<IObservers> _observers;
+    readonly Lazy<IFailedPartitions> _failedPartitions;
+    readonly Lazy<IReactors> _reactors;
+    readonly Lazy<IReducers> _reducers;
+    readonly Lazy<IProjections> _projections;
+    readonly Lazy<IWebhooks> _webhooks;
+    readonly Lazy<IExternalServices> _externalServices;
+    readonly Lazy<ICaptures> _captures;
+    readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions;
+    readonly Lazy<IJobs> _jobs;
+    readonly Lazy<IEventSeeding> _seeding;
+    readonly Lazy<Contracts.Sequences.IEventSequences> _sequences;
+    readonly Lazy<INamespaces> _namespaces;
+    readonly Lazy<IIdentities> _identities;
+    readonly Lazy<IEventTypes> _eventTypes;
+    readonly Lazy<IPatterns> _patterns;
+    readonly Lazy<IRecommendations> _recommendations;
+    readonly Lazy<IConstraints> _constraints;
+    readonly Lazy<IUsers> _users;
+    readonly Lazy<IApplications> _applications;
+    readonly Lazy<IServer> _server;
+    readonly Lazy<IEventStores> _eventStores;
+    readonly Lazy<IReadModels> _readModels;
+    readonly Lazy<ICompliance> _compliance;
 
-    readonly Lazy<IFailedPartitions> _failedPartitions = new(() =>
-        new KernelFailedPartitionsService(storage));
-
-    readonly Lazy<IReactors> _reactors = new(() =>
-        new KernelReactorsService(
-            grainFactory,
-            new KernelReactorMediator(),
-            storage,
-            jsonSerializerOptions,
-            new ActivitySource<KernelReactorsService>(),
-            NullLogger<KernelReactorsService>.Instance));
-
-    readonly Lazy<IReducers> _reducers = new(() =>
-        new KernelReducersService(
-            grainFactory,
-            new KernelReducerMediator(),
-            new ExpandoObjectConverter(new TypeFormats()),
-            jsonSerializerOptions,
-            new ActivitySource<KernelReducersService>(),
-            NullLogger<KernelReducersService>.Instance));
-
-    readonly Lazy<IProjections> _projections = new(() =>
-        new KernelProjectionsService(
-            grainFactory,
-            new ExpandoObjectConverter(new TypeFormats()),
-            null!,
-            null!));
-
-    readonly Lazy<IWebhooks> _webhooks = new(() =>
-        new KernelWebhooksService(
-            grainFactory,
-            storage,
-            new KernelWebhookComparer(
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestingServices"/> class.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> for grain-based operations.</param>
+    /// <param name="storage">The <see cref="IStorage"/> backed by in-memory implementations.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
+    public TestingServices(
+        IGrainFactory grainFactory,
+        IStorage storage,
+        JsonSerializerOptions jsonSerializerOptions)
+    {
+        // One pipeline serves every command-dispatching service. Its provider carries the collaborators the
+        // command handlers resolve their parameters from - the same instances the service constructors used
+        // to receive directly before dispatch moved to the Arc command pipeline.
+        var commandPipeline = new Lazy<Cratis.Arc.Commands.ICommandPipeline>(() =>
+            InProcessCommandPipeline.Create(
+                grainFactory,
                 storage,
-                new ObjectComparer(),
-                NullLogger<KernelWebhookComparer>.Instance),
-            null!,
-            null!,
-            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
-            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+                jsonSerializerOptions,
+                services =>
+                {
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(new KernelEventCompliance(
+                        new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+                        new ExpandoObjectConverter(new TypeFormats())));
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.EventTypes.IEventTypesCacheClient>(new EventSequences.NoOpEventTypesCacheClient());
+                    services.AddSingleton(new KernelEventTypeRegistrar(grainFactory));
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(new KernelCaptureLanguageService());
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.ICaptureValidator>(new KernelCaptureValidator(storage));
+                    services.AddSingleton(new KernelWebhookRegistrar(
+                        grainFactory,
+                        new KernelWebhookComparer(
+                            storage,
+                            new ObjectComparer(),
+                            NullLogger<KernelWebhookComparer>.Instance),
+                        null!,
+                        null!,
+                        new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
+                        Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+                }));
 
-    readonly Lazy<IExternalServices> _externalServices = new(() =>
-        new KernelExternalServicesService(storage));
+        _observers = new(() => new KernelObserversService(grainFactory, storage));
 
-    readonly Lazy<ICaptures> _captures = new(() =>
-        new KernelCapturesService(
-            grainFactory,
-            storage,
-            new KernelCaptureLanguageService(),
-            new KernelCaptureValidator(storage)));
+        _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
-    readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
-        new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
-
-    readonly Lazy<IJobs> _jobs = new(() =>
-        new KernelJobsService(grainFactory, storage, NullLogger<KernelJobsService>.Instance));
-
-    readonly Lazy<IEventSeeding> _seeding = new(() =>
-        new KernelSeedingService(grainFactory));
-
-    readonly Lazy<IEventSequences> _eventSequences = new(() =>
-        new KernelEventSequencesService(
-            grainFactory,
-            storage,
-            new KernelEventCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                new ExpandoObjectConverter(new TypeFormats())),
-            jsonSerializerOptions));
-
-    readonly Lazy<INamespaces> _namespaces = new(() =>
-        new KernelNamespacesService(grainFactory, storage));
-
-    readonly Lazy<IIdentities> _identities = new(() =>
-        new KernelIdentitiesService(storage));
-
-    readonly Lazy<IEventTypes> _eventTypes = new(() =>
-        new KernelEventTypesService(
-            storage,
-            grainFactory,
-            new EventSequences.NoOpEventTypesCacheClient(),
-            new EventSequences.NoOpPatternCapture()));
-
-    readonly Lazy<IRecommendations> _recommendations = new(() =>
-        new KernelRecommendationsService(grainFactory, storage));
-
-    readonly Lazy<IPatterns> _patterns = new(() =>
-        new KernelPatternsService(
-            storage,
-            new KernelFacetVocabulary(Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())),
-            new KernelFacetSetGenerator(),
-            new KernelPatternMatcher(),
-            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
-
-    readonly Lazy<IConstraints> _constraints = new(() =>
-        new KernelConstraintsService(grainFactory));
-
-    readonly Lazy<IUsers> _users = new(() =>
-        new KernelUsersService(grainFactory, storage));
-
-    readonly Lazy<IApplications> _applications = new(() =>
-        new KernelApplicationsService(grainFactory, storage));
-
-    readonly Lazy<IServer> _server = new(() =>
-        new KernelServerService(null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
-
-    readonly Lazy<IEventStores> _eventStores = new(() =>
-        new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));
-
-    readonly Lazy<IReadModels> _readModels = new(() =>
-        new KernelReadModelsService(
-            grainFactory,
-            storage,
-            new ExpandoObjectConverter(new TypeFormats()),
-            new KernelReducerMediator(),
-            new KernelProjectionChangesetMediator(),
-
-            // Live read-model watching is not supported by the in-process scenario harness (grain and
-            // object-reference lookups throw NotSupportedException), so no local silo details are needed.
-            null!,
-            new KernelReadModelsCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                new ExpandoObjectConverter(new TypeFormats())),
-            new KernelEventCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                new ExpandoObjectConverter(new TypeFormats())),
-            new KernelMaterializedReadModelStore(
+        _reactors = new(() =>
+            new KernelReactorsService(
+                grainFactory,
+                new KernelReactorMediator(),
                 storage,
+                jsonSerializerOptions,
+                new ActivitySource<KernelReactorsService>(),
+                NullLogger<KernelReactorsService>.Instance));
+
+        _reducers = new(() =>
+            new KernelReducersService(
+                grainFactory,
+                new KernelReducerMediator(),
+                new ExpandoObjectConverter(new TypeFormats()),
+                jsonSerializerOptions,
+                new ActivitySource<KernelReducersService>(),
+                NullLogger<KernelReducersService>.Instance));
+
+        _projections = new(() =>
+            new KernelProjectionsService(
+                grainFactory,
+                new ExpandoObjectConverter(new TypeFormats()),
+                null!,
+                null!));
+
+        _webhooks = new(() =>
+            new KernelWebhooksService(
+                commandPipeline.Value,
+                storage,
+                NullLogger<KernelWebhooksService>.Instance));
+
+        _externalServices = new(() =>
+            new KernelExternalServicesService(commandPipeline.Value, storage, NullLogger<KernelExternalServicesService>.Instance));
+
+        _captures = new(() =>
+            new KernelCapturesService(
+                commandPipeline.Value,
+                storage,
+                jsonSerializerOptions,
+                NullLogger<KernelCapturesService>.Instance));
+
+        _eventStoreSubscriptions = new(() =>
+            new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+
+        _jobs = new(() =>
+            new KernelJobsService(commandPipeline.Value, storage, grainFactory, NullLogger<KernelJobsService>.Instance));
+
+        _seeding = new(() =>
+            new KernelSeedingService(commandPipeline.Value, grainFactory, NullLogger<KernelSeedingService>.Instance));
+
+        _sequences = new(() =>
+            new KernelSequencesService(
+                commandPipeline.Value,
+                storage,
+                new KernelEventCompliance(
+                    new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+                    new ExpandoObjectConverter(new TypeFormats())),
+                jsonSerializerOptions,
+                new EventSequences.InProcessQueryContextManager(),
+                grainFactory,
+                NullLogger<KernelSequencesService>.Instance));
+
+        _namespaces = new(() =>
+            new KernelNamespacesService(commandPipeline.Value, storage, NullLogger<KernelNamespacesService>.Instance));
+
+        _identities = new(() =>
+            new KernelIdentitiesService(commandPipeline.Value, storage, NullLogger<KernelIdentitiesService>.Instance));
+
+        _eventTypes = new(() =>
+            new KernelEventTypesService(
+                commandPipeline.Value,
+                storage,
+                NullLogger<KernelEventTypesService>.Instance));
+
+        _patterns = new(() =>
+        {
+            var patternOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
+            return new KernelPatternsService(
+                storage,
+                new KernelFacetVocabulary(patternOptions),
+                new KernelFacetSetGenerator(),
+                new KernelPatternMatcher(),
+                patternOptions,
+                NullLogger<KernelPatternsService>.Instance);
+        });
+
+        _recommendations = new(() =>
+            new KernelRecommendationsService(commandPipeline.Value, storage, NullLogger<KernelRecommendationsService>.Instance));
+
+        _constraints = new(() => new KernelConstraintsService(grainFactory));
+
+        _users = new(() =>
+            new KernelUsersService(commandPipeline.Value, storage, NullLogger<KernelUsersService>.Instance));
+
+        _applications = new(() =>
+            new KernelApplicationsService(commandPipeline.Value, storage, NullLogger<KernelApplicationsService>.Instance));
+
+        _server = new(() => new KernelServerService(null!));
+
+        _eventStores = new(() =>
+            new KernelEventStoresService(commandPipeline.Value, storage, NullLogger<KernelEventStoresService>.Instance));
+
+        _readModels = new(() =>
+            new KernelReadModelsService(
+                grainFactory,
+                storage,
+                new ExpandoObjectConverter(new TypeFormats()),
+                new KernelReducerMediator(),
+                new KernelProjectionChangesetMediator(),
+
+                // Live read-model watching is not supported by the in-process scenario harness (grain and
+                // object-reference lookups throw NotSupportedException), so no local silo details are needed.
+                null!,
                 new KernelReadModelsCompliance(
                     new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                    new ExpandoObjectConverter(new TypeFormats()))),
-            jsonSerializerOptions));
+                    new ExpandoObjectConverter(new TypeFormats())),
+                new KernelEventCompliance(
+                    new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+                    new ExpandoObjectConverter(new TypeFormats())),
+                new KernelMaterializedReadModelStore(
+                    storage,
+                    new KernelReadModelsCompliance(
+                        new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+                        new ExpandoObjectConverter(new TypeFormats()))),
+                jsonSerializerOptions));
 
-    readonly Lazy<ICompliance> _compliance = new(() =>
-        new KernelComplianceService(
-            grainFactory,
-            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-            NullLogger<KernelComplianceService>.Instance));
+        _compliance = new(() =>
+            new KernelComplianceService(
+                grainFactory,
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+                NullLogger<KernelComplianceService>.Instance));
+    }
 
     /// <inheritdoc/>
     public IReadModels ReadModels => _readModels.Value;
@@ -278,7 +339,7 @@ internal sealed class TestingServices(
     public IEventSeeding Seeding => _seeding.Value;
 
     /// <inheritdoc/>
-    public IEventSequences EventSequences => _eventSequences.Value;
+    public Contracts.Sequences.IEventSequences Sequences => _sequences.Value;
 
     /// <inheritdoc/>
     public IEventStores EventStores => _eventStores.Value;
@@ -293,10 +354,10 @@ internal sealed class TestingServices(
     public IEventTypes EventTypes => _eventTypes.Value;
 
     /// <inheritdoc/>
-    public IRecommendations Recommendations => _recommendations.Value;
+    public IPatterns Patterns => _patterns.Value;
 
     /// <inheritdoc/>
-    public IPatterns Patterns => _patterns.Value;
+    public IRecommendations Recommendations => _recommendations.Value;
 
     /// <inheritdoc/>
     public IUsers Users => _users.Value;
@@ -309,12 +370,4 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
-
-    sealed class EmptyInstancesOf<T> : IInstancesOf<T>
-        where T : class
-    {
-        public IEnumerator<T> GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
-    }
 }

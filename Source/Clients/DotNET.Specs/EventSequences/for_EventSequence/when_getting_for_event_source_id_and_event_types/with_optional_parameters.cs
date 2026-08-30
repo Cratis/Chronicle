@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Events;
 using ProtoBuf.Grpc;
 
@@ -14,8 +14,7 @@ public class with_optional_parameters : given.an_event_sequence
     EventStreamId _eventStreamId;
     EventSourceType _eventSourceType;
     List<EventType> _eventTypes;
-    GetForEventSourceIdAndEventTypesRequest _request;
-    GetForEventSourceIdAndEventTypesResponse _response;
+    Contracts.Sequences.ForEventSourceIdAndEventTypesRequest _request;
 
     void Establish()
     {
@@ -28,18 +27,13 @@ public class with_optional_parameters : given.an_event_sequence
             new(Guid.NewGuid().ToString(), EventTypeGeneration.First)
         ];
 
-        _response = new()
-        {
-            Events = []
-        };
+        _sequences
+            .When(_ => _.ForEventSourceIdAndEventTypes(Arg.Any<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>(), CallContext.Default))
+            .Do(callInfo => _request = callInfo.Arg<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>());
 
-        _eventSequences
-            .When(_ => _.GetForEventSourceIdAndEventTypes(Arg.Any<GetForEventSourceIdAndEventTypesRequest>(), CallContext.Default))
-            .Do(callInfo => _request = callInfo.Arg<GetForEventSourceIdAndEventTypesRequest>());
-
-        _eventSequences
-            .GetForEventSourceIdAndEventTypes(Arg.Any<GetForEventSourceIdAndEventTypesRequest>(), CallContext.Default)
-            .Returns(_response);
+        _sequences
+            .ForEventSourceIdAndEventTypes(Arg.Any<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>(), CallContext.Default)
+            .Returns(QueryResult<IEnumerable<Contracts.Sequences.AppendedEventResponse>>.Success(Guid.NewGuid(), []));
     }
 
     async Task Because() => await _eventSequence.GetForEventSourceIdAndEventTypes(
@@ -52,6 +46,5 @@ public class with_optional_parameters : given.an_event_sequence
     [Fact] void should_pass_event_source_id() => _request.EventSourceId.ShouldEqual(_eventSourceId.Value);
     [Fact] void should_pass_event_stream_type() => _request.EventStreamType.ShouldEqual(_eventStreamType.Value);
     [Fact] void should_pass_event_stream_id() => _request.EventStreamId.ShouldEqual(_eventStreamId.Value);
-    [Fact] void should_pass_event_source_type() => _request.EventSourceType.ShouldEqual(_eventSourceType.Value);
-    [Fact] void should_pass_event_types() => _request.EventTypes.Select(_ => _.ToClient()).ShouldEqual(_eventTypes);
+    [Fact] void should_pass_event_types() => _request.EventTypeIds.ShouldEqual(string.Join(',', _eventTypes.Select(_ => _.Id.Value)));
 }

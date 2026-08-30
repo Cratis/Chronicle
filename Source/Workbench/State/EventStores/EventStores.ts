@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AllEventStores } from 'Api/EventStores/AllEventStores';
+import { ObserveEventStores } from 'Features/EventStores/ObserveEventStores';
 import { IEventStores } from './IEventStores';
 import { BehaviorSubject } from 'rxjs';
 import { injectable } from 'tsyringe';
@@ -13,9 +13,9 @@ import { injectable } from 'tsyringe';
 export class EventStores implements IEventStores {
     private _eventStores: BehaviorSubject<string[]> = new BehaviorSubject<string[]>([]);
 
-    constructor(allEventStores: AllEventStores) {
+    constructor(allEventStores: ObserveEventStores) {
         allEventStores.subscribe(result => {
-            this.eventStores.next(result.data);
+            this.eventStores.next(result.data.map(eventStore => eventStore.name));
         });
     }
 

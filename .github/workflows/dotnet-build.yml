@@ -47,7 +47,13 @@ on:
       - ".github/build-affecting-paths.txt"
 
 jobs:
+  # First, before anything is built: a change that breaks the wire contract for clients already running against this
+  # major cannot ship, so there is nothing to gain from building and testing it. See wire-compatibility.yml.
+  wire-compatibility:
+    uses: ./.github/workflows/wire-compatibility.yml
+
   dotnet-build:
+    needs: [wire-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     outputs:
@@ -161,6 +167,7 @@ jobs:
   # for the specs/mongodb/integration-api jobs, which must exercise production
   # (non-DEVELOPMENT) behavior.
   dotnet-build-development:
+    needs: [wire-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -495,9 +502,17 @@ jobs:
 
       - name: Build benchmarks the way BenchmarkDotNet does
         run: |
+          # CratisProxiesOutputPath= skips the Arc proxy generator the same way a Release
+          # verification build does elsewhere (see general.md). It is required here, not just
+          # conventional: BenchmarkDotNet's ArtifactsPath redirects OutputPath to an absolute
+          # temp directory, and the generator's own path-combine logic assumes a
+          # project-relative OutputPath - fed an absolute one it double-roots the assembly
+          # path and crashes before benchmarks ever need a proxy.
           dotnet build Benchmarks/Chronicle.Benchmarks/Chronicle.Benchmarks.csproj \
             -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            /p:CratisProxiesOutputPath= \
             /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts"
           dotnet build Benchmarks/Chronicle.Benchmarks.Clustering/Chronicle.Benchmarks.Clustering.csproj \
             -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            /p:CratisProxiesOutputPath= \
             /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts-clustering"

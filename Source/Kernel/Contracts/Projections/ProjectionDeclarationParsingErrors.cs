@@ -13,5 +13,5 @@ public class ProjectionDeclarationParsingErrors
     /// Gets or sets the collection of syntax errors.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IEnumerable<ProjectionDeclarationSyntaxError> Errors { get; set; } = [];
+    public IEnumerable<ProjectionDeclarationSyntaxError> Errors { get; set; } = new List<ProjectionDeclarationSyntaxError>();
 }
