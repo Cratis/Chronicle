@@ -16,9 +16,9 @@ internal class AddUserValidator : CommandValidator<AddUser>
     /// </summary>
     public AddUserValidator()
     {
-        // UserId is the user being created, not a reference to an existing one, so UserIdValidator is
-        // deliberately not attached here.
-        RuleFor(_ => _.UserId).NotEmpty().WithMessage("User identifier is required.");
+        // UserId is the user being created, not a reference to one that must already exist - the
+        // cross-cutting UserIdValidator existence check does not apply here.
+        RuleFor(_ => _.UserId).IgnoreConceptRules().NotEmpty().WithMessage("User identifier is required.");
         RuleFor(_ => _.Username).NotEmpty().WithMessage("Username is required.");
         RuleFor(_ => _.Email).NotEmpty().EmailAddress().WithMessage("A valid email address is required.");
         RuleFor(_ => _.Password).NotEmpty().MinimumLength(8).WithMessage("Password must be at least 8 characters long.");

@@ -42,4 +42,5 @@ service Patterns {
    rpc GetPatterns (GetPatternsRequest) returns (IEnumerable_Pattern);
    rpc GetPatternsForScope (GetPatternsForScopeRequest) returns (IEnumerable_Pattern);
    rpc GetScopes (GetPatternScopesRequest) returns (IEnumerable_String);
+   rpc GetUsualActions (GetPatternsRequest) returns (IEnumerable_Pattern);
 }
