@@ -80,8 +80,6 @@ catch (Exception ex)
     return;
 }
 
-SharedTypeRegistry.Configure(skipNamespaces, baseNamespace);
-
 var typeDiscovery = new TypeDiscovery(assembly);
 var serviceGroups = typeDiscovery.DiscoverServices();
 
@@ -99,6 +97,8 @@ var implementationGenerator = new ServiceImplementationGenerator(skipNamespaces,
 var generated = new List<GeneratedService>();
 var hasError = false;
 
+SharedTypeRegistry.Configure(skipNamespaces, baseNamespace);
+
 foreach (var (_, serviceDefinition) in serviceGroups)
 {
     Console.WriteLine($"\nService: {serviceDefinition.ServiceName} (namespace: {serviceDefinition.Namespace})");
@@ -107,12 +107,6 @@ foreach (var (_, serviceDefinition) in serviceGroups)
     if (serviceDefinition.KeyedQueries.Count > 0)
     {
         Console.WriteLine($"  Keyed queries: {serviceDefinition.KeyedQueries.Count}");
-    }
-
-    if (excluded.Contains(serviceDefinition.ServiceName))
-    {
-        Console.WriteLine($"  Skipped {serviceDefinition.ServiceName} - it is not derived yet and keeps its hand-written contract and implementation.");
-        continue;
     }
 
     if (excluded.Contains(serviceDefinition.ServiceName))

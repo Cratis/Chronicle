@@ -1,14 +1,10 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.Patterns;
 
-// NOTE: This file was written by hand rather than by Source/Kernel/Protobuf/generate-protos.sh, because the
-// generator currently cannot emit this package at all - it aborts for Cratis.Chronicle.Contracts.Patterns (and 21
-// other packages) on a reserved-field error raised for
-// Cratis.Chronicle.Contracts.Events.Constraints.UniqueEventTypeConstraintDefinition, and exits 0 while doing so,
-// which is why CI never reported it. Tracked as Cratis/Chronicle#3712. Every message below matches what
-// protobuf-net would emit for the [ProtoMember] declarations in Source/Kernel/Contracts/Patterns.
-// Re-run the generator and drop this comment once #3712 is fixed.
-
+message GetPatternScopesRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
 message GetPatternsForScopeRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -24,6 +20,9 @@ message GetPatternsRequest {
 }
 message IEnumerable_Pattern {
    repeated Pattern items = 1;
+}
+message IEnumerable_String {
+   repeated string items = 1;
 }
 message Pattern {
    string GroupingKey = 1;
@@ -42,4 +41,5 @@ message SerializableDateTimeOffset {
 service Patterns {
    rpc GetPatterns (GetPatternsRequest) returns (IEnumerable_Pattern);
    rpc GetPatternsForScope (GetPatternsForScopeRequest) returns (IEnumerable_Pattern);
+   rpc GetScopes (GetPatternScopesRequest) returns (IEnumerable_String);
 }

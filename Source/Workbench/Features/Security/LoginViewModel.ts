@@ -6,6 +6,7 @@ import { Guid } from '@cratis/fundamentals';
 import { ChangeUserPassword } from './ChangeUserPassword';
 import { GetStatus } from './GetStatus';
 import { SetInitialAdminPassword } from './SetInitialAdminPassword';
+import { absolutePath } from '../../Utils/basePath';
 
 @injectable()
 export class LoginViewModel {
@@ -48,7 +49,7 @@ export class LoginViewModel {
         this.errorMessage = '';
 
         try {
-            const response = await fetch('/api/security/login', {
+            const response = await fetch(absolutePath('/api/security/login'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -94,7 +95,7 @@ export class LoginViewModel {
     }
 
     async signInWithIdentityApi() {
-        const response = await fetch('/identity/login?useCookies=true', {
+        const response = await fetch(absolutePath('/identity/login?useCookies=true'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ export class LoginViewModel {
         });
 
         if (response.ok) {
-            window.location.href = '/';
+            window.location.href = absolutePath('/');
         } else {
             this.errorMessage = 'Failed to complete sign in. Please try again.';
         }

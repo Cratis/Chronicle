@@ -40,6 +40,13 @@ message FailedPartitionAttempt {
    uint64 SequenceNumber = 2;
    repeated string Messages = 3;
    string StackTrace = 4;
+   FailureKind Kind = 5;
+}
+enum FailureKind {
+   FAILURE_KIND_Unknown = 0;
+   Handling = 1;
+   Timeout = 2;
+   FAILURE_KIND_Disconnected = 3;
 }
 message GetConnectedClientsForObserverRequest {
    string EventStore = 1;
@@ -96,7 +103,7 @@ enum ObserverRunningState {
    Active = 1;
    Suspended = 2;
    Replaying = 3;
-   Disconnected = 4;
+   OBSERVER_RUNNING_STATE_Disconnected = 4;
    Quarantined = 5;
 }
 enum ObserverType {
