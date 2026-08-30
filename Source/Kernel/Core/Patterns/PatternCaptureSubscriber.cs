@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Cratis.Chronicle.Patterns;
 
@@ -50,9 +51,8 @@ public class PatternCaptureSubscriber(
         try
         {
             var touched = new HashSet<Concepts.Patterns.PatternGroupingKey>();
-            foreach (var @event in batch)
+            foreach (var features in batch.Select(extractor.Extract))
             {
-                var features = extractor.Extract(@event);
                 if (!features.GroupingKey.IsSpecified)
                 {
                     continue;
