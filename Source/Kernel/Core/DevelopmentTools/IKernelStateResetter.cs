@@ -7,9 +7,10 @@ namespace Cratis.Chronicle.DevelopmentTools;
 /// Defines something that can reset the kernel back to a freshly bootstrapped state.
 /// </summary>
 /// <remarks>
-/// Exists so <see cref="ResetKernelState"/> can declare the public Handle() method Arc requires without the
+/// Exists so <c>ResetKernelState</c> can declare the public Handle() method Arc requires without the
 /// implementation - which reaches into storage internals and the bootstrap handler - having to become public
-/// surface along with it.
+/// surface along with it. Referred to by name rather than by cref because that command is compiled in only
+/// under the DEVELOPMENT symbol, and a cref to it does not resolve in a release build.
 /// </remarks>
 public interface IKernelStateResetter
 {
