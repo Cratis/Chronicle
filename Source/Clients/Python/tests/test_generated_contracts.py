@@ -3,8 +3,8 @@
 
 from importlib import import_module
 
-events_pb2 = import_module("cratis_chronicle_contracts.events_pb2")
-events_pb2_grpc = import_module("cratis_chronicle_contracts.events_pb2_grpc")
+events_pb2 = import_module("cratis_chronicle_contracts.eventtypes_pb2")
+events_pb2_grpc = import_module("cratis_chronicle_contracts.eventtypes_pb2_grpc")
 bcl_pb2 = import_module("cratis_chronicle_contracts.protobuf_net.bcl_pb2")
 
 
