@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using System.Linq;
 
 namespace Samples.Backoffice;
 
@@ -129,10 +130,8 @@ public static class SampleHistory
         {
             foreach (var habit in _habits)
             {
-                foreach (var day in habit.Days)
+                foreach (var date in habit.Days.Select(day => firstMonday.AddDays((week * 7) + DaysFromMonday(day))))
                 {
-                    var date = firstMonday.AddDays((week * 7) + DaysFromMonday(day));
-
                     for (var occurrence = 0; occurrence < habit.PerDay; occurrence++)
                     {
                         var at = At(date, habit.Times[random.Next(habit.Times.Length)], random);
