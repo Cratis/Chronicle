@@ -68,10 +68,29 @@ public record BehaviorPattern(
     /// <param name="context">The <see cref="FacetSet"/> describing the situation being asked about.</param>
     /// <returns>True when the pattern names an action and was established in a context the asked one covers, false when not.</returns>
     /// <remarks>
+    /// <para>
     /// The action facet is excluded from the comparison on purpose. A caller asking what somebody usually does on a
     /// Monday morning cannot name the command in the question - naming it is what they are asking for - so requiring
     /// the whole pattern to be a subset of the question excludes exactly the patterns that answer it.
+    /// </para>
+    /// <para>
+    /// An answer must also use some of the question. A pattern established in no context at all - "half of what
+    /// this person ever does is post ledger entries" - is a subset of every context there is, so without this it
+    /// answers every question identically, including questions about moments the scope has never worked. That
+    /// would make "nothing is established here" unsayable for anyone with a dominant action, which is the one
+    /// answer this whole surface exists to be able to give honestly. When the caller names nothing, though, the
+    /// general behavior is precisely what they asked for, and it is returned.
+    /// </para>
     /// </remarks>
-    public bool AnswersFor(FacetSet context) =>
-        Facets.ConstrainsAction && Facets.WithoutActions().IsSubsetOf(context);
+    public bool AnswersFor(FacetSet context)
+    {
+        if (!Facets.ConstrainsAction)
+        {
+            return false;
+        }
+
+        var establishedIn = Facets.WithoutActions();
+
+        return establishedIn.IsSubsetOf(context) && (!establishedIn.IsEmpty || context.IsEmpty);
+    }
 }
