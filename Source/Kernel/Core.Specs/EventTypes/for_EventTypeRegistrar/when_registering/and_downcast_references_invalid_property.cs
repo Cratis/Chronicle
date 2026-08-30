@@ -38,7 +38,8 @@ public class and_downcast_references_invalid_property : given.all_dependencies
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_throw_invalid_migration_property() => _exception.ShouldBeOfExactType<InvalidMigrationPropertyForEventType>();
 }

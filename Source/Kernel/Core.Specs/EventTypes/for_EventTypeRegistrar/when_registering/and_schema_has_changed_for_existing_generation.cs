@@ -29,7 +29,8 @@ public class and_schema_has_changed_for_existing_generation : given.all_dependen
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_throw_event_type_schema_changed() => _exception.ShouldBeOfExactType<EventTypeSchemaChanged>();
 }

@@ -25,7 +25,8 @@ public class and_event_type_has_gap_in_migration_chain : given.all_dependencies
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_throw_missing_migration_for_generation() => _exception.ShouldBeOfExactType<MissingMigrationForEventTypeGeneration>();
 }

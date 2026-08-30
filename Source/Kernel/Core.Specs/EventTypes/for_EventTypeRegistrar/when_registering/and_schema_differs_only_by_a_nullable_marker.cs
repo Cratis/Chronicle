@@ -35,7 +35,8 @@ public class and_schema_differs_only_by_a_nullable_marker : given.all_dependenci
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
 }

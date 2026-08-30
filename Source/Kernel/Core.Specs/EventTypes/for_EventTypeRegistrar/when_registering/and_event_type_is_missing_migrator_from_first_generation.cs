@@ -25,7 +25,8 @@ public class and_event_type_is_missing_migrator_from_first_generation : given.al
             ],
             false,
             _storage,
-            _eventTypesCacheClient));
+            _eventTypesCacheClient,
+            _patternCapture));
 
     [Fact] void should_throw_missing_first_generation() => _exception.ShouldBeOfExactType<MissingFirstGenerationForEventType>();
 }

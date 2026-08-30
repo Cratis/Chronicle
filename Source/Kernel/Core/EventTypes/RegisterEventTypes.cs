@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.EventTypes;
@@ -27,17 +28,19 @@ public record RegisterEventTypes(
     /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
     /// <param name="registrar">The <see cref="EventTypeRegistrar"/> that decides what a registration means.</param>
     /// <param name="eventTypesCacheClient">Client for evicting the event type cache on every silo.</param>
+    /// <param name="patternCapture">The <see cref="IPatternCapture"/> to keep observing every registered event type.</param>
     /// <returns>Awaitable task.</returns>
     public Task Handle(
         IStorage storage,
         EventTypeRegistrar registrar,
-        IEventTypesCacheClient eventTypesCacheClient)
+        IEventTypesCacheClient eventTypesCacheClient,
+        IPatternCapture patternCapture)
     {
 #if DEVELOPMENT
         var skipValidation = DisableValidation;
 #else
         const bool skipValidation = false;
 #endif
-        return registrar.Register(EventStore, Types, skipValidation, storage, eventTypesCacheClient);
+        return registrar.Register(EventStore, Types, skipValidation, storage, eventTypesCacheClient, patternCapture);
     }
 }
