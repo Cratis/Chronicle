@@ -18,6 +18,16 @@ Reducers use convention-based method discovery. Chronicle automatically finds an
 
 <ChronicleClientTabs snippet="reducers/event-processing/method-discovery" />
 
+### When more than one method matches
+
+Discovery matches on the parameter types, so a helper you extract out of a reducer method keeps the same shape the reducer method has and matches the same event type. When that happens, Chronicle picks one method per event type, in this order:
+
+1. **A public method beats a non-public one.** Reducer methods are public by convention; anything else is an implementation detail, so a private helper never displaces the method that calls it.
+2. **The richest signature wins.** Between two methods of the same accessibility, the one taking the most parameters asked for the most context — so the overload that also takes the `EventContext` is preferred.
+3. **Method name, ordinal**, so a genuine tie resolves the same way on every run rather than being left to reflection order.
+
+A private method is still a valid reducer method when nothing else handles that event type — the precedence only decides between candidates, it does not disqualify any of them. If a helper is not meant to take part in dispatch at all, change its parameters so it no longer has the reducer shape.
+
 ### Event Source Isolation
 
 Each reducer method is called for a single event source:
