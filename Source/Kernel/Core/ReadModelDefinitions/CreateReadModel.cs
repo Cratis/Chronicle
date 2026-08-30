@@ -31,7 +31,7 @@ public record CreateReadModel(
     /// </summary>
     /// <param name="readModels">The <see cref="IReadModelsService"/> to register through.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IReadModelsService readModels)
+    public Task Handle(IReadModelsService readModels)
     {
         var emptySchema = new JsonSchema { Type = JsonObjectType.Object };
 

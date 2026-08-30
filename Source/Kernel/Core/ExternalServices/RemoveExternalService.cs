@@ -23,6 +23,6 @@ public record RemoveExternalService(EventStoreName EventStore, ExternalServiceId
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IStorage storage) =>
+    public Task Handle(IStorage storage) =>
         storage.GetEventStore(EventStore).ExternalServices.Delete(ExternalServiceId);
 }

@@ -21,7 +21,7 @@ public record StartCapture(EventStoreName EventStore, Concepts.Captures.CaptureI
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the captures manager with.</param>
     /// <returns>What validating the capture had to say before it started.</returns>
-    internal async Task<StartCaptureResult> Handle(IGrainFactory grainFactory)
+    public async Task<StartCaptureResult> Handle(IGrainFactory grainFactory)
     {
         var messages = await grainFactory.GetGrain<ICapturesManager>(EventStore).Start(CaptureId);
         return new(messages.ToContract());

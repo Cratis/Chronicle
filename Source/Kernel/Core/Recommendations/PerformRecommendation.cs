@@ -22,7 +22,7 @@ public record PerformRecommendation(EventStoreName EventStore, EventStoreNamespa
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the recommendations manager grain with.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IGrainFactory grainFactory) =>
+    public Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetRecommendationsManager(new EventStoreAndNamespace(EventStore, Namespace))
             .Perform(RecommendationId);
 }

@@ -23,7 +23,7 @@ public record GenerateDeclarativeCode(EventStoreName EventStore, EventStoreNames
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>The generated C# code or errors.</returns>
     /// <exception cref="UnexpectedProjectionResult">Thrown when the projection service returns a result that is neither generated code nor parsing errors.</exception>
-    internal async Task<GeneratedCodeResult> Handle(IProjections projections)
+    public async Task<GeneratedCodeResult> Handle(IProjections projections)
     {
         var request = new GenerateDeclarativeCodeRequest
         {

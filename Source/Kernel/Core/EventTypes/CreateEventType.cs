@@ -29,7 +29,7 @@ public record CreateEventType(EventStoreName EventStore, EventTypeId Name)
     /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
     /// <param name="eventTypesCacheClient">Client for evicting the event type cache on every silo.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient)
+    public async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient)
     {
         var eventType = new Concepts.Events.EventType(Name, EventTypeGeneration.First, false);
         var mutated = await storage

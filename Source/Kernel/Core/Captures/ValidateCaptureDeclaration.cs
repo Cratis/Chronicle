@@ -27,7 +27,7 @@ public record ValidateCaptureDeclaration(EventStoreName EventStore, string Decla
     /// <param name="languageService">The <see cref="ILanguageService"/> to compile the declaration with.</param>
     /// <param name="captureValidator">The <see cref="ICaptureValidator"/> to validate the compiled capture with.</param>
     /// <returns>What compiling and validating had to say.</returns>
-    internal async Task<ValidateCaptureDeclarationResult> Handle(ILanguageService languageService, ICaptureValidator captureValidator)
+    public async Task<ValidateCaptureDeclarationResult> Handle(ILanguageService languageService, ICaptureValidator captureValidator)
     {
         var compilation = languageService.Compile(Declaration);
         var messages = await compilation.Match(

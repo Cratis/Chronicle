@@ -59,7 +59,7 @@ public record SaveSequenceQuery(
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage) =>
+    public Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage) =>
         storage.GetEventStore(EventStore).SequenceQueries.Save(
             new SequenceQueryDefinition(
                 Id,

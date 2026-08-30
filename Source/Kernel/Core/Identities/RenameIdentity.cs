@@ -29,6 +29,6 @@ public record RenameIdentity(EventStoreName EventStore, EventStoreNamespaceName 
     /// Only the display name changes - the subject, username and on-behalf-of chain are preserved. Chronicle keys
     /// PII encryption on the compliance subject, never on the display name, so no encryption key lookup moves.
     /// </remarks>
-    internal Task Handle(IStorage storage) =>
+    public Task Handle(IStorage storage) =>
         storage.GetEventStore(EventStore).GetNamespace(Namespace).Identities.Rename(Subject, Name);
 }

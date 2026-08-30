@@ -31,7 +31,7 @@ public record UpdateReadModelDefinition(
     /// </summary>
     /// <param name="readModels">The <see cref="IReadModelsService"/> to update through.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IReadModelsService readModels) =>
+    public Task Handle(IReadModelsService readModels) =>
         readModels.UpdateDefinition(new()
         {
             EventStore = EventStore,

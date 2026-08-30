@@ -61,7 +61,7 @@ public record Append(
     /// A rejected append (constraint or concurrency violation) is a normal, expected outcome of appending - not an
     /// exceptional condition - so it is reported on the returned <see cref="AppendResult"/> rather than thrown.
     /// </remarks>
-    internal Task<AppendResult> Handle(
+    public Task<AppendResult> Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
         ICurrentPrincipalAccessor principalAccessor)

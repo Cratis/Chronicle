@@ -23,5 +23,5 @@ public record AddWebhooks(
     /// </summary>
     /// <param name="registrar">The <see cref="WebhookRegistrar"/> that decides what changed.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(WebhookRegistrar registrar) => registrar.Add(EventStore, Webhooks);
+    public Task Handle(WebhookRegistrar registrar) => registrar.Add(EventStore, Webhooks);
 }

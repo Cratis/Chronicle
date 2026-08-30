@@ -25,7 +25,7 @@ public record RegisterSingleEventType(EventStoreName EventStore, Contracts.Event
     /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
     /// <param name="eventTypesCacheClient">Client for evicting the event type cache on every silo.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient)
+    public async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient)
     {
         var chronicleType = Type.Type.ToChronicle();
         var schema = await JsonSchema.FromJsonAsync(Type.Schema);

@@ -24,7 +24,7 @@ public record PreviewProjection(EventStoreName EventStore, EventStoreNamespaceNa
     /// <param name="projections">The <see cref="IProjections"/> service.</param>
     /// <returns>The projection preview.</returns>
     /// <exception cref="UnexpectedProjectionResult">Thrown when the projection service returns a result that is neither a preview nor parsing errors.</exception>
-    internal async Task<ProjectionPreview> Handle(IProjections projections)
+    public async Task<ProjectionPreview> Handle(IProjections projections)
     {
         var request = new PreviewProjectionRequest
         {

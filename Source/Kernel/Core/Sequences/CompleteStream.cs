@@ -36,7 +36,7 @@ public record CompleteStream(
     /// - not an exceptional condition - so it is reported on the returned <see cref="CompleteStreamOutcome"/>
     /// rather than thrown.
     /// </remarks>
-    internal async Task<CompleteStreamOutcome> Handle(IGrainFactory grainFactory)
+    public async Task<CompleteStreamOutcome> Handle(IGrainFactory grainFactory)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var result = await eventSequence.CompleteStream(EventStreamType, EventStreamId);

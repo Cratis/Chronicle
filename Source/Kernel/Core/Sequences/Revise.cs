@@ -51,7 +51,7 @@ public record Revise(
     /// A reactor picks up the resulting <see cref="EventRevised"/> and performs the actual in-place update, rather
     /// than the revision happening synchronously here.
     /// </remarks>
-    internal Task Handle(
+    public Task Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
         ICurrentPrincipalAccessor principalAccessor)

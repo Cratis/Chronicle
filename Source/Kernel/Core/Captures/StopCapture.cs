@@ -21,6 +21,6 @@ public record StopCapture(EventStoreName EventStore, Concepts.Captures.CaptureId
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the captures manager with.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IGrainFactory grainFactory) =>
+    public Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetGrain<ICapturesManager>(EventStore).Stop(CaptureId);
 }

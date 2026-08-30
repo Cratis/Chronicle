@@ -65,7 +65,7 @@ public record AddExternalService(
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IStorage storage) =>
+    public Task Handle(IStorage storage) =>
         storage.GetEventStore(EventStore).ExternalServices.Save(
             new Contracts.ExternalServices.ExternalServiceDefinition
             {
