@@ -24,6 +24,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Contracts.Patterns;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
@@ -47,6 +48,8 @@ using KernelEventTypesService = KernelGrpc::Cratis.Chronicle.Services.EventTypes
 using KernelExternalServicesService = KernelGrpc::Cratis.Chronicle.Services.ExternalServices.ExternalServices;
 using KernelFailedPartitionsService = KernelGrpc::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelGrpc::Cratis.Chronicle.Services.Identities.Identities;
+using KernelFacetSetGenerator = KernelCore::Cratis.Chronicle.Patterns.FacetSetGenerator;
+using KernelFacetVocabulary = KernelCore::Cratis.Chronicle.Patterns.FacetVocabulary;
 using KernelJobsService = KernelGrpc::Cratis.Chronicle.Services.Jobs.Jobs;
 using KernelJsonComplianceManager = KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager;
 using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler;
@@ -59,6 +62,8 @@ using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.
 using KernelReactorsService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
 using KernelReadModelsCompliance = KernelCore::Cratis.Chronicle.ReadModels.ReadModelsCompliance;
 using KernelReadModelsService = KernelGrpc::Cratis.Chronicle.Services.ReadModels.ReadModels;
+using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
+using KernelPatternsService = KernelGrpc::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelRecommendationsService = KernelGrpc::Cratis.Chronicle.Services.Recommendations.Recommendations;
 using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
 using KernelReducersService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reducers.Reducers;
@@ -101,6 +106,7 @@ internal sealed class TestingServices : IServices
     readonly Lazy<INamespaces> _namespaces;
     readonly Lazy<IIdentities> _identities;
     readonly Lazy<IEventTypes> _eventTypes;
+    readonly Lazy<IPatterns> _patterns;
     readonly Lazy<IRecommendations> _recommendations;
     readonly Lazy<IConstraints> _constraints;
     readonly Lazy<IUsers> _users;
@@ -228,6 +234,17 @@ internal sealed class TestingServices : IServices
                 storage,
                 NullLogger<KernelEventTypesService>.Instance));
 
+        _patterns = new(() =>
+        {
+            var patternOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
+            return new KernelPatternsService(
+                storage,
+                new KernelFacetVocabulary(patternOptions),
+                new KernelFacetSetGenerator(),
+                new KernelPatternMatcher(),
+                patternOptions);
+        });
+
         _recommendations = new(() =>
             new KernelRecommendationsService(commandPipeline.Value, storage, NullLogger<KernelRecommendationsService>.Instance));
 
@@ -334,6 +351,9 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public IEventTypes EventTypes => _eventTypes.Value;
+
+    /// <inheritdoc/>
+    public IPatterns Patterns => _patterns.Value;
 
     /// <inheritdoc/>
     public IRecommendations Recommendations => _recommendations.Value;
