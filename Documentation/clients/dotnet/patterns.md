@@ -5,9 +5,35 @@ description: Ask what a user usually does in a given context, from the .NET clie
 
 [Behavior patterns](/chronicle/patterns/) are recurring combinations of context that Chronicle mined from an event store's history. The .NET client exposes them on `IEventStore.Patterns`.
 
-## Asking what usually happens
+## Asking what somebody usually does right now
 
-Build a context from the facets you know and ask within a scope — normally the user whose behavior you are asking about:
+Most applications have one question: *what does this person normally do at this point in the week?* Every Chronicle client offers that as a single call — see [asking about a moment](/chronicle/patterns/) for the shared contract. In .NET it is `GetPatternsAt`, and it takes the scope and nothing else:
+
+```csharp
+var patterns = await eventStore.Patterns.GetPatternsAt(userId);
+```
+
+The day and the part of the day are read off the moment for you, using the same rule the engine bucketed events with when it mined them — so the answer is about the slot the behavior was actually learned in. Pass a moment to ask about a different one:
+
+```csharp
+var patterns = await eventStore.Patterns.GetPatternsAt(userId, tomorrowMorning);
+```
+
+Add further facets when the question is narrower than a moment — *what does this person usually do with an invoice on a Monday morning?*
+
+```csharp
+var patterns = await eventStore.Patterns.GetPatternsAt(
+    userId,
+    alsoConstraining: FacetSet.Empty.With(FacetName.AggregateType, "Invoice"));
+```
+
+:::note
+Derive the time bucket yourself and you own a copy of a rule the engine also owns. When they drift, nothing fails — the query simply asks about a slot the mining never used and returns nothing. `GetPatternsAt` exists so that copy does not have to exist. If you do need the bucket for something else, `ToTimeBucket()` on `DateTimeOffset` is the same rule the engine mines with.
+:::
+
+## Asking about a context that is not a moment
+
+`GetPatterns` is the lower-level call underneath. Build a context from the facets you know and ask within a scope — normally the user whose behavior you are asking about:
 
 ```csharp
 using Cratis.Chronicle.Concepts.Patterns;
@@ -27,6 +53,10 @@ foreach (var pattern in patterns)
 The context may constrain **any subset** of the facets. Facets the store does not mine are discarded rather than narrowing the lookup to nothing, so a caller can describe its situation in whatever terms it has.
 
 Results are ranked **most specific first**, then most confident. A pattern constraining everything you asked about answers your question; a broader, more confident one answers a question you did not ask.
+
+:::caution
+A pattern matches when **its facets are a subset of the context you asked with**, so a query returns patterns describing the context you named — not the action taken in it. Asking about a day and a time tells you whether that slot is established; it does not yet tell you which command usually follows, because a pattern constraining `CommandType` is not a subset of a context that does not name one. Returning the action is tracked in [#3872](https://github.com/Cratis/Chronicle/issues/3872).
+:::
 
 ### An empty result is an answer
 
@@ -60,6 +90,17 @@ Leave `minimumConfidence` and `maximumResults` unset to use whatever the **serve
 ```csharp
 var everything = await eventStore.Patterns.GetPatternsForScope(userId);
 ```
+
+Which leaves the question of what to pass. A browsing view rarely knows a scope up front — it has to offer the ones that exist — and patterns are per scope, so there is nothing to show until one is chosen. `GetScopes` is that list:
+
+```csharp
+foreach (var scope in await eventStore.Patterns.GetScopes())
+{
+    var patterns = await eventStore.Patterns.GetPatternsForScope(scope);
+}
+```
+
+The scopes returned are the ones that actually hold patterns, not every identity that ever appeared in the store. A scope missing from the list has established no behavior yet — which is the same answer an empty `GetPatterns` gives, one level up.
 
 ## What you get back
 

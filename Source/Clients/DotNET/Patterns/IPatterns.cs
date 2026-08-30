@@ -32,6 +32,36 @@ public interface IPatterns
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get what a scope usually does at a moment, most specific and most confident first.
+    /// </summary>
+    /// <param name="groupingKey">The <see cref="PatternGroupingKey">scope</see> to ask about - typically a user.</param>
+    /// <param name="moment">The moment to ask about. Defaults to now.</param>
+    /// <param name="alsoConstraining">Optional further <see cref="FacetSet">facets</see> to narrow the question with.</param>
+    /// <param name="minimumConfidence">The lowest <see cref="PatternConfidence"/> an answer may hold. Defaults to the server's configured threshold.</param>
+    /// <param name="maximumResults">The largest number of answers to return. Defaults to the server's default.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>The matching <see cref="BehaviorPattern">patterns</see>, empty when nothing clears the bar.</returns>
+    /// <remarks>
+    /// The question an application actually has is "what does this person usually do right now", and this is that
+    /// question. The day and the part of the day are read off the moment using the same rule the engine bucketed
+    /// events with when it mined them, so the answer is about the slot the behavior was actually learned in.
+    /// <para>
+    /// <see cref="GetPatterns"/> remains for anything asking about a context that is not a moment - a command, an
+    /// aggregate, what caused what. Pass <paramref name="alsoConstraining"/> to ask about both at once.
+    /// </para>
+    /// <para>
+    /// An empty result is an answer, not a failure: this scope has no established behavior for this moment.
+    /// </para>
+    /// </remarks>
+    Task<IEnumerable<BehaviorPattern>> GetPatternsAt(
+        PatternGroupingKey groupingKey,
+        DateTimeOffset? moment = default,
+        FacetSet? alsoConstraining = default,
+        PatternConfidence? minimumConfidence = default,
+        int maximumResults = 0,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get every pattern established for a scope.
     /// </summary>
     /// <param name="groupingKey">The <see cref="PatternGroupingKey">scope</see> to get for.</param>
@@ -40,4 +70,11 @@ public interface IPatterns
     Task<IEnumerable<BehaviorPattern>> GetPatternsForScope(
         PatternGroupingKey groupingKey,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the scopes that have established patterns.
+    /// </summary>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="PatternGroupingKey">scopes</see> holding patterns.</returns>
+    Task<IEnumerable<PatternGroupingKey>> GetScopes(CancellationToken cancellationToken = default);
 }

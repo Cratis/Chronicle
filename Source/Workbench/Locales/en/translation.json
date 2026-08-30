@@ -52,6 +52,8 @@
         "jobs": "Jobs",
         "sequences": "Sequences",
         "pivot": "Pivot (experimental)",
+        "patterns": "Behavior patterns",
+        "patternHeatmap": "Pattern heatmap",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
         "readModels": "Read Models",
@@ -799,5 +801,28 @@
             },
             "emptyMessage": "No properties defined"
         }
+    },
+    "patterns": {
+        "scope": "Scope",
+        "noScopes": "No behavior has been established yet. Patterns appear once a scope has repeated something often enough to clear the thresholds.",
+        "noPatterns": "This scope has no established behavior yet.",
+        "confidence": "Confidence",
+        "support": "Support",
+        "occurrences": "Occurrences",
+        "weight": "Weight",
+        "lastSeen": "Last seen",
+        "firstSeen": "First seen",
+        "facets": "Facets",
+        "specificity": "Specificity",
+        "noPatternInSlot": "Nothing established for this slot.",
+        "selectSlot": "Select a slot to see the patterns established for it.",
+        "commandType": "Command",
+        "initiatorType": "Initiator",
+        "day": "Day",
+        "timeBucket": "Time of day",
+        "aggregateType": "Aggregate",
+        "causedByCommand": "Caused by",
+        "lessActive": "Less active",
+        "moreActive": "More active"
     }
 }

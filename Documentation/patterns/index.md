@@ -18,7 +18,7 @@ A **behavior pattern** is a combination of facets that recurred often enough and
 | **Weight** | Recency-weighted strength — decays as the behavior goes unseen |
 | **First seen / last seen** | When it was first and last observed |
 
-A pattern such as `{ Day: Monday, TimeBucket: Morning, CommandType: ApproveExpenseReport }` with a confidence of `0.9` reads as: *on Monday mornings, this person approves expense reports nine times out of ten.*
+A pattern such as `{ Day: Monday, TimeBucket: EarlyMorning, CommandType: RegisterInvoice }` with a confidence of `0.9` reads as: *first thing on a Monday, this person enters supplier invoices nine times out of ten.*
 
 ## Facets
 
@@ -75,6 +75,10 @@ Under `Cratis:Chronicle:PatternDetection`:
 
 `Year` and `Month` are deliberately absent from `Facets`: they are kept on a surviving pattern for recency, but combining them multiplies the candidate space by every month the store has been running while splitting one behavior across all of them. Add them when a deployment wants to mine seasonality and can afford the cardinality.
 
+## When capture starts
+
+Pattern capture observes the event types an event store has registered, and re-subscribes as more are registered — so a store that gains its first event types while the server is already running starts being captured then, not at the next restart.
+
 ## Naming the command
 
 For `CommandType` and `CausedByCommand` to be meaningful, something above the event has to name the command. [Cratis Arc](/arc/) records a `Command` causation naming the executing command for the duration of that command, so nested commands produce a real "caused by" chain and sibling commands do not. Anything else appending to Chronicle can do the same by putting a `commandType` property on its causation.
@@ -87,7 +91,38 @@ Ask what usually happens with the [.NET client's pattern API](/chronicle/clients
 
 - **`GetPatterns`** — given a partial context, the patterns that apply, ranked by specificity and then confidence.
 - **`GetPatternsForScope`** — everything a scope has established, unfiltered, for browsing.
+- **`GetScopes`** — the scopes that hold any patterns at all, which is what a browsing view needs before it can offer one.
 
 Specificity outranks confidence in the ranking. A pattern constraining everything you asked about answers your question; a broader, more confident one answers a question you did not ask.
 
+A pattern matches when **its facets are a subset of the asked context**. That means a query describes the context you named rather than the action taken in it: asking about a day and a part of the day says whether that slot is established, not which command usually follows. Returning the action is tracked in [#3872](https://github.com/Cratis/Chronicle/issues/3872).
+
 **Nothing clearing the confidence bar returns nothing.** An empty answer is a true statement — this scope has no established behavior for this context — and is not padded with the best of a bad set.
+
+## Asking about a moment
+
+The context an application usually has is a person and a point in time, so every client offers that as a single call on top of `GetPatterns`: **give it the scope, optionally give it a moment, and it fills in the rest**. The moment defaults to now.
+
+What it fills in is the `Day` and the `TimeBucket`, derived from the moment with **the same rule the engine used when it mined the events**. That rule is the load-bearing part. A caller deriving the bucket itself owns a second copy of it, and when the two drift nothing fails loudly — the query simply asks about a slot the mining never used and comes back empty. Each client therefore exposes the bucketing rule as well, so the copy never has to exist:
+
+| Client | Ask about a moment | Bucket a moment |
+| --- | --- | --- |
+| [.NET](/chronicle/clients/dotnet/patterns/) | `Patterns.GetPatternsAt(scope, moment?)` | `moment.ToTimeBucket()` |
+
+Other clients — TypeScript, Kotlin, Elixir, Python — expose the same capability in their own idiom; see the client's own page for the exact shape. The contract they share is the one above: scope required, moment optional and defaulting to now, day and time bucket derived by the engine's rule rather than the caller's.
+
+## Seeing patterns in the Workbench
+
+Two views under an event store's namespace read the same patterns from different angles.
+
+**Behavior patterns** pivots every pattern in the namespace, with the scope as the first filter rather than a control above the viewer — so two people's behavior can be compared side by side instead of one being chosen before anything can be seen. The facets become the dimensions and filters, so the same set can be approached from whichever direction the question comes: by command, by who initiated it, by day or part of day, by aggregate, by what caused it, or by how specific the pattern is. Each card carries a confidence bar, so a well-established habit is distinguishable from a marginal one without reading numbers.
+
+**Pattern heatmap** answers the narrower question of *when*, for one scope at a time. It is a day-by-time-of-day grid where each cell is shaded by how much the scope does in that slot, with the current slot outlined. Activity rather than confidence, because confidence saturates — anything habitual sits at a hundred percent, so shading by it would make every slot a person works in look the same. Clicking a cell lists everything established for it. Above the grid, a panel names what the scope usually does *right now* — the same question [`GetPatterns`](/chronicle/clients/dotnet/patterns/) answers from code, asked with the current day and time bucket as the context.
+
+A pattern that constrains neither day nor time of day belongs to no cell and is left out of the grid rather than drawn somewhere arbitrary. It is still in the pivot view, which is the one that shows everything.
+
+## Trying it out
+
+The **Backoffice** sample in the Chronicle repository generates half a year of work in the internal system a mid-size company runs on — accounts payable, the ledger, procurement, HR and payroll — plus agents acting on people's behalf, an overnight system run, and one person with no routine at all as a control.
+
+It is the quickest way to see what the views are for, because nobody in it does only one thing. Everybody holds three or four different jobs at different points in the week, so each person's heatmap is a different shape with several commands in it rather than one dominant block: the accounts payable clerk lights up first thing and again at lunchtime with different work in each, the controller lights up through the afternoons and twice a week at midday, and the person who covers whatever is short-handed lights up nowhere. Its README explains what was put in, so what Chronicle establishes can be checked against it.

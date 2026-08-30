@@ -23,6 +23,8 @@ import { Webhooks } from './General/Webhooks/Webhooks';
 import { ExternalServices } from './General/ExternalServices/ExternalServices';
 import { ReadModels } from './Namespaces/ReadModels/ReadModels';
 import { Pivot } from './Namespaces/Pivot/Pivot';
+import { Patterns } from './Namespaces/Patterns/Patterns';
+import { PatternHeatmap } from './Namespaces/Patterns/PatternHeatmap';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
@@ -51,6 +53,8 @@ export const EventStore = () => {
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
                 { label: strings.mainMenu.pivot, url: ':namespace/pivot', icon: mdIcons.MdTimeline },
+                { label: strings.mainMenu.patterns, url: ':namespace/patterns', icon: mdIcons.MdInsights },
+                { label: strings.mainMenu.patternHeatmap, url: ':namespace/pattern-heatmap', icon: mdIcons.MdGridOn },
                 { label: strings.mainMenu.observers, url: ':namespace/observers', icon: mdIcons.MdAirlineStops },
                 { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
                 { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
@@ -122,6 +126,8 @@ export const EventStore = () => {
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />
                     <Route path={'pivot'} element={<Pivot />} />
+                    <Route path={'patterns'} element={<Patterns />} />
+                    <Route path={'pattern-heatmap'} element={<PatternHeatmap />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
                     <Route path={'read-models/*'} element={<ReadModels />} />

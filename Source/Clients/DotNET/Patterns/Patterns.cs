@@ -44,6 +44,27 @@ public class Patterns(IEventStore eventStore) : IPatterns
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<BehaviorPattern>> GetPatternsAt(
+        PatternGroupingKey groupingKey,
+        DateTimeOffset? moment = default,
+        FacetSet? alsoConstraining = default,
+        PatternConfidence? minimumConfidence = default,
+        int maximumResults = 0,
+        CancellationToken cancellationToken = default)
+    {
+        var at = moment ?? DateTimeOffset.Now;
+
+        // Built on top of whatever the caller already wanted to constrain, so asking about a moment and asking
+        // about a command are the same question rather than two competing ones. With() replaces, so a caller who
+        // constrained the day themselves gets the moment's day - which is the value they asked to be asked about.
+        var context = (alsoConstraining ?? FacetSet.Empty)
+            .With(FacetName.Day, at.DayOfWeek.ToString())
+            .With(FacetName.TimeBucket, at.ToTimeBucket().ToString());
+
+        return GetPatterns(groupingKey, context, minimumConfidence, maximumResults, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<BehaviorPattern>> GetPatternsForScope(
         PatternGroupingKey groupingKey,
         CancellationToken cancellationToken = default)
@@ -58,5 +79,19 @@ public class Patterns(IEventStore eventStore) : IPatterns
             new CallContext(new CallOptions(cancellationToken: cancellationToken)));
 
         return patterns.ToClient();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<PatternGroupingKey>> GetScopes(CancellationToken cancellationToken = default)
+    {
+        var scopes = await _servicesAccessor.Services.Patterns.GetScopes(
+            new()
+            {
+                EventStore = eventStore.Name,
+                Namespace = eventStore.Namespace
+            },
+            new CallContext(new CallOptions(cancellationToken: cancellationToken)));
+
+        return [.. scopes.Select(scope => new PatternGroupingKey(scope))];
     }
 }
