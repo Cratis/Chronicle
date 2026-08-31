@@ -11,6 +11,8 @@ import { Json } from 'Features';
 import * as faIcons from 'react-icons/fa6';
 import { ReadModelInstance } from 'Api/ReadModels';
 import { ObjectNavigationalBar } from '@cratis/components/ObjectNavigationalBar';
+import { ProgressSpinner } from '@cratis/components/Display';
+import './ReadModelInstances.css';
 
 interface Props {
     instances: ReadModelInstance[];
@@ -209,7 +211,12 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                         overflow: 'hidden'
                     }}>
 
-                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
+                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto', position: 'relative' }}>
+                        {isPerforming && (
+                            <div className='read-model-instances__busy' data-testid='read-model-instances-busy'>
+                                <ProgressSpinner aria-label={strings.general.loading} />
+                            </div>
+                        )}
                         <DataTableCore<{ [k: string]: Json }>
                             data={objectArray}
                             dataKey='_id'

@@ -94,6 +94,7 @@ export const Projections = () => {
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
+    const [isPreviewing, setIsPreviewing] = useState(false);
     const [draftReadModel, setDraftReadModel] = useState<DraftReadModel | null>(null);
     const [pendingReadModel, setPendingReadModel] = useState<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
@@ -413,17 +414,25 @@ export const Projections = () => {
                                             declaration: toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
                                             draftReadModel: draftReadModel ?? undefined
                                         });
-                                        const result = await previewProjection.execute();
 
-                                        const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
-                                            const instance = new ReadModelInstance();
-                                            instance.instance = entry as Record<string, Record<string, unknown>>;
-                                            return instance;
-                                        });
-                                        setReadModelInstances(instances);
-                                        setSyntaxErrors(result.response?.syntaxErrors ?? []);
-                                        setSelectedInstance(null);
-                                        setPage(0);
+                                        // Previewing replays the events through the projection server-side, which
+                                        // takes long enough to look like nothing happened without saying so.
+                                        setIsPreviewing(true);
+                                        try {
+                                            const result = await previewProjection.execute();
+
+                                            const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
+                                                const instance = new ReadModelInstance();
+                                                instance.instance = entry as Record<string, Record<string, unknown>>;
+                                                return instance;
+                                            });
+                                            setReadModelInstances(instances);
+                                            setSyntaxErrors(result.response?.syntaxErrors ?? []);
+                                            setSelectedInstance(null);
+                                            setPage(0);
+                                        } finally {
+                                            setIsPreviewing(false);
+                                        }
                                     },
                                     // Rendered through the template so the disabled action can still explain
                                     // itself on hover; ActionMenuItem carries no tooltip of its own.
@@ -472,7 +481,7 @@ export const Projections = () => {
                                 page={page}
                                 pageSize={pageSize}
                                 totalItems={readModelInstances.length}
-                                isPerforming={false}
+                                isPerforming={isPreviewing}
                                 setPage={setPage}
                                 setPageSize={setPageSize}
                                 selectedInstance={selectedInstance}
