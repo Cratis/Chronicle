@@ -387,11 +387,13 @@ internal sealed class EventTypes(
             // schema so both sides go through identical normalization before comparison.
             newSchema.EnsureComplianceMetadata();
 
-            // Ignore nullability markers ('?' on a format value): a Chronicle upgrade can add them to an
-            // existing event schema (a nullable known value type that stored 'date-time-offset' now generates
-            // 'date-time-offset?'). That marker only refines how an unset value materializes, not the data
-            // shape, so a marker-only difference is not a breaking schema change.
-            if (!existingGeneration.Schema.EqualsIgnoringNullableFormatMarkers(newSchema))
+            // Compare for compatibility rather than equality. Two differences cannot change what an already
+            // stored payload means and must not be rejected: a nullability marker ('?' on a format value), which
+            // a Chronicle upgrade can introduce on a schema stored before the marker existed, and an enumeration
+            // that only gained members or had members renamed - neither moves an existing member off the
+            // underlying value a stored payload carries. Everything else, including a member that disappeared or
+            // was renumbered, still needs a new generation.
+            if (!existingGeneration.Schema.IsCompatibleWith(newSchema))
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
             }
