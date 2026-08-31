@@ -372,7 +372,7 @@ internal sealed class Projections(
                         });
                 }
 
-                var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition);
+                var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition, (Concepts.Projections.ProjectionCodeLanguage)(int)request.Language);
 
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
             },
@@ -423,7 +423,7 @@ internal sealed class Projections(
                         });
                 }
 
-                var code = languageService.GenerateModelBoundCode(definition, readModelDefinition);
+                var code = languageService.GenerateModelBoundCode(definition, readModelDefinition, (Concepts.Projections.ProjectionCodeLanguage)(int)request.Language);
 
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
             },

@@ -10,13 +10,18 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.CSharp;
 
 /// <summary>
 /// Generates model-bound C# read model code from a <see cref="ProjectionDefinition"/> using Roslyn Syntax Factory.
 /// </summary>
 public class ModelBoundCodeGenerator
 {
+    /// <summary>
+    /// How far each record parameter is indented from the record declaration.
+    /// </summary>
+    const int RecordParameterIndentation = 4;
+
     /// <summary>
     /// Generates model-bound read model C# code.
     /// </summary>
@@ -34,10 +39,14 @@ public class ModelBoundCodeGenerator
             UsingDirective(ParseName("Cratis.Chronicle.Projections.ModelBound"))
         };
 
-        return CompilationUnit()
+        var compilationUnit = CompilationUnit()
             .WithUsings(List(usings))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(CreateRecordDeclaration(readModelName, schema, definition)))
             .NormalizeWhitespace();
+
+        // Normalizing puts the whole parameter list on one line, and for a model-bound read model that
+        // line carries the entire projection in attributes. Give each property its own line back.
+        return (CompilationUnitSyntax)new RecordParameterFormatter(RecordParameterIndentation).Visit(compilationUnit);
     }
 
     static string GetEventPropertyName(string expression)
@@ -211,11 +220,18 @@ public class ModelBoundCodeGenerator
                 else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                 {
                     var innerValue = normalizedExpression[(WellKnownExpressions.Value.Length + 1)..^1];
-                    propInfo.SetValues.Add((eventTypeName, innerValue));
+                    propInfo.SetValues.Add((eventTypeName, innerValue, false));
                 }
                 else if (normalizedExpression == WellKnownExpressions.Null)
                 {
                     propInfo.Clears.Add(eventTypeName);
+                }
+                else if (ProjectionExpressions.ReadValue(normalizedExpression) is { Kind: ProjectionValueKind.Text or ProjectionValueKind.Literal } constant)
+                {
+                    // A constant written without $value() around it - `Status = literal "1"` - is still a
+                    // constant. Left to fall through it became [SetFrom<TEvent>(nameof(TEvent."1"))], which
+                    // reads the value as if it were a property name and does not compile.
+                    propInfo.SetValues.Add((eventTypeName, constant.Value, constant.Kind == ProjectionValueKind.Text));
                 }
                 else
                 {
@@ -268,7 +284,7 @@ public class ModelBoundCodeGenerator
 
         foreach (var setValue in propInfo.SetValues)
         {
-            attributes.Add(CreateSetValueAttribute(setValue.EventTypeName, setValue.Value));
+            attributes.Add(CreateSetValueAttribute(setValue.EventTypeName, setValue.Value, setValue.IsText));
         }
 
         // A clear is emitted as [ClearWith<TEvent>] rather than [SetValue<TEvent>(null)]. Both compile to the same
@@ -324,7 +340,7 @@ public class ModelBoundCodeGenerator
         return Attribute(attribute);
     }
 
-    AttributeSyntax CreateSetValueAttribute(string eventTypeName, string value)
+    AttributeSyntax CreateSetValueAttribute(string eventTypeName, string value, bool isText)
     {
         var attribute = GenericName("SetValue")
             .WithTypeArgumentList(
@@ -334,7 +350,13 @@ public class ModelBoundCodeGenerator
 
         ExpressionSyntax valueLiteral;
 
-        if (bool.TryParse(value, out var boolValue))
+        // A value the declaration quoted is text whatever it spells, so "1" stays the string rather
+        // than being read back as the number.
+        if (isText)
+        {
+            valueLiteral = LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(value));
+        }
+        else if (bool.TryParse(value, out var boolValue))
         {
             valueLiteral = LiteralExpression(
                 boolValue ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression);
@@ -367,7 +389,7 @@ public class ModelBoundCodeGenerator
     {
         public string PropertyName { get; set; } = string.Empty;
         public List<(string EventTypeName, string EventPropertyName)> SetFroms { get; } = [];
-        public List<(string EventTypeName, string Value)> SetValues { get; } = [];
+        public List<(string EventTypeName, string Value, bool IsText)> SetValues { get; } = [];
         public List<string> Clears { get; } = [];
         public List<(string EventTypeName, string EventPropertyName)> AddFroms { get; } = [];
         public List<(string EventTypeName, string EventPropertyName)> SubtractFroms { get; } = [];

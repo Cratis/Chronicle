@@ -5,10 +5,12 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration;
 using Cratis.Monads;
 using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Syntax.Projections;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
@@ -16,12 +18,10 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 /// Represents an implementation of the <see cref="ILanguageService"/>.
 /// </summary>
 /// <param name="generator">The generator used to generate projection language definition strings.</param>
-/// <param name="declarativeCodeGenerator">The generator for declarative C# projection code.</param>
-/// <param name="modelBoundCodeGenerator">The generator for model-bound C# read model code.</param>
+/// <param name="codeGenerators">The generators that render a projection as client code, one per language.</param>
 public class LanguageService(
     IGenerator generator,
-    DeclarativeCodeGenerator declarativeCodeGenerator,
-    ModelBoundCodeGenerator modelBoundCodeGenerator) : ILanguageService
+    IInstancesOf<IProjectionCodeGenerator> codeGenerators) : ILanguageService
 {
     /// <summary>
     /// Screenplay requires a projection to declare at least one block. Chronicle's projection declaration
@@ -88,12 +88,16 @@ public class LanguageService(
     }
 
     /// <inheritdoc/>
-    public string GenerateDeclarativeCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
-        declarativeCodeGenerator.Generate(definition, readModelDefinition).ToFullString();
+    public string GenerateDeclarativeCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, ProjectionCodeLanguage language = ProjectionCodeLanguage.CSharp) =>
+        GeneratorFor(language, ProjectionCodeStyle.Declarative).GenerateDeclarative(definition, readModelDefinition);
 
     /// <inheritdoc/>
-    public string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
-        modelBoundCodeGenerator.Generate(definition, readModelDefinition).ToFullString();
+    public string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, ProjectionCodeLanguage language = ProjectionCodeLanguage.CSharp) =>
+        GeneratorFor(language, ProjectionCodeStyle.ModelBound).GenerateModelBound(definition, readModelDefinition);
+
+    /// <inheritdoc/>
+    public IEnumerable<ProjectionCodeLanguage> GetLanguagesSupporting(ProjectionCodeStyle style) =>
+        codeGenerators.Where(generator => generator.Supports(style)).Select(generator => generator.Language).ToArray();
 
     static CompilerErrors GetErrors(IEnumerable<Diagnostic> diagnostics, bool ignoreMissingDirectives)
     {
@@ -104,5 +108,16 @@ public class LanguageService(
             .Select(diagnostic => new CompilerError(diagnostic.Message, diagnostic.Location.Line, diagnostic.Location.Column));
 
         return new CompilerErrors(errors);
+    }
+
+    IProjectionCodeGenerator GeneratorFor(ProjectionCodeLanguage language, ProjectionCodeStyle style)
+    {
+        var codeGenerator = codeGenerators.FirstOrDefault(candidate => candidate.Language == language);
+
+        // A language with no generator at all, and one whose client has no API for the style asked
+        // for, are the same answer to the caller: there is nothing to show for that combination.
+        return codeGenerator?.Supports(style) == true
+            ? codeGenerator
+            : throw new ProjectionCodeGenerationNotSupported(language, style);
     }
 }

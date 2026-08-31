@@ -11,13 +11,24 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.CSharp;
 
 /// <summary>
 /// Generates declarative C# projection code from a <see cref="ProjectionDefinition"/> using Roslyn Syntax Factory.
 /// </summary>
 public class DeclarativeCodeGenerator
 {
+    /// <summary>
+    /// How far each step of the builder chain is indented - one level past the expression-bodied
+    /// `Define` it hangs off.
+    /// </summary>
+    const int FluentChainIndentation = 12;
+
+    /// <summary>
+    /// The name of the builder parameter the chain hangs off.
+    /// </summary>
+    const string BuilderParameterName = "builder";
+
     /// <summary>
     /// Generates declarative projection C# code.
     /// </summary>
@@ -27,16 +38,20 @@ public class DeclarativeCodeGenerator
     public CompilationUnitSyntax Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title!;
-        var projectionName = definition.Identifier.Value;
+        var projectionName = ProjectionNaming.TypeNameFor(definition.Identifier.Value, readModelName);
 
         var usingDirective = UsingDirective(ParseName("Cratis.Chronicle.Projections"));
 
         var classDeclaration = CreateProjectionClass(projectionName, readModelName, definition);
 
-        return CompilationUnit()
+        var compilationUnit = CompilationUnit()
             .WithUsings(SingletonList(usingDirective))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(classDeclaration))
             .NormalizeWhitespace();
+
+        // Normalizing lays the builder chain out as one line however long it grows, so the steps are
+        // broken back apart afterwards - indented under the `Define` it belongs to.
+        return (CompilationUnitSyntax)new FluentChainFormatter(BuilderParameterName, FluentChainIndentation).Visit(compilationUnit);
     }
 
     static string ConvertExpression(string expression)
