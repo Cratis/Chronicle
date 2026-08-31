@@ -17,10 +17,10 @@ public class an_event_nobody_can_be_named_for : given.a_pattern_miner
     {
         for (var count = 0; count < 20; count++)
         {
-            _miner.Observe(Features(PatternGroupingKey.Unspecified, "ApproveExpenseReport"));
+            _miner.Observe(_eventStore, _namespace, Features(PatternGroupingKey.Unspecified, "ApproveExpenseReport"));
         }
 
-        _result = _miner.GetSurvivingPatterns();
+        _result = _miner.GetSurvivingPatterns(_eventStore, _namespace, PatternGroupingKey.Unspecified);
     }
 
     [Fact] void should_not_mine_anything() => _result.ShouldBeEmpty();
