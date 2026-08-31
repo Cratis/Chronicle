@@ -5,8 +5,8 @@ import { Column } from '@cratis/components/DataTables';
 import { Tag } from '@cratis/components/Display';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { Card } from 'Components/Card';
-import { DataTable } from 'Components/DataTable';
-import { Button } from 'Components/Button';
+import { DataTableCore } from '@cratis/components/DataTables';
+import { Button } from '@cratis/components/Common';
 import { useState } from 'react';
 import { MdRefresh, MdViewList, MdViewModule } from 'react-icons/md';
 
@@ -51,9 +51,9 @@ export const RecentActivityWidget = ({ className }: { className?: string }) => {
                     <span className="text-xs text-gray-500">Last updated 5m ago</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button icon={<MdRefresh />} rounded text severity="secondary" size="small" />
-                    <Button icon={<MdViewList />} rounded text severity="secondary" size="small" />
-                    <Button icon={<MdViewModule />} rounded text severity="secondary" size="small" />
+                    <Button icon={<MdRefresh />} shape='pill' variant='ghost' tone="neutral" size="small" />
+                    <Button icon={<MdViewList />} shape='pill' variant='ghost' tone="neutral" size="small" />
+                    <Button icon={<MdViewModule />} shape='pill' variant='ghost' tone="neutral" size="small" />
                     <Dropdown
                         value={filter}
                         options={['All event types', 'Observer only', 'Events only']}
@@ -61,8 +61,8 @@ export const RecentActivityWidget = ({ className }: { className?: string }) => {
                     />
                 </div>
             </div>
-            <DataTable
-                value={rows}
+            <DataTableCore
+                data={rows}
                 emptyMessage="No recent activity."
                 scrollable
                 scrollHeight="220px"
@@ -72,7 +72,7 @@ export const RecentActivityWidget = ({ className }: { className?: string }) => {
                 <Column field="stream" header="Stream" style={{ minWidth: '7rem' }} />
                 <Column field="age" header="" style={{ minWidth: '6rem' }} />
                 <Column header="" body={actionBody} style={{ minWidth: '7rem' }} />
-            </DataTable>
+            </DataTableCore>
         </Card>
     );
 };

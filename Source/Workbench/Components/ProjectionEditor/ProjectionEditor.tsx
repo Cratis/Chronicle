@@ -15,7 +15,7 @@ import {
 import type { JsonSchema } from '@cratis/screenplay-language/projection';
 import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Api/Projections';
 import { AllEventSequences } from 'Api/EventSequences';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
 import Strings from 'Strings';
@@ -342,7 +342,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     <Button
                         icon="pi pi-times"
                         onClick={() => setIsHelpPanelOpen(false)}
-                        className="p-button-rounded p-button-text"
+                        shape='pill' variant='ghost'
                         style={{ color: '#cccccc' }}
                     />
                 </div>
@@ -378,7 +378,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     <Button
                         icon="pi pi-times"
                         onClick={() => setIsCodePanelOpen(false)}
-                        className="p-button-rounded p-button-text"
+                        shape='pill' variant='ghost'
                         style={{ color: '#cccccc' }}
                     />
                 </div>

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import MonacoEditor from 'Components/MonacoEditor/MonacoEditor';
 import { ToggleButton } from 'primereact/togglebutton';
 import { ToggleButtonGroup, type ToggleButtonGroupValueChangeEvent } from 'primereact/togglebuttongroup';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 
 interface ProjectionCodePanelProps {
     declarativeCode: string;
@@ -47,14 +47,14 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
                     disabled={!onRefresh}
                     tooltip="Refresh Code"
                     tooltipOptions={{ position: 'left' }}
-                    className="p-button-rounded p-button-text"
+                    shape='pill' variant='ghost'
                 />
                 <Button
                     icon="pi pi-copy"
                     onClick={handleCopyToClipboard}
                     tooltip="Copy to Clipboard"
                     tooltipOptions={{ position: 'left' }}
-                    className="p-button-rounded p-button-text"
+                    shape='pill' variant='ghost'
                 />
             </div>
             <div

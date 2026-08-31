@@ -15,7 +15,7 @@ import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
 import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, ProjectionWithDeclaration, SaveProjection } from 'Api/Projections';
@@ -290,8 +290,8 @@ export const Projections = () => {
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="350px">
                     <div className="px-4 py-4">
-                        <DataTable
-                            value={projections.data}
+                        <DataTableCore<ProjectionWithDeclaration>
+                            data={projections.data}
                             dataKey="identifier"
                             selectionMode="single"
                             selection={selectedProjection as ProjectionWithDeclaration | null}
@@ -319,7 +319,7 @@ export const Projections = () => {
 
                             <Column field="identifier" header="Name" />
                             <Column field="containerName" header="Container Name" />
-                        </DataTable>
+                        </DataTableCore>
                     </div>
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">

@@ -84,14 +84,16 @@ const keyOf = <TData extends object>(row: TData | null | undefined, dataKey: str
     row && dataKey ? String(resolveFieldData(row, dataKey)) : undefined;
 
 /**
- * A declarative table over a plain array, rebuilt on PrimeReact 11's compositional
- * `DataTable` primitives.
+ * A table over a plain array for the two things Components' `DataTableCore` does not claim
+ * to do: **row grouping** and **controlled server-side sorting**.
  *
- * PrimeReact 11 removed the monolithic `<DataTable value>` / `primereact/column`
- * pair, and the Cratis `DataTableForQuery` wrappers bind to an Arc query rather
- * than an array. The Workbench renders many tables over arrays it already holds,
- * so this fills that gap while keeping the same `<Column field header body sortable />`
- * authoring model — it consumes the very same `Column` marker as `DataPage.Columns`.
+ * Every other table in the Workbench renders `DataTableCore` directly. Three do not:
+ * the seeding views and Connected Clients group consecutive rows under a subheader, and the
+ * sequence query editor sorts and pages on the server and needs the table to render exactly
+ * the rows it was handed. Components 4's migration guidance is to keep an application-owned
+ * table for precisely those cases rather than approximate them, so this one stays on
+ * PrimeReact as a bounded island — it keeps the same `<Column field header body sortable />`
+ * authoring model, consuming the very same `Column` marker as `DataTableCore`.
  *
  * @typeParam TData - The row type.
  */

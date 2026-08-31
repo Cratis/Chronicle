@@ -4,8 +4,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Column } from '@cratis/components/DataTables';
 import { Dropdown } from '@cratis/components/Dropdown';
-import { DataTable } from 'Components/DataTable';
-import { Paginator } from 'Components/Paginator';
+import { DataTableCore } from '@cratis/components/DataTables';
+import { TablePaginator } from '@cratis/components/DataTables';
 import strings from 'Strings';
 import { Json } from 'Features';
 import * as faIcons from 'react-icons/fa6';
@@ -210,35 +210,25 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                     }}>
 
                     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto' }}>
-                        <DataTable
-                            value={objectArray}
+                        <DataTableCore<{ [k: string]: Json }>
+                            data={objectArray}
+                            dataKey='_id'
                             emptyMessage={isPerforming ? strings.general.loading : strings.eventStore.namespaces.readModels.empty}
                             selectionMode="single"
                             selection={(selectedInstance && typeof selectedInstance === 'object' && !Array.isArray(selectedInstance)) ? selectedInstance as { [k: string]: Json } : null}
-                            onSelectionChange={(e) => {
-                                if (e.value === null) {
-                                    setSelectedInstance(null);
-                                    setNavigationPath([]);
-                                }
-                            }}
-                            onRowClick={(row) => {
-                                const rowData = { ...row };
-                                // Remove internal properties before showing
-                                delete rowData.__arrayIndex;
-                                delete rowData.__sourceInstance;
-
-                                if (selectedInstance && deepEqual(selectedInstance, rowData)) {
-                                    setSelectedInstance(null);
-                                    setNavigationPath([]);
-                                } else {
-                                    setSelectedInstance(rowData);
-                                    setNavigationPath([]);
-                                }
+                            onSelectionChange={(event) => {
+                                // The table reports the row that was activated; clicking the row that is
+                                // already selected clears the selection. Store the row itself rather than a
+                                // copy, so the table can match it back to the row it came from.
+                                const clicked = event.value;
+                                const isAlreadySelected = !!clicked && !!selectedInstance && deepEqual(selectedInstance, clicked);
+                                setSelectedInstance(isAlreadySelected ? null : clicked);
+                                setNavigationPath([]);
                             }}
                             style={selectedInstance ? { minWidth: '100%', width: 'max-content' } : { minWidth: '100%' }}
                         >
                             {columns}
-                        </DataTable>
+                        </DataTableCore>
                     </div>
 
                     {totalItems > 0 && navigationPath.length === 0 && (
@@ -251,10 +241,11 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                                 justifyContent: 'space-between',
                                 gap: '0.5rem'
                             }}>
-                            <Paginator
+                            <TablePaginator
                                 page={page}
+                                pageCount={Math.ceil(totalItems / pageSize)}
                                 pageSize={pageSize}
-                                totalRecords={totalItems}
+                                totalItems={totalItems}
                                 onPageChange={setPage}
                             />
                             <Dropdown<number>

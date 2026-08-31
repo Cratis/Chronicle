@@ -10,7 +10,7 @@ import { Dialog } from '@cratis/components/Dialogs';
 import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from '@cratis/components/Dropdown';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { useState, useEffect } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';

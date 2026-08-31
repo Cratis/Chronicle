@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ChangeApplicationSecret } from 'Api/Security';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { useMemo, useState } from 'react';
 import strings from 'Strings';
 import { Guid } from '@cratis/fundamentals';
@@ -33,14 +33,14 @@ const SecretActions = ({ showSecret, onToggleShow }: SecretActionsProps) => {
             <Button
                 icon={showSecret ? 'pi pi-eye-slash' : 'pi pi-eye'}
                 onClick={onToggleShow}
-                className="p-button-text"
+                variant='ghost'
                 type="button"
                 tooltip={showSecret ? strings.eventStore.system.applications.dialogs.changeSecret.hideSecret : strings.eventStore.system.applications.dialogs.changeSecret.showSecret}
             />
             <Button
                 icon="pi pi-refresh"
                 onClick={handleGenerate}
-                className="p-button-text"
+                variant='ghost'
                 type="button"
                 tooltip={strings.eventStore.system.applications.dialogs.changeSecret.generateSecret}
             />
