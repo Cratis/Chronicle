@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Cratis.Chronicle.Concepts.Patterns;
 
@@ -19,6 +20,21 @@ public sealed record FacetSet
     /// Represents the empty <see cref="FacetSet"/> - the set matching every context.
     /// </summary>
     public static readonly FacetSet Empty = new([]);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FacetSet"/> class.
+    /// </summary>
+    /// <param name="facets">The <see cref="Facet">facets</see> the set is made of.</param>
+    /// <remarks>
+    /// This is the constructor JSON deserialization binds to: its parameter matches the <see cref="Facets"/>
+    /// property by name and type, which the serializer requires. Round-tripping re-runs canonicalization and
+    /// rebuilds the <see cref="Key"/>, so a set is canonical no matter where it came from.
+    /// </remarks>
+    [JsonConstructor]
+    public FacetSet(IReadOnlyList<Facet> facets)
+        : this((IEnumerable<Facet>)facets)
+    {
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FacetSet"/> class.
