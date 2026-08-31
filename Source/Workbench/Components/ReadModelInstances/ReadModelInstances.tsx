@@ -263,7 +263,7 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                                 optionLabel='label'
                                 optionValue='value'
                                 aria-label={strings.eventStore.namespaces.readModels.labels.rowsPerPage}
-                                onChange={event => { setPageSize(event.value); setPage(0); }}
+                                onChange={value => { setPageSize(value); setPage(0); }}
                             />
                         </div>
                     )}

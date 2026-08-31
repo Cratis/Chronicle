@@ -148,7 +148,7 @@ export const AddWebhookDialog = () => {
                         multiple
                         value={selectedEventTypes}
                         options={allEventTypes.data}
-                        onChange={(event) => setSelectedEventTypes(event.value)}
+                        onChange={(value) => setSelectedEventTypes(value)}
                         optionLabel="id"
                         placeholder="Select event types"
                     />

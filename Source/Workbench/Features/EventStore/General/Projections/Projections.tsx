@@ -5,7 +5,8 @@ import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from '@cratis/components/types';
-import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
+import type { JsonSchema as ProjectionJsonSchema } from '@cratis/screenplay-language/projection';
+import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider, toComponentsSchema } from 'Components/ProjectionEditor';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { ActionMenubar, Tooltip, type ActionMenuItem } from '@cratis/components/Common';
 import { Dialog } from '@cratis/components/Dialogs';
@@ -100,9 +101,9 @@ export const Projections = () => {
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const eventSchemas = useMemo(() => {
         if (!eventTypes.data) return undefined;
-        const out: Record<string, JsonSchema> = {};
+        const out: Record<string, ProjectionJsonSchema> = {};
         for (const eventType of eventTypes.data) {
-            const schema = JSON.parse(eventType.schema) as JsonSchema;
+            const schema = JSON.parse(eventType.schema) as ProjectionJsonSchema;
             out[schema.title || eventType.type.id] = schema;
         }
         return out;
@@ -191,9 +192,9 @@ export const Projections = () => {
             setInitialReadModelSchema(undefined);
             setIsCreateReadModelDialogOpen(true);
         });
-        setEditReadModelCallback((readModelName: string, currentSchema: JsonSchema) => {
+        setEditReadModelCallback((readModelName: string, currentSchema: ProjectionJsonSchema) => {
             setNewReadModelDisplayName(readModelName);
-            setInitialReadModelSchema(currentSchema);
+            setInitialReadModelSchema(toComponentsSchema(currentSchema));
             setIsCreateReadModelDialogOpen(true);
         });
     }, []);
@@ -205,7 +206,7 @@ export const Projections = () => {
                 identifier: draftReadModel.identifier,
                 displayName: draftReadModel.displayName,
                 containerName: draftReadModel.containerName,
-                schema: JSON.parse(draftReadModel.schema) as JsonSchema
+                schema: JSON.parse(draftReadModel.schema) as ProjectionJsonSchema
             });
         } else {
             setDraftReadModelInProvider(null);

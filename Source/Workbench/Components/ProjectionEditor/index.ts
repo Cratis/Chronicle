@@ -39,4 +39,5 @@ export {
     setDraftReadModel,
 };
 export type { ReadModelInfo };
-export type { JsonSchema } from '@cratis/components/types';
+export type { JsonSchema } from '@cratis/screenplay-language/projection';
+export * from './schemaInterop';

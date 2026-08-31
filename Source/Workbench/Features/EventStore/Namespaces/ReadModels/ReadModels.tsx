@@ -164,7 +164,7 @@ const ReadModelsContent = () => {
                         id="readModel"
                         value={selectedReadModel}
                         options={allReadModels.data || []}
-                        onChange={(event) => handleReadModelChange(event.value)}
+                        onChange={(value) => handleReadModelChange(value)}
                         optionLabel="containerName"
                         placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
                         className="w-16rem"
@@ -175,7 +175,7 @@ const ReadModelsContent = () => {
                         options={occurrenceOptions}
                         optionLabel="label"
                         optionValue="value"
-                        onChange={(event) => handleOccurrenceChange(event.value)}
+                        onChange={(value) => handleOccurrenceChange(value)}
                         placeholder={strings.eventStore.namespaces.readModels.placeholders.selectOccurrence}
                         className="w-16rem"
                         disabled={!selectedReadModel}

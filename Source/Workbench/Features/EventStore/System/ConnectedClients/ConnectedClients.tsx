@@ -44,7 +44,7 @@ export const ConnectedClients = () => {
                         optionLabel='label'
                         optionValue='value'
                         aria-label={strings.connectedClients.title}
-                        onChange={event => event.value && setView(event.value)} />
+                        onChange={value => value && setView(value)} />
                 </Toolbar.End>
             </Toolbar.Root>
 

@@ -7,14 +7,15 @@
 /* PrimeReact 10's compiled theme published the `--surface-*` / `--text-color` /
    `--primary-color` / `--gray-*` palette this app's own CSS is written against;
    PrimeReact 11 ships no CSS. The palette carries those names forward, with the
-   values of the lara-blue themes this app used - following the preset styledMode()
-   applies where PrimeReact 11 has an equivalent token. Anything written from here
+   values of the lara-blue themes this app used - following the preset the PrimeReact
+   island provider applies where PrimeReact 11 has an equivalent token. Anything written from here
    on should use the `--cratis-*` tokens directly. */
-@import '@cratis/components/primereact-v10-palette';
+@import '@cratis/components/theme';
+@import './primeIslands/primereact-v10-palette.css';
 
 /* The palette above resolves its semantic tokens through `var(--p-*-token, <lara-dark-blue
    literal>)` - the literal only applies when the active preset leaves that `--p-*` token
-   unset. `styledMode()` always supplies a preset (CratisPreset), so for most tokens that is
+   unset. The island provider always supplies a preset (CratisPreset), so for most tokens that is
    exactly the point: they follow the preset. But CratisPreset computes six of them as solid
    grays rather than the lara-dark-blue theme's translucent-white/black formulas, so every
    card, table, dialog and hover picks up a harder, more visible border/hover, brighter body

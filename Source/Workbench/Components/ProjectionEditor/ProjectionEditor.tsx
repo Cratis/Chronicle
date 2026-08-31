@@ -12,7 +12,7 @@ import {
     languageId,
     disposeProjectionDefinitionLanguage,
 } from './index';
-import { JsonSchema } from '@cratis/components/types';
+import type { JsonSchema } from '@cratis/screenplay-language/projection';
 import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Api/Projections';
 import { AllEventSequences } from 'Api/EventSequences';
 import { Button } from 'Components/Button';

@@ -117,7 +117,7 @@ export const AppendEventDialog = () => {
                         id="eventType"
                         value={selectedEventType ?? undefined}
                         options={allEventTypes.data}
-                        onChange={(e) => setSelectedEventType(e.value)}
+                        onChange={(value) => setSelectedEventType(value)}
                         optionLabel="type.id"
                         placeholder={strings.eventStore.namespaces.sequences.dialogs.appendEvent.selectEventType}
                         className="w-full"

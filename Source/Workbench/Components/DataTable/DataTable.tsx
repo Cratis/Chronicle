@@ -6,7 +6,7 @@ import { DataTable as PrimeDataTable } from 'primereact/datatable';
 import { InputText } from 'primereact/inputtext';
 import type { SortOrder, UseDataTableFilterEvent, UseDataTableRowMouseEvent, UseDataTableSortEvent } from '@primereact/headless/datatable';
 import { ColumnFilterMenu } from '@cratis/components/DataTables';
-import type { ColumnProps, DataTableFilterMeta, DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
+import type { ColumnProps, DataTableFilterConstraint, DataTableFilterMeta, DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
 import { resolveFieldData } from './resolveFieldData';
 
 /**
@@ -134,6 +134,27 @@ export const DataTable = <TData extends object>({
         onFilter?.(next);
     };
 
+    // Components 4's `ColumnFilterMenu` is controlled — it renders the draft editor and
+    // reports the result, leaving the applied state to the table that owns it.
+    const applyFilters = (next: DataTableFilterMeta) => {
+        setFilters(next);
+        onFilter?.(next);
+    };
+
+    const constraintFor = (field: string) => {
+        const entry = filters[field];
+        return entry && 'constraints' in entry ? entry.constraints[0] : entry;
+    };
+
+    const applyConstraint = (field: string, constraint: DataTableFilterConstraint) =>
+        applyFilters({ ...filters, [field]: constraint });
+
+    const clearConstraint = (field: string) => {
+        const next = { ...filters };
+        delete next[field];
+        applyFilters(next);
+    };
+
     const selectionKeys = useMemo(() => {
         const key = keyOf(selection, dataKey);
         return key === undefined ? {} : { [key]: true };
@@ -207,7 +228,10 @@ export const DataTable = <TData extends object>({
                                                 field={(column.props.filterField ?? column.props.field) as string}
                                                 dataType={column.props.dataType}
                                                 placeholder={column.props.filterPlaceholder}
-                                                showMatchModes={column.props.showFilterMatchModes} />
+                                                showMatchModes={column.props.showFilterMatchModes}
+                                                constraint={constraintFor((column.props.filterField ?? column.props.field) as string)}
+                                                onApply={constraint => applyConstraint((column.props.filterField ?? column.props.field) as string, constraint)}
+                                                onClear={() => clearConstraint((column.props.filterField ?? column.props.field) as string)} />
                                         )}
                                     </div>
                                 </PrimeDataTable.THeadCell>
