@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Execution;
 
 namespace Samples.Backoffice;
 
@@ -56,6 +57,7 @@ public record AggregateType(string Name)
 /// <param name="store">The <see cref="IEventStore"/> to append to.</param>
 /// <param name="identityProvider">The <see cref="IIdentityProvider"/> to act as somebody through.</param>
 /// <param name="causationManager">The <see cref="ICausationManager"/> to name the acting command through.</param>
+/// <param name="correlationIdModifier">The <see cref="ICorrelationIdModifier"/> to correlate each command through.</param>
 /// <remarks>
 /// Pattern detection mines the context an event was appended in rather than its content, so a generator that only
 /// appended events would produce a store with nothing to mine. Everything the miner reads is set here: who acted,
@@ -66,7 +68,11 @@ public record AggregateType(string Name)
 /// provider carries the user. This is what that looks like when appending through the client directly.
 /// </para>
 /// </remarks>
-public class ActivityAppender(IEventStore store, IIdentityProvider identityProvider, ICausationManager causationManager)
+public class ActivityAppender(
+    IEventStore store,
+    IIdentityProvider identityProvider,
+    ICausationManager causationManager,
+    ICorrelationIdModifier correlationIdModifier)
 {
     /// <summary>
     /// The causation type used for a link representing a command.
@@ -99,6 +105,12 @@ public class ActivityAppender(IEventStore store, IIdentityProvider identityProvi
         string? causedByCommand = default)
     {
         identityProvider.SetCurrentIdentity(actor.Identity);
+
+        // Every planned event is its own command at its own moment, so each one is correlated separately - which
+        // is what an application on Arc gets from its command pipeline, a correlation per command. Leaving them on
+        // one correlation would tell Chronicle the whole generated history happened as a single action, collapsing
+        // an instance's entire life into one snapshot for anything that reads events back grouped by correlation.
+        correlationIdModifier.Modify(CorrelationId.New());
 
         // The chain reads from the root outwards, so the cause is opened first and the command carrying it out
         // second - which is the order the miner reads back as "this command, caused by that one".
