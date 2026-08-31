@@ -59,6 +59,24 @@ Provides a literal default for a property that did not exist in the source gener
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/default-value" />
 
+## MapValues
+
+The four operations above move values between properties. `MapValues` changes the values themselves — it says which value in one generation is which value in the other, which is what you need when an enum is renumbered or a code set is replaced wholesale.
+
+Unlike the property-builder operations, a value map is declared by overriding `MapValues` on the migration:
+
+<ChronicleClientTabs snippet="migrations/dotnet-client/map-values" />
+
+The map is applied forward when upcasting and inverted when downcasting, so you state it once. Values it does not mention are carried across unchanged, and two values collapsing onto one take the first pair declared for that value on the way back.
+
+`MapValues` runs before `Upcast` and `Downcast`, so a direction that declares its own transformation for the same property keeps it. That is also how you express a translation that is deliberately not reversible — declare it on the property builder for the one direction it applies to:
+
+<ChronicleClientTabs snippet="migrations/dotnet-client/map-values-one-direction" />
+
+:::note[Client coverage]
+`MapValues` is currently C#-only.
+:::
+
 ## Multi-generation migrations
 
 If your event type spans more than two generations, define one migrator per generation pair. Chronicle chains them automatically.
