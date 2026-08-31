@@ -5,7 +5,6 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.CSh
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.Elixir;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.Kotlin;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.TypeScript;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.given;
 
@@ -19,18 +18,10 @@ public static class ProjectionCodeGenerators
     /// Gets every generator, as an <see cref="IInstancesOf{T}"/> for the language service to take.
     /// </summary>
     /// <returns>The generators.</returns>
-    public static IInstancesOf<IProjectionCodeGenerator> All()
-    {
-        var instances = Substitute.For<IInstancesOf<IProjectionCodeGenerator>>();
-        IProjectionCodeGenerator[] generators =
-        [
+    public static IInstancesOf<IProjectionCodeGenerator> All() =>
+        new KnownInstancesOf<IProjectionCodeGenerator>(
             new CSharpProjectionCodeGenerator(new DeclarativeCodeGenerator(), new ModelBoundCodeGenerator()),
             new TypeScriptProjectionCodeGenerator(),
             new KotlinProjectionCodeGenerator(),
-            new ElixirProjectionCodeGenerator()
-        ];
-
-        instances.GetEnumerator().Returns(_ => ((IEnumerable<IProjectionCodeGenerator>)generators).GetEnumerator());
-        return instances;
-    }
+            new ElixirProjectionCodeGenerator());
 }
