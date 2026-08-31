@@ -1,0 +1,147 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.time-scrubber {
+    display: flex;
+    flex-direction: column;
+    height: calc(80vh - 100px);
+    min-height: 0;
+}
+
+.time-scrubber__message {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.time-scrubber__content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.time-scrubber__scrubber {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem 0.25rem;
+    border-top: 1px solid var(--cratis-surface-border);
+}
+
+.time-scrubber__caption {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    min-height: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.time-scrubber__caption-event {
+    font-weight: 600;
+}
+
+.time-scrubber__caption-occurred,
+.time-scrubber__caption-position {
+    color: var(--cratis-text-color-secondary);
+    font-size: 0.8rem;
+}
+
+.time-scrubber__caption-position {
+    margin-left: auto;
+}
+
+/*
+ * The bubbles and the range input share the track, so the handle lands on the bubble it belongs to.
+ * The input stays on top and keeps the interaction; the bubbles show where the events are and answer
+ * to hover on their own.
+ */
+.time-scrubber__track {
+    position: relative;
+    height: 2.25rem;
+}
+
+.time-scrubber__line {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    left: 0.5rem;
+    height: 2px;
+    background: var(--cratis-surface-border);
+    transform: translateY(-50%);
+}
+
+.time-scrubber__bubble {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    width: 0.75rem;
+    height: 0.75rem;
+    padding: 0;
+    border: 2px solid var(--cratis-surface-card);
+    border-radius: 50%;
+    background: var(--cratis-surface-border);
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition:
+        background 120ms ease,
+        width 120ms ease,
+        height 120ms ease;
+}
+
+.time-scrubber__bubble[data-passed='true'] {
+    background: var(--cratis-primary-500);
+}
+
+.time-scrubber__bubble[data-current='true'] {
+    width: 1.15rem;
+    height: 1.15rem;
+    background: var(--cratis-primary-color);
+}
+
+.time-scrubber__bubble:hover {
+    background: var(--cratis-primary-color);
+}
+
+.time-scrubber__bubble:focus-visible {
+    outline: none;
+    box-shadow: var(--cratis-focus-ring);
+}
+
+/*
+ * Transparent rather than hidden: the input is what handles dragging, arrow keys, Home and End, so
+ * it has to stay in the page - it just must not paint over the bubbles it moves between. It sits
+ * under them so a bubble still answers to hover, and covers the whole track so a drag anywhere works.
+ */
+.time-scrubber__range {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    appearance: none;
+    cursor: pointer;
+}
+
+.time-scrubber__range::-webkit-slider-thumb {
+    width: 1.15rem;
+    height: 1.15rem;
+    appearance: none;
+    background: transparent;
+}
+
+.time-scrubber__range::-moz-range-thumb {
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 0;
+    background: transparent;
+}
+
+.time-scrubber__range:focus-visible {
+    outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .time-scrubber__bubble {
+        transition: none;
+    }
+}

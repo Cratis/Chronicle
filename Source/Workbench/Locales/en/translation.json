@@ -296,7 +296,8 @@
                     "new": "New",
                     "save": "Save",
                     "preview": "Preview",
-                    "timeMachine": "Time Machine"
+                    "timeMachine": "Time Machine",
+                    "timeScrubber": "Time Scrubber"
                 },
                 "saveDisabledReasons": {
                     "emptyContent": "Editor is empty",
@@ -642,7 +643,8 @@
                     "filter": "Filter",
                     "query": "Perform Query",
                     "timeMachine": "Time Machine",
-                    "navigateBack": "Navigate Back"
+                    "navigateBack": "Navigate Back",
+                    "timeScrubber": "Time Scrubber"
                 },
                 "labels": {
                     "readModel": "Read Model",
@@ -800,6 +802,12 @@
                 "deleteProperty": "Delete property"
             },
             "emptyMessage": "No properties defined"
+        },
+        "timeScrubber": {
+            "title": "Time Scrubber",
+            "empty": "No history available for this instance.",
+            "scrub": "Scrub through the history",
+            "position": "{0} of {1}"
         }
     },
     "patterns": {

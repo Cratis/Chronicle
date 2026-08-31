@@ -22,7 +22,7 @@ import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, Proj
 import { ReadModelInstance } from 'Api/ReadModels';
 import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { TimeMachineDialog, ReadModelInstances, getInstanceKey } from 'Components';
+import { TimeMachineDialog, TimeScrubberDialog, ReadModelInstances, getInstanceKey } from 'Components';
 import { Json } from 'Features';
 import { SaveWithInferredReadModelDialog } from './SaveWithInferredReadModelDialog';
 
@@ -116,6 +116,7 @@ export const Projections = () => {
     const [previewProjection, setPreviewProjectionValues, clearPreviewProjectionValues] = PreviewProjection.use();
     const [saveProjection, setSaveProjectionValues, clearSaveProjectionValues] = SaveProjection.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+    const [TimeScrubberDialogWrapper, showTimeScrubberDialog] = useDialog(TimeScrubberDialog);
     const [SaveWithInferredReadModelWrapper, showSaveWithInferredReadModel] = useDialog(SaveWithInferredReadModelDialog);
     const [showConfirmation] = useConfirmationDialog();
 
@@ -453,6 +454,14 @@ export const Projections = () => {
                                         await showTimeMachineDialog();
                                     },
                                     disabled: !selectedProjection || !getInstanceKey(selectedInstance)
+                                },
+                                {
+                                    label: strings.eventStore.general.projections.actions.timeScrubber,
+                                    icon: <faIcons.FaSliders className='mr-2' />,
+                                    command: async () => {
+                                        await showTimeScrubberDialog();
+                                    },
+                                    disabled: !selectedProjection || !getInstanceKey(selectedInstance)
                                 }
                             ]}
                         />
@@ -514,6 +523,13 @@ export const Projections = () => {
             <>
                 {selectedReadModel && getInstanceKey(selectedInstance) && (
                     <TimeMachineDialogWrapper
+                        readModel={selectedReadModel}
+                        readModelKey={getInstanceKey(selectedInstance)}
+                    />
+                )}
+
+                {selectedReadModel && getInstanceKey(selectedInstance) && (
+                    <TimeScrubberDialogWrapper
                         readModel={selectedReadModel}
                         readModelKey={getInstanceKey(selectedInstance)}
                     />

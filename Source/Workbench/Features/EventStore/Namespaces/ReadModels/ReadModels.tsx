@@ -15,7 +15,7 @@ import strings from 'Strings';
 import { FluxCapacitor } from 'Icons';
 import { Json } from 'Features';
 import { useDialog } from '@cratis/arc.react/dialogs';
-import { TimeMachineDialog } from 'Components';
+import { TimeMachineDialog, TimeScrubberDialog } from 'Components';
 
 interface ReadModelsRouteParams {
     readonly readModel?: string;
@@ -38,6 +38,7 @@ const ReadModelsContent = () => {
     const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
     const [selectedInstance, setSelectedInstance] = useState<Json | null>(null);
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+    const [TimeScrubberDialogWrapper, showTimeScrubberDialog] = useDialog(TimeScrubberDialog);
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
 
@@ -195,6 +196,14 @@ const ReadModelsContent = () => {
                                     await showTimeMachineDialog();
                                 },
                                 disabled: !selectedReadModel || !selectedOccurrence || !getInstanceKey(selectedInstance)
+                            },
+                            {
+                                label: strings.eventStore.namespaces.readModels.actions.timeScrubber,
+                                icon: <faIcons.FaSliders className='mr-2' />,
+                                command: async () => {
+                                    await showTimeScrubberDialog();
+                                },
+                                disabled: !selectedReadModel || !selectedOccurrence || !getInstanceKey(selectedInstance)
                             }
                         ]}
                     />
@@ -219,6 +228,12 @@ const ReadModelsContent = () => {
 
             {(selectedReadModel && selectedOccurrence && selectedInstance) && (
                 <TimeMachineDialogWrapper
+                    readModel={selectedReadModel}
+                    readModelKey={getInstanceKey(selectedInstance)} />
+            )}
+
+            {(selectedReadModel && selectedOccurrence && getInstanceKey(selectedInstance)) && (
+                <TimeScrubberDialogWrapper
                     readModel={selectedReadModel}
                     readModelKey={getInstanceKey(selectedInstance)} />
             )}
