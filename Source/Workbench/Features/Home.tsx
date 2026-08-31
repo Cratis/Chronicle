@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CardFooter } from 'Components/Common/CardFooter';
 import { EventStoreCard } from 'Components/Common/EventStoreCard';
 import { HomeViewModel } from './HomeViewModel';
 import { withViewModel } from '@cratis/arc.react.mvvm';
@@ -31,7 +30,6 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                             key={eventStore}
                             title={eventStore}
                             path={`${basePath}/${eventStore}`}
-                            footer={<CardFooter />}
                             description=''
                         />
                     );

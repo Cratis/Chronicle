@@ -190,7 +190,7 @@ const ReadModelsContent = () => {
                             },
                             {
                                 label: strings.eventStore.namespaces.readModels.actions.timeMachine,
-                                icon: <FluxCapacitor size={20} />,
+                                icon: <FluxCapacitor size={16} />,
                                 command: async () => {
                                     await showTimeMachineDialog();
                                 },

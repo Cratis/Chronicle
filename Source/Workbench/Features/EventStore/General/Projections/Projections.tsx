@@ -8,7 +8,7 @@ import type { JsonSchema } from '@cratis/components/types';
 import type { JsonSchema as ProjectionJsonSchema } from '@cratis/screenplay-language/projection';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider, toComponentsSchema } from 'Components/ProjectionEditor';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
-import { ActionMenubar, Tooltip, type ActionMenuItem } from '@cratis/components/Common';
+import { ActionMenubar, Button, type ActionMenuItem } from '@cratis/components/Common';
 import { Dialog } from '@cratis/components/Dialogs';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
@@ -389,16 +389,16 @@ export const Projections = () => {
                                             setSyntaxErrors(errors);
                                         }
                                     },
+                                    // Rendered through the template so the disabled action can still explain
+                                    // itself on hover; ActionMenuItem carries no tooltip of its own.
                                     template: saveDisabledReason ? (item: ActionMenuItem) => (
-                                        <Tooltip content={saveDisabledReason} position="bottom">
-                                            <div
-                                                className="p-menuitem-link p-disabled"
-                                                style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                                            >
-                                                {item.icon}
-                                                <span className="p-menuitem-text">{item.label}</span>
-                                            </div>
-                                        </Tooltip>
+                                        <Button
+                                            variant='ghost'
+                                            disabled
+                                            icon={item.icon}
+                                            label={item.label}
+                                            tooltip={saveDisabledReason}
+                                            tooltipOptions={{ position: 'bottom' }} />
                                     ) : undefined
                                 },
                                 {
@@ -425,21 +425,21 @@ export const Projections = () => {
                                         setSelectedInstance(null);
                                         setPage(0);
                                     },
+                                    // Rendered through the template so the disabled action can still explain
+                                    // itself on hover; ActionMenuItem carries no tooltip of its own.
                                     template: previewDisabledReason ? (item: ActionMenuItem) => (
-                                        <Tooltip content={previewDisabledReason} position="bottom">
-                                            <div
-                                                className="p-menuitem-link p-disabled"
-                                                style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                                            >
-                                                {item.icon}
-                                                <span className="p-menuitem-text">{item.label}</span>
-                                            </div>
-                                        </Tooltip>
+                                        <Button
+                                            variant='ghost'
+                                            disabled
+                                            icon={item.icon}
+                                            label={item.label}
+                                            tooltip={previewDisabledReason}
+                                            tooltipOptions={{ position: 'bottom' }} />
                                     ) : undefined
                                 },
                                 {
                                     label: strings.eventStore.general.projections.actions.timeMachine,
-                                    icon: <FluxCapacitor size={20} />,
+                                    icon: <FluxCapacitor size={16} />,
                                     command: async () => {
                                         await showTimeMachineDialog();
                                     },
