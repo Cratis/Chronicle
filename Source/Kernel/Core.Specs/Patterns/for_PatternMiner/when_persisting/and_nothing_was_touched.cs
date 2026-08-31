@@ -3,9 +3,9 @@
 
 using Orleans.TestKit;
 
-namespace Cratis.Chronicle.Patterns.for_PatternCaptureSubscriber.when_persisting;
+namespace Cratis.Chronicle.Patterns.for_PatternMiner.when_persisting;
 
-public class and_nothing_was_touched : given.a_pattern_capture_subscriber
+public class and_nothing_was_touched : given.a_pattern_miner
 {
     async Task Because() => await _silo.FireAllTimersAsync();
 
