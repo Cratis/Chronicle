@@ -194,7 +194,7 @@ const ReadModelsContent = () => {
                                 command: async () => {
                                     await showTimeMachineDialog();
                                 },
-                                disabled: !selectedReadModel || !selectedOccurrence || !selectedInstance
+                                disabled: !selectedReadModel || !selectedOccurrence || !getInstanceKey(selectedInstance)
                             }
                         ]}
                     />

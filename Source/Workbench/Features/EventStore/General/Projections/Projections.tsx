@@ -443,7 +443,7 @@ export const Projections = () => {
                                     command: async () => {
                                         await showTimeMachineDialog();
                                     },
-                                    disabled: !selectedProjection || !selectedInstance
+                                    disabled: !selectedProjection || !getInstanceKey(selectedInstance)
                                 }
                             ]}
                         />
@@ -503,7 +503,7 @@ export const Projections = () => {
             </Dialog>
 
             <>
-                {selectedReadModel && selectedInstance && (
+                {selectedReadModel && getInstanceKey(selectedInstance) && (
                     <TimeMachineDialogWrapper
                         readModel={selectedReadModel}
                         readModelKey={getInstanceKey(selectedInstance)}
