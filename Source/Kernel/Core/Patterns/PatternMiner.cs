@@ -1,17 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Configuration;
-using Cratis.DependencyInjection;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Patterns;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Orleans.Placement;
 
 namespace Cratis.Chronicle.Patterns;
 
 /// <summary>
 /// Represents an implementation of <see cref="IPatternMiner"/> backed by a <see cref="LossyCountingSketch"/> per
-/// scope within an event store's namespace.
+/// scope, owned by one activation per event store and namespace.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,129 +22,120 @@ namespace Cratis.Chronicle.Patterns;
 /// Whether a global sketch should exist alongside these, for org-wide behavior, is deliberately left open.
 /// </para>
 /// <para>
-/// Sketches are keyed by event store and namespace as well as by scope, because the miner is one instance serving
-/// every store the server holds. The same scope name in two stores - or two tenants' namespaces - is two different
-/// people's behavior; a sketch keyed by scope alone would count them together and contaminate both stores'
-/// persisted patterns.
+/// Mining is in memory and cheap; persisting a scope rewrites everything that currently survives for it. Doing
+/// that per mined batch couples the write cost to the event rate times the size of each scope's behavior, so
+/// persistence is deferred: mining marks the scope dirty, and a timer rewrites what the interval touched on the
+/// <see cref="PatternDetection.PersistenceInterval"/> cadence. A failed flush keeps the scopes dirty and answers
+/// nothing but the log - the next tick simply tries again, and rewriting a scope is idempotent.
 /// </para>
 /// <para>
-/// An event nobody can be named for is not mined at all. Its behavior belongs to no scope, so it could only be
-/// counted into a catch-all that every unattributed append in the store would pour into - which is noise, not a
-/// pattern.
+/// The activation dies with its silo while what survived it is persisted, so a scope acting for the first time in
+/// an activation's life has its established patterns restored into the sketch before anything is mined - a fresh
+/// sketch would hold its first events with full support, and the next flush would rewrite the scope from that,
+/// wiping established behavior. A small tail of events can still be re-mined after a crash, because observer
+/// progress is checkpointed in batches; that over-counts by at most the checkpoint window, and occurrences are a
+/// bounded approximation.
+/// </para>
+/// <para>
+/// The grain prefers local placement so it activates on the silo of the subscriber feeding it, keeping the call
+/// per batch in-process rather than a network hop.
 /// </para>
 /// </remarks>
 /// <param name="vocabulary">The <see cref="IFacetVocabulary"/> deciding which facets take part.</param>
 /// <param name="generator">The <see cref="IFacetSetGenerator"/> expanding facets into candidate itemsets.</param>
+/// <param name="storage">The <see cref="IStorage"/> to restore from and persist surviving patterns to.</param>
 /// <param name="options">The <see cref="IOptions{TOptions}"/> holding the <see cref="ChronicleOptions"/>.</param>
-[Singleton]
+/// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+[PreferLocalPlacement]
 public class PatternMiner(
     IFacetVocabulary vocabulary,
     IFacetSetGenerator generator,
-    IOptions<ChronicleOptions> options) : IPatternMiner
+    IStorage storage,
+    IOptions<ChronicleOptions> options,
+    ILogger<PatternMiner> logger) : Grain, IPatternMiner
 {
-    readonly Dictionary<(EventStoreName EventStore, EventStoreNamespaceName Namespace, PatternGroupingKey GroupingKey), LossyCountingSketch> _sketches = [];
-    readonly Lock _lock = new();
+    readonly Dictionary<PatternGroupingKey, LossyCountingSketch> _sketches = [];
+    readonly HashSet<PatternGroupingKey> _touchedScopes = [];
+    readonly HashSet<PatternGroupingKey> _restoredScopes = [];
     readonly PatternDetection _configuration = options.Value.PatternDetection;
+    PatternMinerKey _key = PatternMinerKey.NotSet;
+
+    IBehaviorPatternStorage Patterns => storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).Patterns;
 
     /// <inheritdoc/>
-    public void Observe(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventFeatures features)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        if (!features.GroupingKey.IsSpecified)
-        {
-            return;
-        }
+        _key = PatternMinerKey.Parse(this.GetPrimaryKeyString());
+        var interval = TimeSpan.FromSeconds(Math.Max(1, _configuration.PersistenceInterval));
+        this.RegisterGrainTimer(Persist, new GrainTimerCreationOptions { DueTime = interval, Period = interval });
+        return base.OnActivateAsync(cancellationToken);
+    }
 
-        var facets = vocabulary.Select(features);
-        if (facets.IsEmpty)
-        {
-            return;
-        }
+    /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        await Persist();
+        await base.OnDeactivateAsync(reason, cancellationToken);
+    }
 
-        var itemsets = generator.Generate(facets, _configuration.MaximumCombinationSize);
+    /// <inheritdoc/>
+    public async Task Mine(IEnumerable<EventFeatures> features)
+    {
+        var mined = features.Where(feature => feature.GroupingKey.IsSpecified).ToArray();
 
-        lock (_lock)
+        // Every scope the batch touches is restored before anything is mined, so a restore failure part-way
+        // through fails the whole batch with nothing counted - the redelivery counts nothing twice.
+        await RestoreScopesActingForTheFirstTime(mined.Select(feature => feature.GroupingKey));
+
+        foreach (var feature in mined)
         {
-            GetSketch(eventStore, @namespace, features.GroupingKey).Observe(itemsets, features.Occurred);
+            var facets = vocabulary.Select(feature);
+            if (facets.IsEmpty)
+            {
+                continue;
+            }
+
+            var itemsets = generator.Generate(facets, _configuration.MaximumCombinationSize);
+            GetSketch(feature.GroupingKey).Observe(itemsets, feature.Occurred);
+            _touchedScopes.Add(feature.GroupingKey);
         }
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// <para>
-    /// Live counts win: restoring is only meaningful into the absence a restart leaves behind. Once a scope holds a
-    /// sketch, whatever it has counted is more current than what was persisted from it, so a restore into it is
-    /// ignored rather than merged.
-    /// </para>
-    /// <para>
-    /// Only surviving patterns were persisted, but re-deriving a pattern's confidence needs the frequency of its
-    /// context - the itemset without its action - and a pure context rarely survives on its own, because its
-    /// confidence is just its support. Every number needed is still recoverable from what was written: support was
-    /// frequency over observations and confidence was frequency over context frequency, so the observation count
-    /// and every missing context entry are synthesized back from the patterns that reference them. Without that,
-    /// every restored pattern whose context was absent would re-derive at zero confidence and be swept away on the
-    /// first flush after a restart - precisely the wipe restoring exists to prevent.
-    /// </para>
-    /// </remarks>
-    public void Restore(EventStoreName eventStore, EventStoreNamespaceName @namespace, PatternGroupingKey groupingKey, IEnumerable<BehaviorPattern> patterns)
-    {
-        lock (_lock)
-        {
-            var key = (eventStore, @namespace, groupingKey);
-            if (_sketches.ContainsKey(key))
-            {
-                return;
-            }
-
-            var sketch = new LossyCountingSketch(_configuration.Error, _configuration.DecayFactor);
-            var established = patterns.ToArray();
-
-            if (established.Length > 0)
-            {
-                // Support was written as frequency over observations, so the observation count the sketch had is
-                // recoverable from any pattern - the largest answer is the most precise against rounding.
-                var observed = established.Max(pattern => pattern.Support.Value > 0d
-                    ? (long)Math.Round(pattern.Occurrences.Value / pattern.Support.Value)
-                    : 0L);
-
-                var entries = established.ToDictionary(
-                    pattern => pattern.Facets.Key,
-                    pattern => new LossyCountingEntry(
-                        pattern.Facets,
-                        pattern.Occurrences,
-                        0L,
-                        pattern.Weight,
-                        pattern.FirstSeen,
-                        pattern.LastSeen));
-
-                SynthesizeMissingContexts(established, entries);
-                sketch.Restore(entries.Values, observed);
-            }
-
-            _sketches[key] = sketch;
-        }
-    }
-
-    /// <inheritdoc/>
-    public void Decay(DateTimeOffset asOf)
-    {
-        lock (_lock)
-        {
-            foreach (var sketch in _sketches.Values)
-            {
-                sketch.Decay(asOf);
-                sketch.Prune();
-            }
-        }
-    }
-
-    /// <inheritdoc/>
-    public IEnumerable<BehaviorPattern> GetSurvivingPatterns(EventStoreName eventStore, EventStoreNamespaceName @namespace, PatternGroupingKey groupingKey)
-    {
-        lock (_lock)
-        {
-            return _sketches.TryGetValue((eventStore, @namespace, groupingKey), out var sketch)
+    public Task<IEnumerable<BehaviorPattern>> GetSurvivingPatterns(PatternGroupingKey groupingKey) =>
+        Task.FromResult<IEnumerable<BehaviorPattern>>(
+            _sketches.TryGetValue(groupingKey, out var sketch)
                 ? [.. Surviving(groupingKey, sketch)]
-                : [];
+                : []);
+
+    /// <inheritdoc/>
+    public async Task Persist()
+    {
+        if (_touchedScopes.Count == 0)
+        {
+            return;
+        }
+
+        var scopes = _touchedScopes.ToArray();
+        _touchedScopes.Clear();
+
+        try
+        {
+            var patterns = Patterns;
+
+            foreach (var scope in scopes)
+            {
+                var surviving = (await GetSurvivingPatterns(scope)).ToArray();
+                await patterns.Save(surviving);
+                await patterns.RemoveAllExcept(scope, surviving.Select(pattern => pattern.Facets.Key));
+            }
+        }
+        catch (Exception ex)
+        {
+            // Rewriting a scope is idempotent, so scopes that did get written before the failure are simply
+            // rewritten again on the next tick along with the ones that did not.
+            _touchedScopes.UnionWith(scopes);
+            logger.FailedPersistingPatterns(_key.EventStore, _key.Namespace, scopes.Length, ex);
         }
     }
 
@@ -153,8 +146,12 @@ public class PatternMiner(
     /// <param name="established">The persisted <see cref="BehaviorPattern">patterns</see> being restored.</param>
     /// <param name="entries">The entries being restored, keyed by itemset - contexts already among them are left alone.</param>
     /// <remarks>
-    /// Several patterns can share one context, and each names the same context frequency through its own confidence;
-    /// the largest recovered answer is kept as the most precise against rounding.
+    /// Only surviving patterns were persisted, but re-deriving a pattern's confidence needs the frequency of its
+    /// context - the itemset without its action - and a pure context rarely survives on its own, because its
+    /// confidence is just its support. Every number needed is still recoverable from what was written: confidence
+    /// was frequency over context frequency, so every missing context entry is synthesized back from the patterns
+    /// that reference it. Several patterns can share one context, and each names the same context frequency
+    /// through its own confidence; the largest recovered answer is kept as the most precise against rounding.
     /// </remarks>
     static void SynthesizeMissingContexts(BehaviorPattern[] established, Dictionary<FacetSetKey, LossyCountingEntry> entries)
     {
@@ -187,13 +184,63 @@ public class PatternMiner(
         }
     }
 
-    LossyCountingSketch GetSketch(EventStoreName eventStore, EventStoreNamespaceName @namespace, PatternGroupingKey groupingKey)
+    async Task RestoreScopesActingForTheFirstTime(IEnumerable<PatternGroupingKey> scopes)
     {
-        var key = (eventStore, @namespace, groupingKey);
-        if (!_sketches.TryGetValue(key, out var sketch))
+        foreach (var scope in scopes.Distinct().Where(scope => !_restoredScopes.Contains(scope)))
+        {
+            var established = (await Patterns.GetForScope(scope)).ToArray();
+            Restore(scope, established);
+            _restoredScopes.Add(scope);
+        }
+    }
+
+    /// <summary>
+    /// Seed a scope with the patterns an earlier activation had established, unless the scope already holds live
+    /// counts - live counts are more current than what was persisted from them, so a restore into them is ignored
+    /// rather than merged.
+    /// </summary>
+    /// <param name="groupingKey">The <see cref="PatternGroupingKey"/> to restore.</param>
+    /// <param name="established">The persisted <see cref="BehaviorPattern">patterns</see> to restore from.</param>
+    void Restore(PatternGroupingKey groupingKey, BehaviorPattern[] established)
+    {
+        if (_sketches.ContainsKey(groupingKey))
+        {
+            return;
+        }
+
+        var sketch = new LossyCountingSketch(_configuration.Error, _configuration.DecayFactor);
+
+        if (established.Length > 0)
+        {
+            // Support was written as frequency over observations, so the observation count the sketch had is
+            // recoverable from any pattern - the largest answer is the most precise against rounding.
+            var observed = established.Max(pattern => pattern.Support.Value > 0d
+                ? (long)Math.Round(pattern.Occurrences.Value / pattern.Support.Value)
+                : 0L);
+
+            var entries = established.ToDictionary(
+                pattern => pattern.Facets.Key,
+                pattern => new LossyCountingEntry(
+                    pattern.Facets,
+                    pattern.Occurrences,
+                    0L,
+                    pattern.Weight,
+                    pattern.FirstSeen,
+                    pattern.LastSeen));
+
+            SynthesizeMissingContexts(established, entries);
+            sketch.Restore(entries.Values, observed);
+        }
+
+        _sketches[groupingKey] = sketch;
+    }
+
+    LossyCountingSketch GetSketch(PatternGroupingKey groupingKey)
+    {
+        if (!_sketches.TryGetValue(groupingKey, out var sketch))
         {
             sketch = new LossyCountingSketch(_configuration.Error, _configuration.DecayFactor);
-            _sketches[key] = sketch;
+            _sketches[groupingKey] = sketch;
         }
 
         return sketch;

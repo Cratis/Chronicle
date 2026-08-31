@@ -14,20 +14,20 @@ public class behavior_for_two_users : given.a_pattern_miner
     IEnumerable<BehaviorPattern> _forFirstUser;
     IEnumerable<BehaviorPattern> _forSecondUser;
 
-    void Because()
+    async Task Because()
     {
         for (var count = 0; count < 20; count++)
         {
-            _miner.Observe(_eventStore, _namespace, Features("user-42", "ApproveExpenseReport"));
+            await _miner.Mine([Features("user-42", "ApproveExpenseReport")]);
         }
 
         for (var count = 0; count < 20; count++)
         {
-            _miner.Observe(_eventStore, _namespace, Features("user-7", "SubmitExpenseReport", DayOfWeek.Friday, TimeBucket.Evening));
+            await _miner.Mine([Features("user-7", "SubmitExpenseReport", DayOfWeek.Friday, TimeBucket.Evening)]);
         }
 
-        _forFirstUser = _miner.GetSurvivingPatterns(_eventStore, _namespace, "user-42");
-        _forSecondUser = _miner.GetSurvivingPatterns(_eventStore, _namespace, "user-7");
+        _forFirstUser = await _miner.GetSurvivingPatterns("user-42");
+        _forSecondUser = await _miner.GetSurvivingPatterns("user-7");
     }
 
     [Fact] void should_mine_only_the_first_user_behavior_for_the_first_user() =>

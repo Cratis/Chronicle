@@ -11,9 +11,6 @@ internal static partial class PatternCaptureLogging
     [LoggerMessage(LogLevel.Warning, "Failed capturing behavior patterns for event store {EventStore} in namespace {Namespace}")]
     internal static partial void FailedCapturingPatterns(this ILogger<PatternCaptureSubscriber> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, Exception exception);
 
-    [LoggerMessage(LogLevel.Warning, "Failed persisting behavior patterns for {ScopeCount} scopes in event store {EventStore} in namespace {Namespace} - they stay marked for the next flush")]
-    internal static partial void FailedPersistingPatterns(this ILogger<PatternCaptureSubscriber> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, int scopeCount, Exception exception);
-
     [LoggerMessage(LogLevel.Debug, "Subscribing pattern capture for event store {EventStore} in namespace {Namespace} to {EventTypeCount} event types")]
     internal static partial void SubscribingPatternCapture(this ILogger<PatternCapture> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, int eventTypeCount);
 

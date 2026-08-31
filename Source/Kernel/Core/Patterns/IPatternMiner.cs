@@ -1,51 +1,48 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Patterns;
 
 namespace Cratis.Chronicle.Patterns;
 
 /// <summary>
-/// Defines a system that mines recurring behavior from a stream of events.
+/// Defines the grain that mines recurring behavior from the events of one event store namespace.
 /// </summary>
 /// <remarks>
-/// Every operation names the event store and namespace it works within. Behavior belongs to a scope <b>inside</b>
-/// a store's namespace - the same scope name in two stores is two different people's behavior, and counting them
-/// into one sketch would contaminate both.
+/// The grain is keyed by <see cref="PatternMinerKey"/> - one activation per event store and namespace, guaranteed
+/// by Orleans. That identity is what isolates behavior: the same scope name in two stores or two tenants'
+/// namespaces resolves to two different grains, so their counts can never contaminate each other. The activation
+/// owns the sketches, restores a scope's established patterns before its first mine, and persists what mining
+/// touches on its own cadence.
 /// </remarks>
-public interface IPatternMiner
+public interface IPatternMiner : IGrainWithStringKey
 {
     /// <summary>
-    /// Mine the facts extracted from one event.
+    /// Mine the facts extracted from a batch of events.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the event belongs to.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the event belongs to.</param>
-    /// <param name="features">The <see cref="EventFeatures"/> to mine.</param>
-    void Observe(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventFeatures features);
-
-    /// <summary>
-    /// Seed a scope with the patterns an earlier life of the miner had established, unless the scope already
-    /// holds live counts.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the scope belongs to.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the scope belongs to.</param>
-    /// <param name="groupingKey">The <see cref="PatternGroupingKey"/> to restore.</param>
-    /// <param name="patterns">The <see cref="BehaviorPattern">patterns</see> that survived the earlier life.</param>
-    void Restore(EventStoreName eventStore, EventStoreNamespaceName @namespace, PatternGroupingKey groupingKey, IEnumerable<BehaviorPattern> patterns);
-
-    /// <summary>
-    /// Decay every mined itemset as of a point in time.
-    /// </summary>
-    /// <param name="asOf"><see cref="DateTimeOffset">When</see> to decay as of.</param>
-    void Decay(DateTimeOffset asOf);
+    /// <param name="features">The <see cref="EventFeatures"/> for each event in the batch.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A scope acting for the first time in this activation's life has its established patterns restored before
+    /// anything is mined for it. When that restore cannot be read, the call fails with nothing mined - so a
+    /// redelivered batch counts nothing twice.
+    /// </remarks>
+    Task Mine(IEnumerable<EventFeatures> features);
 
     /// <summary>
     /// Gets every itemset that currently clears the support and confidence thresholds for one scope.
     /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the scope belongs to.</param>
-    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the scope belongs to.</param>
     /// <param name="groupingKey">The <see cref="PatternGroupingKey"/> to get for.</param>
     /// <returns>The surviving <see cref="BehaviorPattern">patterns</see>.</returns>
-    IEnumerable<BehaviorPattern> GetSurvivingPatterns(EventStoreName eventStore, EventStoreNamespaceName @namespace, PatternGroupingKey groupingKey);
+    Task<IEnumerable<BehaviorPattern>> GetSurvivingPatterns(PatternGroupingKey groupingKey);
+
+    /// <summary>
+    /// Persist the scopes mining has touched since the last flush.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Runs on the grain's own cadence and on deactivation; exposed so a caller that needs the flush to have
+    /// happened - an operator, a test - can force it rather than wait for the interval.
+    /// </remarks>
+    Task Persist();
 }

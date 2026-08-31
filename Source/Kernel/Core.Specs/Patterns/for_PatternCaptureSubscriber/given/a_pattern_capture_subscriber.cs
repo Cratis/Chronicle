@@ -7,11 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Patterns;
-using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Patterns;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Patterns.for_PatternCaptureSubscriber.given;
@@ -22,9 +18,9 @@ public class a_pattern_capture_subscriber : Specification
 
     protected TestKitSilo _silo;
     protected PatternCaptureSubscriber _subscriber;
-    protected IPatternMiner _miner;
     protected IEventFeatureExtractor _extractor;
-    protected IBehaviorPatternStorage _patterns;
+    protected IPatternMiner _miner;
+    protected string _minerIdentity;
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
 
@@ -33,24 +29,17 @@ public class a_pattern_capture_subscriber : Specification
         _eventStore = "some-store";
         _namespace = EventStoreNamespaceName.Default;
 
-        _miner = Substitute.For<IPatternMiner>();
         _extractor = Substitute.For<IEventFeatureExtractor>();
-        _patterns = Substitute.For<IBehaviorPatternStorage>();
-        _patterns.GetForScope(Arg.Any<PatternGroupingKey>()).Returns([]);
-
-        var storage = Substitute.For<IStorage>();
-        var eventStoreStorage = Substitute.For<IEventStoreStorage>();
-        var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
-        storage.GetEventStore(_eventStore).Returns(eventStoreStorage);
-        eventStoreStorage.GetNamespace(_namespace).Returns(namespaceStorage);
-        namespaceStorage.Patterns.Returns(_patterns);
+        _miner = Substitute.For<IPatternMiner>();
 
         _silo = new TestKitSilo();
-        _silo.AddService(_miner);
         _silo.AddService(_extractor);
-        _silo.AddService(storage);
-        _silo.AddService(Options.Create(new ChronicleOptions()));
         _silo.AddService(Substitute.For<ILogger<PatternCaptureSubscriber>>());
+        _silo.AddProbe<IPatternMiner>(identity =>
+        {
+            _minerIdentity = identity.ToString();
+            return _miner;
+        });
 
         var key = new ObserverSubscriberKey(
             PatternCapture.ObserverIdentifier,
