@@ -148,7 +148,7 @@ export const Pivot = () => {
 
     return (
         <Page title={strings.mainMenu.pivot} noBackground noPadding>
-            <div className="p-4 h-full flex flex-col min-h-0">
+            <div className="h-full flex flex-col min-h-0">
                 <PivotViewer<AppendedEvent>
                     data={events.data ?? []}
                     dimensions={dimensions}
