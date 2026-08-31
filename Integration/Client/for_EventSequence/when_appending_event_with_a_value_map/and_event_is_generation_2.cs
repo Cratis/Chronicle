@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_event_wi
 /// on its way to being stored at the older generation. What it must not do is come back out of the log translated -
 /// an append at the current generation has nothing to translate.
 /// </summary>
+/// <param name="context">The <see cref="context"/> the specification runs against.</param>
 [Collection(ChronicleCollection.Name)]
 public class and_event_is_generation_2(context context) : Given<context>(context)
 {
