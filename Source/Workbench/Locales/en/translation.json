@@ -807,7 +807,8 @@
             "title": "Time Scrubber",
             "empty": "No history available for this instance.",
             "scrub": "Scrub through the history",
-            "position": "{0} of {1}"
+            "position": "{0} of {1}",
+            "moreProperties": "+{0} more"
         }
     },
     "patterns": {

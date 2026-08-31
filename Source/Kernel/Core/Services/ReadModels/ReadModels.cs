@@ -200,29 +200,6 @@ internal sealed class ReadModels(
     }
 
     /// <inheritdoc/>
-    public async Task<GetTimelineByKeyResponse> GetTimelineByKey(GetTimelineByKeyRequest request, CallContext context = default)
-    {
-        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetDefinition();
-
-        // Only a projection can be replayed forward one event at a time. A reducer's state transition
-        // lives in the connected client, so there is nothing here to fold with.
-        var entries = definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection
-            ? await GetTimelineForProjection(
-                definition.ObserverIdentifier,
-                request.EventStore,
-                request.Namespace,
-                request.EventSequenceId,
-                request.ReadModelKey)
-            : [];
-
-        return new GetTimelineByKeyResponse
-        {
-            Entries = [.. entries]
-        };
-    }
-
-    /// <inheritdoc/>
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
@@ -765,41 +742,6 @@ internal sealed class ReadModels(
         }
 
         return snapshots;
-    }
-
-    /// <summary>
-    /// Folds the events one at a time, so every step of the timeline moves by exactly one event.
-    /// </summary>
-    /// <param name="projectionId">The projection that produces the read model.</param>
-    /// <param name="eventStoreName">The event store the read model lives in.</param>
-    /// <param name="namespaceName">The namespace the read model lives in.</param>
-    /// <param name="eventSequenceId">The event sequence to read from.</param>
-    /// <param name="readModelKey">The key of the instance to build the timeline for.</param>
-    /// <returns>The timeline, one entry per event, oldest first.</returns>
-    async Task<IEnumerable<ReadModelTimelineEntry>> GetTimelineForProjection(
-        string projectionId,
-        string eventStoreName,
-        string namespaceName,
-        string eventSequenceId,
-        string readModelKey)
-    {
-        var history = await GetHistoryForProjection(projectionId, eventStoreName, namespaceName, eventSequenceId, readModelKey);
-
-        var entries = new List<ReadModelTimelineEntry>();
-        var state = new ExpandoObject();
-
-        foreach (var appendedEvent in history.Events)
-        {
-            state = await history.Projection.ProcessForSingleReadModel(namespaceName, state, [appendedEvent]);
-
-            entries.Add(new ReadModelTimelineEntry
-            {
-                ReadModel = SerializeReadModel(state, history.ReadModelDefinition),
-                Event = appendedEvent.ToContract(jsonSerializerOptions)
-            });
-        }
-
-        return entries;
     }
 
     string SerializeReadModel(ExpandoObject state, Concepts.ReadModels.ReadModelDefinition readModelDefinition)

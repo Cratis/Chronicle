@@ -5,5 +5,3 @@ export * from './ReadModelInstances';
 export * from './ReadModelOccurrence';
 export * from './ReadModelOccurrences';
 export * from './ReadModelSnapshot';
-export * from './ReadModelTimelineEntry';
-export * from './TimelineForReadModel';

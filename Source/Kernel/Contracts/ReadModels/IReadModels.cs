@@ -73,15 +73,6 @@ public interface IReadModels
     Task<GetSnapshotsByKeyResponse> GetSnapshotsByKey(GetSnapshotsByKeyRequest request, CallContext context = default);
 
     /// <summary>
-    /// Gets a read model's timeline - its state after each event that shaped it.
-    /// </summary>
-    /// <param name="request">The <see cref="GetTimelineByKeyRequest"/> with all the details about the request.</param>
-    /// <param name="context">gRPC call context.</param>
-    /// <returns><see cref="GetTimelineByKeyResponse"/> containing the timeline.</returns>
-    [Operation]
-    Task<GetTimelineByKeyResponse> GetTimelineByKey(GetTimelineByKeyRequest request, CallContext context = default);
-
-    /// <summary>
     /// Get a read model instance by its key.
     /// </summary>
     /// <param name="request">The <see cref="GetInstanceByKeyRequest"/> with all the details about the request.</param>

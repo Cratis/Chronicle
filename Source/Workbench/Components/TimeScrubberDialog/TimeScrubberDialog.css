@@ -69,47 +69,30 @@
     transform: translateY(-50%);
 }
 
+/*
+ * The range input is on top and takes every pointer interaction, so the bubbles must not intercept
+ * the press that starts a drag - hovering is resolved from the pointer's position instead.
+ */
 .time-scrubber__bubble {
     position: absolute;
     top: 50%;
-    z-index: 1;
-    width: 0.75rem;
-    height: 0.75rem;
-    padding: 0;
+    pointer-events: none;
+    width: 0.7rem;
+    height: 0.7rem;
     border: 2px solid var(--cratis-surface-card);
     border-radius: 50%;
     background: var(--cratis-surface-border);
-    cursor: pointer;
     transform: translate(-50%, -50%);
-    transition:
-        background 120ms ease,
-        width 120ms ease,
-        height 120ms ease;
+    transition: background 120ms ease;
 }
 
 .time-scrubber__bubble[data-passed='true'] {
     background: var(--cratis-primary-500);
 }
 
-.time-scrubber__bubble[data-current='true'] {
-    width: 1.15rem;
-    height: 1.15rem;
-    background: var(--cratis-primary-color);
-}
-
-.time-scrubber__bubble:hover {
-    background: var(--cratis-primary-color);
-}
-
-.time-scrubber__bubble:focus-visible {
-    outline: none;
-    box-shadow: var(--cratis-focus-ring);
-}
-
 /*
- * Transparent rather than hidden: the input is what handles dragging, arrow keys, Home and End, so
- * it has to stay in the page - it just must not paint over the bubbles it moves between. It sits
- * under them so a bubble still answers to hover, and covers the whole track so a drag anywhere works.
+ * The input covers the whole track so a drag can start anywhere, the handle included. Its thumb is
+ * the visible current-position marker; the track itself stays transparent so the bubbles show through.
  */
 .time-scrubber__range {
     position: absolute;
@@ -119,25 +102,96 @@
     margin: 0;
     background: transparent;
     appearance: none;
-    cursor: pointer;
+    cursor: grab;
+}
+
+.time-scrubber__range:active {
+    cursor: grabbing;
 }
 
 .time-scrubber__range::-webkit-slider-thumb {
-    width: 1.15rem;
-    height: 1.15rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid var(--cratis-surface-card);
+    border-radius: 50%;
     appearance: none;
-    background: transparent;
+    background: var(--cratis-primary-color);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+    cursor: grab;
 }
 
 .time-scrubber__range::-moz-range-thumb {
-    width: 1.15rem;
-    height: 1.15rem;
-    border: 0;
-    background: transparent;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid var(--cratis-surface-card);
+    border-radius: 50%;
+    background: var(--cratis-primary-color);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+    cursor: grab;
+}
+
+.time-scrubber__range:focus-visible::-webkit-slider-thumb {
+    outline: none;
+    box-shadow: var(--cratis-focus-ring);
+}
+
+.time-scrubber__range:focus-visible::-moz-range-thumb {
+    outline: none;
+    box-shadow: var(--cratis-focus-ring);
 }
 
 .time-scrubber__range:focus-visible {
     outline: none;
+}
+
+/* The hover that describes one event. A little smaller than body copy - it is a glance, not a document. */
+.time-scrubber__hover {
+    max-width: 24rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.time-scrubber__hover-title {
+    color: var(--cratis-primary-300, #7dd3fc);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.time-scrubber__hover-meta {
+    opacity: 0.7;
+    font-size: 0.85rem;
+}
+
+.time-scrubber__hover-properties {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.1rem 0.6rem;
+    margin: 0.4rem 0 0;
+    padding-top: 0.35rem;
+    border-top: 1px solid rgb(255 255 255 / 15%);
+}
+
+.time-scrubber__hover-property {
+    display: contents;
+}
+
+.time-scrubber__hover-property dt {
+    opacity: 0.65;
+    white-space: nowrap;
+}
+
+.time-scrubber__hover-property dd {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.time-scrubber__hover-remaining {
+    margin-top: 0.3rem;
+    opacity: 0.6;
+    font-size: 0.85rem;
+    font-style: italic;
 }
 
 @media (prefers-reduced-motion: reduce) {
