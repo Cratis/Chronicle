@@ -6,30 +6,47 @@ import MonacoEditor from 'Components/MonacoEditor/MonacoEditor';
 import { ToggleButton } from 'primereact/togglebutton';
 import { ToggleButtonGroup, type ToggleButtonGroupValueChangeEvent } from 'primereact/togglebuttongroup';
 import { Button } from '@cratis/components/Common';
+import { Dropdown } from '@cratis/components/Dropdown';
+import { ProjectionCodeLanguages, editorLanguageFor, supportsModelBound, type ProjectionCodeLanguage } from './ProjectionCodeLanguages';
 
 interface ProjectionCodePanelProps {
     declarativeCode: string;
     modelBoundCode: string;
+    language: ProjectionCodeLanguage;
+    onLanguageChange: (language: ProjectionCodeLanguage) => void;
     onRefresh?: () => void;
 }
 
-export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declarativeCode, modelBoundCode, onRefresh }) => {
+export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declarativeCode, modelBoundCode, language, onLanguageChange, onRefresh }) => {
     const [codeType, setCodeType] = useState<'declarative' | 'modelBound'>('declarative');
 
+    // A client without a model-bound projection API has nothing to show for that style, so the view
+    // falls back to the one it does have rather than leaving the panel on an empty tab.
+    const modelBoundAvailable = supportsModelBound(language);
+    const effectiveCodeType = modelBoundAvailable ? codeType : 'declarative';
+
     const handleCopyToClipboard = async () => {
-        const code = codeType === 'declarative' ? declarativeCode : modelBoundCode;
+        const code = effectiveCodeType === 'declarative' ? declarativeCode : modelBoundCode;
         if (code) {
             await navigator.clipboard.writeText(code);
         }
     };
 
-    const currentCode = codeType === 'declarative' ? declarativeCode : modelBoundCode;
+    const currentCode = effectiveCodeType === 'declarative' ? declarativeCode : modelBoundCode;
 
     return (
         <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <Dropdown<ProjectionCodeLanguage>
+                    value={language}
+                    options={ProjectionCodeLanguages}
+                    optionLabel='label'
+                    optionValue='value'
+                    aria-label='Language'
+                    onChange={value => onLanguageChange(value)}
+                    style={{ minWidth: '9rem' }} />
                 <ToggleButtonGroup
-                    value={codeType}
+                    value={effectiveCodeType}
                     allowEmpty={false}
                     onValueChange={(event: ToggleButtonGroupValueChangeEvent) => setCodeType(event.value as 'declarative' | 'modelBound')}
                     style={{ flex: 1 }}
@@ -37,7 +54,7 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
                     <ToggleButton.Root value='declarative'>
                         <ToggleButton.Indicator>Declarative</ToggleButton.Indicator>
                     </ToggleButton.Root>
-                    <ToggleButton.Root value='modelBound'>
+                    <ToggleButton.Root value='modelBound' disabled={!modelBoundAvailable}>
                         <ToggleButton.Indicator>Model-Bound</ToggleButton.Indicator>
                     </ToggleButton.Root>
                 </ToggleButtonGroup>
@@ -67,7 +84,7 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
             >
                 <MonacoEditor
                     height="100%"
-                    language="csharp"
+                    language={editorLanguageFor(language)}
                     value={currentCode || '// Loading...'}
                     theme="vs-dark"
                     options={{

@@ -18,6 +18,7 @@ import { AllEventSequences } from 'Api/EventSequences';
 import { Button } from '@cratis/components/Common';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
+import type { ProjectionCodeLanguage } from './ProjectionCodeLanguages';
 import Strings from 'Strings';
 import type { ReadModelDefinition } from 'Api/ReadModelTypes';
 
@@ -57,18 +58,20 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     const decorationsRef = useRef<string[]>([]);
     const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false);
     const [isCodePanelOpen, setIsCodePanelOpen] = useState(false);
+    const [codeLanguage, setCodeLanguage] = useState<ProjectionCodeLanguage>('CSharp');
     const [declarativeCode, setDeclarativeCode] = useState('');
     const [modelBoundCode, setModelBoundCode] = useState('');
     const [generateDeclarativeCode] = GenerateDeclarativeCode.use();
     const [generateModelBoundCode] = GenerateModelBoundCode.use();
     const [allEventSequencesResult] = AllEventSequences.use(eventStore ? { eventStore } : undefined);
 
-    const fetchCode = async () => {
+    const fetchCode = async (language: ProjectionCodeLanguage = codeLanguage) => {
         if (eventStore && namespace && value) {
             const declaration = normalizeDeclarationForRequests ? normalizeDeclarationForRequests(value) : value;
             generateDeclarativeCode.eventStore = eventStore;
             generateDeclarativeCode.namespace = namespace;
             generateDeclarativeCode.declaration = declaration;
+            generateDeclarativeCode.language = language;
             if (draftReadModel) {
                 generateDeclarativeCode.draftReadModel = draftReadModel;
             }
@@ -77,6 +80,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
             generateModelBoundCode.eventStore = eventStore;
             generateModelBoundCode.namespace = namespace;
             generateModelBoundCode.declaration = declaration;
+            generateModelBoundCode.language = language;
             if (draftReadModel) {
                 generateModelBoundCode.draftReadModel = draftReadModel;
             }
@@ -386,7 +390,12 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                     <ProjectionCodePanel
                         declarativeCode={declarativeCode}
                         modelBoundCode={modelBoundCode}
-                        onRefresh={fetchCode}
+                        language={codeLanguage}
+                        onLanguageChange={language => {
+                            setCodeLanguage(language);
+                            fetchCode(language);
+                        }}
+                        onRefresh={() => fetchCode()}
                     />
                 </div>
             </div>
