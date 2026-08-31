@@ -12,6 +12,7 @@
    on should use the `--cratis-*` tokens directly. */
 @import '@cratis/components/theme';
 @import './primeIslands/primereact-v10-palette.css';
+@import './datatable.css';
 
 /* The palette above resolves its semantic tokens through `var(--p-*-token, <lara-dark-blue
    literal>)` - the literal only applies when the active preset leaves that `--p-*` token

@@ -157,24 +157,37 @@ export const DataTable = <TData extends object>({
         applyFilters(next);
     };
 
-    const selectionKeys = useMemo(() => {
+    // PrimeReact keys a row by a *flat* property lookup, so it cannot resolve a nested
+    // `dataKey` such as `context.sequenceNumber` — every row would key as "undefined" while
+    // this wrapper, which walks the path, produced the real value. The two then disagreed on
+    // every row: nothing highlighted, and a click resolved back to no row at all. Rather than
+    // hand PrimeReact a key it may not understand, the wrapper keys rows by their index and
+    // owns the row/key mapping itself; `dataKey` stays the identity used to match a selection
+    // back to a row across a refreshed page of data.
+    const indexOfSelection = useMemo(() => {
+        if (!selection) return -1;
         const key = keyOf(selection, dataKey);
-        return key === undefined ? {} : { [key]: true };
-    }, [selection, dataKey]);
+        if (key !== undefined) {
+            const found = data.findIndex(candidate => keyOf(candidate, dataKey) === key);
+            if (found >= 0) return found;
+        }
+        return data.indexOf(selection);
+    }, [data, selection, dataKey]);
+
+    const selectionKeys = useMemo(
+        () => (indexOfSelection < 0 ? {} : { [String(indexOfSelection)]: true }),
+        [indexOfSelection]);
 
     const handleSelectionChange = (event: { value: Record<string, boolean>; originalEvent?: React.SyntheticEvent }) => {
         if (!onSelectionChange) return;
         const selectedKey = Object.keys(event.value).find(key => event.value[key]);
-        const row = selectedKey === undefined
-            ? null
-            : data.find(candidate => keyOf(candidate, dataKey) === selectedKey) ?? null;
+        const row = selectedKey === undefined ? null : data[Number(selectedKey)] ?? null;
         onSelectionChange({ value: row, originalEvent: event.originalEvent });
     };
 
     return (
         <PrimeDataTable.Root
             data={data}
-            dataKey={dataKey}
             removableSort
             selectionMode={selectionMode ?? null}
             selectionKeys={selectionKeys}
