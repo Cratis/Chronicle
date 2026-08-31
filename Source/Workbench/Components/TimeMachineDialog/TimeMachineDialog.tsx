@@ -9,8 +9,7 @@ import { AllSnapshotsForReadModel } from 'Api/ReadModels/AllSnapshotsForReadMode
 import { EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
-import { ObjectContentEditor as _OCE } from '@cratis/components';
-const ObjectContentEditor = _OCE.ObjectContentEditor;
+import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import type { Json } from '@cratis/components/types';
 
 export interface TimeMachineDialogProps {
