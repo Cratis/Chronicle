@@ -61,4 +61,22 @@ public interface IEventMigrationPropertyBuilder<TTarget, TSource>
     IEventMigrationPropertyBuilder<TTarget, TSource> DefaultValue<TProperty>(
         Expression<Func<TTarget, TProperty>> targetProperty,
         TProperty value);
+
+    /// <summary>
+    /// Translate the individual values of a property that mean something different in the target generation.
+    /// </summary>
+    /// <typeparam name="TProperty">The type of the target property.</typeparam>
+    /// <typeparam name="TSourceProperty">The type of the source property.</typeparam>
+    /// <param name="targetProperty">Expression selecting the target property to write the translated value into.</param>
+    /// <param name="sourceProperty">Expression selecting the source property to read the value from.</param>
+    /// <param name="map">Action declaring which value becomes which.</param>
+    /// <returns>The builder for continued configuration.</returns>
+    /// <remarks>
+    /// This states the translation for one direction only. To state it once and have both directions follow, override
+    /// <c>MapValues</c> on <see cref="EventTypeMigration{TUpgrade, TPrevious}"/> instead.
+    /// </remarks>
+    IEventMigrationPropertyBuilder<TTarget, TSource> MapValues<TProperty, TSourceProperty>(
+        Expression<Func<TTarget, TProperty>> targetProperty,
+        Expression<Func<TSource, TSourceProperty>> sourceProperty,
+        Action<IValueMapBuilder<TSourceProperty, TProperty>> map);
 }
