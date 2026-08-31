@@ -17,15 +17,15 @@ public class behavior_that_only_sometimes_follows : given.a_pattern_miner
     {
         for (var count = 0; count < 15; count++)
         {
-            _miner.Observe(Features("user-42", "ApproveExpenseReport"));
+            _miner.Observe(_eventStore, _namespace, Features("user-42", "ApproveExpenseReport"));
         }
 
         for (var count = 0; count < 5; count++)
         {
-            _miner.Observe(Features("user-42", "RejectExpenseReport"));
+            _miner.Observe(_eventStore, _namespace, Features("user-42", "RejectExpenseReport"));
         }
 
-        _result = _miner.GetSurvivingPatterns("user-42");
+        _result = _miner.GetSurvivingPatterns(_eventStore, _namespace, "user-42");
     }
 
     BehaviorPattern Approving => _result.Single(_ =>

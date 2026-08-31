@@ -17,10 +17,10 @@ public class a_recurring_behavior : given.a_pattern_miner
     {
         for (var count = 0; count < 20; count++)
         {
-            _miner.Observe(Features("user-42", "ApproveExpenseReport"));
+            _miner.Observe(_eventStore, _namespace, Features("user-42", "ApproveExpenseReport"));
         }
 
-        _result = _miner.GetSurvivingPatterns("user-42");
+        _result = _miner.GetSurvivingPatterns(_eventStore, _namespace, "user-42");
     }
 
     [Fact] void should_mine_the_full_combination() =>

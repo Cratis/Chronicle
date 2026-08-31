@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
-
 namespace Samples.Backoffice;
 
 /// <summary>
@@ -105,9 +103,11 @@ public static class SampleHistory
         Action<int> onProgress)
     {
         // The marker goes down first and is guarded by a uniqueness constraint, so a second run is turned away
-        // here rather than laying a duplicate history on top of the first.
+        // here rather than laying a duplicate history on top of the first. The constraint allows one such event
+        // per event source, so the marker must land on the same, well-known event source every run - a fresh id
+        // would open a fresh source and sail straight past the guard.
         var marker = await appender.Append(
-            EventSourceId.New(),
+            "sample-history",
             new SampleHistoryGenerated(new Quantity(seed)),
             Workforce.Overnight,
             DateTimeOffset.UtcNow,
