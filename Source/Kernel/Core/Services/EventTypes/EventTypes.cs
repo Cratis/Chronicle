@@ -360,6 +360,15 @@ internal sealed class EventTypes(
                     }
 
                     break;
+
+                case WellKnownExpressions.MapValues when entry.Value is JsonObject mapConfig:
+                    var mapSource = mapConfig["source"]?.GetValue<string>();
+                    if (mapSource is not null)
+                    {
+                        yield return mapSource;
+                    }
+
+                    break;
             }
         }
     }
