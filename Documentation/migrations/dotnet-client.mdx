@@ -69,7 +69,7 @@ Unlike the property-builder operations, a value map is declared by overriding `M
 
 The map is applied forward when upcasting and inverted when downcasting, so you state it once. Values it does not mention are carried across unchanged, and two values collapsing onto one take the first pair declared for that value on the way back.
 
-`MapValues` runs before `Upcast` and `Downcast`, so a direction that declares its own transformation for the same property keeps it. That is also how you express a translation that is deliberately not reversible — declare it on the property builder for the one direction it applies to:
+`MapValues` runs before `Upcast` and `Downcast`, so a direction that declares its own transformation for the same property keeps it. That is also the way to express a translation that is not symmetric — several values collapsing onto one, where the way back has to make a choice the forward map cannot state. Declare that as a `MapValues` on the property builder, per direction:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/map-values-one-direction" />
 
