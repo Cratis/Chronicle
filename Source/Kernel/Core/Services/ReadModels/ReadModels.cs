@@ -200,6 +200,29 @@ internal sealed class ReadModels(
     }
 
     /// <inheritdoc/>
+    public async Task<GetTimelineByKeyResponse> GetTimelineByKey(GetTimelineByKeyRequest request, CallContext context = default)
+    {
+        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
+        var definition = await readModel.GetDefinition();
+
+        // Only a projection can be replayed forward one event at a time. A reducer's state transition
+        // lives in the connected client, so there is nothing here to fold with.
+        var entries = definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection
+            ? await GetTimelineForProjection(
+                definition.ObserverIdentifier,
+                request.EventStore,
+                request.Namespace,
+                request.EventSequenceId,
+                request.ReadModelKey)
+            : [];
+
+        return new GetTimelineByKeyResponse
+        {
+            Entries = [.. entries]
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
@@ -640,7 +663,23 @@ internal sealed class ReadModels(
         throw new InvalidOperationException($"Read model definition not registered within {maxRetries * delayMs}ms. Ensure the read model is registered before watching.");
     }
 
-    async Task<IEnumerable<ReadModelSnapshot>> GetSnapshotsForProjection(
+    /// <summary>
+    /// Reads the events that shaped one read model instance, decrypted and in order.
+    /// </summary>
+    /// <remarks>
+    /// A read model's key is only the event source id when the projection does not say otherwise.
+    /// Where it does - a projection keyed on an event property, say - narrowing the sequence by event
+    /// source finds nothing, and the instance looks like it has no history at all. Narrowing stays
+    /// the fast path for the projections it is actually right for; the rest read the sequence and let
+    /// the projection say which events resolved to this key.
+    /// </remarks>
+    /// <param name="projectionId">The projection that produces the read model.</param>
+    /// <param name="eventStoreName">The event store the read model lives in.</param>
+    /// <param name="namespaceName">The namespace the read model lives in.</param>
+    /// <param name="eventSequenceId">The event sequence to read from.</param>
+    /// <param name="readModelKey">The key of the instance to read the history of.</param>
+    /// <returns>The events behind the instance, with what is needed to project them.</returns>
+    async Task<ProjectedReadModelHistory> GetHistoryForProjection(
         string projectionId,
         string eventStoreName,
         string namespaceName,
@@ -658,11 +697,6 @@ internal sealed class ReadModels(
         var readModelDefinition = await storage.GetEventStore(eventStoreName).ReadModels.Get(definition.ReadModel);
         var eventTypes = await projection.GetEventTypes();
 
-        // A read model's key is only the event source id when the projection does not say otherwise.
-        // Where it does - a projection keyed on an event property, say - filtering the sequence by
-        // event source finds nothing, and the instance looks like it has no history at all. Narrowing
-        // by event source stays the fast path for the projections it is actually right for; the rest
-        // read the sequence and let the projection say which events resolved to this key.
         var keyIsEventSourceId = definition.From.Values.All(from => from.Key is null || string.IsNullOrEmpty(from.Key.Value));
 
         var cursor = keyIsEventSourceId
@@ -681,13 +715,25 @@ internal sealed class ReadModels(
             allEvents = (await projection.GetEventsForKey(namespaceName, readModelKey, allEvents)).ToList();
         }
 
-        // Decrypt the stored events before projecting and returning them — both the snapshot read
+        // Decrypt the stored events before projecting and returning them - both the projected read
         // model and the events it carries must be released so no PII leaves encrypted.
         var eventTypeSchemas = await storage.GetEventStore(eventStoreName).EventTypes.GetFor(allEvents.Select(_ => _.Context.EventType).Distinct());
         var releasedEvents = await eventCompliance.Release(allEvents, eventTypeSchemas.ToDictionary(_ => _.Type));
 
+        return new(projection, readModelDefinition, [.. releasedEvents.OrderBy(_ => _.Context.SequenceNumber)]);
+    }
+
+    async Task<IEnumerable<ReadModelSnapshot>> GetSnapshotsForProjection(
+        string projectionId,
+        string eventStoreName,
+        string namespaceName,
+        string eventSequenceId,
+        string readModelKey)
+    {
+        var history = await GetHistoryForProjection(projectionId, eventStoreName, namespaceName, eventSequenceId, readModelKey);
+
         var eventsByCorrelation = new Dictionary<Guid, List<AppendedEvent>>();
-        foreach (var appendedEvent in releasedEvents)
+        foreach (var appendedEvent in history.Events)
         {
             var correlationId = appendedEvent.Context.CorrelationId;
             if (!eventsByCorrelation.TryGetValue(correlationId, out var eventsForCorrelation))
@@ -706,14 +752,12 @@ internal sealed class ReadModels(
             var orderedEvents = events.OrderBy(e => e.Context.SequenceNumber).ToList();
             var firstOccurred = orderedEvents[0].Context.Occurred;
 
-            var result = await projection.ProcessForSingleReadModel(namespaceName, initialState, orderedEvents);
-            var jsonObject = expandoObjectConverter.ToJsonObject(result, readModelDefinition.GetSchemaForLatestGeneration());
-            var readModel = JsonSerializer.Serialize(jsonObject, jsonSerializerOptions);
+            var result = await history.Projection.ProcessForSingleReadModel(namespaceName, initialState, orderedEvents);
             initialState = result;
 
             snapshots.Add(new ReadModelSnapshot
             {
-                ReadModel = readModel,
+                ReadModel = SerializeReadModel(result, history.ReadModelDefinition),
                 Events = orderedEvents.ToContract(jsonSerializerOptions),
                 Occurred = firstOccurred,
                 CorrelationId = correlationId
@@ -721,6 +765,47 @@ internal sealed class ReadModels(
         }
 
         return snapshots;
+    }
+
+    /// <summary>
+    /// Folds the events one at a time, so every step of the timeline moves by exactly one event.
+    /// </summary>
+    /// <param name="projectionId">The projection that produces the read model.</param>
+    /// <param name="eventStoreName">The event store the read model lives in.</param>
+    /// <param name="namespaceName">The namespace the read model lives in.</param>
+    /// <param name="eventSequenceId">The event sequence to read from.</param>
+    /// <param name="readModelKey">The key of the instance to build the timeline for.</param>
+    /// <returns>The timeline, one entry per event, oldest first.</returns>
+    async Task<IEnumerable<ReadModelTimelineEntry>> GetTimelineForProjection(
+        string projectionId,
+        string eventStoreName,
+        string namespaceName,
+        string eventSequenceId,
+        string readModelKey)
+    {
+        var history = await GetHistoryForProjection(projectionId, eventStoreName, namespaceName, eventSequenceId, readModelKey);
+
+        var entries = new List<ReadModelTimelineEntry>();
+        var state = new ExpandoObject();
+
+        foreach (var appendedEvent in history.Events)
+        {
+            state = await history.Projection.ProcessForSingleReadModel(namespaceName, state, [appendedEvent]);
+
+            entries.Add(new ReadModelTimelineEntry
+            {
+                ReadModel = SerializeReadModel(state, history.ReadModelDefinition),
+                Event = appendedEvent.ToContract(jsonSerializerOptions)
+            });
+        }
+
+        return entries;
+    }
+
+    string SerializeReadModel(ExpandoObject state, Concepts.ReadModels.ReadModelDefinition readModelDefinition)
+    {
+        var jsonObject = expandoObjectConverter.ToJsonObject(state, readModelDefinition.GetSchemaForLatestGeneration());
+        return JsonSerializer.Serialize(jsonObject, jsonSerializerOptions);
     }
 
     async Task<ConnectedReducerContext> GetConnectedReducerContext(
@@ -888,4 +973,15 @@ internal sealed class ReadModels(
     }
 
     record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<EventType> EventTypes);
+
+    /// <summary>
+    /// The events behind one read model instance, with what is needed to project them.
+    /// </summary>
+    /// <param name="Projection">The projection that produces the read model.</param>
+    /// <param name="ReadModelDefinition">The read model's definition, for serializing against its schema.</param>
+    /// <param name="Events">The events that shaped the instance, oldest first and decrypted.</param>
+    record ProjectedReadModelHistory(
+        IProjection Projection,
+        Concepts.ReadModels.ReadModelDefinition ReadModelDefinition,
+        IReadOnlyList<AppendedEvent> Events);
 }
