@@ -657,7 +657,17 @@ internal sealed class ReadModels(
         var definition = await projection.GetDefinition();
         var readModelDefinition = await storage.GetEventStore(eventStoreName).ReadModels.Get(definition.ReadModel);
         var eventTypes = await projection.GetEventTypes();
-        var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey, eventTypes: eventTypes);
+
+        // A read model's key is only the event source id when the projection does not say otherwise.
+        // Where it does - a projection keyed on an event property, say - filtering the sequence by
+        // event source finds nothing, and the instance looks like it has no history at all. Narrowing
+        // by event source stays the fast path for the projections it is actually right for; the rest
+        // read the sequence and let the projection say which events resolved to this key.
+        var keyIsEventSourceId = definition.From.Values.All(from => from.Key is null || string.IsNullOrEmpty(from.Key.Value));
+
+        var cursor = keyIsEventSourceId
+            ? await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey, eventTypes: eventTypes)
+            : await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventTypes: eventTypes);
 
         var allEvents = new List<AppendedEvent>();
         while (await cursor.MoveNext())
@@ -665,6 +675,11 @@ internal sealed class ReadModels(
             allEvents.AddRange(cursor.Current);
         }
         cursor.Dispose();
+
+        if (!keyIsEventSourceId)
+        {
+            allEvents = (await projection.GetEventsForKey(namespaceName, readModelKey, allEvents)).ToList();
+        }
 
         // Decrypt the stored events before projecting and returning them — both the snapshot read
         // model and the events it carries must be released so no PII leaves encrypted.
