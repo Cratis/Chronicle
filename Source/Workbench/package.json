@@ -22,7 +22,7 @@
         "@cratis/arc.react": "^22.6.0",
         "@cratis/arc.react.mvvm": "^22.6.0",
         "@cratis/arc.vite": "^22.6.0",
-        "@cratis/components": "^4.1.0",
+        "@cratis/components": "^4.1.1",
         "@cratis/fundamentals": "^7.18.1",
         "@cratis/screenplay-language": "^4.6.0",
         "@monaco-editor/react": "^4.7.0",
