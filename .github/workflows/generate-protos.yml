@@ -33,6 +33,16 @@ jobs:
             "$CONTRACTS_DLL" \
             Source/Kernel/Protobuf
 
+      # The generated schemas feed the Kotlin, TypeScript and Elixir client publishes, so an output that a real
+      # protoc rejects must fail here - not in the client publish steps downstream. The generator once produced an
+      # enum value colliding with a message name and only the pre-existing checked-in file kept publishes green.
+      - name: Validate generated proto files with protoc
+        working-directory: ./Source/Kernel/Protobuf
+        run: |
+          pip install grpcio-tools
+          mkdir -p "$RUNNER_TEMP/protoc-out"
+          python -m grpc_tools.protoc -I. --python_out="$RUNNER_TEMP/protoc-out" *.proto protobuf-net/bcl.proto
+
       - name: Upload proto files artifact
         uses: actions/upload-artifact@v4
         with:
