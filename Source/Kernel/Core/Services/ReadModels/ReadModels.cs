@@ -175,7 +175,8 @@ internal sealed class ReadModels(
                 request.EventStore,
                 request.Namespace,
                 request.EventSequenceId,
-                request.ReadModelKey);
+                request.ReadModelKey,
+                request.Grouping);
 
             snapshots = projectionSnapshots.Select(s => new ReadModelSnapshot
             {
@@ -545,6 +546,16 @@ internal sealed class ReadModels(
         }
     }
 
+    /// <summary>
+    /// Groups events by the correlation they were appended under, keeping the order they arrived in.
+    /// </summary>
+    /// <param name="events">The events to group.</param>
+    /// <returns>Each correlation with its events, ordered.</returns>
+    static IEnumerable<(CorrelationId CorrelationId, List<AppendedEvent> Events)> GroupByCorrelation(IEnumerable<AppendedEvent> events) =>
+        events
+            .GroupBy(appendedEvent => appendedEvent.Context.CorrelationId)
+            .Select(group => (group.Key, group.OrderBy(appendedEvent => appendedEvent.Context.SequenceNumber).ToList()));
+
     static EventSequenceNumber GetLastHandledEventSequenceNumber(ExpandoObject instance)
     {
         var values = (IDictionary<string, object?>)instance;
@@ -700,43 +711,45 @@ internal sealed class ReadModels(
         return new(projection, readModelDefinition, [.. releasedEvents.OrderBy(_ => _.Context.SequenceNumber)]);
     }
 
+    /// <summary>
+    /// Folds an instance's events into snapshots, grouped the way the caller asked for.
+    /// </summary>
+    /// <param name="projectionId">The projection that produces the read model.</param>
+    /// <param name="eventStoreName">The event store the read model lives in.</param>
+    /// <param name="namespaceName">The namespace the read model lives in.</param>
+    /// <param name="eventSequenceId">The event sequence to read from.</param>
+    /// <param name="readModelKey">The key of the instance to fold.</param>
+    /// <param name="grouping">How to group the events into snapshots.</param>
+    /// <returns>The snapshots, oldest first.</returns>
+    /// <remarks>
+    /// Both groupings are one pass over the same events, carrying the state forward - they differ only
+    /// in how often a snapshot is taken from it.
+    /// </remarks>
     async Task<IEnumerable<ReadModelSnapshot>> GetSnapshotsForProjection(
         string projectionId,
         string eventStoreName,
         string namespaceName,
         string eventSequenceId,
-        string readModelKey)
+        string readModelKey,
+        ReadModelSnapshotGrouping grouping)
     {
         var history = await GetHistoryForProjection(projectionId, eventStoreName, namespaceName, eventSequenceId, readModelKey);
-
-        var eventsByCorrelation = new Dictionary<Guid, List<AppendedEvent>>();
-        foreach (var appendedEvent in history.Events)
-        {
-            var correlationId = appendedEvent.Context.CorrelationId;
-            if (!eventsByCorrelation.TryGetValue(correlationId, out var eventsForCorrelation))
-            {
-                eventsForCorrelation = [];
-                eventsByCorrelation[correlationId] = eventsForCorrelation;
-            }
-            eventsForCorrelation.Add(appendedEvent);
-        }
+        var groups = grouping == ReadModelSnapshotGrouping.Event
+            ? history.Events.Select(appendedEvent => (appendedEvent.Context.CorrelationId, new List<AppendedEvent> { appendedEvent }))
+            : GroupByCorrelation(history.Events);
 
         var snapshots = new List<ReadModelSnapshot>();
-        var initialState = new ExpandoObject();
+        var state = new ExpandoObject();
 
-        foreach (var (correlationId, events) in eventsByCorrelation)
+        foreach (var (correlationId, events) in groups)
         {
-            var orderedEvents = events.OrderBy(e => e.Context.SequenceNumber).ToList();
-            var firstOccurred = orderedEvents[0].Context.Occurred;
-
-            var result = await history.Projection.ProcessForSingleReadModel(namespaceName, initialState, orderedEvents);
-            initialState = result;
+            state = await history.Projection.ProcessForSingleReadModel(namespaceName, state, events);
 
             snapshots.Add(new ReadModelSnapshot
             {
-                ReadModel = SerializeReadModel(result, history.ReadModelDefinition),
-                Events = orderedEvents.ToContract(jsonSerializerOptions),
-                Occurred = firstOccurred,
+                ReadModel = SerializeReadModel(state, history.ReadModelDefinition),
+                Events = events.ToContract(jsonSerializerOptions),
+                Occurred = events[0].Context.Occurred,
                 CorrelationId = correlationId
             });
         }
