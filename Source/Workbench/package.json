@@ -18,10 +18,12 @@
         "build-storybook": "storybook build -c .frontend/.storybook"
     },
     "dependencies": {
+        "@cratis/arc": "^22.6.0",
         "@cratis/arc.react": "^22.6.0",
         "@cratis/arc.react.mvvm": "^22.6.0",
         "@cratis/arc.vite": "^22.6.0",
-        "@cratis/components": "^3.6.1",
+        "@cratis/components": "^4.1.0",
+        "@cratis/fundamentals": "^7.18.1",
         "@cratis/screenplay-language": "^4.6.0",
         "@monaco-editor/react": "^4.7.0",
         "@primereact/core": "^11.1.0",
@@ -34,12 +36,14 @@
         "chart.js": "^4.5.1",
         "echarts": "^6.1.0",
         "monaco-editor": "^0.56.0",
+        "pixi.js": "^8.20.0",
         "pluralize": "^8.0.0",
         "primeicons": "^8.0.0",
         "primereact": "^11.1.0",
         "react-icons": "^5.7.0",
         "reflect-metadata": "0.2.2",
         "ts-deepmerge": "8.0.0",
+        "tsyringe": "4.10.0",
         "usehooks-ts": "3.1.1"
     },
     "devDependencies": {

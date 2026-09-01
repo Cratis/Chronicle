@@ -6,7 +6,7 @@ import MonacoEditor, { Monaco, OnMount } from 'Components/MonacoEditor/MonacoEdi
 import type { editor, Uri } from 'monaco-editor';
 import { registerCaptureDefinitionLanguage, languageId, disposeCaptureDefinitionLanguage } from './index';
 import { registerDynamicCompletions } from './dynamicCompletions';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { CaptureHelpPanel } from './CaptureHelpPanel';
 import Strings from 'Strings';
 
@@ -258,7 +258,7 @@ export const CaptureEditor: React.FC<CaptureEditorProps> = ({
                     <Button
                         icon="pi pi-times"
                         onClick={() => setIsHelpPanelOpen(false)}
-                        className="p-button-rounded p-button-text"
+                        shape='pill' variant='ghost'
                         style={{ color: '#cccccc' }}
                     />
                 </div>

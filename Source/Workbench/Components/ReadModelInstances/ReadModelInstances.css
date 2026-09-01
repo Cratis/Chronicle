@@ -1,0 +1,22 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+/*
+ * Sits over the rows rather than replacing them, so a refresh does not blank out the table the
+ * user is already reading. Centered on the scroll viewport rather than the table, which can be
+ * far taller than the area actually in view.
+ */
+
+.read-model-instances__busy {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 8rem;
+    margin-bottom: -100%;
+    background: color-mix(in srgb, var(--cratis-surface-card) 65%, transparent);
+}

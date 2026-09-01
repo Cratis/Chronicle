@@ -58,7 +58,7 @@ public abstract class a_language_service_compiling_nested<TReadModel> : Specific
 
     void Establish()
     {
-        _languageService = new LanguageService(new Generator(), new DeclarativeCodeGenerator(), new ModelBoundCodeGenerator());
+        _languageService = new LanguageService(new Generator(), CodeGeneration.given.ProjectionCodeGenerators.All());
         _readModelDefinition = CreateReadModelDefinition<TReadModel>();
         _eventTypeSchemas = CreateEventTypeSchemas(EventTypes).ToList();
     }

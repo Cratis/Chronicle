@@ -8,8 +8,7 @@ import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
-import { ObjectContentEditor as _OCE } from '@cratis/components';
-const ObjectContentEditor = _OCE.ObjectContentEditor;
+import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { QueryResultWithState } from '@cratis/arc/queries';
@@ -149,7 +148,7 @@ export const Pivot = () => {
 
     return (
         <Page title={strings.mainMenu.pivot} noBackground noPadding>
-            <div className="p-4 h-full flex flex-col min-h-0">
+            <div className="h-full flex flex-col min-h-0">
                 <PivotViewer<AppendedEvent>
                     data={events.data ?? []}
                     dimensions={dimensions}

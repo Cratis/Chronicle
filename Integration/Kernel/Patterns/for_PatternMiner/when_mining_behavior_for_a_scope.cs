@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Storage;
 using ConceptsEventStoreName = Cratis.Chronicle.Concepts.EventStoreName;

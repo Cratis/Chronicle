@@ -5,8 +5,8 @@ import { Column } from '@cratis/components/DataTables';
 import { Tag } from '@cratis/components/Display';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { Card } from 'Components/Card';
-import { DataTable } from 'Components/DataTable';
-import { Button } from 'Components/Button';
+import { DataTableCore } from '@cratis/components/DataTables';
+import { Button } from '@cratis/components/Common';
 import { useState } from 'react';
 import { MdAdd } from 'react-icons/md';
 
@@ -62,11 +62,11 @@ export const ObserverHealthWidget = ({ className }: { className?: string }) => {
                         options={['Latest 14 entries', 'Latest 50 entries', 'All']}
                         className="text-xs border-gray-700"
                     />
-                    <Button icon={<MdAdd />} rounded text severity="secondary" size="small" />
+                    <Button icon={<MdAdd />} shape='pill' variant='ghost' tone="neutral" size="small" />
                 </div>
             </div>
-            <DataTable
-                value={rows}
+            <DataTableCore
+                data={rows}
                 emptyMessage="No observers."
                 scrollable
                 scrollHeight="220px"
@@ -77,7 +77,7 @@ export const ObserverHealthWidget = ({ className }: { className?: string }) => {
                 <Column field="throughput" header="Throughput" style={{ minWidth: '8rem' }} />
                 <Column field="lastError" header="Last Error" style={{ minWidth: '7rem' }} />
                 <Column header="" body={statusBody} style={{ minWidth: '6rem' }} />
-            </DataTable>
+            </DataTableCore>
         </Card>
     );
 };

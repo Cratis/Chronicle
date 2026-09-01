@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Popover, type PopoverRootOpenChangeEvent } from 'primereact/popover';
 import * as icons from "react-icons/fa";
 import css from './Profile.module.css';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { useDarkMode } from 'usehooks-ts';
 import strings from 'Strings';
 import { useAuth } from '../../../Features/Security/AuthContext';
@@ -40,8 +40,8 @@ export const Profile = () => {
                     <Popover.Trigger as="span">
                         <Button
                             icon={<icons.FaUser />}
-                            rounded
-                            severity="info"
+                            shape='pill'
+                            tone="accent"
                             className="p-2"
                             aria-label="User" />
                     </Popover.Trigger>

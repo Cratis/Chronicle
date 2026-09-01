@@ -1,3 +1,10 @@
 {
-
+    "components": {
+        "timeScrubber": {
+            "title": "Tidsskrubber",
+            "empty": "Ingen historikk tilgjengelig for denne instansen.",
+            "scrub": "Skrubb gjennom historikken",
+            "position": "{0} av {1}"
+        }
+    }
 }
