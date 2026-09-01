@@ -3,7 +3,10 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.Mutations;
 using Microsoft.EntityFrameworkCore;
+using EventSequenceMutationCoverage = Cratis.Chronicle.Storage.EventSequences.Mutations.EventSequenceMutationCoverage;
+using EventSequenceMutationOrdinal = Cratis.Chronicle.Concepts.EventSequences.Mutations.EventSequenceMutationOrdinal;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
@@ -69,6 +72,16 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<EventSequences.EventSequenceState> EventSequences { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the event sequence mutation heads DbSet.
+    /// </summary>
+    public DbSet<EventSequenceMutationHeadEntry> EventSequenceMutationHeads { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the event sequence mutation history DbSet.
+    /// </summary>
+    public DbSet<EventSequenceMutationHistoryEntry> EventSequenceMutationHistory { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the event seeding data DbSet.
     /// </summary>
     public DbSet<Seeding.EventSeedsEntity> EventSeeds { get; set; } = null!;
@@ -108,6 +121,44 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             {
                 entity.ToTable(WellKnownTableNames.BehaviorPatterns);
                 entity.HasKey(e => new { e.GroupingKey, e.FacetSetHash });
+            })
+            .Entity<EventSequenceMutationHeadEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.EventSequenceMutationHeads);
+                entity.HasKey(e => e.EventSequenceId);
+                entity.Property(e => e.EventSequenceId).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Coverage).HasDefaultValue(EventSequenceMutationCoverage.Untracked).IsRequired();
+                entity.Property(e => e.LastAssignedOrdinal).HasDefaultValue(EventSequenceMutationOrdinal.NotSet).IsRequired();
+                entity.Property(e => e.ActiveMutationId).IsRequired(false);
+                entity.Property(e => e.ActiveOrdinal).IsRequired(false);
+                entity.Property(e => e.ActiveOriginSequence).HasMaxLength(200).IsRequired(false);
+                entity.Property(e => e.ActiveOriginSequenceNumber).IsRequired(false);
+                entity.Property(e => e.ActiveKind).IsRequired(false);
+                entity.Property(e => e.ActiveCommandPayload).IsRequired(false);
+                entity.Property(e => e.ActiveCommandHash).HasMaxLength(64).IsRequired(false);
+                entity.Property(e => e.ActiveTargetStart).IsRequired(false);
+                entity.Property(e => e.ActiveTargetEndExclusive).IsRequired(false);
+                entity.Property(e => e.ActiveTargetExpectedCount).IsRequired(false);
+                entity.Property(e => e.ActivePhase).IsRequired(false);
+                entity.Property(e => e.ActiveBlockedFrom).IsRequired(false);
+                entity.Property(e => e.ActiveRepairState).IsRequired(false);
+            })
+            .Entity<EventSequenceMutationHistoryEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.EventSequenceMutationHistory);
+                entity.HasKey(e => new { e.EventSequenceId, e.Ordinal });
+                entity.HasIndex(e => e.MutationId).IsUnique();
+                entity.Property(e => e.EventSequenceId).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Ordinal).IsRequired();
+                entity.Property(e => e.MutationId).IsRequired();
+                entity.Property(e => e.OriginSequence).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.OriginSequenceNumber).IsRequired();
+                entity.Property(e => e.Kind).IsRequired();
+                entity.Property(e => e.CommandHash).HasMaxLength(64).IsRequired();
+                entity.Property(e => e.TargetStart).IsRequired();
+                entity.Property(e => e.TargetEndExclusive).IsRequired();
+                entity.Property(e => e.TargetExpectedCount).IsRequired();
+                entity.Property(e => e.RepairState).IsRequired();
             });
 
         // Match the column mappings to the provider-native JSON type the migrations create
