@@ -27,6 +27,10 @@ export interface EventTooltipProps {
  * There is one tooltip for the whole track rather than one per bubble - a busy instance draws well
  * over a hundred bubbles, and it is only ever pointing at one of them. It anchors to the hovered
  * bubble so the arrow comes out of that point.
+ *
+ * It has to clear the dialog it belongs to: the tooltip's own layering puts it at 1001, behind the
+ * dialog's backdrop at 1100 - behind the very dialog it describes. The stylesheet overrides that;
+ * see the note there for why it cannot be done through the component's props.
  * @param props The {@link EventTooltipProps}.
  * @returns The rendered tooltip.
  */
@@ -40,8 +44,14 @@ export const EventTooltip = ({ event, anchor, position, total }: EventTooltipPro
     return (
         <Tooltip.Root open={isOpen} anchor={anchor ?? undefined} openDelay={0} closeDelay={0}>
             <Tooltip.Portal>
-                <Tooltip.Positioner side='top' align='center' sideOffset={10}>
-                    <Tooltip.Popup>
+                <Tooltip.Positioner
+                    className='time-scrubber__hover-positioner'
+                    side='top'
+                    align='center'
+                    sideOffset={10}
+                    shift
+                    flip>
+                    <Tooltip.Popup className='time-scrubber__hover-popup'>
                         <Tooltip.Arrow />
                         {event && (
                             <div className='time-scrubber__hover'>

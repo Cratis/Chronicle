@@ -144,27 +144,52 @@
     outline: none;
 }
 
+/*
+ * Above the dialog's backdrop, which sits at 1100. The positioner writes its own z-index of 1001 as an
+ * inline style and honours neither `autoZIndex={false}` nor `baseZIndex`, so a declaration is the only
+ * thing that can outrank it. Scoped to this tooltip, so no other overlay's layering moves.
+ */
+.time-scrubber__hover-positioner {
+    z-index: 1200 !important;
+}
+
+/*
+ * Against a bubble near the end of the track there is little room on that side, and the positioner's
+ * answer is to cap the popup's width to whatever fits - which cuts a long event name in half. It is
+ * told to shift inward instead, so the width follows the name rather than the bubble's position, and
+ * this is the only cap left.
+ */
+.time-scrubber__hover-popup {
+    max-width: min(24rem, calc(100vw - 2rem));
+}
+
 /* The hover that describes one event. A little smaller than body copy - it is a glance, not a document. */
 .time-scrubber__hover {
-    max-width: 24rem;
+    min-width: 0;
     font-size: 0.9rem;
     line-height: 1.45;
 }
 
+/*
+ * The event name sets the width. It is a single unbroken identifier with nowhere to wrap, so letting it
+ * wrap just overflows - the properties below it give way instead.
+ */
 .time-scrubber__hover-title {
     color: var(--cratis-primary-300, #7dd3fc);
     font-size: 0.95rem;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .time-scrubber__hover-meta {
     opacity: 0.7;
     font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .time-scrubber__hover-properties {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 0.1rem 0.6rem;
     margin: 0.4rem 0 0;
     padding-top: 0.35rem;
