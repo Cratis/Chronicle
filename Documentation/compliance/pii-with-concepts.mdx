@@ -12,11 +12,11 @@ This page covers the **property type** path — Chronicle resolves `[PII]` throu
 | Path | C# | Kotlin/Java | TypeScript | Elixir |
 |---|---|---|---|---|
 | Property | yes | yes | yes | yes |
-| Declaring type | yes | no | no | no |
-| Property type (concept) | yes | yes | yes | no |
-| Constructor parameter | yes | partial | no | n/a |
+| Declaring type | yes | yes | yes | no |
+| Property type (concept) | yes | yes | yes | yes |
+| Constructor parameter | yes | yes | no | n/a |
 
-Kotlin/Java and TypeScript both have a `ConceptAs<T>` equivalent and already resolve a `@Pii`/`@pii()` marker on that type, so the pattern on this page ports directly — see [Marking data as PII](./pii) for the full path table. Elixir has no concept construct, so there is no idiomatic way to port a concept-level declaration there; mark the field directly with `pii/1,2` instead (see [Applying to an event property](./pii#applying-to-an-event-property)). The declaring-type and constructor-parameter paths remain C#-only — open defects in the non-C# clients, not deliberate design choices.
+**Every client supports the pattern on this page.** C#, Kotlin/Java and TypeScript each have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`, which serializes as the value it wraps in the same way. Declare the marker once on the concept and every event and read model property using that type is encrypted — see [Marking data as PII](./pii) for the full path table and the two remaining gaps.
 :::
 
 > [!TIP]

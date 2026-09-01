@@ -16,11 +16,15 @@ Chronicle resolves `[PII]` on a property through four paths, checked in this ord
 | Path | C# | Kotlin/Java | TypeScript | Elixir |
 |---|---|---|---|---|
 | Property | yes | yes | yes | yes |
-| Declaring type | yes | no | no | no |
-| Property type (concept) | yes | yes | yes | no |
-| Constructor parameter | yes | partial | no | n/a |
+| Declaring type | yes | yes | yes | no |
+| Property type (concept) | yes | yes | yes | yes |
+| Constructor parameter | yes | yes | no | n/a |
 
-Every client covers the **property** path — that's what the tabs on this page show. Kotlin/Java and TypeScript also resolve a marker on the property's **concept type** (`ConceptAs<T>` or its client equivalent), matching C#'s preferred approach — see [Declaring PII on a concept](pii-with-concepts). Elixir has no concept construct, so that path does not apply there. The **declaring type** and **constructor parameter** paths remain C#-only: Kotlin/Java reaches a constructor parameter only when it is also declared as a property (`val`/`var`), and no other client cascades a class-level marker onto its sibling properties. These are open defects in the non-C# clients, not deliberate design choices.
+Every client covers the **property** path, and every client resolves a marker on the property's **concept type** — declare it once on the concept and every event and read model using that type is covered. That is the preferred approach; see [Declaring PII on a concept](pii-with-concepts).
+
+Two gaps remain. Elixir has no way to mark a whole multi-field struct as PII in one declaration — a concept wraps a single value, so mark the fields you need. And the TypeScript decorator does not read a constructor parameter, which matters only for classes that take their values positionally rather than as declared properties.
+
+Whichever path applies, the marker lands on the individual **leaf** values in the schema, not on the object that contains them — so a concept nested inside a value object is still encrypted, and the document keeps its shape on release.
 :::
 
 ## Marker signatures
