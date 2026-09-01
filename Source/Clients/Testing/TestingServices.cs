@@ -30,6 +30,7 @@ using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Traces;
 using Cratis.Types;
 using Microsoft.Extensions.Options;
@@ -39,7 +40,6 @@ using KernelCapturesService = KernelCore::Cratis.Chronicle.Services.Captures.Cap
 using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.CaptureValidator;
 using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
-using KernelEventCompliance = KernelCore::Cratis.Chronicle.Events.EventCompliance;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
 using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
@@ -49,8 +49,6 @@ using KernelFacetVocabulary = KernelCore::Cratis.Chronicle.Patterns.FacetVocabul
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
 using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
-using KernelJsonComplianceManager = KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager;
-using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler;
 using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
 using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
@@ -60,7 +58,6 @@ using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projectio
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
 using KernelReactorsService = KernelCore::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
-using KernelReadModelsCompliance = KernelCore::Cratis.Chronicle.ReadModels.ReadModelsCompliance;
 using KernelReadModelsService = KernelCore::Cratis.Chronicle.Services.ReadModels.ReadModels;
 using KernelRecommendationsService = KernelCore::Cratis.Chronicle.Services.Recommendations.Recommendations;
 using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
@@ -85,10 +82,12 @@ namespace Cratis.Chronicle.Testing;
 /// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for grain-based operations.</param>
 /// <param name="storage">The <see cref="IStorage"/> backed by in-memory implementations.</param>
+/// <param name="compliance">The <see cref="InProcessCompliance"/> shared by every collaborator in the scenario.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
 internal sealed class TestingServices(
     IGrainFactory grainFactory,
     IStorage storage,
+    InProcessCompliance compliance,
     JsonSerializerOptions jsonSerializerOptions) : IServices
 {
     readonly Lazy<IObservers> _observers = new(() =>
@@ -158,9 +157,7 @@ internal sealed class TestingServices(
         new KernelEventSequencesService(
             grainFactory,
             storage,
-            new KernelEventCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                new ExpandoObjectConverter(new TypeFormats())),
+            compliance.CreateEventCompliance(),
             jsonSerializerOptions));
 
     readonly Lazy<INamespaces> _namespaces = new(() =>
@@ -213,23 +210,17 @@ internal sealed class TestingServices(
             // Live read-model watching is not supported by the in-process scenario harness (grain and
             // object-reference lookups throw NotSupportedException), so no local silo details are needed.
             null!,
-            new KernelReadModelsCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                new ExpandoObjectConverter(new TypeFormats())),
-            new KernelEventCompliance(
-                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                new ExpandoObjectConverter(new TypeFormats())),
+            compliance.CreateReadModelsCompliance(),
+            compliance.CreateEventCompliance(),
             new KernelMaterializedReadModelStore(
                 storage,
-                new KernelReadModelsCompliance(
-                    new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                    new ExpandoObjectConverter(new TypeFormats()))),
+                compliance.CreateReadModelsCompliance()),
             jsonSerializerOptions));
 
     readonly Lazy<ICompliance> _compliance = new(() =>
         new KernelComplianceService(
             grainFactory,
-            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
+            compliance.Manager,
             NullLogger<KernelComplianceService>.Instance));
 
     /// <inheritdoc/>

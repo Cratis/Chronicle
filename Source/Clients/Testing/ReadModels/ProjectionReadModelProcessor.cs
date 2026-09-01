@@ -81,6 +81,17 @@ internal static class ProjectionReadModelProcessor
     }
 
     /// <summary>
+    /// Gets a value indicating whether this processor runs Chronicle's compliance stack.
+    /// </summary>
+    /// <remarks>
+    /// The live projection pipeline runs <c>EncryptChangeset</c> before the sink and releases what it reads
+    /// back; the pipeline below runs neither, so a <c>[PII]</c> member is projected and read as plaintext.
+    /// Wire compliance in and flip this, and <see cref="SubstitutedLayers"/> stops reporting
+    /// <see cref="ReadModelSubstitutedLayer.Compliance"/>.
+    /// </remarks>
+    public static bool AppliesCompliance => false;
+
+    /// <summary>
     /// Processes the given events through the projection for <typeparamref name="TReadModel"/> and returns the resulting read model.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model produced by the projection.</typeparam>

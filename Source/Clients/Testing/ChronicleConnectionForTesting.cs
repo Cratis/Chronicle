@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Testing.Compliance;
 
 namespace Cratis.Chronicle.Testing;
 
@@ -13,13 +14,15 @@ namespace Cratis.Chronicle.Testing;
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for grain-based operations.</param>
 /// <param name="storage">The <see cref="IStorage"/> backed by in-memory implementations.</param>
+/// <param name="compliance">The <see cref="InProcessCompliance"/> shared by every collaborator in the scenario.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
 internal sealed class ChronicleConnectionForTesting(
     IGrainFactory grainFactory,
     IStorage storage,
+    InProcessCompliance compliance,
     JsonSerializerOptions jsonSerializerOptions) : IChronicleConnection, IChronicleServicesAccessor
 {
-    readonly TestingServices _services = new(grainFactory, storage, jsonSerializerOptions);
+    readonly TestingServices _services = new(grainFactory, storage, compliance, jsonSerializerOptions);
 
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; } = new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance);
