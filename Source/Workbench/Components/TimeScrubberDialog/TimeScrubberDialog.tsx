@@ -13,6 +13,7 @@ import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
 import { EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { EventBubbles } from './EventBubbles';
+import { ReadModelSnapshotGrouping } from './ReadModelSnapshotGrouping';
 import { flattenSnapshots } from './flattenSnapshots';
 import './TimeScrubberDialog.css';
 
@@ -29,10 +30,10 @@ export interface TimeScrubberDialogProps {
 /**
  * Scrubs a read model instance through its own history.
  *
- * It reads the same snapshots the Time Machine does, so both dialogs describe an instance from one
- * source, and renders them with the same renderer, so a value looks the same wherever it is read.
- * The snapshots are flattened into one bubble per event: hovering one says what happened, and moving
- * the scrubber shows the read model as it stood once that event's snapshot had been applied.
+ * It reads the same snapshots the Time Machine does and renders them with the same renderer, so both
+ * dialogs describe an instance from one source and a value looks the same wherever it is read. It
+ * asks for them per event rather than per correlation, though: the Time Machine shows what each
+ * action did, while scrubbing moves one event at a time, so every step moves the read model.
  * @param props The {@link TimeScrubberDialogProps}.
  * @returns The rendered dialog.
  */
@@ -45,7 +46,8 @@ export const TimeScrubberDialog = ({ readModel, readModelKey }: TimeScrubberDial
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         readModel: readModel.identifier,
-        readModelKey
+        readModelKey,
+        grouping: ReadModelSnapshotGrouping.Event
     });
 
     const steps = useMemo(() => flattenSnapshots(snapshots.data ?? []), [snapshots.data]);
