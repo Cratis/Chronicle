@@ -38,9 +38,9 @@ Chronicle supports two complementary approaches for marking data as personally i
 | `[PII]` on an event property | The property is a primitive type or an untyped value that holds personal data in a specific event. |
 | `[PII]` on a `ConceptAs<T>` type | The concept itself is inherently personal — any use of this type anywhere in any event is PII by definition. |
 
-The `ConceptAs<T>` approach is the preferred one. It is declared once and applies everywhere the type is used, so there is no risk of forgetting to mark a property in a future event. See [Applying PII to ConceptAs types](pii-with-concepts) for details.
+The `ConceptAs<T>` approach is the preferred one. It is declared once and applies everywhere the type is used, so there is no risk of forgetting to mark a property in a future event. See [Declaring PII on a concept](pii-with-concepts) for details.
 
-For a full description of the `[PII]` attribute and its rules, see [PII Attribute](pii).
+For a full description of the `[PII]` marker and its rules, see [Marking data as PII](pii).
 
 ## Event source identifiers cannot be encrypted
 
@@ -52,8 +52,8 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the 
 
 | Topic | Description |
 |---|---|
-| [PII Attribute](pii) | The `[PII]` attribute — rules, usage, and constraints |
-| [Applying PII to ConceptAs types](pii-with-concepts) | How to mark domain value types as PII once and apply everywhere |
+| [Marking data as PII](pii) | The `[PII]` marker — rules, usage, and constraints |
+| [Declaring PII on a concept](pii-with-concepts) | How to mark domain value types as PII once and apply everywhere |
 | [Working with compliance from the client](client) | How to annotate events and ConceptAs types in your .NET client code |
 | [Read models and PII](read-models) | How PII encryption affects projections, reducers, and read model queries |
 | [Erasing a subject](erasing-a-subject.md) | What one erasure reaches, and how to erase across every event store |

@@ -1,8 +1,8 @@
 - name: Overview
   href: index.md
-- name: PII Attribute
+- name: Marking data as PII
   href: pii.mdx
-- name: Applying PII to ConceptAs types
+- name: Declaring PII on a concept
   href: pii-with-concepts.mdx
 - name: Working with compliance from the client
   href: client.mdx
