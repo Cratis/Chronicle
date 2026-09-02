@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations;
 /// <param name="CommandHash">The hash of the mutation command.</param>
 /// <param name="Target">The event sequence range targeted by the mutation.</param>
 /// <param name="RepairState">The terminal repair state of the mutation.</param>
+/// <param name="TerminalWitness">The terminal cryptographic witness.</param>
 public sealed record EventSequenceMutationHistoryEntry(
     EventSequenceMutationId MutationId,
     EventSequenceId EventSequenceId,
@@ -26,4 +27,5 @@ public sealed record EventSequenceMutationHistoryEntry(
     EventSequenceMutationKind Kind,
     EventSequenceMutationCommandHash CommandHash,
     EventSequenceMutationTarget Target,
-    EventSequenceMutationRepairState RepairState);
+    EventSequenceMutationRepairState RepairState,
+    EventSequenceMutationTerminalWitness TerminalWitness);

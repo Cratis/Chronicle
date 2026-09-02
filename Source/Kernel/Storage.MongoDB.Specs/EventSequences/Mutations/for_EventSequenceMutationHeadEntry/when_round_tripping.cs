@@ -16,19 +16,31 @@ public class when_round_tripping : Specification
     EventSequenceMutationHeadEntry _roundTripped;
     BsonDocument _document;
 
-    void Establish() => _entry = new(
-        EventSequenceId.Log,
-        EventSequenceMutationCoverage.Sealed,
-        new EventSequenceMutationOrdinal(42L),
-        new EventSequenceMutation(
-            new EventSequenceMutationId(Guid.NewGuid()),
+    void Establish()
+    {
+        var scope = new EventSequenceKey(EventSequenceId.Log, "event-store", "namespace");
+        var targetIdentity = EventSequenceMutationIdentity.TryCreate(EventSequenceId.Log.Value).Identity!;
+        var originIdentity = EventSequenceMutationIdentity.TryCreate(EventSequenceId.System.Value).Identity!;
+        var request = new EventSequenceMutationRequest(
+            Guid.NewGuid(),
+            targetIdentity,
+            new(originIdentity, EventSequenceNumber.First),
+            EventSequenceMutationKind.Revision,
+            new("payload", "command-hash"));
+        var target = new EventSequenceMutationTarget(EventSequenceNumber.First, new EventSequenceNumber(1UL), 1);
+        var definition = EventSequenceMutationDefinition.Create(scope, request, target);
+        _entry = new(
+            EventSequenceId.Log,
+            EventSequenceMutationCoverage.Sealed,
             new EventSequenceMutationOrdinal(42L),
-            new EventSequenceMutationOrigin(EventSequenceId.System, EventSequenceNumber.First),
-            new EventSequenceMutationCommandEnvelope(EventSequenceMutationKind.Revision, "payload", "command-hash"),
-            new EventSequenceMutationTarget(EventSequenceNumber.First, new EventSequenceNumber(2UL), 1),
-            EventSequenceMutationPhase.Applying,
-            EventSequenceMutationPhase.None,
-            EventSequenceMutationRepairState.Pending));
+            new(
+                definition,
+                new EventSequenceMutationOrdinal(42L),
+                EventSequenceMutationStateVersion.First,
+                EventSequenceMutationPhase.Applying,
+                EventSequenceMutationPhase.None,
+                EventSequenceMutationRepairState.Unspecified));
+    }
 
     void Because()
     {

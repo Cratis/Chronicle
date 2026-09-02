@@ -6,22 +6,49 @@ using Cratis.Chronicle.Concepts.EventSequences.Mutations;
 namespace Cratis.Chronicle.Storage.EventSequences.Mutations;
 
 /// <summary>
-/// Represents the persisted state of an event sequence mutation.
+/// Represents the persisted active state of an event sequence mutation.
 /// </summary>
-/// <param name="Id">The unique mutation identifier.</param>
-/// <param name="Ordinal">The ordinal assigned to the mutation.</param>
-/// <param name="Origin">The event that originated the mutation.</param>
-/// <param name="Command">The persisted mutation command.</param>
-/// <param name="Target">The event sequence range targeted by the mutation.</param>
+/// <param name="Definition">The registered mutation definition.</param>
+/// <param name="Ordinal">The positive ordinal assigned to the mutation.</param>
+/// <param name="StateVersion">The positive state version.</param>
 /// <param name="Phase">The current mutation phase.</param>
 /// <param name="BlockedFrom">The phase from which the mutation became blocked.</param>
 /// <param name="RepairState">The repair state of the mutation.</param>
 public sealed record EventSequenceMutation(
-    EventSequenceMutationId Id,
+    EventSequenceMutationDefinition Definition,
     EventSequenceMutationOrdinal Ordinal,
-    EventSequenceMutationOrigin Origin,
-    EventSequenceMutationCommandEnvelope Command,
-    EventSequenceMutationTarget Target,
+    EventSequenceMutationStateVersion StateVersion,
     EventSequenceMutationPhase Phase,
     EventSequenceMutationPhase BlockedFrom,
-    EventSequenceMutationRepairState RepairState);
+    EventSequenceMutationRepairState RepairState)
+{
+    /// <summary>
+    /// Gets the mutation identifier.
+    /// </summary>
+    public EventSequenceMutationId Id => Definition.Request.Id;
+
+    /// <summary>
+    /// Gets the target sequence identity.
+    /// </summary>
+    public EventSequenceMutationIdentity TargetSequence => Definition.Request.TargetSequence;
+
+    /// <summary>
+    /// Gets the originating event.
+    /// </summary>
+    public EventSequenceMutationOrigin Origin => Definition.Request.Origin;
+
+    /// <summary>
+    /// Gets the mutation kind.
+    /// </summary>
+    public EventSequenceMutationKind Kind => Definition.Request.Kind;
+
+    /// <summary>
+    /// Gets the mutation command envelope.
+    /// </summary>
+    public EventSequenceMutationCommandEnvelope Command => Definition.Request.Command;
+
+    /// <summary>
+    /// Gets the frozen target.
+    /// </summary>
+    public EventSequenceMutationTarget Target => Definition.Target;
+}

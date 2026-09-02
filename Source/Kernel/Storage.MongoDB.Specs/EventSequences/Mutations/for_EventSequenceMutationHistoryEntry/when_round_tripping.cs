@@ -16,15 +16,21 @@ public class when_round_tripping : Specification
     EventSequenceMutationHistoryEntry _roundTripped;
     BsonDocument _document;
 
-    void Establish() => _entry = new(
-        new EventSequenceMutationId(Guid.NewGuid()),
-        EventSequenceId.Log,
-        new EventSequenceMutationOrdinal(42L),
-        new EventSequenceMutationOrigin(EventSequenceId.System, EventSequenceNumber.First),
-        EventSequenceMutationKind.Revision,
-        new EventSequenceMutationCommandHash("command-hash"),
-        new EventSequenceMutationTarget(EventSequenceNumber.First, new EventSequenceNumber(2UL), 1),
-        EventSequenceMutationRepairState.Accepted);
+    void Establish()
+    {
+        var definitionDigest = new EventSequenceMutationDefinitionDigestV1(new byte[32]);
+        var receiptDigest = new EventSequenceMutationReceiptDigestV1(Enumerable.Repeat((byte)1, 32).ToArray());
+        _entry = new(
+            new EventSequenceMutationId(Guid.NewGuid()),
+            EventSequenceId.Log,
+            new EventSequenceMutationOrdinal(42L),
+            new EventSequenceMutationOrigin(EventSequenceMutationIdentity.TryCreate(EventSequenceId.System.Value).Identity!, EventSequenceNumber.First),
+            EventSequenceMutationKind.Revision,
+            new EventSequenceMutationCommandHash("command-hash"),
+            new EventSequenceMutationTarget(EventSequenceNumber.First, new EventSequenceNumber(1UL), 1),
+            EventSequenceMutationRepairState.Accepted,
+            new(EventSequenceMutationStateVersion.First, definitionDigest, receiptDigest));
+    }
 
     void Because()
     {
@@ -41,6 +47,7 @@ public class when_round_tripping : Specification
     [Fact] void should_use_camel_case_for_the_command_hash() => _document.Contains("commandHash").ShouldBeTrue();
     [Fact] void should_use_camel_case_for_the_target() => _document.Contains("target").ShouldBeTrue();
     [Fact] void should_use_camel_case_for_the_repair_state() => _document.Contains("repairState").ShouldBeTrue();
+    [Fact] void should_use_camel_case_for_the_terminal_witness() => _document.Contains("terminalWitness").ShouldBeTrue();
     [Fact] void should_store_the_ordinal_as_int64() => _document["ordinal"].IsInt64.ShouldBeTrue();
     [Fact] void should_not_write_a_discriminator() => _document.Contains("_t").ShouldBeFalse();
     [Fact] void should_not_persist_a_command_payload() => _document.ToJson().Contains("\"payload\"", StringComparison.Ordinal).ShouldBeFalse();

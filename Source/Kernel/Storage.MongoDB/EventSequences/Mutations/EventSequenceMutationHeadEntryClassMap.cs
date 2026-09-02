@@ -16,6 +16,7 @@ public class EventSequenceMutationHeadEntryClassMap : IBsonClassMapFor<EventSequ
     /// <inheritdoc/>
     public void Configure(BsonClassMap<EventSequenceMutationHeadEntry> classMap)
     {
+        EventSequenceMutationBsonSerialization.Register();
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.EventSequenceId);
         classMap.MapProperty(_ => _.Coverage).SetDefaultValue(EventSequenceMutationCoverage.Untracked);

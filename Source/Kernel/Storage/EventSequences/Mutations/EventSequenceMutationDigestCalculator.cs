@@ -56,23 +56,34 @@ public static class EventSequenceMutationDigestCalculator
     /// <param name="mutation">The mutation definition.</param>
     /// <returns>The version 1 definition digest.</returns>
     /// <exception cref="UnsupportedEventSequenceId">Thrown when the target or origin event sequence identifier is unsupported.</exception>
-    public static EventSequenceMutationDefinitionDigestV1 CalculateDefinitionDigest(EventSequenceKey scope, EventSequenceMutation mutation)
+    public static EventSequenceMutationDefinitionDigestV1 CalculateDefinitionDigest(EventSequenceKey scope, EventSequenceMutation mutation) =>
+        CalculateDefinitionDigest(scope, mutation.Definition.Request, mutation.Definition.Target);
+
+    /// <summary>
+    /// Calculates the version 1 definition digest for a request and its winning frozen target.
+    /// </summary>
+    /// <param name="scope">The target event sequence scope.</param>
+    /// <param name="request">The immutable mutation request.</param>
+    /// <param name="target">The winning frozen target.</param>
+    /// <returns>The version 1 definition digest.</returns>
+    public static EventSequenceMutationDefinitionDigestV1 CalculateDefinitionDigest(
+        EventSequenceKey scope,
+        EventSequenceMutationRequest request,
+        EventSequenceMutationTarget target)
     {
-        var targetIdentity = GetIdentity(scope.EventSequenceId.Value);
-        var originIdentity = GetIdentity(mutation.Origin.Sequence.Value);
         var frame = new CanonicalFrameWriter(_definitionDomain);
         frame.WriteText("eventStore", scope.EventStore.Value);
         frame.WriteText("namespace", scope.Namespace.Value);
-        frame.WriteText("targetSequence", targetIdentity);
-        frame.WriteGuid(mutation.Id.Value);
-        frame.WriteText("originSequence", originIdentity);
-        frame.WriteUInt64(mutation.Origin.SequenceNumber.Value);
-        frame.WriteInt32((int)mutation.Command.Kind);
-        frame.WriteText("commandPayload", mutation.Command.Payload);
-        frame.WriteText("commandHash", mutation.Command.Hash.Value);
-        frame.WriteUInt64(mutation.Target.Start.Value);
-        frame.WriteUInt64(mutation.Target.EndExclusive.Value);
-        frame.WriteUInt64(mutation.Target.ExpectedCount.Value);
+        frame.WriteText("targetSequence", request.TargetSequence);
+        frame.WriteGuid(request.Id.Value);
+        frame.WriteText("originSequence", request.Origin.Sequence);
+        frame.WriteUInt64(request.Origin.SequenceNumber.Value);
+        frame.WriteInt32((int)request.Kind);
+        frame.WriteText("commandPayload", request.Command.Payload);
+        frame.WriteText("commandHash", request.Command.Hash.Value);
+        frame.WriteUInt64(target.Start.Value);
+        frame.WriteUInt64(target.EndExclusive.Value);
+        frame.WriteUInt64(target.ExpectedCount.Value);
 
         return new(SHA256.HashData(frame.WrittenSpan));
     }
@@ -93,14 +104,13 @@ public static class EventSequenceMutationDigestCalculator
         EventSequenceMutationDefinitionDigestV1 definitionDigest)
     {
         var targetIdentity = GetIdentity(scope.EventSequenceId.Value);
-        var originIdentity = GetIdentity(receipt.Origin.Sequence.Value);
         var frame = new CanonicalFrameWriter(_receiptDomain);
         frame.WriteText("eventStore", scope.EventStore.Value);
         frame.WriteText("namespace", scope.Namespace.Value);
         frame.WriteText("targetSequence", targetIdentity);
         frame.WriteGuid(receipt.Id.Value);
         frame.WriteInt64(receipt.Ordinal.Value);
-        frame.WriteText("originSequence", originIdentity);
+        frame.WriteText("originSequence", receipt.Origin.Sequence);
         frame.WriteUInt64(receipt.Origin.SequenceNumber.Value);
         frame.WriteInt32((int)receipt.Kind);
         frame.WriteText("commandHash", receipt.CommandHash.Value);

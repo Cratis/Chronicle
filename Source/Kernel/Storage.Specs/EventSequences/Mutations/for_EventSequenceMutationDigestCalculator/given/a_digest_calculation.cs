@@ -17,25 +17,32 @@ public class a_digest_calculation : Specification
     void Establish()
     {
         _scope = new("event-log", "store", "default");
-        _mutation = new(
+        var request = new EventSequenceMutationRequest(
             Guid.Parse("00112233-4455-6677-8899-aabbccddeeff"),
+            EventSequenceMutationIdentity.TryCreate("event-log").Identity!,
+            new(EventSequenceMutationIdentity.TryCreate("system").Identity!, 1UL),
+            EventSequenceMutationKind.Revision,
+            new("{\"name\":\"Ada\"}", "same-hash"));
+        var target = new EventSequenceMutationTarget(10UL, 13UL, 3UL);
+        var definition = EventSequenceMutationDefinition.Create(_scope, request, target);
+        _mutation = new(
+            definition,
             42L,
-            new("system", 1UL),
-            new(EventSequenceMutationKind.Revision, "{\"name\":\"Ada\"}", "same-hash"),
-            new(10UL, 13UL, 3UL),
+            1L,
             EventSequenceMutationPhase.Reserved,
             EventSequenceMutationPhase.None,
             EventSequenceMutationRepairState.Accepted);
+        _finalStateVersion = 7L;
+        _definitionDigest = definition.DefinitionDigestV1;
         _receipt = new(
             _mutation.Id,
             _mutation.Ordinal,
             _mutation.Origin,
-            _mutation.Command.Kind,
+            _mutation.Kind,
             _mutation.Command.Hash,
             _mutation.Target,
-            _mutation.RepairState);
-        _finalStateVersion = 7L;
-        _definitionDigest = EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(_scope, _mutation);
+            _mutation.RepairState,
+            new(_finalStateVersion, _definitionDigest, new(new byte[32])));
     }
 
     protected EventSequenceMutationDefinitionDigestV1 CalculateDefinition(EventSequenceKey? scope = null, EventSequenceMutation? mutation = null) =>

@@ -20,7 +20,7 @@ public class when_changing_each_receipt_field : given.a_digest_calculation
             CalculateReceipt(scope: _scope with { EventSequenceId = "another-target" }),
             CalculateReceipt(receipt: _receipt with { Id = Guid.Parse("10112233-4455-6677-8899-aabbccddeeff") }),
             CalculateReceipt(receipt: _receipt with { Ordinal = 43L }),
-            CalculateReceipt(receipt: _receipt with { Origin = _receipt.Origin with { Sequence = "another-origin" } }),
+            CalculateReceipt(receipt: _receipt with { Origin = _receipt.Origin with { Sequence = EventSequenceMutationIdentity.TryCreate("another-origin").Identity! } }),
             CalculateReceipt(receipt: _receipt with { Origin = _receipt.Origin with { SequenceNumber = 2UL } }),
             CalculateReceipt(receipt: _receipt with { Kind = EventSequenceMutationKind.PointRedaction }),
             CalculateReceipt(receipt: _receipt with { CommandHash = "another-hash" }),

@@ -21,6 +21,14 @@ public class when_checking_persisted_structure : Specification
                 (nameof(EventSequenceMutationHistoryEntry.Kind), typeof(EventSequenceMutationKind)),
                 (nameof(EventSequenceMutationHistoryEntry.CommandHash), typeof(EventSequenceMutationCommandHash)),
                 (nameof(EventSequenceMutationHistoryEntry.Target), typeof(EventSequenceMutationTarget)),
-                (nameof(EventSequenceMutationHistoryEntry.RepairState), typeof(EventSequenceMutationRepairState))
+                (nameof(EventSequenceMutationHistoryEntry.RepairState), typeof(EventSequenceMutationRepairState)),
+                (nameof(EventSequenceMutationHistoryEntry.TerminalWitness), typeof(EventSequenceMutationTerminalWitness))
             ]);
+    [Fact] void should_not_contain_payload() => HasPropertyContaining("payload").ShouldBeFalse();
+    [Fact] void should_not_contain_audit_data() => HasPropertyContaining("audit").ShouldBeFalse();
+    [Fact] void should_not_contain_content() => HasPropertyContaining("content").ShouldBeFalse();
+    [Fact] void should_not_contain_schema() => HasPropertyContaining("schema").ShouldBeFalse();
+    [Fact] void should_not_contain_selector() => HasPropertyContaining("selector").ShouldBeFalse();
+
+    bool HasPropertyContaining(string value) => _properties.Any(_ => _.Name.Contains(value, StringComparison.OrdinalIgnoreCase));
 }

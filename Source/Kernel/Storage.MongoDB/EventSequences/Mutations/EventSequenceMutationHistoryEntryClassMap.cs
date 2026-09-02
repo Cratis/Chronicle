@@ -14,6 +14,7 @@ public class EventSequenceMutationHistoryEntryClassMap : IBsonClassMapFor<EventS
     /// <inheritdoc/>
     public void Configure(BsonClassMap<EventSequenceMutationHistoryEntry> classMap)
     {
+        EventSequenceMutationBsonSerialization.Register();
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.MutationId);
     }
