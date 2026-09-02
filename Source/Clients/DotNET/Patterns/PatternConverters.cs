@@ -16,7 +16,7 @@ public static class PatternConverters
     /// </summary>
     /// <param name="patterns">The patterns to convert.</param>
     /// <returns>The converted <see cref="BehaviorPattern">patterns</see>.</returns>
-    public static IEnumerable<BehaviorPattern> ToClient(this IEnumerable<Contract.Pattern> patterns) =>
+    public static IEnumerable<BehaviorPattern> ToClient(this IEnumerable<Contract.BehaviorPatternDetailsResponse> patterns) =>
         [.. patterns.Select(pattern => pattern.ToClient())];
 
     /// <summary>
@@ -24,7 +24,11 @@ public static class PatternConverters
     /// </summary>
     /// <param name="pattern">The pattern to convert.</param>
     /// <returns>The converted <see cref="BehaviorPattern"/>.</returns>
-    public static BehaviorPattern ToClient(this Contract.Pattern pattern) => new(
+    /// <remarks>
+    /// The response carries an <c>Id</c> and a <c>Specificity</c> that the client type derives rather than stores -
+    /// the identity is the scope and facets it already holds, and specificity is how many facets that is.
+    /// </remarks>
+    public static BehaviorPattern ToClient(this Contract.BehaviorPatternDetailsResponse pattern) => new(
         pattern.GroupingKey,
         new FacetSet(pattern.Facets.Select(facet => new Facet(new FacetName(facet.Key), new FacetValue(facet.Value)))),
         pattern.Occurrences,

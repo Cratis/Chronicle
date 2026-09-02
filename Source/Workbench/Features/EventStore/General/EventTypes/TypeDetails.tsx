@@ -5,10 +5,11 @@ import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { SchemaEditor } from '@cratis/components/SchemaEditor';
 import type { JsonSchema } from '@cratis/components/types';
-import { AllTypeFormats } from 'Api/TypeFormats';
-import { EventTypeRegistration, EventTypeSource } from 'Api/Events';
-import { Register } from 'Api/Events';
-import { AllEventTypeGenerations } from 'Api/EventTypes/AllEventTypeGenerations';
+import { AllTypeFormats } from 'Features/Schemas';
+import { EventTypeSource } from 'Features/Contracts/Events';
+import { EventTypeDetails } from 'Features/EventTypes';
+import { RegisterEventTypes } from 'Features/EventTypes';
+import { AllEventTypeGenerations } from 'Features/EventTypes';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { Tabs, TabPanel } from 'Components/Tabs';
 import { useParams } from 'react-router-dom';
@@ -19,15 +20,15 @@ import strings from 'Strings';
 interface GenerationOption {
     label: string;
     value: number;
-    registration: EventTypeRegistration;
+    registration: EventTypeDetails;
 }
 
-export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>) => {
+export const TypeDetails = (props: IDetailsComponentProps<EventTypeDetails>) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [schema, setSchema] = useState<JsonSchema>(() => JSON.parse(props.item.schema));
     const [selectedGeneration, setSelectedGeneration] = useState<number>(props.item.type.generation);
-    const [currentRegistration, setCurrentRegistration] = useState<EventTypeRegistration>(props.item);
-    const [register] = Register.use();
+    const [currentRegistration, setCurrentRegistration] = useState<EventTypeDetails>(props.item);
+    const [register] = RegisterEventTypes.use();
     const [generationsQuery, performGenerationsQuery] = AllEventTypeGenerations.use({
         eventStore: params.eventStore!,
         eventTypeId: props.item.type.id
@@ -65,7 +66,10 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
             type: currentRegistration.type,
             owner: currentRegistration.owner,
             source: EventTypeSource.user,
-            schema: JSON.stringify(schema, null, 2)
+            schema: JSON.stringify(schema, null, 2),
+            generations: [],
+            migrations: [],
+            eventStore: params.eventStore!
         }];
 
         await register.execute();

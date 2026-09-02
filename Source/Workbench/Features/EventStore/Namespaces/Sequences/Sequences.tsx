@@ -11,11 +11,11 @@ import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { AllEventSequences } from 'Api/EventSequences/AllEventSequences';
-import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
-import { AllQueryFolders } from 'Api/SequenceQueries/AllQueryFolders';
-import { AllSequenceQueries } from 'Api/SequenceQueries/AllSequenceQueries';
-import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
+import { AllEventSequences } from 'Features/Sequences';
+import { AllEventTypes } from 'Features/EventTypes';
+import { AllQueryFolders } from 'Features/SequenceQueries';
+import { AllSequenceQueries } from 'Features/SequenceQueries';
+import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
 import { getDistinctEventTypeOptions } from './getDistinctEventTypeOptions';
 import { QueryEditor } from './QueryEditor/QueryEditor';
 import { SaveQueryDialog, SaveQueryDialogResponse } from './QueryEditor/SaveQueryDialog';
@@ -175,7 +175,7 @@ export const Sequences = () => {
                                                 state={query.state}
                                                 eventStore={eventStore}
                                                 eventTypeIds={eventTypeIds}
-                                                eventSequenceIds={eventSequences.data}
+                                                eventSequenceIds={eventSequences.data.map(eventSequence => eventSequence.name)}
                                                 hasUnsavedChanges={hasUnsavedChanges(query)}
                                                 onChange={state => update(index, state)}
                                                 onSave={() => save(query.state, query.saved === null)} />

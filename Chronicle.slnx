@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Solution>
     <Folder Name="/Source/Clients/">
-        <Project Path="Source/Clients/Api/Api.csproj" />
-        <Project Path="Source/Clients/Api.Specs/Api.Specs.csproj" />
         <Project Path="Source/Clients/Aspire/Aspire.csproj" />
         <Project Path="Source/Clients/Aspire.Specs/Aspire.Specs.csproj" />
         <Project Path="Source/Clients/AspNetCore/AspNetCore.csproj" />
@@ -17,16 +15,19 @@
         <Project Path="Source/Clients/Testing.Specs/Testing.Specs.csproj" />
         <Project Path="Source/Clients/Workbench/Workbench.csproj" />
         <Project Path="Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+        <Project Path="Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj" />
     </Folder>
     <Folder Name="/Source/Kernel/">
         <Project Path="Source/Kernel/Concepts/Concepts.csproj" />
         <Project Path="Source/Kernel/Concepts.Specs/Concepts.Specs.csproj" />
+        <Project Path="Source/Kernel/Compatibility/Compatibility.csproj" />
+        <Project Path="Source/Kernel/Compatibility.Specs/Compatibility.Specs.csproj" />
         <Project Path="Source/Kernel/Contracts/Contracts.csproj" />
         <Project Path="Source/Kernel/Core/Core.csproj" />
         <Project Path="Source/Kernel/Core.Specs/Core.Specs.csproj" />
+        <Project Path="Source/Kernel/Grpc/Grpc.csproj" />
         <Project Path="Source/Kernel/Server/Server.csproj" />
         <Project Path="Source/Kernel/Server.Specs/Server.Specs.csproj" />
-        <Project Path="Source/Kernel/Services.Specs/Services.Specs.csproj" />
         <Project Path="Source/Kernel/Storage/Storage.csproj" />
         <Project Path="Source/Kernel/Storage.AzureKeyVault/Storage.AzureKeyVault.csproj" />
         <Project Path="Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
@@ -48,6 +49,8 @@
         <Project Path="Source/Tools/ProtoGenerator/ProtoGenerator.csproj" />
         <Project Path="Source/Tools/ProtoGenerator.Specs/ProtoGenerator.Specs.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
+        <Project Path="Source/Tools/WireCompatibility/WireCompatibility.csproj" />
+        <Project Path="Source/Tools/WireCompatibility.Specs/WireCompatibility.Specs.csproj" />
     </Folder>
     <Folder Name="/Source/">
         <Project Path="Source/Infrastructure/Infrastructure.csproj" />

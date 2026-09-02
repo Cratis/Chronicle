@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -46,8 +45,7 @@ public class when_adding_webhook : Specification
 
     [Fact]
     void should_call_register_on_services_with_webhook() => _serviceAccessor.Services.Webhooks.Received(1)
-        .Add(Arg.Is<AddWebhooks>(w =>
+        .AddWebhooks(Arg.Is<AddWebhooksRequest>(w =>
             w.EventStore == _eventStore.Name &&
-            w.Owner == ObserverOwner.Client &&
-            w.Webhooks.Count == 1));
+            w.Webhooks.Count() == 1));
 }

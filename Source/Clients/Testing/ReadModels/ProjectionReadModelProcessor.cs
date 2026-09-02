@@ -3,6 +3,7 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
+extern alias KernelGrpc;
 
 using System.Dynamic;
 using System.Text.Json;
@@ -116,7 +117,7 @@ internal static class ProjectionReadModelProcessor
         var schema = jsonSchemaGenerator.Generate(readModelType);
 
         var kernelReadModelDefinition = BuildKernelReadModelDefinition(readModelType, schema);
-        var kernelProjectionDefinition = KernelCore::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
+        var kernelProjectionDefinition = KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
             projectionDefinition,
             KernelConceptsNs::Projections.ProjectionOwner.Client);
 

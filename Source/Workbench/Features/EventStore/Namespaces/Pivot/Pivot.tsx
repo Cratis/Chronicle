@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { PivotDimension, PivotFilter, PivotViewer } from '@cratis/components/PivotViewer';
-import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
+import { AppendedEvents, AppendedEventsParameters } from 'Features/Sequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
-import { AppendedEvent } from 'Api/Events';
+import { AppendedEvent } from 'Features/Sequences';
 import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
-import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
-import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
+import { ObserveEventTypes } from 'Features/EventTypes';
+import { EventTypeDetails } from 'Features/EventTypes';
 import { QueryResultWithState } from '@cratis/arc/queries';
 
 const pad = (value: number) => value.toString().padStart(2, '0');
@@ -121,8 +121,8 @@ const filters: PivotFilter<AppendedEvent>[] = [
     },
 ];
 
-const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<EventTypeRegistration[]>) => {
-    const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === event.context.eventType.id);
+const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<EventTypeDetails[]>) => {
+    const eventType = eventTypes.data?.find((et: EventTypeDetails) => et.type.id === event.context.eventType.id);
     const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
     const content = typeof event.content === 'string' ? JSON.parse(event.content) : event.content;
 
@@ -144,7 +144,7 @@ export const Pivot = () => {
     };
 
     const [events] = AppendedEvents.use(queryArgs);
-    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
 
     return (
         <Page title={strings.mainMenu.pivot} noBackground noPadding>

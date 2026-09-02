@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
+import { BehaviorPatternDetails } from 'Features/Patterns/BehaviorPatternDetails';
 import { busiestSlot, intensityOf, slotKey, strongestBySlot } from '../PatternHeatmapState';
 import { aPattern } from './given/a_pattern';
 
 describe('when a slot holds patterns of differing activity', () => {
-    let busy: BehaviorPattern;
-    let quiet: BehaviorPattern;
-    let result: Map<string, BehaviorPattern>;
+    let busy: BehaviorPatternDetails;
+    let quiet: BehaviorPatternDetails;
+    let result: Map<string, BehaviorPatternDetails>;
 
     beforeEach(() => {
         // Both fully confident, which is the normal case: confidence saturates for anything habitual, so it

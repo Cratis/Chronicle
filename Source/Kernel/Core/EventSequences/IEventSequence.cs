@@ -4,8 +4,10 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Grpc;
 using Cratis.Monads;
 using Orleans.Concurrency;
 
@@ -14,6 +16,8 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Defines the event sequence.
 /// </summary>
+[KeyedBy<EventSequenceKey>]
+[BelongsTo(WellKnownServices.EventSequenceQueries)]
 public interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>
@@ -219,5 +223,6 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="eventStreamType">The <see cref="EventStreamType"/> identifying the stream's type.</param>
     /// <param name="eventStreamId">The <see cref="EventStreamId"/> identifying the stream within the type.</param>
     /// <returns>True if the stream has been completed; false otherwise.</returns>
+    [Query]
     Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId);
 }

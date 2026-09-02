@@ -9,17 +9,22 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
-        <InternalsVisibleTo Include="Cratis.Chronicle.Services.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
-        <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
+        <!-- Cratis.Chronicle.Server used to need this only because the generated gRPC service
+             implementations lived here and were internal. They now live in Cratis.Chronicle.Grpc,
+             which is what Server actually needs internal access to - see Grpc.csproj. The one
+             remaining reason Grpc itself needs Core internals is ChronicleServerSiloBuilderExtensions
+             (also moved to Grpc) directly registering the internal ChronicleServerStartupTask. -->
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grpc" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../Compatibility/Compatibility.csproj" />
         <ProjectReference Include="../Contracts/Contracts.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">
@@ -30,28 +35,44 @@
         </ProjectReference>
     </ItemGroup>
 
-    <!-- Generation of the gRPC contracts is conceptually independent of the TypeScript ProxyGenerator below;
-         it reads the built Core assembly for Arc artifacts. It stays gated on DisableProxyGenerator only
-         because the Observation artifacts in Core are not yet a complete replacement for the hand-written
-         Contracts/Observation/IObservers.cs - running generation today would overwrite that contract with one
-         missing ClearObserverQuarantine, GetObserverInformation, GetConnectedClientsForObserver,
-         WaitForCompletion and GetReplayableObserversForEventTypes. Ungate this the moment those are converted;
-         until then the Contracts for the converted services are checked in and can drift. -->
-    <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableProxyGenerator)' != 'true' ">
-        <Message Text="Generating gRPC contracts from Arc artifacts" Importance="high" />
-        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+    <!-- Services that are not derived from Arc artifacts yet. The generator leaves both the contract and the
+         implementation alone for these, so a hand-written contract that has drifted from what Core can produce
+         is not silently replaced by a smaller one. Observers is the remaining case: Contracts/Observation
+         /IObservers.cs carries five methods Core has no artifacts for, and its existing rpcs are named
+         differently from what the artifacts would produce. Removing it from this list is what Step 3 of the
+         Observation migration means. -->
+    <PropertyGroup>
+        <NonDerivedGrpcServices>Observers</NonDerivedGrpcServices>
+    </PropertyGroup>
+
+    <!-- Generates the gRPC contracts under ../Contracts from this project's Arc artifacts, the classes that
+         implement them under ../Grpc, and the registrations for those in ../Server. Everything named in
+         NonDerivedGrpcServices is left alone, so a hand-written contract for one of those survives a run. -->
+    <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
+        <Message Text="Generating gRPC contracts and service implementations from Arc artifacts" Importance="high" />
+        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts --implementations &quot;$(MSBuildThisFileDirectory)../Grpc&quot; --implementations-namespace Cratis.Chronicle.Services --registrations &quot;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs&quot; --registrations-namespace Cratis.Chronicle.Server --exclude $(NonDerivedGrpcServices)" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
     </Target>
 
     <PropertyGroup>
-        <!-- ProxyGenerator is disabled for Core because it is an Orleans grain project.
-             Orleans base types cannot be resolved in the ProxyGenerator's isolated assembly
-             load context, causing a hard crash. TypeScript proxy generation runs from the
-             API project instead (or a dedicated thin proxy-generation project). -->
-        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">true</DisableProxyGenerator>
+        <!--
+            Two generators read this project, and they have separate switches so that turning one on cannot
+            silently re-run the other. They used to share DisableProxyGenerator, which meant enabling TypeScript
+            proxies also regenerated the gRPC contracts and dropped contract methods.
+
+            Both run by default now. Observers is the one service still hand-written - it carries methods Core has
+            no artifact for - and NonDerivedGrpcServices keeps the generator off it.
+        -->
+        <DisableGrpcContractGeneration Condition="'$(DisableGrpcContractGeneration)' == ''">false</DisableGrpcContractGeneration>
+        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
+
+        <!-- The ProxyGenerator resolves referenced assemblies from the output directory, and a library project
+             does not copy its NuGet runtime assets there. Without this, Orleans.Serialization cannot be resolved
+             and generation aborts the build. -->
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Api</CratisProxiesOutputPath>
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Features</CratisProxiesOutputPath>
         <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
         <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
     </PropertyGroup>
@@ -61,7 +82,9 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
+        <!-- Build-only: it generates TypeScript at build time and carries no runtime assets, so it must not flow
+             to anything consuming this project as a package. -->
+        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AllPatternScopes, PatternsForScope } from 'Api/Patterns';
+import { AllPatternScopes, PatternsForScope } from 'Features/Patterns';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';

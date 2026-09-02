@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
-import { SeedEntry } from 'Api/Seeding/SeedEntry';
-import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
-import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
+import { SeedingEntry } from 'Features/Contracts/Seeding';
+import { ObserveEventTypes } from 'Features/EventTypes';
+import { EventTypeDetails } from 'Features/EventTypes';
 import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 
-export const SeedEntryDetails = ({ item }: IDetailsComponentProps<SeedEntry>) => {
+export const SeedEntryDetails = ({ item }: IDetailsComponentProps<SeedingEntry>) => {
     const params = useParams<EventStoreParams>();
-    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
 
-    const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === item.eventTypeId);
+    const eventType = eventTypes.data?.find((et: EventTypeDetails) => et.type.id === item.eventTypeId);
     const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
     const content = typeof item.content === 'string' ? JSON.parse(item.content) : item.content;
 

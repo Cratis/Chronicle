@@ -26,6 +26,12 @@
             <Aliases>KernelCore</Aliases>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <!-- The Cratis.Chronicle.Services.* service implementations these scenarios wrap in-memory now live
+             here, not in Core - see Source/Kernel/Grpc/Grpc.csproj. -->
+        <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj">
+            <Aliases>KernelGrpc</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

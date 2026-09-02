@@ -76,7 +76,6 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
                     new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(valueHandler),
                     NullLogger<JsonComplianceManager>.Instance),
                 _expandoObjectConverter),
-            _eventCompliance,
             _materializedReadModels,
             new JsonSerializerOptions());
     }

@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CapturedEvents } from 'Api/Events';
-import { AppendedEvent } from 'Api/Events';
-import { DataTableCore } from '@cratis/components/DataTables';
-import { Column } from '@cratis/components/DataTables';
+import { CapturedEvent, CapturedEvents } from 'Features/Captures';
+import { Column, DataTableCore } from '@cratis/components/DataTables';
 import { useEffect } from 'react';
 import strings from 'Strings';
 
@@ -20,31 +18,31 @@ export interface CapturedEventsViewProps {
  * Shows the events a capture has ingested - the events tagged with the capture's name, most recent first.
  */
 export const CapturedEventsView = ({ eventStore, captureName, refreshTrigger }: CapturedEventsViewProps) => {
-    const [result, perform] = CapturedEvents.use({ eventStore, captureName });
+    const [result, perform] = CapturedEvents.use({ eventStore, captureName, namespace: 'Default', maxEvents: 200 });
 
     useEffect(() => {
         if (refreshTrigger > 0) {
-            perform({ eventStore, captureName });
+            perform({ eventStore, captureName, namespace: 'Default', maxEvents: 200 });
         }
     }, [refreshTrigger]);
 
     return (
         <div className="h-full" style={{ overflow: 'auto' }}>
-            <DataTableCore<AppendedEvent>
+            <DataTableCore<CapturedEvent>
                 data={result.data}
                 emptyMessage={strings.eventStore.general.captures.dataView.empty}
-                dataKey="context.sequenceNumber"
+                dataKey="id"
                 className="rounded-lg overflow-hidden"
             >
                 <Column field="context.sequenceNumber" header={strings.eventStore.general.captures.dataView.columns.sequenceNumber} />
                 <Column field="context.eventType.id" header={strings.eventStore.general.captures.dataView.columns.eventType} />
                 <Column field="context.eventSourceId" header={strings.eventStore.general.captures.dataView.columns.eventSourceId} />
-                <Column<AppendedEvent>
+                <Column<CapturedEvent>
                     field="context.occurred"
                     header={strings.eventStore.general.captures.dataView.columns.occurred}
-                    body={(event) => new Date(event.context.occurred).toLocaleString()}
+                    body={(event) => new Date(event.context.occurred.value).toLocaleString()}
                 />
-                <Column<AppendedEvent>
+                <Column<CapturedEvent>
                     field="content"
                     header={strings.eventStore.general.captures.dataView.columns.content}
                     body={(event) => <code style={{ fontSize: '0.85rem' }}>{event.content}</code>}

@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
-import { WebhookDefinition } from 'Api/Webhooks';
+import { WebhookDetails as WebhookDetailsModel } from 'Features/Observation/Webhooks';
 import { getAuthorizationTypeString } from './getAuthorizationTypeString';
 import strings from 'Strings';
 
-export const WebhookDetails = (props: IDetailsComponentProps<WebhookDefinition>) => {
+export const WebhookDetails = (props: IDetailsComponentProps<WebhookDetailsModel>) => {
     const authTypeName = getAuthorizationTypeString(props.item.authorizationType);
 
     return (
         <div className="webhook-details p-4" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <h3 className="mb-4">{props.item.name}</h3>
+            <h3 className="mb-4">{props.item.identifier}</h3>
 
             <div className="field mb-3">
                 <label className="font-bold block mb-2">{strings.eventStore.general.webhooks.columns.url}</label>

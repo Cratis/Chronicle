@@ -50,21 +50,6 @@ message FromEveryDefinition {
    bool IncludeChildren = 2;
    AutoMap AutoMap = 3;
 }
-message GenerateDeclarativeCodeRequest {
-   string EventStore = 1;
-   string Namespace = 2;
-   string Declaration = 3;
-   DraftReadModelDefinition DraftReadModel = 4;
-}
-message GenerateModelBoundCodeRequest {
-   string EventStore = 1;
-   string Namespace = 2;
-   string Declaration = 3;
-   DraftReadModelDefinition DraftReadModel = 4;
-}
-message GeneratedCode {
-   string Code = 1;
-}
 message GetAllDeclarationsRequest {
    string EventStore = 1;
 }
@@ -100,10 +85,6 @@ message KeyValuePair_EventType_RemovedWithDefinition {
 message KeyValuePair_EventType_RemovedWithJoinDefinition {
    EventType Key = 1;
    RemovedWithJoinDefinition Value = 2;
-}
-message OneOf_GeneratedCode_ProjectionDeclarationParsingErrors {
-   GeneratedCode Value0 = 1;
-   ProjectionDeclarationParsingErrors Value1 = 2;
 }
 message OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors {
    ProjectionPreview Value0 = 1;
@@ -195,6 +176,7 @@ message RegisterRequest {
    string EventStore = 1;
    ProjectionOwner Owner = 2;
    repeated ProjectionDefinition Projections = 3;
+   bool FullSet = 4;
 }
 message RemovedWithDefinition {
    string Key = 1;
@@ -222,8 +204,6 @@ message SinkDefinition {
    string TypeId = 2;
 }
 service Projections {
-   rpc GenerateDeclarativeCode (GenerateDeclarativeCodeRequest) returns (OneOf_GeneratedCode_ProjectionDeclarationParsingErrors);
-   rpc GenerateModelBoundCode (GenerateModelBoundCodeRequest) returns (OneOf_GeneratedCode_ProjectionDeclarationParsingErrors);
    rpc GetAllDeclarations (GetAllDeclarationsRequest) returns (IEnumerable_ProjectionWithDeclaration);
    rpc GetAllDefinitions (GetAllDefinitionsRequest) returns (IEnumerable_ProjectionDefinition);
    rpc Preview (PreviewProjectionRequest) returns (OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors);

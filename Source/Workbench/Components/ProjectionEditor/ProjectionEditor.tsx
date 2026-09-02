@@ -13,14 +13,14 @@ import {
     disposeProjectionDefinitionLanguage,
 } from './index';
 import type { JsonSchema } from '@cratis/screenplay-language/projection';
-import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Api/Projections';
-import { AllEventSequences } from 'Api/EventSequences';
+import { ProjectionDeclarationSyntaxError, GenerateDeclarativeCode, GenerateModelBoundCode, DraftReadModel } from 'Features/ProjectionEditor';
+import { AllEventSequences } from 'Features/Sequences';
 import { Button } from '@cratis/components/Common';
 import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
 import type { ProjectionCodeLanguage } from './ProjectionCodeLanguages';
 import Strings from 'Strings';
-import type { ReadModelDefinition } from 'Api/ReadModelTypes';
+import type { ReadModelDefinition } from 'Features/ReadModelDefinitions';
 
 export interface ProjectionEditorProps {
     value: string;
@@ -160,7 +160,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     // Update event sequences when they're loaded
     useEffect(() => {
         if (allEventSequencesResult.data) {
-            setEventSequences(allEventSequencesResult.data);
+            setEventSequences(allEventSequencesResult.data.map(eventSequence => eventSequence.name));
         }
     }, [allEventSequencesResult.data]);
 

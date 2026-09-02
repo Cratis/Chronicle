@@ -4,7 +4,6 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
-using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
 namespace Cratis.Chronicle.Security;
 
@@ -14,7 +13,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Id">The unique identifier of the application to remove.</param>
 [Command]
 [BelongsTo(WellKnownServices.Applications)]
-public record RemoveApplication(Guid Id)
+public record RemoveApplication(Concepts.Security.ApplicationId Id)
 {
     /// <summary>
     /// Handles the command by appending an <see cref="ApplicationRemoved"/> event to the event log.
@@ -25,6 +24,6 @@ public record RemoveApplication(Guid Id)
     {
         var @event = new ApplicationRemoved();
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((ApplicationId)Id, @event);
+        await eventSequence.Append(Id, @event);
     }
 }

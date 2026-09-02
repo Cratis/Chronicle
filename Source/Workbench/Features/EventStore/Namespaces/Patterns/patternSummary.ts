@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
+import { BehaviorPatternDetails } from 'Features/Patterns/BehaviorPatternDetails';
 
 /**
  * The order facets read in when a pattern is summarized.
@@ -24,10 +24,10 @@ const positionOf = (name: string) => {
  * every pattern that leaves that facet unconstrained look identical - a wall of cards all reading "Any" - which
  * is exactly the case for the broader patterns a scope establishes.
  *
- * @param pattern The {@link BehaviorPattern} to describe.
+ * @param pattern The {@link BehaviorPatternDetails} to describe.
  * @returns The description.
  */
-export const summaryOf = (pattern: BehaviorPattern): string => {
+export const summaryOf = (pattern: BehaviorPatternDetails): string => {
     const facets = Object.entries(pattern.facets ?? {})
         .filter(([, value]) => !!value)
         .sort(([first], [second]) => positionOf(first) - positionOf(second) || first.localeCompare(second));

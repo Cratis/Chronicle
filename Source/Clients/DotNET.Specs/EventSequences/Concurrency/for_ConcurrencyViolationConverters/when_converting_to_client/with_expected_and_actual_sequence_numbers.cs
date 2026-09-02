@@ -14,6 +14,7 @@ public class with_expected_and_actual_sequence_numbers : Specification
     {
         _contractViolation = new Contracts.EventSequences.Concurrency.ConcurrencyViolation
         {
+            EventSourceId = Guid.NewGuid().ToString(),
             ExpectedSequenceNumber = 42ul,
             ActualSequenceNumber = 43ul
         };

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AddUser } from 'Api/Security';
+import { AddUser } from 'Features/Security';
 import { Button } from '@cratis/components/Common';
 import { useState } from 'react';
 import strings from 'Strings';

@@ -5,7 +5,7 @@ import { BehaviorSubject } from 'rxjs';
 import sinon, { SinonStubbedInstance } from 'sinon';
 import { ObserversViewModel } from '../../../ObserversViewModel';
 import { INamespaces } from 'State/Namespaces';
-import { ClearObserverQuarantine, Replay } from 'Api/Observation';
+import { ClearObserverQuarantine, ReplayObserver as Replay } from 'Features/Observation';
 import { Dialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 

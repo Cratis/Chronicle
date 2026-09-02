@@ -37,4 +37,75 @@ public static class WellKnownServices
     /// The name of the EventStores service.
     /// </summary>
     public const string EventStores = "EventStores";
+
+    /// <summary>
+    /// The name of the Identities service.
+    /// </summary>
+    public const string Identities = "Identities";
+
+    /// <summary>
+    /// The name of the Recommendations service.
+    /// </summary>
+    public const string Recommendations = "Recommendations";
+
+    /// <summary>
+    /// The service holding the behavior patterns mined from an event store's history.
+    /// </summary>
+    public const string Patterns = "Patterns";
+
+    /// <summary>
+    /// The name of the EventSeeding service.
+    /// </summary>
+    public const string EventSeeding = "EventSeeding";
+
+    /// <summary>
+    /// The name of the ExternalServices service.
+    /// </summary>
+    public const string ExternalServices = "ExternalServices";
+
+    /// <summary>
+    /// The name of the Captures service.
+    /// </summary>
+    public const string Captures = "Captures";
+
+    /// <summary>
+    /// The name of the EventTypes service.
+    /// </summary>
+    public const string EventTypes = "EventTypes";
+
+    /// <summary>
+    /// The name of the Webhooks service.
+    /// </summary>
+    public const string Webhooks = "Webhooks";
+
+    /// <summary>
+    /// The name of the ReadModelExplorer service - reading a read model instance and the history behind it.
+    /// </summary>
+    public const string ReadModelExplorer = "ReadModelExplorer";
+
+    /// <summary>
+    /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately distinct from the client-facing <c>IProjections</c> contract, which stays hand-written for the
+    /// registration and preview operations the client SDK calls. Only the code-generation operations, which no
+    /// client SDK uses, moved onto the generated path.
+    /// </remarks>
+    public const string ProjectionEditor = "ProjectionEditor";
+
+    /// <summary>
+    /// The name of the EventSequences service.
+    /// </summary>
+    public const string EventSequences = "EventSequences";
+
+    /// <summary>
+    /// The name of the service exposing <c>[KeyedBy&lt;TKey&gt;]</c> grain queries for event sequences.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately distinct from <see cref="EventSequences"/> - both live in the same generated
+    /// <c>Contracts/EventSequences</c> folder (the grain interface's own C# namespace), and sharing a service name
+    /// would generate the same file the hand-written <c>Contracts.EventSequences.IEventSequences</c> contract still
+    /// occupies. See PLAN2.md's "near-miss" section.
+    /// </remarks>
+    public const string EventSequenceQueries = "EventSequenceQueries";
 }

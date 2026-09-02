@@ -5,6 +5,7 @@ import "google/protobuf/empty.proto";
 message ServerVersionInfo {
    string Version = 1;
    string CommitSha = 2;
+   string ProtocolVersion = 3;
 }
 service Server {
    rpc GetVersionInfo (.google.protobuf.Empty) returns (ServerVersionInfo);

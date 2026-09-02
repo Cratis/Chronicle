@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { EventType } from 'Api/Events';
+import { EventTypeDetails } from 'Features/EventTypes';
 
 /**
  * Builds the distinct, alphabetically sorted set of event-type filter options from the event types
@@ -9,14 +9,14 @@ import { EventType } from 'Api/Events';
  * @param eventTypes The event types registered in the event store.
  * @returns Distinct dropdown options keyed by event type id.
  */
-export const getDistinctEventTypeOptions = (eventTypes: EventType[]): { label: string; value: string }[] => {
+export const getDistinctEventTypeOptions = (eventTypes: EventTypeDetails[]): { label: string; value: string }[] => {
     const seen = new Set<string>();
     const options: { label: string; value: string }[] = [];
 
     for (const eventType of eventTypes ?? []) {
-        if (!seen.has(eventType.id)) {
-            seen.add(eventType.id);
-            options.push({ label: eventType.id, value: eventType.id });
+        if (!seen.has(eventType.type.id)) {
+            seen.add(eventType.type.id);
+            options.push({ label: eventType.type.id, value: eventType.type.id });
         }
     }
 

@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -18,8 +18,8 @@ public class many_events_for_different_event_source_ids_with_subjects : given.an
     EventType _eventType;
     IEnumerable<Causation> _causation;
     Identity _causedBy;
-    AppendManyRequest _command;
-    AppendManyResponse _response;
+    Contracts.Sequences.AppendManyForEventSourcesRequest _command;
+    Contracts.Sequences.AppendManyResponse _response;
     Dictionary<EventSourceId, ConcurrencyScope> _concurrencyScopes;
 
     void Establish()
@@ -58,9 +58,9 @@ public class many_events_for_different_event_source_ids_with_subjects : given.an
 
         _eventTypes.HasFor(typeof(EventWithSubject)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(EventWithSubject)).Returns(_eventType);
-        _eventSequences
-            .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+        _sequences
+            .When(_ => _.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendManyForEventSourcesRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
         _concurrencyScopeStrategy.GetScope(_events[0].EventSourceId, _events[0].EventStreamType, _events[0].EventStreamId, _events[0].EventSourceType, default).Returns(Task.FromResult(_concurrencyScopes[_events[0].EventSourceId]));
         _concurrencyScopeStrategy.GetScope(_events[1].EventSourceId, _events[1].EventStreamType, _events[1].EventStreamId, _events[1].EventSourceType, default).Returns(Task.FromResult(_concurrencyScopes[_events[1].EventSourceId]));
@@ -71,17 +71,19 @@ public class many_events_for_different_event_source_ids_with_subjects : given.an
             CorrelationId = Guid.NewGuid(),
             SequenceNumbers = [42, 43],
             ConstraintViolations = [],
-            Errors = []
+            Errors = [],
+            ConcurrencyViolations = []
         };
 
-        _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(_response);
+        _sequences.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => await _eventSequence.AppendMany(_events);
 
     [Fact] void should_append_events() => _command.ShouldNotBeNull();
-    [Fact] void should_append_first_event_with_resolved_subject() => _command.Events[0].Subject.ShouldEqual("derived-person");
-    [Fact] void should_append_second_event_with_explicit_subject() => _command.Events[1].Subject.ShouldEqual("explicit-person");
+    [Fact] void should_append_first_event_with_resolved_subject() => _command.Events.ElementAt(0).Subject.ShouldEqual("derived-person");
+    [Fact] void should_append_second_event_with_explicit_subject() => _command.Events.ElementAt(1).Subject.ShouldEqual("explicit-person");
 
     record EventWithSubject([Subject] string PersonId, string Value);
 }

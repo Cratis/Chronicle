@@ -13,5 +13,5 @@ public class SaveProjectionResult
     /// Gets or sets the syntax errors, if any.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IEnumerable<ProjectionDeclarationSyntaxError> Errors { get; set; } = [];
+    public IEnumerable<ProjectionDeclarationSyntaxError> Errors { get; set; } = new List<ProjectionDeclarationSyntaxError>();
 }

@@ -21,5 +21,8 @@ public class ServiceDefinition(string serviceName, string serviceNamespace)
 
     /// <summary>Gets the queries (read models) belonging to this service.</summary>
     public IList<QueryDefinition> Queries { get; } = new List<QueryDefinition>();
+
+    /// <summary>Gets the keyed grain queries belonging to this service.</summary>
+    public IList<KeyedQueryDefinition> KeyedQueries { get; } = new List<KeyedQueryDefinition>();
 }
 

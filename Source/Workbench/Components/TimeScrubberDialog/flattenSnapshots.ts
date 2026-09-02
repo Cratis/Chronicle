@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { Json } from '@cratis/components/types';
-import type { ReadModelSnapshot } from 'Api/ReadModels';
+import type { ReadModelSnapshot } from 'Features/ReadModelExplorer';
+import { parseJsonObject } from 'Components/ReadModelExplorer';
 import type { ScrubStep } from './ScrubStep';
 
 /**
@@ -16,9 +17,13 @@ import type { ScrubStep } from './ScrubStep';
  * @returns One step per event, in the order the snapshots and their events arrived.
  */
 export const flattenSnapshots = (snapshots: ReadModelSnapshot[]): ScrubStep[] =>
-    snapshots.flatMap(snapshot =>
-        (snapshot.events ?? []).map(event => ({
+    snapshots.flatMap(snapshot => {
+        // Parsed once per snapshot rather than once per step - every event in a snapshot shares its state.
+        const instance = parseJsonObject(snapshot.instance) as Json;
+
+        return (snapshot.events ?? []).map(event => ({
             event,
-            instance: snapshot.instance as Json,
+            instance,
             occurred: snapshot.occurred
-        })));
+        }));
+    });

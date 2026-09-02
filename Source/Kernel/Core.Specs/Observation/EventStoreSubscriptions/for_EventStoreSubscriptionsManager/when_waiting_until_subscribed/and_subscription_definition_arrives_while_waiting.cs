@@ -51,17 +51,16 @@ public class and_subscription_definition_arrives_while_waiting : Specification
 
     async Task Because()
     {
-        // Start waiting BEFORE the definition exists in state — this is the race condition:
-        // the gRPC Add handler calls WaitUntilSubscribed immediately after appending
-        // EventStoreSubscriptionAdded, but the reactor that calls manager.Add() is asynchronous.
+        // Start waiting BEFORE the definition exists in state - this is the race condition: the gRPC Add
+        // handler calls WaitUntilSubscribed immediately after appending EventStoreSubscriptionAdded, but the
+        // reactor that calls manager.Add() is asynchronous. The call runs synchronously until its first poll
+        // finds nothing and yields, so by the time it hands control back here it has already looked and not
+        // found the definition - which is the ordering this proves, without waiting on the clock for it.
         var waitTask = _manager.WaitUntilSubscribed(
             new EventStoreSubscriptionId(SourceEventStore),
-            TimeSpan.FromSeconds(2));
+            TimeSpan.FromSeconds(30));
 
-        // Let the polling loop spin a few iterations without finding the definition.
-        await Task.Delay(50);
-
-        // Simulate the reactor delivering the definition (as EventStoreSubscriptionsReactor.Added does).
+        // Deliver the definition, as EventStoreSubscriptionsReactor.Added does.
         await _manager.Add(_definition);
 
         // WaitUntilSubscribed should now find the definition and return successfully.

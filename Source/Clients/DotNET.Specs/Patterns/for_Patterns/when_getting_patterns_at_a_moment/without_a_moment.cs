@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Patterns;
+using Cratis.Chronicle.Contracts.Queries;
 using ProtoBuf.Grpc;
 using Contract = Cratis.Chronicle.Contracts.Patterns;
 
@@ -12,13 +13,13 @@ namespace Cratis.Chronicle.Patterns.for_Patterns.when_getting_patterns_at_a_mome
 /// </summary>
 public class without_a_moment : given.a_patterns_client
 {
-    Contract.GetPatternsRequest _request;
+    Contract.UsualActionsRequest _request;
     DateTimeOffset _asked;
 
     void Establish() =>
         _patterns
-            .GetUsualActions(Arg.Do<Contract.GetPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
-            .Returns([]);
+            .UsualActions(Arg.Do<Contract.UsualActionsRequest>(request => _request = request), Arg.Any<CallContext>())
+            .Returns(QueryResult<IEnumerable<Contract.BehaviorPatternDetailsResponse>>.Success(Guid.NewGuid(), []));
 
     async Task Because()
     {

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AllUsers, User, RemoveUser, RequirePasswordChange } from 'Api/Security';
+import { AllUsers, User, RemoveUser, RequirePasswordChange } from 'Features/Security';
 import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
