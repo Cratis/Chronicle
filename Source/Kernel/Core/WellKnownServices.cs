@@ -79,6 +79,16 @@ public static class WellKnownServices
     public const string Webhooks = "Webhooks";
 
     /// <summary>
+    /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately distinct from the client-facing <c>IProjections</c> contract, which stays hand-written for the
+    /// registration and preview operations the client SDK calls. Only the code-generation operations, which no
+    /// client SDK uses, moved onto the generated path.
+    /// </remarks>
+    public const string ProjectionEditor = "ProjectionEditor";
+
+    /// <summary>
     /// The name of the EventSequences service.
     /// </summary>
     public const string EventSequences = "EventSequences";
