@@ -50,10 +50,15 @@ env:
   # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
   # release that does, never to make a red check go away.
   #
-  # This floor keeps moving while the PR is open: it was 16.38.0, then 16.39.0, and unrelated releases have shipped
-  # past both. It names the release this change goes out as, so it is never a version already published by the time
-  # this line is read - re-check the latest tag before trusting it. Latest at the time of writing is 16.42.0.
-  WIRE_BASELINE_FLOOR: "16.43.0"
+  # This floor keeps moving while the PR is open: it was 16.38.0, then 16.39.0, then 16.43.0, and unrelated releases
+  # have shipped past each. It names the release this change goes out as, so it is never a version already published
+  # by the time this line is read - re-check the latest tag before trusting it. Latest at the time of writing is
+  # 16.44.1.
+  #
+  # This branch moves it again on purpose: the two projection code-generation operations left the hand-written
+  # Projections contract and became the generated ProjectionEditor service, so Projections lost two rpcs and the
+  # messages behind them. That is the same conversion, for the same reason, as everything listed above.
+  WIRE_BASELINE_FLOOR: "16.45.0"
 
 jobs:
   wire-compatibility:
