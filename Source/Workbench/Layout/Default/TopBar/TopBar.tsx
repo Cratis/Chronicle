@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useLayoutContext } from '../context/LayoutContext';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import css from './TopBar.module.css';
 import { FaBars } from 'react-icons/fa6';
 import { version } from '../../../version';
@@ -20,7 +20,7 @@ export const TopBar = () => {
                 <div className={css.sidebarToggle}>
                     <Button
                         onClick={toggleLeftSidebarOpen}
-                        text
+                        variant='ghost'
                         className={css.hamburgerMenuButton}>
                         <FaBars />
                     </Button>

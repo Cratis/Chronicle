@@ -63,17 +63,44 @@ public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrat
     /// <param name="builder">The <see cref="IEventMigrationBuilder{TPrevious, TUpgrade}"/> to use.</param>
     public abstract void Downcast(IEventMigrationBuilder<TPrevious, TUpgrade> builder);
 
+    /// <summary>
+    /// Declare the values that keep their property but change what they mean between the two generations.
+    /// </summary>
+    /// <param name="builder">The <see cref="IEventValueMapBuilder{TUpgrade, TPrevious}"/> to use.</param>
+    /// <remarks>
+    /// A map declared here is applied in both directions - forward when upcasting, inverted when downcasting - so an
+    /// enum member that was renumbered, or a code that took on a new spelling, is stated once instead of twice. It is
+    /// applied before <see cref="Upcast"/> and <see cref="Downcast"/> run, so a migration that needs a different
+    /// answer for one direction states that direction's transformation itself and it wins.
+    /// </remarks>
+    public virtual void MapValues(IEventValueMapBuilder<TUpgrade, TPrevious> builder)
+    {
+    }
+
     /// <inheritdoc/>
     void IEventTypeMigration.Upcast(IEventMigrationBuilder builder)
     {
-        var typedBuilder = new EventMigrationBuilderFor<TUpgrade, TPrevious>(builder);
-        Upcast(typedBuilder);
+        ApplyValueMaps(builder, (maps, properties) => maps.ApplyUpcast(properties));
+        Upcast(new EventMigrationBuilderFor<TUpgrade, TPrevious>(builder));
     }
 
     /// <inheritdoc/>
     void IEventTypeMigration.Downcast(IEventMigrationBuilder builder)
     {
-        var typedBuilder = new EventMigrationBuilderFor<TPrevious, TUpgrade>(builder);
-        Downcast(typedBuilder);
+        ApplyValueMaps(builder, (maps, properties) => maps.ApplyDowncast(properties));
+        Downcast(new EventMigrationBuilderFor<TPrevious, TUpgrade>(builder));
+    }
+
+    void ApplyValueMaps(IEventMigrationBuilder builder, Action<EventValueMapBuilder<TUpgrade, TPrevious>, IEventMigrationPropertyBuilder> apply)
+    {
+        var maps = new EventValueMapBuilder<TUpgrade, TPrevious>();
+        MapValues(maps);
+
+        if (!maps.HasMaps)
+        {
+            return;
+        }
+
+        builder.Properties(properties => apply(maps, properties));
     }
 }

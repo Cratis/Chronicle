@@ -126,7 +126,7 @@ export const QueryEditor = ({
                 value={state.eventSequenceId}
                 options={sequenceOptions}
                 aria-label={sequenceStrings.eventSequence}
-                onChange={event => applyAndRun({ ...state, eventSequenceId: event.value as string })} />
+                onChange={value => applyAndRun({ ...state, eventSequenceId: value as string })} />
 
             <QueryFilterBar
                 state={state}

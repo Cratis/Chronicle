@@ -306,6 +306,40 @@ public class Projection(
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<AppendedEvent>> GetEventsForKey(EventStoreNamespaceName eventStoreNamespace, ReadModelKey key, IEnumerable<AppendedEvent> events)
+    {
+        var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
+        var eventSequenceStorage = storage
+            .GetEventStore(projectionKey.EventStore)
+            .GetNamespace(eventStoreNamespace)
+            .GetEventSequence(State.EventSequenceId);
+        var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+
+        var wanted = key.Value;
+        var result = new List<AppendedEvent>();
+
+        foreach (var @event in events)
+        {
+            var keyResolver = projection.GetKeyResolverFor(@event.Context.EventType);
+            var keyResult = await keyResolver(eventSequenceStorage, NullSink.Instance, @event);
+
+            // A deferred key cannot be resolved without the state the projection is building, so it
+            // cannot be attributed to an instance here.
+            if (keyResult is not ResolvedKey resolved)
+            {
+                continue;
+            }
+
+            if (string.Equals(resolved.Key.Value.ToString(), wanted, StringComparison.Ordinal))
+            {
+                result.Add(@event);
+            }
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ExpandoObject>> ProcessForPreview(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events, ReadModelDefinition readModelDefinition)
     {
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());

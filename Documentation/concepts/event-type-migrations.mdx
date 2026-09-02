@@ -56,6 +56,24 @@ Sets a default value for a new property:
 
 <ChronicleClientTabs snippet="concepts/event-type-migrations/default-value" />
 
+### Value map
+
+The operations above move values between properties. A **value map** changes the values themselves — it states which value in one generation is which value in the other. This is what you reach for when an enum is renumbered, or a status code takes on a new set of values, and the old numbers now mean something the new generation spells differently.
+
+Override `MapValues` on the migration rather than declaring it inside `Upcast` or `Downcast`:
+
+<ChronicleClientTabs snippet="concepts/event-type-migrations/map-values" />
+
+A map declared this way is applied **in both directions**: forward when upcasting, inverted when downcasting. The pair of values is one fact about the two generations, so you state it once and the two directions cannot drift apart.
+
+Three things are worth knowing:
+
+- **Values the map does not mention are carried across unchanged.** A map says what changed meaning; it is not an exhaustive listing of an enum that is free to grow.
+- **Two values collapsing onto one have no single inverse**, so the first pair declared for a target value is the one that represents it going back.
+- **The map does not have to stay on the same property.** The two property expressions may name different properties, in which case the map also carries the value across — covering a rename and a re-valuing in one statement.
+
+`MapValues` is applied *before* `Upcast` and `Downcast` run, so a direction that states its own transformation for the same property keeps it.
+
 ## How Migrations Work
 
 When an event is appended to the event store:

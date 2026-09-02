@@ -10,8 +10,7 @@ import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { ObserveEventTypes } from 'Features/EventTypes';
 import { AllEventTypeGenerations } from 'Features/EventTypes';
 import { EventTypeDetails } from 'Features/EventTypes';
-import { ObjectContentEditor as _OCE } from '@cratis/components';
-const ObjectContentEditor = _OCE.ObjectContentEditor;
+import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import type { Json } from '@cratis/components/types';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
@@ -234,7 +233,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                                 options={revisionOptions}
                                 optionLabel='label'
                                 optionValue='value'
-                                onChange={(e) => setSelectedRevision(e.value)}
+                                onChange={(value) => setSelectedRevision(value)}
                                 placeholder={revisionPlaceholder}
                                 style={{ minWidth: '200px' }}
                             />
@@ -250,7 +249,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                                 options={generationOptions}
                                 optionLabel='label'
                                 optionValue='value'
-                                onChange={(e) => setSelectedGeneration(e.value)}
+                                onChange={(value) => setSelectedGeneration(value)}
                                 placeholder={generationPlaceholder}
                                 style={{ minWidth: '200px' }}
                             />

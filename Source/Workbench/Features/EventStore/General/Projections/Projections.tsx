@@ -5,23 +5,24 @@ import { ObserveEventTypes } from 'Features/EventTypes';
 import { AllReadModelDefinitions, ReadModelSource } from 'Features/ReadModelDefinitions';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from '@cratis/components/types';
-import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
+import type { JsonSchema as ProjectionJsonSchema } from '@cratis/screenplay-language/projection';
+import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider, toComponentsSchema } from 'Components/ProjectionEditor';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
-import { ActionMenubar, Tooltip, type ActionMenuItem } from '@cratis/components/Common';
+import { ActionMenubar, Button, type ActionMenuItem } from '@cratis/components/Common';
 import { Dialog } from '@cratis/components/Dialogs';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { EventStoreAndNamespaceParams } from 'Shared/EventStoreAndNamespaceParams';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
 import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, ProjectionWithDeclaration, SaveProjection } from 'Features/ProjectionEditor';
 import { ReadModelInstance } from 'Features/ReadModelExplorer';
 import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { TimeMachineDialog, ReadModelInstances, getInstanceKey } from 'Components';
+import { TimeMachineDialog, TimeScrubberDialog, ReadModelInstances, getInstanceKey } from 'Components';
 import { Json } from 'Features';
 import { SaveWithInferredReadModelDialog } from './SaveWithInferredReadModelDialog';
 
@@ -93,6 +94,7 @@ export const Projections = () => {
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
+    const [isPreviewing, setIsPreviewing] = useState(false);
     const [draftReadModel, setDraftReadModel] = useState<DraftReadModel | null>(null);
     const [pendingReadModel, setPendingReadModel] = useState<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
@@ -100,9 +102,9 @@ export const Projections = () => {
     const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
     const eventSchemas = useMemo(() => {
         if (!eventTypes.data) return undefined;
-        const out: Record<string, JsonSchema> = {};
+        const out: Record<string, ProjectionJsonSchema> = {};
         for (const eventType of eventTypes.data) {
-            const schema = JSON.parse(eventType.schema) as JsonSchema;
+            const schema = JSON.parse(eventType.schema) as ProjectionJsonSchema;
             out[schema.title || eventType.type.id] = schema;
         }
         return out;
@@ -114,6 +116,7 @@ export const Projections = () => {
     const [previewProjection, setPreviewProjectionValues, clearPreviewProjectionValues] = PreviewProjection.use();
     const [saveProjection, setSaveProjectionValues, clearSaveProjectionValues] = SaveProjection.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+    const [TimeScrubberDialogWrapper, showTimeScrubberDialog] = useDialog(TimeScrubberDialog);
     const [SaveWithInferredReadModelWrapper, showSaveWithInferredReadModel] = useDialog(SaveWithInferredReadModelDialog);
     const [showConfirmation] = useConfirmationDialog();
 
@@ -191,9 +194,9 @@ export const Projections = () => {
             setInitialReadModelSchema(undefined);
             setIsCreateReadModelDialogOpen(true);
         });
-        setEditReadModelCallback((readModelName: string, currentSchema: JsonSchema) => {
+        setEditReadModelCallback((readModelName: string, currentSchema: ProjectionJsonSchema) => {
             setNewReadModelDisplayName(readModelName);
-            setInitialReadModelSchema(currentSchema);
+            setInitialReadModelSchema(toComponentsSchema(currentSchema));
             setIsCreateReadModelDialogOpen(true);
         });
     }, []);
@@ -205,7 +208,7 @@ export const Projections = () => {
                 identifier: draftReadModel.identifier,
                 displayName: draftReadModel.displayName,
                 containerName: draftReadModel.containerName,
-                schema: JSON.parse(draftReadModel.schema) as JsonSchema
+                schema: JSON.parse(draftReadModel.schema) as ProjectionJsonSchema
             });
         } else {
             setDraftReadModelInProvider(null);
@@ -289,8 +292,8 @@ export const Projections = () => {
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="350px">
                     <div className="px-4 py-4">
-                        <DataTable
-                            value={projections.data}
+                        <DataTableCore<ProjectionWithDeclaration>
+                            data={projections.data}
                             dataKey="identifier"
                             selectionMode="single"
                             selection={selectedProjection as ProjectionWithDeclaration | null}
@@ -318,7 +321,7 @@ export const Projections = () => {
 
                             <Column field="identifier" header="Name" />
                             <Column field="containerName" header="Container Name" />
-                        </DataTable>
+                        </DataTableCore>
                     </div>
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">
@@ -388,16 +391,16 @@ export const Projections = () => {
                                             setSyntaxErrors(errors);
                                         }
                                     },
+                                    // Rendered through the template so the disabled action can still explain
+                                    // itself on hover; ActionMenuItem carries no tooltip of its own.
                                     template: saveDisabledReason ? (item: ActionMenuItem) => (
-                                        <Tooltip content={saveDisabledReason} position="bottom">
-                                            <div
-                                                className="p-menuitem-link p-disabled"
-                                                style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                                            >
-                                                {item.icon}
-                                                <span className="p-menuitem-text">{item.label}</span>
-                                            </div>
-                                        </Tooltip>
+                                        <Button
+                                            variant='ghost'
+                                            disabled
+                                            icon={item.icon}
+                                            label={item.label}
+                                            tooltip={saveDisabledReason}
+                                            tooltipOptions={{ position: 'bottom' }} />
                                     ) : undefined
                                 },
                                 {
@@ -412,37 +415,53 @@ export const Projections = () => {
                                             declaration: toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
                                             draftReadModel: draftReadModel ?? undefined
                                         });
-                                        const result = await previewProjection.execute();
 
-                                        const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
-                                            const instance = new ReadModelInstance();
-                                            instance.instance = entry as Record<string, Record<string, unknown>>;
-                                            return instance;
-                                        });
-                                        setReadModelInstances(instances);
-                                        setSyntaxErrors(result.response?.syntaxErrors ?? []);
-                                        setSelectedInstance(null);
-                                        setPage(0);
+                                        // Previewing replays the events through the projection server-side, which
+                                        // takes long enough to look like nothing happened without saying so.
+                                        setIsPreviewing(true);
+                                        try {
+                                            const result = await previewProjection.execute();
+
+                                            const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
+                                                const instance = new ReadModelInstance();
+                                                instance.instance = entry as Record<string, Record<string, unknown>>;
+                                                return instance;
+                                            });
+                                            setReadModelInstances(instances);
+                                            setSyntaxErrors(result.response?.syntaxErrors ?? []);
+                                            setSelectedInstance(null);
+                                            setPage(0);
+                                        } finally {
+                                            setIsPreviewing(false);
+                                        }
                                     },
+                                    // Rendered through the template so the disabled action can still explain
+                                    // itself on hover; ActionMenuItem carries no tooltip of its own.
                                     template: previewDisabledReason ? (item: ActionMenuItem) => (
-                                        <Tooltip content={previewDisabledReason} position="bottom">
-                                            <div
-                                                className="p-menuitem-link p-disabled"
-                                                style={{ cursor: 'not-allowed', opacity: 0.6 }}
-                                            >
-                                                {item.icon}
-                                                <span className="p-menuitem-text">{item.label}</span>
-                                            </div>
-                                        </Tooltip>
+                                        <Button
+                                            variant='ghost'
+                                            disabled
+                                            icon={item.icon}
+                                            label={item.label}
+                                            tooltip={previewDisabledReason}
+                                            tooltipOptions={{ position: 'bottom' }} />
                                     ) : undefined
                                 },
                                 {
                                     label: strings.eventStore.general.projections.actions.timeMachine,
-                                    icon: <FluxCapacitor size={20} />,
+                                    icon: <FluxCapacitor size={16} />,
                                     command: async () => {
                                         await showTimeMachineDialog();
                                     },
-                                    disabled: !selectedProjection || !selectedInstance
+                                    disabled: !selectedProjection || !getInstanceKey(selectedInstance)
+                                },
+                                {
+                                    label: strings.eventStore.general.projections.actions.timeScrubber,
+                                    icon: <faIcons.FaSliders className='mr-2' />,
+                                    command: async () => {
+                                        await showTimeScrubberDialog();
+                                    },
+                                    disabled: !selectedProjection || !getInstanceKey(selectedInstance)
                                 }
                             ]}
                         />
@@ -471,7 +490,7 @@ export const Projections = () => {
                                 page={page}
                                 pageSize={pageSize}
                                 totalItems={readModelInstances.length}
-                                isPerforming={false}
+                                isPerforming={isPreviewing}
                                 setPage={setPage}
                                 setPageSize={setPageSize}
                                 selectedInstance={selectedInstance}
@@ -502,8 +521,15 @@ export const Projections = () => {
             </Dialog>
 
             <>
-                {selectedReadModel && selectedInstance && (
+                {selectedReadModel && getInstanceKey(selectedInstance) && (
                     <TimeMachineDialogWrapper
+                        readModel={selectedReadModel}
+                        readModelKey={getInstanceKey(selectedInstance)}
+                    />
+                )}
+
+                {selectedReadModel && getInstanceKey(selectedInstance) && (
+                    <TimeScrubberDialogWrapper
                         readModel={selectedReadModel}
                         readModelKey={getInstanceKey(selectedInstance)}
                     />

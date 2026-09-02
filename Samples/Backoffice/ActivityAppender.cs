@@ -1,12 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+using System.Reflection;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Concepts;
+using Cratis.Execution;
 
 namespace Samples.Backoffice;
 
@@ -56,6 +60,7 @@ public record AggregateType(string Name)
 /// <param name="store">The <see cref="IEventStore"/> to append to.</param>
 /// <param name="identityProvider">The <see cref="IIdentityProvider"/> to act as somebody through.</param>
 /// <param name="causationManager">The <see cref="ICausationManager"/> to name the acting command through.</param>
+/// <param name="correlationIdModifier">The <see cref="ICorrelationIdModifier"/> to correlate each command through.</param>
 /// <remarks>
 /// Pattern detection mines the context an event was appended in rather than its content, so a generator that only
 /// appended events would produce a store with nothing to mine. Everything the miner reads is set here: who acted,
@@ -66,7 +71,11 @@ public record AggregateType(string Name)
 /// provider carries the user. This is what that looks like when appending through the client directly.
 /// </para>
 /// </remarks>
-public class ActivityAppender(IEventStore store, IIdentityProvider identityProvider, ICausationManager causationManager)
+public class ActivityAppender(
+    IEventStore store,
+    IIdentityProvider identityProvider,
+    ICausationManager causationManager,
+    ICorrelationIdModifier correlationIdModifier)
 {
     /// <summary>
     /// The causation type used for a link representing a command.
@@ -100,10 +109,16 @@ public class ActivityAppender(IEventStore store, IIdentityProvider identityProvi
     {
         identityProvider.SetCurrentIdentity(actor.Identity);
 
+        // Every planned event is its own command at its own moment, so each one is correlated separately - which
+        // is what an application on Arc gets from its command pipeline, a correlation per command. Leaving them on
+        // one correlation would tell Chronicle the whole generated history happened as a single action, collapsing
+        // an instance's entire life into one snapshot for anything that reads events back grouped by correlation.
+        correlationIdModifier.Modify(CorrelationId.New());
+
         // The chain reads from the root outwards, so the cause is opened first and the command carrying it out
         // second - which is the order the miner reads back as "this command, caused by that one".
         using var causeScope = causedByCommand is null ? null : causationManager.BeginScope(Command, PropertiesFor(causedByCommand));
-        using var commandScope = causationManager.BeginScope(Command, PropertiesFor(commandType));
+        using var commandScope = causationManager.BeginScope(Command, PropertiesFor(commandType, eventSourceId, aggregate, @event));
 
         return await store.EventLog.Append(
             eventSourceId,
@@ -114,4 +129,80 @@ public class ActivityAppender(IEventStore store, IIdentityProvider identityProvi
 
     static Dictionary<string, string> PropertiesFor(string commandType) =>
         new(StringComparer.Ordinal) { [WellKnownCausationProperties.CommandType] = commandType };
+
+    /// <summary>
+    /// Builds the causation properties for the command being carried out - its name and the values it was asked to
+    /// act on.
+    /// </summary>
+    /// <param name="commandType">The name of the command.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> the command acted on.</param>
+    /// <param name="aggregate">The <see cref="AggregateType"/> the event source is, used to name its id.</param>
+    /// <param name="event">The event the command produced, whose values were the command's input.</param>
+    /// <returns>The properties to record on the causation.</returns>
+    /// <remarks>
+    /// Naming the command says which command produced an event but not which invocation of it - two invoices
+    /// registered by the same command are indistinguishable on the chain. The values are what separate them, and
+    /// they are what an application on Arc records automatically: a command's property values travel on the
+    /// causation of every event it appends.
+    /// <para>
+    /// This sample has no command objects to read those values from - a command here is a name - so it reconstructs
+    /// the same set from what the command demonstrably acted on: the event source it targeted, and the values it
+    /// put on the event. For <c>RegisterInvoice</c> that is the invoice id plus the supplier, amount and reference,
+    /// which is exactly what the real command would have carried.
+    /// </para>
+    /// <para>
+    /// A real application also decides what must <em>not</em> travel this way. Values marked <c>[PII]</c> and
+    /// <c>[NotAudited]</c> are withheld, because the causation is written into the event log and stays there for as
+    /// long as the events do. Nothing here is sensitive, so nothing is withheld.
+    /// </para>
+    /// </remarks>
+    static Dictionary<string, string> PropertiesFor(
+        string commandType,
+        EventSourceId eventSourceId,
+        AggregateType aggregate,
+        object @event)
+    {
+        var properties = PropertiesFor(commandType);
+        properties[$"{CamelCase(aggregate.Name)}Id"] = eventSourceId.Value;
+
+        foreach (var property in @event.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (property.GetIndexParameters().Length != 0) continue;
+            if (property.GetValue(@event) is not { } value) continue;
+
+            properties[CamelCase(property.Name)] = Render(value);
+        }
+
+        return properties;
+    }
+
+    /// <summary>
+    /// Renders a value the way Arc renders it on a causation.
+    /// </summary>
+    /// <param name="value">The value to render.</param>
+    /// <returns>The rendered value.</returns>
+    /// <remarks>
+    /// Invariant, and concepts unwrapped to the value they hold. A causation written in one locale has to read the
+    /// same in another - a decimal that arrives as "13073,75" on this machine and "13073.75" on the next is not a
+    /// value anything downstream can compare.
+    /// </remarks>
+    static string Render(object value)
+    {
+        if (value.IsConcept())
+        {
+            return Render(value.GetConceptValue());
+        }
+
+        return value switch
+        {
+            string text => text,
+            DateTimeOffset offset => offset.ToString("O", CultureInfo.InvariantCulture),
+            DateTime date => date.ToString("O", CultureInfo.InvariantCulture),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => value.ToString() ?? string.Empty
+        };
+    }
+
+    static string CamelCase(string name) =>
+        string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name[1..];
 }

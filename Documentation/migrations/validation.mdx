@@ -66,6 +66,22 @@ Cratis.Chronicle.Services.Events.EventTypeSchemaChanged:
 
 The fix is always to introduce a new generation and a corresponding migrator rather than silently mutating an existing one.
 
+### What an enum may still do
+
+Immutability is about what an already stored event *means*, so two kinds of change to an enum are accepted in place and update the registered schema rather than being rejected:
+
+- **Gaining a member.** Nothing already stored carries the new value, so nothing already stored changes meaning.
+- **Renaming a member.** An event's payload carries the underlying number, not the name; the name is resolved through the schema when the value is read. An enum mirroring an external system is renamed on that system's schedule, and Chronicle does not make you cut a generation for a spelling you do not control.
+
+Two changes remain breaking, because both leave already stored values denoting something other than what they denoted when they were written:
+
+- **Removing a member** — stored events carrying that value now denote nothing.
+- **Renumbering a member** — the names survive but move onto different numbers, so every stored event silently reads as a different member.
+
+For those two, cut a new generation and declare a [value map](../concepts/event-type-migrations#value-map) in the migration saying what the old values became. Chronicle applies it forward when upcasting and inverted when downcasting.
+
+Everything outside enums — a property added, removed, retyped, or renamed — is unchanged: still a schema change, still needing a new generation.
+
 ## Relaxing validation for development
 
 Strict validation is **always enforced in the production image** of the Kernel. The development image relaxes this by honouring the `EnableEventTypeGenerationValidation` flag sent from the client.

@@ -60,6 +60,21 @@ public class OrderPlacedV1ToV2 : EventTypeMigration<OrderPlaced, OrderPlacedV1>
 
 The property builder exposes `DefaultValue`, `RenamedFrom`, `Split`, and `Combine` — use them to express the change declaratively. Both `Upcast` and `Downcast` are abstract on the base, so both must be implemented (`Downcast` may be a no-op `builder.Properties(_ => { })` when no consumer needs the gen-1 shape).
 
+### 2b. When the *values* changed meaning, declare a value map
+
+The operations above move values between properties. When a value itself means something different in the new generation — an enum renumbered, a status code set replaced — override **`MapValues`** on the migration instead. It is declared once and applied forward when upcasting and inverted when downcasting:
+
+```csharp
+public override void MapValues(IEventValueMapBuilder<OrderStatusChanged, OrderStatusChangedV1> builder) =>
+    builder.For(current => current.Status, previous => previous.Status, map => map
+        .Map(OrderStatusV1.Pending, OrderStatus.Awaiting)
+        .Map(OrderStatusV1.Done, OrderStatus.Completed));
+```
+
+Values the map doesn't mention are carried across unchanged. Two values collapsing onto one take the first pair declared for that value on the way back. `MapValues` runs *before* `Upcast`/`Downcast`, so a direction that states its own transformation for the property keeps it — that's also how you express a deliberately one-way translation (`builder.Properties(pb => pb.MapValues(...))`).
+
+> **An enum gaining a member or having a member renamed needs no migration at all** — Chronicle accepts both in place and updates the registered schema, because neither changes what an already stored value means. Only a *removed* or *renumbered* member needs a new generation plus a value map.
+
 ### 3. Chain across generations
 
 For three generations, write two migrations (`1→2`, `2→3`) — each only knows its adjacent pair; Chronicle chains them.

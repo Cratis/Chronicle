@@ -13,14 +13,14 @@ public class an_event_nobody_can_be_named_for : given.a_pattern_miner
 {
     IEnumerable<BehaviorPattern> _result;
 
-    void Because()
+    async Task Because()
     {
         for (var count = 0; count < 20; count++)
         {
-            _miner.Observe(Features(PatternGroupingKey.Unspecified, "ApproveExpenseReport"));
+            await _miner.Mine([Features(PatternGroupingKey.Unspecified, "ApproveExpenseReport")]);
         }
 
-        _result = _miner.GetSurvivingPatterns();
+        _result = await _miner.GetSurvivingPatterns(PatternGroupingKey.Unspecified);
     }
 
     [Fact] void should_not_mine_anything() => _result.ShouldBeEmpty();

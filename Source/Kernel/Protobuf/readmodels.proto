@@ -115,6 +115,7 @@ message GetSnapshotsByKeyRequest {
    string ReadModelIdentifier = 3;
    string EventSequenceId = 4; // default value could not be applied: event-log
    string ReadModelKey = 5;
+   ReadModelSnapshotGrouping Grouping = 6;
 }
 message GetSnapshotsByKeyResponse {
    repeated ReadModelSnapshot Snapshots = 1;
@@ -192,6 +193,10 @@ message ReadModelSnapshot {
    repeated AppendedEvent Events = 2;
    SerializableDateTimeOffset Occurred = 3;
    .bcl.Guid CorrelationId = 4;
+}
+enum ReadModelSnapshotGrouping {
+   Correlation = 0;
+   Event = 1;
 }
 enum ReadModelSource {
    Unknown = 0;

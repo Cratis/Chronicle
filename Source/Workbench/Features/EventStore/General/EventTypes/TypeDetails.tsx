@@ -3,8 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
-import { SchemaEditor as _SE } from '@cratis/components';
-const SchemaEditor = _SE.SchemaEditor;
+import { SchemaEditor } from '@cratis/components/SchemaEditor';
 import type { JsonSchema } from '@cratis/components/types';
 import { AllTypeFormats } from 'Features/Schemas';
 import { EventTypeSource } from 'Features/Contracts/Events';
@@ -97,7 +96,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeDetails>) => 
                         options={generationOptions}
                         optionLabel='label'
                         optionValue='value'
-                        onChange={(event) => handleGenerationChange(event.value)}
+                        onChange={(value) => handleGenerationChange(value)}
                         style={{ minWidth: '160px' }}
                     />
                 </div>

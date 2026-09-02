@@ -55,12 +55,14 @@ message GenerateDeclarativeCodeRequest {
    string Namespace = 2;
    string Declaration = 3;
    DraftReadModelDefinition DraftReadModel = 4;
+   ProjectionCodeLanguage Language = 5;
 }
 message GenerateModelBoundCodeRequest {
    string EventStore = 1;
    string Namespace = 2;
    string Declaration = 3;
    DraftReadModelDefinition DraftReadModel = 4;
+   ProjectionCodeLanguage Language = 5;
 }
 message GeneratedCode {
    string Code = 1;
@@ -115,6 +117,13 @@ message PreviewProjectionRequest {
    string EventSequenceId = 3; // default value could not be applied: event-log
    string Declaration = 4;
    DraftReadModelDefinition DraftReadModel = 5;
+}
+enum ProjectionCodeLanguage {
+   CSharp = 0;
+   TypeScript = 1;
+   Kotlin = 2;
+   Java = 3;
+   Elixir = 4;
 }
 message ProjectionDeclarationParsingErrors {
    repeated ProjectionDeclarationSyntaxError Errors = 1;

@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { type CSSProperties, type ReactNode } from 'react';
-import { Card as PrimeCard } from 'primereact/card';
+import { Surface } from '@cratis/components/Common';
+import './Card.css';
 
 /**
  * Props for {@link Card}.
@@ -21,17 +22,16 @@ export interface CardProps {
 }
 
 /**
- * A declarative card over PrimeReact 11's compositional `Card` primitives.
+ * A card with optional header and footer slots.
  *
- * PrimeReact 10's `<Card header= footer=>` became a namespace of parts
- * (`Card.Root`, `Card.Header`, `Card.Body`, `Card.Footer`) in 11. The Workbench
- * uses the header/body/footer shape in a dozen places, so this keeps that one
- * authoring model rather than repeating the composition at every call site.
+ * Components 4 has no card of its own — `Surface` supplies the chrome (border, radius,
+ * card background and subtle shadow) and this adds the header/body/footer split the
+ * Workbench's dashboard widgets and event-store tiles are written against.
  */
 export const Card = ({ header, footer, children, className, style }: CardProps) => (
-    <PrimeCard.Root className={className} style={style}>
-        {header && <PrimeCard.Header>{header}</PrimeCard.Header>}
-        <PrimeCard.Body>{children}</PrimeCard.Body>
-        {footer && <PrimeCard.Footer>{footer}</PrimeCard.Footer>}
-    </PrimeCard.Root>
+    <Surface className={className ? `workbench-card ${className}` : 'workbench-card'} style={style}>
+        {header && <div className='workbench-card__header'>{header}</div>}
+        <div className='workbench-card__body'>{children}</div>
+        {footer && <div className='workbench-card__footer'>{footer}</div>}
+    </Surface>
 );

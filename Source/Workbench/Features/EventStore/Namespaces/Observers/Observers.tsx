@@ -5,7 +5,7 @@ import { type ChangeEvent, useState } from 'react';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { Column } from '@cratis/components/DataTables';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import { IconField } from 'primereact/iconfield';
 import { InputText } from 'primereact/inputtext';
@@ -113,8 +113,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             <div className='flex-1 overflow-hidden px-4 pb-4'>
                 <Allotment className='h-full' proportionalLayout={false}>
                     <Allotment.Pane className='flex-grow'>
-                        <DataTable<ObserverInformation>
-                            value={observerRows}
+                        <DataTableCore<ObserverInformation>
+                            data={observerRows}
                             selectionMode='single'
                             selection={viewModel.selectedObserver}
                             onSelectionChange={(event) => (viewModel.selectedObserver = event.value ?? undefined)}
@@ -168,7 +168,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 filter
                                 filterField='runningState'
                                 body={runningState} />
-                        </DataTable>
+                        </DataTableCore>
                     </Allotment.Pane>
                     {viewModel.selectedObserver &&
                         <Allotment.Pane preferredSize='450px'>

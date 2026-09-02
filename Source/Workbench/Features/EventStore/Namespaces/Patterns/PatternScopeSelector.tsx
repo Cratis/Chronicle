@@ -31,7 +31,7 @@ export const PatternScopeSelector = ({ scopes, selected, onChange }: PatternScop
                     filter={scopes.length > 10}
                     placeholder={strings.patterns.scope}
                     className="min-w-[20rem]"
-                    onChange={(event) => onChange(event.value)}
+                    onChange={(value) => onChange(value)}
                 />
             )
             : scopes.length === 0 && <span className="opacity-70">{strings.patterns.noScopes}</span>}

@@ -33,6 +33,11 @@ export interface IGenerateDeclarativeCode {
     eventStore?: string;
     
     /**
+     * The language to generate for - one of the {@link ProjectionCodeLanguage} names. Defaults to C#.
+     */
+    language?: string;
+    
+    /**
      * The namespace the projection targets.
      */
     namespace?: string;
@@ -59,12 +64,14 @@ export class GenerateDeclarativeCode extends Command<IGenerateDeclarativeCode, G
         new PropertyDescriptor('declaration', String, false),
         new PropertyDescriptor('draftReadModel', DraftReadModel, true),
         new PropertyDescriptor('eventStore', String, false),
+        new PropertyDescriptor('language', String, false),
         new PropertyDescriptor('namespace', String, false),
     ];
 
     private _declaration!: string;
     private _draftReadModel?: DraftReadModel;
     private _eventStore!: string;
+    private _language!: string;
     private _namespace!: string;
 
     constructor() {
@@ -108,6 +115,17 @@ export class GenerateDeclarativeCode extends Command<IGenerateDeclarativeCode, G
     set eventStore(value: string) {
         this._eventStore = value;
         this.propertyChanged('eventStore');
+    }
+    /**
+     * The language to generate for - one of the {@link ProjectionCodeLanguage} names. Defaults to C#.
+     */
+    get language(): string {
+        return this._language;
+    }
+
+    set language(value: string) {
+        this._language = value;
+        this.propertyChanged('language');
     }
     /**
      * The namespace the projection targets.

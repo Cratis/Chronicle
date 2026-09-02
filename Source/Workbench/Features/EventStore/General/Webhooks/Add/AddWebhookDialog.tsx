@@ -7,8 +7,8 @@ import { AllEventTypes } from 'Features/EventTypes';
 import { EventType } from 'Features/Contracts/Events';
 import { AuthorizationType } from 'Features/Contracts/Security';
 import { Dropdown } from '@cratis/components/Dropdown';
-import { Message } from 'Components/Message';
-import { Button } from 'Components/Button';
+import { Message } from '@cratis/components/Display';
+import { Button } from '@cratis/components/Common';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
@@ -56,7 +56,7 @@ const WebhookTestButton = ({ isValid, onTestResult }: TestButtonProps) => {
         <Button
             label={strings.eventStore.general.webhooks.dialogs.addWebhook.test}
             icon="pi pi-check-circle"
-            severity="secondary"
+            tone="neutral"
             disabled={!isValid}
             onClick={handleTest}
         />
@@ -148,7 +148,7 @@ export const AddWebhookDialog = () => {
                         multiple
                         value={selectedEventTypes}
                         options={allEventTypes.data}
-                        onChange={(event) => setSelectedEventTypes(event.value)}
+                        onChange={(value) => setSelectedEventTypes(value)}
                         optionLabel="id"
                         placeholder="Select event types"
                     />
