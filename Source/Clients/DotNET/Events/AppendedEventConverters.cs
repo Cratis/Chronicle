@@ -107,4 +107,37 @@ internal static class AppendedEventConverters
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions) =>
         events.Select(_ => _.ToClient(eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
+
+    /// <summary>
+    /// Convert to a client version of a collection of <see cref="Contracts.ReadModelExplorer.Event"/>.
+    /// </summary>
+    /// <param name="events">Collection of <see cref="Contracts.ReadModelExplorer.Event"/> to convert from.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the events belong to.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the events belong to.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
+    /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
+    /// <returns>An immutable collection of <see cref="AppendedEvent"/>.</returns>
+    internal static IImmutableList<AppendedEvent> ToClient(
+        this IEnumerable<Contracts.ReadModelExplorer.Event> events,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IEventTypes eventTypes,
+        JsonSerializerOptions jsonSerializerOptions) =>
+        events.Select(_ => ToClient(_.Context, _.Content, eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
+
+    static AppendedEvent ToClient(
+        Contracts.Sequences.EventContext context,
+        string content,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IEventTypes eventTypes,
+        JsonSerializerOptions jsonSerializerOptions)
+    {
+        var clientContext = context.ToClient(eventStore, @namespace);
+        var clientContent = eventTypes.HasFor(clientContext.EventType.Id)
+            ? JsonSerializer.Deserialize(content, eventTypes.GetClrTypeFor(clientContext.EventType.Id), jsonSerializerOptions)!
+            : JsonSerializer.Deserialize<ExpandoObject>(content, jsonSerializerOptions) ?? new ExpandoObject();
+
+        return new(clientContext, clientContent);
+    }
 }

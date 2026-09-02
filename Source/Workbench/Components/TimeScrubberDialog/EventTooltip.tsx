@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { Tooltip } from 'primereact/tooltip';
 import type { Event } from 'Features/ReadModelExplorer';
 import strings from 'Strings';
+import { parseJsonObject } from 'Components/ReadModelExplorer';
 import { summarizeProperties } from './eventProperties';
 
 /**
@@ -36,7 +37,7 @@ export interface EventTooltipProps {
  */
 export const EventTooltip = ({ event, anchor, position, total }: EventTooltipProps) => {
     const summary = useMemo(
-        () => summarizeProperties(event?.content as Record<string, unknown> | undefined),
+        () => summarizeProperties(parseJsonObject(event?.content)),
         [event]);
 
     const isOpen = !!event && !!anchor;
@@ -55,13 +56,13 @@ export const EventTooltip = ({ event, anchor, position, total }: EventTooltipPro
                         <Tooltip.Arrow />
                         {event && (
                             <div className='time-scrubber__hover'>
-                                <div className='time-scrubber__hover-title'>{event.type}</div>
+                                <div className='time-scrubber__hover-title'>{event.context.eventType.id}</div>
                                 <div className='time-scrubber__hover-meta'>
                                     {strings.components.timeScrubber.position
                                         .replace('{0}', String(position))
                                         .replace('{1}', String(total))}
                                     {' · '}
-                                    {new Date(event.occurred).toLocaleString()}
+                                    {new Date(event.context.occurred).toLocaleString()}
                                 </div>
 
                                 {summary.properties.length > 0 && (

@@ -127,6 +127,11 @@ public interface IServices
     IReadModels ReadModels { get; }
 
     /// <summary>
+    /// Gets the <see cref="ReadModelExplorer.IReadModelExplorer"/> service.
+    /// </summary>
+    ReadModelExplorer.IReadModelExplorer ReadModelExplorer { get; }
+
+    /// <summary>
     /// Gets the <see cref="IMaterializedReadModels"/> service.
     /// </summary>
     IMaterializedReadModels MaterializedReadModels { get; }

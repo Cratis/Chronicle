@@ -6,6 +6,7 @@ import { Dialog } from '@cratis/components/Dialogs';
 import { TimeMachine, type Version } from '@cratis/components/TimeMachine';
 import { useState, useEffect } from 'react';
 import { AllSnapshotsForReadModel } from 'Features/ReadModelExplorer';
+import { parseJsonObject } from 'Components/ReadModelExplorer';
 import { EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { ReadModelDefinition } from 'Features/ReadModelDefinitions';
@@ -39,10 +40,10 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
 
                 // Map backend events to component event format
                 const mappedEvents = snapshot.events.map(event => ({
-                    sequenceNumber: event.sequenceNumber,
-                    type: event.type,
-                    occurred: new Date(event.occurred),
-                    content: event.content || {},
+                    sequenceNumber: event.context.sequenceNumber,
+                    type: event.context.eventType.id,
+                    occurred: new Date(event.context.occurred),
+                    content: parseJsonObject(event.content),
                 }));
 
                 const schema = JSON.parse(readModel.schema);
@@ -50,7 +51,7 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
                     id: `snapshot-${index}`,
                     timestamp,
                     label: `${readModel.identifier} @ ${snapshot.occurred.toLocaleString()}`,
-                    content: <ObjectContentEditor object={snapshot.instance as Json} timestamp={timestamp} schema={schema} />,
+                    content: <ObjectContentEditor object={parseJsonObject(snapshot.instance) as Json} timestamp={timestamp} schema={schema} />,
                     events: mappedEvents,
                 };
             });

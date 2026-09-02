@@ -1,10 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.ReadModelExplorer;
 
@@ -12,49 +17,56 @@ namespace Cratis.Chronicle.ReadModelExplorer;
 /// Represents a snapshot of a read model.
 /// </summary>
 /// <param name="Occurred">When the snapshot was taken.</param>
-/// <param name="Instance">The instance of the read model.</param>
+/// <param name="CorrelationId">The correlation the events behind the snapshot were appended under.</param>
+/// <param name="Instance">The JSON representation of the read model as it stood at the snapshot.</param>
 /// <param name="Events">The events that led to the snapshot.</param>
 [ReadModel]
-public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IEnumerable<Event> Events)
+[BelongsTo(WellKnownServices.ReadModelExplorer)]
+public record ReadModelSnapshot(DateTimeOffset Occurred, Guid CorrelationId, string Instance, IEnumerable<Event> Events)
 {
     /// <summary>
-    /// Gets all snapshots for a specific read model.
+    /// Gets all snapshots a read model instance passed through.
     /// </summary>
-    /// <param name="readModels">The read models service.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to resolve the read model and its projection with.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read events and definitions from.</param>
+    /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> to render the state with.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> content is serialized with.</param>
     /// <param name="eventStore">The event store name.</param>
     /// <param name="namespace">The event store namespace.</param>
     /// <param name="readModel">The read model identifier.</param>
     /// <param name="readModelKey">The read model key.</param>
+    /// <param name="eventSequenceId">The event sequence the read model observes, defaulting to the event log.</param>
     /// <param name="grouping">How the events are grouped into snapshots, defaulting to by correlation.</param>
-    /// <returns>Collection of snapshots.</returns>
+    /// <returns>The snapshots, oldest first.</returns>
     /// <remarks>
     /// The grouping is taken as a string rather than the enum it names, because an enum query parameter
     /// is dropped by the proxy generator and would silently never reach here.
     /// </remarks>
-    public static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
-        IReadModels readModels,
-        string eventStore,
-        string @namespace,
+    public static Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
+        IGrainFactory grainFactory,
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        IExpandoObjectConverter expandoObjectConverter,
+        JsonSerializerOptions jsonSerializerOptions,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         string readModel,
         string readModelKey,
-        string grouping = nameof(ReadModelSnapshotGrouping.Correlation))
-    {
-        var response = await readModels.GetSnapshotsByKey(new GetSnapshotsByKeyRequest
-        {
-            EventStore = eventStore,
-            Namespace = @namespace,
-            ReadModelIdentifier = readModel,
-            EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey,
-            Grouping = ParseGrouping(grouping)
-        });
-
-        return response.Snapshots.Select(s => new ReadModelSnapshot(s.Occurred, JsonNode.Parse(s.ReadModel)!.AsObject(), s.Events.Select(e => new Event(
-            e.Context.SequenceNumber,
-            e.Context.EventType.Id,
-            e.Context.Occurred,
-            JsonNode.Parse(e.Content)!.AsObject()))));
-    }
+        string eventSequenceId = "event-log",
+        string grouping = nameof(ReadModelSnapshotGrouping.Correlation)) =>
+        ReadModelSnapshotReader.Read(
+            new ReadModelIdentifier(readModel),
+            eventStore,
+            @namespace,
+            new EventSequenceId(eventSequenceId),
+            readModelKey,
+            ParseGrouping(grouping),
+            grainFactory,
+            storage,
+            eventCompliance,
+            expandoObjectConverter,
+            jsonSerializerOptions);
 
     static ReadModelSnapshotGrouping ParseGrouping(string grouping) =>
         Enum.TryParse<ReadModelSnapshotGrouping>(grouping, ignoreCase: true, out var parsed)

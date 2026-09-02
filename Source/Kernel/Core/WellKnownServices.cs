@@ -79,6 +79,11 @@ public static class WellKnownServices
     public const string Webhooks = "Webhooks";
 
     /// <summary>
+    /// The name of the ReadModelExplorer service - reading a read model instance and the history behind it.
+    /// </summary>
+    public const string ReadModelExplorer = "ReadModelExplorer";
+
+    /// <summary>
     /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.
     /// </summary>
     /// <remarks>
