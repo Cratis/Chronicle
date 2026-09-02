@@ -93,6 +93,29 @@ public static class EventSequenceMutationValidator
     }
 
     /// <summary>
+    /// Validates that a mutation request carries the deterministic identifier for its target, origin and kind.
+    /// </summary>
+    /// <param name="request">The mutation request.</param>
+    /// <returns>The validation result.</returns>
+    public static EventSequenceMutationValidationResult ValidateDeterministicId(EventSequenceMutationRequest? request)
+    {
+        var validation = ValidateRequest(request);
+        if (!validation.IsValid)
+        {
+            return validation;
+        }
+
+        var expected = EventSequenceMutationDigestCalculator.CalculateId(
+            request!.TargetSequence,
+            request.Origin.Sequence,
+            request.Origin.SequenceNumber,
+            request.Kind);
+        return request.Id == expected
+            ? EventSequenceMutationValidationResult.Valid
+            : Invalid(EventSequenceMutationValidationError.InvalidId, nameof(request.Id));
+    }
+
+    /// <summary>
     /// Validates a complete mutation definition and recomputes its digest.
     /// </summary>
     /// <param name="scope">The event sequence scope.</param>
@@ -329,6 +352,42 @@ public static class EventSequenceMutationValidator
     }
 
     /// <summary>
+    /// Validates an event sequence mutation identity.
+    /// </summary>
+    /// <param name="identity">The identity to validate.</param>
+    /// <returns>The validation result.</returns>
+    public static EventSequenceMutationValidationResult ValidateIdentity(EventSequenceMutationIdentity? identity) =>
+        ValidateIdentity(identity, nameof(identity));
+
+    /// <summary>
+    /// Validates that tracking may begin from the expected coverage.
+    /// </summary>
+    /// <param name="expected">The expected current coverage.</param>
+    /// <returns>The validation result.</returns>
+    public static EventSequenceMutationValidationResult ValidateTrackingCoverage(EventSequenceMutationCoverage expected) =>
+        Enum.IsDefined(expected) && expected == EventSequenceMutationCoverage.Untracked
+            ? EventSequenceMutationValidationResult.Valid
+            : Invalid(EventSequenceMutationValidationError.InvalidEnum, nameof(expected));
+
+    /// <summary>
+    /// Validates a frozen mutation target.
+    /// </summary>
+    /// <param name="target">The target to validate.</param>
+    /// <returns>The validation result.</returns>
+    public static EventSequenceMutationValidationResult ValidateTarget(EventSequenceMutationTarget? target)
+    {
+        if (target is not { Start: { } start, EndExclusive: { } endExclusive, ExpectedCount: { } expectedCount } ||
+            !start.IsActualValue || !endExclusive.IsActualValue || expectedCount == Concepts.Events.EventCount.NotSet ||
+            endExclusive.Value < start.Value || expectedCount.Value > ulong.MaxValue - start.Value ||
+            start.Value + expectedCount.Value != endExclusive.Value)
+        {
+            return Invalid(EventSequenceMutationValidationError.InvalidTarget, nameof(target));
+        }
+
+        return EventSequenceMutationValidationResult.Valid;
+    }
+
+    /// <summary>
     /// Determines whether a phase composite is a valid active state.
     /// </summary>
     /// <param name="phase">The phase.</param>
@@ -344,7 +403,12 @@ public static class EventSequenceMutationValidator
             _ => false
         };
 
-    static EventSequenceMutationValidationResult ValidateScope(EventSequenceKey? scope)
+    /// <summary>
+    /// Validates the complete event sequence mutation registry scope.
+    /// </summary>
+    /// <param name="scope">The scope to validate.</param>
+    /// <returns>The validation result.</returns>
+    public static EventSequenceMutationValidationResult ValidateScope(EventSequenceKey? scope)
     {
         if (scope is null || scope.EventSequenceId is null || scope.EventStore is null || scope.Namespace is null ||
             scope.EventSequenceId == EventSequenceId.Unspecified || scope.EventStore.Value is null || scope.EventStore == Concepts.EventStoreName.NotSet ||
@@ -383,19 +447,6 @@ public static class EventSequenceMutationValidator
             : Invalid(EventSequenceMutationValidationError.InvalidIdentity, field);
     }
 
-    static EventSequenceMutationValidationResult ValidateTarget(EventSequenceMutationTarget? target)
-    {
-        if (target is not { Start: { } start, EndExclusive: { } endExclusive, ExpectedCount: { } expectedCount } ||
-            !start.IsActualValue || !endExclusive.IsActualValue || expectedCount == Concepts.Events.EventCount.NotSet ||
-            endExclusive.Value < start.Value || expectedCount.Value > ulong.MaxValue - start.Value ||
-            start.Value + expectedCount.Value != endExclusive.Value)
-        {
-            return Invalid(EventSequenceMutationValidationError.InvalidTarget, nameof(target));
-        }
-
-        return EventSequenceMutationValidationResult.Valid;
-    }
-
     static bool IsValidWitness(EventSequenceMutationTerminalWitness? witness, EventSequenceMutationDefinitionDigestV1? expectedDefinitionDigest) =>
         witness is
         {
@@ -425,5 +476,5 @@ public static class EventSequenceMutationValidator
         }
     }
 
-    static EventSequenceMutationValidationResult Invalid(EventSequenceMutationValidationError error, string field) => new(error, field);
+    static EventSequenceMutationValidationResult Invalid(EventSequenceMutationValidationError error, string field) => EventSequenceMutationValidationResult.Failed(error, field);
 }

@@ -50,4 +50,26 @@ public sealed class EventSequenceMutationValidationResult
             throw new InvalidEventSequenceMutation(this);
         }
     }
+
+    /// <summary>
+    /// Creates an explicitly failed validation result.
+    /// </summary>
+    /// <param name="error">The validation error.</param>
+    /// <param name="field">The field associated with the error.</param>
+    /// <returns>The failed validation result.</returns>
+    /// <exception cref="InvalidEventSequenceMutationRegistryResult">Thrown when the error or field does not describe a failure.</exception>
+    internal static EventSequenceMutationValidationResult Failed(EventSequenceMutationValidationError error, string field)
+    {
+        if (!Enum.IsDefined(error) || error == EventSequenceMutationValidationError.None)
+        {
+            throw new InvalidEventSequenceMutationRegistryResult(nameof(error));
+        }
+
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            throw new InvalidEventSequenceMutationRegistryResult(nameof(field));
+        }
+
+        return new(error, field);
+    }
 }
