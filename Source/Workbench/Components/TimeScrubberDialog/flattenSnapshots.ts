@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { Json } from '@cratis/components/types';
-import type { ReadModelSnapshot } from 'Api/ReadModels';
+import type { ReadModelSnapshot } from 'Features/ReadModelExplorer';
 import type { ScrubStep } from './ScrubStep';
 
 /**

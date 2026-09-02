@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import type { ReadModelSnapshot } from 'Api/ReadModels';
+import type { ReadModelSnapshot } from 'Features/ReadModelExplorer';
 import { flattenSnapshots } from '../flattenSnapshots';
 
 const snapshot = (occurred: string, instance: object, ...types: string[]) => ({

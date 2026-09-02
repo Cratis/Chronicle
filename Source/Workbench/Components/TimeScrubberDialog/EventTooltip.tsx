@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { Tooltip } from 'primereact/tooltip';
-import type { Event } from 'Api/ReadModels';
+import type { Event } from 'Features/ReadModelExplorer';
 import strings from 'Strings';
 import { summarizeProperties } from './eventProperties';
 
