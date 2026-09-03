@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Cratis.Arc;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Security;
+using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -42,6 +43,7 @@ public class AuthorizationController(
     /// <exception cref="InvalidOperationException">Thrown when the OpenID Connect request cannot be retrieved or the grant type is not supported.</exception>
     [HttpPost("token")]
     [Produces("application/json")]
+    [IgnoreAntiforgeryToken]
     [AspNetResult]
     public async Task<IActionResult> Exchange()
     {
@@ -78,6 +80,17 @@ public class AuthorizationController(
 
             var applicationId = await applicationManager.GetIdAsync(application);
             var clientId = await applicationManager.GetClientIdAsync(application);
+            if (!TokenSubjectValidation.TryGetApplicationId(applicationId, out var appId))
+            {
+                logger.ApplicationHasNoStableIdentifier(clientId ?? string.Empty);
+                return Forbid(
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidClient,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The client application is invalid."
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
 
             // Create the claims-based identity for the client
             var identity = new ClaimsIdentity(
@@ -85,17 +98,17 @@ public class AuthorizationController(
                 nameType: OpenIddictConstants.Claims.Name,
                 roleType: OpenIddictConstants.Claims.Role);
 
-            identity.AddClaim(OpenIddictConstants.Claims.Subject, applicationId ?? string.Empty);
+            identity.AddClaim(OpenIddictConstants.Claims.Subject, applicationId);
             identity.AddClaim(OpenIddictConstants.Claims.Name, clientId ?? string.Empty);
 
             identity.SetScopes(request.GetScopes());
+            identity.SetChronicleAudience();
             identity.SetDestinations(GetDestinations);
 
             logger.ClientCredentialsValidated(clientId ?? string.Empty);
 
             // Append event for successful application authentication
             var appAuthEvent = new ApplicationAuthenticated(clientId ?? string.Empty);
-            var appId = Guid.Parse(applicationId ?? Guid.Empty.ToString());
             await eventLog.Append(appId, appAuthEvent);
 
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -113,6 +126,18 @@ public class AuthorizationController(
                 var unknownUserEvent = new UnknownUserLoginAttempted(request.Username ?? string.Empty);
                 await eventLog.Append(Guid.Empty, unknownUserEvent);
 
+                return Forbid(
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The username/password couple is invalid."
+                    }),
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            if (!TokenSubjectValidation.IsStableUserId(user.Id))
+            {
+                logger.PasswordGrantUserHasNoStableIdentifier();
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
                     {
@@ -151,6 +176,7 @@ public class AuthorizationController(
             identity.AddClaim(OpenIddictConstants.Claims.Name, user.Username);
 
             identity.SetScopes(request.GetScopes());
+            identity.SetChronicleAudience();
             identity.SetDestinations(GetDestinations);
 
             logger.PasswordValidated(request.Username ?? string.Empty);
@@ -209,6 +235,7 @@ public class AuthorizationController(
                 roleType: OpenIddictConstants.Claims.Role);
 
             identity.SetScopes(request.GetScopes());
+            identity.SetChronicleAudience();
             identity.SetDestinations(GetDestinations);
 
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);

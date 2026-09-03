@@ -1,17 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DefaultLayout } from "../../Layout/Default/DefaultLayout";
-import { Navigate, Route, Routes } from "react-router-dom";
-import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
+import { DefaultLayout } from '../../Layout/Default/DefaultLayout';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { IMenuItemGroup } from '../../Layout/Default/Sidebar/MenuItem/MenuItem';
 import * as mdIcons from 'react-icons/md';
 // import * as devIcons from 'react-icons/di';
 // import * as gameIcons from 'react-icons/gi';
-import { EventTypes } from "./General/EventTypes/EventTypes";
-import { Observers } from "./Namespaces/Observers/Observers";
-import { Projections } from "./General/Projections/Projections";
-import { FailedPartitions } from "./Namespaces/FailedPartitions/FailedPartitions";
-import { Recommendations } from "./Namespaces/Recommendations/Recommendations";
+import { EventTypes } from './General/EventTypes/EventTypes';
+import { Observers } from './Namespaces/Observers/Observers';
+import { Projections } from './General/Projections/Projections';
+import { FailedPartitions } from './Namespaces/FailedPartitions/FailedPartitions';
+import { Recommendations } from './Namespaces/Recommendations/Recommendations';
 import { Jobs } from './Namespaces/Jobs/Jobs';
 import { Identities } from './Namespaces/Identities/Identities';
 import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
@@ -35,7 +35,6 @@ import { AreDevelopmentToolsAvailable } from 'Api/DevelopmentTools/AreDevelopmen
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 import { Captures } from './General/Captures/Captures';
-// import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
     // The server decides: development tools are only compiled into development builds, so a
@@ -46,90 +45,187 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                // { label: 'Dashboard', url: ':namespace/dashboard', icon: mdIcons.MdSpaceDashboard },
-                { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
-                { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
-                { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
-                { label: strings.mainMenu.pivot, url: ':namespace/pivot', icon: mdIcons.MdTimeline },
-                { label: strings.mainMenu.observers, url: ':namespace/observers', icon: mdIcons.MdAirlineStops },
-                { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
-                { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
-                { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
-                { label: strings.mainMenu.general.seedData, url: ':namespace/seed-data', icon: mdIcons.MdGrain },
-            ]
+                {
+                    label: strings.mainMenu.recommendations,
+                    url: ':namespace/recommendations',
+                    icon: mdIcons.MdInfo,
+                },
+                {
+                    label: strings.mainMenu.jobs,
+                    url: ':namespace/jobs',
+                    icon: mdIcons.MdGroupWork,
+                },
+                {
+                    label: strings.mainMenu.sequences,
+                    url: ':namespace/sequences',
+                    icon: mdIcons.MdDataArray,
+                },
+                {
+                    label: strings.mainMenu.pivot,
+                    url: ':namespace/pivot',
+                    icon: mdIcons.MdTimeline,
+                },
+                {
+                    label: strings.mainMenu.observers,
+                    url: ':namespace/observers',
+                    icon: mdIcons.MdAirlineStops,
+                },
+                {
+                    label: strings.mainMenu.failedPartitions,
+                    url: ':namespace/failed-partitions',
+                    icon: mdIcons.MdErrorOutline,
+                },
+                {
+                    label: strings.mainMenu.readModels,
+                    url: ':namespace/read-models',
+                    icon: mdIcons.MdTableView,
+                },
+                {
+                    label: strings.mainMenu.identities,
+                    url: ':namespace/identities',
+                    icon: mdIcons.MdPeople,
+                },
+                {
+                    label: strings.mainMenu.general.seedData,
+                    url: ':namespace/seed-data',
+                    icon: mdIcons.MdGrain,
+                },
+            ],
         },
         {
             label: strings.mainMenu.general.groupLabel,
             items: [
-                { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
-                { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdTypeSpecimen },
+                {
+                    label: strings.mainMenu.general.eventTypes,
+                    url: 'event-types',
+                    icon: mdIcons.MdDataObject,
+                },
+                {
+                    label: strings.mainMenu.general.readModelTypes,
+                    url: 'read-model-types',
+                    icon: mdIcons.MdTypeSpecimen,
+                },
                 { label: 'Webhooks', url: 'webhooks', icon: mdIcons.MdWebhook },
-                { label: 'External Services', url: 'external-services', icon: mdIcons.MdCloud },
-                { label: strings.mainMenu.general.captures, url: 'captures', icon: mdIcons.MdCameraAlt },
-                { label: strings.mainMenu.general.projections, url: ':namespace/projections', icon: mdIcons.MdTransform },
-                { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
-                { label: strings.mainMenu.general.seedData, url: 'seed-data', icon: mdIcons.MdGrain },
+                {
+                    label: 'External Services',
+                    url: 'external-services',
+                    icon: mdIcons.MdCloud,
+                },
+                {
+                    label: strings.mainMenu.general.captures,
+                    url: 'captures',
+                    icon: mdIcons.MdCameraAlt,
+                },
+                {
+                    label: strings.mainMenu.general.projections,
+                    url: ':namespace/projections',
+                    icon: mdIcons.MdTransform,
+                },
+                {
+                    label: strings.mainMenu.general.namespaces,
+                    url: 'namespaces',
+                    icon: mdIcons.MdApps,
+                },
+                {
+                    label: strings.mainMenu.general.seedData,
+                    url: 'seed-data',
+                    icon: mdIcons.MdGrain,
+                },
                 // { label: strings.mainMenu.general.sequences, url: 'sequences', icon: mdIcons.MdDataArray },
                 // { label: strings.mainMenu.general.projections, url: 'projections', icon: mdIcons.MdMediation },
                 // { label: strings.mainMenu.general.reducers, url: 'reducers', icon: gameIcons.GiTransform },
                 // { label: strings.mainMenu.general.reactors, url: 'reactors', icon: gameIcons.GiReactor },
                 // { label: strings.mainMenu.general.sinks, url: 'sinks', icon: devIcons.DiDatabase }
-            ]
+            ],
         },
         {
             label: strings.mainMenu.system.groupLabel,
             items: [
-                { label: strings.mainMenu.system.users, url: 'users', icon: mdIcons.MdVerifiedUser },
-                { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity },
-                { label: strings.mainMenu.system.connectedClients, url: 'connected-clients', icon: mdIcons.MdDevices },
+                {
+                    label: strings.mainMenu.system.users,
+                    url: 'users',
+                    icon: mdIcons.MdVerifiedUser,
+                },
+                {
+                    label: strings.mainMenu.system.applications,
+                    url: 'applications',
+                    icon: mdIcons.MdSecurity,
+                },
+                {
+                    label: strings.mainMenu.system.connectedClients,
+                    url: 'connected-clients',
+                    icon: mdIcons.MdDevices,
+                },
                 ...(areDevelopmentToolsAvailable
-                    ? [{ label: strings.mainMenu.system.developmentTools, url: 'development-tools', icon: mdIcons.MdConstruction }]
-                    : [])
-            ]
-        }
+                    ? [
+                          {
+                              label: strings.mainMenu.system.developmentTools,
+                              url: 'development-tools',
+                              icon: mdIcons.MdConstruction,
+                          },
+                      ]
+                    : []),
+            ],
+        },
     ];
 
     const basePath = useRelativePath('event-store');
 
-    return (<>
-        <Routes>
-            <Route path=':eventStore'
-                element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
+    return (
+        <>
+            <Routes>
+                <Route
+                    path=':eventStore'
+                    element={
+                        <DefaultLayout
+                            menu={menuItems}
+                            basePath={`${basePath}/:eventStore`}
+                        />
+                    }
+                >
+                    <Route
+                        index
+                        element={<Navigate to={'Default/recommendations'} replace />}
+                    />
 
-                <Route index element={<Navigate to={'Default/recommendations'} replace />} />
-
-                <Route path={'event-types'} element={<EventTypes />} />
-                <Route path={'read-model-types'} element={<ReadModelTypes />} />
-                <Route path={'webhooks'} element={<Webhooks />} />
-                <Route path={'external-services'} element={<ExternalServices />} />
-                <Route path={'captures'} element={<Captures />} />
-                <Route path={'namespaces'} element={<Namespaces />} />
-                <Route path={'seed-data'} element={<EventsSeeding />} />
-                <Route path={'sequences'} element={<GeneralSequences />} />
-                <Route path={'projections'} element={<Projections />} />
-                <Route path={'reducers'} element={<Reducers />} />
-                <Route path={'reactors'} element={<Reactors />} />
-                <Route path={'sinks'} element={<Sinks />} />
-                <Route path={'users'} element={<Users />} />
-                <Route path={'applications'} element={<Applications />} />
-                <Route path={'connected-clients'} element={<ConnectedClients />} />
-                <Route path={'development-tools'} element={<DevelopmentTools />} />
-
-                <Route path={':namespace'}>
-                    <Route path={''} element={<Navigate to={'recommendations'} replace />} />
-                    {/* <Route path={'dashboard'} element={<Dashboard />} /> */}
-                    <Route path={'recommendations'} element={<Recommendations />} />
-                    <Route path={'jobs'} element={<Jobs />} />
-                    <Route path={'sequences'} element={<Sequences />} />
-                    <Route path={'pivot'} element={<Pivot />} />
-                    <Route path={'observers'} element={<Observers />} />
-                    <Route path={'failed-partitions'} element={<FailedPartitions />} />
-                    <Route path={'read-models/*'} element={<ReadModels />} />
+                    <Route path={'event-types'} element={<EventTypes />} />
+                    <Route path={'read-model-types'} element={<ReadModelTypes />} />
+                    <Route path={'webhooks'} element={<Webhooks />} />
+                    <Route path={'external-services'} element={<ExternalServices />} />
+                    <Route path={'captures'} element={<Captures />} />
+                    <Route path={'namespaces'} element={<Namespaces />} />
+                    <Route path={'seed-data'} element={<EventsSeeding />} />
+                    <Route path={'sequences'} element={<GeneralSequences />} />
                     <Route path={'projections'} element={<Projections />} />
-                    <Route path={'identities'} element={<Identities />} />
-                    <Route path={'seed-data'} element={<NamespacedEventsSeeding />} />
+                    <Route path={'reducers'} element={<Reducers />} />
+                    <Route path={'reactors'} element={<Reactors />} />
+                    <Route path={'sinks'} element={<Sinks />} />
+                    <Route path={'users'} element={<Users />} />
+                    <Route path={'applications'} element={<Applications />} />
+                    <Route path={'connected-clients'} element={<ConnectedClients />} />
+                    <Route path={'development-tools'} element={<DevelopmentTools />} />
+
+                    <Route path={':namespace'}>
+                        <Route
+                            path={''}
+                            element={<Navigate to={'recommendations'} replace />}
+                        />
+                        <Route path={'recommendations'} element={<Recommendations />} />
+                        <Route path={'jobs'} element={<Jobs />} />
+                        <Route path={'sequences'} element={<Sequences />} />
+                        <Route path={'pivot'} element={<Pivot />} />
+                        <Route path={'observers'} element={<Observers />} />
+                        <Route
+                            path={'failed-partitions'}
+                            element={<FailedPartitions />}
+                        />
+                        <Route path={'read-models/*'} element={<ReadModels />} />
+                        <Route path={'projections'} element={<Projections />} />
+                        <Route path={'identities'} element={<Identities />} />
+                        <Route path={'seed-data'} element={<NamespacedEventsSeeding />} />
+                    </Route>
                 </Route>
-            </Route>
-        </Routes>
-    </>);
+            </Routes>
+        </>
+    );
 };

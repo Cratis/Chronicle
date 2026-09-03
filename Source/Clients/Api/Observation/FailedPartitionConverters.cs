@@ -14,7 +14,11 @@ internal static class FailedPartitionConverters
     /// <param name="failedPartition">The failed partition to convert.</param>
     /// <returns>The converted failed partition.</returns>
     public static FailedPartition ToApi(this Contracts.Observation.FailedPartition failedPartition) =>
-        new(failedPartition.Id, failedPartition.ObserverId, failedPartition.Partition, failedPartition.Attempts.ToApi());
+        new(failedPartition.Id, failedPartition.ObserverId, failedPartition.Partition, failedPartition.Attempts.ToApi())
+        {
+            IsResolved = failedPartition.IsResolved,
+            IsQuarantined = failedPartition.IsQuarantined
+        };
 
     /// <summary>
     /// Converts a collection of <see cref="Contracts.Observation.FailedPartition"/> to a collection of <see cref="FailedPartition"/>.

@@ -31,6 +31,7 @@ public class LoginController(
     /// <returns>The login response.</returns>
     [HttpPost("login")]
     [Produces("application/json")]
+    [IgnoreAntiforgeryToken]
     [AspNetResult]
     public async Task<LoginResponse> Login([FromBody] LoginRequest request)
     {
@@ -47,7 +48,7 @@ public class LoginController(
         // Get the full user details to check HasLoggedIn
         var chronicleUser = await userStorage.GetById(user.Id);
 
-        // If the user hasn't logged in yet (e.g., initial admin user), they cannot authenticate with password
+        // The initial administrator has no password credentials yet and cannot authenticate.
         if (chronicleUser?.HasLoggedIn is false)
         {
             return new LoginResponse

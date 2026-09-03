@@ -37,7 +37,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
             SecurityStamp = Guid.NewGuid().ToString(),
             IsActive = true,
             RequiresPasswordChange = true,
-            HasLoggedIn = false,
+            HasLoggedIn = true,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModifiedAt = null
         };

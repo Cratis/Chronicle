@@ -611,12 +611,20 @@
                 },
                 "columns": {
                     "partition": "Partition",
+                    "status": "Status",
                     "attempts": "Attempts",
                     "lastAttempt": "Last attempt"
+                },
+                "statuses": {
+                    "unknown": "Unknown",
+                    "failed": "Failed",
+                    "quarantined": "Quarantined",
+                    "resolved": "Resolved"
                 },
                 "details": {
                     "observer": "Observer",
                     "partition": "Partition",
+                    "status": "Status",
                     "attempts": "Attempts",
                     "sequenceNumber": "Sequence number",
                     "messages": "Messages",

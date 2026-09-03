@@ -34,6 +34,8 @@ message FailedPartition {
    string ObserverId = 2;
    string Partition = 3;
    repeated FailedPartitionAttempt Attempts = 4;
+   bool IsResolved = 5;
+   optional bool IsQuarantined = 6;
 }
 message FailedPartitionAttempt {
    SerializableDateTimeOffset Occurred = 1;

@@ -22,8 +22,8 @@ export class LoginViewModel {
     constructor(
         readonly _changePassword: ChangePasswordForUser,
         readonly _setInitialAdminPassword: SetInitialAdminPassword,
-        readonly _getStatus: GetStatus) {
-    }
+        readonly _getStatus: GetStatus,
+    ) {}
 
     async checkInitialSetup() {
         this.isLoading = true;
@@ -33,10 +33,11 @@ export class LoginViewModel {
                 this.isInitialSetup = true;
                 this.requiresPasswordChange = true;
                 this.userId = result.data.adminUserId ?? null;
-                this.username = 'admin';
+                this.username = result.data.adminUsername || 'admin';
             }
-        } catch (error) {
-            console.error('Failed to check initial setup status:', error);
+        } catch {
+            // The view-model error state is the caller-visible outcome for this UI operation.
+            this.errorMessage = 'Unable to determine whether initial setup is required.';
         } finally {
             this.isLoading = false;
         }
@@ -78,14 +79,15 @@ export class LoginViewModel {
                 let errorDetail = 'Invalid username or password';
                 try {
                     const error = await response.json();
-                    errorDetail = error.errorMessage || error.detail || error.title || errorDetail;
+                    errorDetail =
+                        error.errorMessage || error.detail || error.title || errorDetail;
                 } catch {
                     errorDetail = response.statusText || `Error ${response.status}`;
                 }
                 this.errorMessage = errorDetail;
             }
-        } catch (error) {
-            console.error('Login error:', error);
+        } catch {
+            // The view-model error state is the caller-visible outcome for this UI operation.
             this.errorMessage = 'An error occurred while signing in. Please try again.';
         } finally {
             this.isLoggingIn = false;
@@ -124,7 +126,8 @@ export class LoginViewModel {
         }
 
         if (!this.isInitialSetup && this.newPassword === this.password) {
-            this.errorMessage = 'New password must be different from your current password.';
+            this.errorMessage =
+                'New password must be different from your current password.';
             return;
         }
 
@@ -147,7 +150,7 @@ export class LoginViewModel {
                     this.errorMessage = `Failed to set password: ${messages.join('; ')}`;
                 })
                 .onValidationFailure((validationResults) => {
-                    const errors = validationResults.map(vr => vr.message);
+                    const errors = validationResults.map((vr) => vr.message);
                     this.errorMessage = `Password validation failed: ${errors.join('; ')}`;
                 })
                 .onUnauthorized(() => {
@@ -169,7 +172,7 @@ export class LoginViewModel {
                     this.errorMessage = `Failed to change password: ${messages.join('; ')}`;
                 })
                 .onValidationFailure((validationResults) => {
-                    const errors = validationResults.map(vr => vr.message);
+                    const errors = validationResults.map((vr) => vr.message);
                     this.errorMessage = `Password change validation failed: ${errors.join('; ')}`;
                 })
                 .onUnauthorized(() => {

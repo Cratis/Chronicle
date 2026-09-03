@@ -15,7 +15,9 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -365,6 +367,7 @@ if (chronicleOptions.Authentication.Enabled)
     app.UseMiddleware<GrpcAuthenticationMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseMiddleware<CookieAntiforgeryMiddleware>();
 }
 
 if (chronicleOptions.Features.Api)
@@ -389,9 +392,24 @@ if (chronicleOptions.Features.Api)
 // ASP.NET Identity stack, which is not registered when authentication is off.
 if (chronicleOptions.Authentication.Enabled)
 {
-    app.MapGroup("/identity")
-        .MapIdentityApi<User>()
-        .AllowAnonymous();
+    app.MapGet(
+        "/.cratis/antiforgery",
+        (HttpContext context, IAntiforgery antiforgery) =>
+        {
+            var tokens = antiforgery.GetAndStoreTokens(context);
+            return new AntiforgeryTokenResponse(tokens.RequestToken!);
+        });
+
+    var identityEndpoints = app.MapGroup("/identity").MapIdentityApi<User>();
+    IdentityEndpointAuthorization.Apply(identityEndpoints);
+
+    app.MapPost(
+        "/identity/logout",
+        async (SignInManager<User> signInManager) =>
+        {
+            await signInManager.SignOutAsync();
+            return Results.Ok();
+        });
 }
 
 // Map controllers for API and OAuth

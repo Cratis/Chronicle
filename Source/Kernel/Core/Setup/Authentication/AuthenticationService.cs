@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Security;
@@ -18,6 +21,7 @@ namespace Cratis.Chronicle.Setup.Authentication;
 /// <param name="applicationStorage">The <see cref="IApplicationStorage"/> service.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="options">Chronicle options.</param>
+/// <param name="eventSerializer">The event serializer.</param>
 /// <param name="logger">The logger.</param>
 [Singleton]
 internal sealed class AuthenticationService(
@@ -25,6 +29,7 @@ internal sealed class AuthenticationService(
     IApplicationStorage applicationStorage,
     IGrainFactory grainFactory,
     IOptions<Configuration.ChronicleOptions> options,
+    IEventSerializer eventSerializer,
     ILogger<AuthenticationService> logger) : IAuthenticationService
 {
     static readonly PasswordHasher<object> _passwordHasher = new();
@@ -53,70 +58,59 @@ internal sealed class AuthenticationService(
 
         logger.CheckingForDefaultAdminUser();
 
-        var existingUsers = await userStorage.GetAll();
         var authentication = _options.Authentication;
         var adminUser = authentication.AdminUser;
+        var effectiveUsername = authentication.EffectiveAdminUsername;
+        var bootstrapPassword = adminUser?.Password ?? string.Empty;
+#if DEVELOPMENT
+        if (string.IsNullOrEmpty(bootstrapPassword))
+        {
+            bootstrapPassword = authentication.DefaultAdminPassword;
+        }
+#endif
 
-        // Determine the effective username — AdminUser.Username takes precedence if set
-        var effectiveUsername = !string.IsNullOrEmpty(adminUser?.Username)
-            ? adminUser.Username
-            : authentication.DefaultAdminUsername;
+        var eventSequence = grainFactory.GetEventLog();
+        var existingAdmin = (await userStorage.GetAll()).FirstOrDefault(user =>
+            string.Equals(user.Username, effectiveUsername, StringComparison.OrdinalIgnoreCase));
+        if (existingAdmin is not null)
+        {
+            logger.DefaultAdminUserAlreadyExist();
+            if (!existingAdmin.HasLoggedIn && !string.IsNullOrEmpty(bootstrapPassword))
+            {
+                await EnsureConfiguredPassword(
+                    eventSequence,
+                    existingAdmin.Id,
+                    bootstrapPassword,
+                    adminUser?.RequirePasswordChangeOnFirstLogin is true,
+                    effectiveUsername);
+            }
+            return;
+        }
 
-        if (existingUsers.Any(u => u.Username == effectiveUsername))
+        var userId = UserId.InitialAdministrator;
+        var initialUser = new Security.InitialAdminUserAdded(effectiveUsername, adminUser?.Email ?? string.Empty);
+        var initialResult = await AppendOnce(eventSequence, userId, initialUser);
+        if (initialResult.HasConcurrencyViolations)
         {
             logger.DefaultAdminUserAlreadyExist();
             return;
         }
+        if (!initialResult.IsSuccess)
+        {
+            throw new AdministratorBootstrapFailed("create the administrator");
+        }
 
-        var eventSequence = grainFactory.GetEventLog();
-        var userId = Guid.NewGuid();
-
-        // Path 1: AdminUser is configured with a password — bootstrap with credentials
-        if (adminUser is not null && !string.IsNullOrEmpty(adminUser.Password))
+        if (!string.IsNullOrEmpty(bootstrapPassword))
         {
             logger.CreatingAdminUserWithConfiguredCredentials(effectiveUsername);
-
-            var @event = new Security.InitialAdminUserAdded(effectiveUsername, adminUser.Email);
-            await eventSequence.Append(userId, @event);
-
-            var passwordHash = _passwordHasher.HashPassword(null!, adminUser.Password);
-            await eventSequence.Append(userId, new Security.UserPasswordChanged(passwordHash));
-
-            if (adminUser.RequirePasswordChangeOnFirstLogin)
-            {
-                logger.RequiringPasswordChangeOnFirstLogin(effectiveUsername);
-                await eventSequence.Append(userId, new Security.PasswordChangeRequired());
-            }
-
+            await EnsureConfiguredPassword(
+                eventSequence,
+                userId,
+                bootstrapPassword,
+                adminUser?.RequirePasswordChangeOnFirstLogin is true,
+                effectiveUsername);
             logger.AdminUserWithCredentialsCreated(effectiveUsername);
-            return;
         }
-
-#if DEVELOPMENT
-        // Path 2 (legacy dev): DefaultAdminPassword is set — same as AdminUser with password, dev-only
-        if (!string.IsNullOrEmpty(authentication.DefaultAdminPassword))
-        {
-            logger.CreatingDefaultAdminUser();
-
-            var @event = new Security.InitialAdminUserAdded(effectiveUsername, string.Empty);
-            await eventSequence.Append(userId, @event);
-
-            logger.SettingDefaultAdminPassword();
-
-            var passwordHash = _passwordHasher.HashPassword(null!, authentication.DefaultAdminPassword);
-            await eventSequence.Append(userId, new Security.UserPasswordChanged(passwordHash));
-
-            logger.DefaultAdminPasswordSet();
-            logger.DefaultAdminUserAdded();
-            return;
-        }
-#endif
-
-        // Path 3: No password configured — create admin without password (initial setup flow)
-        logger.CreatingDefaultAdminUser();
-
-        var defaultEvent = new Security.InitialAdminUserAdded(effectiveUsername, string.Empty);
-        await eventSequence.Append(userId, defaultEvent);
 
         logger.DefaultAdminUserAdded();
     }
@@ -216,4 +210,53 @@ internal sealed class AuthenticationService(
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif
+
+    async Task EnsureConfiguredPassword(
+        IEventSequence eventSequence,
+        UserId userId,
+        string password,
+        bool requirePasswordChange,
+        string username)
+    {
+        var passwordHash = _passwordHasher.HashPassword(null!, password);
+        var passwordResult = await AppendOnce(eventSequence, userId, new Security.UserPasswordChanged(passwordHash));
+        if (!passwordResult.IsSuccess && !passwordResult.HasConcurrencyViolations)
+        {
+            throw new AdministratorBootstrapFailed("set the administrator password");
+        }
+
+        if (requirePasswordChange)
+        {
+            logger.RequiringPasswordChangeOnFirstLogin(username);
+            var requirementResult = await AppendOnce(eventSequence, userId, new Security.PasswordChangeRequired());
+            if (!requirementResult.IsSuccess && !requirementResult.HasConcurrencyViolations)
+            {
+                throw new AdministratorBootstrapFailed("require an administrator password change");
+            }
+        }
+    }
+
+    async Task<AppendResult> AppendOnce(IEventSequence eventSequence, UserId userId, object @event)
+    {
+        var eventType = @event.GetType().GetEventType();
+        var concurrencyScope = new ConcurrencyScope(
+            EventSequenceNumber.BeforeFirst,
+            EventSourceId: true,
+            EventStreamType: null,
+            EventStreamId: null,
+            EventSourceType: null,
+            EventTypes: [eventType]);
+        return await eventSequence.Append(
+            EventSourceType.Default,
+            userId,
+            EventStreamType.All,
+            EventStreamId.Default,
+            eventType,
+            eventSerializer.Serialize(@event),
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            [],
+            concurrencyScope);
+    }
 }

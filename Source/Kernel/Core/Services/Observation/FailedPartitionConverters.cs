@@ -30,7 +30,9 @@ internal static class FailedPartitionConverters
             Id = failedPartition.Id,
             ObserverId = failedPartition.ObserverId.ToString(),
             Partition = failedPartition.Partition.ToString(),
-            Attempts = failedPartition.Attempts.Select(_ => _.ToContract())
+            Attempts = failedPartition.Attempts.Select(_ => _.ToContract()),
+            IsResolved = failedPartition.IsResolved,
+            IsQuarantined = failedPartition.IsQuarantined
         };
     }
 

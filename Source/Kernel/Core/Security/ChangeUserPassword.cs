@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
@@ -31,7 +32,8 @@ public record ChangeUserPassword(Guid UserId, string OldPassword, string Passwor
     /// <exception cref="Services.Security.UserNotFound">Thrown when the specified user does not exist.</exception>
     /// <exception cref="Services.Security.InvalidOldPassword">Thrown when the supplied current password is incorrect.</exception>
     /// <exception cref="Services.Security.NewPasswordMustBeDifferent">Thrown when the new password is the same as the current password.</exception>
-    internal async Task Handle(IGrainFactory grainFactory, IStorage storage)
+    /// <exception cref="Services.Security.PasswordCouldNotBeChanged">Thrown when the password event could not be appended.</exception>
+    internal async Task<EventSequenceNumber> Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
         {
@@ -54,6 +56,12 @@ public record ChangeUserPassword(Guid UserId, string OldPassword, string Passwor
         var passwordHash = passwordHasher.HashPassword(null!, Password);
         var @event = new UserPasswordChanged((UserPassword)passwordHash);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(UserId, @event);
+        var appendResult = await eventSequence.Append(UserId, @event);
+        if (!appendResult.IsSuccess)
+        {
+            throw new Services.Security.PasswordCouldNotBeChanged(UserId);
+        }
+
+        return appendResult.SequenceNumber;
     }
 }

@@ -18,6 +18,17 @@ namespace Cratis.Chronicle.Api.Observation;
 public record FailedPartition(Guid Id, string ObserverId, string Partition, IEnumerable<FailedPartitionAttempt> Attempts)
 {
     /// <summary>
+    /// Gets whether the failure has been resolved.
+    /// </summary>
+    public bool IsResolved { get; init; }
+
+    /// <summary>
+    /// Gets whether the partition is quarantined from automatic retries.
+    /// Null means the connected server did not provide this additive state.
+    /// </summary>
+    public bool? IsQuarantined { get; init; }
+
+    /// <summary>
     /// Gets all failed partitions for an event store and namespace.
     /// </summary>
     /// <param name="failedPartitions"><see cref="IFailedPartitions"/> for working with failed partitions.</param>

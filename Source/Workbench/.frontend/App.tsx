@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { BlankLayout } from "../Layout/Blank/BlankLayout";
-import { Home } from "../Features/Home";
-import { EventStore } from "../Features/EventStore/EventStore";
-import { Login, AuthProvider, ProtectedRoute } from "../Features/Security";
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BlankLayout } from '../Layout/Blank/BlankLayout';
+import { Home } from '../Features/Home';
+import { EventStore } from '../Features/EventStore/EventStore';
+import { Login, AuthProvider, ProtectedRoute } from '../Features/Security';
 import { LayoutProvider } from '../Layout/Default/context/LayoutContext';
 import { DialogComponents } from '@cratis/arc.react/dialogs';
 import { BusyIndicatorDialog } from '@cratis/components/Dialogs';
@@ -13,6 +13,7 @@ import { ConfirmationDialog } from 'Components/Dialogs';
 import { Arc } from '@cratis/arc.react';
 import { MVVM } from '@cratis/arc.react.mvvm';
 import { basePath as configuredBasePath } from '../Utils/basePath';
+import { getAntiforgeryHeaders } from '../Features/Security/antiforgery';
 
 const isDevelopment = import.meta.env.MODE === 'development';
 
@@ -26,10 +27,15 @@ function App() {
         <Arc
             development={isDevelopment}
             apiBasePath={basePath}
-            basePath={basePath}>
+            basePath={basePath}
+            httpHeadersCallback={getAntiforgeryHeaders}
+        >
             <MVVM>
                 <LayoutProvider>
-                    <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
+                    <DialogComponents
+                        confirmation={ConfirmationDialog}
+                        busyIndicator={BusyIndicatorDialog}
+                    >
                         <BrowserRouter>
                             <AuthProvider>
                                 <Routes>
@@ -38,17 +44,23 @@ function App() {
                                             <Route path='' element={<Login />} />
                                         </Route>
                                         <Route path='' element={<BlankLayout />}>
-                                            <Route path='' element={
-                                                <ProtectedRoute>
-                                                    <Home />
-                                                </ProtectedRoute>
-                                            } />
+                                            <Route
+                                                path=''
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <Home />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
                                         </Route>
-                                        <Route path='event-store/*' element={
-                                            <ProtectedRoute>
-                                                <EventStore />
-                                            </ProtectedRoute>
-                                        } />
+                                        <Route
+                                            path='event-store/*'
+                                            element={
+                                                <ProtectedRoute>
+                                                    <EventStore />
+                                                </ProtectedRoute>
+                                            }
+                                        />
                                     </Route>
                                 </Routes>
                             </AuthProvider>

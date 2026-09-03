@@ -192,6 +192,18 @@ public class EventSequenceCommands(
         [FromRoute] string eventSequenceId,
         [FromBody] RedactEvents redaction)
     {
-        throw new NotImplementedException();
+        // These route/body parameters are part of the shipped endpoint until its next-major removal.
+        _ = eventStore;
+        _ = @namespace;
+        _ = eventSequenceId;
+        _ = redaction;
+
+        Response.StatusCode = StatusCodes.Status501NotImplemented;
+        return Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status501NotImplemented,
+            Title = "Bulk event redaction is not supported.",
+            Detail = "Redact events individually until a bounded bulk-redaction workflow is available."
+        });
     }
 }

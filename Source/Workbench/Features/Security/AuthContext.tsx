@@ -4,6 +4,11 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { absolutePath } from '../../Utils/basePath';
+import {
+    clearAntiforgeryToken,
+    getAntiforgeryHeaders,
+    refreshAntiforgeryToken,
+} from './antiforgery';
 
 export interface AuthContextType {
     isAuthenticated: boolean;
@@ -39,13 +44,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             });
 
             if (response.ok) {
+                await refreshAntiforgeryToken();
                 setIsAuthenticated(true);
             } else if (response.status === 401) {
                 setIsAuthenticated(false);
                 navigate(absolutePath('/login'));
             }
-        } catch (error) {
-            console.error('Auth check error:', error);
+        } catch {
+            // Authentication transport failures are represented by the context state.
             setIsAuthenticated(false);
         } finally {
             setIsLoading(false);
@@ -54,14 +60,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const logout = async () => {
         try {
-            await fetch(absolutePath('/identity/logout'), {
+            const response = await fetch(absolutePath('/identity/logout'), {
                 method: 'POST',
                 credentials: 'include',
+                headers: getAntiforgeryHeaders(),
             });
+            if (!response.ok) {
+                throw new Error('Logout failed.');
+            }
+        } finally {
+            clearAntiforgeryToken();
             setIsAuthenticated(false);
             navigate(absolutePath('/login'));
-        } catch (error) {
-            console.error('Logout error:', error);
         }
     };
 

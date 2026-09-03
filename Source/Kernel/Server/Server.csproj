@@ -18,6 +18,10 @@
         <None Remove="out/**" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Server.Specs" />
+    </ItemGroup>
+
     <!-- 3rd party package references -->
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Http.Resilience" />

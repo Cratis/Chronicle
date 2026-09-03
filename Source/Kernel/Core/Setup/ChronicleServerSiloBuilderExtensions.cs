@@ -111,6 +111,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
             var projections = new Cratis.Chronicle.Services.Projections.Projections(grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp);
+            var observers = new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage);
             return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.Compliance.ComplianceService(
                     grainFactory,
@@ -131,7 +132,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Events.EventTypes(storage, grainFactory, sp.GetRequiredService<IEventTypesCacheClient>()),
                 new Constraints(grainFactory),
-                new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
+                observers,
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(
                     grainFactory,
@@ -154,7 +155,12 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelsCompliance>()),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Jobs.Jobs>>()),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
-                new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
+                new Cratis.Chronicle.Services.Security.Users(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<IOptions<ChronicleOptions>>(),
+                    sp.GetRequiredService<Cratis.Chronicle.EventSequences.IEventSerializer>(),
+                    observers),
                 new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
                 new Cratis.Chronicle.Services.Host.Server(
                     grainFactory,

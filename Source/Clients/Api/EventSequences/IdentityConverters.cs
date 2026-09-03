@@ -15,7 +15,7 @@ public static class IdentityConverters
     /// <returns>The converted identity.</returns>
     public static Contracts.Identities.Identity ToContract(this System.Security.Claims.ClaimsPrincipal? user)
     {
-        if (user == null || user.Identity?.IsAuthenticated == false)
+        if (user?.Identity?.IsAuthenticated is not true)
         {
             return new Contracts.Identities.Identity
             {
@@ -25,7 +25,11 @@ public static class IdentityConverters
             };
         }
 
-        var subject = user.Claims.FirstOrDefault(c => c.Type == "sub")?.Value ?? Guid.NewGuid().ToString();
+        var subject = user.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            throw new AuthenticatedUserHasNoSubject();
+        }
         var name = user.Identity?.Name ?? subject;
         var userName = user.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value ?? name;
 

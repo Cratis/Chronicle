@@ -17,6 +17,11 @@ public record UserId(Guid Value) : ConceptAs<Guid>(Value)
     public static readonly UserId NotSet = new(Guid.Empty);
 
     /// <summary>
+    /// Represents the deterministic initial administrator identifier used by every silo.
+    /// </summary>
+    public static readonly UserId InitialAdministrator = new(Guid.Parse("ec806b74-64a4-56b9-99b7-8ec683fb735d"));
+
+    /// <summary>
     /// Implicitly converts from <see cref="EventSourceId"/> to <see cref="UserId"/>.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to convert.</param>

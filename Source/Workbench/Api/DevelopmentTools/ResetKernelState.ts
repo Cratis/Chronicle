@@ -7,40 +7,46 @@
 /* eslint-disable @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line header/header
 import { Command } from '@cratis/arc/commands';
-import { useCommand, SetCommandValues, ClearCommandValues } from '@cratis/arc.react/commands';
+import {
+    useCommand,
+    SetCommandValues,
+    ClearCommandValues,
+} from '@cratis/arc.react/commands';
 import { PropertyDescriptor } from '@cratis/arc/reflection';
 
 /**
  * Represents the command for wiping every event store and re-bootstrapping the kernel.
  */
-export interface IResetKernelState {
-}
-
+export interface IResetKernelState {}
 
 /**
  * Represents the command for wiping every event store and re-bootstrapping the kernel.
  */
-export class ResetKernelState extends Command<IResetKernelState> implements IResetKernelState {
+export class ResetKernelState
+    extends Command<IResetKernelState>
+    implements IResetKernelState
+{
     readonly route: string = '/api/development-tools/reset-kernel-state';
     readonly treatWarningsAsErrors: boolean = false;
     readonly roles: string[] = [];
-    readonly propertyDescriptors: PropertyDescriptor[] = [
-    ];
-
+    readonly propertyDescriptors: PropertyDescriptor[] = [];
 
     constructor() {
         super(Object, false);
     }
 
     get requestParameters(): string[] {
-        return [
-        ];
+        return [];
     }
 
-
-    static use(initialValues?: IResetKernelState): [ResetKernelState, SetCommandValues<IResetKernelState>, ClearCommandValues] {
+    static use(
+        initialValues?: IResetKernelState,
+    ): [ResetKernelState, SetCommandValues<IResetKernelState>, ClearCommandValues] {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        return useCommand<ResetKernelState, IResetKernelState>(ResetKernelState, initialValues);
+        return useCommand<ResetKernelState, IResetKernelState>(
+            ResetKernelState,
+            initialValues,
+        );
     }
 }

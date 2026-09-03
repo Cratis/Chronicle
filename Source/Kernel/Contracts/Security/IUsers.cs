@@ -202,6 +202,12 @@ public class AdminPasswordStatusResponse
     /// </summary>
     [ProtoMember(2)]
     public Guid? AdminUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AdminUsername.
+    /// </summary>
+    [ProtoMember(3)]
+    public string AdminUsername { get; set; }
 }
 
 /// <summary>

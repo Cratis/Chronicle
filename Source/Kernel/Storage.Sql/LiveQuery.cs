@@ -30,6 +30,7 @@ public static class LiveQuery
     /// </summary>
     /// <param name="query">Reads the current state from the database.</param>
     /// <param name="pollingInterval">Optional interval between polls. Defaults to <see cref="DefaultPollingInterval"/>.</param>
+    /// <param name="comparer">Optional comparer used to detect whether an item changed between polls.</param>
     /// <typeparam name="TResult">Type of the items emitted to subscribers.</typeparam>
     /// <returns>
     /// An <see cref="ISubject{T}"/> delivering the initial snapshot and subsequent changes. The subject is
@@ -38,9 +39,11 @@ public static class LiveQuery
     /// </returns>
     public static ISubject<IEnumerable<TResult>> Observe<TResult>(
         Func<Task<IEnumerable<TResult>>> query,
-        TimeSpan? pollingInterval = null)
+        TimeSpan? pollingInterval = null,
+        IEqualityComparer<TResult>? comparer = null)
     {
         var interval = pollingInterval ?? DefaultPollingInterval;
+        comparer ??= EqualityComparer<TResult>.Default;
 
         var observable = Observable.Create<IEnumerable<TResult>>(async (observer, cancellationToken) =>
         {
@@ -48,7 +51,7 @@ public static class LiveQuery
             while (!cancellationToken.IsCancellationRequested)
             {
                 var current = (await query()).ToArray();
-                if (previous is null || !current.SequenceEqual(previous))
+                if (previous is null || !current.SequenceEqual(previous, comparer))
                 {
                     observer.OnNext(current);
                     previous = current;

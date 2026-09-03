@@ -56,8 +56,9 @@ public class User
     public bool RequiresPasswordChange { get; set; }
 
     /// <summary>
-    /// Gets or sets whether the user has ever logged in and set their password.
-    /// This is primarily used for the initial admin user who starts without a password.
+    /// Gets or sets whether the user's password credentials have been initialized.
+    /// This distinguishes the initial administrator, who starts without a password, from users
+    /// created with a temporary password that must be changed on first login.
     /// </summary>
     public bool HasLoggedIn { get; set; }
 }

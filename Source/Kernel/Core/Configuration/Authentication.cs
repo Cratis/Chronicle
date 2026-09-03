@@ -27,6 +27,16 @@ public class Authentication
     public string? Authority { get; init; }
 
     /// <summary>
+    /// Gets the audience external-authority access tokens must target.
+    /// </summary>
+    public string Audience { get; init; } = "chronicle";
+
+    /// <summary>
+    /// Gets a value indicating whether external-authority metadata must use HTTPS.
+    /// </summary>
+    public bool RequireHttpsMetadata { get; init; } = true;
+
+    /// <summary>
     /// Gets whether to use the internal OAuth authority. Returns true when Authority is not set.
     /// </summary>
     public bool UseInternalAuthority => string.IsNullOrEmpty(Authority);
@@ -36,6 +46,13 @@ public class Authentication
     /// or its <see cref="AdminUserBootstrapConfig.Username"/> is empty.
     /// </summary>
     public string DefaultAdminUsername { get; init; } = "admin";
+
+    /// <summary>
+    /// Gets the effective administrator username from bootstrap configuration or the default.
+    /// </summary>
+    public string EffectiveAdminUsername => !string.IsNullOrEmpty(AdminUser?.Username)
+        ? AdminUser.Username
+        : DefaultAdminUsername;
 
     /// <summary>
     /// Gets the bootstrap configuration for the initial admin user.

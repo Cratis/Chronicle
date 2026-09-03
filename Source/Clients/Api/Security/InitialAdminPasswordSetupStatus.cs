@@ -19,6 +19,11 @@ public record InitialAdminPasswordSetupStatus(
     Guid? AdminUserId)
 {
     /// <summary>
+    /// Gets the configured administrator username when setup is required.
+    /// </summary>
+    public string AdminUsername { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the initial admin password setup status.
     /// </summary>
     /// <param name="users">The <see cref="IUsers"/> contract.</param>
@@ -26,6 +31,9 @@ public record InitialAdminPasswordSetupStatus(
     public static async Task<InitialAdminPasswordSetupStatus> GetStatus(IUsers users)
     {
         var status = await users.GetStatus().EnsureSuccess();
-        return new InitialAdminPasswordSetupStatus(status.IsRequired, status.AdminUserId);
+        return new InitialAdminPasswordSetupStatus(status.IsRequired, status.AdminUserId)
+        {
+            AdminUsername = status.AdminUsername
+        };
     }
 }

@@ -14,7 +14,10 @@ namespace Cratis.Chronicle.Server.Authentication.for_ServiceCollectionExtensions
 
 public class chronicle_authentication_services : Specification
 {
-    protected ChronicleAuthenticationServices BuildServices(SharedDataProtectionKeys? sharedKeys = null)
+    protected ChronicleAuthenticationServices BuildServices(
+        SharedDataProtectionKeys? sharedKeys = null,
+        bool authenticationEnabled = false,
+        bool useInternalAuthority = false)
     {
         sharedKeys ??= new();
         var dataProtectionKeys = sharedKeys.CreateGrain();
@@ -26,9 +29,11 @@ public class chronicle_authentication_services : Specification
         services.AddSingleton(grainFactory);
         services.AddChronicleAuthentication(new Cratis.Chronicle.Configuration.ChronicleOptions
         {
+            Storage = new() { Type = Cratis.Chronicle.Storage.StorageType.InMemory },
             Authentication = new Cratis.Chronicle.Configuration.Authentication
             {
-                Enabled = false
+                Enabled = authenticationEnabled,
+                Authority = authenticationEnabled && !useInternalAuthority ? "https://identity.example" : null
             }
         });
 

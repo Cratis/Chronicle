@@ -83,6 +83,15 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddAntiforgery(options =>
+        {
+            options.HeaderName = CookieAntiforgeryMiddleware.HeaderName;
+            options.Cookie.Name = "Chronicle.Antiforgery";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+        });
+
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>
             {
@@ -114,7 +123,7 @@ public static class ServiceCollectionExtensions
             options.ForwardDefaultSelector = context =>
             {
                 // If there's a cookie, use cookie authentication
-                if (context.Request.Cookies.ContainsKey("Chronicle.Auth"))
+                if (context.Request.Cookies.ContainsKey(CookieAntiforgeryMiddleware.AuthenticationCookieName))
                 {
                     return IdentityConstants.ApplicationScheme;
                 }
@@ -126,15 +135,20 @@ public static class ServiceCollectionExtensions
 
         if (!chronicleOptions.Authentication.UseInternalAuthority)
         {
-            authBuilder.AddJwtBearer();
+            authBuilder.AddJwtBearer(options =>
+            {
+                options.Authority = chronicleOptions.Authentication.Authority;
+                options.Audience = chronicleOptions.Authentication.Audience;
+                options.RequireHttpsMetadata = chronicleOptions.Authentication.RequireHttpsMetadata;
+            });
         }
 
         // Add cookie authentication for Identity API endpoints
         authBuilder.AddCookie(IdentityConstants.ApplicationScheme, options =>
         {
-            options.Cookie.Name = "Chronicle.Auth";
+            options.Cookie.Name = CookieAntiforgeryMiddleware.AuthenticationCookieName;
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.ExpireTimeSpan = TimeSpan.FromDays(14);
             options.SlidingExpiration = true;
