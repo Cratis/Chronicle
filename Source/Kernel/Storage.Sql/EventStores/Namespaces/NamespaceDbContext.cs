@@ -131,6 +131,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.Property(e => e.LastAssignedOrdinal).HasDefaultValue(EventSequenceMutationOrdinal.NotSet).IsRequired();
                 entity.Property(e => e.ActiveMutationId).IsRequired(false);
                 entity.Property(e => e.ActiveOrdinal).IsRequired(false);
+                entity.Property(e => e.ActiveStateVersion).IsRequired(false);
                 entity.Property(e => e.ActiveOriginSequence).HasMaxLength(200).IsRequired(false);
                 entity.Property(e => e.ActiveOriginSequenceNumber).IsRequired(false);
                 entity.Property(e => e.ActiveKind).IsRequired(false);
@@ -139,6 +140,10 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.Property(e => e.ActiveTargetStart).IsRequired(false);
                 entity.Property(e => e.ActiveTargetEndExclusive).IsRequired(false);
                 entity.Property(e => e.ActiveTargetExpectedCount).IsRequired(false);
+                entity.Property(e => e.ActiveDefinitionDigestV1)
+                    .HasConversion(d => EventSequenceMutationDigestColumns.DefinitionDigestToHex(d!), s => EventSequenceMutationDigestColumns.DefinitionDigestFromHex(s))
+                    .HasMaxLength(64)
+                    .IsRequired(false);
                 entity.Property(e => e.ActivePhase).IsRequired(false);
                 entity.Property(e => e.ActiveBlockedFrom).IsRequired(false);
                 entity.Property(e => e.ActiveRepairState).IsRequired(false);
@@ -159,6 +164,15 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.Property(e => e.TargetEndExclusive).IsRequired();
                 entity.Property(e => e.TargetExpectedCount).IsRequired();
                 entity.Property(e => e.RepairState).IsRequired();
+                entity.Property(e => e.FinalStateVersion).IsRequired();
+                entity.Property(e => e.DefinitionDigestV1)
+                    .HasConversion(d => EventSequenceMutationDigestColumns.DefinitionDigestToHex(d), s => EventSequenceMutationDigestColumns.DefinitionDigestFromHex(s))
+                    .HasMaxLength(64)
+                    .IsRequired();
+                entity.Property(e => e.ReceiptDigestV1)
+                    .HasConversion(d => EventSequenceMutationDigestColumns.ReceiptDigestToHex(d), s => EventSequenceMutationDigestColumns.ReceiptDigestFromHex(s))
+                    .HasMaxLength(64)
+                    .IsRequired();
             });
 
         // Match the column mappings to the provider-native JSON type the migrations create

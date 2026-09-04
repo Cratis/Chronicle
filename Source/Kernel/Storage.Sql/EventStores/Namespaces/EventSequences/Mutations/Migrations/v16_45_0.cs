@@ -29,6 +29,7 @@ public class v16_45_0 : Migration
                     ? table.StringColumn(migrationBuilder, maxLength: 36, nullable: true)
                     : table.GuidColumn(migrationBuilder, nullable: true),
                 ActiveOrdinal = table.NumberColumn<long>(migrationBuilder, nullable: true),
+                ActiveStateVersion = table.NumberColumn<long>(migrationBuilder, nullable: true),
                 ActiveOriginSequence = table.StringColumn(migrationBuilder, maxLength: 200, nullable: true),
                 ActiveOriginSequenceNumber = table.NumberColumn<ulong>(migrationBuilder, nullable: true),
                 ActiveKind = table.NumberColumn<int>(migrationBuilder, nullable: true),
@@ -37,6 +38,7 @@ public class v16_45_0 : Migration
                 ActiveTargetStart = table.NumberColumn<ulong>(migrationBuilder, nullable: true),
                 ActiveTargetEndExclusive = table.NumberColumn<ulong>(migrationBuilder, nullable: true),
                 ActiveTargetExpectedCount = table.NumberColumn<ulong>(migrationBuilder, nullable: true),
+                ActiveDefinitionDigestV1 = table.StringColumn(migrationBuilder, maxLength: 64, nullable: true),
                 ActivePhase = table.NumberColumn<int>(migrationBuilder, nullable: true),
                 ActiveBlockedFrom = table.NumberColumn<int>(migrationBuilder, nullable: true),
                 ActiveRepairState = table.NumberColumn<int>(migrationBuilder, nullable: true)
@@ -70,7 +72,10 @@ public class v16_45_0 : Migration
                 TargetStart = table.NumberColumn<ulong>(migrationBuilder, nullable: false),
                 TargetEndExclusive = table.NumberColumn<ulong>(migrationBuilder, nullable: false),
                 TargetExpectedCount = table.NumberColumn<ulong>(migrationBuilder, nullable: false),
-                RepairState = table.NumberColumn<int>(migrationBuilder, nullable: false)
+                RepairState = table.NumberColumn<int>(migrationBuilder, nullable: false),
+                FinalStateVersion = table.NumberColumn<long>(migrationBuilder, nullable: false),
+                DefinitionDigestV1 = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
+                ReceiptDigestV1 = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false)
             },
             constraints: table =>
             {

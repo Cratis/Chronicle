@@ -39,6 +39,17 @@ public class EventSequenceMutationHeadEntry
     public EventSequenceMutationOrdinal? ActiveOrdinal { get; set; }
 
     /// <summary>
+    /// Gets or sets the active mutation state version.
+    /// </summary>
+    /// <remarks>
+    /// This is the ABA-fencing field. It is strictly monotonic and unique across the mutation's
+    /// lifetime, so a compare-and-swap <c>UPDATE ... WHERE ActiveStateVersion = @expected</c> can
+    /// distinguish two visits to the same phase composite after a Block→Resume cycle, where the
+    /// phase/blocked-from/repair-state alone would be ambiguous.
+    /// </remarks>
+    public EventSequenceMutationStateVersion? ActiveStateVersion { get; set; }
+
+    /// <summary>
     /// Gets or sets the event sequence containing the event that originated the active mutation.
     /// </summary>
     public EventSequenceId? ActiveOriginSequence { get; set; }
@@ -77,6 +88,11 @@ public class EventSequenceMutationHeadEntry
     /// Gets or sets the expected event count in the active mutation target.
     /// </summary>
     public EventCount? ActiveTargetExpectedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the version 1 digest of the active mutation definition.
+    /// </summary>
+    public EventSequenceMutationDefinitionDigestV1? ActiveDefinitionDigestV1 { get; set; }
 
     /// <summary>
     /// Gets or sets the active mutation phase.

@@ -17,6 +17,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.Mut
 
 public class when_migrating_a_previous_namespace : Specification
 {
+    static readonly string _zeroDigestHex = new('0', 64);
+
     SqliteConnection _connection;
     NamespaceDbContext _context;
     bool _hasHeads;
@@ -30,6 +32,9 @@ public class when_migrating_a_previous_namespace : Specification
     int _coverageDefault;
     long _lastAssignedOrdinalDefault;
     bool _allActiveColumnsNullable;
+    bool _hasActiveStateVersion;
+    bool _hasActiveDefinitionDigest;
+    bool _hasHistoryTerminalWitnessColumns;
     string _storedMutationId;
     string _mutationIdStorageClass;
     bool _alternateMutationIdEncodingRejected;
@@ -74,6 +79,12 @@ public class when_migrating_a_previous_namespace : Specification
         _headForeignKeyCount = await RowCount($"PRAGMA foreign_key_list(\"{WellKnownTableNames.EventSequenceMutationHeads}\")");
         _historyForeignKeyCount = await RowCount($"PRAGMA foreign_key_list(\"{WellKnownTableNames.EventSequenceMutationHistory}\")");
         _allActiveColumnsNullable = await ActiveColumnsAreNullable();
+        _hasActiveStateVersion = await ColumnExists(WellKnownTableNames.EventSequenceMutationHeads, "ActiveStateVersion");
+        _hasActiveDefinitionDigest = await ColumnExists(WellKnownTableNames.EventSequenceMutationHeads, "ActiveDefinitionDigestV1");
+        _hasHistoryTerminalWitnessColumns =
+            await ColumnExists(WellKnownTableNames.EventSequenceMutationHistory, "FinalStateVersion") &&
+            await ColumnExists(WellKnownTableNames.EventSequenceMutationHistory, "DefinitionDigestV1") &&
+            await ColumnExists(WellKnownTableNames.EventSequenceMutationHistory, "ReceiptDigestV1");
 
         await Execute($"INSERT INTO \"{WellKnownTableNames.EventSequenceMutationHeads}\" (\"EventSequenceId\") VALUES ('event-log')");
         await using var defaults = _connection.CreateCommand();
@@ -110,8 +121,10 @@ public class when_migrating_a_previous_namespace : Specification
             await Execute($$"""
                 INSERT INTO "{{WellKnownTableNames.EventSequenceMutationHistory}}" (
                     "EventSequenceId", "Ordinal", "MutationId", "OriginSequence", "OriginSequenceNumber",
-                    "Kind", "CommandHash", "TargetStart", "TargetEndExclusive", "TargetExpectedCount", "RepairState")
-                VALUES ('event-log', 2, X'{{alternateEncoding}}', 'system', 1, 1, 'command-hash', 0, 1, 1, 4);
+                    "Kind", "CommandHash", "TargetStart", "TargetEndExclusive", "TargetExpectedCount", "RepairState",
+                    "FinalStateVersion", "DefinitionDigestV1", "ReceiptDigestV1")
+                VALUES ('event-log', 2, X'{{alternateEncoding}}', 'system', 1, 1, 'command-hash', 0, 1, 1, 4,
+                    1, '{{_zeroDigestHex}}', '{{_zeroDigestHex}}');
                 """);
         }
         catch (SqliteException)
@@ -126,8 +139,10 @@ public class when_migrating_a_previous_namespace : Specification
             await Execute($$"""
                 INSERT INTO "{{WellKnownTableNames.EventSequenceMutationHistory}}" (
                     "EventSequenceId", "Ordinal", "MutationId", "OriginSequence", "OriginSequenceNumber",
-                    "Kind", "CommandHash", "TargetStart", "TargetEndExclusive", "TargetExpectedCount", "RepairState")
-                VALUES ('event-log', 3, '{{alternateSpelling}}', 'system', 1, 1, 'command-hash', 0, 1, 1, 4);
+                    "Kind", "CommandHash", "TargetStart", "TargetEndExclusive", "TargetExpectedCount", "RepairState",
+                    "FinalStateVersion", "DefinitionDigestV1", "ReceiptDigestV1")
+                VALUES ('event-log', 3, '{{alternateSpelling}}', 'system', 1, 1, 'command-hash', 0, 1, 1, 4,
+                    1, '{{_zeroDigestHex}}', '{{_zeroDigestHex}}');
                 """);
         }
         catch (SqliteException)
@@ -140,8 +155,10 @@ public class when_migrating_a_previous_namespace : Specification
             await Execute($$"""
                 INSERT INTO "{{WellKnownTableNames.EventSequenceMutationHistory}}" (
                     "EventSequenceId", "Ordinal", "MutationId", "OriginSequence", "OriginSequenceNumber",
-                    "Kind", "CommandHash", "TargetStart", "TargetEndExclusive", "TargetExpectedCount", "RepairState")
-                VALUES ('event-log', 4, '{{canonicalMutationId}}' || char(0) || '!', 'system', 1, 1, 'command-hash', 0, 1, 1, 4);
+                    "Kind", "CommandHash", "TargetStart", "TargetEndExclusive", "TargetExpectedCount", "RepairState",
+                    "FinalStateVersion", "DefinitionDigestV1", "ReceiptDigestV1")
+                VALUES ('event-log', 4, '{{canonicalMutationId}}' || char(0) || '!', 'system', 1, 1, 'command-hash', 0, 1, 1, 4,
+                    1, '{{_zeroDigestHex}}', '{{_zeroDigestHex}}');
                 """);
         }
         catch (SqliteException)
@@ -167,6 +184,9 @@ public class when_migrating_a_previous_namespace : Specification
     [Fact] void should_default_coverage_to_untracked() => _coverageDefault.ShouldEqual(0);
     [Fact] void should_default_last_assigned_ordinal_to_zero() => _lastAssignedOrdinalDefault.ShouldEqual(0L);
     [Fact] void should_make_the_entire_active_group_nullable() => _allActiveColumnsNullable.ShouldBeTrue();
+    [Fact] void should_add_the_active_state_version_fencing_column() => _hasActiveStateVersion.ShouldBeTrue();
+    [Fact] void should_add_the_active_definition_digest_column() => _hasActiveDefinitionDigest.ShouldBeTrue();
+    [Fact] void should_add_the_history_terminal_witness_columns() => _hasHistoryTerminalWitnessColumns.ShouldBeTrue();
     [Fact] void should_store_mutation_ids_in_canonical_uppercase_format() => _storedMutationId.ShouldEqual("8AE3BA16-1B36-4D8A-8F19-A341225B368A");
     [Fact] void should_store_mutation_ids_in_one_canonical_sqlite_encoding() => _mutationIdStorageClass.ShouldEqual("text");
     [Fact] void should_reject_alternate_mutation_id_encodings() => _alternateMutationIdEncodingRejected.ShouldBeTrue();
@@ -267,7 +287,22 @@ public class when_migrating_a_previous_namespace : Specification
                 }
             }
         }
-        return activeColumns == 13;
+        return activeColumns == 15;
+    }
+
+    async Task<bool> ColumnExists(string tableName, string columnName)
+    {
+        await using var command = _connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info(\"{tableName}\")";
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            if (string.Equals(reader.GetString(1), columnName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     sealed class ExposedMigration : MutationMigration
