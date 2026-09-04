@@ -93,6 +93,21 @@ public interface IObservers
     Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default);
 
     /// <summary>
+    /// Checks whether a named set of observers have durably applied through a target position.
+    /// </summary>
+    /// <param name="request">The <see cref="AppliedThroughRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>An <see cref="AppliedThroughResponse"/> carrying a typed outcome per requested observer.</returns>
+    /// <remarks>
+    /// Unlike <see cref="WaitForCompletion"/>, the observer set is always explicit, never "every observer on the
+    /// sequence" implicitly, and a caller's deadline (via <paramref name="context"/>) is reported back as a typed
+    /// <see cref="AppliedThroughOutcome.TimedOut"/> per still-unresolved observer rather than an unstructured
+    /// cancellation fault - this never reports success from wall-clock timestamps or polling read-model contents,
+    /// only from durably observed observer state.
+    /// </remarks>
+    Task<AppliedThroughResponse> AppliedThrough(AppliedThroughRequest request, CallContext context = default);
+
+    /// <summary>
     /// Get all replayable observers for specific event types.
     /// </summary>
     /// <param name="request">The <see cref="GetReplayableObserversForEventTypesRequest"/>.</param>

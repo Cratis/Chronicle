@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Observation;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -97,6 +98,20 @@ public interface IEventSequence
     /// This is based on the tail of the event types the observer is interested in.
     /// </remarks>
     Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type);
+
+    /// <summary>
+    /// Checks whether a named set of observers have durably applied through a target position.
+    /// </summary>
+    /// <param name="observerIds">The explicit <see cref="ObserverId"/>s to check.</param>
+    /// <param name="targetPosition">The target <see cref="EventSequenceNumber"/> every named observer must have durably applied through.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it defaults to 5 seconds.</param>
+    /// <returns>An <see cref="AppliedThroughResult"/> carrying a typed outcome per requested observer.</returns>
+    /// <remarks>
+    /// Unlike <see cref="Observation.AppendResultWaitForCompletionExtensions.WaitForCompletion"/>, the observer set
+    /// is always explicit, and a caller's deadline is reported back as a typed <see cref="AppliedThroughOutcome.TimedOut"/>
+    /// per still-unresolved observer rather than an unstructured cancellation fault.
+    /// </remarks>
+    Task<AppliedThroughResult> AppliedThrough(IEnumerable<ObserverId> observerIds, EventSequenceNumber targetPosition, TimeSpan? timeout = default);
 
     /// <summary>
     /// Append a single event to the event store.
