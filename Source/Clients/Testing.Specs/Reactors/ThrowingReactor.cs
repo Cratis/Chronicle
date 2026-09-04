@@ -17,9 +17,5 @@ public class ThrowingReactor : IReactor
     /// <param name="event">The triggering <see cref="ReservationMade"/> event.</param>
     /// <returns>A <see cref="Task"/> that always faults with <see cref="ReservationNotYetVisible"/>.</returns>
     /// <exception cref="ReservationNotYetVisible">Always thrown.</exception>
-    public async Task ReservationMade(ReservationMade @event)
-    {
-        await Task.Yield();
-        throw new ReservationNotYetVisible();
-    }
+    public Task ReservationMade(ReservationMade @event) => Task.FromException(new ReservationNotYetVisible());
 }
