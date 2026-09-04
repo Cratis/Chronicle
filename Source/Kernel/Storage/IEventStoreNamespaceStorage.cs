@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.Cuts;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
@@ -108,6 +109,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the namespace-scoped permanent event sequence mutation registry.
     /// </summary>
     IEventSequenceMutationRegistry EventSequenceMutations => UnsupportedEventSequenceMutationRegistry.Instance;
+
+    /// <summary>
+    /// Gets the namespace-scoped read-model cut payload and manifest storage.
+    /// </summary>
+    IReadModelCutStorage ReadModelCuts => UnsupportedReadModelCutStorage.Instance;
 
     /// <summary>
     /// Get the event sequences that exist for the event store namespace.

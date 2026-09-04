@@ -175,7 +175,8 @@ public static class ChronicleServerSiloBuilderExtensions
                     grainFactory,
                     sp.GetRequiredService<ILocalSiloDetails>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>(),
-                    sp.GetRequiredService<IOptions<ChronicleOptions>>()));
+                    sp.GetRequiredService<IOptions<ChronicleOptions>>()),
+                new Cratis.Chronicle.Services.Cuts.ReadModelCuts(grainFactory, storage, expandoObjectConverter));
         });
 
         return builder;

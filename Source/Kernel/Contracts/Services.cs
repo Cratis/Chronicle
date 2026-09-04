@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
+using Cratis.Chronicle.Contracts.Cuts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -56,6 +57,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Applications"><see cref="IApplications"/> instance.</param>
 /// <param name="Server"><see cref="IServer"/> instance.</param>
 /// <param name="Connections"><see cref="IConnectionService"/> instance.</param>
+/// <param name="ReadModelCuts"><see cref="IReadModelCuts"/> instance.</param>
 public sealed record Services(
     ICompliance Compliance,
     IEventStores EventStores,
@@ -82,4 +84,5 @@ public sealed record Services(
     IUsers Users,
     IApplications Applications,
     IServer Server,
-    IConnectionService Connections) : IServices;
+    IConnectionService Connections,
+    IReadModelCuts ReadModelCuts) : IServices;

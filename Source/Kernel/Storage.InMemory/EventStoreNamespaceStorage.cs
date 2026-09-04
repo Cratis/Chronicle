@@ -6,11 +6,13 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.Cuts;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.InMemory.Changes;
+using Cratis.Chronicle.Storage.InMemory.Cuts;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.EventSequences.Mutations;
@@ -60,6 +62,9 @@ public sealed class EventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IIdentityStorage Identities { get; } = new IdentityStorage();
+
+    /// <inheritdoc/>
+    public IReadModelCutStorage ReadModelCuts { get; } = new ReadModelCutStorage();
 
     /// <inheritdoc/>
     public IJobStorage Jobs { get; } = new JobStorage(jobTypes);
