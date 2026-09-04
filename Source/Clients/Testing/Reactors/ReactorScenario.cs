@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -239,7 +240,17 @@ public class ReactorScenario<TReactor>
                 CorrelationId.New());
 
             _nextSequenceNumber += 1;
-            await invoker.Invoke(@event, context);
+            var result = await invoker.Invoke(@event, context);
+
+            // A throwing reactor handler is a documented, load-bearing behavior in production - it pauses the
+            // failing event-source partition so Chronicle can retry it. ReactorInvoker itself catches the
+            // exception so it can report it to the kernel, which would otherwise make it indistinguishable from
+            // "the reactor ran and did nothing" here - rethrow so Catch.Exception around Events(...) sees it,
+            // matching what a spec author asserting the reactor's guard clearly expects (#3933).
+            if (result.ExceptionResult.TryGetException(out var reactorException))
+            {
+                ExceptionDispatchInfo.Capture(reactorException).Throw();
+            }
         }
     }
 
