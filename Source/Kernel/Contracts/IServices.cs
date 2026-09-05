@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
+using Cratis.Chronicle.Contracts.Cuts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -161,4 +162,9 @@ public interface IServices
     /// Gets the <see cref="IConnectionService"/> service.
     /// </summary>
     IConnectionService Connections { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IReadModelCuts"/> service.
+    /// </summary>
+    IReadModelCuts ReadModelCuts { get; }
 }

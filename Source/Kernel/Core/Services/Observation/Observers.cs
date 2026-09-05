@@ -85,6 +85,84 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     }
 
     /// <inheritdoc/>
+    public async Task<AppliedThroughResponse> AppliedThrough(AppliedThroughRequest request, CallContext context = default)
+    {
+        var requestedIds = request.ObserverIds.ToHashSet(StringComparer.Ordinal);
+        var outcomes = new Dictionary<string, AppliedThroughOutcome>(StringComparer.Ordinal);
+
+        try
+        {
+            while (outcomes.Count < requestedIds.Count)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var observers = (await GetObservers(
+                    new AllObserversRequest
+                    {
+                        EventStore = request.EventStore,
+                        Namespace = request.Namespace
+                    },
+                    context))
+                    .Where(_ => _.EventSequenceId == request.EventSequenceId && requestedIds.Contains(_.Id))
+                    .ToArray();
+
+                var foundIds = observers.Select(_ => _.Id).ToHashSet(StringComparer.Ordinal);
+                foreach (var missingId in requestedIds.Except(foundIds))
+                {
+                    outcomes[missingId] = AppliedThroughOutcome.Unavailable;
+                }
+
+                if (observers.Length > 0)
+                {
+                    var observerIds = observers.Select(_ => (Concepts.Observation.ObserverId)_.Id).ToArray();
+                    var failedPartitions = await storage
+                        .GetEventStore(request.EventStore)
+                        .GetNamespace(request.Namespace)
+                        .FailedPartitions
+                        .GetFor(observerIds);
+                    var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
+
+                    foreach (var observer in observers)
+                    {
+                        // A null classification means the observer is still active and simply has not reached
+                        // the target yet - it stays out of `outcomes` so the loop keeps polling it, rather than
+                        // being reported as a terminal outcome prematurely.
+                        var outcome = ClassifyObserver(observer, failedObserverIds, request.TargetEventSequenceNumber);
+                        if (outcome is not null)
+                        {
+                            outcomes[observer.Id] = outcome.Value;
+                        }
+                    }
+                }
+
+                if (outcomes.Count == requestedIds.Count)
+                {
+                    break;
+                }
+
+                await Task.Delay(ObserverCompletionPollingDelayMs, context.CancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        {
+            // The caller's deadline elapsed - report it as a typed outcome for whichever observers had not
+            // resolved yet, rather than letting the whole call fault. Success must never be inferred from the
+            // cancellation itself, only from outcomes already durably observed above.
+        }
+
+        foreach (var stillUnresolved in requestedIds.Except(outcomes.Keys))
+        {
+            outcomes[stillUnresolved] = AppliedThroughOutcome.TimedOut;
+        }
+
+        return new AppliedThroughResponse
+        {
+            IsSuccess = outcomes.Values.All(_ => _ == AppliedThroughOutcome.Ready),
+            Results = requestedIds.Select(id => new AppliedThroughObserverResult { ObserverId = id, Outcome = outcomes[id] }).ToArray()
+        };
+    }
+
+    /// <inheritdoc/>
     public Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default) =>
         grainFactory.GetObserver(command).ClearObserverQuarantine();
 
@@ -198,5 +276,41 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             select (definition, state);
 
         return observers.ToContract();
+    }
+
+    /// <summary>
+    /// Classifies a single observer's current state against the target position.
+    /// </summary>
+    /// <param name="observer">The observer's current <see cref="ObserverInformation"/>.</param>
+    /// <param name="failedObserverIds">The set of observer ids with a failed partition.</param>
+    /// <param name="targetEventSequenceNumber">The target position to compare against.</param>
+    /// <returns>The terminal outcome, or <see langword="null"/> when the observer is still active and simply has not reached the target yet.</returns>
+    static AppliedThroughOutcome? ClassifyObserver(ObserverInformation observer, HashSet<string> failedObserverIds, ulong targetEventSequenceNumber)
+    {
+        if (failedObserverIds.Contains(observer.Id))
+        {
+            return AppliedThroughOutcome.Failed;
+        }
+
+        // Checked before the position, deliberately: a replaying observer's checkpoint can be rewinding, so its
+        // current LastHandledEventSequenceNumber momentarily looking past the target must never be read as
+        // durable forward progress - the running state is what makes that distinction trustworthy.
+        switch (observer.RunningState)
+        {
+            case ObserverRunningState.Quarantined:
+                return AppliedThroughOutcome.Quarantined;
+            case ObserverRunningState.Replaying:
+                return AppliedThroughOutcome.Replaying;
+            case ObserverRunningState.Disconnected:
+                return AppliedThroughOutcome.Unavailable;
+        }
+
+        if (((EventSequenceNumber)observer.LastHandledEventSequenceNumber).IsActualValue &&
+            observer.LastHandledEventSequenceNumber >= targetEventSequenceNumber)
+        {
+            return AppliedThroughOutcome.Ready;
+        }
+
+        return null;
     }
 }

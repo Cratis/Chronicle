@@ -118,4 +118,7 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public Contracts.Cuts.IReadModelCuts ReadModelCuts => throw new NotSupportedException("ReadModelCuts is not supported in test scenarios.");
 }
