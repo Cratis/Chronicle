@@ -46,6 +46,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Security.IUsers, Services.Security.Users>();
         services.AddSingleton<Contracts.Security.IApplications, Services.Security.Applications>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
+        services.AddSingleton<Contracts.Cuts.IReadModelCuts, Services.Cuts.ReadModelCuts>();
 
         return services;
     }
@@ -86,6 +87,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Security.Users>();
             _.MapGrpcService<Services.Security.Applications>();
             _.MapGrpcService<Services.Host.Server>();
+            _.MapGrpcService<Services.Cuts.ReadModelCuts>();
         });
 
         return app;

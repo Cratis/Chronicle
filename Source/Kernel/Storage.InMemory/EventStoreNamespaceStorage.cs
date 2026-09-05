@@ -6,12 +6,16 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.Cuts;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.InMemory.Changes;
+using Cratis.Chronicle.Storage.InMemory.Cuts;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
+using Cratis.Chronicle.Storage.InMemory.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.InMemory.Identities;
 using Cratis.Chronicle.Storage.InMemory.Jobs;
 using Cratis.Chronicle.Storage.InMemory.Keys;
@@ -51,12 +55,16 @@ public sealed class EventStoreNamespaceStorage(
     readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IClosedStreamsConstraintStorage> _closedStreamsConstraints = new();
+    readonly EventSequenceMutationRegistryState _eventSequenceMutationState = new();
 
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new ChangesetStorage();
 
     /// <inheritdoc/>
     public IIdentityStorage Identities { get; } = new IdentityStorage();
+
+    /// <inheritdoc/>
+    public IReadModelCutStorage ReadModelCuts { get; } = new ReadModelCutStorage();
 
     /// <inheritdoc/>
     public IJobStorage Jobs { get; } = new JobStorage(jobTypes);
@@ -99,6 +107,9 @@ public sealed class EventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IProjectionFuturesStorage ProjectionFutures { get; } = new ProjectionFuturesStorage();
+
+    /// <inheritdoc/>
+    public IEventSequenceMutationRegistry EventSequenceMutations => new EventSequenceMutationRegistry(eventStore, @namespace, _eventSequenceMutationState);
 
     /// <inheritdoc/>
     /// <remarks>

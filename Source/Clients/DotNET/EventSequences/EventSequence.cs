@@ -13,10 +13,13 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Traces;
+using Grpc.Core;
+using ProtoBuf.Grpc;
 using ContractCompleteStreamError = Cratis.Chronicle.Contracts.EventSequences.CompleteStreamError;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -440,6 +443,31 @@ public class EventSequence(
     {
         var observerEventTypes = ReactorInvoker.GetEventTypesFor(eventTypes, type);
         return await GetTailSequenceNumber(filterEventTypes: observerEventTypes);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppliedThroughResult> AppliedThrough(IEnumerable<ObserverId> observerIds, EventSequenceNumber targetPosition, TimeSpan? timeout = default)
+    {
+        var observers = GetObservers() ??
+            throw new CannotWaitForObserverCompletion(eventStoreName, eventSequenceId);
+
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+
+        var response = await observers.AppliedThrough(
+            new Contracts.Observation.AppliedThroughRequest
+            {
+                EventStore = eventStoreName,
+                Namespace = @namespace,
+                EventSequenceId = eventSequenceId,
+                ObserverIds = observerIds.Select(_ => _.Value).ToArray(),
+                TargetEventSequenceNumber = targetPosition
+            },
+            new CallContext(new CallOptions(cancellationToken: cts.Token)));
+
+        return new AppliedThroughResult(
+            response.IsSuccess,
+            response.Results.Select(_ => new AppliedThroughObserverResult(_.ObserverId, _.Outcome.ToClient())).ToArray());
     }
 
     /// <inheritdoc/>

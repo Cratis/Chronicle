@@ -16,5 +16,6 @@ public class EventClassMap : IBsonClassMapFor<Event>
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.SequenceNumber);
+        classMap.MapProperty(_ => _.LastMutationOrdinal).SetDefaultValue(0L);
     }
 }

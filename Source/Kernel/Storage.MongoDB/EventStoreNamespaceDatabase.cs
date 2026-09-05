@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -27,6 +28,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
     readonly IMongoDatabase _database;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
+    readonly ConcurrentDictionary<string, byte> _indexedMutationHistoryCollections = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceDatabase"/> class.
@@ -84,6 +86,8 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <inheritdoc/>
     public async Task EnsureIndexesForEventSequence(EventSequenceId eventSequenceId)
     {
+        await EnsureMutationHistoryIndexes().ConfigureAwait(false);
+
         if (_indexedEventSequences.ContainsKey(eventSequenceId))
         {
             return;
@@ -115,6 +119,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         yield return new(
             Builders<Event>.IndexKeys.Ascending(_ => _.Occurred),
             new CreateIndexOptions { Name = "occurred", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.LastMutationOrdinal),
+                Builders<Event>.IndexKeys.Ascending(_ => _.SequenceNumber)),
+            new CreateIndexOptions { Name = "lastMutationOrdinal_sequenceNumber", Background = true, Sparse = false });
 
         yield return new(
             Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceType),
@@ -178,6 +188,18 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         yield return new(
             Builders<Event>.IndexKeys.Ascending(x => x.Tags),
             new CreateIndexOptions { Name = "tags" });
+    }
+
+    async Task EnsureMutationHistoryIndexes()
+    {
+        var collection = GetCollection<EventSequenceMutationHistoryEntry>(WellKnownCollectionNames.EventSequenceMutationHistory);
+        await collection.EnsureIndexesOnceAsync(
+            _indexedMutationHistoryCollections,
+            new CreateIndexModel<EventSequenceMutationHistoryEntry>(
+                Builders<EventSequenceMutationHistoryEntry>.IndexKeys.Combine(
+                    Builders<EventSequenceMutationHistoryEntry>.IndexKeys.Ascending(_ => _.EventSequenceId),
+                    Builders<EventSequenceMutationHistoryEntry>.IndexKeys.Ascending(_ => _.Ordinal)),
+                new CreateIndexOptions { Name = "eventSequenceId_ordinal", Background = true, Sparse = false, Unique = true })).ConfigureAwait(false);
     }
 
     string GetCollectionNameFor(EventSequenceId eventSequenceId) => eventSequenceId.Value;
