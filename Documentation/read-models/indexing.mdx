@@ -16,14 +16,7 @@ persisted to, every time the container is built.
 
 Put `[Index]` on the property — or, for a record, on the constructor parameter:
 
-```csharp
-[ReadModel]
-public record Order(
-    OrderId Id,
-    [Index] CustomerId CustomerId,
-    [Index] OrderNumber Number,
-    decimal Total);
-```
+<ChronicleClientTabs snippet="read-models/indexing/basic" />
 
 The key of a read model does not need `[Index]` — the store already indexes it.
 
@@ -37,16 +30,7 @@ reason — the same way it does for `[Subject]`.
 Indexes are collected by walking the read model, so a property on a nested object or on a child
 collection's element type is indexed at its full path:
 
-```csharp
-[ReadModel]
-public record Order(
-    OrderId Id,
-    IEnumerable<OrderLine> Lines);
-
-public record OrderLine(
-    [Index] ProductId ProductId,
-    int Quantity);
-```
+<ChronicleClientTabs snippet="read-models/indexing/nested" />
 
 This declares an index on `lines.productId`. The path uses the naming policy the client is
 configured with, the same one that decides how the properties are stored.
