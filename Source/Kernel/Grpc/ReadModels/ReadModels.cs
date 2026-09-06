@@ -13,7 +13,6 @@ using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -21,11 +20,9 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using ReadModelSnapshot = Cratis.Chronicle.Contracts.ReadModels.ReadModelSnapshot;
 
 namespace Cratis.Chronicle.Services.ReadModels;
 
@@ -39,7 +36,6 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="changesetMediator">The <see cref="IProjectionChangesetMediator"/> for forwarding watched changesets to client streams.</param>
 /// <param name="localSiloDetails">The <see cref="ILocalSiloDetails"/> for pinning the watch subscriber grain to this silo.</param>
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
-/// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="materializedReadModels">The <see cref="IMaterializedReadModelStore"/> for reading instances that are already materialized.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
@@ -50,7 +46,6 @@ internal sealed class ReadModels(
     IProjectionChangesetMediator changesetMediator,
     ILocalSiloDetails localSiloDetails,
     IReadModelsCompliance complianceHelper,
-    IEventCompliance eventCompliance,
     IMaterializedReadModelStore materializedReadModels,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
@@ -157,45 +152,6 @@ internal sealed class ReadModels(
             TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize
-        };
-    }
-
-    /// <inheritdoc/>
-    public async Task<GetSnapshotsByKeyResponse> GetSnapshotsByKey(GetSnapshotsByKeyRequest request, CallContext context = default)
-    {
-        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetDefinition();
-
-        IList<ReadModelSnapshot> snapshots;
-
-        if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
-        {
-            var projectionSnapshots = await GetSnapshotsForProjection(
-                definition.ObserverIdentifier,
-                request.EventStore,
-                request.Namespace,
-                request.EventSequenceId,
-                request.ReadModelKey);
-
-            snapshots = projectionSnapshots.Select(s => new ReadModelSnapshot
-            {
-                ReadModel = s.ReadModel,
-                Events = s.Events,
-                Occurred = s.Occurred,
-                CorrelationId = s.CorrelationId
-            }).ToList();
-        }
-        else
-        {
-            // For reducers, snapshots are typically computed on the client side
-            // Server-side reducers would need additional implementation here
-            // For now, return empty snapshots as reducers typically run client-side
-            snapshots = [];
-        }
-
-        return new GetSnapshotsByKeyResponse
-        {
-            Snapshots = snapshots
         };
     }
 
@@ -638,74 +594,6 @@ internal sealed class ReadModels(
         }
 
         throw new InvalidOperationException($"Read model definition not registered within {maxRetries * delayMs}ms. Ensure the read model is registered before watching.");
-    }
-
-    async Task<IEnumerable<ReadModelSnapshot>> GetSnapshotsForProjection(
-        string projectionId,
-        string eventStoreName,
-        string namespaceName,
-        string eventSequenceId,
-        string readModelKey)
-    {
-        var eventSequenceStorage = storage
-            .GetEventStore(eventStoreName)
-            .GetNamespace(namespaceName)
-            .GetEventSequence(eventSequenceId);
-
-        var projectionKey = new ProjectionKey(projectionId, eventStoreName);
-        var projection = grainFactory.GetGrain<IProjection>(projectionKey);
-        var definition = await projection.GetDefinition();
-        var readModelDefinition = await storage.GetEventStore(eventStoreName).ReadModels.Get(definition.ReadModel);
-        var eventTypes = await projection.GetEventTypes();
-        var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey, eventTypes: eventTypes);
-
-        var allEvents = new List<AppendedEvent>();
-        while (await cursor.MoveNext())
-        {
-            allEvents.AddRange(cursor.Current);
-        }
-        cursor.Dispose();
-
-        // Decrypt the stored events before projecting and returning them — both the snapshot read
-        // model and the events it carries must be released so no PII leaves encrypted.
-        var eventTypeSchemas = await storage.GetEventStore(eventStoreName).EventTypes.GetFor(allEvents.Select(_ => _.Context.EventType).Distinct());
-        var releasedEvents = await eventCompliance.Release(allEvents, eventTypeSchemas.ToDictionary(_ => _.Type));
-
-        var eventsByCorrelation = new Dictionary<Guid, List<AppendedEvent>>();
-        foreach (var appendedEvent in releasedEvents)
-        {
-            var correlationId = appendedEvent.Context.CorrelationId;
-            if (!eventsByCorrelation.TryGetValue(correlationId, out var eventsForCorrelation))
-            {
-                eventsForCorrelation = [];
-                eventsByCorrelation[correlationId] = eventsForCorrelation;
-            }
-            eventsForCorrelation.Add(appendedEvent);
-        }
-
-        var snapshots = new List<ReadModelSnapshot>();
-        var initialState = new ExpandoObject();
-
-        foreach (var (correlationId, events) in eventsByCorrelation)
-        {
-            var orderedEvents = events.OrderBy(e => e.Context.SequenceNumber).ToList();
-            var firstOccurred = orderedEvents[0].Context.Occurred;
-
-            var result = await projection.ProcessForSingleReadModel(namespaceName, initialState, orderedEvents);
-            var jsonObject = expandoObjectConverter.ToJsonObject(result, readModelDefinition.GetSchemaForLatestGeneration());
-            var readModel = JsonSerializer.Serialize(jsonObject, jsonSerializerOptions);
-            initialState = result;
-
-            snapshots.Add(new ReadModelSnapshot
-            {
-                ReadModel = readModel,
-                Events = orderedEvents.ToContract(jsonSerializerOptions),
-                Occurred = firstOccurred,
-                CorrelationId = correlationId
-            });
-        }
-
-        return snapshots;
     }
 
     async Task<ConnectedReducerContext> GetConnectedReducerContext(

@@ -105,7 +105,7 @@ export const Patterns = () => {
 
     return (
         <Page title={strings.mainMenu.patterns} noBackground noPadding>
-            <div className="p-4 h-full flex flex-col min-h-0">
+            <div className="h-full flex flex-col min-h-0">
                 <PivotViewer<BehaviorPatternDetails>
                     data={patterns.data ?? []}
                     dimensions={dimensions}

@@ -4,6 +4,7 @@
 using Cratis.Chronicle;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Identities;
+using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Samples.Backoffice;
 
@@ -18,12 +19,13 @@ var connectionString = Environment.GetEnvironmentVariable("CHRONICLE_CONNECTION_
     ?? "chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000?skipTlsValidation=true";
 
 var identityProvider = new BaseIdentityProvider();
+var correlationIdAccessor = new CorrelationIdAccessor();
 var options = ChronicleOptions.FromConnectionString(connectionString);
 
 Console.WriteLine("Connecting to Chronicle...");
-using var client = new ChronicleClient(options, identityProvider: identityProvider, loggerFactory: loggerFactory);
+using var client = new ChronicleClient(options, identityProvider: identityProvider, correlationIdAccessor: correlationIdAccessor, loggerFactory: loggerFactory);
 var store = await client.GetEventStore("Backoffice");
-var appender = new ActivityAppender(store, identityProvider, client.CausationManager);
+var appender = new ActivityAppender(store, identityProvider, client.CausationManager, correlationIdAccessor);
 
 // Every command is reachable as an argument as well as a keystroke, so the sample can be driven from a script -
 // seeding a demo environment should not need somebody sitting at the keyboard.

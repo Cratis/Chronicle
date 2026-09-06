@@ -24,6 +24,7 @@ public class EventStoreSubscriptionsManager(
     ILogger<EventStoreSubscriptionsManager> logger) : Grain<EventStoreSubscriptionsState>, IEventStoreSubscriptionsManager, IOnBroadcastChannelSubscribed, IRemindable
 {
     const string SubscriptionReminderPrefix = "event-store-subscription-subscribe:";
+    static readonly TimeSpan _pollInterval = TimeSpan.FromMilliseconds(10);
     static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.FromMilliseconds(100);
     static readonly TimeSpan _subscriptionReminderPeriod = TimeSpan.FromMinutes(1);
 
@@ -79,23 +80,18 @@ public class EventStoreSubscriptionsManager(
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
         var namespacesToWaitFor = namespaces.ToList();
 
-        var startTime = DateTime.UtcNow;
+        var deadline = DateTime.UtcNow + timeout;
 
         // The subscription definition is written by the EventStoreSubscriptionsReactor reacting to the
         // EventStoreSubscriptionAdded event. That reactor processes asynchronously, so the definition may
         // not yet be in State.Subscriptions when this method is called immediately after appending the event.
         // Poll until the definition appears in state before proceeding to check IsSubscribed.
-        EventStoreSubscriptionDefinition? definition = null;
-        while (DateTime.UtcNow - startTime < timeout)
+        EventStoreSubscriptionDefinition? definition;
+        do
         {
             definition = State.Subscriptions.FirstOrDefault(s => s.Identifier == subscriptionId);
-            if (definition is not null)
-            {
-                break;
-            }
-
-            await Task.Delay(10);
         }
+        while (definition is null && await WaitToRetry(deadline));
 
         if (definition is null)
         {
@@ -103,19 +99,18 @@ public class EventStoreSubscriptionsManager(
             throw new TimeoutException($"Subscription '{subscriptionId}' was not registered within {timeout.TotalMilliseconds}ms");
         }
 
-        while (DateTime.UtcNow - startTime < timeout)
+        bool isReady;
+        do
         {
-            var tasks = namespacesToWaitFor.Select(ns => CheckSubscriptionForNamespace(definition, ns));
-            var results = await Task.WhenAll(tasks);
+            var results = await Task.WhenAll(namespacesToWaitFor.Select(ns => CheckSubscriptionForNamespace(definition, ns)));
+            isReady = results.All(r => r);
+        }
+        while (!isReady && await WaitToRetry(deadline));
 
-            if (results.All(r => r))
-            {
-                logger.SubscriptionReadyForUse(subscriptionId);
-                return;
-            }
-
-            // Brief delay before retrying
-            await Task.Delay(10);
+        if (isReady)
+        {
+            logger.SubscriptionReadyForUse(subscriptionId);
+            return;
         }
 
         logger.SubscriptionNotReadyWithinTimeout(subscriptionId, timeout);
@@ -203,6 +198,28 @@ public class EventStoreSubscriptionsManager(
         return Task.CompletedTask;
 
         static Task OnError(Exception exception) => Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Waits before the next poll, saying whether there is still time to poll again.
+    /// </summary>
+    /// <param name="deadline">When the caller's timeout runs out.</param>
+    /// <returns>True when the caller waited and should look again, false when the deadline has passed.</returns>
+    /// <remarks>
+    /// The deadline is tested here, after a look has already happened, rather than before one. Testing it first
+    /// means an exhausted budget produces a timeout describing state nobody examined - and worse, that the
+    /// registration poll spending the budget skips the readiness check entirely, which is the check that would
+    /// have said the subscription was ready all along.
+    /// </remarks>
+    static async Task<bool> WaitToRetry(DateTime deadline)
+    {
+        if (DateTime.UtcNow >= deadline)
+        {
+            return false;
+        }
+
+        await Task.Delay(_pollInterval);
+        return true;
     }
 
     async Task<bool> HealthCheckSubscription(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)

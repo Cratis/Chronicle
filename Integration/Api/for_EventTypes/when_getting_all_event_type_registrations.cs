@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Queries;
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.EventTypes;
 using context = Cratis.Chronicle.Integration.Api.for_EventTypes.when_getting_all_event_type_registrations.context;
 
@@ -18,6 +19,10 @@ public class when_getting_all_event_type_registrations(context context) : Given<
 
         async Task Establish()
         {
+            // Every artifact carrying an EventStoreName is checked against the stores that exist, so the store has
+            // to be created before anything can be registered in it - the same order a real client connects in.
+            await Client.ExecuteCommand("/api/event-stores/ensure-event-store", new EnsureEventStore("test-store-registrations"));
+
             await Client.ExecuteCommand("/api/event-types/register-event-types", new RegisterEventTypes(
             "test-store-registrations",
             [

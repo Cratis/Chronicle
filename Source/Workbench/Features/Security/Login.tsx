@@ -5,9 +5,9 @@ import { withViewModel } from '@cratis/arc.react.mvvm';
 import { LoginViewModel } from './LoginViewModel';
 import { InputText } from 'primereact/inputtext';
 import { InputPassword, type InputPasswordValueChangeEvent } from 'primereact/inputpassword';
-import { Button } from 'Components/Button';
-import { Message } from 'Components/Message';
-import { ProgressSpinner } from 'Components/ProgressSpinner';
+import { Button } from '@cratis/components/Common';
+import { Message } from '@cratis/components/Display';
+import { ProgressSpinner } from '@cratis/components/Display';
 import css from './Login.module.css';
 import chronicleLogo from './chronicle.svg';
 import { useEffect, type ChangeEvent } from 'react';
@@ -160,7 +160,7 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                                     <Button
                                         type="button"
                                         label="Cancel"
-                                        severity="secondary"
+                                        tone="neutral"
                                         onClick={() => viewModel.cancelPasswordChange()}
                                         disabled={viewModel.isLoggingIn}
                                     />

@@ -272,37 +272,8 @@ public static class JsonSchemaExtensions
     static string WithoutNullableFormatMarkers(string schemaJson)
     {
         var node = JsonNode.Parse(schemaJson);
-        StripNullableFormatMarkers(node);
+        JsonSchemaCompatibilityExtensions.StripNullableFormatMarkers(node);
         return node?.ToJsonString() ?? schemaJson;
-    }
-
-    static void StripNullableFormatMarkers(JsonNode? node)
-    {
-        switch (node)
-        {
-            case JsonObject jsonObject:
-                if (jsonObject["format"] is JsonValue formatValue &&
-                    formatValue.TryGetValue<string>(out var format) &&
-                    format.EndsWith('?'))
-                {
-                    jsonObject["format"] = format[..^1];
-                }
-
-                foreach (var property in jsonObject.ToArray().Where(_ => _.Key != "format"))
-                {
-                    StripNullableFormatMarkers(property.Value);
-                }
-
-                break;
-
-            case JsonArray jsonArray:
-                foreach (var item in jsonArray.ToArray())
-                {
-                    StripNullableFormatMarkers(item);
-                }
-
-                break;
-        }
     }
 
     static bool IsDeclaredMember(JsonSchemaProperty schemaProperty, object? value)

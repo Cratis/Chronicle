@@ -276,9 +276,6 @@ internal sealed class TestingServices : IServices
                 new KernelReadModelsCompliance(
                     new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
                     new ExpandoObjectConverter(new TypeFormats())),
-                new KernelEventCompliance(
-                    new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>(), NullLogger<KernelJsonComplianceManager>.Instance),
-                    new ExpandoObjectConverter(new TypeFormats())),
                 new KernelMaterializedReadModelStore(
                     storage,
                     new KernelReadModelsCompliance(
@@ -298,6 +295,9 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public IMaterializedReadModels MaterializedReadModels => throw new NotSupportedException("MaterializedReadModels is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public Contracts.ReadModelExplorer.IReadModelExplorer ReadModelExplorer => throw new NotSupportedException("ReadModelExplorer is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public ICompliance Compliance => _compliance.Value;

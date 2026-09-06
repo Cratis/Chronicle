@@ -101,6 +101,9 @@ internal sealed class InProcessServices(
     public IMaterializedReadModels MaterializedReadModels => throw new NotSupportedException("MaterializedReadModels is not supported in test scenarios.");
 
     /// <inheritdoc/>
+    public Contracts.ReadModelExplorer.IReadModelExplorer ReadModelExplorer => throw new NotSupportedException("ReadModelExplorer is not supported in test scenarios.");
+
+    /// <inheritdoc/>
     public IJobs Jobs => throw new NotSupportedException("Jobs is not supported in test scenarios.");
 
     /// <inheritdoc/>

@@ -119,7 +119,6 @@ public class all_dependencies : Specification
             _changesetMediator,
             _localSiloDetails,
             _complianceHelper,
-            _eventCompliance,
             _materializedReadModels,
             new JsonSerializerOptions());
     }
