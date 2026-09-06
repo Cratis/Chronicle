@@ -48,7 +48,8 @@ internal static class FailedPartitionConverters
             Occurred = failedPartitionAttempt.Occurred,
             SequenceNumber = failedPartitionAttempt.SequenceNumber,
             Messages = failedPartitionAttempt.Messages,
-            StackTrace = failedPartitionAttempt.StackTrace
+            StackTrace = failedPartitionAttempt.StackTrace,
+            Kind = (FailureKind)(int)failedPartitionAttempt.Kind
         };
     }
 }

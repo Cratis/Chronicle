@@ -17,7 +17,7 @@ public class and_read_model_has_no_pii : given.all_dependencies
         _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(Task.FromResult<ExpandoObject?>(null));
     }
 
-    async Task Because() => await _pipeline.Handle(
+    async Task Because() => await _pipeline.Reduce(
         CreateContext(EventSourceIdValue),
         CreateReducer(_returnedState));
 

@@ -44,9 +44,9 @@ public record JobSummary(
     /// Arc MongoDB reactive collection, which is only available in a host that configured Arc - the kernel
     /// runs in-process without one in the client integration fixtures.
     /// </remarks>
-    internal static async Task<IEnumerable<JobSummary>> AllJobs(string eventStore, string @namespace, IGrainFactory grainFactory)
+    internal static async Task<IEnumerable<JobSummary>> AllJobs(EventStoreName eventStore, EventStoreNamespaceName @namespace, IGrainFactory grainFactory)
     {
-        var jobs = await grainFactory.GetJobsManager((EventStoreName)eventStore, (EventStoreNamespaceName)@namespace).GetAllJobs();
+        var jobs = await grainFactory.GetJobsManager(eventStore, @namespace).GetAllJobs();
         return ToJobs(jobs);
     }
 
@@ -57,7 +57,7 @@ public record JobSummary(
     /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe jobs from.</param>
     /// <returns>An observable subject emitting collections of jobs.</returns>
-    internal static ISubject<IEnumerable<JobSummary>> ObserveJobs(string eventStore, string @namespace, IStorage storage)
+    internal static ISubject<IEnumerable<JobSummary>> ObserveJobs(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
         var catchOrObserve = storage
             .GetEventStore(eventStore)

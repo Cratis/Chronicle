@@ -119,6 +119,11 @@ public class ChronicleOptions
     public EncryptionCertificate EncryptionCertificate { get; init; } = new();
 
     /// <summary>
+    /// Gets the pattern detection configuration.
+    /// </summary>
+    public PatternDetection PatternDetection { get; init; } = new PatternDetection();
+
+    /// <summary>
     /// Gets or inits the TLS configuration.
     /// </summary>
     public Tls Tls { get; init; } = new Tls();

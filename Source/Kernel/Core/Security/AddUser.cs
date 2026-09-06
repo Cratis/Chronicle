@@ -28,7 +28,7 @@ public record AddUser(Guid UserId, string Username, string Email, string Passwor
     /// <param name="storage">The storage used to enforce username uniqueness.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="Services.Security.UserAlreadyExists">Thrown when the username is already registered.</exception>
-    internal async Task Handle(IGrainFactory grainFactory, IStorage storage)
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (await storage.System.Users.GetByUsername(Username) is not null)
         {

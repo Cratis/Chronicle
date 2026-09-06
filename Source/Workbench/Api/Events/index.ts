@@ -1,4 +1,5 @@
 export * from './AppendedEvent';
+export * from './CapturedEvents';
 export * from './CreateEventType';
 export * from './EventRevision';
 export * from './EventContext';

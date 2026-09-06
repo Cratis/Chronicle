@@ -2,6 +2,8 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.AspNetCore</AssemblyName>
         <RootNamespace>Cratis.Chronicle.AspNetCore</RootNamespace>
+        <Description>ASP.NET Core integration for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Hosting, dependency injection, and application lifecycle wiring for event-sourced web applications.</Description>
+        <PackageTags>event-sourcing;event-store;cqrs;orleans;dotnet;aspnetcore;grpc</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

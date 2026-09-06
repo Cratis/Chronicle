@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -26,6 +27,8 @@ public class a_performing_job_step : Specification
     protected Storage.IStorage _storage;
     protected IObserver _observer;
     protected ISomeObserverType _observerSubscriber;
+    protected IConfigurationForObserverProvider _configurationProvider;
+    protected Observers _observersConfig;
     protected IEventCursor _eventCursor;
     protected HandleEventsForPartitionState _performState;
     protected static readonly EventSequenceNumber first_event_sequence_number = 42ul;
@@ -73,6 +76,11 @@ public class a_performing_job_step : Specification
         _silo.AddService(_storage);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
+
+        _observersConfig = new Observers();
+        _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
+        _configurationProvider.GetFor(Arg.Any<string>()).Returns(_ => _observersConfig);
+        _silo.AddService(_configurationProvider);
 
         var eventCompliance = Substitute.For<IEventCompliance>();
         eventCompliance

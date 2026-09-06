@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -10,9 +11,9 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
-
 using context = Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes.and_a_dictionary_property_is_set_then_a_sibling_property_changes.context;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes;
@@ -57,7 +58,7 @@ public class and_a_dictionary_property_is_set_then_a_sibling_property_changes(co
             var typeFormats = new TypeFormats();
             var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
             var collections = new SinkCollections(readModel, _database);
-            var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel);
+            var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
             var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
             _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
             _collection = collections.GetCollection();

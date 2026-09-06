@@ -34,6 +34,6 @@ public class and_only_a_live_handler_exists_during_replay : Specification
     {
         public int LiveCalls { get; private set; }
 
-        public void Handle(MyEvent @event) => LiveCalls++;
+        public void OnMyEvent(MyEvent @event) => LiveCalls++;
     }
 }

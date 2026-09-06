@@ -105,7 +105,7 @@ export const SaveQueryDialog = () => {
                         optionLabel='label'
                         optionValue='value'
                         placeholder={sequenceStrings.save.rootFolder}
-                        onChange={event => setFolder((event.value as string) ?? '')} />
+                        onChange={value => setFolder((value as string) ?? '')} />
                 </label>
             </div>
         </Dialog>

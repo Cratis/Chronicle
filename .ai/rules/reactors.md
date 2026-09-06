@@ -13,6 +13,8 @@ Reactors are the "if this then that" of event sourcing — they observe events a
 
 `IReactor` is a **marker interface** with no methods to implement. Method dispatch is entirely by convention: the first parameter type of each public method determines which event it handles.
 
+A helper extracted out of a handler takes the same event as its first parameter, so it matches the same event type. When several methods match one event type, Chronicle picks the public one over the non-public one, then the richest signature (most parameters), then by method name — so a private helper never displaces the handler that calls it. A private method is still a valid handler when nothing else handles that event type; give a helper a first parameter that is not an event type to keep it out of dispatch entirely.
+
 ```csharp
 public class ProjectRegisteredNotifier(INotificationService notifications) : IReactor
 {

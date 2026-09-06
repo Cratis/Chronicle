@@ -21,7 +21,7 @@ public class and_there_are_failed_partitions : given.a_catch_up_observer_job
             .Do(call => _capturedKeys = call.Arg<IEnumerable<Key>>().ToList());
     }
 
-    async Task Because() => await _job.Start(_request);
+    async Task Because() => await StartAndLetTheStepsCome();
 
     [Fact] void should_register_only_non_failed_keys() => _capturedKeys.ShouldNotBeNull();
     [Fact] void should_include_first_partition() => _capturedKeys.ShouldContain(_key1);

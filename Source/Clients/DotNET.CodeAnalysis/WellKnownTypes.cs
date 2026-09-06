@@ -85,6 +85,11 @@ public static class WellKnownTypes
     public const string IReducerName = "Cratis.Chronicle.Reducers.IReducer";
 
     /// <summary>
+    /// The full name of the generic IReducerFor interface.
+    /// </summary>
+    public const string IReducerForName = "Cratis.Chronicle.Reducers.IReducerFor`1";
+
+    /// <summary>
     /// The full name of the IAggregateRoot interface.
     /// </summary>
     /// <remarks>

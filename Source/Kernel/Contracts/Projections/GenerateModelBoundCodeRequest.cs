@@ -33,4 +33,14 @@ public class GenerateModelBoundCodeRequest
     /// </summary>
     [ProtoMember(4)]
     public DraftReadModelDefinition? DraftReadModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the language to generate for.
+    /// </summary>
+    /// <remarks>
+    /// Optional. A request that does not set it generates C#, which is what every caller got before
+    /// there was a choice - so an older client keeps working unchanged.
+    /// </remarks>
+    [ProtoMember(5)]
+    public ProjectionCodeLanguage Language { get; set; } = ProjectionCodeLanguage.CSharp;
 }

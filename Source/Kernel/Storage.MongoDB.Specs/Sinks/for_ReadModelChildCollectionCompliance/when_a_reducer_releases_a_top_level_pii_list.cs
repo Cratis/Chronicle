@@ -65,12 +65,12 @@ public class when_a_reducer_releases_a_top_level_pii_list(MongoDBFixture fixture
         var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace);
 
         // First reduce creates the read model with a coarse [PII] scores list.
-        await pipeline.Handle(
+        await pipeline.Reduce(
             new ReducerContext([Event()], Key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), State())));
 
         // Second reduce reads the stored (encrypted) state and releases it before reducing again.
-        _error = await Catch.Exception(() => pipeline.Handle(
+        _error = await Catch.Exception(() => pipeline.Reduce(
             new ReducerContext([Event()], Key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), State()))));
 

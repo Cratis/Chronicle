@@ -5,7 +5,8 @@ build-backend = "hatchling.build"
 [project]
 name = "cratis-chronicle-contracts"
 dynamic = ["version"]
-description = "Generated Python gRPC contracts for Cratis Chronicle"
+description = "Generated Python gRPC contracts for Cratis Chronicle - the open-source event-sourcing database"
+keywords = ["event-sourcing", "event-store", "cqrs", "grpc", "chronicle", "cratis"]
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

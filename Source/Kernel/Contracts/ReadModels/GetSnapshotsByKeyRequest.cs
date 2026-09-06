@@ -38,4 +38,10 @@ public class GetSnapshotsByKeyRequest
     /// </summary>
     [ProtoMember(5)]
     public string ReadModelKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets how the events are grouped into snapshots.
+    /// </summary>
+    [ProtoMember(6)]
+    public ReadModelSnapshotGrouping Grouping { get; set; } = ReadModelSnapshotGrouping.Correlation;
 }

@@ -22,6 +22,7 @@ using Cratis.Serialization;
 using Cratis.Types;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
 using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
@@ -150,13 +151,13 @@ public class EventScenario(
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)eventStoreName;
         var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)namespaceName;
 
-        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId);
+        var identityStorage = new InMemoryIdentityStorage();
+        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId, identityStorage);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
         var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
         var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
-        var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
 
         var storage = new InMemoryStorage(

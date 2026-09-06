@@ -21,7 +21,7 @@ public record ChangeApplicationSecret(
     /// </summary>
     /// <param name="applications">The <see cref="IApplications"/> contract.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(IApplications applications) =>
+    public Task Handle(IApplications applications) =>
         applications.ChangeApplicationSecret(new()
         {
             Id = Id,

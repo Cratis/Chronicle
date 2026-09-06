@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState } from 'react';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { DialogButtons, DialogResult, useConfirmationDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
@@ -59,7 +59,7 @@ export const DevelopmentTools = () => {
                 <h2 className='development-tools__heading'>{developmentToolsStrings.reset.title}</h2>
                 <p className='development-tools__description'>{developmentToolsStrings.reset.description}</p>
                 <Button
-                    severity='danger'
+                    tone='critical'
                     icon='pi pi-trash'
                     label={developmentToolsStrings.reset.action}
                     loading={isResetting}

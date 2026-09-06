@@ -14,6 +14,7 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Patching;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
@@ -28,6 +29,7 @@ namespace Orleans.Hosting;
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
 /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
+/// <param name="patternCapture"><see cref="IPatternCapture"/> for observing events for behavior pattern mining.</param>
 /// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
@@ -36,6 +38,7 @@ internal sealed class ChronicleServerStartupTask(
     IStorage storage,
     IEventTypes eventTypes,
     IReactors reactors,
+    IPatternCapture patternCapture,
     IProjectionsServiceClient projectionsServiceClient,
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
@@ -89,6 +92,7 @@ internal sealed class ChronicleServerStartupTask(
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
                 await reactors.DiscoverAndRegister(eventStore, namespaceName);
+                await patternCapture.Subscribe(eventStore, namespaceName);
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await jobsManager.Rehydrate();

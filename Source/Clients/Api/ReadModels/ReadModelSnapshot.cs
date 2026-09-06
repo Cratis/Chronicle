@@ -25,13 +25,19 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
     /// <param name="namespace">The event store namespace.</param>
     /// <param name="readModel">The read model identifier.</param>
     /// <param name="readModelKey">The read model key.</param>
+    /// <param name="grouping">How the events are grouped into snapshots, defaulting to by correlation.</param>
     /// <returns>Collection of snapshots.</returns>
+    /// <remarks>
+    /// The grouping is taken as a string rather than the enum it names, because an enum query parameter
+    /// is dropped by the proxy generator and would silently never reach here.
+    /// </remarks>
     public static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
         IReadModels readModels,
         string eventStore,
         string @namespace,
         string readModel,
-        string readModelKey)
+        string readModelKey,
+        string grouping = nameof(ReadModelSnapshotGrouping.Correlation))
     {
         var response = await readModels.GetSnapshotsByKey(new GetSnapshotsByKeyRequest
         {
@@ -39,7 +45,8 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
             Namespace = @namespace,
             ReadModelIdentifier = readModel,
             EventSequenceId = EventSequenceId.Log,
-            ReadModelKey = readModelKey
+            ReadModelKey = readModelKey,
+            Grouping = ParseGrouping(grouping)
         });
 
         return response.Snapshots.Select(s => new ReadModelSnapshot(s.Occurred, JsonNode.Parse(s.ReadModel)!.AsObject(), s.Events.Select(e => new Event(
@@ -48,4 +55,9 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
             e.Context.Occurred,
             JsonNode.Parse(e.Content)!.AsObject()))));
     }
+
+    static ReadModelSnapshotGrouping ParseGrouping(string grouping) =>
+        Enum.TryParse<ReadModelSnapshotGrouping>(grouping, ignoreCase: true, out var parsed)
+            ? parsed
+            : ReadModelSnapshotGrouping.Correlation;
 }

@@ -28,7 +28,7 @@ public record EnsureEventStore(string Name)
     /// <param name="eventTypes">The <see cref="IEventTypes"/> to discover and register event types with.</param>
     /// <param name="reactors">The <see cref="IReactors"/> to discover and register kernel reactors with.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes, IReactors reactors)
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes, IReactors reactors)
     {
         var eventStoreName = new EventStoreName(Name);
         var exists = await storage.HasEventStore(eventStoreName);

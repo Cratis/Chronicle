@@ -45,6 +45,18 @@ public class a_catch_up_observer_job : Specification
 
     protected static IObserverKeys CreateKeys(params Key[] keys) => new TestObserverKeys(keys);
 
+    /// <summary>
+    /// Start the job and let it get as far as preparing and starting its steps. Catch-up hands that work to its own
+    /// next turn rather than doing it inside <c>Start</c>, so a spec about the steps has to fire the timer that
+    /// carries it.
+    /// </summary>
+    /// <returns>The task representing the operation.</returns>
+    protected async Task StartAndLetTheStepsCome()
+    {
+        await _job.Start(_request);
+        await _silo.TimerRegistry.FireAllAsync();
+    }
+
     async Task Establish()
     {
         _jobId = Guid.Parse("33333333-3333-3333-3333-333333333333");

@@ -6,7 +6,7 @@ import { DataTable as PrimeDataTable } from 'primereact/datatable';
 import { InputText } from 'primereact/inputtext';
 import type { SortOrder, UseDataTableFilterEvent, UseDataTableRowMouseEvent, UseDataTableSortEvent } from '@primereact/headless/datatable';
 import { ColumnFilterMenu } from '@cratis/components/DataTables';
-import type { ColumnProps, DataTableFilterMeta, DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
+import type { ColumnProps, DataTableFilterConstraint, DataTableFilterMeta, DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
 import { resolveFieldData } from './resolveFieldData';
 
 /**
@@ -84,14 +84,16 @@ const keyOf = <TData extends object>(row: TData | null | undefined, dataKey: str
     row && dataKey ? String(resolveFieldData(row, dataKey)) : undefined;
 
 /**
- * A declarative table over a plain array, rebuilt on PrimeReact 11's compositional
- * `DataTable` primitives.
+ * A table over a plain array for the two things Components' `DataTableCore` does not claim
+ * to do: **row grouping** and **controlled server-side sorting**.
  *
- * PrimeReact 11 removed the monolithic `<DataTable value>` / `primereact/column`
- * pair, and the Cratis `DataTableForQuery` wrappers bind to an Arc query rather
- * than an array. The Workbench renders many tables over arrays it already holds,
- * so this fills that gap while keeping the same `<Column field header body sortable />`
- * authoring model — it consumes the very same `Column` marker as `DataPage.Columns`.
+ * Every other table in the Workbench renders `DataTableCore` directly. Three do not:
+ * the seeding views and Connected Clients group consecutive rows under a subheader, and the
+ * sequence query editor sorts and pages on the server and needs the table to render exactly
+ * the rows it was handed. Components 4's migration guidance is to keep an application-owned
+ * table for precisely those cases rather than approximate them, so this one stays on
+ * PrimeReact as a bounded island — it keeps the same `<Column field header body sortable />`
+ * authoring model, consuming the very same `Column` marker as `DataTableCore`.
  *
  * @typeParam TData - The row type.
  */
@@ -134,24 +136,58 @@ export const DataTable = <TData extends object>({
         onFilter?.(next);
     };
 
-    const selectionKeys = useMemo(() => {
+    // Components 4's `ColumnFilterMenu` is controlled — it renders the draft editor and
+    // reports the result, leaving the applied state to the table that owns it.
+    const applyFilters = (next: DataTableFilterMeta) => {
+        setFilters(next);
+        onFilter?.(next);
+    };
+
+    const constraintFor = (field: string) => {
+        const entry = filters[field];
+        return entry && 'constraints' in entry ? entry.constraints[0] : entry;
+    };
+
+    const applyConstraint = (field: string, constraint: DataTableFilterConstraint) =>
+        applyFilters({ ...filters, [field]: constraint });
+
+    const clearConstraint = (field: string) => {
+        const next = { ...filters };
+        delete next[field];
+        applyFilters(next);
+    };
+
+    // PrimeReact keys a row by a *flat* property lookup, so it cannot resolve a nested
+    // `dataKey` such as `context.sequenceNumber` — every row would key as "undefined" while
+    // this wrapper, which walks the path, produced the real value. The two then disagreed on
+    // every row: nothing highlighted, and a click resolved back to no row at all. Rather than
+    // hand PrimeReact a key it may not understand, the wrapper keys rows by their index and
+    // owns the row/key mapping itself; `dataKey` stays the identity used to match a selection
+    // back to a row across a refreshed page of data.
+    const indexOfSelection = useMemo(() => {
+        if (!selection) return -1;
         const key = keyOf(selection, dataKey);
-        return key === undefined ? {} : { [key]: true };
-    }, [selection, dataKey]);
+        if (key !== undefined) {
+            const found = data.findIndex(candidate => keyOf(candidate, dataKey) === key);
+            if (found >= 0) return found;
+        }
+        return data.indexOf(selection);
+    }, [data, selection, dataKey]);
+
+    const selectionKeys = useMemo(
+        () => (indexOfSelection < 0 ? {} : { [String(indexOfSelection)]: true }),
+        [indexOfSelection]);
 
     const handleSelectionChange = (event: { value: Record<string, boolean>; originalEvent?: React.SyntheticEvent }) => {
         if (!onSelectionChange) return;
         const selectedKey = Object.keys(event.value).find(key => event.value[key]);
-        const row = selectedKey === undefined
-            ? null
-            : data.find(candidate => keyOf(candidate, dataKey) === selectedKey) ?? null;
+        const row = selectedKey === undefined ? null : data[Number(selectedKey)] ?? null;
         onSelectionChange({ value: row, originalEvent: event.originalEvent });
     };
 
     return (
         <PrimeDataTable.Root
             data={data}
-            dataKey={dataKey}
             removableSort
             selectionMode={selectionMode ?? null}
             selectionKeys={selectionKeys}
@@ -207,7 +243,10 @@ export const DataTable = <TData extends object>({
                                                 field={(column.props.filterField ?? column.props.field) as string}
                                                 dataType={column.props.dataType}
                                                 placeholder={column.props.filterPlaceholder}
-                                                showMatchModes={column.props.showFilterMatchModes} />
+                                                showMatchModes={column.props.showFilterMatchModes}
+                                                constraint={constraintFor((column.props.filterField ?? column.props.field) as string)}
+                                                onApply={constraint => applyConstraint((column.props.filterField ?? column.props.field) as string, constraint)}
+                                                onClear={() => clearConstraint((column.props.filterField ?? column.props.field) as string)} />
                                         )}
                                     </div>
                                 </PrimeDataTable.THeadCell>

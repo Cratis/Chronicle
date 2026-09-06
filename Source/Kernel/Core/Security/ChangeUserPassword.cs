@@ -33,7 +33,7 @@ public record ChangeUserPassword(Guid UserId, string OldPassword, string Passwor
     /// <exception cref="Services.Security.InvalidOldPassword">Thrown when the supplied current password is incorrect.</exception>
     /// <exception cref="Services.Security.NewPasswordMustBeDifferent">Thrown when the new password is the same as the current password.</exception>
     /// <exception cref="Services.Security.PasswordCouldNotBeChanged">Thrown when the password event could not be appended.</exception>
-    internal async Task<EventSequenceNumber> Handle(IGrainFactory grainFactory, IStorage storage)
+    public async Task<EventSequenceNumber> Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
         {

@@ -34,4 +34,13 @@ public record FailedPartitionAttempt
     /// Gets or sets the StackTrace for the last error on this failed partition.
     /// </summary>
     public string StackTrace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets what kind of thing went wrong on the attempt.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="FailureKind.Unknown"/>, which is also what every attempt recorded before failures
+    /// carried a kind reads back as.
+    /// </remarks>
+    public FailureKind Kind { get; set; } = FailureKind.Unknown;
 }

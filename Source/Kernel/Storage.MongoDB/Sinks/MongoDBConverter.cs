@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Strings;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -23,10 +24,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between <see cref="ExpandoObject"/> to <see cref="BsonDocument"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
 /// <param name="readModel"><see cref="ReadModelDefinition"/> the converter is for.</param>
+/// <param name="logger">The <see cref="ILogger{TCategoryName}"/> for logging.</param>
 public class MongoDBConverter(
     IExpandoObjectConverter expandoObjectConverter,
     ITypeFormats typeFormats,
-    ReadModelDefinition readModel) : IMongoDBConverter
+    ReadModelDefinition readModel,
+    ILogger<MongoDBConverter> logger) : IMongoDBConverter
 {
     /// <inheritdoc/>
     public MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers)
@@ -148,7 +151,20 @@ public class MongoDBConverter(
         if (typeFormats.IsKnown(schemaProperty.Format!))
         {
             var targetType = typeFormats.GetTypeForFormat(schemaProperty.Format!);
-            return input.ToBsonValue(targetType);
+            try
+            {
+                return input.ToBsonValue(targetType);
+            }
+            catch (Exception)
+            {
+                // The schema's declared format (e.g. "guid") does not always match the actual value - a
+                // ConceptAs<string> key resolved through a schema that reports "guid" is the common shape
+                // (see #3844), and the conversion raises a FormatException. Falling back to the untyped
+                // BSON representation keeps the value queryable under its real shape instead of freezing
+                // the partition with "Unrecognized Guid format."
+                logger.KeyNotConvertible(readModel.Identifier, schemaProperty.Name);
+                return input.ToBsonValue();
+            }
         }
 
         if (input is ExpandoObject expandoObject)

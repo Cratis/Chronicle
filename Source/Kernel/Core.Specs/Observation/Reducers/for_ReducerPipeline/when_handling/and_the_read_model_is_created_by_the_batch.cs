@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Observation.Reducers.for_ReducerPipeline.when_handlin
 
 public class and_the_read_model_is_created_by_the_batch : given.a_pipeline_with_a_recording_sink
 {
-    async Task Because() => await _pipeline.Handle(CreateContext(), CreateReducer(NewState()));
+    async Task Because() => await _pipeline.Reduce(CreateContext(), CreateReducer(NewState()));
 
     [Fact] void should_write_unconditionally() => _sink.WriteModes.Single().ShouldEqual(SinkWriteMode.Always);
 }

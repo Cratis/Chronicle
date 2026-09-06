@@ -36,7 +36,7 @@ public record SetInitialAdminPassword(Guid UserId, string Password, string Confi
     /// <exception cref="Services.Security.InitialPasswordCanOnlyBeSetForAdministrator">Thrown when the user is not the configured administrator.</exception>
     /// <exception cref="Services.Security.InitialPasswordAlreadySet">Thrown when the initial password has already been set.</exception>
     /// <exception cref="Services.Security.InitialPasswordCouldNotBeSet">Thrown when the password event could not be appended.</exception>
-    internal async Task<EventSequenceNumber> Handle(
+    public async Task<EventSequenceNumber> Handle(
         IGrainFactory grainFactory,
         IStorage storage,
         Configuration.Authentication authentication,

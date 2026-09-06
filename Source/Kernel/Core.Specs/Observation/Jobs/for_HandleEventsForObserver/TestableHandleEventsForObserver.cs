@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains.</param>
 /// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
+/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 public class TestableHandleEventsForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -30,8 +32,9 @@ public class TestableHandleEventsForObserver(
     IEventCompliance eventCompliance,
     IGrainFactory grainFactory,
     IObserverSubscriberSelector subscriberSelector,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<HandleEventsForObserver> logger)
-    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, subscriberSelector, logger), IGrainType
+    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, logger), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;

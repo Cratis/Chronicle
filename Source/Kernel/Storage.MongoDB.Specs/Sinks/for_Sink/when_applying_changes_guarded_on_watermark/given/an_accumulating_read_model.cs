@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_guarded_on_watermark.given;
@@ -38,7 +39,7 @@ public abstract class an_accumulating_read_model(MongoDBFixture fixture) : Speci
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         var collections = new SinkCollections(readModel, database);
-        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel);
+        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
         _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
     }

@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reactive.Linq;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
@@ -38,6 +40,17 @@ internal sealed class Projections(
     ILanguageService languageService,
     IServiceProvider serviceProvider) : IProjections
 {
+    /// <summary>
+    /// The property a materialized read model carries its key in, which is what the read side looks it up by.
+    /// </summary>
+    const string ReadModelKeyProperty = "_id";
+
+    /// <summary>
+    /// The property names a projection may have tagged a read model's key with, in the order it
+    /// resolves them from the read model's schema.
+    /// </summary>
+    static readonly string[] _projectedKeyPropertyNames = [ReadModelKeyProperty, "Id", "id"];
+
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
@@ -173,7 +186,9 @@ internal sealed class Projections(
                     result = await projection.Process(request.Namespace, events);
                 }
 
-                var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
+                var readModels = result
+                    .Select(r => WithReadModelKey(r, expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration())).ToString())
+                    .ToArray();
 
                 return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionPreview
                 {
@@ -357,7 +372,7 @@ internal sealed class Projections(
                         });
                 }
 
-                var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition);
+                var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition, (Concepts.Projections.ProjectionCodeLanguage)(int)request.Language);
 
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
             },
@@ -408,7 +423,7 @@ internal sealed class Projections(
                         });
                 }
 
-                var code = languageService.GenerateModelBoundCode(definition, readModelDefinition);
+                var code = languageService.GenerateModelBoundCode(definition, readModelDefinition, (Concepts.Projections.ProjectionCodeLanguage)(int)request.Language);
 
                 return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
             },
@@ -529,5 +544,39 @@ internal sealed class Projections(
         }
 
         return schema;
+    }
+
+    /// <summary>
+    /// Carries the read model's key onto its previewed JSON.
+    /// </summary>
+    /// <param name="readModel">The projected read model, which the projection tagged with its key.</param>
+    /// <param name="json">The read model converted to JSON against its schema.</param>
+    /// <returns>The same JSON, with the key under the property the read side looks it up by.</returns>
+    /// <remarks>
+    /// A projection tags every read model it produces with the key it was projected for, but the
+    /// conversion to JSON keeps only what the read model's schema declares - and a schema does not
+    /// declare its own key. Preview results therefore reached the Workbench carrying no way to tell
+    /// which instance a row came from, which is what left the Time Machine with nothing to look up.
+    /// A materialized read model carries its key as <c>_id</c> because that is what the sink writes,
+    /// so preview uses the same name rather than inventing a second convention for the read side.
+    /// </remarks>
+    static JsonObject WithReadModelKey(ExpandoObject readModel, JsonObject json)
+    {
+        if (json.ContainsKey(ReadModelKeyProperty))
+        {
+            return json;
+        }
+
+        var properties = (IDictionary<string, object?>)readModel;
+        var key = _projectedKeyPropertyNames
+            .Select(name => properties.TryGetValue(name, out var value) ? value : null)
+            .FirstOrDefault(value => value is not null);
+
+        if (key is not null)
+        {
+            json[ReadModelKeyProperty] = JsonValue.Create(key.ToString());
+        }
+
+        return json;
     }
 }

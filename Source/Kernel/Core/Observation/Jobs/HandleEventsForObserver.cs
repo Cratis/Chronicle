@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -26,6 +28,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains off the activation thread.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
+/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -35,6 +38,7 @@ public class HandleEventsForObserver(
     IEventCompliance eventCompliance,
     IGrainFactory grainFactory,
     IObserverSubscriberSelector subscriberSelector,
+    IConfigurationForObserverProvider configurationProvider,
     ILogger<HandleEventsForObserver> logger) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -86,6 +90,7 @@ public class HandleEventsForObserver(
         State.EventTypes = request.EventTypes.ToArray();
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
+        State.SkipFailedPartitions = request.SkipFailedPartitions;
         return ValueTask.CompletedTask;
     }
 
@@ -159,6 +164,15 @@ public class HandleEventsForObserver(
                 eventTypes: eventTypesToRead,
                 cancellationToken: cancellationToken);
 
+            // A failed partition belongs to the retry job working on it. Reading the set once, before the walk,
+            // keeps this step from asking the observer per batch; a partition that starts failing while the walk
+            // is running is caught by the failure path below instead.
+            HashSet<Key> failedPartitions = currentState.SkipFailedPartitions
+                ? [.. await _observer.GetFailedPartitionKeys()]
+                : [];
+
+            var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
+
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             while (await events.MoveNext())
             {
@@ -183,13 +197,19 @@ public class HandleEventsForObserver(
                     }
 
                     var partition = partitionEvents[0].Context.EventSourceId;
-                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents);
+                    if (failedPartitions.Contains(partition))
+                    {
+                        logger.SkippingFailedPartition(partition);
+                        continue;
+                    }
+
+                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents, subscriberTimeout);
                     if (handleEventsResult.TryGetException(out var handleEventsException))
                     {
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
-                        await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace);
+                        await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
@@ -339,7 +359,7 @@ public class HandleEventsForObserver(
             case ObserverSubscriberState.Disconnected:
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
-                await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty);
+                await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
                 return (
                     JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
@@ -381,7 +401,7 @@ public class HandleEventsForObserver(
 
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-        await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace);
+        await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling);
         return (
             JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                 CreateResult(lastSuccessfullyHandledEventSequenceNumber),
@@ -392,7 +412,8 @@ public class HandleEventsForObserver(
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         Key partition,
-        AppendedEvent[] events)
+        AppendedEvent[] events,
+        TimeSpan subscriberTimeout)
     {
         try
         {
@@ -406,7 +427,7 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
-            var result = await subscriber!.OnNext(partition, decryptedEvents, subscriberContext);
+            var result = await subscriber!.OnNextWithin(subscriberTimeout, partition, decryptedEvents, subscriberContext);
             return (result, decryptedEvents);
         }
         catch (Exception ex)
