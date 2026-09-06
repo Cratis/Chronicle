@@ -39,10 +39,12 @@ env:
   # 16.x, comparing only from the release the conversion finished at instead of failing on a break that had already
   # shipped.
   #
-  # This PR finishes the major bump that break was leading to - the release goes out as 17.0.0, so 16.x is behind
-  # for good and the floor that carried it has nothing left to narrow. Leave this empty unless a future major ships
-  # a deliberate mid-major break of its own and needs the same carry-through.
-  WIRE_BASELINE_FLOOR: ""
+  # v17.0.0 is not that release. It was cut by accident on 2026-08-25 from a routine chore PR 125 commits behind
+  # v16.42.0 - a completely different, pre-migration wire contract - and NuGet/npm/Maven/Hex.pm immutability means
+  # the version number cannot be reclaimed. The real migration ships as 17.0.1, which floors major 17 the same way
+  # 16.45.0 floored 16.x: v17.0.0 is acknowledged as already wrong and excluded, so this gate measures every 17.x
+  # release against the contract that is actually meant to be the major's baseline instead of one that never was.
+  WIRE_BASELINE_FLOOR: "17.0.1"
 
 jobs:
   wire-compatibility:
