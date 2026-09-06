@@ -27,6 +27,11 @@ public record Order(
 
 The key of a read model does not need `[Index]` — the store already indexes it.
 
+Both forms declare the same thing, so `[property: Index]` on a positional parameter is equivalent to the
+shorthand above and there is no reason to prefer it. C# binds a bare attribute on a positional record
+parameter to the *parameter* rather than the property, and Chronicle looks in both places for exactly that
+reason — the same way it does for `[Subject]`.
+
 ## Nested and child properties
 
 Indexes are collected by walking the read model, so a property on a nested object or on a child
