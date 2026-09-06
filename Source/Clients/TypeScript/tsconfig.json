@@ -3,6 +3,10 @@
         "target": "ES2022",
         "module": "ESNext",
         "lib": ["ES2022"],
+        // The package is generated with ts-proto's env=node, so the contracts it emits reach for Buffer and
+        // atob. Naming the types explicitly keeps that dependency stated rather than inherited from whatever
+        // happens to be installed under node_modules/@types.
+        "types": ["node"],
         "declaration": true,
         "declarationMap": true,
         "sourceMap": true,

@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { AllFailedPartitions, AllFailedPartitionsParameters } from 'Api/Observation';
+import { AllFailedPartitions, AllFailedPartitionsParameters } from 'Features/Observation';
 import { type DataTableFilterMeta } from '@cratis/components/DataTables';
 import { FilterMatchMode } from '@primereact/headless/datatable';
 import { Tooltip } from '@cratis/components/Common';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { FailedPartition } from 'Api/Observation';
+import { FailedPartitionDetails as FailedPartition } from 'Features/Observation';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
 import { FailedPartitionDetails } from './FailedPartitionDetails';

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AddEventStore as AddEventStoreCommand } from 'Api/EventStores';
+import { EnsureEventStore as AddEventStoreCommand } from 'Features/EventStores';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
 import strings from 'Strings';

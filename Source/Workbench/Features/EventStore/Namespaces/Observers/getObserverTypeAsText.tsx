@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { ObserverType } from 'Api/Observation/ObserverType';
+import { ObserverType } from 'Features/Contracts/Observation';
 
 export const getObserverTypeAsText = (type: ObserverType) => {
     switch (type) {

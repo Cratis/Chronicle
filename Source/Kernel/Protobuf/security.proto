@@ -22,8 +22,8 @@ message ApplicationResponse {
    .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string ClientId = 2;
    bool IsActive = 3;
-   DateTimeOffset CreatedAt = 4;
-   DateTimeOffset LastModifiedAt = 5;
+   SerializableDateTimeOffset CreatedAt = 4;
+   SerializableDateTimeOffset LastModifiedAt = 5;
 }
 message ChangeApplicationSecretRequest {
    .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -42,8 +42,6 @@ message CommandResult {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
-}
-message DateTimeOffset {
 }
 message QueryResult_AdminPasswordStatusResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -78,6 +76,10 @@ message RemoveUserRequest {
 message RequirePasswordChangeRequest {
    .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
+message SerializableDateTimeOffset {
+   string Value = 1;
+}
 message SetInitialAdminPasswordRequest {
    .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Password = 2;
@@ -88,8 +90,8 @@ message UserResponse {
    string Username = 2;
    string Email = 3;
    bool IsActive = 4;
-   DateTimeOffset CreatedAt = 5;
-   DateTimeOffset LastModifiedAt = 6;
+   SerializableDateTimeOffset CreatedAt = 5;
+   SerializableDateTimeOffset LastModifiedAt = 6;
    bool HasLoggedIn = 7;
 }
 message ValidationResult {

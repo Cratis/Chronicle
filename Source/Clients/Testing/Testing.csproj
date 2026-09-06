@@ -26,6 +26,12 @@
             <Aliases>KernelCore</Aliases>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <!-- The Cratis.Chronicle.Services.* service implementations these scenarios wrap in-memory now live
+             here, not in Core - see Source/Kernel/Grpc/Grpc.csproj. -->
+        <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj">
+            <Aliases>KernelGrpc</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -48,9 +54,12 @@
         </PackageReference>
     </ItemGroup>
 
-    <!-- Pack Orleans and the kernel's Screenplay compiler runtime assemblies into lib/ so they are available without nuspec dependencies -->
+    <!-- Pack Orleans, the kernel's Screenplay compiler and Roslyn runtime assemblies into lib/ so they are
+         available without nuspec dependencies. Core's projection-to-client-code generation needs the Roslyn
+         C# syntax model (CSharpSyntaxRewriter/CSharpSyntaxVisitor) at runtime, so any consumer constructing a
+         scenario needs it too. -->
     <PropertyGroup>
-        <PrivatePackageRuntimeAssemblyRegex>^(Orleans\..*|Cratis\.Screenplay)\.dll$</PrivatePackageRuntimeAssemblyRegex>
+        <PrivatePackageRuntimeAssemblyRegex>^(Orleans\..*|Cratis\.Screenplay|Microsoft\.CodeAnalysis(\.CSharp)?)\.dll$</PrivatePackageRuntimeAssemblyRegex>
     </PropertyGroup>
 
 </Project>

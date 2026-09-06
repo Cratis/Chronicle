@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -34,7 +33,7 @@ public record ObserverInformation(
     string EventSequenceId,
     ObserverType Type,
     ObserverOwner Owner,
-    IEnumerable<string> EventTypes,
+    IEnumerable<Contracts.Events.EventType> EventTypes,
     ulong NextEventSequenceNumber,
     ulong LastHandledEventSequenceNumber,
     ulong TailEventSequenceNumber,
@@ -54,7 +53,34 @@ public record ObserverInformation(
     {
         var definitions = await storage.GetEventStore(eventStore).Observers.GetAll();
         var states = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.GetAll();
-        return Join(definitions, states);
+        return ObserverInformationConverters.Join(definitions, states);
+    }
+
+    /// <summary>
+    /// Gets the replayable observers in a namespace that consume any of a set of event types.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The namespace within the event store.</param>
+    /// <param name="eventTypes">The identifiers of the event types to find observers for.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read observers from.</param>
+    /// <returns>A collection of observer information.</returns>
+    /// <remarks>
+    /// The join is an inner one on purpose: an observer that has never run has nothing to replay, so unlike the
+    /// all-observers listing it must not appear here.
+    /// </remarks>
+    internal static async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IEnumerable<string> eventTypes,
+        IStorage storage)
+    {
+        var types = eventTypes.Select(eventType => new Concepts.Events.EventType(eventType, Concepts.Events.EventTypeGeneration.First, false));
+        var definitions = await storage.GetEventStore(eventStore).Observers.GetReplayableObserversForEventTypes(types);
+        var states = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.GetAll();
+
+        return from definition in definitions
+               join state in states on definition.Identifier equals state.Identifier
+               select ObserverInformationConverters.ToObserverInformation(definition, state);
     }
 
     /// <summary>
@@ -74,45 +100,9 @@ public record ObserverInformation(
             .SelectMany(async states =>
             {
                 var definitions = await storage.GetEventStore(eventStore).Observers.GetAll();
-                return Join(definitions, states);
+                return ObserverInformationConverters.Join(definitions, states);
             })
             .Subscribe(subject.OnNext);
         return subject;
     }
-
-    /// <summary>
-    /// Joins observer definitions with their state.
-    /// </summary>
-    /// <param name="definitions">The observer definitions.</param>
-    /// <param name="states">The observer states.</param>
-    /// <returns>The joined observer information.</returns>
-    /// <remarks>
-    /// Left outer join on purpose: an observer that has been defined but has not run yet has no state,
-    /// and it still belongs in the listing. An inner join would hide it until it first handled an event.
-    /// </remarks>
-    private static IEnumerable<ObserverInformation> Join(
-        IEnumerable<ObserverDefinition> definitions,
-        IEnumerable<ObserverState> states) =>
-        from definition in definitions
-        join state in states on definition.Identifier equals state.Identifier into stateGroup
-        from state in stateGroup.DefaultIfEmpty(ObserverState.Empty)
-        select ToObserverInformation(definition, state);
-
-    private static ObserverInformation ToObserverInformation(ObserverDefinition definition, ObserverState state) =>
-        new(
-            definition.Identifier,
-            definition.EventSequenceId,
-            (ObserverType)(int)definition.Type,
-            (ObserverOwner)(int)definition.Owner,
-            definition.EventTypes.Select(et => et.Id.Value),
-            state.NextEventSequenceNumber,
-            state.LastHandledEventSequenceNumber,
-            state.TailEventSequenceNumber,
-            state.HandledEventCount,
-            (ObserverRunningState)(int)state.RunningState,
-
-            // Subscription state is per-observer and only known by the observer grain, so the listing
-            // reports false rather than activating every grain to ask. Read a single observer to get it.
-            IsSubscribed: false,
-            definition.IsReplayable);
 }

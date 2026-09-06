@@ -27,6 +27,12 @@
             <Aliases>KernelCore</Aliases>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <!-- AddChronicleToSilo (Orleans.Hosting.ChronicleServerSiloBuilderExtensions) lives here now,
+             not in Core - see Source/Kernel/Grpc/Grpc.csproj. -->
+        <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj">
+            <Aliases>KernelGrpc</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -90,6 +96,8 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="protobuf-net" />
+        <PackageReference Include="protobuf-net.Reflection" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="Snappier" />
     </ItemGroup>

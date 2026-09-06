@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
@@ -10,42 +9,42 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
-/// Represents methods for converting between <see cref="AppendResponse"/> to <see cref="AppendResult"/>.
+/// Represents methods for converting between <see cref="Contracts.Sequences.AppendResponse"/> to <see cref="AppendResult"/>.
 /// </summary>
 internal static class AppendResultConverters
 {
     /// <summary>
-    /// Convert from <see cref="AppendResponse"/> to <see cref="AppendResult"/>.
+    /// Convert from <see cref="Contracts.Sequences.AppendResponse"/> to <see cref="AppendResult"/>.
     /// </summary>
-    /// <param name="result"><see cref="AppendResponse"/> to convert from.</param>
+    /// <param name="result"><see cref="Contracts.Sequences.AppendResponse"/> to convert from.</param>
     /// <returns>Converted <see cref="AppendResult"/>.</returns>
-    public static AppendResult ToClient(this AppendResponse result)
+    public static AppendResult ToClient(this Contracts.Sequences.AppendResponse result)
     {
         return new AppendResult
         {
             CorrelationId = result.CorrelationId,
             SequenceNumber = result.SequenceNumber,
-            ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
-            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
+            ConstraintViolations = (result.ConstraintViolations ?? []).Select(v => v.ToClient()).ToImmutableList(),
+            Errors = (result.Errors ?? []).Select(e => (AppendError)e).ToImmutableList(),
             ConcurrencyViolation = result.ConcurrencyViolation?.ToClient(),
             ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
     }
 
     /// <summary>
-    /// Convert from <see cref="AppendManyResponse"/> to <see cref="AppendManyResult"/>.
+    /// Convert from <see cref="Contracts.Sequences.AppendManyResponse"/> to <see cref="AppendManyResult"/>.
     /// </summary>
-    /// <param name="result"><see cref="AppendManyResponse"/> to convert from.</param>
+    /// <param name="result"><see cref="Contracts.Sequences.AppendManyResponse"/> to convert from.</param>
     /// <returns>Converted <see cref="AppendManyResult"/>.</returns>
-    public static AppendManyResult ToClient(this AppendManyResponse result)
+    public static AppendManyResult ToClient(this Contracts.Sequences.AppendManyResponse result)
     {
         return new AppendManyResult
         {
             CorrelationId = result.CorrelationId,
-            SequenceNumbers = result.SequenceNumbers.Select(_ => (EventSequenceNumber)_).ToImmutableList(),
-            ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
-            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
-            ConcurrencyViolations = result.ConcurrencyViolations.Select(_ => _.ToClient()).ToImmutableList(),
+            SequenceNumbers = (result.SequenceNumbers ?? []).Select(_ => (EventSequenceNumber)_).ToImmutableList(),
+            ConstraintViolations = (result.ConstraintViolations ?? []).Select(v => v.ToClient()).ToImmutableList(),
+            Errors = (result.Errors ?? []).Select(e => (AppendError)e).ToImmutableList(),
+            ConcurrencyViolations = (result.ConcurrencyViolations ?? []).Select(_ => _.ToClient()).ToImmutableList(),
             ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
     }

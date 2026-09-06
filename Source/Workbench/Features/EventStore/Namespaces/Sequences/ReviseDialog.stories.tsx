@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ReviseDialog } from './ReviseDialog';
-import { AppendedEvent } from 'Api/Events';
-import { EventContext } from 'Api/Events/EventContext';
-import { EventType } from 'Api/Events/EventType';
+import { AppendedEvent } from 'Features/Sequences';
+import { EventContext } from 'Features/Sequences';
+import { EventType } from 'Features/Sequences';
 import { DialogContext, DialogContextContent } from '@cratis/arc.react/dialogs';
 
 const mockEventType = Object.assign(new EventType(), {

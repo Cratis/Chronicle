@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Services.Jobs.for_Jobs.given;
 /// </summary>
 public class all_dependencies : Specification
 {
+    protected Cratis.Arc.Commands.ICommandPipeline _commandPipeline;
     protected IGrainFactory _grainFactory;
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
@@ -28,6 +29,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
+        _commandPipeline = Substitute.For<Cratis.Arc.Commands.ICommandPipeline>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
@@ -49,6 +51,6 @@ public class all_dependencies : Specification
         Catch<IImmutableList<JobStepState>> failedSteps = _exception;
         _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>()).Returns(Task.FromResult(failedSteps));
 
-        _service = new Jobs(_grainFactory, _storage, _logger);
+        _service = new Jobs(_commandPipeline, _storage, _grainFactory, _logger);
     }
 }

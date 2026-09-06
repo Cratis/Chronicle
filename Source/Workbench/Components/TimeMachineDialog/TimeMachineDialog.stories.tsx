@@ -6,8 +6,8 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { DialogComponents } from '@cratis/arc.react/dialogs';
 import { BusyIndicatorDialog, ConfirmationDialog } from '@cratis/components/Dialogs';
 import { TimeMachineDialog } from './TimeMachineDialog';
-import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
-import { ReadModelOwner, ReadModelSource } from 'Api/ReadModelTypes';
+import { ReadModelDefinition } from 'Features/ReadModelDefinitions';
+import { ReadModelOwner, ReadModelSource } from 'Features/ReadModelDefinitions';
 
 const mockReadModel: ReadModelDefinition = {
     identifier: 'SampleReadModel',

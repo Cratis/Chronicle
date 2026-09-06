@@ -32,12 +32,9 @@ message EventContext {
    string Hash = 15;
 }
 enum EventObservationState {
-   // this is a composite/flags enumeration
    EVENT_OBSERVATION_STATE_None = 0;
    Initial = 1;
-   HeadOfReplay = 2;
-   Replay = 4;
-   TailOfReplay = 8;
+   Replay = 2;
 }
 message EventRevision {
    uint32 Generation = 1;

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useParams } from 'react-router-dom';
-import { ObserveObserversForEventType } from 'Api/Observation';
+import { ObserveObserversForEventType } from 'Features/Observation';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ObserversForEventTypeTable } from './ObserversForEventTypeTable';
 

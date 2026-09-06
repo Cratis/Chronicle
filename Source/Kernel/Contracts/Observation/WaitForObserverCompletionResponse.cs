@@ -19,5 +19,5 @@ public class WaitForObserverCompletionResponse
     /// Gets or sets the failed partitions discovered while waiting.
     /// </summary>
     [ProtoMember(2)]
-    public IEnumerable<FailedPartition> FailedPartitions { get; set; } = [];
+    public IEnumerable<FailedPartition> FailedPartitions { get; set; } = new List<FailedPartition>();
 }

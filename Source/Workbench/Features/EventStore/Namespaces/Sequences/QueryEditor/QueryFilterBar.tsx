@@ -7,7 +7,7 @@ import { Chip } from '@cratis/components/Display';
 import { InputTags, type InputTagsRootValueChangeEvent } from 'primereact/inputtags';
 import { InputText } from 'primereact/inputtext';
 import strings from 'Strings';
-import { SequenceHistogram } from 'Api/EventSequences/SequenceHistogram';
+import { SequenceHistogram } from 'Features/Sequences';
 import { SequenceQueryState, areSequenceQueryStatesEqual } from './SequenceQueryState';
 import {
     applyCustomFilterValue,

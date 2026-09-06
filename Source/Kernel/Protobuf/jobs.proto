@@ -14,8 +14,6 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
-message DateTimeOffset {
-}
 message DeleteJobRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -86,9 +84,13 @@ message JobSummaryResponse {
    string Details = 2;
    string Type = 3;
    JobStatus Status = 4;
-   DateTimeOffset Created = 5;
+   SerializableDateTimeOffset Created = 5;
    repeated JobStatusChanged StatusChanges = 6;
    JobProgress Progress = 7;
+}
+message ObserveJobsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
 }
 message QueryResult_IEnumerable_JobStepSummaryResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -132,9 +134,10 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service Jobs {
-   rpc AllJobs (AllJobsRequest) returns (stream QueryResult_IEnumerable_JobSummaryResponse);
+   rpc AllJobs (AllJobsRequest) returns (QueryResult_IEnumerable_JobSummaryResponse);
    rpc DeleteJob (DeleteJobRequest) returns (CommandResult);
    rpc GetJobSteps (GetJobStepsRequest) returns (QueryResult_IEnumerable_JobStepSummaryResponse);
+   rpc ObserveJobs (ObserveJobsRequest) returns (stream QueryResult_IEnumerable_JobSummaryResponse);
    rpc ResumeJob (ResumeJobRequest) returns (CommandResult);
    rpc StopJob (StopJobRequest) returns (CommandResult);
 }

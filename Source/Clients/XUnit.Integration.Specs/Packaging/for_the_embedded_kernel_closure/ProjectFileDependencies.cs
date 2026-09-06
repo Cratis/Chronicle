@@ -12,8 +12,11 @@ static class ProjectFileDependencies
 
     internal static (HashSet<string> Packages, IReadOnlyCollection<(string Include, bool IsEmbedded)> References) Read(XDocument document)
     {
+        // A package reference marked PrivateAssets=all contributes nothing to whoever consumes this project, and
+        // that is how a build-only package - a generator, an analyzer - says it has no runtime assets to carry.
+        // Requiring the packaging project to declare one would make every consumer run our proxy generator.
         var packages = document.Descendants()
-            .Where(_ => HasName(_.Name, "PackageReference"))
+            .Where(_ => HasName(_.Name, "PackageReference") && !MetadataValues(_, "PrivateAssets").Any(IncludesAll))
             .Select(_ => AttributeValue(_, "Include"))
             .OfType<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);

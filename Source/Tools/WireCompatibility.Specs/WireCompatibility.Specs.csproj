@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Tools.WireCompatibility.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Tools.WireCompatibility</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../WireCompatibility/WireCompatibility.csproj" />
+    </ItemGroup>
+</Project>

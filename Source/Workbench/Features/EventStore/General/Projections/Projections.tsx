@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AllEventTypesWithSchemas } from 'Api/EventTypes';
-import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
+import { ObserveEventTypes } from 'Features/EventTypes';
+import { AllReadModelDefinitions, ReadModelSource } from 'Features/ReadModelDefinitions';
 import { Page } from 'Components/Common/Page';
 import type { JsonSchema } from '@cratis/components/types';
 import type { JsonSchema as ProjectionJsonSchema } from '@cratis/screenplay-language/projection';
@@ -18,8 +18,8 @@ import * as faIcons from 'react-icons/fa6';
 import { DataTableCore } from '@cratis/components/DataTables';
 import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
-import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, ProjectionWithDeclaration, SaveProjection } from 'Api/Projections';
-import { ReadModelInstance } from 'Api/ReadModels';
+import { AllProjectionsWithDeclarations, DraftReadModel, PreviewProjection, ProjectionDeclarationSyntaxError, ProjectionWithDeclaration, SaveProjection } from 'Features/ProjectionEditor';
+import { ReadModelInstance } from 'Features/ReadModelExplorer';
 import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { TimeMachineDialog, TimeScrubberDialog, ReadModelInstances, getInstanceKey } from 'Components';
@@ -99,7 +99,7 @@ export const Projections = () => {
     const [pendingReadModel, setPendingReadModel] = useState<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
-    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
     const eventSchemas = useMemo(() => {
         if (!eventTypes.data) return undefined;
         const out: Record<string, ProjectionJsonSchema> = {};

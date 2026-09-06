@@ -32,6 +32,22 @@ kotlin {
     jvmToolchain(17)
 }
 
+// The canonical descriptor set travels with the package so a client can hand the kernel exactly the contracts it
+// was built against, and the kernel can own the one compatibility check instead of every language reimplementing
+// it. See Source/Kernel/Compatibility.
+val embedDescriptorSet by tasks.registering(Copy::class) {
+    from(file("../../Kernel/Protobuf/chronicle.desc"))
+    into(layout.buildDirectory.dir("generated/resources/chronicle"))
+}
+
+sourceSets.named("main") {
+    resources.srcDir(layout.buildDirectory.dir("generated/resources"))
+}
+
+tasks.named("processResources") {
+    dependsOn(embedDescriptorSet)
+}
+
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:$protobufVersion"

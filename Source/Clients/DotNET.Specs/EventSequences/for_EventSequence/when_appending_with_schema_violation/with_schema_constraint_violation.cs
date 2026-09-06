@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Identities;
@@ -20,7 +20,7 @@ public class with_schema_constraint_violation : given.an_event_sequence
     JsonObject _eventContext;
     IEnumerable<Causation> _causation;
     Identity _causedBy;
-    AppendResponse _response;
+    Contracts.Sequences.AppendResponse _response;
     IAppendResult _result;
 
     void Establish()
@@ -67,7 +67,8 @@ public class with_schema_constraint_violation : given.an_event_sequence
             Errors = []
         };
 
-        _serviceAccessor.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(_response);
+        _sequences.Append(Arg.Any<Contracts.Sequences.AppendRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => _result = await _eventSequence.Append(_eventSourceId, _event);

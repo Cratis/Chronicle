@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelGrpc;
 extern alias KernelConcepts;
 
 using Cratis.Chronicle.Connections;
@@ -9,7 +10,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ConnectionService = KernelCore::Cratis.Chronicle.Services.Clients.ConnectionService;
+using ConnectionService = KernelGrpc::Cratis.Chronicle.Services.Clients.ConnectionService;
 using IConnectedClients = KernelCore::Cratis.Chronicle.Clients.IConnectedClients;
 using KernelConnectionId = KernelConcepts::Cratis.Chronicle.Concepts.Clients.ConnectionId;
 
@@ -104,7 +105,13 @@ internal class ChronicleConnection(
             Environment.MachineName,
             ".NET");
 
-        _connectionService = new ConnectionService(grainFactory, localSiloDetails, loggerFactory.CreateLogger<ConnectionService>(), Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()));
+        var chronicleOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
+        _connectionService = new ConnectionService(
+            grainFactory,
+            localSiloDetails,
+            new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsQuery(grainFactory, chronicleOptions),
+            loggerFactory.CreateLogger<ConnectionService>(),
+            chronicleOptions);
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

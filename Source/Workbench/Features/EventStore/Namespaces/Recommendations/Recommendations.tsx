@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { AllRecommendations, AllRecommendationsParameters } from 'Api/Recommendations';
+import { AllRecommendations, AllRecommendationsParameters } from 'Features/Recommendations';
 import { type DataTableFilterMeta } from '@cratis/components/DataTables';
 import { FilterMatchMode } from '@primereact/headless/datatable';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { Recommendation } from 'Api/Recommendations/Recommendation';
+import { RecommendationDetails } from 'Features/Recommendations';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/arc.react.mvvm';
@@ -19,7 +19,7 @@ const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.In },
 };
 
-const occurred = (recommendation: Recommendation) => {
+const occurred = (recommendation: RecommendationDetails) => {
     return recommendation.occurred.toLocaleString();
 };
 
@@ -52,7 +52,7 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
             title={strings.eventStore.namespaces.recommendations.title}
             query={AllRecommendations}
             queryArguments={queryArgs}
-            onSelectionChange={(e) => (viewModel.selectedRecommendation = e.value as Recommendation)}
+            onSelectionChange={(e) => (viewModel.selectedRecommendation = e.value as RecommendationDetails)}
             dataKey='id'
             defaultFilters={defaultFilters}
             globalFilterFields={['tombstone']}

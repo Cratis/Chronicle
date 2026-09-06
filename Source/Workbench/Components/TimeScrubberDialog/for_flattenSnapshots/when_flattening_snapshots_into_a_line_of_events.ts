@@ -1,13 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import type { ReadModelSnapshot } from 'Api/ReadModels';
+import type { ReadModelSnapshot } from 'Features/ReadModelExplorer';
 import { flattenSnapshots } from '../flattenSnapshots';
 
 const snapshot = (occurred: string, instance: object, ...types: string[]) => ({
     occurred: new Date(occurred),
-    instance,
-    events: types.map((type, index) => ({ sequenceNumber: index, type, occurred: new Date(occurred), content: {} }))
+    instance: JSON.stringify(instance),
+    events: types.map((type, index) => ({
+        context: { sequenceNumber: index, eventType: { id: type }, occurred: new Date(occurred) },
+        content: '{}'
+    }))
 } as unknown as ReadModelSnapshot);
 
 describe('when flattening snapshots into a line of events', () => {
@@ -23,7 +26,7 @@ describe('when flattening snapshots into a line of events', () => {
         flattenSnapshots([
             snapshot('2026-01-01', { total: 1 }, 'Opened', 'Credited'),
             snapshot('2026-01-02', { total: 2 }, 'Debited')
-        ]).map(step => step.event.type).should.eql(['Opened', 'Credited', 'Debited']));
+        ]).map(step => step.event.context.eventType.id).should.eql(['Opened', 'Credited', 'Debited']));
 
     it('should give every event of a snapshot that snapshot\'s state', () => {
         const steps = flattenSnapshots([snapshot('2026-01-01', { total: 7 }, 'Opened', 'Credited')]);
@@ -46,9 +49,9 @@ describe('when flattening snapshots into a line of events', () => {
         flattenSnapshots([
             snapshot('2026-01-01', { total: 1 }),
             snapshot('2026-01-02', { total: 2 }, 'Debited')
-        ]).map(step => step.event.type).should.eql(['Debited']));
+        ]).map(step => step.event.context.eventType.id).should.eql(['Debited']));
 
     it('should survive a snapshot with no events at all', () =>
-        flattenSnapshots([{ occurred: new Date(), instance: {} } as unknown as ReadModelSnapshot])
+        flattenSnapshots([{ occurred: new Date(), instance: '{}' } as unknown as ReadModelSnapshot])
             .length.should.equal(0));
 });

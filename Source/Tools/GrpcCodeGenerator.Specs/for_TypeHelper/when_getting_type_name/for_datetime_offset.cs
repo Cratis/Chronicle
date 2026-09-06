@@ -15,7 +15,7 @@ public class for_datetime_offset : Specification
     }
 
     [Fact] void should_use_the_serializable_date_time_offset_contract() =>
-        _typeName.ShouldEqual("Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset");
+        _typeName.ShouldEqual("global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset");
     [Fact] void should_represent_nullable_values_with_the_reference_type() =>
-        _nullableTypeName.ShouldEqual("Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset");
+        _nullableTypeName.ShouldEqual("global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset");
 }

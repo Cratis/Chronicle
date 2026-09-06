@@ -33,13 +33,5 @@ public record Application(
     internal static ISubject<IEnumerable<Application>> AllApplications(IStorage storage) =>
         storage.System.Applications
             .ObserveAll()
-            .TransformSubject(apps => apps.Select(ToApplication));
-
-    private static Application ToApplication(Storage.Security.Application app) =>
-        new(
-            (Guid)app.Id,
-            (string)app.ClientId,
-            true,
-            DateTimeOffset.UtcNow,
-            null);
+            .TransformSubject(apps => apps.Select(ApplicationConverters.ToApplication));
 }

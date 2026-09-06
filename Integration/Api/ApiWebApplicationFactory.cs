@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
+using Cratis.Json;
 using Microsoft.AspNetCore.TestHost;
 namespace Cratis.Chronicle.Integration.Api;
 
@@ -10,7 +11,30 @@ public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoo
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
-        builder.ConfigureTestServices(services => services.Configure<ChronicleAspNetCoreOptions>(options =>
+
+        // Program.cs is a bare WebApplicationFactory marker host with no Arc/host bootstrapping of
+        // its own (the specs talk to the containerized kernel over HTTP, not to this host) - but it
+        // still references Server.csproj, so a broad AddBindingsByConvention() sweep here - the way
+        // ChronicleOrleansInProcessWebApplicationFactory runs it on its own, actually-hosted silo -
+        // would eagerly register and validate every [Singleton] across the whole Kernel/Core graph,
+        // most of which need a real grain factory or storage this host never sets up. Register only
+        // what AddCratisChronicleClient() actually needs from this thin client-only host:
+        // type discovery (IInstancesOf<IReactorSideEffectHandler>, resolved lazily on access),
+        // ClientArtifactsActivator, and the shared JsonSerializerOptions - directly, rather than
+        // convention-scanning for them.
+        builder.ConfigureServices(services =>
+        {
+            services.AddTypeDiscovery();
+            services.AddSingleton<IClientArtifactsActivator, ClientArtifactsActivator>();
+            services.AddSingleton(Globals.JsonSerializerOptions);
+        });
+
+        // Overrides the base factory's bare connection string with the out-of-process
+        // container's real dev credentials. Configuring ChronicleClientOptions - not
+        // ChronicleAspNetCoreOptions - because that's the type AddCratisChronicleClient
+        // actually reads; the two are separate IOptions<T> registrations even though
+        // ChronicleAspNetCoreOptions derives from it.
+        builder.ConfigureTestServices(services => services.Configure<ChronicleClientOptions>(options =>
         {
             options.EventStore = Constants.EventStore;
             options.ConnectionString = new ChronicleConnectionStringBuilder()

@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from '@cratis/components/DataTables';
-import { DataTableCore } from '@cratis/components/DataTables';
-import { ObserverInformation } from 'Api/Observation';
+import { Column, DataTableCore } from '@cratis/components/DataTables';
+import { ObserverInformation } from 'Features/Observation';
 import strings from 'Strings';
 import css from './ObserverEventTypes.module.css';
 

@@ -3,9 +3,9 @@
 
 import { DialogResult } from '@cratis/arc.react/dialogs';
 import { Guid } from '@cratis/fundamentals';
-import { Append } from 'Api/EventSequences';
-import { AllEventTypesWithSchemas } from 'Api/EventTypes';
-import { EventTypeRegistration } from 'Api/Events';
+import { Append } from 'Features/Sequences';
+import { ObserveEventTypes } from 'Features/EventTypes';
+import { EventTypeDetails } from 'Features/EventTypes';
 import { Dialog } from '@cratis/components/Dialogs';
 import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import { InputText } from 'primereact/inputtext';
@@ -21,9 +21,9 @@ export const AppendEventDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [appendEvent] = Append.use();
 
-    const [allEventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [allEventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
 
-    const [selectedEventType, setSelectedEventType] = useState<EventTypeRegistration | null>(null);
+    const [selectedEventType, setSelectedEventType] = useState<EventTypeDetails | null>(null);
     const [eventSourceId, setEventSourceId] = useState('');
     const [eventSourceType, setEventSourceType] = useState('Default');
     const [eventStreamType, setEventStreamType] = useState('All');
@@ -113,7 +113,7 @@ export const AppendEventDialog = () => {
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="field mb-3">
                     <label htmlFor="eventType">{strings.eventStore.namespaces.sequences.dialogs.appendEvent.eventType}</label>
-                    <Dropdown<EventTypeRegistration>
+                    <Dropdown<EventTypeDetails>
                         id="eventType"
                         value={selectedEventType ?? undefined}
                         options={allEventTypes.data}

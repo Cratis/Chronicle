@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using ProtoBuf.Grpc;
@@ -19,8 +19,8 @@ public class many_events_for_different_event_source_ids_with_tags : given.an_eve
     JsonObject _eventContext;
     IEnumerable<Causation> _causation;
     Identity _causedBy;
-    AppendManyRequest _command;
-    AppendManyResponse _response;
+    Contracts.Sequences.AppendManyForEventSourcesRequest _command;
+    Contracts.Sequences.AppendManyResponse _response;
 
     void Establish()
     {
@@ -47,9 +47,9 @@ public class many_events_for_different_event_source_ids_with_tags : given.an_eve
 
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
-        _eventSequences
-            .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+        _sequences
+            .When(_ => _.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendManyForEventSourcesRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
         _identityProvider.GetCurrent().Returns(_causedBy);
 
@@ -58,10 +58,12 @@ public class many_events_for_different_event_source_ids_with_tags : given.an_eve
             CorrelationId = Guid.NewGuid(),
             SequenceNumbers = [42, 43],
             ConstraintViolations = [],
-            Errors = []
+            Errors = [],
+            ConcurrencyViolations = []
         };
 
-        _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(_response);
+        _sequences.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => await _eventSequence.AppendMany(_events, tags: _tags);

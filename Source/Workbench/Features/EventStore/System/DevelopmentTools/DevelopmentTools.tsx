@@ -6,8 +6,7 @@ import { Button } from '@cratis/components/Common';
 import { DialogButtons, DialogResult, useConfirmationDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
-import { AreDevelopmentToolsAvailable } from 'Api/DevelopmentTools/AreDevelopmentToolsAvailable';
-import { ResetKernelState } from 'Api/DevelopmentTools/ResetKernelState';
+import { AreDevelopmentToolsAvailable, ResetKernelState } from 'Features/DevelopmentTools';
 import './DevelopmentTools.css';
 
 /**

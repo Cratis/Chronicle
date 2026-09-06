@@ -2,14 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Cratis.Chronicle.Api;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace Cratis.Chronicle.Integration.Api;
 
 /// <summary>
-/// Entry point for the Chronicle API integration tests.
+/// Entry point for the Chronicle HTTP API integration tests.
 /// </summary>
+/// <remarks>
+/// The specs talk to a containerized kernel over HTTP, so this host exists only to give
+/// <c>WebApplicationFactory</c> something to start - it serves nothing itself.
+/// </remarks>
 public sealed class Program
 {
     /// <summary>
@@ -27,73 +29,13 @@ public sealed class Program
     /// <returns>A task representing the async operation.</returns>
     public static async Task Main(string[] args)
     {
-        AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
-
-        // Force invariant culture for the Kernel
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
         var builder = WebApplication.CreateBuilder(args);
-        builder.Configuration.AddJsonFile("chronicle.json", optional: true, reloadOnChange: true);
-
-        var chronicleApiOptions = new ChronicleApiOptions();
-        builder.Configuration.Bind(chronicleApiOptions);
-        builder.Services.Configure<ChronicleApiOptions>(builder.Configuration);
-        builder.Services.AddCratisChronicleApi();
-        builder.AddCratisChronicle();
-
-        builder.Host
-           .UseDefaultServiceProvider(_ =>
-           {
-               _.ValidateScopes = false;
-               _.ValidateOnBuild = false;
-           })
-           .AddCratisArc();
-
-        builder.WebHost.UseKestrel(options =>
-        {
-            options.ListenAnyIP(chronicleApiOptions.ManagementPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
-            options.Limits.Http2.MaxStreamsPerConnection = 100;
-        });
-
         var app = builder.Build();
-        app
-            .UseRouting()
-            .UseCratisArc()
-            .UseCratisChronicle()
-            .UseCratisChronicleApi();
-
-        Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ManagementPort}");
-
         await app.RunAsync();
     }
-
-    static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
-    {
-        if (args.ExceptionObject is Exception exception)
-        {
-            Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
-            PrintExceptionInfo(exception);
-
-            while (exception.InnerException is not null)
-            {
-                Console.WriteLine("\n------------ BEGIN INNER EXCEPTION ------------");
-                PrintExceptionInfo(exception.InnerException);
-                exception = exception.InnerException;
-                Console.WriteLine("------------ END INNER EXCEPTION ------------\n");
-            }
-
-            Console.WriteLine("************ END UNHANDLED EXCEPTION ************ ");
-        }
-    }
-
-    static void PrintExceptionInfo(Exception exception)
-    {
-        Console.WriteLine($"Exception type: {exception.GetType().FullName}");
-        Console.WriteLine($"Exception message: {exception.Message}");
-        Console.WriteLine($"Stack Trace: {exception.StackTrace}");
-    }
 }
-

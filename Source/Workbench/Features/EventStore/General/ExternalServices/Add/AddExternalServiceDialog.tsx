@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AddExternalService, ExternalServiceEndpointType } from 'Api/ExternalServices';
-import { AuthorizationType } from 'Api/Security';
+import { AddExternalService } from 'Features/ExternalServices';
+import { ExternalServiceEndpointType } from 'Features/Contracts/ExternalServices';
+import { AuthorizationType } from 'Features/Contracts/Security';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';

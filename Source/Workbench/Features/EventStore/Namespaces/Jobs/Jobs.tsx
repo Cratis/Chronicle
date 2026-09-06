@@ -4,15 +4,16 @@
 import strings from 'Strings';
 import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
-import { AllJobs, AllJobsParameters } from 'Api/Jobs';
-import { Job, JobStatus } from 'Api/Jobs';
+import { ObserveJobs, ObserveJobsParameters } from 'Features/Jobs';
+import { JobSummary } from 'Features/Jobs';
+import { JobStatus } from 'Features/Contracts/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { JobsViewModel } from './JobsViewModel';
 import { Page } from 'Components/Common/Page';
 
-const jobStatus = (job: Job) => {
+const jobStatus = (job: JobSummary) => {
     switch (job.status) {
         case JobStatus.none:
             return strings.eventStore.namespaces.jobs.status.none;
@@ -38,7 +39,7 @@ const jobStatus = (job: Job) => {
     return strings.eventStore.namespaces.jobs.status.none;
 };
 
-const progress = (job: Job) => {
+const progress = (job: JobSummary) => {
     const completedSteps = job.progress.failedSteps + job.progress.successfulSteps;
     const progress = (completedSteps / job.progress.totalSteps) * 100;
     return `${Math.abs(progress).toFixed()}%`;
@@ -46,7 +47,7 @@ const progress = (job: Job) => {
 
 export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs: AllJobsParameters = {
+    const queryArgs: ObserveJobsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };
@@ -55,11 +56,11 @@ export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
         <Page title={strings.eventStore.namespaces.jobs.title}>
         <DataPage
             title={strings.eventStore.namespaces.jobs.title}
-            query={AllJobs}
+            query={ObserveJobs}
             queryArguments={queryArgs}
             emptyMessage={strings.eventStore.namespaces.jobs.empty}
             dataKey='id'
-            onSelectionChange={e => viewModel.selectedJob = e.value as Job}>
+            onSelectionChange={e => viewModel.selectedJob = e.value as JobSummary}>
             <DataPage.MenuItems>
                 <MenuItem
                     label={strings.eventStore.namespaces.jobs.actions.stop} icon={faIcons.FaStop}

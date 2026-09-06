@@ -4,10 +4,9 @@
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
@@ -36,7 +35,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Recommendations"><see cref="IRecommendations"/> instance.</param>
 /// <param name="Patterns"><see cref="IPatterns"/> instance.</param>
 /// <param name="Identities"><see cref="IIdentities"/> instance.</param>
-/// <param name="EventSequences"><see cref="IEventSequences"/> instance.</param>
+/// <param name="Sequences"><see cref="Sequences.IEventSequences"/> instance.</param>
 /// <param name="EventTypes"><see cref="IEventTypes"/> instance.</param>
 /// <param name="Constraints"><see cref="IConstraints"/> instance.</param>
 /// <param name="Observers"><see cref="IObservers"/> instance.</param>
@@ -50,6 +49,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="EventStoreSubscriptions"><see cref="IEventStoreSubscriptions"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="MaterializedReadModels"><see cref="IMaterializedReadModels"/> instance.</param>
+/// <param name="ReadModelExplorer"><see cref="ReadModelExplorer.IReadModelExplorer"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="Seeding"><see cref="IEventSeeding"/> instance.</param>
 /// <param name="Users"><see cref="IUsers"/> instance.</param>
@@ -63,7 +63,7 @@ public sealed record Services(
     IRecommendations Recommendations,
     IPatterns Patterns,
     IIdentities Identities,
-    IEventSequences EventSequences,
+    Sequences.IEventSequences Sequences,
     IEventTypes EventTypes,
     IConstraints Constraints,
     IObservers Observers,
@@ -77,6 +77,7 @@ public sealed record Services(
     IEventStoreSubscriptions EventStoreSubscriptions,
     IReadModels ReadModels,
     IMaterializedReadModels MaterializedReadModels,
+    ReadModelExplorer.IReadModelExplorer ReadModelExplorer,
     IJobs Jobs,
     IEventSeeding Seeding,
     IUsers Users,

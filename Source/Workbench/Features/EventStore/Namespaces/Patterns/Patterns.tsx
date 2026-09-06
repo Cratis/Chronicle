@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { PivotDimension, PivotFilter, PivotGroup, PivotViewer } from '@cratis/components/PivotViewer';
-import { AllPatterns } from 'Api/Patterns';
-import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
+import { AllPatterns } from 'Features/Patterns';
+import { BehaviorPatternDetails } from 'Features/Patterns/BehaviorPatternDetails';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
@@ -13,7 +13,7 @@ import { summaryOf } from './patternSummary';
 
 // A pattern only constrains the facets it is about, so a missing facet is not missing data — it means the pattern
 // holds whatever that facet's value is. Saying "Any" keeps that readable as a pivot value.
-const facet = (pattern: BehaviorPattern, name: string) => pattern.facets?.[name] ?? 'Any';
+const facet = (pattern: BehaviorPatternDetails, name: string) => pattern.facets?.[name] ?? 'Any';
 
 const facetAxes = [
     { key: 'commandType', name: 'CommandType', label: strings.patterns.commandType },
@@ -24,7 +24,7 @@ const facetAxes = [
     { key: 'causedByCommand', name: 'CausedByCommand', label: strings.patterns.causedByCommand },
 ];
 
-const dimensions: PivotDimension<BehaviorPattern>[] = [
+const dimensions: PivotDimension<BehaviorPatternDetails>[] = [
     {
         key: 'scope',
         label: strings.patterns.scope,
@@ -34,11 +34,11 @@ const dimensions: PivotDimension<BehaviorPattern>[] = [
     ...facetAxes.map(({ key, name, label }) => ({
         key,
         label,
-        getValue: (pattern: BehaviorPattern) => facet(pattern, name),
+        getValue: (pattern: BehaviorPatternDetails) => facet(pattern, name),
         // Command is the axis people land on first, so its busiest values lead; the rest read better alphabetically.
         sort: key === 'commandType'
-            ? (a: PivotGroup<BehaviorPattern>, b: PivotGroup<BehaviorPattern>) => b.items.length - a.items.length
-            : (a: PivotGroup<BehaviorPattern>, b: PivotGroup<BehaviorPattern>) => a.label.localeCompare(b.label),
+            ? (a: PivotGroup<BehaviorPatternDetails>, b: PivotGroup<BehaviorPatternDetails>) => b.items.length - a.items.length
+            : (a: PivotGroup<BehaviorPatternDetails>, b: PivotGroup<BehaviorPatternDetails>) => a.label.localeCompare(b.label),
     })),
     {
         key: 'specificity',
@@ -48,21 +48,21 @@ const dimensions: PivotDimension<BehaviorPattern>[] = [
     },
 ];
 
-const filters: PivotFilter<BehaviorPattern>[] = [
+const filters: PivotFilter<BehaviorPatternDetails>[] = [
     // Scope leads, because "whose behavior am I looking at" is the question asked before any of the others - and
     // being a filter rather than a control above the viewer is what lets two scopes be compared side by side.
     { key: 'scope', label: strings.patterns.scope, getValue: (pattern) => pattern.groupingKey, multi: true },
     ...facetAxes.map(({ key, name, label }) => ({
         key,
         label,
-        getValue: (pattern: BehaviorPattern) => facet(pattern, name),
+        getValue: (pattern: BehaviorPatternDetails) => facet(pattern, name),
         multi: true,
     })),
     { key: 'confidence', label: strings.patterns.confidence, getValue: (pattern) => Math.round(pattern.confidence * 100), type: 'number', buckets: 10 },
     { key: 'occurrences', label: strings.patterns.occurrences, getValue: (pattern) => Number(pattern.occurrences), type: 'number', buckets: 10 },
 ];
 
-const detailRenderer = (pattern: BehaviorPattern) => (
+const detailRenderer = (pattern: BehaviorPatternDetails) => (
     <div className="p-5 h-full overflow-auto">
         <h2 className="mt-0 mb-5">{summaryOf(pattern)}</h2>
 
@@ -106,7 +106,7 @@ export const Patterns = () => {
     return (
         <Page title={strings.mainMenu.patterns} noBackground noPadding>
             <div className="h-full flex flex-col min-h-0">
-                <PivotViewer<BehaviorPattern>
+                <PivotViewer<BehaviorPatternDetails>
                     data={patterns.data ?? []}
                     dimensions={dimensions}
                     filters={filters}

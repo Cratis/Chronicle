@@ -1,10 +1,37 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.ExternalServices;
-import "google/protobuf/empty.proto";
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
-message AddExternalServices {
+message AddExternalServiceRequest {
+   string EventStore = 1;
+   string Id = 2;
+   string Name = 3;
+   ExternalServiceEndpointType EndpointType = 4;
+   string Url = 5;
+   AuthorizationType AuthorizationType = 6;
+   string BasicUsername = 7;
+   string BasicPassword = 8;
+   string BearerToken = 9;
+   string OAuthAuthority = 10;
+   string OAuthClientId = 11;
+   string OAuthClientSecret = 12;
+   map<string,string> Headers = 13;
+   string Host = 14;
+   int32 Port = 15;
+   string Database = 16;
+   string Username = 17;
+   string Password = 18;
+   map<string,string> Options = 19;
+}
+message AddExternalServicesRequest {
    string EventStore = 1;
    repeated ExternalServiceDefinition ExternalServices = 2;
+}
+enum AuthorizationType {
+   None = 0;
+   Basic = 1;
+   Bearer = 2;
+   OAuth = 3;
 }
 message BasicAuthorization {
    string Username = 1;
@@ -12,6 +39,14 @@ message BasicAuthorization {
 }
 message BearerTokenAuthorization {
    string Token = 1;
+}
+message CommandResult {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
 }
 message DatabaseEndpointConfiguration {
    string Host = 1;
@@ -36,6 +71,19 @@ enum ExternalServiceEndpointType {
    MsSql = 1;
    PostgreSql = 2;
 }
+message ExternalServiceResponse {
+   string Id = 1;
+   string Name = 2;
+   ExternalServiceEndpointType EndpointType = 3;
+   string Url = 4;
+   AuthorizationType AuthorizationType = 5;
+   map<string,string> Headers = 6;
+   string Host = 7;
+   int32 Port = 8;
+   string Database = 9;
+   string Username = 10;
+   map<string,string> Options = 11;
+}
 message GetExternalServicesRequest {
    string EventStore = 1;
 }
@@ -44,26 +92,51 @@ message HttpEndpointConfiguration {
    OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization Authorization = 2;
    map<string,string> Headers = 3;
 }
-message IEnumerable_ExternalServiceDefinition {
-   repeated ExternalServiceDefinition items = 1;
-}
 message OAuthAuthorization {
    string Authority = 1;
    string ClientId = 2;
    string ClientSecret = 3;
+}
+message ObserveExternalServicesRequest {
+   string EventStore = 1;
 }
 message OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization {
    BasicAuthorization Value0 = 1;
    BearerTokenAuthorization Value1 = 2;
    OAuthAuthorization Value2 = 3;
 }
-message RemoveExternalServices {
+message QueryResult_IEnumerable_ExternalServiceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2; // default value could not be applied: True
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated ExternalServiceResponse Data = 6;
+}
+message RemoveExternalServiceRequest {
+   string EventStore = 1;
+   string ExternalServiceId = 2;
+}
+message RemoveExternalServicesRequest {
    string EventStore = 1;
    repeated string ExternalServices = 2;
 }
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
 service ExternalServices {
-   rpc Add (AddExternalServices) returns (.google.protobuf.Empty);
-   rpc GetExternalServices (GetExternalServicesRequest) returns (IEnumerable_ExternalServiceDefinition);
-   rpc ObserveExternalServices (GetExternalServicesRequest) returns (stream IEnumerable_ExternalServiceDefinition);
-   rpc Remove (RemoveExternalServices) returns (.google.protobuf.Empty);
+   rpc AddExternalService (AddExternalServiceRequest) returns (CommandResult);
+   rpc AddExternalServices (AddExternalServicesRequest) returns (CommandResult);
+   rpc GetExternalServices (GetExternalServicesRequest) returns (QueryResult_IEnumerable_ExternalServiceResponse);
+   rpc ObserveExternalServices (ObserveExternalServicesRequest) returns (stream QueryResult_IEnumerable_ExternalServiceResponse);
+   rpc RemoveExternalService (RemoveExternalServiceRequest) returns (CommandResult);
+   rpc RemoveExternalServices (RemoveExternalServicesRequest) returns (CommandResult);
 }

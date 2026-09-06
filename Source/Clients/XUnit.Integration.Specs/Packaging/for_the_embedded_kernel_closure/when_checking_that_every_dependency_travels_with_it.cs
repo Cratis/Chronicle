@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+
 namespace Cratis.Chronicle.XUnit.Integration.Packaging.for_the_embedded_kernel_closure;
 
 /// <summary>
@@ -34,12 +37,33 @@ public class when_checking_that_every_dependency_travels_with_it : Specification
         // A dependency of a project reference that is not embedded arrives at the consumer on its own, through
         // that project's own package. Only the embedded ones have nothing carrying them.
         var covered = declared.Concat(flowing).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _uncovered = [.. embedded.Where(_ => !covered.Contains(_)).Order(StringComparer.OrdinalIgnoreCase)];
+
+        // One more way a dependency travels: packed into lib/ rather than declared, for the one that cannot be
+        // declared at all. See PrivatePackageRuntimeAssemblyRegex in the packaging project.
+        var packed = PackedRuntimeAssemblies(package);
+
+        _uncovered =
+        [
+            .. embedded
+                .Where(_ => !covered.Contains(_) && !packed.IsMatch($"{_}.dll"))
+                .Order(StringComparer.OrdinalIgnoreCase)
+        ];
     }
 
     [Fact]
     void should_declare_every_package_the_embedded_kernel_needs() =>
         string.Join(", ", _uncovered).ShouldEqual(string.Empty);
+
+    static Regex PackedRuntimeAssemblies(FileInfo project)
+    {
+        var pattern = XDocument.Load(project.FullName)
+            .Descendants()
+            .FirstOrDefault(_ => _.Name.LocalName.Equals("PrivatePackageRuntimeAssemblyRegex", StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+
+        // Nothing packed means nothing matches, rather than everything.
+        return new(string.IsNullOrWhiteSpace(pattern) ? "(?!)" : pattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+    }
 
     static FileInfo ProjectFile(string relativePath)
     {

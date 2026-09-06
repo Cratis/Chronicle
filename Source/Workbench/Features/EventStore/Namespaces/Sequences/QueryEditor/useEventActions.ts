@@ -4,9 +4,9 @@
 import { useCallback } from 'react';
 import { DialogButtons, DialogResult, useConfirmationDialog, useDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
-import { AppendedEvent } from 'Api/Events';
-import { GetReplayableObserversForEventTypes } from 'Api/Observation';
-import { ObserverType } from 'Api/Observation/ObserverType';
+import { AppendedEvent } from 'Features/Sequences';
+import { GetReplayableObserversForEventTypes } from 'Features/Observation';
+import { ObserverType } from 'Features/Contracts/Observation';
 import { AppendEventDialog } from '../Add/AppendEventDialog';
 import { RedactEventDialog, RedactEventDialogProps } from '../RedactEventDialog';
 import { ReviseDialog, ReviseDialogProps } from '../ReviseDialog';
@@ -84,7 +84,7 @@ export const useEventActions = (
         const observers = await new GetReplayableObserversForEventTypes().perform({
             eventStore,
             namespace,
-            eventTypeIds: selectedEvent.context.eventType.id
+            eventTypes: [selectedEvent.context.eventType.id]
         });
 
         const reviseStrings = sequenceStrings.dialogs.revise;

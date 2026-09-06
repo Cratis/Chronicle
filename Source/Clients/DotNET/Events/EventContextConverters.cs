@@ -57,4 +57,33 @@ internal static class EventContextConverters
         context.Hash,
         context.ObservationState.ToClient(),
         Subject: new Subject(context.EventSourceId));
+
+    /// <summary>
+    /// Convert to Chronicle version of <see cref="EventContext"/>.
+    /// </summary>
+    /// <param name="context"><see cref="Contracts.Sequences.EventContext"/> to convert.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the context is for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the context is for.</param>
+    /// <returns>Converted <see cref="EventContext"/>.</returns>
+    /// <remarks>
+    /// The event store and namespace are not carried on <see cref="Contracts.Sequences.EventContext"/> - the
+    /// caller already knows which event sequence it queried, so they are supplied rather than round-tripped.
+    /// </remarks>
+    internal static EventContext ToClient(this Contracts.Sequences.EventContext context, EventStoreName eventStore, EventStoreNamespaceName @namespace) => new(
+        context.EventType.ToClient(),
+        context.EventSourceType,
+        context.EventSourceId,
+        context.EventStreamType,
+        context.EventStreamId,
+        context.SequenceNumber,
+        context.Occurred,
+        eventStore,
+        @namespace,
+        context.CorrelationId,
+        context.Causation.ToClient(),
+        context.CausedBy.ToClient(),
+        context.Tags.Select(_ => (Tag)_).ToArray(),
+        context.Hash ?? EventHash.NotSet,
+        context.ObservationState.ToClient(),
+        Subject: new Subject(context.EventSourceId));
 }

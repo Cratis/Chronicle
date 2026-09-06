@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ObserverInformation, ObserverRunningState } from 'Api/Observation';
+import { ObserverInformation } from 'Features/Observation';
+import { ObserverRunningState } from 'Features/Contracts/Observation';
 import { given } from 'given';
 import { a_view_model } from '../when_replaying/given/a_view_model';
 

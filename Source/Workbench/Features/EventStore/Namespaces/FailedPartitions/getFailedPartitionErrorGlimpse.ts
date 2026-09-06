@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { FailedPartition } from 'Api/Observation';
+import { FailedPartitionDetails as FailedPartition } from 'Features/Observation';
 import { getFailedPartitionAttemptsNewestFirst } from './getFailedPartitionAttemptsNewestFirst';
 
 /**

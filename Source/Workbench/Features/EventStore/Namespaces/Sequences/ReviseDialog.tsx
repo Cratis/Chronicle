@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AppendedEvent } from 'Api/Events';
-import { Revise } from 'Api/EventSequences';
-import { AllEventTypesWithSchemas } from 'Api/EventTypes';
+import { AppendedEvent } from 'Features/Sequences';
+import { Revise } from 'Features/Sequences';
+import { ObserveEventTypes } from 'Features/EventTypes';
 import { useState, useEffect, useMemo } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
@@ -37,7 +37,7 @@ export const ReviseDialog = () => {
         [parsedContent, originalContent]
     );
 
-    const [allEventTypes] = AllEventTypesWithSchemas.use({ eventStore: request?.eventStore ?? '' });
+    const [allEventTypes] = ObserveEventTypes.use({ eventStore: request?.eventStore ?? '' });
 
     useEffect(() => {
         const registration = allEventTypes.data.find(et => et.type.id === request?.event.context.eventType.id);

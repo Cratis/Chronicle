@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { SaveSequenceQuery } from 'Api/SequenceQueries/SaveSequenceQuery';
+import { SaveSequenceQuery } from 'Features/SequenceQueries';
 import { SequenceQueryState } from './SequenceQueryState';
 
 /**

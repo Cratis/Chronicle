@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="JobId">The unique identifier of the job to stop.</param>
 [Command]
 [BelongsTo(WellKnownServices.Jobs)]
-public record StopJob(string EventStore, string Namespace, Guid JobId)
+public record StopJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Concepts.Jobs.JobId JobId)
 {
     /// <summary>
     /// Handles the command by invoking <see cref="IJobsManager.Stop"/> on the jobs manager grain.
@@ -23,5 +23,5 @@ public record StopJob(string EventStore, string Namespace, Guid JobId)
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get jobs manager grains with.</param>
     /// <returns>Awaitable task.</returns>
     public Task Handle(IGrainFactory grainFactory) =>
-        grainFactory.GetJobsManager((EventStoreName)EventStore, (EventStoreNamespaceName)Namespace).Stop((Concepts.Jobs.JobId)JobId);
+        grainFactory.GetJobsManager(EventStore, Namespace).Stop(JobId);
 }
