@@ -253,4 +253,9 @@ public static class DiagnosticIds
     /// A type is marked with both [EventType] and [EventTypeGenerationFor&lt;T&gt;].
     /// </summary>
     public const string EventTypeGenerationForCannotCombineWithEventType = "CHR0050";
+
+    /// <summary>
+    /// A reducer method declares its current read model parameter as non-nullable.
+    /// </summary>
+    public const string ReducerCurrentReadModelMustBeNullable = "CHR0051";
 }
