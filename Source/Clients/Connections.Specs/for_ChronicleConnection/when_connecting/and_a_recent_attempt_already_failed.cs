@@ -8,12 +8,13 @@ namespace Cratis.Chronicle.Connections.for_ChronicleConnection.when_connecting;
 /// caller used to pay a full connect attempt of its own, on its own thread, with no bound on how many could be
 /// waiting at once. Only one attempt per back-off window should reach the kernel; the rest fail at once.
 /// </summary>
-public class and_a_recent_attempt_already_failed : given.a_connection_that_cannot_reach_the_kernel
+public class and_a_recent_attempt_already_failed : given.a_connection_that_lost_a_working_kernel
 {
     Exception _result;
 
     async Task Because()
     {
+        await ConnectThenLoseTheKernel();
         await Catch.Exception(_connection.Connect);
         _result = await Catch.Exception(_connection.Connect);
     }

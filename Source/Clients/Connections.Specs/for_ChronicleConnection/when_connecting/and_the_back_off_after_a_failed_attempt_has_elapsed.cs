@@ -7,12 +7,13 @@ namespace Cratis.Chronicle.Connections.for_ChronicleConnection.when_connecting;
 /// The back-off after a failed connect keeps callers off the kernel, but it must not be a terminal state - a
 /// kernel that comes back has to be reachable again without restarting the client (#3948).
 /// </summary>
-public class and_the_back_off_after_a_failed_attempt_has_elapsed : given.a_connection_that_cannot_reach_the_kernel
+public class and_the_back_off_after_a_failed_attempt_has_elapsed : given.a_connection_that_lost_a_working_kernel
 {
     Exception _result;
 
     async Task Because()
     {
+        await ConnectThenLoseTheKernel();
         await Catch.Exception(_connection.Connect);
         _time.Advance(TimeSpan.FromSeconds(ConnectTimeoutSeconds + 1));
         _result = await Catch.Exception(_connection.Connect);

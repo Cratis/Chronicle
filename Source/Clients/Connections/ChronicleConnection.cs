@@ -67,6 +67,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
     DateTimeOffset? _lastConnectFailure;
+    bool _hasEverConnected;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
@@ -134,7 +135,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _watchDog = new ConnectionWatchdog(
             tasks,
             OnSessionDropped,
-            Connect,
+            Reconnect,
             loggerFactory.CreateLogger<ConnectionWatchdog>(),
             cancellationToken);
 
@@ -193,14 +194,31 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// queued behind each attempt as well as their own, and an arrival rate above the connect timeout grew that
     /// queue without bound (#3948).
     /// </remarks>
-    public async Task Connect()
+    public Task Connect() => Connect(respectFailureBackoff: true);
+
+    /// <summary>
+    /// Reconnect on behalf of the watchdog, which must always get to attempt.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The watchdog is the thing that recovers the connection, and it paces itself with its own backoff. Holding it
+    /// to the caller-facing one meant it was refused before it dialed anything, so it burned its attempts on a
+    /// connection that could then never come back - every later call kept failing against a kernel that was
+    /// reachable again.
+    /// </remarks>
+    internal async Task Reconnect() => await Connect(respectFailureBackoff: false);
+
+    async Task Connect(bool respectFailureBackoff)
     {
         if (Lifecycle.IsConnected)
         {
             return;
         }
 
-        ThrowIfWithinConnectFailureBackoff();
+        if (respectFailureBackoff)
+        {
+            ThrowIfWithinConnectFailureBackoff();
+        }
 
         var connectTimeout = TimeSpan.FromSeconds(_connectTimeout);
         if (!await _connectLock.WaitAsync(connectTimeout, _cancellationToken))
@@ -218,7 +236,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
             // The attempt we queued behind may have just failed. Paying for our own full attempt on top of the
             // wait we already served is what turned one unreachable kernel into a thread per caller.
-            ThrowIfWithinConnectFailureBackoff();
+            if (respectFailureBackoff)
+            {
+                ThrowIfWithinConnectFailureBackoff();
+            }
 
             await ConnectInternal();
             _lastConnectFailure = null;
@@ -237,7 +258,19 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <summary>
     /// Records that a connect attempt failed, starting the back-off window that makes subsequent callers fail fast.
     /// </summary>
-    void RecordConnectFailure() => _lastConnectFailure = _timeProvider.GetUtcNow();
+    /// <remarks>
+    /// Only once a connection has actually been established. A kernel that is not up yet while its client starts is
+    /// ordinary - the client is expected to keep trying and come good - so the failure state deliberately does not
+    /// arm before the first successful connect. What #3948 reports is the other case: a connection that worked and
+    /// then stopped recovering, where every later call paid for an attempt of its own.
+    /// </remarks>
+    void RecordConnectFailure()
+    {
+        if (_hasEverConnected)
+        {
+            _lastConnectFailure = _timeProvider.GetUtcNow();
+        }
+    }
 
     /// <summary>
     /// Fail immediately while the back-off after a failed connect attempt is still running.
@@ -339,6 +372,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (_skipKeepAlive)
         {
             _logger.Connected();
+            _hasEverConnected = true;
             await Lifecycle.Connected();
             return;
         }
@@ -363,6 +397,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout), _timeProvider);
             _logger.Connected();
+            _hasEverConnected = true;
             await Lifecycle.Connected();
         }
         catch (TimeoutException)
@@ -370,8 +405,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // Returning normally here reported success while the lifecycle stayed disconnected, so there was no
             // failure state to observe and no back-off to apply - the next call simply re-entered and paid the
             // timeout again (#3948). The watchdog still starts below and keeps reconnecting in the background.
+            //
+            // Only once a connection has been established, though. A kernel that has not come up yet while its
+            // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
+            // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
             _logger.TimedOut();
-            throw new ConnectionTimedOut();
+            if (_hasEverConnected)
+            {
+                throw new ConnectionTimedOut();
+            }
         }
         finally
         {
