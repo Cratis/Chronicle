@@ -59,6 +59,26 @@ Provides a literal default for a property that did not exist in the source gener
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/default-value" />
 
+## Properties inside a nested object
+
+An event's payload is rarely flat — a value object groups related values, and that inner record evolves on its own schedule. Every operation above addresses such a property by the expression you would write anyway:
+
+<ChronicleClientTabs snippet="migrations/dotnet-client/nested-property" />
+
+The expression becomes the path `Price.Description`, and Chronicle resolves it segment by segment: reading walks into the object, writing creates the objects along the way when the stored payload does not carry them yet. That also lets a migration restructure a payload — `RenamedFrom(m => m.Price.Amount, e => e.Amount)` moves a value that used to sit at the top level into the object it now belongs to.
+
+A path that goes nowhere is rejected at registration with `InvalidMigrationPropertyForEventType`, naming the path so you can see which segment is wrong.
+
+## When you need no operations at all
+
+Adding or removing an **optional** property — at any depth — needs a migration class, but no property operations inside it:
+
+<ChronicleClientTabs snippet="migrations/dotnet-client/no-operations" />
+
+This looks like something is missing, and it isn't. Chronicle converts a payload by walking the *target* generation's schema: upcasting materializes a property the older payload never carried as absent, and downcasting drops one the older generation does not declare. The class only has to exist so the generation chain is complete — see [Validation: missing migrators](./validation).
+
+Reach for `DefaultValue` when absent is the wrong answer and you want a specific value instead.
+
 ## MapValues
 
 The four operations above move values between properties. `MapValues` changes the values themselves — it says which value in one generation is which value in the other, which is what you need when an enum is renumbered or a code set is replaced wholesale.
