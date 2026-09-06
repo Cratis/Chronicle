@@ -25,7 +25,7 @@ internal static class EventMigrationExpressions
         var separator = config["separator"]?.GetValue<string>() ?? string.Empty;
         var part = config["part"]?.GetValue<int>() ?? 0;
 
-        if (source is null || !content.TryGetPropertyValue(source, out var sourceNode) || sourceNode is null)
+        if (source is null || !JsonPropertyPaths.TryResolve(content, source, out var sourceNode) || sourceNode is null)
             return JsonValue.Create(string.Empty);
 
         var sourceValue = sourceNode.GetValue<string>();
@@ -51,7 +51,7 @@ internal static class EventMigrationExpressions
         foreach (var source in sources)
         {
             var propertyName = source?.GetValue<string>();
-            if (propertyName != null && content.TryGetPropertyValue(propertyName, out var node) && node != null)
+            if (propertyName != null && JsonPropertyPaths.TryResolve(content, propertyName, out var node) && node != null)
             {
                 if (!first)
                     builder.Append(separator);
@@ -70,7 +70,7 @@ internal static class EventMigrationExpressions
     /// <returns>The value, or <see langword="null"/> when the source generation did not carry it.</returns>
     public static JsonNode? EvaluateRename(JsonObject content, string? oldName)
     {
-        if (oldName is null || !content.TryGetPropertyValue(oldName, out var value))
+        if (oldName is null || !JsonPropertyPaths.TryResolve(content, oldName, out var value))
             return null;
         return value?.DeepClone();
     }
@@ -93,7 +93,7 @@ internal static class EventMigrationExpressions
         value = null;
 
         var source = config["source"]?.GetValue<string>();
-        if (source is null || !content.TryGetPropertyValue(source, out var sourceNode))
+        if (source is null || !JsonPropertyPaths.TryResolve(content, source, out var sourceNode))
         {
             return false;
         }
