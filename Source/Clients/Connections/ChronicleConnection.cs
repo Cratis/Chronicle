@@ -59,12 +59,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly ILoadBalancerStrategy _loadBalancerStrategy;
     readonly SemaphoreSlim _connectLock = new(1, 1);
     readonly ConnectionWatchdog _watchDog;
+    readonly TimeProvider _timeProvider;
     ChronicleServerAddress? _currentServerAddress;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     IServices _services;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
+    DateTimeOffset? _lastConnectFailure;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
@@ -87,6 +89,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect. Useful for short-lived clients like CLIs.</param>
     /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses. Defaults to <see cref="ChronicleServerAddressResolver"/>.</param>
     /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or least-connections.</param>
+    /// <param name="timeProvider">Optional <see cref="TimeProvider"/> used to time the back-off after a failed connect. Defaults to the system clock.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
@@ -107,8 +110,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         bool skipCompatibilityCheck = false,
         bool skipKeepAlive = false,
         IChronicleServerAddressResolver? serverAddressResolver = null,
-        ILoadBalancerStrategy? loadBalancerStrategy = null)
+        ILoadBalancerStrategy? loadBalancerStrategy = null,
+        TimeProvider? timeProvider = null)
     {
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
         _skipKeepAlive = skipKeepAlive;
@@ -180,6 +185,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     }
 
     /// <inheritdoc/>
+    /// <exception cref="ConnectionTimedOut">Thrown when the connect attempt, or the wait for one already in flight, exceeds the connect timeout.</exception>
+    /// <exception cref="ConnectionUnavailable">Thrown when a recent attempt failed and the back-off after it has not elapsed yet.</exception>
+    /// <remarks>
+    /// Every failure mode here has to end in a return or a throw. A client whose reconnect never completes used to
+    /// absorb the thread of every caller instead: the connect lock was waited on without a deadline, so callers
+    /// queued behind each attempt as well as their own, and an arrival rate above the connect timeout grew that
+    /// queue without bound (#3948).
+    /// </remarks>
     public async Task Connect()
     {
         if (Lifecycle.IsConnected)
@@ -187,7 +200,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
-        await _connectLock.WaitAsync(_cancellationToken);
+        ThrowIfWithinConnectFailureBackoff();
+
+        var connectTimeout = TimeSpan.FromSeconds(_connectTimeout);
+        if (!await _connectLock.WaitAsync(connectTimeout, _cancellationToken))
+        {
+            RecordConnectFailure();
+            throw new ConnectionTimedOut();
+        }
+
         try
         {
             if (Lifecycle.IsConnected)
@@ -195,11 +216,45 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 return;
             }
 
+            // The attempt we queued behind may have just failed. Paying for our own full attempt on top of the
+            // wait we already served is what turned one unreachable kernel into a thread per caller.
+            ThrowIfWithinConnectFailureBackoff();
+
             await ConnectInternal();
+            _lastConnectFailure = null;
+        }
+        catch
+        {
+            RecordConnectFailure();
+            throw;
         }
         finally
         {
             _connectLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Records that a connect attempt failed, starting the back-off window that makes subsequent callers fail fast.
+    /// </summary>
+    void RecordConnectFailure() => _lastConnectFailure = _timeProvider.GetUtcNow();
+
+    /// <summary>
+    /// Fail immediately while the back-off after a failed connect attempt is still running.
+    /// </summary>
+    /// <exception cref="ConnectionUnavailable">Thrown when the back-off has not elapsed.</exception>
+    /// <remarks>
+    /// Without this every caller pays the full connect timeout on its own thread for as long as the kernel stays
+    /// unreachable. The window is the connect timeout, so at most one attempt per timeout probes the kernel while
+    /// the watchdog keeps reconnecting in the background - and a caller learns the connection is down at once
+    /// rather than by waiting for it.
+    /// </remarks>
+    void ThrowIfWithinConnectFailureBackoff()
+    {
+        var lastFailure = _lastConnectFailure;
+        if (lastFailure is not null && _timeProvider.GetUtcNow() - lastFailure.Value < TimeSpan.FromSeconds(_connectTimeout))
+        {
+            throw new ConnectionUnavailable(_connectionString.Redacted);
         }
     }
 
@@ -306,13 +361,17 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         try
         {
-            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));
+            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout), _timeProvider);
             _logger.Connected();
             await Lifecycle.Connected();
         }
         catch (TimeoutException)
         {
+            // Returning normally here reported success while the lifecycle stayed disconnected, so there was no
+            // failure state to observe and no back-off to apply - the next call simply re-entered and paid the
+            // timeout again (#3948). The watchdog still starts below and keeps reconnecting in the background.
             _logger.TimedOut();
+            throw new ConnectionTimedOut();
         }
         finally
         {
