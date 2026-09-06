@@ -22,6 +22,9 @@
             <Aliases>KernelConcepts</Aliases>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <ProjectReference Include="../../Kernel/Compatibility/Compatibility.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Kernel/Core/Core.csproj">
             <Aliases>KernelCore</Aliases>
             <PrivateAssets>all</PrivateAssets>
