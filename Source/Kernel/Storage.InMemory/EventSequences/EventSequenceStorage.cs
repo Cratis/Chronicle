@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.InMemory.EventSequences;
@@ -21,10 +22,12 @@ namespace Cratis.Chronicle.Storage.InMemory.EventSequences;
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage serves.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> this storage serves.</param>
+/// <param name="identityStorage">The <see cref="IIdentityStorage"/> for resolving the identity chain that caused an append.</param>
 public class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
-    EventSequenceId eventSequenceId) : IEventSequenceStorage
+    EventSequenceId eventSequenceId,
+    IIdentityStorage identityStorage) : IEventSequenceStorage
 {
     static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -118,7 +121,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -134,35 +137,47 @@ public class EventSequenceStorage(
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
         Subject? subject = null)
     {
+        var causedBy = await identityStorage.GetFor(causedByChain).ConfigureAwait(false);
+
         lock (_lock)
         {
             if (_events.Exists(_ => _.Context.SequenceNumber == sequenceNumber))
             {
                 var nextAvailable = (EventSequenceNumber)(_events.Max(_ => _.Context.SequenceNumber.Value) + 1);
-                return Task.FromResult(Result<AppendedEvent, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable)));
+                return Result<AppendedEvent, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
             }
 
-            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, tags, occurred, content, subject);
+            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, subject);
             _events.Add(appended);
 
-            return Task.FromResult(Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended));
+            return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
         }
     }
 
     /// <inheritdoc/>
-    public Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(
+    public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(
         IEnumerable<EventToAppendToStorage> events)
     {
+        var eventsToAppend = events as IReadOnlyList<EventToAppendToStorage> ?? events.ToList();
+
+        // Resolved outside the lock - identity resolution is async, and awaiting inside a lock is illegal.
+        var causedByPerEvent = new List<Identity>(eventsToAppend.Count);
+        foreach (var e in eventsToAppend)
+        {
+            causedByPerEvent.Add(await identityStorage.GetFor(e.CausedByChain).ConfigureAwait(false));
+        }
+
         var appended = new List<AppendedEvent>();
 
         lock (_lock)
         {
-            foreach (var e in events)
+            for (var index = 0; index < eventsToAppend.Count; index++)
             {
+                var e = eventsToAppend[index];
                 if (_events.Exists(_ => _.Context.SequenceNumber == e.SequenceNumber))
                 {
                     var nextAvailable = (EventSequenceNumber)(_events.Max(_ => _.Context.SequenceNumber.Value) + 1);
-                    return Task.FromResult(Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable)));
+                    return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
                 }
 
                 var content = new Dictionary<EventTypeGeneration, ExpandoObject>
@@ -179,6 +194,7 @@ public class EventSequenceStorage(
                     e.EventType,
                     e.CorrelationId,
                     e.Causation,
+                    causedByPerEvent[index],
                     e.Tags,
                     e.Occurred,
                     content,
@@ -189,7 +205,7 @@ public class EventSequenceStorage(
             }
         }
 
-        return Task.FromResult(Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appended));
+        return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appended);
     }
 
     /// <inheritdoc/>
@@ -670,6 +686,7 @@ public class EventSequenceStorage(
         EventType eventType,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
+        Identity causedBy,
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
@@ -687,7 +704,7 @@ public class EventSequenceStorage(
             @namespace,
             correlationId,
             causation,
-            Identity.System,
+            causedBy,
             tags,
             EventHash.NotSet,
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value));
