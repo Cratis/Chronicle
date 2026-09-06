@@ -2,7 +2,7 @@
 using Cratis.Chronicle.ReadModels;
 
 public record ReadModelsIndexingOrderLine(
-    [property: Index] Guid ProductId,
+    [Index] Guid ProductId,
     int Quantity);
 
 [ReadModel]
