@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.CSharp;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 

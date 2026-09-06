@@ -11,7 +11,7 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import * as faIcons from 'react-icons/fa6';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { Column } from '@cratis/components/DataTables';
 import { Allotment } from 'allotment';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
@@ -265,8 +265,8 @@ export const Captures = () => {
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="320px">
                     <div className="px-4 py-4 h-full">
-                        <DataTable
-                            value={captures}
+                        <DataTableCore
+                            data={captures}
                             dataKey="id"
                             selectionMode="single"
                             selection={selectedCapture}
@@ -276,7 +276,7 @@ export const Captures = () => {
                         >
                             <Column field="name" header={strings.eventStore.general.captures.columns.name} />
                             <Column field="status" header={strings.eventStore.general.captures.columns.status} body={statusBody} />
-                        </DataTable>
+                        </DataTableCore>
                     </div>
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">

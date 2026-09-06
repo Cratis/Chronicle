@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_nested_in_nested_from_pdl.given;
@@ -68,10 +69,9 @@ public abstract class a_compiled_pdl_nested_projection : Specifications.Specific
 
     void Establish()
     {
-        _languageService = new LanguageService(
-            new Generator(),
-            new DeclarativeCodeGenerator(),
-            new ModelBoundCodeGenerator());
+        // This scenario only compiles a declaration - it never generates client code - so the language
+        // service is given no code generators rather than a set it would not use.
+        _languageService = new LanguageService(new Generator(), new KnownInstancesOf<IProjectionCodeGenerator>());
 
         _readModelDefinition = CreateReadModelDefinition<PdlDeepNestedSlice>();
         _eventTypeSchemas = CreateEventTypeSchemas(

@@ -2,12 +2,21 @@
 uid: Chronicle.Compliance.PIIWithConcepts
 ---
 
-# Applying PII to ConceptAs types
+# Declaring PII on a concept
 
 The most robust way to declare that a value is personally identifiable is to mark the `ConceptAs<T>` type itself with `[PII]`. Doing so means the declaration lives exactly once — on the type — and every event property that uses that type is automatically encrypted, regardless of where or how many times it appears across your event model.
 
 :::note[Client coverage]
-This page is specifically about `ConceptAs<T>`, a C# strongly-typed value-wrapper pattern. Kotlin and Elixir have no equivalent typed-wrapper convention in this corpus, so there's no idiomatic way to port a "concept-level" PII declaration to them — mark the property directly instead (see [PII Attribute](./pii)). TypeScript already has partial coverage here since a plain wrapper class works without needing to inherit from anything.
+This page covers the **property type** path — Chronicle resolves `[PII]` through four paths in total (property, declaring type, property type, constructor parameter), and marking a concept's type once is not C#-only:
+
+| Path | C# | Kotlin/Java | TypeScript | Elixir |
+|---|---|---|---|---|
+| Property | yes | yes | yes | yes |
+| Declaring type | yes | yes | yes | no |
+| Property type (concept) | yes | yes | yes | yes |
+| Constructor parameter | yes | yes | no | n/a |
+
+**Every client supports the pattern on this page.** C#, Kotlin/Java and TypeScript each have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`, which serializes as the value it wraps in the same way. Declare the marker once on the concept and every event and read model property using that type is encrypted — see [Marking data as PII](./pii) for the full path table and the two remaining gaps.
 :::
 
 > [!TIP]

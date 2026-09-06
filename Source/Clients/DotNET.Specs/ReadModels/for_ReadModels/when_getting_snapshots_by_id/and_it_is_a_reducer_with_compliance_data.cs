@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Contracts.ReadModelExplorer;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -33,19 +33,14 @@ public class and_it_is_a_reducer_with_compliance_data : given.all_dependencies
         _handler.EventSequenceId.Returns(new EventSequenceId("custom-sequence"));
         _reducers.GetHandlerForReadModelType(typeof(MyReadModel)).Returns(_handler);
 
-        _services.ReadModels.GetSnapshotsByKey(Arg.Any<GetSnapshotsByKeyRequest>()).Returns(new GetSnapshotsByKeyResponse
-        {
-            Snapshots =
-            [
-                new()
-                {
-                    ReadModel = """{"Id":"test-id","Name":"Original Name"}""",
-                    Events = [],
-                    Occurred = DateTimeOffset.UtcNow,
-                    CorrelationId = Guid.NewGuid()
-                }
-            ]
-        });
+        _services.ReadModelExplorer.AllSnapshotsForReadModel(Arg.Any<AllSnapshotsForReadModelRequest>()).Returns(
+            given.a_snapshot_response.AsResult(new ReadModelSnapshotResponse
+            {
+                Instance = """{"Id":"test-id","Name":"Original Name"}""",
+                Events = [],
+                Occurred = DateTimeOffset.UtcNow,
+                CorrelationId = Guid.NewGuid()
+            }));
 
         var schema = new JsonSchema();
         schema.ExtensionData[ComplianceJsonSchemaExtensions.ComplianceKey] = new List<ComplianceSchemaMetadata> { new("pii", "{}") };

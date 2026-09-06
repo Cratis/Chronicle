@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from '@cratis/components/DataTables';
-import { DataTable } from 'Components/DataTable';
+import { Column, DataTableCore } from '@cratis/components/DataTables';
 import { ObserverInformationForEventType } from 'Features/Observation';
 import { getObserverRunningStateAsText } from '../../../Namespaces/Observers/getObserverRunningStateAsText';
 import { getObserverTypeAsText } from '../../../Namespaces/Observers/getObserverTypeAsText';
@@ -34,9 +33,9 @@ export const ObserversForEventTypeTable = ({ observers }: ObserversForEventTypeT
     const columnStrings = strings.eventStore.general.eventTypes.observers.columns;
 
     return (
-        <DataTable
-            value={observers as ObserverInformationForEventType[]}
-            dataKey='id'
+        <DataTableCore
+            data={observers as ObserverInformationForEventType[]}
+            dataKey='observer.id'
             emptyMessage={strings.eventStore.general.eventTypes.observers.empty}
             scrollable
             scrollHeight='flex'
@@ -53,6 +52,6 @@ export const ObserversForEventTypeTable = ({ observers }: ObserversForEventTypeT
                 header={columnStrings.state}
                 body={renderRowRunningState}
                 sortable />
-        </DataTable>
+        </DataTableCore>
     );
 };
