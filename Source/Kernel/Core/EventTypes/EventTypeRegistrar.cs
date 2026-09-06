@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -240,18 +241,19 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
     static void ValidatePropertyKeys(string eventTypeId, JsonObject jmesPath, JsonSchema schema, uint generation, string direction)
     {
-        var schemaProperties = schema.ActualProperties.Select(p => p.Key).ToHashSet();
-
         foreach (var property in jmesPath)
         {
-            // DefaultValue introduces a brand-new property to the target generation.
-            // The auto-generated schema for that generation may be empty, so skip validation.
-            if (property.Value is JsonObject expr && expr.ContainsKey(WellKnownExpressions.DefaultValue))
+            // DefaultValue introduces a property to the target generation, and the auto-generated schema for that
+            // generation can be empty - so a key that resolves nowhere is only accepted when there is nothing to
+            // resolve it against. Skipping the check outright let a nested default through to a kernel that then
+            // dropped the value silently, which is worse than either outcome (#3949).
+            if (property.Value is JsonObject expr && expr.ContainsKey(WellKnownExpressions.DefaultValue) &&
+                schema.ActualProperties.Count == 0)
             {
                 continue;
             }
 
-            if (!schemaProperties.Contains(property.Key))
+            if (!SchemaDeclaresPath(schema, property.Key))
             {
                 throw new InvalidMigrationPropertyForEventType(eventTypeId, property.Key, generation, direction);
             }
@@ -260,18 +262,44 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
     static void ValidateExpressionSources(string eventTypeId, JsonObject jmesPath, JsonSchema sourceSchema, uint sourceGeneration, string direction)
     {
-        var schemaProperties = new HashSet<string>(sourceSchema.ActualProperties.Select(p => p.Key));
-
         foreach (var entry in jmesPath)
         {
             foreach (var prop in ExtractSourceProperties(entry.Value))
             {
-                if (!schemaProperties.Contains(prop))
+                if (!SchemaDeclaresPath(sourceSchema, prop))
                 {
                     throw new InvalidMigrationPropertyForEventType(eventTypeId, prop, sourceGeneration, direction);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gets whether a schema declares the property a dotted path addresses.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> to resolve within.</param>
+    /// <param name="path">The dotted property path a migration carries.</param>
+    /// <returns><see langword="true"/> when every segment of the path is declared; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// A migration built from a nested property expression carries a path rather than a name, so resolving it
+    /// against the top-level property map alone reported that the property did not exist when it existed one level
+    /// down (#3949).
+    /// </remarks>
+    static bool SchemaDeclaresPath(JsonSchema schema, string path)
+    {
+        var current = schema;
+
+        foreach (var segment in JsonPropertyPaths.Split(path))
+        {
+            if (!current.ActualProperties.TryGetValue(segment, out var property))
+            {
+                return false;
+            }
+
+            current = property.ActualSchema;
+        }
+
+        return true;
     }
 
     static IEnumerable<string> ExtractSourceProperties(JsonNode? value)

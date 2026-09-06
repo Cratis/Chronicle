@@ -15,6 +15,7 @@ public static class JsonSchemaCompatibilityExtensions
     const string EnumerationKey = "enum";
     const string EnumerationNamesKey = "x-enumNames";
     const string FormatKey = "format";
+    const string TitleKey = "title";
 
     /// <summary>
     /// Determines whether a newly generated schema is a compatible evolution of an already stored one.
@@ -39,6 +40,14 @@ public static class JsonSchemaCompatibilityExtensions
     /// different matter, because a stored value then denotes nothing or something else, so those stay a breaking
     /// change that needs a new generation and a value map to state what the old values now mean.
     /// </para>
+    /// <para>
+    /// The third is the <c>title</c>, which the client derives from the CLR type name. It says nothing about the
+    /// shape of a stored payload - the event type identifier names the type and the properties describe the data -
+    /// so comparing it made the CLR name load-bearing, which is exactly what pinning an identifier with
+    /// <c>[EventType("...")]</c> is documented to prevent. Renaming a record while pinning its identifier read as a
+    /// breaking schema change, and so did the documented generational escape hatch, whose previous generation has to
+    /// be a separate and therefore differently named type (#3926).
+    /// </para>
     /// </remarks>
     public static bool IsCompatibleWith(this JsonSchema stored, JsonSchema generated)
     {
@@ -48,8 +57,43 @@ public static class JsonSchemaCompatibilityExtensions
         StripNullableFormatMarkers(storedNode);
         StripNullableFormatMarkers(generatedNode);
 
+        StripTitles(storedNode);
+        StripTitles(generatedNode);
+
         return TryEraseCompatibleEnumerations(storedNode, generatedNode) &&
             storedNode?.ToJsonString() == generatedNode?.ToJsonString();
+    }
+
+    /// <summary>
+    /// Strips every <c>title</c> declaration from a schema node.
+    /// </summary>
+    /// <param name="node">The <see cref="JsonNode"/> to strip, which may be <see langword="null"/>.</param>
+    /// <remarks>
+    /// The title carries the CLR type name, not anything about the payload, so it is removed from both sides rather
+    /// than compared. It stays in the stored schema for the tooling that reads it.
+    /// </remarks>
+    internal static void StripTitles(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject jsonObject:
+                jsonObject.Remove(TitleKey);
+
+                foreach (var property in jsonObject.ToArray())
+                {
+                    StripTitles(property.Value);
+                }
+
+                break;
+
+            case JsonArray jsonArray:
+                foreach (var item in jsonArray.ToArray())
+                {
+                    StripTitles(item);
+                }
+
+                break;
+        }
     }
 
     /// <summary>

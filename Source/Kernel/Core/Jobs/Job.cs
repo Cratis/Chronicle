@@ -163,6 +163,20 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             {
                 return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.Unknown);
             }
+
+            // A job can be left persisted as running with every one of its steps already accounted for: the
+            // progress for the last step is written before the status that follows from it, so a silo that stops
+            // in between - or a completion handler that fails - leaves a state that contradicts itself. Nothing
+            // revisited it, and reporting it as already running kept it that way: the job stayed Running forever
+            // and its observer could never resubscribe (#3944). Resume is where both the kernel's rehydration and
+            // an observer's subscribe reach the job, so finalize it here rather than leaving it wedged.
+            if (State.Status is JobStatus.Running && State.Progress.IsCompleted)
+            {
+                _logger.FinalizingJobLeftRunningAfterAllStepsCompleted();
+                _ = await HandleCompletionResult(await HandleCompletion());
+                return ResumeJobSuccess.JobIsCompleted;
+            }
+
             if (JobIsRunning())
             {
                 return ResumeJobSuccess.JobAlreadyRunning;
@@ -186,6 +200,18 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             if (_jobStepGrains is null or { Count: 0 })
             {
                 _jobStepGrains = await GetIdAndGrainReferenceForNonCompletedJobSteps();
+            }
+
+            // A prepared job with nothing left to start cannot make progress on its own, so resuming it only puts
+            // it back into Running for the next resume to find. That is the same permanent wedge as the state
+            // above, reached when the progress for a completed step was never persisted (#3944). The steps
+            // themselves are the record of what happened, so recount from them before finalizing.
+            if (_jobStepGrains.Count == 0)
+            {
+                _logger.FinalizingJobLeftRunningAfterAllStepsCompleted();
+                await ReconcileProgressFromJobSteps();
+                _ = await HandleCompletionResult(await HandleCompletion());
+                return ResumeJobSuccess.JobIsCompleted;
             }
 
             _logger.Resuming();

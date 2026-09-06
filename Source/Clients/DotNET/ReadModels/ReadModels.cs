@@ -467,13 +467,20 @@ public class ReadModels(
         }
         visitedTypes.Add(type);
 
+        // The record shorthand — [Index] on a positional parameter, without the property: target. The
+        // attribute is valid on both a property and a parameter, and C# binds it to the *parameter* on a
+        // positional record whenever the attribute allows it, so looking only at properties misses the form
+        // the documentation recommends — and misses it silently, producing no index at all. The same
+        // shorthand is honored for [Subject] (see SubjectResolver), so a reader expects it here too.
+        var indexedParameterNames = IndexedParameterNames(type);
+
         foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             var propertyPath = string.IsNullOrEmpty(prefix)
                 ? namingPolicy.GetPropertyName(property.Name)
                 : $"{prefix}.{namingPolicy.GetPropertyName(property.Name)}";
 
-            if (Attribute.IsDefined(property, typeof(IndexAttribute)))
+            if (Attribute.IsDefined(property, typeof(IndexAttribute)) || indexedParameterNames.Contains(property.Name))
             {
                 indexes.Add(new IndexDefinition { PropertyPath = propertyPath });
             }
@@ -494,6 +501,17 @@ public class ReadModels(
                 // Recurse into complex types
                 CollectIndexes(propertyType, propertyPath, indexes, visitedTypes);
             }
+        }
+
+        static HashSet<string> IndexedParameterNames(Type type)
+        {
+            var primaryConstructor = type.GetConstructors().MaxBy(constructor => constructor.GetParameters().Length);
+
+            return primaryConstructor is null
+                ? []
+                : [.. primaryConstructor.GetParameters()
+                    .Where(parameter => parameter.IsDefined(typeof(IndexAttribute), inherit: false))
+                    .Select(parameter => parameter.Name!)];
         }
     }
 }

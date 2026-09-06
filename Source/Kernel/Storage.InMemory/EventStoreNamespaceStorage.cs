@@ -138,7 +138,7 @@ public sealed class EventStoreNamespaceStorage(
             return existing;
         }
 
-        var created = new EventSequenceStorage(eventStore, @namespace, eventSequenceId);
+        var created = new EventSequenceStorage(eventStore, @namespace, eventSequenceId, Identities);
         return _eventSequences.GetOrAdd(eventSequenceId, created);
     }
 }
