@@ -4,6 +4,7 @@
 #pragma warning disable SA1402
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
 using MongoDB.Bson;
@@ -55,21 +56,17 @@ public class and_the_declaration_is_on_a_record_parameter(context context) : Giv
 
         async Task Because()
         {
-            await EventStore.EventLog.Append(OrderId, Event);
+            var appendResult = await EventStore.EventLog.Append(OrderId, Event);
+            await appendResult.WaitForCompletion();
 
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            while (Instance is null)
-            {
-                Instance = await EventStore.ReadModels.GetInstanceById<IndexedOrder>(OrderId.Value);
-                if (Instance is not null) break;
-                await Task.Delay(200, cts.Token);
-            }
+            Instance = await EventStore.ReadModels.GetInstanceById<IndexedOrder>(OrderId.Value);
 
             if (!StoreCanBeInspected)
             {
                 return;
             }
 
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
             using var indexes = await ChronicleFixture.ReadModels.Database
                 .GetCollection<BsonDocument>(CollectionName)
                 .Indexes.ListAsync(cts.Token);
