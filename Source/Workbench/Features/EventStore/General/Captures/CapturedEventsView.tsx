@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CapturedEvent, CapturedEvents } from 'Features/Captures';
+import { CapturedEvents } from 'Features/Captures';
+import type { CapturedEvent } from 'Features/Captures';
 import { Column, DataTableCore } from '@cratis/components/DataTables';
 import { useEffect } from 'react';
 import strings from 'Strings';
