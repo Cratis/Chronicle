@@ -101,7 +101,6 @@
 3 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_the_catchup_trigger_faults.cs
 1 Source/Kernel/Core.Specs/Jobs/for_JobStepThrottle/when_acquiring_and_releasing_slots.cs  # knob
 1 Source/Kernel/Core.Specs/Jobs/for_JobStepThrottle/when_observer_partition_limit_is_lower_than_job_step_limit.cs
-1 Source/Kernel/Core.Specs/Observation/EventStoreSubscriptions/for_EventStoreSubscriptionsManager/when_waiting_until_subscribed/and_subscription_definition_arrives_while_waiting.cs
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_acquiring_coarsely_while_a_stripe_is_held.cs  # deadline
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_different_event_source_ids_are_acquired_concurrently.cs  # deadline
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave

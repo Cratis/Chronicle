@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Queries;
 using ProtoBuf.Grpc;
 using Contract = Cratis.Chronicle.Contracts.Patterns;
 
@@ -13,12 +14,12 @@ public class for_a_given_moment : given.a_patterns_client
 {
     static readonly DateTimeOffset _moment = new(2026, 8, 27, 9, 30, 0, TimeSpan.Zero);
 
-    Contract.GetPatternsRequest _request;
+    Contract.UsualActionsRequest _request;
 
     void Establish() =>
         _patterns
-            .GetUsualActions(Arg.Do<Contract.GetPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
-            .Returns([]);
+            .UsualActions(Arg.Do<Contract.UsualActionsRequest>(request => _request = request), Arg.Any<CallContext>())
+            .Returns(QueryResult<IEnumerable<Contract.BehaviorPatternDetailsResponse>>.Success(Guid.NewGuid(), []));
 
     async Task Because() => await _client.GetPatternsAt("user-42", _moment);
 

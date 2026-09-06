@@ -3,6 +3,8 @@
 
 from importlib import import_module
 
+# The event type contract is generated from the artifacts in Core, which put it under EventTypes rather than the
+# Events namespace it used to share with the constraints - so the module it lands in is eventtypes_pb2.
 eventtypes_pb2 = import_module("cratis_chronicle_contracts.eventtypes_pb2")
 eventtypes_pb2_grpc = import_module("cratis_chronicle_contracts.eventtypes_pb2_grpc")
 bcl_pb2 = import_module("cratis_chronicle_contracts.protobuf_net.bcl_pb2")

@@ -4,8 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { InputText } from 'primereact/inputtext';
 import pluralize from 'pluralize';
-import { SchemaEditor as _SE } from '@cratis/components';
-const SchemaEditor = _SE.SchemaEditor;
+import { SchemaEditor } from '@cratis/components/SchemaEditor';
 import { AllTypeFormats } from 'Features/Schemas';
 import type { JsonSchema } from '@cratis/components/types';
 import strings from 'Strings';

@@ -333,31 +333,21 @@ public class Reducers : IReducers
         var readModelType = typeof(TReadModel);
         var handler = GetHandlerForReadModelType(readModelType);
 
-        var request = new Contracts.ReadModels.GetSnapshotsByKeyRequest
-        {
-            EventStore = _eventStore.Name,
-            Namespace = _eventStore.Namespace,
-            ReadModelIdentifier = readModelType.GetReadModelIdentifier(),
-            EventSequenceId = handler.EventSequenceId,
-            ReadModelKey = readModelKey
-        };
+        var response = await _servicesAccessor.Services.ReadModelExplorer.AllSnapshotsForReadModel(
+            new Contracts.ReadModelExplorer.AllSnapshotsForReadModelRequest
+            {
+                EventStore = _eventStore.Name,
+                Namespace = _eventStore.Namespace,
+                ReadModel = readModelType.GetReadModelIdentifier(),
+                ReadModelKey = readModelKey,
+                EventSequenceId = handler.EventSequenceId
+            });
 
-        var response = await _servicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
-
-        var snapshots = new List<ReadModelSnapshot<TReadModel>>();
-        foreach (var snapshot in response.Snapshots)
-        {
-            var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, _jsonSerializerOptions)!;
-            var events = snapshot.Events.ToClient(_eventTypes, _jsonSerializerOptions);
-
-            snapshots.Add(new ReadModelSnapshot<TReadModel>(
-                readModel,
-                events,
-                snapshot.Occurred,
-                snapshot.CorrelationId));
-        }
-
-        return snapshots;
+        return response.Data.Select(snapshot => new ReadModelSnapshot<TReadModel>(
+            JsonSerializer.Deserialize<TReadModel>(snapshot.Instance, _jsonSerializerOptions)!,
+            snapshot.Events.ToClient(_eventStore.Name, _eventStore.Namespace, _eventTypes, _jsonSerializerOptions),
+            snapshot.Occurred,
+            snapshot.CorrelationId)).ToList();
     }
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Queries;
 using Grpc.Core;
 using ProtoBuf.Grpc;
 
@@ -24,7 +25,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
         int maximumResults = 0,
         CancellationToken cancellationToken = default)
     {
-        var patterns = await _servicesAccessor.Services.Patterns.GetPatterns(
+        var patterns = await _servicesAccessor.Services.Patterns.MatchingPatterns(
             new()
             {
                 EventStore = eventStore.Name,
@@ -40,7 +41,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
             },
             new CallContext(new CallOptions(cancellationToken: cancellationToken)));
 
-        return patterns.ToClient();
+        return patterns.EnsureSuccess().ToClient();
     }
 
     /// <inheritdoc/>
@@ -51,7 +52,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
         int maximumResults = 0,
         CancellationToken cancellationToken = default)
     {
-        var patterns = await _servicesAccessor.Services.Patterns.GetUsualActions(
+        var patterns = await _servicesAccessor.Services.Patterns.UsualActions(
             new()
             {
                 EventStore = eventStore.Name,
@@ -63,7 +64,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
             },
             new CallContext(new CallOptions(cancellationToken: cancellationToken)));
 
-        return patterns.ToClient();
+        return patterns.EnsureSuccess().ToClient();
     }
 
     /// <inheritdoc/>
@@ -92,7 +93,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
         PatternGroupingKey groupingKey,
         CancellationToken cancellationToken = default)
     {
-        var patterns = await _servicesAccessor.Services.Patterns.GetPatternsForScope(
+        var patterns = await _servicesAccessor.Services.Patterns.PatternsForScope(
             new()
             {
                 EventStore = eventStore.Name,
@@ -101,13 +102,13 @@ public class Patterns(IEventStore eventStore) : IPatterns
             },
             new CallContext(new CallOptions(cancellationToken: cancellationToken)));
 
-        return patterns.ToClient();
+        return patterns.EnsureSuccess().ToClient();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<PatternGroupingKey>> GetScopes(CancellationToken cancellationToken = default)
     {
-        var scopes = await _servicesAccessor.Services.Patterns.GetScopes(
+        var scopes = await _servicesAccessor.Services.Patterns.AllPatternScopes(
             new()
             {
                 EventStore = eventStore.Name,
@@ -115,6 +116,6 @@ public class Patterns(IEventStore eventStore) : IPatterns
             },
             new CallContext(new CallOptions(cancellationToken: cancellationToken)));
 
-        return [.. scopes.Select(scope => new PatternGroupingKey(scope))];
+        return [.. scopes.EnsureSuccess().Select(scope => new PatternGroupingKey(scope.Id))];
     }
 }

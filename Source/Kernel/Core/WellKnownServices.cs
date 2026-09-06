@@ -49,6 +49,11 @@ public static class WellKnownServices
     public const string Recommendations = "Recommendations";
 
     /// <summary>
+    /// The service holding the behavior patterns mined from an event store's history.
+    /// </summary>
+    public const string Patterns = "Patterns";
+
+    /// <summary>
     /// The name of the EventSeeding service.
     /// </summary>
     public const string EventSeeding = "EventSeeding";
@@ -72,6 +77,21 @@ public static class WellKnownServices
     /// The name of the Webhooks service.
     /// </summary>
     public const string Webhooks = "Webhooks";
+
+    /// <summary>
+    /// The name of the ReadModelExplorer service - reading a read model instance and the history behind it.
+    /// </summary>
+    public const string ReadModelExplorer = "ReadModelExplorer";
+
+    /// <summary>
+    /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately distinct from the client-facing <c>IProjections</c> contract, which stays hand-written for the
+    /// registration and preview operations the client SDK calls. Only the code-generation operations, which no
+    /// client SDK uses, moved onto the generated path.
+    /// </remarks>
+    public const string ProjectionEditor = "ProjectionEditor";
 
     /// <summary>
     /// The name of the EventSequences service.

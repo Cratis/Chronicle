@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Patterns;
+using Cratis.Chronicle.Contracts.Queries;
 using ProtoBuf.Grpc;
 using Contract = Cratis.Chronicle.Contracts.Patterns;
 
@@ -9,18 +10,21 @@ namespace Cratis.Chronicle.Patterns.for_Patterns.when_getting_patterns;
 
 public class for_a_context : given.a_patterns_client
 {
-    Contract.GetPatternsRequest _request;
+    Contract.MatchingPatternsRequest _request;
     IEnumerable<BehaviorPattern> _result;
 
     void Establish()
     {
         _patterns
-            .GetPatterns(Arg.Do<Contract.GetPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
-            .Returns(
-            [
-                new Contract.Pattern
+            .MatchingPatterns(Arg.Do<Contract.MatchingPatternsRequest>(request => _request = request), Arg.Any<CallContext>())
+            .Returns(QueryResult<IEnumerable<Contract.BehaviorPatternDetailsResponse>>.Success(
+                Guid.NewGuid(),
+                [
+                new Contract.BehaviorPatternDetailsResponse
                 {
+                    Id = "user-42/Day=Monday;TimeBucket=Morning",
                     GroupingKey = "user-42",
+                    Specificity = 2,
                     Facets = new Dictionary<string, string> { { "Day", "Monday" }, { "TimeBucket", "Morning" } },
                     Confidence = 0.9d,
                     Support = 0.4d,
@@ -29,7 +33,7 @@ public class for_a_context : given.a_patterns_client
                     FirstSeen = DateTimeOffset.UnixEpoch,
                     LastSeen = DateTimeOffset.UnixEpoch
                 }
-            ]);
+                ]));
     }
 
     async Task Because() => _result = await _client.GetPatterns(

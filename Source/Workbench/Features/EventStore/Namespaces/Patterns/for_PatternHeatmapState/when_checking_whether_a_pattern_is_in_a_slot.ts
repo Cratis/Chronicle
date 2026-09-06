@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
+import { BehaviorPatternDetails } from 'Features/Patterns/BehaviorPatternDetails';
 import { isInSlot } from '../PatternHeatmapState';
 import { aPattern } from './given/a_pattern';
 
 describe('when checking whether a pattern is in a slot', () => {
-    let mondayMorning: BehaviorPattern;
+    let mondayMorning: BehaviorPatternDetails;
 
     beforeEach(() => {
         mondayMorning = aPattern({ Day: 'Monday', TimeBucket: 'Morning' }, 0.9);

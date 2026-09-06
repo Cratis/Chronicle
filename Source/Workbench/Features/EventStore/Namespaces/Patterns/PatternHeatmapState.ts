@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
+import { BehaviorPatternDetails } from 'Features/Patterns/BehaviorPatternDetails';
 
 export const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -48,7 +48,7 @@ export const slotFor = (moment: Date): Slot => ({
 
 export const slotKey = (slot: Slot) => `${slot.day}|${slot.timeBucket}`;
 
-export const isInSlot = (pattern: BehaviorPattern, slot: Slot) =>
+export const isInSlot = (pattern: BehaviorPatternDetails, slot: Slot) =>
     pattern.facets?.['Day'] === slot.day && pattern.facets?.['TimeBucket'] === slot.timeBucket;
 
 /**
@@ -58,7 +58,7 @@ export const isInSlot = (pattern: BehaviorPattern, slot: Slot) =>
  * reliably does something every Monday morning has a hundred percent confidence in every slot it acts in, so
  * ranking on confidence alone would pick arbitrarily among ties. Confidence breaks the tie.
  */
-const outranks = (candidate: BehaviorPattern, current: BehaviorPattern) =>
+const outranks = (candidate: BehaviorPatternDetails, current: BehaviorPatternDetails) =>
     candidate.occurrences !== current.occurrences
         ? candidate.occurrences > current.occurrences
         : candidate.confidence > current.confidence;
@@ -69,8 +69,8 @@ const outranks = (candidate: BehaviorPattern, current: BehaviorPattern) =>
  * A pattern constraining no day or time belongs to no cell and is left out rather than being drawn somewhere
  * arbitrary - it is still in the pivot view, which is the one that shows everything.
  */
-export const strongestBySlot = (patterns: BehaviorPattern[]): Map<string, BehaviorPattern> => {
-    const strongest = new Map<string, BehaviorPattern>();
+export const strongestBySlot = (patterns: BehaviorPatternDetails[]): Map<string, BehaviorPatternDetails> => {
+    const strongest = new Map<string, BehaviorPatternDetails>();
 
     for (const pattern of patterns) {
         const day = pattern.facets?.['Day'];
@@ -97,7 +97,7 @@ export const strongestBySlot = (patterns: BehaviorPattern[]): Map<string, Behavi
  * question the grid answers - when is this scope most active - is about that scope, not about how it compares to
  * the busiest person in the store.
  */
-export const busiestSlot = (strongest: Map<string, BehaviorPattern>) =>
+export const busiestSlot = (strongest: Map<string, BehaviorPatternDetails>) =>
     [...strongest.values()].reduce((most, pattern) => Math.max(most, pattern.occurrences), 0);
 
 /**
@@ -113,10 +113,10 @@ export const busiestSlot = (strongest: Map<string, BehaviorPattern>) =>
  * @param busiest The occurrence count of the busiest slot in the scope.
  * @returns The intensity, or undefined when the slot holds nothing.
  */
-export const intensityOf = (pattern: BehaviorPattern | undefined, busiest: number) =>
+export const intensityOf = (pattern: BehaviorPatternDetails | undefined, busiest: number) =>
     pattern === undefined || busiest <= 0 ? undefined : Math.sqrt(pattern.occurrences / busiest);
 
-export const patternsInSlot = (patterns: BehaviorPattern[], slot: Slot): BehaviorPattern[] =>
+export const patternsInSlot = (patterns: BehaviorPatternDetails[], slot: Slot): BehaviorPatternDetails[] =>
     patterns
         .filter((pattern) => isInSlot(pattern, slot))
         .slice()

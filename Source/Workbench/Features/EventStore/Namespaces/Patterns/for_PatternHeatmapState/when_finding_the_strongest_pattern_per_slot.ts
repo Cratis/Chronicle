@@ -1,16 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BehaviorPattern } from 'Api/Patterns/BehaviorPattern';
+import { BehaviorPatternDetails } from 'Features/Patterns/BehaviorPatternDetails';
 import { strongestBySlot } from '../PatternHeatmapState';
 import { aPattern } from './given/a_pattern';
 
 describe('when finding the strongest pattern per slot', () => {
-    let weak: BehaviorPattern;
-    let strong: BehaviorPattern;
-    let elsewhere: BehaviorPattern;
-    let withoutASlot: BehaviorPattern;
-    let result: Map<string, BehaviorPattern>;
+    let weak: BehaviorPatternDetails;
+    let strong: BehaviorPatternDetails;
+    let elsewhere: BehaviorPatternDetails;
+    let withoutASlot: BehaviorPatternDetails;
+    let result: Map<string, BehaviorPatternDetails>;
 
     beforeEach(() => {
         weak = aPattern({ Day: 'Monday', TimeBucket: 'Morning', CommandType: 'RejectExpenseReport' }, 0.4);

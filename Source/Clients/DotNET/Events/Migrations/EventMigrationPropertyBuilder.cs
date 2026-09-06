@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Cratis.Chronicle.Events.Migrations;
@@ -14,6 +16,7 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     const string CombineExpression = "$combine";
     const string RenameExpression = "$rename";
     const string DefaultValueExpression = "$defaultValue";
+    const string MapValuesExpression = "$mapValues";
 
     readonly Dictionary<PropertyExpression, JsonNode> _properties = [];
 
@@ -66,4 +69,40 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
             [DefaultValueExpression] = JsonValue.Create(value)
         };
     }
+
+    /// <inheritdoc/>
+    public void MapValues(PropertyName targetProperty, PropertyName sourceProperty, IEnumerable<ValueMapping> mappings)
+    {
+        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        {
+            [MapValuesExpression] = new JsonObject
+            {
+                ["source"] = (string)sourceProperty,
+                ["mappings"] = new JsonArray([.. mappings.Select(ToMappingNode)])
+            }
+        };
+    }
+
+    static JsonNode ToMappingNode(ValueMapping mapping) => new JsonObject
+    {
+        ["from"] = ToJsonNode(mapping.From),
+        ["to"] = ToJsonNode(mapping.To)
+    };
+
+    /// <summary>
+    /// Renders a mapped value the way the value will appear in an event's payload.
+    /// </summary>
+    /// <param name="value">The value to render.</param>
+    /// <returns>The value as a <see cref="JsonNode"/>.</returns>
+    /// <remarks>
+    /// An enum is rendered as its underlying numeric value, which is what a payload carries - rendering it by name
+    /// would produce a map that never matches anything.
+    /// </remarks>
+    static JsonNode? ToJsonNode(object? value) => value switch
+    {
+        null => null,
+        Enum enumValue => JsonSerializer.SerializeToNode(
+            Convert.ChangeType(enumValue, Enum.GetUnderlyingType(enumValue.GetType()), CultureInfo.InvariantCulture)),
+        _ => JsonSerializer.SerializeToNode(value, value.GetType())
+    };
 }
