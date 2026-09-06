@@ -3,9 +3,11 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
+using Cratis.Chronicle.Connections;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -58,6 +60,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         configure?.Invoke(chronicleBuilder);
 
         builder.Services.AddCratisChronicleClient(chronicleBuilder);
+        builder.Services.AddChronicleHealthCheck();
 
         return builder;
     }
@@ -75,8 +78,25 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         {
             var client = app.ApplicationServices.GetRequiredService<IChronicleClient>();
             var options = app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>();
-            var eventStore = client.GetEventStore(options.Value.EventStore).GetAwaiter().GetResult();
-            eventStore.Connection.Connect().GetAwaiter().GetResult();
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<IApplicationBuilder>>();
+
+            try
+            {
+                var eventStore = client.GetEventStore(options.Value.EventStore).GetAwaiter().GetResult();
+                eventStore.Connection.Connect().GetAwaiter().GetResult();
+            }
+            catch (Exception ex) when (ex is ConnectionTimedOut or ConnectionUnavailable)
+            {
+                // A kernel that is briefly unreachable while a host starts is ordinary, and the connection's
+                // watchdog keeps reconnecting in the background - so this must not take the host down with it.
+                // Connecting now reports failure rather than swallowing it (#3948), which is why this is caught
+                // here rather than never raised. The Chronicle health check reports the state until it recovers.
+                //
+                // Only the connection failures are caught. Anything else here means the client is misconfigured
+                // rather than unable to reach a kernel - it will never come good on its own, so it keeps taking
+                // startup down where it is seen instead of leaving a host running with no event store.
+                logger.CouldNotConnectOnStartup(ex);
+            }
         });
 
         return app;

@@ -1,10 +1,13 @@
-# CHR0037: Event type migration generations must share one explicit [EventType] id
+# CHR0037: Event type migration generations must belong to one event type
 
 ## Rule Description
 
-A class deriving from `EventTypeMigration<TUpgrade, TPrevious>` references two event type generations whose `[EventType]` ids are absent or differ. Chronicle keys generations of the same event by their explicit `[EventType]` id, so both generations must carry the same id and differ only by their generation number.
+A class deriving from `EventTypeMigration<TUpgrade, TPrevious>` references two event type generations that don't resolve to the same event type id. Chronicle keys generations of the same event by their event type id, so both generations must resolve to the same id and differ only by their generation number.
 
-Give both event types the same explicit id, and set a distinct `generation:` on each.
+This is checked for both ways of declaring a previous generation:
+
+- **`[EventTypeGenerationFor<T>]`** (recommended) — the rule verifies that `T` really is the migration's `TUpgrade`. Referencing any other type here is always a mistake: the migration would upcast a generation that doesn't belong to the event type it claims to.
+- **`[EventType]` on both generations** (the older, explicit-id style) — the rule verifies both ids are present and identical. An absent id (silently defaulting to the CLR type name) or a mismatched id makes Chronicle treat the two records as unrelated event types.
 
 ## Severity
 
@@ -12,16 +15,28 @@ Warning
 
 ## Example
 
+### Violation
+
 <ChronicleClientTabs snippet="code-analysis/chr0037/violation" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0037/fix" />
+
+## How To Fix It
+
+- **Preferred:** mark the previous generation with `[EventTypeGenerationFor<TUpgrade>(N)]` instead of giving it its own `[EventType]`. The id is then resolved from `TUpgrade` directly, so the two generations can never drift apart.
+- **If you keep the `[EventType]`-on-both style:** give both generations the exact same explicit id string, and vary only `generation:`.
 
 ## Why This Rule Exists
 
-When an event's schema changes after events of the old shape are already stored, you add a new generation of the same event type and an `EventTypeMigration<TUpgrade, TPrevious>` that upcasts the stored events into the new shape. Chronicle recognizes the two records as generations of *one* event type by their shared `[EventType]` id — not by their C# type names.
+When an event's schema changes after events of the old shape are already stored, you add a new generation of the same event type and an `EventTypeMigration<TUpgrade, TPrevious>` that upcasts the stored events into the new shape. Chronicle recognizes the two records as generations of *one* event type by a shared event type id — not by their C# type names.
 
-If the ids differ, or one generation has no explicit id (so it defaults to the type name), Chronicle sees two unrelated event types. The migration then never applies: stored events of the previous generation are never upcast, and consumers read the old shape. Because both records compile and the migration is discovered by convention, nothing surfaces the mistake without this rule.
+If the two generations resolve to different ids, the migration never applies: stored events of the previous generation are never upcast, and consumers read the old shape. Because both records compile and the migration is discovered by convention, nothing surfaces the mistake without this rule — and the same mismatch is caught again, one layer later and much louder, by `MigrationGenerationsMustShareEventTypeId` thrown from the migration's constructor at runtime.
 
-The correct shape is one explicit id shared by both generations, with only the `generation:` argument distinguishing them.
+`[EventTypeGenerationFor<T>]` was added specifically to make this class of mistake structurally impossible: with no independent id to type on the previous generation, there is nothing left to mismatch. This rule keeps checking the older style for callers who haven't migrated to it yet, and additionally verifies that `[EventTypeGenerationFor<T>]` points at the right type — see [CHR0049](CHR0049) for what happens when it doesn't point at an event type at all.
 
 ## Related Rules
 
-- [CHR0021: Event types should be record types](CHR0021) — event types are immutable records.
+- [CHR0049](CHR0049): `[EventTypeGenerationFor<T>]` must reference a type marked with `[EventType]`.
+- [CHR0021](CHR0021): Event types should be record types — event types are immutable records.

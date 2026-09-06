@@ -37,7 +37,11 @@ internal sealed class ConnectionService(
         ConnectRequest request,
         CallContext context = default)
     {
-        var subject = new Subject<ConnectionKeepAlive>();
+        // Replaying, so the first keep-alive is not lost. It is sent as soon as the client is registered, which
+        // races the transport subscribing to this subject - and a plain Subject drops what it has no subscriber
+        // for, which would silently put the client back to waiting a full interval. One is all that needs
+        // replaying: a keep-alive carries nothing but the connection it belongs to.
+        var subject = new ReplaySubject<ConnectionKeepAlive>(1);
         var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         _ = Task.Run(
@@ -54,6 +58,15 @@ internal sealed class ConnectionService(
 
                 try
                 {
+                    // The session is established the moment the client is registered, and the first keep-alive is
+                    // how the client learns that - it does not treat itself as connected until one arrives. Send it
+                    // straight away rather than after a first interval, or every client everywhere pays the whole
+                    // keep-alive interval before it can do anything.
+                    subject.OnNext(new ConnectionKeepAlive
+                    {
+                        ConnectionId = request.ConnectionId
+                    });
+
                     while (!context.CancellationToken.IsCancellationRequested)
                     {
                         await Task.Delay(_keepAliveInterval).ConfigureAwait(false);

@@ -12,12 +12,15 @@ import { BusyIndicatorDialog } from '@cratis/components/Dialogs';
 import { ConfirmationDialog } from 'Components/Dialogs';
 import { Arc } from '@cratis/arc.react';
 import { MVVM } from '@cratis/arc.react.mvvm';
+import { basePath as configuredBasePath } from '../Utils/basePath';
 
 const isDevelopment = import.meta.env.MODE === 'development';
 
 function App() {
-    const basePathElement = document.querySelector('meta[name="base-path"]') as HTMLMetaElement;
-    const basePath = basePathElement?.content ?? '/';
+    // Normalized to '' at the root, so it can be concatenated everywhere without producing a double slash -
+    // which is the same value the meta tag already yielded when unset, so the routes below are unchanged when
+    // the Workbench is served where it always has been.
+    const basePath = configuredBasePath;
 
     return (
         <Arc

@@ -21,4 +21,11 @@ flowchart LR
     G2 -->|migration| G3["Generation 3 + JSON schema"]
 ```
 
-For detailed information on how to define and use migrations, see [Event Type Migrations](./event-type-migrations).
+You keep the record for every past generation in your codebase alongside the current one. The
+recommended way to declare a previous generation is `[EventTypeGenerationFor<T>]`, where `T` is
+the current generation's type — Chronicle resolves the shared event type id from `T`'s own
+`[EventType]`, so the previous generation never carries (and can never mistype) an id of its own.
+
+For detailed information on how to define and use migrations — including this attribute, the
+older explicit-id style it replaces, and the operations available for transforming events between
+generations — see [Event Type Migrations](./event-type-migrations).

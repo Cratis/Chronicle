@@ -1,0 +1,70 @@
+name: Python Contracts
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Source/Clients/Python/**"
+      - "Source/Kernel/Protobuf/**"
+      - ".github/workflows/python-contracts.yml"
+
+permissions: {}
+
+jobs:
+  verify:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: Source/Clients/Python/pyproject.toml
+
+      - name: Install package tooling
+        working-directory: Source/Clients/Python
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Generate Python contracts
+        working-directory: Source/Clients/Python
+        run: python generate.py --proto-root ../../Kernel/Protobuf
+
+      - name: Check formatting
+        working-directory: Source/Clients/Python
+        run: ruff format --check generate.py build_package.py tests
+
+      - name: Lint
+        working-directory: Source/Clients/Python
+        run: ruff check generate.py build_package.py tests
+
+      - name: Test generated contracts
+        working-directory: Source/Clients/Python
+        run: pytest
+
+      - name: Build and check distributions
+        working-directory: Source/Clients/Python
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.0"
+        run: python build_package.py

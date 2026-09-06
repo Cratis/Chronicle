@@ -66,6 +66,22 @@ Cratis.Chronicle.Services.Events.EventTypeSchemaChanged:
 
 The fix is always to introduce a new generation and a corresponding migrator rather than silently mutating an existing one.
 
+### What an enum may still do
+
+Immutability is about what an already stored event *means*, so two kinds of change to an enum are accepted in place and update the registered schema rather than being rejected:
+
+- **Gaining a member.** Nothing already stored carries the new value, so nothing already stored changes meaning.
+- **Renaming a member.** An event's payload carries the underlying number, not the name; the name is resolved through the schema when the value is read. An enum mirroring an external system is renamed on that system's schedule, and Chronicle does not make you cut a generation for a spelling you do not control.
+
+Two changes remain breaking, because both leave already stored values denoting something other than what they denoted when they were written:
+
+- **Removing a member** — stored events carrying that value now denote nothing.
+- **Renumbering a member** — the names survive but move onto different numbers, so every stored event silently reads as a different member.
+
+For those two, cut a new generation and declare a [value map](../concepts/event-type-migrations#value-map) in the migration saying what the old values became. Chronicle applies it forward when upcasting and inverted when downcasting.
+
+Everything outside enums — a property added, removed, retyped, or renamed — is unchanged: still a schema change, still needing a new generation.
+
 ## Relaxing validation for development
 
 Strict validation is **always enforced in the production image** of the Kernel. The development image relaxes this by honouring the `EnableEventTypeGenerationValidation` flag sent from the client.
@@ -87,6 +103,15 @@ Alternatively, set it in `appsettings.json` under the `Cratis:Chronicle` section
 ```
 
 This value is forwarded to the Kernel as part of the event-type registration request. The Kernel only honours it when running the **development image** — the production image always validates unconditionally regardless of what the client sends. This makes it impossible to accidentally disable validation in a production deployment.
+
+## Client-side checks, before anything reaches the Kernel
+
+The rules above are all enforced by the Kernel during registration. Two further checks run entirely in your own process, the moment a migrator is constructed or discovered — before a registration request is ever sent:
+
+- **`MigrationGenerationsMustShareEventTypeId`** — thrown from `EventTypeMigration<TUpgrade, TPrevious>`'s constructor if `TUpgrade` and `TPrevious` resolve to different event type ids. This is what catches the classic mistake with the old, explicit-id style: an id omitted on the previous generation (silently defaulting to the CLR type name) or a typo that makes the two ids differ. Marking the previous generation with [`[EventTypeGenerationFor<T>]`](../concepts/event-type-migrations) instead removes the mistake structurally, since there is no independent id to mistype in the first place.
+- **`MultipleMigratorsForSameEventTypeGeneration`** — thrown when discovering migrators if two different migrator classes both claim to bridge the same generation pair for one event type. Exactly one migrator may own a given transition.
+
+The [code analysis](../code-analysis/index.md) rules [CHR0037](../code-analysis/CHR0037) and [CHR0049](../code-analysis/CHR0049) catch the same class of mistake at compile time, before you even run the application.
 
 ## What happens when validation fires
 

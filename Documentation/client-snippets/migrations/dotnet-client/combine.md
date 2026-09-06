@@ -2,11 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsDotnetClientCombineShippingAddressRecordedV1(string Street, string City);
-
 [EventType("dotnet-client-shipping-address-recorded", generation: 2)]
 public record MigrationsDotnetClientCombineShippingAddressRecorded(string FullAddress);
+
+[EventTypeGenerationFor<MigrationsDotnetClientCombineShippingAddressRecorded>(1)]
+public record MigrationsDotnetClientCombineShippingAddressRecordedV1(string Street, string City);
 
 public class MigrationsDotnetClientCombineShippingAddressRecordedMigration : EventTypeMigration<MigrationsDotnetClientCombineShippingAddressRecorded, MigrationsDotnetClientCombineShippingAddressRecordedV1>
 {

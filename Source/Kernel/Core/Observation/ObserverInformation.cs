@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -49,7 +50,7 @@ public record ObserverInformation(
     /// <param name="namespace">The namespace within the event store.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read observers from.</param>
     /// <returns>A collection of observer information.</returns>
-    internal static async Task<IEnumerable<ObserverInformation>> AllObservers(string eventStore, string @namespace, IStorage storage)
+    internal static async Task<IEnumerable<ObserverInformation>> AllObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
         var definitions = await storage.GetEventStore(eventStore).Observers.GetAll();
         var states = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.GetAll();
@@ -63,7 +64,7 @@ public record ObserverInformation(
     /// <param name="namespace">The namespace within the event store.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe observers from.</param>
     /// <returns>An observable subject emitting collections of observer information.</returns>
-    internal static ISubject<IEnumerable<ObserverInformation>> ObserveObservers(string eventStore, string @namespace, IStorage storage)
+    internal static ISubject<IEnumerable<ObserverInformation>> ObserveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
         var subject = new ReplaySubject<IEnumerable<ObserverInformation>>(1);
         storage

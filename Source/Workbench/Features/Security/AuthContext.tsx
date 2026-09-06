@@ -3,6 +3,7 @@
 
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { absolutePath } from '../../Utils/basePath';
 
 export interface AuthContextType {
     isAuthenticated: boolean;
@@ -33,7 +34,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const checkAuth = async () => {
         try {
             // Try to access a protected endpoint to verify authentication
-            const response = await fetch('/api/event-stores', {
+            const response = await fetch(absolutePath('/api/event-stores'), {
                 credentials: 'include',
             });
 
@@ -41,7 +42,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 setIsAuthenticated(true);
             } else if (response.status === 401) {
                 setIsAuthenticated(false);
-                navigate('/login');
+                navigate(absolutePath('/login'));
             }
         } catch (error) {
             console.error('Auth check error:', error);
@@ -53,12 +54,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const logout = async () => {
         try {
-            await fetch('/identity/logout', {
+            await fetch(absolutePath('/identity/logout'), {
                 method: 'POST',
                 credentials: 'include',
             });
             setIsAuthenticated(false);
-            navigate('/login');
+            navigate(absolutePath('/login'));
         } catch (error) {
             console.error('Logout error:', error);
         }

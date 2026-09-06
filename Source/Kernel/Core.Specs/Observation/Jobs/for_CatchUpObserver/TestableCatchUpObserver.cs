@@ -24,10 +24,18 @@ public class TestableCatchUpObserver(
     ILogger<CatchUpObserver> logger)
     : CatchUpObserver(catchupServiceClient, storage, jsonSerializerOptions, logger), IGrainType
 {
+    /// <summary>
+    /// Gets the steps the job prepared, or <see langword="null"/> when it has not prepared any yet.
+    /// </summary>
+    public IImmutableList<JobStepDetails>? PreparedSteps { get; private set; }
+
     /// <inheritdoc/>
     public Type GrainType => typeof(ICatchUpObserver);
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request) =>
-        base.PrepareSteps(request);
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
+    {
+        PreparedSteps = await base.PrepareSteps(request);
+        return PreparedSteps;
+    }
 }

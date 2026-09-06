@@ -112,7 +112,7 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 4. **[contract] Events never carry the event-source id** — it is implicit in the event context.
 5. **[contract] `[Key]` / `[Subject]` are distinct.** `[Key]` is for event-source/read-model/projection key resolution; `[Subject]` is compliance identity only. Don't put either on an `EventSourceId<T>` value (it already is both); use them only for non-`EventSourceId<T>` values.
 6. **[contract] Avoid nullable event properties** — Chronicle's analyzer warns on them. Model optional facts as a separate event; resolve nullable command inputs to a non-null sentinel before constructing the event.
-7. **[contract] `[EventType]` takes no arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract; schema changes get a new generation + an `EventTypeMigration<TUpgrade,TPrevious>` (never edit stored-event semantics silently).
+7. **[contract] `[EventType]` takes no arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract; schema changes get a new generation + an `EventTypeMigration<TUpgrade,TPrevious>` (never edit stored-event semantics silently). An enum that only gains a member, or has one renamed, is the exception — Chronicle accepts that in place; a *removed* or *renumbered* member still needs a generation, plus a value map saying what the old values became.
 8. **[convention] Every `[EventType]` has an XML `<summary>`** — a Cratis C# documentation convention (not a Chronicle rule); events live in the log forever, so record why they exist.
 9. **[convention] `[ReadModel]` properties carry no default values** except semantically meaningful enum initial states and `[SetValue<T>]`-driven `bool` flags. False defaults hide missing projection wiring.
 10. **[contract] AutoMap is on by default — never call `.AutoMap()`.** Match property names so AutoMap wires them; diverge with `[SetFrom<T>]` / fluent `.Set().To()` only for genuine name differences. Re-enable `.AutoMap()` only inside a scope where it was disabled with `.NoAutoMap()`.
@@ -178,6 +178,7 @@ All gates pass before merging, opening a PR, or marking a slice complete — exc
 | Strongly-typed values (`ConceptAs<T>`, `EventSourceId<T>`) | `concepts.md` |
 | Shared term definitions (event, projection, reducer, reactor, observer, DCB, …) | `glossary.md` |
 | Diagnosing a misbehaving slice (read model stale, proxy missing, quarantine, …) | the **diagnose-slice** skill |
+| Inspecting or operating a **running** Chronicle store (failed partitions, replays, browsing events) with the `cratis` CLI | the **inspect-running-chronicle** skill |
 | EF Core read models / migrations | `efcore.md`, `efcore.specs.md` |
 | PRs / commits | `pull-requests.md`, `git-commits.md` |
 | Event modeling / schema migration / calling commands from code / paging / cross-cutting metadata / multi-tenancy | the matching skills |
@@ -202,3 +203,13 @@ All gates pass before merging, opening a PR, or marking a slice complete — exc
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 ```
+
+## Local AI work artifacts — `.ai-work/` only
+
+AI-assisted sessions produce working artifacts: plans, handover documents, session notes, continuation prompts, status boards, scratch analyses, research dumps. These are **work records, not documentation**:
+
+- Create every such artifact inside **`.ai-work/`** at the repository root — never at the repository root itself, never under documentation folders, never anywhere else.
+- `.ai-work/` is gitignored and must stay untracked. Never commit anything inside it, never `git add -f` anything inside it, and never remove the ignore entry.
+- These artifacts must never enter git history or reach GitHub — not on any branch. If you find one tracked in git, move it into `.ai-work/` and remove it from tracking in a dedicated commit.
+- A genuine follow-up that must survive the session is **not** a work record — suggest opening a GitHub issue for it (or open one when asked) so future work is tracked where everyone can see it, instead of leaving a planning file behind.
+- Knowledge that must outlive the session belongs in the repository's documentation structure through normal review, not in a work record.

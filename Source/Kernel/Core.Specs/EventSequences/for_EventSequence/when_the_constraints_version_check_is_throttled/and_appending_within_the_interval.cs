@@ -13,7 +13,8 @@ public class and_appending_within_the_interval : given.an_event_sequence
     protected override TimeSpan ConstraintsVersionCheckInterval => TimeSpan.FromHours(1);
 
     /// <summary>
-    /// Activation reads the version, which is what the throttle then measures from; only appends are of interest.
+    /// Activation reads the version, but does not count as a completed check - the first append is what starts the
+    /// throttle. Only the appends are of interest here.
     /// </summary>
     void Establish() => _constraintsGrain.ClearReceivedCalls();
 
@@ -21,10 +22,11 @@ public class and_appending_within_the_interval : given.an_event_sequence
     {
         await Append();
         await Append();
+        await Append();
     }
 
-    [Fact] void should_not_check_the_constraints_version_again() =>
-        _constraintsGrain.DidNotReceive().GetVersion();
+    [Fact] void should_check_the_constraints_version_on_the_first_append() =>
+        _constraintsGrain.Received(1).GetVersion();
 
     Task Append() => _eventSequence.Append(
         EventSourceType.Default,

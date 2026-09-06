@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -34,6 +35,26 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
     public const string StampedValue = "stamped-by-the-join";
 
     /// <summary>
+    /// The subject value carried by a blind root-level property change.
+    /// </summary>
+    public const string BlindSubject = "blind-root-subject";
+
+    /// <summary>
+    /// A regular root property included beside a join to prove all blind root updates are suppressed.
+    /// </summary>
+    public const string OrdinaryRootProperty = "ordinaryRootProperty";
+
+    /// <summary>
+    /// The value carried by the regular blind root property change.
+    /// </summary>
+    public const string OrdinaryRootValue = "blind-root-write";
+
+    /// <summary>
+    /// The property changed by the correctly filtered join payload.
+    /// </summary>
+    public const string StampedProperty = "stamped";
+
+    /// <summary>
     /// The row whose joined-on column holds <see cref="MatchingValue"/>.
     /// </summary>
     public const string RowWithTheMatchingValue = "row-with-the-matching-value";
@@ -54,7 +75,6 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
     public const string RowWithoutTheColumn = "row-without-the-column";
 
     const string JoinedOnProperty = "joinedOn";
-    const string StampedProperty = "stamped";
 
     IMongoClient _client = default!;
     IMongoCollection<BsonDocument> _collection = default!;
@@ -86,6 +106,16 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
     /// </summary>
     protected abstract object? JoinKey { get; }
 
+    /// <summary>
+    /// Gets whether the sink should apply the changes inside a bulk window.
+    /// </summary>
+    protected virtual bool UseBulkMode => false;
+
+    /// <summary>
+    /// Gets root property differences that have no document key target during a root-level join.
+    /// </summary>
+    protected virtual IReadOnlyCollection<PropertyDifference> RootPropertyDifferences => [];
+
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
@@ -97,13 +127,18 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         var collections = new SinkCollections(readModel, _client.GetDatabase(_databaseName));
-        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel);
+        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
         var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
         _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
         _collection = collections.GetCollection();
 
         await InsertRows();
         DocumentsBeforeTheJoin = await ReadRows();
+
+        if (UseBulkMode)
+        {
+            await _sink.BeginBulk();
+        }
 
         try
         {
@@ -115,6 +150,13 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
         catch (Exception error)
         {
             Error = error;
+        }
+        finally
+        {
+            if (UseBulkMode)
+            {
+                await _sink.EndBulk();
+            }
         }
 
         DocumentsAfterTheJoin = await ReadRows();
@@ -176,24 +218,28 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
             {
                 ["_id"] = RowWithTheMatchingValue,
                 [JoinedOnProperty] = new BsonBinaryData(MatchingValue, GuidRepresentation.Standard),
-                [StampedProperty] = string.Empty
+                [StampedProperty] = string.Empty,
+                [OrdinaryRootProperty] = string.Empty
             },
             new BsonDocument
             {
                 ["_id"] = RowWithAnotherValue,
                 [JoinedOnProperty] = new BsonBinaryData(Guid.NewGuid(), GuidRepresentation.Standard),
-                [StampedProperty] = string.Empty
+                [StampedProperty] = string.Empty,
+                [OrdinaryRootProperty] = string.Empty
             },
             new BsonDocument
             {
                 ["_id"] = RowWithANullColumn,
                 [JoinedOnProperty] = BsonNull.Value,
-                [StampedProperty] = string.Empty
+                [StampedProperty] = string.Empty,
+                [OrdinaryRootProperty] = string.Empty
             },
             new BsonDocument
             {
                 ["_id"] = RowWithoutTheColumn,
-                [StampedProperty] = string.Empty
+                [StampedProperty] = string.Empty,
+                [OrdinaryRootProperty] = string.Empty
             }
         ]);
 
@@ -217,6 +263,11 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
                     new ExpandoObject(),
                     [new PropertyDifference(new PropertyPath(StampedProperty), string.Empty, StampedValue)])
             ]));
+
+        if (RootPropertyDifferences.Count != 0)
+        {
+            changeset.Add(new PropertiesChanged<ExpandoObject>(new ExpandoObject(), RootPropertyDifferences));
+        }
 
         return changeset;
     }

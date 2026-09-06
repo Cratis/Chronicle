@@ -84,12 +84,14 @@ public class FailedPartitions
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the attempt was for.</param>
     /// <param name="messages">Collection of messages associated with the error.</param>
     /// <param name="stackTrace">The stack trace associated with the error.</param>
+    /// <param name="kind">What kind of thing went wrong on the attempt.</param>
     /// <returns>A <see cref="FailedPartition"/> instance.</returns>
     public FailedPartition RegisterAttempt(
         Key partition,
         EventSequenceNumber sequenceNumber,
         IEnumerable<string> messages,
-        string stackTrace)
+        string stackTrace,
+        FailureKind kind = FailureKind.Unknown)
     {
         if (!TryGet(partition, out var failure))
         {
@@ -106,7 +108,8 @@ public class FailedPartitions
             Occurred = DateTimeOffset.UtcNow,
             SequenceNumber = sequenceNumber,
             Messages = messages,
-            StackTrace = stackTrace
+            StackTrace = stackTrace,
+            Kind = kind
         });
 
         return failure;

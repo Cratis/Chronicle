@@ -6,23 +6,26 @@
   <ItemGroup>
     <!-- System -->
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
+    <!-- net8.0 only: the client compiles against System.Collections.Immutable 10.0.0 transitively, but the SDK
+         prunes it from declared dependencies. Declare it explicitly so consumers do not hit missing types. -->
+    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.11" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.18.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.18.0" />
-    <PackageVersion Include="Cratis.Arc" Version="21.19.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="21.19.0" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="21.19.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="21.19.0" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="21.19.0" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="21.19.0" />
-    <PackageVersion Include="Cratis.Screenplay" Version="4.0.1" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.18.2" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.18.1" />
+    <PackageVersion Include="Cratis.Arc" Version="22.6.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.6.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.6.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.6.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.6.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.6.0" />
+    <PackageVersion Include="Cratis.Screenplay" Version="4.6.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
@@ -68,27 +71,27 @@
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
     <!-- Open Telemetry -->
-    <PackageVersion Include="OpenTelemetry" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.17.0-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.18.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.18.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.3" />
     <!-- Roslyn-->
-    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.6.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.6.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
     <!-- Analysis -->
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.2.2" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.16.1" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.159" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.177" />
     <!-- Testing & Specifications -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -108,8 +111,8 @@
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.11.0" />
-    <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.0" />
-    <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.0" />
+    <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.14" />
+    <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.6.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
@@ -121,9 +124,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
-    <PackageVersion Include="protobuf-net.Reflection" Version="3.3.8" />
-    <PackageVersion Include="protobuf-net.Grpc" Version="1.3.0" />
-    <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.0" />
+    <PackageVersion Include="protobuf-net.Reflection" Version="3.4.19" />
+    <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
+    <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.14" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.83.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />

@@ -9,6 +9,19 @@ namespace Cratis.Chronicle.Configuration;
 public class Authentication
 {
     /// <summary>
+    /// Gets whether authentication is enforced. Defaults to <see langword="true"/>.
+    /// </summary>
+    /// <remarks>
+    /// Turning this off removes authentication from the server entirely - no token authority, no identity
+    /// endpoints, no bootstrap admin user, and every gRPC service and HTTP endpoint answers anonymously. It
+    /// exists for a Chronicle that is not reachable as a server at all: one embedded in a single container or
+    /// process, talking to its own client over loopback, disposed with the process. There the credential
+    /// exchange protects nothing and costs every client seconds of cold start. Anywhere a network can reach the
+    /// server, leaving this off publishes the whole event store to anyone who can open a socket.
+    /// </remarks>
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.
     /// </summary>
     public string? Authority { get; init; }

@@ -1,0 +1,126 @@
+name: Publish Python Contracts
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+      protos-artifact:
+        description: Name of the artifact containing proto files. Leave empty to generate them.
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate version format
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+|[ab][0-9]+|rc[0-9]+)?(\.post[0-9]+)?(\.dev[0-9]+)?$ ]]; then
+            echo "::error::Version '$VERSION' is not a valid release version"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        if: inputs.protos-artifact == ''
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download proto files
+        if: inputs.protos-artifact != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ inputs.protos-artifact }}
+          path: Source/Kernel/Protobuf/
+
+      - name: Build Contracts
+        if: inputs.protos-artifact == ''
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate proto files
+        if: inputs.protos-artifact == ''
+        run: |
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            "$CONTRACTS_DLL" \
+            Source/Kernel/Protobuf
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: Source/Clients/Python/pyproject.toml
+
+      - name: Install package tooling
+        working-directory: Source/Clients/Python
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Generate Python contracts
+        working-directory: Source/Clients/Python
+        run: python generate.py --proto-root ../../Kernel/Protobuf
+
+      - name: Test generated contracts
+        working-directory: Source/Clients/Python
+        run: pytest
+
+      - name: Build distributions
+        working-directory: Source/Clients/Python
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ inputs.version }}
+        run: python build_package.py
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: python-contract-distributions
+          path: Source/Clients/Python/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi-python-contracts
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: python-contract-distributions
+          path: dist/
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

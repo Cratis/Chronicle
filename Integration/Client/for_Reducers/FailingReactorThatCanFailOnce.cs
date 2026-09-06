@@ -17,7 +17,7 @@ public class FailingReactorThatCanFailOnce : IReactor
         if (ShouldFail)
         {
             ShouldFail = false;
-            throw new Exception("Something went wrong");
+            throw new DeliberateReactorFailure();
         }
 
         Interlocked.Increment(ref HandledEvents);

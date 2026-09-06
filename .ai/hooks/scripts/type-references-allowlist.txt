@@ -1,0 +1,60 @@
+# Names validate-type-references.sh must never warn about.
+#
+# The Tier 3 index is built from the XML documentation of the Cratis NuGet packages this repository
+# pins, and from what the corpus and `Source/**/*.cs` declare for themselves. Everything below is a
+# name that is genuinely real and genuinely outside that index — a .NET attribute from an ecosystem
+# whose package ships no XML docs, a Chronicle *Kernel* internal that is in no client package, or a
+# TypeScript API in a repository whose index only covers .NET assemblies.
+#
+# One name per line, `#` starts a comment, blank lines ignored. Every entry states *why* it is here:
+# an entry nobody can justify is an entry that should have been a fix instead. An entry is wrong the
+# moment its name becomes resolvable — the guard silently stops checking it — so prefer widening the
+# index over adding a line here whenever that is possible.
+#
+# Add the bare name, not the `Attribute` suffix; the guard resolves both spellings.
+
+# --- ASP.NET Core, from the Microsoft.AspNetCore.App shared framework ------------------------------
+# The shared framework is a ref pack, and ref packs carry no XML documentation, so no amount of
+# indexing NuGet reaches these. The corpus names them to say what NOT to write (`[Route]` on a
+# model-bound query) or in non-Cratis illustrations.
+FromServices
+HttpGet
+
+# --- System.ComponentModel.DataAnnotations, from the base class library ---------------------------
+# Same reason: BCL, ref pack, no XML docs. Cited when contrasting DataAnnotations validation with
+# Arc's `CommandValidator<T>` / `ConceptValidator<T>`.
+Required
+Range
+MaxLength
+
+# --- Microsoft.Extensions.* -----------------------------------------------------------------------
+# `[LoggerMessage]` is the logging source generator's attribute; `[FromKeyedServices]` is keyed DI.
+# Both are real; the packages that carry them are transitive here, so their XML docs are not indexed.
+LoggerMessage
+FromKeyedServices
+
+# --- Microsoft Orleans ----------------------------------------------------------------------------
+# `orleans.md` is framework-profile guidance for the Chronicle Kernel's grains. The pinned Orleans
+# packages ship no XML documentation, so `[Alias]` and `[StorageProvider]` cannot be resolved.
+Alias
+StorageProvider
+
+# --- Cratis Chronicle Kernel ----------------------------------------------------------------------
+# `WellKnown` is a Kernel static class (`WellKnown.MeterName`), used by the framework-profile
+# add-traces skill. Kernel internals are not published in any client package, so nothing this guard
+# can read knows about them.
+WellKnown
+
+# --- The `cratis` CLI -----------------------------------------------------------------------------
+# `[CliCommand]` and `[CliExample]` are `Cratis.Cli.Registration` attributes — verified present as
+# `T:Cratis.Cli.Registration.CliCommandAttribute` / `...CliExampleAttribute` in the Cratis/cli build
+# output. The CLI is a dotnet tool from a separate repository, not a package any application pins,
+# so no Directory.Packages.props entry can ever bring it into the index.
+CliCommand
+CliExample
+
+# --- Cratis TypeScript ----------------------------------------------------------------------------
+# `JsonSerializer` is `@cratis/fundamentals`' TypeScript serializer, referenced from the frontend
+# identity guidance. This guard indexes .NET assemblies only; named TypeScript imports are Tier 2's
+# question, and a bare TypeScript class name is nobody's.
+JsonSerializer

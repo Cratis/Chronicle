@@ -23,7 +23,7 @@ The `compliance` section now contains an `encryption` subsection that holds the 
 
 ## Migrating from the default storage
 
-If you are configuring a dedicated compliance storage on a system that has already been running, the keys you care about are in the general storage backend — and the new store is empty. Turning it on by itself is a one-way flip: those keys become unreachable, and every `[PII]` value they protect reads back as an **empty string**. Nothing reports it. No exception is thrown, nothing is logged, and the health endpoint stays green — the result is byte-for-byte what a completed [right-to-erasure](../../compliance/index) looks like.
+If you are configuring a dedicated compliance storage on a system that has already been running, the keys you care about are in the general storage backend — and the new store is empty. Turning it on by itself is a one-way flip: those keys become unreachable, and every `[PII]` value they protect reads back as an **empty string**. Nothing reports it. No exception is thrown, nothing is logged, and the health endpoint stays green — the result is byte-for-byte what a completed [right-to-erasure](../../compliance/index.md) looks like.
 
 Set `migrateFromDefaultStorage` and there is no flip at all:
 
@@ -78,7 +78,7 @@ Restore in this order:
 
 Step 3 is the one specific to this page, and it is a point-in-time match rather than a "latest wins":
 
-- A key store restored **older** than the storage is missing keys for subjects created since. Every `[PII]` value belonging to those subjects reads back as an **empty string** — byte-for-byte identical to a completed [right to erasure](../../compliance/index), reported by nothing.
+- A key store restored **older** than the storage is missing keys for subjects created since. Every `[PII]` value belonging to those subjects reads back as an **empty string** — byte-for-byte identical to a completed [right to erasure](../../compliance/index.md), reported by nothing.
 - A key store restored **newer** than the storage brings back keys for subjects whose erasure the storage backup predates. Nothing breaks, and that is the problem: an erasure you have already reported as complete is silently undone.
 
 When `migrateFromDefaultStorage` is on, both stores are live and both are part of the backup set. Restoring only the dedicated store leaves the keys that had not been read yet — the ones still living only in the default storage — out of the restore.

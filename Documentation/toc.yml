@@ -17,7 +17,7 @@
 - name: Concepts
   href: concepts/toc.yml
 - name: Architecture
-  href: architecture.md
+  href: architecture.mdx
 - name: Dynamic Consistency Boundary
   href: dynamic-consistency-boundary/toc.yml
 - name: Events
@@ -50,6 +50,8 @@
   href: external-services/toc.yml
 - name: Reactors
   href: reactors/toc.yml
+- name: Behavior Patterns
+  href: patterns/toc.yml
 - name: Subscriptions
   href: subscriptions/toc.yml
 - name: Jobs
@@ -68,6 +70,8 @@
   href: workbench/toc.yml
 - name: Hosting
   href: hosting/toc.yml
+- name: Building a Client
+  href: building-a-client/toc.yml
 - name: Contributing
   href: contributing/toc.yml
 - name: Statistics

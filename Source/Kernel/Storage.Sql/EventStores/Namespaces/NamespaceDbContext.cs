@@ -49,6 +49,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<Recommendations.Recommendation> Recommendations { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the behavior patterns DbSet.
+    /// </summary>
+    public DbSet<Patterns.BehaviorPattern> BehaviorPatterns { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the replay contexts DbSet.
     /// </summary>
     public DbSet<ReplayContexts.ReplayContextEntry> ReplayContexts { get; set; } = null!;
@@ -93,11 +98,17 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<ClosedStreamEntry>(entity =>
-        {
-            entity.ToTable(WellKnownTableNames.ClosedStreams);
-            entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId });
-        });
+        modelBuilder
+            .Entity<ClosedStreamEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.ClosedStreams);
+                entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId });
+            })
+            .Entity<Patterns.BehaviorPattern>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.BehaviorPatterns);
+                entity.HasKey(e => new { e.GroupingKey, e.FacetSetHash });
+            });
 
         // Match the column mappings to the provider-native JSON type the migrations create
         // (jsonb on Npgsql), so EF Core sends parameters with the correct OID. PostgreSQL is

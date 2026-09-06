@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
@@ -13,10 +14,12 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Patching;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace Orleans.Hosting;
 
@@ -26,16 +29,20 @@ namespace Orleans.Hosting;
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
 /// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
+/// <param name="patternCapture"><see cref="IPatternCapture"/> for observing events for behavior pattern mining.</param>
 /// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
+/// <param name="logger">The logger.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
     IEventTypes eventTypes,
     IReactors reactors,
+    IPatternCapture patternCapture,
     IProjectionsServiceClient projectionsServiceClient,
     IGrainFactory grainFactory,
-    IAuthenticationService authenticationService) : ILifecycleParticipant<ISiloLifecycle>
+    IAuthenticationService authenticationService,
+    ILogger<ChronicleServerStartupTask> logger) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
@@ -80,11 +87,12 @@ internal sealed class ChronicleServerStartupTask(
             await capturesManager.Ensure();
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
-            await projectionsServiceClient.Register(eventStore, projectionDefinitions);
+            await RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions);
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
                 await reactors.DiscoverAndRegister(eventStore, namespaceName);
+                await patternCapture.Subscribe(eventStore, namespaceName);
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await jobsManager.Rehydrate();
@@ -99,6 +107,18 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await authenticationService.EnsureDefaultClientCredentials();
 #endif
+    }
+
+    async Task RegisterPersistedProjectionDefinitions(EventStoreName eventStore, IEnumerable<ProjectionDefinition> projectionDefinitions)
+    {
+        var result = await projectionsServiceClient.Register(eventStore, projectionDefinitions);
+        if (result.TryGetError(out var error))
+        {
+            foreach (var (identifier, failure) in error.Failures)
+            {
+                logger.FailedRegisteringPersistedProjectionDefinition(failure, identifier);
+            }
+        }
     }
 
     async Task RehydrateReducerAndReactorObservers(EventStoreName eventStore, EventStoreNamespaceName namespaceName)

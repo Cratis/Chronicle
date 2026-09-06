@@ -57,7 +57,7 @@ public class interface_handler_with_derived_events_and_multiple_invokers : Speci
 
         public IReadOnlyCollection<Type> HandledEventTypes => _handledEventTypes;
 
-        public Task Handle(IMyEvent @event)
+        public Task OnMyEvent(IMyEvent @event)
         {
             _handledEventTypes.Add(@event.GetType());
             return Task.CompletedTask;

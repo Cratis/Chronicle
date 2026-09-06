@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CapturedEvents } from 'Api/Captures';
+import { CapturedEvents } from 'Api/Events';
 import { AppendedEvent } from 'Api/Events';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { Column } from '@cratis/components/DataTables';
 import { useEffect } from 'react';
 import strings from 'Strings';
@@ -30,8 +30,8 @@ export const CapturedEventsView = ({ eventStore, captureName, refreshTrigger }: 
 
     return (
         <div className="h-full" style={{ overflow: 'auto' }}>
-            <DataTable<AppendedEvent>
-                value={result.data}
+            <DataTableCore<AppendedEvent>
+                data={result.data}
                 emptyMessage={strings.eventStore.general.captures.dataView.empty}
                 dataKey="context.sequenceNumber"
                 className="rounded-lg overflow-hidden"
@@ -49,7 +49,7 @@ export const CapturedEventsView = ({ eventStore, captureName, refreshTrigger }: 
                     header={strings.eventStore.general.captures.dataView.columns.content}
                     body={(event) => <code style={{ fontSize: '0.85rem' }}>{event.content}</code>}
                 />
-            </DataTable>
+            </DataTableCore>
         </div>
     );
 };

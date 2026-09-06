@@ -2,11 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsValidationAuthorRegisteredV1(string Name);
-
 [EventType("validation-author-registered", generation: 2)]
 public record MigrationsValidationAuthorRegistered(string Name, string Status);
+
+[EventTypeGenerationFor<MigrationsValidationAuthorRegistered>(1)]
+public record MigrationsValidationAuthorRegisteredV1(string Name);
 
 public class MigrationsValidationAuthorRegisteredMigration : EventTypeMigration<MigrationsValidationAuthorRegistered, MigrationsValidationAuthorRegisteredV1>
 {

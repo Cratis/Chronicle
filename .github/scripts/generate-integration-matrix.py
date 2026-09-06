@@ -11,9 +11,10 @@ Sharding only changes how the work is distributed: every shard of a namespace
 together covers exactly the same tests as the un-sharded namespace would, so
 coverage across the selected infrastructure configurations is preserved.
 
-Which configurations are selected depends on ``--all-providers``. Pull requests
-run the default backend only; the nightly schedule and manual dispatch run all
-of them.
+Which configurations are selected depends on the backend selection flags. Pull
+requests run ``PULL_REQUEST_DATABASES``; the nightly schedule and manual
+dispatch pass ``--all-providers`` to run every backend. ``--databases`` names an
+explicit set for anything in between.
 
 Balancing is by ``[Fact]`` count across test classes. Each spec file declares
 the facts on its first top-level class, so a shard targets a class with
@@ -54,12 +55,19 @@ INFRA_CONFIGS = [
     ("outofprocess", "mssql", True),
 ]
 
-# Storage backends covered on every pull request. Running all five backends per
-# PR meant each shard was built and started five times over, and the four
-# non-default backends re-verified storage-provider behavior that the change
-# under review usually does not touch. The full set still runs on the nightly
-# schedule and on demand -- see --all-providers.
-DEFAULT_DATABASES = {"mongodb"}
+# Every backend any configuration covers, in the order INFRA_CONFIGS declares them.
+ALL_DATABASES = tuple(dict.fromkeys(database for _, database, _ in INFRA_CONFIGS))
+
+# Storage backends covered on every pull request. Running all five configurations
+# per PR meant each shard was built and started five times over, but running
+# MongoDB alone let MongoDB-shaped assumptions merge green and break the nightly:
+# specs that assumed a sink's row order, and a SQL path that never provisioned a
+# namespace's database, both landed that way. SQLite is the one non-Mongo backend
+# that needs no database container of its own -- the kernel container writes to a
+# SQLite file -- so it puts the whole Storage.Sql/EF Core path under every PR for
+# one extra job per shard. PostgreSQL and SQL Server each add a second container
+# per job and stay on the nightly schedule -- see --all-providers.
+PULL_REQUEST_DATABASES = ("mongodb", "sqlite")
 
 _NAMESPACE_RE = re.compile(r"^\s*namespace\s+([A-Za-z0-9_.]+)", re.MULTILINE)
 # A top-level type declaration starts at column 0 (no leading whitespace). The
@@ -157,21 +165,47 @@ def _shards_for(namespace):
     return shards
 
 
+def _databases(value):
+    """Parse a comma-separated backend list, rejecting anything not in ALL_DATABASES."""
+    selected = tuple(item.strip() for item in value.split(",") if item.strip())
+    unknown = [item for item in selected if item not in ALL_DATABASES]
+    if unknown:
+        raise argparse.ArgumentTypeError(
+            f"unknown storage backend(s): {', '.join(unknown)}. "
+            f"Known backends: {', '.join(ALL_DATABASES)}")
+    if not selected:
+        raise argparse.ArgumentTypeError("at least one storage backend is required")
+    return selected
+
+
+def selected_databases(args):
+    """Resolve which storage backends the matrix covers, widest selection first."""
+    if args.all_providers:
+        return ALL_DATABASES
+    if args.databases:
+        return args.databases
+    return PULL_REQUEST_DATABASES
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--all-providers",
         action="store_true",
-        help="Include every storage backend. Without it only the backends in "
-        "DEFAULT_DATABASES are included, which is what pull requests run.",
+        help="Include every storage backend. This is what the nightly schedule and "
+        "manual dispatch run; it takes precedence over --databases.",
+    )
+    parser.add_argument(
+        "--databases",
+        type=_databases,
+        help="Comma-separated storage backends to cover, e.g. 'mongodb,sqlite'. "
+        "Without it the backends in PULL_REQUEST_DATABASES are covered, which is "
+        "what pull requests run.",
     )
     args = parser.parse_args()
 
-    configs = [
-        config
-        for config in INFRA_CONFIGS
-        if args.all_providers or config[1] in DEFAULT_DATABASES
-    ]
+    databases = selected_databases(args)
+    configs = [config for config in INFRA_CONFIGS if config[1] in databases]
 
     include = []
     for namespace in _namespaces_with_facts():

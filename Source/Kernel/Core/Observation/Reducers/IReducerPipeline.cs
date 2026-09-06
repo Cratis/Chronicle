@@ -54,5 +54,5 @@ public interface IReducerPipeline
     /// <param name="context">The <see cref="ReducerContext"/> being reduced.</param>
     /// <param name="reducer"><see cref="ReducerDelegate"/> delegate.</param>
     /// <returns>Awaitable task.</returns>
-    Task Handle(ReducerContext context, ReducerDelegate reducer);
+    Task Reduce(ReducerContext context, ReducerDelegate reducer);
 }

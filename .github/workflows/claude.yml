@@ -1,7 +1,10 @@
 name: Claude Assistant
 
+# One concurrency group per issue / pull request instead of one global group:
+# with the global group, a mention on one issue cancelled Claude's in-flight work
+# on a completely different issue.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 
@@ -23,7 +26,18 @@ permissions:
 
 jobs:
   claude-response:
+    # Only start a runner when Claude is actually addressed. Without this gate the
+    # workflow booted a runner and checked out the repository for every comment,
+    # review and issue event in the repository (~150 runs/week), even though the
+    # action itself then found no @claude mention and did nothing. Issue opened /
+    # assigned events stay ungated because assignment is itself the signal.
+    if: >-
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

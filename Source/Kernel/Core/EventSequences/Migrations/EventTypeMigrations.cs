@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
@@ -49,50 +48,6 @@ public class EventTypeMigrations(
         await DowncastToLowerGenerations(eventType.Generation, content, definition, result);
 
         return result;
-    }
-
-    static JsonValue? EvaluateSplit(JsonObject content, JsonObject config)
-    {
-        var source = config["source"]?.GetValue<string>();
-        var separator = config["separator"]?.GetValue<string>() ?? string.Empty;
-        var part = config["part"]?.GetValue<int>() ?? 0;
-
-        if (source is null || !content.TryGetPropertyValue(source, out var sourceNode) || sourceNode is null)
-            return JsonValue.Create(string.Empty);
-
-        var sourceValue = sourceNode.GetValue<string>();
-        var parts = sourceValue.Split(separator);
-        return JsonValue.Create(parts.Length > part ? parts[part] : string.Empty);
-    }
-
-    static JsonValue? EvaluateCombine(JsonObject content, JsonObject config)
-    {
-        if (config["sources"] is not JsonArray sources)
-            return JsonValue.Create(string.Empty);
-
-        var separator = config["separator"]?.GetValue<string>() ?? string.Empty;
-
-        var builder = new StringBuilder();
-        var first = true;
-        foreach (var source in sources)
-        {
-            var propertyName = source?.GetValue<string>();
-            if (propertyName != null && content.TryGetPropertyValue(propertyName, out var node) && node != null)
-            {
-                if (!first)
-                    builder.Append(separator);
-                builder.Append(node.GetValue<string>());
-                first = false;
-            }
-        }
-        return JsonValue.Create(builder.ToString());
-    }
-
-    static JsonNode? EvaluateRename(JsonObject content, string? oldName)
-    {
-        if (oldName is null || !content.TryGetPropertyValue(oldName, out var value))
-            return null;
-        return value?.DeepClone();
     }
 
     async Task UpcastToHigherGenerations(
@@ -185,15 +140,23 @@ public class EventTypeMigrations(
                         break;
 
                     case WellKnownExpressions.Split when expr[WellKnownExpressions.Split] is JsonObject splitConfig:
-                        customResults[property.Key] = EvaluateSplit(content, splitConfig);
+                        customResults[property.Key] = EventMigrationExpressions.EvaluateSplit(content, splitConfig);
                         break;
 
                     case WellKnownExpressions.Combine when expr[WellKnownExpressions.Combine] is JsonObject combineConfig:
-                        customResults[property.Key] = EvaluateCombine(content, combineConfig);
+                        customResults[property.Key] = EventMigrationExpressions.EvaluateCombine(content, combineConfig);
                         break;
 
                     case WellKnownExpressions.Rename:
-                        customResults[property.Key] = EvaluateRename(content, expr[WellKnownExpressions.Rename]?.GetValue<string>());
+                        customResults[property.Key] = EventMigrationExpressions.EvaluateRename(content, expr[WellKnownExpressions.Rename]?.GetValue<string>());
+                        break;
+
+                    case WellKnownExpressions.MapValues when expr[WellKnownExpressions.MapValues] is JsonObject mapConfig:
+                        if (EventMigrationExpressions.TryEvaluateMapValues(content, mapConfig, out var mappedValue))
+                        {
+                            customResults[property.Key] = mappedValue;
+                        }
+
                         break;
 
                     default:
@@ -234,18 +197,22 @@ public class EventTypeMigrations(
             result = JsonNode.Parse(content.ToJsonString())?.AsObject() ?? new JsonObject();
         }
 
-        // Apply custom expression results (split / combine / rename)
+        // Apply custom expression results (split / combine / rename). The property name is a path, so a target
+        // inside a nested object is written where it belongs instead of becoming a top-level key with a dot in
+        // its name that the target generation's schema then discards (#3949).
         foreach (var (propertyName, value) in customResults)
         {
-            result[propertyName] = value?.DeepClone();
+            JsonPropertyPaths.Set(result, propertyName, value?.DeepClone());
         }
 
         // Apply default values for any properties that are absent from the result
         foreach (var (propertyName, defaultValue) in defaultValues)
         {
-            if (!result.ContainsKey(propertyName))
+            // Present-but-null still counts as present, exactly as the flat containment check it replaces did -
+            // a default fills in a property the payload does not carry, not one that carries no value.
+            if (!JsonPropertyPaths.TryResolve(result, propertyName, out _))
             {
-                result[propertyName] = defaultValue?.DeepClone();
+                JsonPropertyPaths.Set(result, propertyName, defaultValue?.DeepClone());
             }
         }
 

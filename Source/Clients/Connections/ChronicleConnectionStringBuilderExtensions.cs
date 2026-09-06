@@ -83,6 +83,23 @@ public static class ChronicleConnectionStringBuilderExtensions
     }
 
     /// <summary>
+    /// Connects without presenting any credentials.
+    /// </summary>
+    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
+    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
+    /// <remarks>
+    /// Only works against a server running with authentication turned off
+    /// (<c>Cratis:Chronicle:Authentication:Enabled=false</c>) - typically a Chronicle embedded in the same
+    /// container or process as its client. It skips the token exchange entirely, which is what makes a cold
+    /// start of such an instance fast.
+    /// </remarks>
+    public static ChronicleConnectionStringBuilder WithoutAuthentication(this ChronicleConnectionStringBuilder builder)
+    {
+        builder.NoAuthentication = true;
+        return builder;
+    }
+
+    /// <summary>
     /// Sets the API key for API key authentication.
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>

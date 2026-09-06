@@ -6,6 +6,49 @@ applyTo: "**/*"
 
 Commits are the permanent record of how the codebase evolved. Each commit should tell a clear story: *what* changed and *why*. A reviewer reading `git log --oneline` should understand the arc of the work without opening any diffs.
 
+## Never rewrite history
+
+**Committed history is append-only. Never rewrite it — under any circumstances, on any branch, including your own.**
+
+These commands are **forbidden** unless the human explicitly asks for that specific command on that specific branch in that specific message:
+
+| Forbidden | Why |
+|---|---|
+| `git rebase` (any form, incl. `-i`, `--onto`, `--autosquash`) | rewrites every replayed commit; the originals become unreachable |
+| `git commit --amend` | replaces the tip commit; the original is unreachable immediately |
+| `git reset --hard`, `git reset` onto an earlier commit | discards commits and, with `--hard`, uncommitted work too |
+| `git push --force`, `git push --force-with-lease`, `git push -f` | destroys the remote's copy — the one backup that survives local loss |
+| `git branch -D` / `git branch -d` on a branch holding unmerged commits | strands those commits with no ref; `git gc` then deletes them |
+| `git checkout`/`git switch` away while another agent's commits sit only on this branch | the commits leave with the branch and the working tree silently reverts |
+| `git filter-branch`, `git filter-repo`, history-rewriting scripts | rewrites the entire history graph |
+| `git gc --prune=now`, `git reflog expire` | destroys the recovery path for anything already stranded |
+| `git merge --squash`, `gh pr merge --squash`, `--rebase`, the **Squash and merge** / **Rebase and merge** buttons | collapses or replays the branch's commits into new ones; every original commit becomes unreachable and the branch's real history is destroyed at the moment of merge |
+
+**Merging is part of this rule, and it is the easiest place to get it wrong.** A squash merge feels
+like an integration step rather than a rewrite, which is exactly why it slips past: the branch is
+deleted straight afterwards, so the commits it collapsed have no ref left and `gc` eventually takes
+them. **Always merge with a true merge commit** — `git merge --no-ff`, or `gh pr merge --merge`.
+Never `--squash`, never `--rebase`, and never the equivalent buttons in the GitHub UI.
+
+If a repository's settings only allow squash or rebase merges, that is a **setting to raise with the
+owner, not a licence to squash.** Stop and ask.
+
+**This is not stylistic.** A commit can exist as an object (`git cat-file -t <sha>` succeeds) while being absent from every branch *and* from the working tree — reachable only through `git reflog`, and only until `gc` runs. Work has already been lost in this repository exactly this way: a branch checkout carried another session's commit away, the branch was deleted, and the file changes silently reverted in the tree. It was recovered from the reflog by luck, because someone asked the right question in time.
+
+### What to do instead
+
+- **Made a mistake in the last commit?** Add a new commit that corrects it. The wrong state stays in history, and that is fine — history is a record of what happened, not a curated story of what you wish had happened.
+- **Need to undo a commit?** `git revert <sha>` — it records the undo as a new commit and loses nothing.
+- **Messy commits before a PR?** Leave them. A reviewer reading a coherent series of small commits is better served than by one squashed blob, and the project does not require a linear history.
+- **Landing a PR?** `gh pr merge --merge` (a real merge commit). **Not `--squash`, not `--rebase`.** The commits on the branch are the record of how the change was actually built; squashing throws that away permanently in exchange for a tidier `main`, which is not a trade this project makes.
+- **Need someone else's changes?** `git merge`, never `git rebase`.
+- **Need to move a commit to another branch?** `git cherry-pick` — it copies, leaving the original reachable.
+- **Working alongside another agent or session?** Use `git worktree add` so each has its own checkout and branch. Never two sessions committing in one working tree.
+
+### Before you finish
+
+Verify your own commits are still reachable on the branch **and** that their content is still in the working tree — those are two different things. `git log --oneline -5` plus a `grep` for something the commit introduced. If a commit has gone missing, `git reflog` is the recovery tool: find the SHA, `git tag` it immediately so `gc` cannot take it, then `git cherry-pick` it back.
+
 ## Logical Grouping
 
 Every commit must be a **single logical unit of work**. Group related changes together; separate unrelated changes into distinct commits.
@@ -29,6 +72,7 @@ Every commit must be a **single logical unit of work**. Group related changes to
 Ask: "If I needed to revert this commit, would I lose exactly one coherent change?" If reverting would undo two unrelated things, it should be two commits.
 
 Common split points:
+
 1. **Infrastructure / plumbing first** — interface additions, new types, or schema changes that later commits build on.
 2. **Core logic second** — the behavioral change that uses the new infrastructure.
 3. **Specs / tests third** — the specs that prove the behavioral change works. Specs may also be combined with the core logic commit when they are tightly coupled (e.g., a TDD red-green cycle or a bug fix with its regression test).
@@ -40,7 +84,7 @@ When a task produces both source fixes and new integration specs, prefer separat
 
 ### Format
 
-```
+```text
 <imperative summary of what this commit does>
 
 <optional body — why the change was made, context, trade-offs>
@@ -53,14 +97,14 @@ When a task produces both source fixes and new integration specs, prefer separat
 
 ### Good examples
 
-```
+```text
 Fix duplicate key crash in IdentityStorage.Populate
 
 The upsert used InsertOne which threw on existing identities.
 Replace with ReplaceOne using upsert: true.
 ```
 
-```
+```text
 Add type-safe event migration API with expression-based builders
 
 Introduce EventTypeMigration<TUpgrade, TPrevious> base class with
@@ -68,7 +112,7 @@ typed property builders for Split, Join, Rename, and DefaultValue
 operations. Migrators are discovered automatically by convention.
 ```
 
-```
+```text
 Add integration specs for observer replay on redaction
 ```
 

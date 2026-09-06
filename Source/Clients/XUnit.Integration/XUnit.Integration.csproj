@@ -4,6 +4,8 @@
         <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.XUnit.Integration</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
+        <Description>xUnit integration-testing support for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Fixtures and helpers for integration tests against an in-process kernel.</Description>
+        <PackageTags>event-sourcing;event-store;cqrs;testing;xunit;integration-testing;dotnet;chronicle</PackageTags>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
 

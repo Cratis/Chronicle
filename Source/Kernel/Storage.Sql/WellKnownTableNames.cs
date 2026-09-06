@@ -89,6 +89,11 @@ public static class WellKnownTableNames
     public const string Recommendations = "Recommendations";
 
     /// <summary>
+    /// The table that holds the behavior patterns that survived mining.
+    /// </summary>
+    public const string BehaviorPatterns = "BehaviorPatterns";
+
+    /// <summary>
     /// The table that holds observer definitions.
     /// </summary>
     public const string ObserverDefinitions = "ObserverDefinitions";

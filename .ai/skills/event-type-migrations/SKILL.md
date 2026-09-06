@@ -29,12 +29,17 @@ Generation 1 (stored) → Migration 1→2 → Migration 2→3 → Current (Gener
 
 ### 1. Keep the prior record and bump the generation on the new one
 
-Keep the old shape available to the migration as `TPrevious`, and mark the current record's generation:
+Keep the old shape available to the migration as `TPrevious`. Mark the current record's generation with `[EventType(generation: N)]` as always, and mark the prior record with **`[EventTypeGenerationFor<TCurrent>(N-1)]`** instead of its own `[EventType]` — its event type id is then resolved from the current record's `[EventType]`, so the two can never end up with mismatched ids:
 
 ```csharp
 [EventType(generation: 2)]
 public record OrderPlaced(OrderId OrderId, Currency Currency);   // generation 2 (current)
+
+[EventTypeGenerationFor<OrderPlaced>(1)]
+public record OrderPlacedV1(OrderId OrderId);   // generation 1 (prior)
 ```
+
+> **Older style, still supported:** you can instead give `OrderPlacedV1` its own `[EventType("order-placed", generation: 1)]`, as long as the id string is explicit and **identical** to the id on `OrderPlaced`. This is not deprecated, but prefer `[EventTypeGenerationFor<T>]` for anything new — an omitted or mismatched id on this older style silently defaults to the CLR type name, which Chronicle then treats as a wholly unrelated event type, and the migration never applies. Two analyzers (`CHR0037`, `CHR0049`) and a constructor-time exception (`MigrationGenerationsMustShareEventTypeId`) catch this mistake for both styles.
 
 ### 2. Write the migration
 
@@ -55,6 +60,25 @@ public class OrderPlacedV1ToV2 : EventTypeMigration<OrderPlaced, OrderPlacedV1>
 
 The property builder exposes `DefaultValue`, `RenamedFrom`, `Split`, and `Combine` — use them to express the change declaratively. Both `Upcast` and `Downcast` are abstract on the base, so both must be implemented (`Downcast` may be a no-op `builder.Properties(_ => { })` when no consumer needs the gen-1 shape).
 
+**A property inside a nested value object is addressed by the expression you'd write anyway** — `pb.DefaultValue(_ => _.Price.Description, "unspecified")`. The expression becomes the path `Price.Description`: reading walks into the object, writing creates the objects along the way. That also restructures a payload — `RenamedFrom(_ => _.Price.Amount, e => e.Amount)` moves a top-level value into the object it now belongs to. A path that resolves to nothing is rejected at registration with `InvalidMigrationPropertyForEventType`.
+
+> **Adding or removing an *optional* property — at any depth — needs the migration class but no property operations in it.** Chronicle converts a payload by walking the *target* generation's schema, so upcasting materializes the new property as absent and downcasting drops it, on their own. An empty `Upcast`/`Downcast` pair is the correct and complete migration there; the class only has to exist so the generation chain is complete. Reach for `DefaultValue` when absent is the wrong answer and you want a specific value.
+
+### 2b. When the *values* changed meaning, declare a value map
+
+The operations above move values between properties. When a value itself means something different in the new generation — an enum renumbered, a status code set replaced — override **`MapValues`** on the migration instead. It is declared once and applied forward when upcasting and inverted when downcasting:
+
+```csharp
+public override void MapValues(IEventValueMapBuilder<OrderStatusChanged, OrderStatusChangedV1> builder) =>
+    builder.For(current => current.Status, previous => previous.Status, map => map
+        .Map(OrderStatusV1.Pending, OrderStatus.Awaiting)
+        .Map(OrderStatusV1.Done, OrderStatus.Completed));
+```
+
+Values the map doesn't mention are carried across unchanged. Two values collapsing onto one take the first pair declared for that value on the way back. `MapValues` runs *before* `Upcast`/`Downcast`, so a direction that states its own transformation for the property keeps it — that's also how you express a deliberately one-way translation (`builder.Properties(pb => pb.MapValues(...))`).
+
+> **An enum gaining a member or having a member renamed needs no migration at all** — Chronicle accepts both in place and updates the registered schema, because neither changes what an already stored value means. Only a *removed* or *renumbered* member needs a new generation plus a value map.
+
 ### 3. Chain across generations
 
 For three generations, write two migrations (`1→2`, `2→3`) — each only knows its adjacent pair; Chronicle chains them.
@@ -64,9 +88,11 @@ For three generations, write two migrations (`1→2`, `2→3`) — each only kno
 | Pitfall | Why it breaks |
 |---|---|
 | Editing the stored event record without bumping `generation` | Old events still carry the old schema; Chronicle won't migrate them |
+| Giving the prior record its own `[EventType]` with no id, or an id that doesn't exactly match the current generation's | Chronicle treats the two as unrelated event types and the migration never applies; use `[EventTypeGenerationFor<T>]` so there's no id to mismatch |
 | Adding a nullable value type to handle "missing old data" | Analyzer-flagged anti-pattern; use a migration default |
 | A migration that throws on a null/missing old field | Old events may lack fields entirely — null-coalesce / default |
 | Splitting one event into two inside `Upcast` | `Upcast` returns one event; model a split as a reactor/command, not a schema migration |
+| Reaching for an API to build a new nested value from the old one | There isn't one, and there doesn't need to be — a migration is a declarative descriptor evaluated kernel-side against JSON, with no CLR types. Address the inner property directly (`_ => _.Price.Description`), or leave the migration empty when the property is optional |
 
 ## Quality gate
 

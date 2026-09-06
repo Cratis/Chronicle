@@ -1,0 +1,1 @@
+../../.ai/agents/frontend-developer.md

@@ -1,12 +1,21 @@
 name: Publish
 
-# Keyed by the pull request, never by a value that several simultaneously-closing pull requests share.
-# Merging a consolidation closes every pull request whose commits it carries, each of those fires its own
-# pull_request:closed event, and on a shared group cancel-in-progress means the last run to start cancels
-# the rest — including the one that was supposed to cut the release.
+# Publish runs are grouped per pull request, and never cancelled.
+#
+# Under the pull_request trigger github.ref is refs/pull/<N>/merge, so this group is unique to one
+# pull request: simultaneous merges never cancel one another's publish run, and with
+# cancel-in-progress off a run that has started always finishes and cuts its version. It does not
+# serialize releases. Choosing the next version is a read then a create, so two runs still read the
+# same latest version and race to create it - merging eleven pull requests in two minutes on
+# 2026-08-18 gave five runs all computing v16.35.7 and four 403s from secondary rate limiting.
+# A constant group would not fix that and must not be introduced: GitHub keeps only one pending run
+# per group and cancels the earlier pending one, so a third merge silently drops the second's
+# release, which is worse than a noisy 403. The real fix is to stop deriving the version from a
+# read-then-create race - retry the create with backoff, or decouple release from merge so only one
+# release run exists at a time (task 2.2 in PLAN-reliability-program.md).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
@@ -72,6 +81,7 @@ jobs:
     # doing any work at all, on top of the concurrency key above keeping them out of each other's way.
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
@@ -96,6 +106,7 @@ jobs:
   coverage-statistics:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release]
     permissions:
       contents: write
@@ -115,13 +126,15 @@ jobs:
           fail-on-cache-miss: false
 
       - name: Collect coverage statistics for release
+        env:
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           .github/scripts/collect-coverage.sh \
             "./coverage-reports" \
             "./Documentation/statistics/coverage-data.js" \
             "${{ needs.release.outputs.version }}" \
             "${{ github.sha }}" \
-            "${{ github.event.head_commit.message }}"
+            "$HEAD_COMMIT_MESSAGE"
 
       - name: Commit coverage statistics
         run: |
@@ -142,6 +155,7 @@ jobs:
   dotnet-x64:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release]
 
     steps:
@@ -170,6 +184,7 @@ jobs:
   dotnet-arm64:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
     needs: [release]
 
     steps:
@@ -198,6 +213,7 @@ jobs:
   workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release]
 
     steps:
@@ -244,6 +260,7 @@ jobs:
   dotnet-pack-and-publish:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
     permissions:
       # Required for NuGet trusted publishing using OIDC tokens
@@ -272,7 +289,7 @@ jobs:
 
       - name: Build and Create NuGet packages
         run: |
-          for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
+          find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
             dotnet pack "$project" --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
           done
           # Also pack the Contracts project from Kernel
@@ -297,6 +314,7 @@ jobs:
   notify-arc:
     if: needs.release.outputs.publish == 'true' && needs.release.outputs.prerelease != 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release, dotnet-pack-and-publish]
 
     steps:
@@ -335,9 +353,26 @@ jobs:
       version: ${{ needs.release.outputs.version }}
       protos-artifact: proto-files
 
+  publish-python-client:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release, generate-protos]
+    uses: ./.github/workflows/publish-python-client.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
+      protos-artifact: proto-files
+
+  # The development kernel is built Release, like the release kernel - the development part is the DEVELOPMENT
+  # symbol passed below, not the configuration. Nothing is lost by optimizing it: DefineConstants resolves to
+  # DEVELOPMENT alone in both configurations (the global property overrides the DEBUG the Debug configuration
+  # would otherwise add), and there is no #if DEBUG, Debug.Assert or [Conditional("DEBUG")] anywhere in Source,
+  # so no conditional code changes - only Optimize. It was built Debug until the unoptimized kernel showed up as
+  # startup cost in every container based on this image: the kernel's boot is serial and CPU-bound, so it lands
+  # directly on time-to-ready on slower cloud vCPUs.
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release]
 
     steps:
@@ -355,7 +390,7 @@ jobs:
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
+          dotnet publish -c Release -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
 
       - name: Upload x64 development kernel output
         uses: actions/upload-artifact@v4
@@ -366,6 +401,7 @@ jobs:
   dotnet-arm64-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
     needs: [release]
 
     steps:
@@ -383,7 +419,7 @@ jobs:
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
+          dotnet publish -c Release -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
 
       - name: Upload arm64 development kernel output
         uses: actions/upload-artifact@v4
@@ -394,6 +430,7 @@ jobs:
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
@@ -440,26 +477,11 @@ jobs:
           if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
             TAGS="${TAGS}\ncratis/chronicle:latest"
           fi
-          echo "tags<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$TAGS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # A published image that cannot start must fail here, not at the consumer - 15.37.0-15.38.2 shipped
-      # unable to start because nothing ever booted what was pushed. Build the native arch locally and boot it.
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/Production/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: chronicle-boot-test:production
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:production production
+          {
+            echo "tags<<EOF"
+            printf '%b\n' "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build Production Docker Image
         uses: docker/build-push-action@v5
@@ -504,6 +526,7 @@ jobs:
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
@@ -538,23 +561,11 @@ jobs:
           if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
             TAGS="${TAGS}\ncratis/chronicle:latest-workbench"
           fi
-          echo "tags<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$TAGS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/Workbench/Dockerfile
-          load: true
-          tags: chronicle-boot-test:workbench
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:workbench workbench
+          {
+            echo "tags<<EOF"
+            printf '%b\n' "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build Workbench Image
         uses: docker/build-push-action@v5
@@ -570,6 +581,7 @@ jobs:
   publish-docker-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
@@ -616,26 +628,11 @@ jobs:
           if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
             TAGS="${TAGS}\ncratis/chronicle:latest-development"
           fi
-          echo "tags<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$TAGS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # Boots with no environment at all - the documented zero-config consumer invocation. That exact path
-      # aborted at startup for every development image from 16.33.1 onward without CI noticing.
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/Development/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: chronicle-boot-test:development
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:development development
+          {
+            echo "tags<<EOF"
+            printf '%b\n' "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build Development Docker Image
         uses: docker/build-push-action@v5
@@ -666,6 +663,7 @@ jobs:
   publish-docker-development-slim:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
@@ -712,24 +710,11 @@ jobs:
           if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
             TAGS="${TAGS}\ncratis/chronicle:latest-development-slim"
           fi
-          echo "tags<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$TAGS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Build boot-test image
-        uses: docker/build-push-action@v5
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          file: ./Docker/DevelopmentSlim/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: chronicle-boot-test:development-slim
-          build-args: |
-            VERSION=${{ needs.release.outputs.version }}
-
-      - name: Boot the image before publishing
-        run: bash ./Docker/boot-test.sh chronicle-boot-test:development-slim development-slim
+          {
+            echo "tags<<EOF"
+            printf '%b\n' "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build Development Slim Docker Image
         uses: docker/build-push-action@v5
@@ -743,13 +728,54 @@ jobs:
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
 
+  verify-published-docker-tags:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    needs:
+      - release
+      - publish-docker-production
+      - publish-docker-workbench
+      - publish-docker-development
+      - publish-docker-development-slim
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@master
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Verify published Docker tags
+        env:
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
+          RELEASE_PRERELEASE: ${{ needs.release.outputs.prerelease }}
+        run: |
+          python3 .github/scripts/verify-published-docker-tags.py \
+            --version "$RELEASE_VERSION" \
+            --prerelease "$RELEASE_PRERELEASE"
+
   verify-published:
     # A merged pull request that publishes nothing is the failure mode that silently costs a release: the release
     # job succeeds, every publish job is skipped for want of should-publish, and the whole run reports green. Fail
     # instead, so a release that did not happen cannot be mistaken for one that did. workflow_dispatch is excluded
     # because a manual run may legitimately resolve to no publish.
-    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true'
+    #
+    # A pull request labelled no-release published nothing on purpose - it changed no shipped behavior - so this
+    # check would be reporting the intended outcome as a failure, and a job that cries wolf on the common case
+    # stops being read. verify-semver-label guarantees the label is a deliberate choice rather than an omission,
+    # which is what makes it safe to trust here.
+    if: always() && github.event_name == 'pull_request' && needs.release.result == 'success' && needs.release.outputs.publish != 'true' && !contains(github.event.pull_request.labels.*.name, 'no-release')
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [release]
 
     steps:

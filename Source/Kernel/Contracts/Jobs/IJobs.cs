@@ -243,7 +243,7 @@ public class JobSummaryResponse
     /// Gets or sets the Created.
     /// </summary>
     [ProtoMember(5)]
-    public DateTimeOffset Created { get; set; }
+    public Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Created { get; set; }
 
     /// <summary>
     /// Gets or sets the StatusChanges.

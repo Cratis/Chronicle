@@ -1,6 +1,6 @@
 # Authentication
 
-Authentication is always enabled. When `authority` is not configured, Chronicle uses its built-in OpenIdDict OAuth authority. When `authority` is set to an external OAuth provider URL, Chronicle will use that instead of the internal authority.
+Authentication is enabled by default. When `authority` is not configured, Chronicle uses its built-in OpenIdDict OAuth authority. When `authority` is set to an external OAuth provider URL, Chronicle will use that instead of the internal authority.
 
 Identity provider certificate configuration is documented on [Identity Provider Certificate](identity-provider-certificate.md).
 
@@ -9,6 +9,7 @@ Identity provider certificate configuration is documented on [Identity Provider 
 ```json
 {
   "authentication": {
+    "enabled": true,
     "authority": null,
     "defaultAdminUsername": "admin"
   }
@@ -17,8 +18,34 @@ Identity provider certificate configuration is documented on [Identity Provider 
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
+| enabled | bool | true | Whether authentication is enforced. See [Turning authentication off](#turning-authentication-off) |
 | authority | string | null | External OAuth authority URL |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
+
+## Turning authentication off
+
+Setting `enabled` to `false` removes authentication from the server entirely. There is no token authority, no
+`/connect/token` endpoint, no identity endpoints and no bootstrap admin user, and every gRPC service and HTTP
+endpoint answers anonymously. A client connects to it with `auth=none` in its connection string:
+
+```text
+chronicle://localhost:35000?auth=none
+```
+
+**This is only for a Chronicle that is not reachable as a server.** It exists for an instance embedded in a
+single container or process, talking to its own client over loopback, thrown away with the process — a play
+sandbox, a disposable test host. There the credential exchange protects nothing and costs every client
+seconds of cold start: acquiring the first access token takes 1.9 seconds on an unconstrained machine and 3.7
+under a half-core container limit, almost all of it warming the token endpoint's request pipeline.
+
+Anywhere a network can reach the server, leaving this off publishes the whole event store — every event, every
+read model, every management operation — to anyone who can open a socket to it. It is not a development
+convenience to be left on by accident; treat it as part of the deployment topology.
+
+A client using `auth=none` against a server that does enforce authentication fails every call as
+unauthenticated. Note also that a connection string with *no* credentials does not mean this — it still
+performs a client-credentials exchange using the development credentials, which is what it has always done.
+`auth=none` is the explicit form.
 
 ## Admin user bootstrap
 

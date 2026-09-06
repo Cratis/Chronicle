@@ -9,5 +9,5 @@ public class with_passive_attribute : Specification
 
     void Because() => _result = typeof(TypeWithPassiveAttribute).HasModelBoundProjectionAttributes();
 
-    [Fact] void should_return_true() => _result.ShouldBeTrue();
+    [Fact] void should_return_false() => _result.ShouldBeFalse();
 }

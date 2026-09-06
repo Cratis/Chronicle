@@ -78,6 +78,20 @@ public interface IProjection : IGrainWithStringKey
     Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events);
 
     /// <summary>
+    /// Selects the events that the projection resolves to a specific read model key.
+    /// </summary>
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="key">The read model key to select events for.</param>
+    /// <param name="events">The events to select from.</param>
+    /// <returns>The events that belong to <paramref name="key"/>, in the order they were given.</returns>
+    /// <remarks>
+    /// A read model's key is whatever the projection resolves it to, which is only the event source id
+    /// when the projection does not say otherwise. Anything wanting the events behind one instance has
+    /// to ask the projection rather than filter the sequence by event source.
+    /// </remarks>
+    Task<IEnumerable<AppendedEvent>> GetEventsForKey(EventStoreNamespaceName eventStoreNamespace, ReadModelKey key, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
     /// Process a set of events through the projection for preview with a provided read model definition.
     /// This is used when the read model hasn't been persisted yet (e.g., draft read models).
     /// </summary>

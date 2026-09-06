@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
 using OpenIddict.Validation.AspNetCore;
@@ -49,9 +50,11 @@ public static class ServiceCollectionExtensions
         var encryptionCertificateRing = Cratis.Chronicle.Security.EncryptionCertificateRing.From(chronicleOptions);
         services.AddSingleton<Cratis.Chronicle.Security.IEncryptionCertificateRing>(encryptionCertificateRing);
 
-        // Configure Data Protection (required for webhook secret encryption)
-        // This is set up here to ensure it's available even when OpenIddict is disabled
-        services.AddSingleton<IXmlRepository, GrainBasedXmlRepository>();
+        // Configure Data Protection with Chronicle's shared storage so every node uses the same authentication key ring.
+        services.AddSingleton<GrainBasedXmlRepository>();
+        services.AddSingleton<IXmlRepository>(sp => sp.GetRequiredService<GrainBasedXmlRepository>());
+        services.AddOptions<KeyManagementOptions>()
+            .Configure<GrainBasedXmlRepository>((options, repository) => options.XmlRepository = repository);
         var dataProtectionBuilder = services.AddDataProtection()
             .SetApplicationName("Chronicle");
 
@@ -64,6 +67,20 @@ public static class ServiceCollectionExtensions
             dataProtectionBuilder
                 .ProtectKeysWithCertificate(encryptionCertificateRing.Active.Certificate)
                 .UnprotectKeysWithAnyCertificate([.. encryptionCertificateRing.All.Select(_ => _.Certificate)]);
+        }
+
+        // Everything from here on exists to authenticate callers. With authentication off there is nothing to
+        // authenticate them against, so the token authority, the identity stack and the schemes are all skipped
+        // and the fallback policy lets every request through. Data Protection above stays either way - webhook
+        // secret encryption depends on it and has nothing to do with authentication.
+        if (!chronicleOptions.Authentication.Enabled)
+        {
+            services.AddAuthorizationBuilder()
+                .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+                    .RequireAssertion(_ => true)
+                    .Build());
+
+            return services;
         }
 
         // Add ASP.NET Identity

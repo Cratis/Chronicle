@@ -32,7 +32,7 @@ public record SaveSequenceQueryFolder(
     /// <param name="sequenceQueries">The <see cref="ISequenceQueries"/> contract.</param>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <returns>Awaitable task.</returns>
-    internal Task Handle(ISequenceQueries sequenceQueries, ICurrentPrincipalAccessor currentPrincipalAccessor) =>
+    public Task Handle(ISequenceQueries sequenceQueries, ICurrentPrincipalAccessor currentPrincipalAccessor) =>
         sequenceQueries.SaveFolder(new()
         {
             EventStore = EventStore,

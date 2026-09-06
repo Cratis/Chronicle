@@ -22,6 +22,7 @@ internal static class NamespaceJsonStringColumns
         (typeof(JobSteps.JobStep), "StateJson"),
         (typeof(FailedPartitions.FailedPartition), "StateJson"),
         (typeof(Recommendations.Recommendation), "RequestJson"),
+        (typeof(Patterns.BehaviorPattern), "FacetsJson"),
         (typeof(Projections.ProjectionFutureEntity), "EventContentJson"),
         (typeof(Projections.ProjectionFutureEntity), "ParentKeyJson"),
         (typeof(Changesets.Changeset), "ChangesetData"),

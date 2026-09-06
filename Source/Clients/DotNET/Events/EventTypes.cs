@@ -55,6 +55,9 @@ public class EventTypes : IEventTypes
     public IImmutableList<EventType> All => _typesByEventType.Keys.ToImmutableList();
 
     /// <inheritdoc/>
+    /// <exception cref="MultipleEventTypesWithSameIdFound">
+    /// Thrown when more than one CLR type resolves to the same event type id and generation.
+    /// </exception>
     public Task Discover()
     {
         var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
@@ -62,11 +65,16 @@ public class EventTypes : IEventTypes
             ClrType = _,
             EventType = _.GetEventType()
         }).ToArray();
-        var duplicateEventTypes = eventTypes.GroupBy(_ => _.EventType).Where(_ => _.Count() > 1).ToArray();
-        if (duplicateEventTypes.Length > 0)
+
+        var duplicate = eventTypes
+            .GroupBy(_ => _.EventType)
+            .Where(_ => _.Count() > 1)
+            .OrderBy(_ => _.Key.Id.Value)
+            .ThenBy(_ => _.Key.Generation.Value)
+            .FirstOrDefault();
+        if (duplicate is not null)
         {
-            var clrTypes = duplicateEventTypes.SelectMany(_ => _).Select(_ => _.ClrType).ToArray();
-            throw new MultipleEventTypesWithSameIdFound(clrTypes);
+            throw new MultipleEventTypesWithSameIdFound(duplicate.Key, duplicate.Select(_ => _.ClrType));
         }
 
         _typesByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _.ClrType);
@@ -84,7 +92,8 @@ public class EventTypes : IEventTypes
         // type are registered as a single registration with multiple generation schemas.
         foreach (var group in _typesByEventType.GroupBy(_ => _.Key.Id))
         {
-            var latestEntry = group.OrderByDescending(_ => _.Key.Generation.Value).First();
+            var orderedGroup = group.OrderBy(_ => _.Key.Generation.Value).ToList();
+            var latestEntry = orderedGroup[^1];
             var latestEventType = latestEntry.Key;
             var latestClrType = latestEntry.Value;
             var latestSchema = _schemasByEventType[latestEventType];
@@ -97,23 +106,28 @@ public class EventTypes : IEventTypes
                 EventStore = eventStoreAttribute?.EventStore ?? string.Empty
             };
 
-            foreach (var (eventType, clrType) in group)
+            // Pass 1: register the real schema for every CLR type that represents a generation in
+            // this group before any migrator gets a chance to backfill a placeholder for it. This
+            // must be a distinct pass rather than interleaved with migrator processing below,
+            // because the underlying dictionary's enumeration order is not generation-ascending and
+            // is randomized per process - interleaving let a migrator's placeholder win the race
+            // against a lower generation's real schema depending on enumeration order.
+            foreach (var (eventType, _) in orderedGroup)
             {
                 var schema = _schemasByEventType[eventType];
-                var migrators = _eventTypeMigrators.GetMigratorsFor(clrType).ToList();
-
-                // Add generation definition for this CLR type
-                if (!registration.Generations.Any(g => g.Generation == eventType.Generation.Value))
+                registration.Generations.Add(new EventTypeGenerationDefinition
                 {
-                    registration.Generations.Add(new EventTypeGenerationDefinition
-                    {
-                        Generation = eventType.Generation,
-                        Schema = schema.ToJson()
-                    });
-                }
+                    Generation = eventType.Generation,
+                    Schema = schema.ToJson()
+                });
+            }
 
-                // Add migration definitions from discovered migrators
-                foreach (var migrator in migrators)
+            // Pass 2: add migration definitions, backfilling an empty placeholder schema only for a
+            // generation that has no CLR type at all in this group (a genuine gap, kept for backward
+            // compatibility) - never for one whose real schema was already added in pass 1.
+            foreach (var (_, clrType) in orderedGroup)
+            {
+                foreach (var migrator in _eventTypeMigrators.GetMigratorsFor(clrType))
                 {
                     var upcastBuilder = new EventMigrationBuilder();
                     migrator.Upcast(upcastBuilder);
@@ -129,9 +143,6 @@ public class EventTypes : IEventTypes
                         DowncastJmesPath = downcastBuilder.ToJson().ToJsonString()
                     });
 
-                    // Ensure both from and to generation schemas are registered so the kernel
-                    // can store all generations. If a generation schema is not explicitly known
-                    // (e.g. a previous generation schema), use an empty schema.
                     if (!registration.Generations.Any(g => g.Generation == migrator.From.Value))
                     {
                         registration.Generations.Add(new EventTypeGenerationDefinition

@@ -5,8 +5,7 @@ import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { SeedEntry } from 'Api/Seeding/SeedEntry';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
-import { ObjectContentEditor as _OCE } from '@cratis/components';
-const ObjectContentEditor = _OCE.ObjectContentEditor;
+import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 

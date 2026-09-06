@@ -52,22 +52,6 @@ Exit codes:
 - `0`: No breaking changes detected
 - `1`: Breaking changes detected
 
-#### `update-pr-description.sh`
-
-Updates a pull request description with a warning about gRPC breaking changes.
-
-**Usage:**
-
-```bash
-GH_TOKEN=<token> .github/scripts/update-pr-description.sh <pr-number> <breaking-changes>
-```
-
-**Example:**
-
-```bash
-GH_TOKEN=$GITHUB_TOKEN .github/scripts/update-pr-description.sh 123 "Service 'Foo' was removed;Method 'Bar' signature changed"
-```
-
 ### Workflows
 
 #### `grpc-compatibility.yml`
@@ -98,7 +82,7 @@ The gRPC compatibility check is integrated into:
 1. **Pull Request Workflow** (`pull-requests.yml`):
    - Runs on every PR
    - Compares PR branch against the base branch
-   - Adds a warning to the PR description if breaking changes are detected
+   - Surfaces any breaking changes through the workflow's `has-breaking-changes` and `breaking-changes` outputs
 
 2. **Publish Workflow** (`publish.yml`):
    - Runs on releases
@@ -112,25 +96,6 @@ The system detects the following types of breaking changes:
 1. **Service Removal**: When a gRPC service is removed
 2. **Method Removal**: When an RPC method is removed from a service
 3. **Signature Changes**: When a method's request or response types change
-
-## Example Output
-
-When breaking changes are detected, the PR description will be updated with:
-
-```markdown
-## ⚠️ gRPC API Breaking Changes Detected
-
-This PR introduces **breaking changes** to the gRPC API surface that will cause wire incompatibility with existing clients.
-
-### Breaking Changes:
-- Service 'EventStores' was removed
-- Method 'Namespaces.GetNamespaces' signature changed
-
-Please ensure:
-1. This is intentional and documented in the release notes
-2. Version number is bumped appropriately (major version for breaking changes)
-3. Migration guide is provided if necessary
-```
 
 ## Development
 

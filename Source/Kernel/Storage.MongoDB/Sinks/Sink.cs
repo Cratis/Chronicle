@@ -147,7 +147,9 @@ public class Sink(
         // upsert a phantom Group keyed on UserId. Use the join-targets-only filter (Empty)
         // in this case so only existing documents are updated.
         var hasJoined = changeset.HasJoined();
+        var hasActualRootLevelJoin = HasActualRootLevelJoin(changeset.Changes);
         var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
+        var shouldSuppressRootUpdateAfterRootLevelJoin = hasActualRootLevelJoin && onlyPropertyUpdatesAlongsideJoin;
 
         // Compute the _id filter value only when the document is actually keyed by _id. For a join whose
         // target documents are matched by the join column (the Empty filter below), the resolved key carries
@@ -223,6 +225,14 @@ public class Sink(
 
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
         if (!converted.hasChanges) return [];
+
+        // ChangesetConverter has already executed the correctly filtered UpdateMany for the root join.
+        // Any remaining direct root PropertiesChanged have no single _id target, so issuing the follow-up
+        // UpdateOne would pick an arbitrary document (Filter.Empty) and corrupt it.
+        if (shouldSuppressRootUpdateAfterRootLevelJoin)
+        {
+            return [];
+        }
 
         if (_isBulkMode)
         {
@@ -306,6 +316,13 @@ public class Sink(
     public async Task BeginReplay(ReplayContext context)
     {
         await collections.BeginReplay(context);
+
+        // A replay writes into its own shadow collection and that collection is renamed into place at the end,
+        // taking its own indexes with it - and only its own. Indexes were ensured once when the sink was built,
+        // against the collection that the swap replaces, so without this the promoted collection comes up with
+        // none of them until something rebuilds the sink. Recreating them is exactly what the declaration on the
+        // read model is for (#3942).
+        await EnsureIndexes();
         await BeginBulk();
     }
 
@@ -313,6 +330,7 @@ public class Sink(
     public async Task ResumeReplay(ReplayContext context)
     {
         await collections.ResumeReplay(context);
+        await EnsureIndexes();
         await BeginBulk();
     }
 
@@ -456,6 +474,11 @@ public class Sink(
                 observer.OnCompleted);
         });
     }
+
+    static bool HasActualRootLevelJoin(IEnumerable<Change> changes) =>
+        changes
+            .OfType<Joined>()
+            .Any(joined => !joined.ArrayIndexers.All.Any());
 
     /// <summary>
     /// Builds the clause that restricts a write to documents that have not yet observed the given event.

@@ -36,6 +36,16 @@ public sealed class JobStateConverter : JsonConverter<JobState>
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Job grains persist their own <see cref="JobState"/>-derived state type, so the converter must own those types
+    /// too - exactly as MongoDB's <c>JobStateSerializationProvider</c> hands every <see cref="JobState"/> subclass to
+    /// its serializer. Without this, System.Text.Json falls back to the default converter for a derived state, which
+    /// writes the <see cref="JobState.Request"/> declared as the empty marker interface <c>IJobRequest</c> as an empty
+    /// object and cannot read it back at all.
+    /// </remarks>
+    public override bool CanConvert(Type typeToConvert) => typeof(JobState).IsAssignableFrom(typeToConvert);
+
+    /// <inheritdoc/>
     public override JobState? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var node = JsonElement.ParseValue(ref reader);
@@ -43,10 +53,9 @@ public sealed class JobStateConverter : JsonConverter<JobState>
         {
             return default!;
         }
-        var jobStateResult = new JobState();
+        var jobStateResult = (JobState)Activator.CreateInstance(typeToConvert)!;
         var nodeAsObject = JsonObject.Create(node);
         jobStateResult.Type = new(nodeAsObject![nameof(JobState.Type).ToCamelCase()]!.ToString());
-        var jobRequestType = _jobTypes.Value.GetRequestClrTypeForOrThrow(jobStateResult.Type);
 
         foreach (var (field, value) in nodeAsObject)
         {
@@ -65,9 +74,16 @@ public sealed class JobStateConverter : JsonConverter<JobState>
             var deserializedValue = value.Deserialize(jobStatePropertyInfo.PropertyType, options);
             jobStatePropertyInfo.SetValue(jobStateResult, deserializedValue);
         }
-        var jobStateRequestProperty = typeToConvert.GetProperty(nameof(JobState.Request))!;
-        var jobRequest = nodeAsObject[nameof(JobState.Request).ToCamelCase()]!.Deserialize(jobRequestType, options);
-        jobStateRequestProperty.SetValue(jobStateResult, jobRequest);
+
+        // Write only emits the request when there is one, and JobState.Request starts out unset, so a state persisted
+        // before its request was assigned has no request to read back - and nothing to resolve a request type for.
+        // Mirrors the MongoDB serializer's bookmark handling.
+        if (nodeAsObject[nameof(JobState.Request).ToCamelCase()] is { } requestNode)
+        {
+            var jobRequestType = _jobTypes.Value.GetRequestClrTypeForOrThrow(jobStateResult.Type);
+            var jobStateRequestProperty = typeToConvert.GetProperty(nameof(JobState.Request))!;
+            jobStateRequestProperty.SetValue(jobStateResult, requestNode.Deserialize(jobRequestType, options));
+        }
 
         return jobStateResult;
     }

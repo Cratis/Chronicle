@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 
@@ -20,7 +21,7 @@ public static class ModelBoundProjectionsExtensions
     {
         try
         {
-            if (type.GetCustomAttributes().Any(attr => attr is IProjectionAnnotation || attr is EventSequenceAttribute))
+            if (type.GetCustomAttributes().Any(IsModelBoundProjectionAttribute))
             {
                 return true;
             }
@@ -32,7 +33,7 @@ public static class ModelBoundProjectionsExtensions
             {
                 var parameters = primaryConstructor.GetParameters();
                 if (parameters.Any(param => param.GetCustomAttributes()
-                                                    .Any(attr => attr is IProjectionAnnotation)))
+                                                    .Any(IsModelBoundProjectionAttribute)))
                 {
                     return true;
                 }
@@ -40,12 +41,16 @@ public static class ModelBoundProjectionsExtensions
 
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             return properties.Any(property => property.GetCustomAttributes()
-                                                      .Any(attr => attr is IProjectionAnnotation));
+                                                      .Any(IsModelBoundProjectionAttribute));
         }
         catch (Exception ex) when (ex is FileNotFoundException or FileLoadException or TypeLoadException or ReflectionTypeLoadException)
         {
             return false;
         }
     }
+
+    static bool IsModelBoundProjectionAttribute(object attribute) =>
+        attribute is EventSequenceAttribute ||
+        attribute is IProjectionAnnotation and not PassiveAttribute;
 }
 

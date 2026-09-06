@@ -22,5 +22,17 @@ public class CausationManagerForTesting : ICausationManager
     }
 
     /// <inheritdoc/>
+    public IDisposable BeginScope(CausationType type, IDictionary<string, string> properties) => NullScope.Instance;
+
+    /// <inheritdoc/>
     public IImmutableList<Causation> GetCurrentChain() => ImmutableList<Causation>.Empty;
+
+    sealed class NullScope : IDisposable
+    {
+        public static readonly NullScope Instance = new();
+
+        public void Dispose()
+        {
+        }
+    }
 }

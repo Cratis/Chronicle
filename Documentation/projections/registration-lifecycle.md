@@ -19,6 +19,21 @@ definition in the registration still lands — in the engine, in its projection 
 registered state — and the failure is reported back to the client naming exactly the projections that
 did not register. A failed definition is not marked registered, so the next registration retries it.
 
+## When the kernel is busy
+
+Registering a projection against a store that already holds events starts a catch-up, and registration
+does not wait for it. A projection catches up through a single job step that walks the sequence in
+global order, and that step is brought up on the observer's own turn rather than inside the
+registration call — so the size of the event log does not decide how long registering takes.
+
+Registration is also retried rather than fatal. The client re-runs the whole registration with an
+exponential backoff before giving up, configurable through
+[`RegistrationRetry`](../configuration/chronicle-options) — every step is idempotent, so a retry
+costs the kernel only the comparison it already does. A host therefore waits out a kernel that is
+merely busy instead of failing to start, restarting, and re-registering into the queue it was waiting
+on. A kernel that is genuinely refusing the definitions still fails the host, once the attempts are
+spent.
+
 ## When a projection is no longer registered — retirement
 
 A projection the client stops declaring — its read model was deleted, or renamed and thereby given a

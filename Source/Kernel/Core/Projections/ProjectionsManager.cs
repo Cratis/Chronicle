@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
@@ -83,9 +84,10 @@ public partial class ProjectionsManager(
                 failures[identifier] = exception;
             }
 
-            // Merge into the state only the definitions that the engine and the projection grains fully accepted.
-            // A definition that failed anywhere is left out, so the next registration sees it as changed and retries
-            // exactly the work that did not land - one bad definition can no longer leave the others silently stale.
+            // Merge into the state only the definitions that the engine and projection grains fully accepted.
+            // A downstream subscription failure can happen after the engine accepted a definition. Leaving that
+            // definition out makes the next client registration reconcile every layer idempotently without rolling
+            // back observers or triggering additional replay side effects during the failed registration.
             MergeIntoState(changedDefinitions.Where(definition => !failures.ContainsKey(definition.Identifier)));
             await WriteStateAsync();
         }
@@ -141,7 +143,8 @@ public partial class ProjectionsManager(
     async Task OnNamespaceAdded(NamespaceAdded added)
     {
         await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
-        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+        var readModelDefinitions = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
+            .ToDictionary(readModel => readModel.Identifier);
         var eventTypeSchemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
 
         await Task.WhenAll(State.Projections.Select(async projectionDefinition =>
@@ -151,8 +154,7 @@ public partial class ProjectionsManager(
                 var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
                 var projection = GrainFactory.GetGrain<IProjection>(key);
                 await projection.SetDefinition(projectionDefinition);
-                var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == projectionDefinition.ReadModel);
-                if (readModelDefinition is null)
+                if (!readModelDefinitions.TryGetValue(projectionDefinition.ReadModel, out var readModelDefinition))
                 {
                     logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
                     return;
@@ -201,7 +203,8 @@ public partial class ProjectionsManager(
     async Task<IReadOnlyDictionary<ProjectionId, Exception>> SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions)
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+        var readModelDefinitions = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
+            .ToDictionary(readModel => readModel.Identifier);
 
         // The event type schemas are the same for every definition and namespace in this pass; fetching them once
         // here instead of per subscription keeps a registration from fanning out into definitions × namespaces
@@ -211,13 +214,12 @@ public partial class ProjectionsManager(
         // Failures are isolated per definition: one projection that cannot set its definition or subscribe must not
         // keep the others from landing, and the caller decides whether the collected failures surface as an error
         // (registration) or are only logged (the timer-driven resubscription pass).
-        var failures = new Dictionary<ProjectionId, Exception>();
+        var failures = new ConcurrentDictionary<ProjectionId, Exception>();
         await Task.WhenAll(definitions.Select(async definition =>
         {
             try
             {
-                var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
-                if (readModelDefinition is null)
+                if (!readModelDefinitions.TryGetValue(definition.ReadModel, out var readModelDefinition))
                 {
                     logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
                     failures[definition.Identifier] = new ReadModelNotFound(definition.ReadModel);
@@ -238,40 +240,19 @@ public partial class ProjectionsManager(
 
     async Task<IReadOnlyList<ProjectionDefinition>> RegisterWithEngine(IReadOnlyList<ProjectionDefinition> definitions, Dictionary<ProjectionId, Exception> failures)
     {
-        try
+        var result = await projectionsService.Register(_eventStoreName, definitions);
+        if (!result.TryGetError(out var error))
         {
-            await projectionsService.Register(_eventStoreName, definitions);
             return definitions;
         }
-        catch (Exception exception) when (definitions.Count == 1)
+
+        foreach (var (identifier, failure) in error.Failures)
         {
-            failures[definitions[0].Identifier] = exception;
-            logger.FailedRegisteringProjectionWithEngine(exception, definitions[0].Identifier);
-            return [];
-        }
-        catch
-        {
-            // At least one definition in the batch was rejected, and the batch call only surfaces the first failure.
-            // Fall through to registering each definition on its own so one bad definition cannot leave every other
-            // changed definition silently stale.
+            failures[identifier] = failure;
+            logger.FailedRegisteringProjectionWithEngine(failure, identifier);
         }
 
-        var accepted = new List<ProjectionDefinition>();
-        foreach (var definition in definitions)
-        {
-            try
-            {
-                await projectionsService.Register(_eventStoreName, [definition]);
-                accepted.Add(definition);
-            }
-            catch (Exception exception)
-            {
-                failures[definition.Identifier] = exception;
-                logger.FailedRegisteringProjectionWithEngine(exception, definition.Identifier);
-            }
-        }
-
-        return accepted;
+        return definitions.Where(definition => !error.Failures.ContainsKey(definition.Identifier)).ToList();
     }
 
     void MergeIntoState(IEnumerable<ProjectionDefinition> definitions)

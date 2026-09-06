@@ -45,11 +45,11 @@ Restart the dev server after setting it — Vite reads the environment at startu
 
 | Piece | Role |
 |---|---|
-| [`vite.config.ts`](../../Source/Workbench/.frontend/vite.config.ts) | Exposes the `PRIMEUI_` prefix alongside `CHRONICLE_` |
-| [`primeUiLicense.ts`](../../Source/Workbench/.frontend/primeUiLicense.ts) | The single accessor; resolves an empty value to `undefined` |
-| [`index.tsx`](../../Source/Workbench/.frontend/index.tsx) | Passes it to `CratisComponentsProvider` |
-| [`.storybook/preview.tsx`](../../Source/Workbench/.frontend/.storybook/preview.tsx) | The same, so Storybook renders unbannered too |
-| [`vite-env.d.ts`](../../Source/Workbench/.frontend/vite-env.d.ts) | Types it, so it is discoverable rather than a magic string |
+| [`vite.config.ts`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/vite.config.ts) | Exposes the `PRIMEUI_` prefix alongside `CHRONICLE_` |
+| [`primeUiLicense.ts`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/primeUiLicense.ts) | The single accessor; resolves an empty value to `undefined` |
+| [`index.tsx`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/index.tsx) | Passes it to `CratisComponentsProvider` |
+| [`.storybook/preview.tsx`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/.storybook/preview.tsx) | The same, so Storybook renders unbannered too |
+| [`vite-env.d.ts`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/vite-env.d.ts) | Types it, so it is discoverable rather than a magic string |
 
 ## Continuous integration
 
@@ -62,6 +62,6 @@ env:
     PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}
 ```
 
-It is set in [`workbench-build.yml`](../../.github/workflows/workbench-build.yml) and
-[`publish.yml`](../../.github/workflows/publish.yml). A fork's pull request builds with it unset, which is
+It is set in [`workbench-build.yml`](https://github.com/Cratis/Chronicle/blob/main/.github/workflows/workbench-build.yml) and
+[`publish.yml`](https://github.com/Cratis/Chronicle/blob/main/.github/workflows/publish.yml). A fork's pull request builds with it unset, which is
 a supported outcome rather than a failure.

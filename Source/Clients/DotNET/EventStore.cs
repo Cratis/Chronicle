@@ -22,6 +22,7 @@ using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -58,7 +59,11 @@ public class EventStore : IEventStore
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
+    readonly RegistrationRetryOptions _registrationRetry;
+    readonly RegistrationBackoff _registrationBackoff;
     SingleFlightRegistration? _registerAllFlight;
+    int _backgroundRegistrationRetryActive;
+    Task? _backgroundRegistrationRetryTask;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -104,6 +109,8 @@ public class EventStore : IEventStore
         ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
+        _registrationRetry = options.Value.RegistrationRetry;
+        _registrationBackoff = new RegistrationBackoff(_registrationRetry.InitialDelay, _registrationRetry.MaximumDelay);
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
@@ -250,6 +257,8 @@ public class EventStore : IEventStore
             artifactActivator,
             loggerFactory.CreateLogger<EventSeeding>());
 
+        Patterns = new Patterns.Patterns(this);
+
         PII = new Compliance.GDPR.PIIManager(eventStoreName, @namespace, connection);
         Identities = new IdentityManager(eventStoreName, @namespace, connection);
 
@@ -314,6 +323,9 @@ public class EventStore : IEventStore
     public IEventSeeding Seeding { get; }
 
     /// <inheritdoc/>
+    public IPatterns Patterns { get; }
+
+    /// <inheritdoc/>
     public Compliance.GDPR.IPIIManager PII { get; }
 
     /// <inheritdoc/>
@@ -326,6 +338,12 @@ public class EventStore : IEventStore
     /// Gets the serializer owned by this event store.
     /// </summary>
     internal IEventSerializer EventSerializer { get; }
+
+    /// <summary>
+    /// Gets the currently running background registration retry loop, if <see cref="StartBackgroundRegistrationRetry"/>
+    /// has started one that has not yet finished.
+    /// </summary>
+    internal Task? PendingBackgroundRegistrationRetry => _backgroundRegistrationRetryTask;
 
     /// <inheritdoc/>
     public async Task DiscoverAll()
@@ -394,30 +412,7 @@ public class EventStore : IEventStore
 
         try
         {
-            // Ensure the event store exists before registering artifacts.
-            await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
-
-            // We need to register event types and read models first, as they are used by the other artifacts
-            await Task.WhenAll(
-                EventTypes.Register(),
-                ReadModels.Register());
-
-            // Register all observers before seeding to prevent race conditions where
-            // seeded events arrive at the kernel before observers are registered
-            await Task.WhenAll(
-                Constraints.Register(),
-                Reactors.Register(),
-                Reducers.Register(),
-                Projections.Register());
-
-            // Auto-subscribe to any external event stores referenced by observers
-            await RegisterExternalEventStoreSubscriptionsAsync();
-
-            // Start watching read models for any registered read model reactors
-            ReadModelReactors.Start();
-
-            // Seed events only after all observers are registered
-            await Seeding.Register();
+            await RegisterAllArtifactsWithRetries();
 
             // Everything that could be registered has been, and the kernel calls carrying it have returned - which is
             // the first moment the outcome is a fact rather than a hope, and the only transition a consumer can
@@ -433,8 +428,138 @@ public class EventStore : IEventStore
             // consumer now has. The connection lifecycle still gets the exception, and a later reconnect that
             // succeeds replaces this outcome wholesale.
             Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception);
+            StartBackgroundRegistrationRetry();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Keeps retrying registration in the background after <see cref="RegisterAllArtifactsWithRetries"/> exhausts
+    /// its bounded attempts, until it succeeds or the connection drops.
+    /// </summary>
+    /// <remarks>
+    /// A registration failure here happens after the transport has already reconnected successfully - the
+    /// connection watchdog only re-drives a full reconnect (and therefore a fresh registration) when the keep-alive
+    /// goes stale, which a healthy transport never does again on its own. Without this, some observers can stay
+    /// unsubscribed indefinitely even though the client and kernel are both otherwise fine, because nothing ever
+    /// asks the kernel again. Idempotent to start - a second failure while one of these loops is already running is
+    /// a no-op, since <see cref="RegisterAll"/> is single-flighted and this loop already owns retrying it.
+    /// </remarks>
+    void StartBackgroundRegistrationRetry()
+    {
+        if (Interlocked.CompareExchange(ref _backgroundRegistrationRetryActive, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _logger.EnteringBackgroundRegistrationRetry();
+
+        // Tracked (not discarded) so a caller that needs to observe the loop's completion - a graceful shutdown, a
+        // specification - can, without this method itself depending on anything awaiting it.
+        _backgroundRegistrationRetryTask = RetryRegistrationInBackgroundUntilSuccessOrDisconnect();
+    }
+
+    async Task RetryRegistrationInBackgroundUntilSuccessOrDisconnect()
+    {
+        var disconnected = false;
+        Task StopOnDisconnect()
+        {
+            disconnected = true;
+            return Task.CompletedTask;
+        }
+
+        Connection.Lifecycle.OnDisconnected += StopOnDisconnect;
+        try
+        {
+            var attempt = 1;
+            while (!disconnected)
+            {
+                var delay = _registrationBackoff.NextDelay(attempt);
+                await Task.Delay(delay);
+
+                if (disconnected)
+                {
+                    return;
+                }
+
+                try
+                {
+                    await RegisterAll();
+                    _logger.BackgroundRegistrationRetrySucceeded(attempt);
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    _logger.RetryingRegisterAllArtifactsInBackground(exception, attempt, delay);
+                    attempt++;
+                }
+            }
+        }
+        finally
+        {
+            Connection.Lifecycle.OnDisconnected -= StopOnDisconnect;
+            Interlocked.Exchange(ref _backgroundRegistrationRetryActive, 0);
+        }
+    }
+
+    /// <summary>
+    /// Register every artifact, retrying the whole registration when the kernel does not accept it.
+    /// </summary>
+    /// <returns>The task representing the operation.</returns>
+    /// <remarks>
+    /// Registration runs on the way up, so its failure is the host's failure. A kernel that is busy - catching up a
+    /// newly added read model over a large event log - answers late rather than wrongly, and a host that dies on that
+    /// answer restarts and re-registers, adding load to the queue it was waiting on. Waiting it out here breaks that
+    /// loop. Every step is idempotent, so a retry re-runs the whole registration rather than trying to resume a
+    /// partial one, and the outcome is only published once the attempts are spent - a waiter never sees the failure
+    /// of an attempt that a later one went on to succeed at.
+    /// </remarks>
+    async Task RegisterAllArtifactsWithRetries()
+    {
+        var attempt = 1;
+        while (true)
+        {
+            try
+            {
+                await RegisterAllArtifacts();
+                return;
+            }
+            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts)
+            {
+                var delay = _registrationBackoff.NextDelay(attempt);
+                _logger.RetryingRegisterAllArtifacts(exception, attempt, _registrationRetry.MaxAttempts, delay);
+                await Task.Delay(delay);
+                attempt++;
+            }
+        }
+    }
+
+    async Task RegisterAllArtifacts()
+    {
+        // Ensure the event store exists before registering artifacts.
+        await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
+
+        // We need to register event types and read models first, as they are used by the other artifacts
+        await Task.WhenAll(
+            EventTypes.Register(),
+            ReadModels.Register());
+
+        // Register all observers before seeding to prevent race conditions where
+        // seeded events arrive at the kernel before observers are registered
+        await Task.WhenAll(
+            Constraints.Register(),
+            Reactors.Register(),
+            Reducers.Register(),
+            Projections.Register());
+
+        // Auto-subscribe to any external event stores referenced by observers
+        await RegisterExternalEventStoreSubscriptionsAsync();
+
+        // Start watching read models for any registered read model reactors
+        ReadModelReactors.Start();
+
+        // Seed events only after all observers are registered
+        await Seeding.Register();
     }
 
     async Task RegisterExternalEventStoreSubscriptionsAsync()

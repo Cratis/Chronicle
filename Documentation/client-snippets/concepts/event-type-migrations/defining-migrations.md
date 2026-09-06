@@ -2,11 +2,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-[EventType]
-public record MigrationsAuthorRegisteredV1(string Name);
-
 [EventType("author-registered", generation: 2)]
 public record MigrationsAuthorRegistered(string FirstName, string LastName);
+
+[EventTypeGenerationFor<MigrationsAuthorRegistered>(1)]
+public record MigrationsAuthorRegisteredV1(string Name);
 
 public class MigrationsAuthorRegisteredMigration : EventTypeMigration<MigrationsAuthorRegistered, MigrationsAuthorRegisteredV1>
 {

@@ -38,13 +38,14 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__OAuthAuthority | Enable internal OAuth authority |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
-| Cratis__Chronicle__Observers__SubscriberTimeout | Observer subscriber timeout in seconds |
+| Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |
 | Cratis__Chronicle__Observers__MaximumBackoffDelay | Maximum observer backoff delay in seconds |
 | Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
+| Cratis__Chronicle__Authentication__Enabled | Whether authentication is enforced (default `true`) - see [Authentication](authentication.md#turning-authentication-off) before turning it off |
 | Cratis__Chronicle__Authentication__Authority | External OAuth authority URL |
 | Cratis__Chronicle__Authentication__DefaultAdminUsername | Default admin username |
 | Cratis__Chronicle__Authentication__AdminUser__Username | Bootstrap admin username (falls back to the default admin username when empty) |
@@ -113,8 +114,8 @@ Cratis__Chronicle__Storage__ConnectionDetails=mongodb://localhost:27017
 ## Observers
 
 ```bash
-# Timeout in seconds for observer subscriber calls (default: 5)
-Cratis__Chronicle__Observers__SubscriberTimeout=5
+# Seconds an observer waits for its subscriber to answer a batch (0 = indefinitely, default: 30)
+Cratis__Chronicle__Observers__SubscriberTimeout=30
 
 # Maximum retry attempts for failed partitions (0 = infinite, default: 10)
 Cratis__Chronicle__Observers__MaxRetryAttempts=10

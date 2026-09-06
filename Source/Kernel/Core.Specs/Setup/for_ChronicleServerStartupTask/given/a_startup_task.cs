@@ -2,10 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Text.Json.Nodes;
+using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
@@ -14,13 +22,18 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Patching;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
+using Microsoft.Extensions.Logging.Abstractions;
+
+using ProjectionRegistrationError = Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 
@@ -30,6 +43,7 @@ public class a_startup_task : Specification
     protected IStorage _storage = null!;
     protected IEventTypes _eventTypes = null!;
     protected IReactors _reactors = null!;
+    protected IPatternCapture _patternCapture = null!;
     protected IProjectionsServiceClient _projectionsServiceClient = null!;
     protected IGrainFactory _grainFactory = null!;
     IAuthenticationService _authenticationService = null!;
@@ -45,7 +59,9 @@ public class a_startup_task : Specification
     protected IReadModelsManager _readModelsManager = null!;
     protected IProjectionsManager _projectionsManager = null!;
     protected IWebhooks _webhooksManager = null!;
+    protected ICapturesManager _capturesManager = null!;
     protected IJobsManager _jobsManager = null!;
+    protected IEventSequences _eventSequences = null!;
     protected IObserver _reducerObserver = null!;
     protected IObserver _reactorObserver = null!;
     protected EventStoreName _eventStore;
@@ -58,6 +74,7 @@ public class a_startup_task : Specification
         _storage = Substitute.For<IStorage>();
         _eventTypes = Substitute.For<IEventTypes>();
         _reactors = Substitute.For<IReactors>();
+        _patternCapture = Substitute.For<IPatternCapture>();
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _authenticationService = new TestAuthenticationService();
@@ -73,7 +90,9 @@ public class a_startup_task : Specification
         _readModelsManager = Substitute.For<IReadModelsManager>();
         _projectionsManager = Substitute.For<IProjectionsManager>();
         _webhooksManager = Substitute.For<IWebhooks>();
+        _capturesManager = Substitute.For<ICapturesManager>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _eventSequences = Substitute.For<IEventSequences>();
         _reducerObserver = Substitute.For<IObserver>();
         _reactorObserver = Substitute.For<IObserver>();
 
@@ -86,9 +105,11 @@ public class a_startup_task : Specification
             _storage,
             _eventTypes,
             _reactors,
+            _patternCapture,
             _projectionsServiceClient,
             _grainFactory,
-            _authenticationService);
+            _authenticationService,
+            NullLogger<ChronicleServerStartupTask>.Instance);
 
         _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([_eventStore]));
         _storage.GetEventStore(_eventStore).Returns(_eventStoreStorage);
@@ -97,6 +118,9 @@ public class a_startup_task : Specification
         _eventStoreStorage.Reactors.Returns(_reactorDefinitionsStorage);
         _eventStoreStorage.Reducers.Returns(_reducerDefinitionsStorage);
         _namespaceStorage.Observers.Returns(_observerStateStorage);
+        _observerStateStorage.GetAll().Returns(Task.FromResult<IEnumerable<ObserverState>>([]));
+        _reactorDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReactorDefinition>>([]));
+        _reducerDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReducerDefinition>>([]));
 
         _patchManager.ApplyPatches().Returns(Task.CompletedTask);
         _systemNamespaces.EnsureDefault().Returns(Task.CompletedTask);
@@ -106,13 +130,15 @@ public class a_startup_task : Specification
         _projectionsManager.Ensure().Returns(Task.CompletedTask);
         _projectionsManager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         _webhooksManager.Ensure().Returns(Task.CompletedTask);
+        _capturesManager.Ensure().Returns(Task.CompletedTask);
         _jobsManager.Rehydrate().Returns(Task.CompletedTask);
+        _eventSequences.Rehydrate().Returns(Task.CompletedTask);
         _reducerObserver.Ensure().Returns(Task.CompletedTask);
         _reactorObserver.Ensure().Returns(Task.CompletedTask);
         _eventTypes.DiscoverAndRegister(_eventStore).Returns(Task.CompletedTask);
         _reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default).Returns(Task.CompletedTask);
         _reactors.DiscoverAndRegister(_eventStore, _namespace).Returns(Task.CompletedTask);
-        _projectionsServiceClient.Register(_eventStore, Arg.Any<IEnumerable<ProjectionDefinition>>()).Returns(Task.CompletedTask);
+        _projectionsServiceClient.Register(_eventStore, Arg.Any<IEnumerable<ProjectionDefinition>>()).Returns(Task.FromResult(Cratis.Monads.Result<ProjectionRegistrationError>.Success()));
 
         _grainFactory.GetGrain<IPatchManager>(0).Returns(_patchManager);
         _grainFactory.GetGrain<INamespaces>(EventStoreName.System).Returns(_systemNamespaces);
@@ -121,7 +147,9 @@ public class a_startup_task : Specification
         _grainFactory.GetGrain<IReadModelsManager>(_eventStore).Returns(_readModelsManager);
         _grainFactory.GetGrain<IProjectionsManager>(_eventStore).Returns(_projectionsManager);
         _grainFactory.GetGrain<IWebhooks>(_eventStore).Returns(_webhooksManager);
+        _grainFactory.GetGrain<ICapturesManager>(_eventStore).Returns(_capturesManager);
         _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_eventStore, _namespace)).Returns(_jobsManager);
+        _grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(_eventStore, _namespace)).Returns(_eventSequences);
         _grainFactory.GetGrain<IObserver>(_reducerObserverKey).Returns(_reducerObserver);
         _grainFactory.GetGrain<IObserver>(_reactorObserverKey).Returns(_reactorObserver);
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
@@ -132,6 +160,22 @@ public class a_startup_task : Specification
         var execute = typeof(ChronicleServerStartupTask).GetMethod("Execute", BindingFlags.Instance | BindingFlags.NonPublic)!;
         return (Task)execute.Invoke(_startupTask, [CancellationToken.None])!;
     }
+
+    protected static ProjectionDefinition CreateProjectionDefinition(ProjectionId identifier, ReadModelIdentifier readModel) => new(
+        ProjectionOwner.Client,
+        EventSequenceId.Log,
+        identifier,
+        readModel,
+        true,
+        true,
+        new JsonObject(),
+        new Dictionary<EventType, FromDefinition>(),
+        new Dictionary<EventType, JoinDefinition>(),
+        new Dictionary<PropertyPath, ChildrenDefinition>(),
+        [],
+        new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
+        new Dictionary<EventType, RemovedWithDefinition>(),
+        new Dictionary<EventType, RemovedWithJoinDefinition>());
 
     class TestAuthenticationService : IAuthenticationService
     {

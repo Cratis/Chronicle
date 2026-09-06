@@ -59,6 +59,9 @@ public class a_projections_manager_grain : Specification
         _silo.AddService(projectionFactory);
 
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
+        _projectionsServiceClient
+            .Register(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionDefinition>>())
+            .Returns(Task.FromResult(Cratis.Monads.Result<ProjectionRegistrationError>.Success()));
         _silo.AddService(_projectionsServiceClient);
 
         _silo.AddService(Substitute.For<ILanguageService>());

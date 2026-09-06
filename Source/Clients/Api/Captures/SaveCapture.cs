@@ -20,7 +20,7 @@ public record SaveCapture(string EventStore, string Id, string Declaration)
     /// </summary>
     /// <param name="captures">The <see cref="ICapturesService"/> contract.</param>
     /// <returns>The <see cref="SaveCaptureResult"/>.</returns>
-    internal async Task<SaveCaptureResult> Handle(ICapturesService captures)
+    public async Task<SaveCaptureResult> Handle(ICapturesService captures)
     {
         var response = await captures.Save(new()
         {

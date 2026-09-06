@@ -113,9 +113,14 @@ public class EventSequence(
         _knownConstraints = await ConstraintsGrain.GetDefinitions();
         _constraintsVersion = await ConstraintsGrain.GetVersion();
 
-        // The version was just read, so the next check is due one full interval from now.
+        // Deliberately not stamped as a completed check. A sequence does not only activate to append - a read, or
+        // an observer subscribing to it, activates it just as well, and it can then sit idle while a client
+        // finishes registering its artifacts. Treating the activation read as a completed check would let the
+        // first append arriving inside the interval validate against the constraints as they were before that
+        // registration, which is to say against no constraints at all on a store being set up for the first time.
+        // Leaving it unset makes the first append re-check; the throttle applies to every append after it.
         _constraintsVersionCheckInterval = options.Value.Events.ConstraintsVersionCheckInterval;
-        _lastConstraintsVersionCheck = Stopwatch.GetTimestamp();
+        _lastConstraintsVersionCheck = 0;
         _statePersistenceInterval = Math.Max(1, options.Value.Events.StatePersistenceInterval);
 
         await EventSequenceStorage.EnsureIndexes();
@@ -1021,11 +1026,17 @@ public class EventSequence(
     /// The timestamp is advanced when the check is found due rather than after it completes, so a slow or failing
     /// constraints grain cannot make every subsequent append re-attempt the call. No synchronization is needed: the
     /// grain is non-reentrant, so only one turn is ever inside this.
+    /// <para>
+    /// It starts unset, so the first append after an activation always checks. Everything the throttle is there to
+    /// avoid - a call per append, serialized behind the one constraints activation in the event store - is still
+    /// avoided; this costs one extra read per activation.
+    /// </para>
     /// </remarks>
     bool IsConstraintsVersionCheckDue()
     {
-        if (_constraintsVersionCheckInterval <= TimeSpan.Zero)
+        if (_constraintsVersionCheckInterval <= TimeSpan.Zero || _lastConstraintsVersionCheck == 0)
         {
+            _lastConstraintsVersionCheck = Stopwatch.GetTimestamp();
             return true;
         }
 

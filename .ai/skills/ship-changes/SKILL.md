@@ -14,6 +14,15 @@ This skill takes local modifications from the working tree and lands them on
 project conventions for commits, PR descriptions, and labels — and leaves no
 resolved issue open behind it.
 
+> **Never rewrite history while shipping.** No `rebase`, no `commit --amend`, no
+> `reset --hard`, no `push --force` (or `--force-with-lease`), no deleting a branch that
+> still holds unmerged commits — on any branch, including your own, unless the human asks
+> for that exact command in that exact message. Correct a mistake with a **new commit**;
+> undo with `git revert`; move work with `git cherry-pick`; integrate with `git merge`.
+> Do not tidy a messy series before opening the PR — the series is the record.
+> See [git-commits.md](../../rules/git-commits.md#never-rewrite-history) for the full
+> prohibition and the recovery procedure.
+
 ## Inputs
 
 Collect the following before starting:
@@ -24,7 +33,7 @@ Collect the following before starting:
 
 ## Step 1 — Review the working tree
 
-```
+```bash
 git status
 git diff
 ```
@@ -42,7 +51,7 @@ Branch off of current `main`. Always use a prefix:
 | `feat/` | new features, new slices, new capabilities |
 | `chore/` | build infra, tooling, docs, refactoring |
 
-```
+```bash
 git checkout -b <prefix>/<short-description>
 ```
 
@@ -63,7 +72,7 @@ Never mix unrelated changes in a single commit.
 
 Stage files explicitly — never `git add .` or `git add -A`:
 
-```
+```bash
 git add <file1> <file2>
 git diff --cached          # verify staged content before committing
 git commit -m "<message>"
@@ -71,7 +80,7 @@ git commit -m "<message>"
 
 ### Commit message format
 
-```
+```text
 <imperative summary — 72-char max, no trailing period>
 
 <optional body: WHY the change was made, context, trade-offs>
@@ -84,7 +93,7 @@ git commit -m "<message>"
 
 **Good examples:**
 
-```
+```text
 Add _PackPrivateAssemblyGlobs target for runtime-only NuGet package embedding
 
 Extend the shared client build infrastructure with a new MSBuild target.
@@ -92,7 +101,7 @@ The new PrivatePackageAssemblyGlob item type globs $(OutputPath) at pack
 time and embeds matching DLLs into lib/{tfm}/ without a nuspec dependency.
 ```
 
-```
+```text
 Fix duplicate key crash in IdentityStorage.Populate
 
 The upsert used InsertOne which threw on existing identities.
@@ -108,7 +117,7 @@ Replace with ReplaceOne using upsert: true.
 
 ## Step 4 — Push the branch
 
-```
+```bash
 git push -u origin <branch-name>
 ```
 
@@ -142,6 +151,7 @@ release notes. Include only non-empty sections.
 ```
 
 Rules:
+
 - Bullets are short, release-note ready, written for a user reading the changelog.
 - Use `# Summary` when the release-note bullets need context. The summary should
   explain what was fixed from the consumer's point of view and why the fix matters
@@ -152,7 +162,7 @@ Rules:
 
 ### Searching for a related issue
 
-```
+```text
 mcp_github_github_search_issues  query="<keywords> repo:<owner>/<repo>"
 ```
 
@@ -188,6 +198,13 @@ Otherwise use `gh pr edit <number> --add-label "<label>"` with one of:
 
 If `gh pr edit` fails on the Projects-classic GraphQL deprecation, add the label with the REST API instead: `gh api -X POST repos/<owner>/<repo>/issues/<number>/labels -f "labels[]=<label>"`. Label **before** the PR's first `verify` run where you can — a run that starts before the label lands sees no label and fails, and needs re-running.
 
+> **The same deprecation breaks `gh pr edit --body-file`, and it fails silently.** `gh pr edit` queries `repository.pullRequest.projectCards` whatever you are editing, so it can error on the deprecation *after* printing nothing useful and leave the body untouched. Always re-read the body after editing it — `gh api repos/<owner>/<repo>/pulls/<number> --jq '.body'` — and if it did not take, PATCH it directly:
+>
+> ```bash
+> printf '%s' "$(cat body.md)" | python3 -c 'import json,sys; print(json.dumps({"body": sys.stdin.read()}))' \
+>   | gh api -X PATCH repos/<owner>/<repo>/pulls/<number> --input -
+> ```
+
 ## Step 7 — Wait for CI to pass
 
 **Skip this step entirely for a documentation-only PR** — merge as soon as it is open. Its `verify` will be red for the deliberately absent version label, and that is the expected outcome, not a failure to chase.
@@ -202,9 +219,20 @@ Otherwise, before merging, poll the PR checks with `pull_request_read`:
 
 Use `mcp_github_github_merge_pull_request` with:
 
-- `merge_method`: `merge`
+- `merge_method`: **`merge`** — a real merge commit, always
 - `owner` / `repo`: the current repository (same as step 5)
 - `pullNumber`: the PR number returned in step 5
+
+**`merge_method` is `merge` and nothing else. Never `squash`, never `rebase`** — and the same
+applies if you reach for the CLI instead: `gh pr merge --merge`, never `gh pr merge --squash` or
+`--rebase`. Squashing is a **history rewrite** (`.ai/rules/git-commits.md#never-rewrite-history`):
+it replaces the branch's commits with one new commit, and because step 10 deletes the branch
+immediately afterwards, nothing is left pointing at the originals. It does not feel like a rewrite
+— it looks like an integration step, and the tidier result looks like an improvement — which is
+precisely why it is the easiest way to break the rule by accident.
+
+If the repository's settings permit only squash or rebase merges, **stop and ask the human.** That
+is a setting to change, not a reason to squash.
 
 ## Step 9 — Close the related issues
 
@@ -218,7 +246,7 @@ on a closing keyword, and this repo deliberately keeps those out of the PR body
 
 For each issue the merged PR **fully resolves**:
 
-```
+```bash
 gh issue close <N> --repo <owner>/<tracker-repo> --comment "Fixed in <owner>/<repo>#<pr-number>."
 gh issue view <N> --repo <owner>/<tracker-repo> --json number,state    # verify it is CLOSED
 ```
@@ -254,18 +282,24 @@ separate public repo (check `.agents/PROJECT.md`). Two consequences:
 
 ## Step 10 — Clean up the branch
 
-```
+```bash
 git checkout main && git pull && git branch -d <branch-name> && git push origin --delete <branch-name>
 ```
 
 Run all four commands in one shell invocation to avoid partial state.
 After this completes, `main` is fully up to date locally.
 
+**Only ever after the merge, and only with lowercase `-d`.** `-d` refuses to delete a
+branch holding commits that are not merged anywhere — that refusal is a safety net, not an
+obstacle. **Never reach for `-D` to force past it**: it strands those commits with no ref,
+and `git gc` then deletes them permanently. If `-d` refuses, the branch still holds work
+that exists nowhere else — stop and find out what it is.
+
 ## Full example sequence
 
 An illustrative end-to-end run for a new slice (paths and numbers are placeholders — use the current repo's):
 
-```
+```bash
 # 1. Review
 git status
 git diff
@@ -294,7 +328,8 @@ gh pr edit <pr-number> --add-label "minor"
 
 # 7. Wait for CI — pull_request_read get_check_runs until green
 
-# 8. Merge (via mcp_github_github_merge_pull_request)
+# 8. Merge (via mcp_github_github_merge_pull_request, merge_method: merge)
+#    CLI equivalent: gh pr merge <pr-number> --merge   # NEVER --squash / --rebase
 
 # 9. Close the issues the PR resolves, and verify
 gh issue close <issue-number> --comment "Fixed in #<pr-number>."
