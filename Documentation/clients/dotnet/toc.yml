@@ -4,6 +4,8 @@
   href: getting-started.md
 - name: Observing artifact registration
   href: registration-outcome.md
+- name: Health checks
+  href: health-checks.md
 - name: Captures
   href: captures/toc.yml
 - name: External Services

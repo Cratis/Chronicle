@@ -29,7 +29,25 @@ public static class ReducerTypeExtensions
     /// TReadModel {MethodName}(TEvent event, TReadModel? current)
     /// ]]>
     /// </remarks>
-    public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
+    public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes) =>
+        methodInfo.HasReducerMethodShape(readModelType, eventTypes) &&
+        !methodInfo.HasNonNullableCurrentReadModelParameter();
+
+    /// <summary>
+    /// Check if a <see cref="MethodInfo"/> is shaped like a reducer method, without considering the nullability of its current read model parameter.
+    /// </summary>
+    /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
+    /// <param name="readModelType">Type of read model.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
+    /// <returns>True if it has the shape of a reducer method, false if not.</returns>
+    /// <remarks>
+    /// This is the signature match on its own - return type, event type as first parameter, the read model as second
+    /// and an optional <see cref="EventContext"/> as third. A method that matches this but declares its current read
+    /// model as non-nullable is a reducer method the author got wrong, not a method that happens to look similar,
+    /// which is what lets <see cref="ReducerMethodCurrentReadModelMustBeNullable"/> report it instead of silently
+    /// dropping it from dispatch.
+    /// </remarks>
+    public static bool HasReducerMethodShape(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
     {
         if (methodInfo.IsSpecialName)
         {
@@ -52,12 +70,6 @@ public static class ReducerTypeExtensions
             parameters[0].ParameterType.IsEventType(eventTypes) &&
             parameters[1].ParameterType.Equals(readModelType))
         {
-            var nullabilityContext = new NullabilityInfoContext();
-            if (nullabilityContext.Create(parameters[1]).ReadState == NullabilityState.NotNull)
-            {
-                return false;
-            }
-
             if (parameters.Length == 3)
             {
                 if (parameters[2].ParameterType == typeof(EventContext)) return true;
@@ -69,6 +81,28 @@ public static class ReducerTypeExtensions
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Check whether a reducer-shaped <see cref="MethodInfo"/> declares its current read model parameter as non-nullable.
+    /// </summary>
+    /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
+    /// <returns>True if the current read model parameter is statically non-nullable, false if not.</returns>
+    /// <remarks>
+    /// The current read model is null for the event that brings an instance into existence, so a non-nullable
+    /// declaration is a claim the reducer cannot keep. A method declared in a <c>#nullable disable</c> context makes
+    /// no claim either way and is not reported.
+    /// </remarks>
+    public static bool HasNonNullableCurrentReadModelParameter(this MethodInfo methodInfo)
+    {
+        var parameters = methodInfo.GetParameters();
+        if (parameters.Length < 2)
+        {
+            return false;
+        }
+
+        var nullabilityContext = new NullabilityInfoContext();
+        return nullabilityContext.Create(parameters[1]).ReadState == NullabilityState.NotNull;
     }
 
     /// <summary>

@@ -316,6 +316,13 @@ public class Sink(
     public async Task BeginReplay(ReplayContext context)
     {
         await collections.BeginReplay(context);
+
+        // A replay writes into its own shadow collection and that collection is renamed into place at the end,
+        // taking its own indexes with it - and only its own. Indexes were ensured once when the sink was built,
+        // against the collection that the swap replaces, so without this the promoted collection comes up with
+        // none of them until something rebuilds the sink. Recreating them is exactly what the declaration on the
+        // read model is for (#3942).
+        await EnsureIndexes();
         await BeginBulk();
     }
 
@@ -323,6 +330,7 @@ public class Sink(
     public async Task ResumeReplay(ReplayContext context)
     {
         await collections.ResumeReplay(context);
+        await EnsureIndexes();
         await BeginBulk();
     }
 
