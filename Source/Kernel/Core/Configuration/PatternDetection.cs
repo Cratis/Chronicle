@@ -66,4 +66,17 @@ public class PatternDetection
     /// value of 1 disables decay entirely and a smaller value forgets faster.
     /// </remarks>
     public double DecayFactor { get; init; } = 0.99;
+
+    /// <summary>
+    /// Gets how many seconds pass between persisting the scopes mining has touched.
+    /// </summary>
+    /// <remarks>
+    /// Mining is in-memory and cheap; persisting a scope rewrites everything that currently survives for it.
+    /// Persisting per observed batch couples the write cost to the event rate times the size of each scope's
+    /// behavior - a bulk ingest of a few thousand events becomes hundreds of thousands of storage writes, all
+    /// serialized through the one activation the subscriber has. Persisting on this cadence instead bounds the
+    /// cost by how many scopes were touched in the interval, no matter how many events touched them. Values at
+    /// or below zero are treated as one second.
+    /// </remarks>
+    public int PersistenceInterval { get; init; } = 5;
 }

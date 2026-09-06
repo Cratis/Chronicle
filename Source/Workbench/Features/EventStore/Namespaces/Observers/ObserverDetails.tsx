@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Column } from '@cratis/components/DataTables';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { Tabs, TabPanel } from 'Components/Tabs';
 import { ObserverInformation } from 'Features/Observation';
 import { ObserverOwner } from 'Features/Contracts/Observation';
@@ -75,8 +75,8 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
                     {isClientOwned && (
                         <div className={css.connectedClients}>
                             <h3 className={css.connectedClientsTitle}>{clientStrings.title}</h3>
-                            <DataTable
-                                value={clients.data ?? []}
+                            <DataTableCore
+                                data={clients.data ?? []}
                                 dataKey='connectionId'
                                 emptyMessage={clientStrings.empty}>
                                 <Column field='connectionId' header={clientStrings.columns.connectionId} />
@@ -86,7 +86,7 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
                                 <Column field='processId' header={clientStrings.columns.processId} />
                                 <Column field='processPath' header={clientStrings.columns.processPath} />
                                 <Column field='lastSeen' header={clientStrings.columns.lastSeen} body={lastSeenColumn} />
-                            </DataTable>
+                            </DataTableCore>
                         </div>
                     )}
                 </TabPanel>

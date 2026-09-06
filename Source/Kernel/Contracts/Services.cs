@@ -49,6 +49,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="EventStoreSubscriptions"><see cref="IEventStoreSubscriptions"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="MaterializedReadModels"><see cref="IMaterializedReadModels"/> instance.</param>
+/// <param name="ReadModelExplorer"><see cref="ReadModelExplorer.IReadModelExplorer"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="Seeding"><see cref="IEventSeeding"/> instance.</param>
 /// <param name="Users"><see cref="IUsers"/> instance.</param>
@@ -76,6 +77,7 @@ public sealed record Services(
     IEventStoreSubscriptions EventStoreSubscriptions,
     IReadModels ReadModels,
     IMaterializedReadModels MaterializedReadModels,
+    ReadModelExplorer.IReadModelExplorer ReadModelExplorer,
     IJobs Jobs,
     IEventSeeding Seeding,
     IUsers Users,

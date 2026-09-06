@@ -78,7 +78,6 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
                     new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(valueHandler),
                     NullLogger<JsonComplianceManager>.Instance),
                 _expandoObjectConverter),
-            _eventCompliance,
             _materializedReadModels,
             new JsonSerializerOptions());
     }

@@ -243,6 +243,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.ReadModels.IReadModels>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.ReadModels.IMaterializedReadModels>(clientFactory),
+            callInvoker.CreateGrpcService<Contracts.ReadModelExplorer.IReadModelExplorer>(clientFactory),
             callInvoker.CreateGrpcService<IJobs>(clientFactory),
             callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
             callInvoker.CreateGrpcService<IUsers>(clientFactory),

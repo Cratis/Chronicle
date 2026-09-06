@@ -7,3 +7,4 @@ export * from './Dialogs';
 export * from './ItemsList';
 export * from './ReadModelInstances';
 export * from './TimeMachineDialog';
+export * from './TimeScrubberDialog';
