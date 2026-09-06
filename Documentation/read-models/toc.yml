@@ -11,7 +11,7 @@
 - name: Querying Read Models
   href: querying.md
 - name: Indexing Read Models
-  href: indexing.mdx
+  href: indexing.md
 - name: Materialized Read Models
   href: materialized-pagination.mdx
 - name: Getting Snapshots

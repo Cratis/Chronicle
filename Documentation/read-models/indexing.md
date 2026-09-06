@@ -16,7 +16,7 @@ persisted to, every time the container is built.
 
 Put `[Index]` on the property — or, for a record, on the constructor parameter:
 
-<ChronicleClientTabs snippet="read-models/indexing/basic" />
+<ChronicleClientTabs snippet="read-models/indexing/declaring" />
 
 The key of a read model does not need `[Index]` — the store already indexes it.
 

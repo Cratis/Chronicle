@@ -197,18 +197,22 @@ public class EventTypeMigrations(
             result = JsonNode.Parse(content.ToJsonString())?.AsObject() ?? new JsonObject();
         }
 
-        // Apply custom expression results (split / combine / rename)
+        // Apply custom expression results (split / combine / rename). The property name is a path, so a target
+        // inside a nested object is written where it belongs instead of becoming a top-level key with a dot in
+        // its name that the target generation's schema then discards (#3949).
         foreach (var (propertyName, value) in customResults)
         {
-            result[propertyName] = value?.DeepClone();
+            JsonPropertyPaths.Set(result, propertyName, value?.DeepClone());
         }
 
         // Apply default values for any properties that are absent from the result
         foreach (var (propertyName, defaultValue) in defaultValues)
         {
-            if (!result.ContainsKey(propertyName))
+            // Present-but-null still counts as present, exactly as the flat containment check it replaces did -
+            // a default fills in a property the payload does not carry, not one that carries no value.
+            if (!JsonPropertyPaths.TryResolve(result, propertyName, out _))
             {
-                result[propertyName] = defaultValue?.DeepClone();
+                JsonPropertyPaths.Set(result, propertyName, defaultValue?.DeepClone());
             }
         }
 
