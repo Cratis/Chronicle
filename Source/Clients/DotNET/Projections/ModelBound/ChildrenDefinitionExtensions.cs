@@ -154,7 +154,7 @@ static class ChildrenDefinitionExtensions
         var identifiedBy = identifiedByProperty?.GetValue(attr) as string;
         if (string.IsNullOrEmpty(identifiedBy))
         {
-            identifiedBy = DiscoverKeyPropertyName(childType);
+            identifiedBy = DiscoverKeyPropertyName(childType, key);
         }
 
         // Check if child type or parent type has NoAutoMapAttribute to determine if auto-mapping should be disabled
@@ -795,7 +795,7 @@ static class ChildrenDefinitionExtensions
         return enumerableInterface?.GetGenericArguments()[0];
     }
 
-    static string DiscoverKeyPropertyName(Type? childType)
+    static string DiscoverKeyPropertyName(Type? childType, string childKey)
     {
         if (childType is null)
         {
@@ -826,6 +826,12 @@ static class ChildrenDefinitionExtensions
         if (idProperty is not null)
         {
             return idProperty.Name;
+        }
+
+        var matchingKeyProperty = properties.FirstOrDefault(p => p.Name.Equals(childKey, StringComparison.OrdinalIgnoreCase));
+        if (matchingKeyProperty is not null)
+        {
+            return matchingKeyProperty.Name;
         }
 
         return WellKnownExpressions.EventSourceId;
