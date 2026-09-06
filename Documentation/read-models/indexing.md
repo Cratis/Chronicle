@@ -1,0 +1,80 @@
+---
+uid: Chronicle.ReadModels.Indexing
+---
+
+# Indexing Read Models
+
+A read model is stored in a collection or table, and the store needs indexes to read it efficiently.
+You could create those indexes yourself, but you would have to create them again every time the
+container is recreated — and Chronicle recreates it on its own, during a replay.
+
+The `[Index]` attribute moves the decision to where it belongs: onto the read model. You declare
+which properties are indexed, and Chronicle creates them in whichever store the read model is
+persisted to, every time the container is built.
+
+## Declaring an index
+
+Put `[Index]` on the property — or, for a record, on the constructor parameter:
+
+```csharp
+[ReadModel]
+public record Order(
+    OrderId Id,
+    [Index] CustomerId CustomerId,
+    [Index] OrderNumber Number,
+    decimal Total);
+```
+
+The key of a read model does not need `[Index]` — the store already indexes it.
+
+## Nested and child properties
+
+Indexes are collected by walking the read model, so a property on a nested object or on a child
+collection's element type is indexed at its full path:
+
+```csharp
+[ReadModel]
+public record Order(
+    OrderId Id,
+    IEnumerable<OrderLine> Lines);
+
+public record OrderLine(
+    [Index] ProductId ProductId,
+    int Quantity);
+```
+
+This declares an index on `lines.productId`. The path uses the naming policy the client is
+configured with, the same one that decides how the properties are stored.
+
+## Why it lives on the read model
+
+Chronicle replays a read model by building it into a **shadow container** — a separate collection or
+table — and swapping that in when the replay completes. The container the application reads from
+afterwards is therefore not the one it read from before: it is a new one, and it only has the
+indexes that were created on it.
+
+That is the reason `[Index]` exists. Because the declaration travels with the read model's
+definition rather than being applied to a container by hand, Chronicle can recreate the indexes for
+whichever container it is currently building — the original one, or the shadow one a replay is
+filling. An index created manually against the live collection does not survive the swap; a declared
+one does.
+
+It is also why this is declarative rather than store-specific. `[Index]` says *what* should be
+indexed; each sink decides *how*. On MongoDB that means an ascending index built in the background
+and named `chronicle_idx_<path>`; another store expresses the same declaration its own way.
+
+## When it takes effect
+
+Indexes are ensured when Chronicle sets up storage for the read model — when the sink is first built
+for it, and when a replay begins filling its shadow container. Creating an index that already exists
+is skipped, so this is safe to run repeatedly.
+
+Adding `[Index]` to a read model that is already in production applies on the next start of the
+kernel. It does not require a replay — the index is created against the existing container.
+
+## What it does not do
+
+`[Index]` does not give you a query surface. Chronicle's read model API is keyed, and indexing does
+not change that — see [Querying Read Models](./querying.md) for what to do when you need to search a
+read model by something other than its key. What indexing does is make *that* work efficient, whether
+the query comes from Chronicle's own key lookups or from your code going to the store directly.
