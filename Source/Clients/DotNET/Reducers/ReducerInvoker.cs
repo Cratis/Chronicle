@@ -8,6 +8,7 @@ using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Reducers.Validators;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -141,6 +142,11 @@ public class ReducerInvoker : IReducerInvoker
 
     static FrozenDictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
     {
+        // A method that matches the reducer shape but declares its current read model as non-nullable used to be
+        // dropped from dispatch without a word, so its events were never applied and the reducer merely looked
+        // registered. Reject it here instead - it can only ever be a mistake (#3947).
+        ReducerMethodCurrentReadModelMustBeNullable.ThrowIfAnyMethodHasNonNullableCurrentReadModel(targetType, readModelType, eventTypes);
+
         var methodsByEventType = new Dictionary<Type, MethodInfo>();
 
         // Ordered so the reducer method that should win comes first, and claimed with TryAdd so it keeps the

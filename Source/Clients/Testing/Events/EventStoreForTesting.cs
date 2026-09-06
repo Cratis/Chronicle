@@ -49,6 +49,7 @@ using ExternalServicesImpl = Cratis.Chronicle.ExternalServices.ExternalServices;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
 using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
@@ -122,7 +123,8 @@ public class EventStoreForTesting : IEventStore
         var topLevelStorage = new InMemoryStorage(new InMemoryEventSequenceStorage(
             (KernelConceptsNs::EventStoreName)(string)Name,
             (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace,
-            KernelSequenceConcepts::EventSequenceId.Log));
+            KernelSequenceConcepts::EventSequenceId.Log,
+            new InMemoryIdentityStorage()));
         Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _jsonSerializerOptions);
 
         var loggerFactory = new NullLoggerFactory();
@@ -372,12 +374,12 @@ public class EventStoreForTesting : IEventStore
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)Name;
         var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace;
 
-        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId);
+        var identityStorage = new InMemoryIdentityStorage();
+        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId, identityStorage);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
         var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var constraintsStorage = new InMemoryConstraintsStorage(_constraintProvider);
-        var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
 
         var storage = new InMemoryStorage(
