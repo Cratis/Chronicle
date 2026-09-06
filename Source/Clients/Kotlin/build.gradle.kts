@@ -48,6 +48,13 @@ tasks.named("processResources") {
     dependsOn(embedDescriptorSet)
 }
 
+// sourcesJar (created by the maven-publish plugin) packages sourceSets.main.allSource, which reads the
+// generated resources directory directly rather than through processResources - so it needs the same
+// explicit dependency to avoid Gradle's implicit-dependency validation failure.
+tasks.matching { it.name == "sourcesJar" }.configureEach {
+    dependsOn(embedDescriptorSet)
+}
+
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:$protobufVersion"
