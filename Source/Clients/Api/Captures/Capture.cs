@@ -39,35 +39,4 @@ public record Capture(string Id, string Name, string Declaration, CaptureStatus 
         captures.InvokeAndWrapWithTransformSubject(
             token => captures.ObserveCaptures(new() { EventStore = eventStore }, token),
             captureCollection => captureCollection.ToApi());
-
-    /// <summary>
-    /// Get the events ingested by a capture - the events tagged with the capture's name, most recent first.
-    /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequencesService"/> for getting the events.</param>
-    /// <param name="eventStore">The event store the capture belongs to.</param>
-    /// <param name="captureName">The name of the capture.</param>
-    /// <param name="namespace">Optional namespace the events were ingested into - defaults to the default namespace.</param>
-    /// <param name="maxEvents">Optional maximum number of events to return, most recent first.</param>
-    /// <returns>Collection of <see cref="AppendedEvent"/>, most recent first.</returns>
-    public static async Task<IEnumerable<AppendedEvent>> CapturedEvents(
-        IEventSequencesService eventSequences,
-        string eventStore,
-        string captureName,
-        string? @namespace = default,
-        int maxEvents = 200)
-    {
-        var response = await eventSequences.GetEventsFromEventSequenceNumber(new()
-        {
-            EventStore = eventStore,
-            Namespace = @namespace ?? "Default",
-            EventSequenceId = EventSequenceId.Log,
-            FromEventSequenceNumber = 0,
-            Tags = [captureName]
-        });
-
-        return response.Events.ToApi()
-            .OrderByDescending(@event => @event.Context.SequenceNumber)
-            .Take(maxEvents)
-            .ToArray();
-    }
 }

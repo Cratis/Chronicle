@@ -8,6 +8,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
@@ -24,10 +26,12 @@ namespace Cratis.Chronicle.Services.Events;
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grain references.</param>
 /// <param name="eventTypesCacheClient">Client for evicting event type caches on every silo when a registration changes one.</param>
+/// <param name="patternCapture"><see cref="IPatternCapture"/> to keep observing every registered event type.</param>
 internal sealed class EventTypes(
     IStorage storage,
     IGrainFactory grainFactory,
-    Cratis.Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient) : IEventTypes
+    Cratis.Chronicle.EventTypes.IEventTypesCacheClient eventTypesCacheClient,
+    IPatternCapture patternCapture) : IEventTypes
 {
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
@@ -73,6 +77,7 @@ internal sealed class EventTypes(
         }
 
         await AppendSystemEventsForNewGenerations(request.EventStore, newGenerationsPerEventType);
+        await CapturePatternsForNewEventTypes(request.EventStore, mutated);
     }
 
     /// <inheritdoc/>
@@ -91,6 +96,7 @@ internal sealed class EventTypes(
         if (mutated)
         {
             await eventTypesCacheClient.Invalidate(request.EventStore, chronicleType.Id);
+            await patternCapture.SubscribeAcrossNamespaces(request.EventStore);
         }
     }
 
@@ -277,18 +283,19 @@ internal sealed class EventTypes(
 
     static void ValidatePropertyKeys(string eventTypeId, JsonObject jmesPath, JsonSchema schema, uint generation, string direction)
     {
-        var schemaProperties = schema.ActualProperties.Select(p => p.Key).ToHashSet();
-
         foreach (var property in jmesPath)
         {
-            // DefaultValue introduces a brand-new property to the target generation.
-            // The auto-generated schema for that generation may be empty, so skip validation.
-            if (property.Value is JsonObject expr && expr.ContainsKey(WellKnownExpressions.DefaultValue))
+            // DefaultValue introduces a property to the target generation, and the auto-generated schema for that
+            // generation can be empty - so a key that resolves nowhere is only accepted when there is nothing to
+            // resolve it against. Skipping the check outright let a nested default through to a kernel that then
+            // dropped the value silently, which is worse than either outcome (#3949).
+            if (property.Value is JsonObject expr && expr.ContainsKey(WellKnownExpressions.DefaultValue) &&
+                schema.ActualProperties.Count == 0)
             {
                 continue;
             }
 
-            if (!schemaProperties.Contains(property.Key))
+            if (!SchemaDeclaresPath(schema, property.Key))
             {
                 throw new InvalidMigrationPropertyForEventType(eventTypeId, property.Key, generation, direction);
             }
@@ -297,18 +304,44 @@ internal sealed class EventTypes(
 
     static void ValidateExpressionSources(string eventTypeId, JsonObject jmesPath, JsonSchema sourceSchema, uint sourceGeneration, string direction)
     {
-        var schemaProperties = new HashSet<string>(sourceSchema.ActualProperties.Select(p => p.Key));
-
         foreach (var entry in jmesPath)
         {
             foreach (var prop in ExtractSourceProperties(entry.Value))
             {
-                if (!schemaProperties.Contains(prop))
+                if (!SchemaDeclaresPath(sourceSchema, prop))
                 {
                     throw new InvalidMigrationPropertyForEventType(eventTypeId, prop, sourceGeneration, direction);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gets whether a schema declares the property a dotted path addresses.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> to resolve within.</param>
+    /// <param name="path">The dotted property path a migration carries.</param>
+    /// <returns><see langword="true"/> when every segment of the path is declared; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// A migration built from a nested property expression carries a path rather than a name, so resolving it
+    /// against the top-level property map alone reported that the property did not exist when it existed one level
+    /// down (#3949).
+    /// </remarks>
+    static bool SchemaDeclaresPath(JsonSchema schema, string path)
+    {
+        var current = schema;
+
+        foreach (var segment in JsonPropertyPaths.Split(path))
+        {
+            if (!current.ActualProperties.TryGetValue(segment, out var property))
+            {
+                return false;
+            }
+
+            current = property.ActualSchema;
+        }
+
+        return true;
     }
 
     static IEnumerable<string> ExtractSourceProperties(JsonNode? value)
@@ -355,6 +388,15 @@ internal sealed class EventTypes(
                     }
 
                     break;
+
+                case WellKnownExpressions.MapValues when entry.Value is JsonObject mapConfig:
+                    var mapSource = mapConfig["source"]?.GetValue<string>();
+                    if (mapSource is not null)
+                    {
+                        yield return mapSource;
+                    }
+
+                    break;
             }
         }
     }
@@ -382,11 +424,13 @@ internal sealed class EventTypes(
             // schema so both sides go through identical normalization before comparison.
             newSchema.EnsureComplianceMetadata();
 
-            // Ignore nullability markers ('?' on a format value): a Chronicle upgrade can add them to an
-            // existing event schema (a nullable known value type that stored 'date-time-offset' now generates
-            // 'date-time-offset?'). That marker only refines how an unset value materializes, not the data
-            // shape, so a marker-only difference is not a breaking schema change.
-            if (!existingGeneration.Schema.EqualsIgnoringNullableFormatMarkers(newSchema))
+            // Compare for compatibility rather than equality. Two differences cannot change what an already
+            // stored payload means and must not be rejected: a nullability marker ('?' on a format value), which
+            // a Chronicle upgrade can introduce on a schema stored before the marker existed, and an enumeration
+            // that only gained members or had members renamed - neither moves an existing member off the
+            // underlying value a stored payload carries. Everything else, including a member that disappeared or
+            // was renumbered, still needs a new generation.
+            if (!existingGeneration.Schema.IsCompatibleWith(newSchema))
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
             }
@@ -424,6 +468,28 @@ internal sealed class EventTypes(
                     new EventTypeGenerationAdded(newGenerations.EventTypeId, generation, schema));
             }
         }
+    }
+
+    /// <summary>
+    /// Re-subscribes pattern capture when a registration actually introduced something new.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> that was registered against.</param>
+    /// <param name="mutated">The event types the registration changed.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Pattern capture subscribes to the event types that exist at the time it subscribes, and a server starting
+    /// against a store no client has connected to yet has none - so without this, a first run captures nothing at
+    /// all until the next restart. Gated on the registration having changed something, so a client reconnecting and
+    /// re-registering the same types does not re-subscribe on every connect.
+    /// </remarks>
+    async Task CapturePatternsForNewEventTypes(EventStoreName eventStore, IEnumerable<EventTypeId> mutated)
+    {
+        if (!mutated.Any())
+        {
+            return;
+        }
+
+        await patternCapture.SubscribeAcrossNamespaces(eventStore);
     }
 
     /// <summary>

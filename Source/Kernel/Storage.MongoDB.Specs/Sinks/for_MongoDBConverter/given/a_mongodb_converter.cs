@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.given;
 
@@ -13,11 +14,13 @@ public class a_mongodb_converter : Specification
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ITypeFormats _typeFormats;
     protected ReadModelDefinition _model;
+    protected ILogger<MongoDBConverter> _logger;
 
     void Establish()
     {
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _typeFormats = Substitute.For<ITypeFormats>();
+        _logger = Substitute.For<ILogger<MongoDBConverter>>();
         _model = new ReadModelDefinition(
             typeof(ReadModel).FullName,
             nameof(ReadModel),
@@ -32,6 +35,6 @@ public class a_mongodb_converter : Specification
                 { ReadModelGeneration.First, JsonSchema.FromType<ReadModel>() },
             },
             []);
-        _converter = new(_expandoObjectConverter, _typeFormats, _model);
+        _converter = new(_expandoObjectConverter, _typeFormats, _model, _logger);
     }
 }

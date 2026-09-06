@@ -16,6 +16,13 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// Ensure the existence of the projections manager.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A no-op call whose only purpose is activating the grain, so it must not queue FIFO behind whatever
+    /// else is already pending on this non-reentrant grain (typically a client Register() fan-out during a
+    /// rolling redeploy) - the silo's own startup path calls this and has no resilience against waiting on
+    /// a busy queue for work this call never does (#3848).
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>

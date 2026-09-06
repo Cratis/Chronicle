@@ -6,7 +6,9 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Reducers.Validators;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -140,9 +142,17 @@ public class ReducerInvoker : IReducerInvoker
 
     static FrozenDictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
     {
+        // A method that matches the reducer shape but declares its current read model as non-nullable used to be
+        // dropped from dispatch without a word, so its events were never applied and the reducer merely looked
+        // registered. Reject it here instead - it can only ever be a mistake (#3947).
+        ReducerMethodCurrentReadModelMustBeNullable.ThrowIfAnyMethodHasNonNullableCurrentReadModel(targetType, readModelType, eventTypes);
+
         var methodsByEventType = new Dictionary<Type, MethodInfo>();
 
-        foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        // Ordered so the reducer method that should win comes first, and claimed with TryAdd so it keeps the
+        // event type. A private helper shaped like a reducer method is a candidate too, and without this it
+        // could overwrite the real one purely on reflection order.
+        foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ByPrecedence())
         {
             if (!method.IsReducerMethod(readModelType, eventTypes))
             {
@@ -152,7 +162,7 @@ public class ReducerInvoker : IReducerInvoker
             var eventParameterType = method.GetParameters()[0].ParameterType;
             foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
             {
-                methodsByEventType[eventType] = method;
+                methodsByEventType.TryAdd(eventType, method);
             }
         }
 

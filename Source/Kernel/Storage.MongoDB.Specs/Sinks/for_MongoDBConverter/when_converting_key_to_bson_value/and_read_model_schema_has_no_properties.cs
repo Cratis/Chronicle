@@ -32,7 +32,7 @@ public class and_read_model_schema_has_no_properties : a_mongodb_converter
                 { ReadModelGeneration.First, new JsonSchema() }
             },
             []);
-        _converter = new(_expandoObjectConverter, _typeFormats, _model);
+        _converter = new(_expandoObjectConverter, _typeFormats, _model, _logger);
         _key = new Key("key-value", ArrayIndexers.NoIndexers);
     }
 

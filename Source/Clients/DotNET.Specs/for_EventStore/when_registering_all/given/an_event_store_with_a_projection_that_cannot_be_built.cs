@@ -12,6 +12,7 @@ using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Seeding;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,13 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
     protected IProjections _projections;
     protected IClientArtifactsProvider _clientArtifacts;
     protected IChronicleServicesAccessor _servicesAccessor;
+    protected ConnectionLifecycle _connectionLifecycle;
+
+    /// <summary>
+    /// The retry settings the event store registers under. A single attempt by default, so a specification about
+    /// something other than retrying sees the first failure rather than the last.
+    /// </summary>
+    protected RegistrationRetryOptions _registrationRetry = new() { MaxAttempts = 1 };
 
     void Establish()
     {
@@ -72,7 +80,18 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         SetField("_servicesAccessor", _servicesAccessor);
         SetField("_logger", Substitute.For<ILogger<EventStore>>());
         SetField("_projections", projections);
+        SetField("_registrationRetry", _registrationRetry);
+
+        // Zero delays: a specification about retrying asserts on how many attempts were made, never on the clock.
+        SetField("_registrationBackoff", new RegistrationBackoff(TimeSpan.Zero, TimeSpan.Zero));
         SetAutoProperty("Registration", Registrations.RegistrationOutcome.NotRun);
+
+        // A real lifecycle (not a mock) so a specification can drive Disconnected()/Connected() directly and have
+        // the event store's own OnDisconnected subscription observe it exactly as it would in production.
+        _connectionLifecycle = new ConnectionLifecycle(Substitute.For<ILogger<ConnectionLifecycle>>());
+        var eventStoreConnection = Substitute.For<IChronicleConnection>();
+        eventStoreConnection.Lifecycle.Returns(_connectionLifecycle);
+        SetAutoProperty("Connection", eventStoreConnection);
         SetAutoProperty("Name", new EventStoreName("Testing"));
         SetAutoProperty("Namespace", new EventStoreNamespaceName("default"));
         SetAutoProperty("EventTypes", Substitute.For<IEventTypes>());

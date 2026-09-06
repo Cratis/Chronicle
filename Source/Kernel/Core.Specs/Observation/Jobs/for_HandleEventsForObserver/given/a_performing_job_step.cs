@@ -28,6 +28,8 @@ public class a_performing_job_step : Specification
     protected TestKitSilo _silo = new();
     protected Storage.IStorage _storage;
     protected IObserver _observer;
+    protected IConfigurationForObserverProvider _configurationProvider;
+    protected Observers _observersConfig;
     protected ISomeObserverType _observerSubscriber;
     protected IEventCursor _eventCursor;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -104,6 +106,11 @@ public class a_performing_job_step : Specification
         _silo.AddService(_storage);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
+
+        _observersConfig = new Observers();
+        _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
+        _configurationProvider.GetFor(Arg.Any<string>()).Returns(_ => _observersConfig);
+        _silo.AddService(_configurationProvider);
 
         var eventCompliance = Substitute.For<IEventCompliance>();
         eventCompliance

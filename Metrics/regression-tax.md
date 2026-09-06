@@ -5,7 +5,7 @@
 Generated 2026-08-18 18:05 UTC from the git history of this clone and the issue search for
 `Cratis/Chronicle`. The metric definitions live in
 `.github/scripts/regression_tax_metrics.py`; the targets come from
-`PLAN-reliability-program.md`, section 5, task 2.4.
+the reliability program plan (section 5, task 2.4).
 
 ## 2026-07
 

@@ -29,7 +29,7 @@ public class and_read_model_has_pii_and_initial_state_is_null : given.all_depend
         _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(Task.FromResult<ExpandoObject?>(null));
     }
 
-    async Task Because() => await _pipeline.Handle(
+    async Task Because() => await _pipeline.Reduce(
         CreateContext(EventSourceIdValue),
         CreateReducer(_returnedState));
 

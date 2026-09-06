@@ -49,6 +49,7 @@ on:
 jobs:
   dotnet-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     outputs:
       dotnet-cache-key: ${{ steps.export-cache-key.outputs.key }}
       chronicle-image: ${{ steps.export-cache-key.outputs.image }}
@@ -161,6 +162,7 @@ jobs:
   # (non-DEVELOPMENT) behavior.
   dotnet-build-development:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: read
@@ -216,6 +218,7 @@ jobs:
 
   specs:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs: [dotnet-build]
     steps:
       - name: Checkout code
@@ -272,6 +275,7 @@ jobs:
 
   integration-api:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs: [dotnet-build]
     steps:
       - name: Checkout code
@@ -334,6 +338,7 @@ jobs:
 
   mongodb:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs: [dotnet-build]
     steps:
       - name: Checkout code
@@ -381,6 +386,7 @@ jobs:
   coverage-merge-and-cache:
     if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs: [specs, integration, integration-api, mongodb]
     outputs:
       coverage-cache-key: ${{ steps.export-coverage-key.outputs.key }}
@@ -469,6 +475,7 @@ jobs:
   # minutes off the critical path rather than ~13 on it.
   benchmarks-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs: [dotnet-build]
 
     steps:

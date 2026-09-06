@@ -29,7 +29,7 @@ public class and_subject_is_different_from_event_source_id : given.all_dependenc
         _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(Task.FromResult<ExpandoObject?>(null));
     }
 
-    async Task Because() => await _pipeline.Handle(
+    async Task Because() => await _pipeline.Reduce(
         CreateContext(EventSourceIdValue, (Subject)SubjectValue),
         CreateReducer(_returnedState));
 

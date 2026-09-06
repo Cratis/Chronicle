@@ -452,7 +452,19 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 // fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
 app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
-await app.RunAsync(cancellationToken.Token);
+try
+{
+    await app.RunAsync(cancellationToken.Token);
+}
+catch (OperationCanceledException)
+{
+    // A shutdown signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is
+    // still binding, or an ILifecycleParticipant is still running - cancels the host's own lifetime token
+    // and surfaces as an OperationCanceledException out of RunAsync instead of RunAsync completing
+    // normally. Left uncaught, that reaches AppDomain.CurrentDomain.UnhandledException and the process
+    // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
+    logger.ServerShutdownDuringStartup();
+}
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

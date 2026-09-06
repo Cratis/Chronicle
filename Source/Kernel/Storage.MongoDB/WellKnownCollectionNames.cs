@@ -94,6 +94,11 @@ public static class WellKnownCollectionNames
     public const string Recommendations = "recommendations";
 
     /// <summary>
+    /// The collection that holds the behavior patterns that survived mining.
+    /// </summary>
+    public const string BehaviorPatterns = "behavior-patterns";
+
+    /// <summary>
     /// The collection that holds reactor definitions.
     /// </summary>
     public const string ReactorDefinitions = "reactors";

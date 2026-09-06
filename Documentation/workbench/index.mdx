@@ -1,0 +1,105 @@
+---
+title: Chronicle Workbench
+description: Bundled local browser inspection and supported projection-preview boundaries for Chronicle.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+import SimpleCard from '@components/SimpleCard.astro';
+import TopicHero from '@components/TopicHero.astro';
+
+<TopicHero
+  icon="laptop"
+  eyebrow="Chronicle Workbench"
+  title="Inspect Chronicle from a local browser"
+>
+  Chronicle Workbench provides a bundled local browser surface for authorized
+  inspection of Chronicle runtime state and preview of supported projection
+  behavior.
+
+  Chronicle and its bundled local Workbench are available as MIT-licensed
+  self-hosted software; authorized local use is separate from paid Cratis
+  support, hosted coordination, or managed operational responsibility.
+</TopicHero>
+
+## Start locally
+
+<Steps>
+1. Pull and start the current development image with Chronicle available only
+   on this machine. MongoDB remains internal to the container. Pin a released
+   version in project-owned configuration when repeatability matters.
+
+   ```bash
+   docker run --pull=always --rm -d --name chronicle \
+     -p 127.0.0.1:35000:35000 \
+     cratis/chronicle:latest-development
+   ```
+
+2. Wait for the local health endpoint to report readiness. The development
+   image uses a self-signed certificate, so this command disables certificate
+   verification only for this local check.
+
+   ```bash
+   curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 \
+     https://localhost:35000/health
+   ```
+
+   Continue when the response prints `Healthy`.
+
+3. Open `https://localhost:35000` in a browser and follow the authentication
+   flow shown by the local development image. Browser handling of its self-signed
+   certificate varies by environment.
+
+4. Select the event store and namespace you are authorized to inspect.
+
+5. Review only the runtime state and projection-preview paths needed for the
+   evaluation.
+
+6. Stop and remove the container when finished.
+
+   ```bash
+   docker rm -f chronicle
+   ```
+
+</Steps>
+
+## What to inspect
+
+<CardGrid>
+  <Card title="Connected clients" icon="node">
+    Review the clients currently represented by the selected local runtime scope.
+  </Card>
+  <Card title="Stores and namespaces" icon="seti:db">
+    Confirm the exact event store and namespace before interpreting runtime state.
+  </Card>
+  <Card title="Observer state" icon="list-format">
+    Inspect the status presented for observers and recorded failed partitions.
+  </Card>
+  <Card title="Read models" icon="laptop">
+    Inspect the read-model instances exposed by the selected runtime scope.
+  </Card>
+  <Card title="Projection preview" icon="puzzle">
+    Preview the projection behavior supported by the running Chronicle image.
+  </Card>
+</CardGrid>
+
+:::danger[Inspection does not authorize mutation]
+Do not infer authority to append, revise, redact, replay, recover, control jobs,
+or perform another mutation from the ability to inspect runtime state. Complete
+administration, governed/production-ready mutation, federation, managed service,
+support, SLA, security, compatibility, and production suitability are outside
+this page's claim scope.
+:::
+
+## Continue
+
+<CardGrid>
+  <SimpleCard title="Chronicle overview" icon="seti:db" link="/chronicle/">
+    Start Chronicle locally and understand the product boundary.
+  </SimpleCard>
+  <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
+    Locate the kernel, protocol surfaces, stores, namespaces, and subscriptions.
+  </SimpleCard>
+  <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
+    Use terminal inspection and diagnostic workflows.
+  </SimpleCard>
+</CardGrid>

@@ -92,7 +92,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
                         options={generationOptions}
                         optionLabel='label'
                         optionValue='value'
-                        onChange={(event) => handleGenerationChange(event.value)}
+                        onChange={(value) => handleGenerationChange(value)}
                         style={{ minWidth: '160px' }}
                     />
                 </div>

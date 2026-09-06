@@ -20,6 +20,7 @@ on:
 jobs:
   discover:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     outputs:
       client-matrix: ${{ steps.client.outputs.matrix }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
@@ -82,6 +83,7 @@ jobs:
   client-integration-specs:
     needs: [discover]
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
@@ -190,6 +192,7 @@ jobs:
   kernel-integration-specs:
     needs: [discover]
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.kernel-matrix) }}
@@ -259,6 +262,7 @@ jobs:
   clustering-integration-specs:
     needs: [discover]
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.clustering-matrix) }}

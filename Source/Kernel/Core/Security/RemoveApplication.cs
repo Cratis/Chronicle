@@ -21,7 +21,7 @@ public record RemoveApplication(Guid Id)
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Handle(IGrainFactory grainFactory)
+    public async Task Handle(IGrainFactory grainFactory)
     {
         var @event = new ApplicationRemoved();
         var eventSequence = grainFactory.GetEventLog();

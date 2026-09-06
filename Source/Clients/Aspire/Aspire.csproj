@@ -2,6 +2,8 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Aspire</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Aspire</RootNamespace>
+        <Description>.NET Aspire hosting integration for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Run the Chronicle kernel as an Aspire resource in your distributed application.</Description>
+        <PackageTags>event-sourcing;event-store;cqrs;aspire;dotnet;chronicle</PackageTags>
         <NoWarn>$(NoWarn);ASPIREPROBES001;NU1903</NoWarn>
     </PropertyGroup>
 

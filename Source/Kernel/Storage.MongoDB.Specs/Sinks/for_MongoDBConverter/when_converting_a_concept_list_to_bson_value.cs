@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter;
@@ -35,7 +36,7 @@ public class when_converting_a_concept_list_to_bson_value : Specification
                 { ReadModelGeneration.First, JsonSchema.FromType<TaggedReadModel>() },
             },
             []);
-        _converter = new(new ExpandoObjectConverter(typeFormats), typeFormats, model);
+        _converter = new(new ExpandoObjectConverter(typeFormats), typeFormats, model, NullLogger<MongoDBConverter>.Instance);
     }
 
     void Because() => _result = _converter.ToBsonValue(

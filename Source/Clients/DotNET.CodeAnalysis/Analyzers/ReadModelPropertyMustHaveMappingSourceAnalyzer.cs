@@ -78,16 +78,21 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        foreach (var (member, memberType) in GetMembers(typeSymbol))
+        foreach (var (member, memberType, attributes) in GetMembers(typeSymbol))
         {
-            AnalyzeMember(context, member, memberType, subscribedEvents);
+            AnalyzeMember(context, member, memberType, attributes, subscribedEvents);
         }
     }
 
-    static void AnalyzeMember(SymbolAnalysisContext context, ISymbol member, ITypeSymbol memberType, IReadOnlyCollection<INamedTypeSymbol> subscribedEvents)
+    static void AnalyzeMember(
+        SymbolAnalysisContext context,
+        ISymbol member,
+        ITypeSymbol memberType,
+        IReadOnlyList<AttributeData> attributes,
+        IReadOnlyCollection<INamedTypeSymbol> subscribedEvents)
     {
         // Skip members that are explicitly sourced by a mapping attribute or marked as the key.
-        if (member.GetAttributes().Any(IsMappingOrKeyAttribute))
+        if (attributes.Any(IsMappingOrKeyAttribute))
         {
             return;
         }
@@ -118,9 +123,9 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
             return true;
         }
 
-        foreach (var (member, _) in GetMembers(typeSymbol))
+        foreach (var (_, _, attributes) in GetMembers(typeSymbol))
         {
-            if (member.GetAttributes().Any(IsModelBoundMappingAttribute))
+            if (attributes.Any(IsModelBoundMappingAttribute))
             {
                 return true;
             }
@@ -147,15 +152,15 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
 
         Collect(typeSymbol.GetAttributes());
 
-        foreach (var (member, _) in GetMembers(typeSymbol))
+        foreach (var (_, _, attributes) in GetMembers(typeSymbol))
         {
-            Collect(member.GetAttributes());
+            Collect(attributes);
         }
 
         return events;
     }
 
-    static IEnumerable<(ISymbol Member, ITypeSymbol Type)> GetMembers(INamedTypeSymbol typeSymbol)
+    static IEnumerable<(ISymbol Member, ITypeSymbol Type, IReadOnlyList<AttributeData> Attributes)> GetMembers(INamedTypeSymbol typeSymbol)
     {
         // Restrict to public instance properties: this excludes the compiler-generated protected
         // EqualityContract on records and any other non-public synthesized members.
@@ -164,7 +169,7 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
             .Where(property => !property.IsStatic && !property.IsIndexer && property.DeclaredAccessibility == Accessibility.Public)
             .ToArray();
 
-        var propertyNames = new HashSet<string>(properties.Select(property => property.Name), StringComparer.Ordinal);
+        var propertiesByName = properties.ToDictionary(property => property.Name, StringComparer.Ordinal);
         var handledByParameter = new HashSet<string>(StringComparer.Ordinal);
 
         // For a positional record, a member-level mapping/key attribute (and the member location) lands on the
@@ -176,18 +181,27 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
 
         if (typeSymbol.IsRecord && primaryConstructor is not null)
         {
-            // A positional parameter generates a matching property; filtering on propertyNames excludes the
+            // A positional parameter generates a matching property; filtering on the property names excludes the
             // compiler-generated copy constructor's parameter, which has no corresponding property.
-            foreach (var parameter in primaryConstructor.Parameters.Where(parameter => propertyNames.Contains(parameter.Name)))
+            foreach (var parameter in primaryConstructor.Parameters.Where(parameter => propertiesByName.ContainsKey(parameter.Name)))
             {
                 handledByParameter.Add(parameter.Name);
-                yield return (parameter, parameter.Type);
+
+                // Where an attribute lands depends on how it was written: a bare [SetFrom<T>] on a positional
+                // parameter binds to the parameter, whereas [property: SetFrom<T>] binds to the generated
+                // property. Both are valid ways to declare the same mapping and both are honored at runtime, so
+                // the two have to be considered together - looking at only one of them reports a mapping that is
+                // plainly there as missing.
+                yield return (
+                    parameter,
+                    parameter.Type,
+                    [.. parameter.GetAttributes(), .. propertiesByName[parameter.Name].GetAttributes()]);
             }
         }
 
         foreach (var property in properties.Where(property => !handledByParameter.Contains(property.Name)))
         {
-            yield return (property, property.Type);
+            yield return (property, property.Type, property.GetAttributes());
         }
     }
 

@@ -27,6 +27,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
@@ -43,6 +44,7 @@ jobs:
   kernel:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [release]
 
     steps:
@@ -78,6 +80,7 @@ jobs:
   workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [release]
 
     steps:
@@ -125,6 +128,7 @@ jobs:
   kernel-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [release]
 
     steps:
@@ -167,6 +171,7 @@ jobs:
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [release, workbench]
 
     steps:
@@ -219,6 +224,7 @@ jobs:
   publish-docker:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [workbench, kernel, kernel-development, release]
 
     steps:

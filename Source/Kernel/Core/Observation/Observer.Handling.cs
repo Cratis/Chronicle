@@ -107,6 +107,7 @@ public partial class Observer
         }
 
         var failed = false;
+        var failureKind = FailureKind.Unknown;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
@@ -132,6 +133,8 @@ public partial class Observer
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
+                    var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey);
+
                     ObserverSubscriberResult result;
                     while (true)
                     {
@@ -139,7 +142,7 @@ public partial class Observer
                         var key = _subscription.GetSubscriberKeyFor(partition, target.SiloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        result = await subscriber.OnNext(partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
+                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
 
                         // A disconnected result from one client instance only removes that instance —
                         // the batch is retried against the remaining instances. Only when the last
@@ -163,6 +166,7 @@ public partial class Observer
                     if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
+                        failureKind = FailureKind.Handling;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
                         tailEventSequenceNumber = result.HandledAnyEvents
@@ -202,6 +206,7 @@ public partial class Observer
                 catch (Exception ex)
                 {
                     failed = true;
+                    failureKind = ex.ToFailureKind();
                     exceptionMessages = ex.GetAllMessages().ToArray();
                     exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 }
@@ -219,7 +224,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind);
                 }
                 else
                 {

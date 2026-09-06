@@ -21,6 +21,12 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Debug, "Resuming job")]
     internal static partial void Resuming(this ILogger<IJob> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Job was left running with all of its steps already completed - finalizing it instead of resuming")]
+    internal static partial void FinalizingJobLeftRunningAfterAllStepsCompleted(this ILogger<IJob> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Job failed recounting its progress from its job steps")]
+    internal static partial void FailedReconcilingProgressFromJobSteps(this ILogger<IJob> logger, Exception ex);
+
     [LoggerMessage(LogLevel.Debug, "Stopping job")]
     internal static partial void Stopping(this ILogger<IJob> logger);
 
@@ -41,6 +47,12 @@ internal static partial class JobLogMessages
 
     [LoggerMessage(LogLevel.Warning, "An error occurred while preparing and starting job steps")]
     internal static partial void ErrorPreparingJobSteps(this ILogger<IJob> logger, Exception ex);
+
+    [LoggerMessage(LogLevel.Warning, "Failed starting the job steps in the background with error {Error}")]
+    internal static partial void FailedStartingJobStepsInBackground(this ILogger<IJob> logger, StartJobError error);
+
+    [LoggerMessage(LogLevel.Debug, "Not starting the job steps because the job is no longer preparing, it is {Status}")]
+    internal static partial void NotStartingJobStepsForJobThatIsNoLongerPreparing(this ILogger<IJob> logger, JobStatus status);
 
     [LoggerMessage(LogLevel.Trace, "Step {JobStepId} successfully completed")]
     internal static partial void StepSuccessfullyCompleted(this ILogger<IJob> logger, JobStepId jobStepId);

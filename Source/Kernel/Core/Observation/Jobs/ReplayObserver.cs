@@ -29,6 +29,14 @@ public class ReplayObserver(
     ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <inheritdoc/>
+    /// <remarks>
+    /// A definition change replays through Subscribe, and behind Subscribe sits the client's registration call with
+    /// a response timeout on it. A reactor or reducer replays with a step per event source, so bringing those steps
+    /// up must not be billed to that call.
+    /// </remarks>
+    protected override bool StartStepsInBackground => true;
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
         if (request.ObserverType == ObserverType.Projection)

@@ -31,7 +31,7 @@ public record ChangeUserPassword(Guid UserId, string OldPassword, string Passwor
     /// <exception cref="Services.Security.UserNotFound">Thrown when the specified user does not exist.</exception>
     /// <exception cref="Services.Security.InvalidOldPassword">Thrown when the supplied current password is incorrect.</exception>
     /// <exception cref="Services.Security.NewPasswordMustBeDifferent">Thrown when the new password is the same as the current password.</exception>
-    internal async Task Handle(IGrainFactory grainFactory, IStorage storage)
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
         {

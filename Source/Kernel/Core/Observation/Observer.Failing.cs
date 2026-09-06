@@ -16,13 +16,14 @@ public partial class Observer
         Key partition,
         EventSequenceNumber sequenceNumber,
         IEnumerable<string> exceptionMessages,
-        string exceptionStackTrace)
+        string exceptionStackTrace,
+        FailureKind kind = FailureKind.Unknown)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         _metrics?.PartitionFailed(partition);
         logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var partitionWasAlreadyFailed = Failures.IsFailed(partition);
-        var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
         if (!partitionWasAlreadyFailed)
         {
             State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
@@ -173,9 +174,21 @@ public partial class Observer
             requestPredicate: r => r.Key == failedPartition.Partition);
     }
 
+    /// <summary>
+    /// Check whether the observer's failures have reached a threshold that takes it out of service.
+    /// </summary>
+    /// <param name="config">The <see cref="Observers"/> configuration holding the thresholds.</param>
+    /// <returns>True when the observer should be quarantined, false if not.</returns>
+    /// <remarks>
+    /// A partition whose last attempt timed out does not count toward either threshold. Quarantining stops retries
+    /// and needs an operator to undo, which is the right answer for an observer that is wrong and the wrong answer
+    /// for one that is only waiting on a congested kernel - the congestion is transient and takes the retries with it
+    /// when it clears. Counting timeouts would let a busy period take healthy projections out of service, and the
+    /// operator who then cleared the quarantine would find nothing wrong with them.
+    /// </remarks>
     bool ShouldQuarantineObserver(Observers config)
     {
-        var failedPartitionCount = Failures.Partitions.Count();
+        var failedPartitionCount = Failures.Partitions.Count(_ => _.LastAttempt.Kind != FailureKind.Timeout);
         if (config.QuarantineOnFailedPartitionCount > 0 && failedPartitionCount >= config.QuarantineOnFailedPartitionCount)
         {
             logger.ObserverFailedPartitionCountThresholdReached(failedPartitionCount, config.QuarantineOnFailedPartitionCount);

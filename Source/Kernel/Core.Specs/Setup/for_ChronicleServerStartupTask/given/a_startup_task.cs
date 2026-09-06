@@ -22,6 +22,7 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Patching;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
@@ -42,6 +43,7 @@ public class a_startup_task : Specification
     protected IStorage _storage = null!;
     protected IEventTypes _eventTypes = null!;
     protected IReactors _reactors = null!;
+    protected IPatternCapture _patternCapture = null!;
     protected IProjectionsServiceClient _projectionsServiceClient = null!;
     protected IGrainFactory _grainFactory = null!;
     IAuthenticationService _authenticationService = null!;
@@ -72,6 +74,7 @@ public class a_startup_task : Specification
         _storage = Substitute.For<IStorage>();
         _eventTypes = Substitute.For<IEventTypes>();
         _reactors = Substitute.For<IReactors>();
+        _patternCapture = Substitute.For<IPatternCapture>();
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _authenticationService = new TestAuthenticationService();
@@ -102,6 +105,7 @@ public class a_startup_task : Specification
             _storage,
             _eventTypes,
             _reactors,
+            _patternCapture,
             _projectionsServiceClient,
             _grainFactory,
             _authenticationService,

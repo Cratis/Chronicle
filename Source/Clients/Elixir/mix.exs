@@ -14,7 +14,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      description: "Generated Elixir gRPC contracts for Chronicle",
+      description: "Generated Elixir gRPC contracts for Cratis Chronicle - the open-source event-sourcing database",
       package: package(),
       source_url: @source_url,
       homepage_url: @source_url
@@ -41,7 +41,11 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
     [
       name: "cratis_chronicle_contracts",
       licenses: ["MIT"],
-      links: %{"GitHub" => @source_url},
+      links: %{
+        "GitHub" => @source_url,
+        "Documentation" => "https://www.cratis.io/chronicle/",
+        "Cratis" => "https://www.cratis.io"
+      },
       maintainers: ["Cratis"],
       files: ~w(lib mix.exs README.md .formatter.exs)
     ]

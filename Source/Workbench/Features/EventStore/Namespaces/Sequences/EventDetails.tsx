@@ -233,7 +233,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                                 options={revisionOptions}
                                 optionLabel='label'
                                 optionValue='value'
-                                onChange={(e) => setSelectedRevision(e.value)}
+                                onChange={(value) => setSelectedRevision(value)}
                                 placeholder={revisionPlaceholder}
                                 style={{ minWidth: '200px' }}
                             />
@@ -249,7 +249,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                                 options={generationOptions}
                                 optionLabel='label'
                                 optionValue='value'
-                                onChange={(e) => setSelectedGeneration(e.value)}
+                                onChange={(value) => setSelectedGeneration(value)}
                                 placeholder={generationPlaceholder}
                                 style={{ minWidth: '200px' }}
                             />

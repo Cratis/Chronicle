@@ -9,7 +9,7 @@ percentage - and beside the hand-measured series the reliability program was arg
 definition that drifts away from that analysis shows up as a widening delta instead of quietly
 becoming the new truth.
 
-The targets come from PLAN-reliability-program.md, section 5, task 2.4: volume flat or up,
+The targets come from the reliability program plan (section 5, task 2.4): volume flat or up,
 fix-share below 10%, patch share below 40%, and reverts trending toward the pre-2026 baseline of
 roughly one a month. The plan sets no threshold for the regression-language issue rate, so this
 reports its direction rather than inventing a verdict for it.
@@ -172,7 +172,7 @@ def render(series, month, partial, baseline, sources, repository, generated):
         f"Generated {generated} from the git history of this clone and the issue search for",
         f"`{repository or 'an undetermined repository'}`. The metric definitions live in",
         "`.github/scripts/regression_tax_metrics.py`; the targets come from",
-        "`PLAN-reliability-program.md`, section 5, task 2.4.", "",
+        "the reliability program plan (section 5, task 2.4).", "",
     ]
     body += render_verdicts(series, month, partial) + [""] + render_series(series, baseline)
     body += [""] + render_sources(sources)
