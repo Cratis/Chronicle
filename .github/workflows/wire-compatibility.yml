@@ -29,38 +29,20 @@ env:
   DOTNET_VERSION: "10.0.x"
   PROTOBUF_DIRECTORY: Source/Kernel/Protobuf
 
-  # The oldest release this gate measures from, and the major it applies to. Anything older in that major is not
-  # compared against; every other major is compared in full.
+  # The oldest release this gate measures from, and the major it applies to. Empty means no floor: every released
+  # minor of the current major is compared in full, which is the default behavior for every major.
   #
-  # 16.x already lost intra-major compatibility. From 16.34.0 the Security and Jobs surfaces stopped being
-  # hand-written gRPC contracts and became generated from the Arc artifacts in Core, which renamed every method and
-  # moved every query payload behind a result envelope; COMPATIBILITY-REPORT.md measures exactly what that cost and
-  # concludes it cannot be undone without freezing a pre-Arc response shape into the generator permanently. Issue
-  # #2908 finished that conversion: every remaining hand-written service (EventSequences, EventTypes, Captures,
-  # ExternalServices, Identities, Observation/Webhooks, Recommendations, Seeding, and the rest of the Web API
-  # surface) moved onto the same generated path, for the same reason, and broke the same way.
+  # 16.x lost intra-major compatibility partway through: from 16.34.0 the Security and Jobs surfaces, then every
+  # remaining hand-written gRPC service (issue #2908), moved from hand-written contracts to ones generated from the
+  # Arc artifacts in Core, renaming every method and wrapping every query payload in a result envelope.
+  # COMPATIBILITY-REPORT.md measures what that cost. A floor naming 16.45.0 carried this gate through the rest of
+  # 16.x, comparing only from the release the conversion finished at instead of failing on a break that had already
+  # shipped.
   #
-  # A gate that fails every run on a break that already shipped stops being read, and one that is turned off
-  # entirely catches nothing. So 16.x is measured from where the conversion finished instead: 16.39.0 and
-  # everything after it is the generated contract and has to keep working, and the releases before it - including
-  # 16.34.0 through 16.38.2, which only had *part* of the conversion - are acknowledged as already broken. This is
-  # a statement about 16.x only - the major is read from the version itself, so 17 and beyond get the whole of
-  # their major compared with no floor at all, which is the behavior every major should have.
-  #
-  # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
-  # release that does, never to make a red check go away.
-  #
-  # This floor keeps moving while the PR is open: it was 16.38.0, then 16.39.0, then 16.43.0, and unrelated releases
-  # have shipped past each. It names the release this change goes out as, so it is never a version already published
-  # by the time this line is read - re-check the latest tag before trusting it. Latest at the time of writing is
-  # 16.44.1.
-  #
-  # This branch moves it again on purpose. The two projection code-generation operations left the hand-written
-  # Projections contract and became the generated ProjectionEditor service, and reading a read model instance's
-  # snapshots left the hand-written ReadModels contract to become the generated ReadModelExplorer query - so
-  # Projections lost two rpcs and ReadModels lost one, along with the messages behind them. That is the same
-  # conversion, for the same reason, as everything listed above.
-  WIRE_BASELINE_FLOOR: "16.45.0"
+  # This PR finishes the major bump that break was leading to - the release goes out as 17.0.0, so 16.x is behind
+  # for good and the floor that carried it has nothing left to narrow. Leave this empty unless a future major ships
+  # a deliberate mid-major break of its own and needs the same carry-through.
+  WIRE_BASELINE_FLOOR: ""
 
 jobs:
   wire-compatibility:
