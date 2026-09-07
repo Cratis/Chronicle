@@ -25,6 +25,12 @@ export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, IName
         }
     }, [params.eventStore, viewModel]);
 
+    useEffect(() => {
+        if (params.namespace) {
+            viewModel.syncNamespaceFromRoute(params.namespace);
+        }
+    }, [params.namespace, viewModel]);
+
     const [isNamespacePanelOpen, setIsNamespacePanelOpen] = useState(false);
 
     const selectNamespace = (namespace: string) => {

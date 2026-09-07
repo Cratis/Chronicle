@@ -38,4 +38,16 @@ export class NamespaceSelectorViewModel {
         this._props.onNamespaceSelected(namespace);
         this._namespaces.setCurrentNamespace(namespace);
     }
+
+    /**
+     * Keeps the global namespace store in sync with the route whenever the namespace
+     * changes through a means other than this selector (browser back/forward, a deep
+     * link, or a directly-typed URL).
+     * @param namespace - The namespace currently in the route.
+     */
+    syncNamespaceFromRoute(namespace: string) {
+        if (namespace && namespace !== this.currentNamespace) {
+            this._namespaces.setCurrentNamespace(namespace);
+        }
+    }
 }
