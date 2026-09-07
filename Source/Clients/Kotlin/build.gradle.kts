@@ -104,3 +104,14 @@ mavenPublishing {
         }
     }
 }
+
+// The sources jar (registered by signAllPublications() above, but only once the maven-publish plugin's own
+// afterEvaluate callback runs) packages the main source set's resources, which now include the generated
+// directory embedDescriptorSet writes into - without this, Gradle's implicit-dependency validation fails the
+// build because nothing orders the two tasks relative to each other. afterEvaluate defers this until after
+// that callback has had a chance to register the task.
+afterEvaluate {
+    tasks.named("sourcesJar") {
+        dependsOn(embedDescriptorSet)
+    }
+}
