@@ -20,6 +20,8 @@ In Cratis applications, Chronicle tests usually sit inside [Cratis Specification
 
 Use `Cratis.Testing` instead of `Cratis.Chronicle.Testing` when the same spec also tests Arc commands.
 
+Application command execution scopes, including Chronicle transactions, belong to the outer Arc command pipeline. The in-process kernel does not discover or invoke your application's `ICommandExecutionScope` implementations when processing an event append. Your application scopes still run around the application command; you do not need to register their dependencies with the kernel test harness.
+
 ## Topics
 
 | Guide | Description |
