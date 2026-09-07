@@ -43,6 +43,7 @@ using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
 using ExternalServicesImpl = Cratis.Chronicle.ExternalServices.ExternalServices;
@@ -405,7 +406,16 @@ public class EventStoreForTesting : IEventStore
             new ExpandoObjectConverter(new TypeFormats()));
 
         var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
-            InProcessCommandPipeline.Create(grainFactory, storage, _jsonSerializerOptions),
+            InProcessCommandPipeline.Create(
+                grainFactory,
+                storage,
+                _jsonSerializerOptions,
+                services =>
+                {
+                    services.AddSingleton<IUnitOfWorkManager>(new NoOpUnitOfWorkManager());
+                    services.AddSingleton<IEventLog>(new NoOpEventLog());
+                    services.AddSingleton<IEventTypes>(_eventTypes);
+                }),
             storage,
             eventCompliance,
             _jsonSerializerOptions,

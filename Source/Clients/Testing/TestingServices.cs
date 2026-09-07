@@ -31,6 +31,7 @@ using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Transactions;
 using Cratis.Traces;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
@@ -154,6 +155,17 @@ internal sealed class TestingServices : IServices
                         null!,
                         new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
                         Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+
+                    // AddCratisArcCore discovers every ICommandExecutionScope across the whole process, not just the
+                    // ones this pipeline cares about - an Arc.Chronicle consumer's transactional command scope is
+                    // discovered here too, even though this pipeline only ever executes the kernel's own commands,
+                    // which append directly through the grain and never touch a unit of work. Without a
+                    // registration, that scope falls back to auto-activating the real client EventStore, which
+                    // needs a live connection this in-process kernel does not have. This satisfies the resolution
+                    // harmlessly instead.
+                    services.AddSingleton<IUnitOfWorkManager>(new EventSequences.NoOpUnitOfWorkManager());
+                    services.AddSingleton<Cratis.Chronicle.EventSequences.IEventLog>(new EventSequences.NoOpEventLog());
+                    services.AddSingleton(Defaults.Instance.EventTypes);
                 }));
 
         _observers = new(() => new KernelObserversService(grainFactory, storage));
