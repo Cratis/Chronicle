@@ -33,6 +33,10 @@ export const PatternHeatmap = () => {
 
     const [scopes] = AllPatternScopes.use({ eventStore: params.eventStore!, namespace: params.namespace! });
     const scopeIds = useMemo(() => (scopes.data ?? []).map((_) => _.id), [scopes.data]);
+    const scopeName = useMemo(
+        () => (scopes.data ?? []).find((_) => _.id === scope)?.name ?? scope,
+        [scopes.data, scope]
+    );
 
     useEffect(() => {
         if (!scope && scopeIds.length > 0) {
@@ -56,7 +60,7 @@ export const PatternHeatmap = () => {
     return (
         <Page title={strings.mainMenu.patternHeatmap} noBackground>
             <div className="flex flex-col gap-4 h-full min-h-0">
-                <PatternScopeSelector scopes={scopeIds} selected={scope} onChange={setScope} />
+                <PatternScopeSelector scopes={scopes.data ?? []} selected={scope} onChange={setScope} />
 
                 {nowPattern && (
                     <div className="p-4 rounded border border-[var(--surface-border)]">
@@ -64,7 +68,7 @@ export const PatternHeatmap = () => {
                             {nowSlot.day}, {timeBucketLabels[nowSlot.timeBucket]}
                         </div>
                         <div className="text-lg">
-                            Right now, <strong>{scope}</strong> usually{' '}
+                            Right now, <strong>{scopeName}</strong> usually{' '}
                             <strong>{nowPattern.facets?.['CommandType'] ?? 'does this'}</strong>
                         </div>
                         <div className="mt-2 max-w-sm">
