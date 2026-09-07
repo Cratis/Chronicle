@@ -35,6 +35,11 @@ export const PatternHeatmap = () => {
     const scopeIds = useMemo(() => (scopes.data ?? []).map((_) => _.id), [scopes.data]);
 
     useEffect(() => {
+        setScope(undefined);
+        setSelectedSlot(undefined);
+    }, [params.namespace]);
+
+    useEffect(() => {
         if (!scope && scopeIds.length > 0) {
             setScope(scopeIds[0]);
         }
