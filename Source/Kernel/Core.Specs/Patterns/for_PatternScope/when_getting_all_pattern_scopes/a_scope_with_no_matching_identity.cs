@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Identities;
@@ -24,7 +23,7 @@ public class a_scope_with_no_matching_identity : Specification
         patterns.GetScopes().Returns([new PatternGroupingKey(Subject)]);
 
         var identities = Substitute.For<IIdentityStorage>();
-        identities.GetAll().Returns(Enumerable.Empty<Identity>());
+        identities.GetAll().Returns([]);
 
         _storage = Substitute.For<IStorage>();
         var eventStore = Substitute.For<IEventStoreStorage>();
