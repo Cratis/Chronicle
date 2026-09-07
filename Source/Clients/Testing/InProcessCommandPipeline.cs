@@ -9,6 +9,7 @@ using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.EventSequences;
+using Cratis.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using KernelRequestCausation = KernelCore::Cratis.Chronicle.Sequences.RequestCausation;
@@ -47,6 +48,7 @@ internal static class InProcessCommandPipeline
         services.AddLogging();
         services.Configure<ArcOptions>(_ => { });
         services.AddCratisArcCore();
+        services.AddSingleton<IInstancesOf<ICommandExecutionScope>>(new KnownInstancesOf<ICommandExecutionScope>());
         services.AddSingleton(grainFactory);
         services.AddSingleton(storage);
         services.AddSingleton(jsonSerializerOptions);
