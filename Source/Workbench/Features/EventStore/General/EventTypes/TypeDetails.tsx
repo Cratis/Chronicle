@@ -102,7 +102,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeDetails>) => 
                 </div>
             )}
             <Tabs className='flex flex-col flex-1 min-h-0'
-                panelContainerClassName='flex flex-col flex-1 min-h-0 p-0'>
+                panelContainerClassName='flex flex-col flex-1 min-h-0 overflow-y-auto p-0'>
                 <TabPanel header={strings.eventStore.general.eventTypes.tabs.schema}>
                     <div className='flex flex-col flex-1 min-h-0'>
                         <SchemaEditor
