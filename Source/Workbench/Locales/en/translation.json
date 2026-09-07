@@ -48,6 +48,7 @@
         }
     },
     "mainMenu": {
+        "dashboard": "Dashboard",
         "recommendations": "Recommendations",
         "jobs": "Jobs",
         "sequences": "Sequences",
@@ -369,6 +370,56 @@
             }
         },
         "namespaces": {
+            "dashboard": {
+                "title": "Dashboard",
+                "serverHealth": {
+                    "title": "Server Health",
+                    "connected": "Connected",
+                    "disconnected": "Disconnected",
+                    "context": "Context",
+                    "store": "Store",
+                    "namespace": "Namespace",
+                    "tailSequence": "Tail sequence",
+                    "catalog": "Catalog",
+                    "eventTypes": "Event types",
+                    "projections": "Projections",
+                    "readModels": "Read models",
+                    "subscriptions": "Subscriptions"
+                },
+                "observers": {
+                    "title": "Observers",
+                    "observers": "observers",
+                    "viewAll": "View observers"
+                },
+                "failures": {
+                    "title": "Failures",
+                    "healthy": "All partitions healthy",
+                    "unhealthy": "failed partitions",
+                    "viewAll": "View failed partitions"
+                },
+                "recommendations": {
+                    "title": "Recommendations",
+                    "pending": "pending recommendations",
+                    "reviewSuggested": "Review suggested",
+                    "viewAll": "View recommendations"
+                },
+                "jobs": {
+                    "title": "Jobs",
+                    "running": "jobs running",
+                    "total": "total",
+                    "viewAll": "View jobs"
+                },
+                "eventThroughput": {
+                    "title": "Event Throughput",
+                    "empty": "No samples yet"
+                },
+                "observersOverTime": {
+                    "title": "Observers Over Time",
+                    "total": "Total",
+                    "active": "Active",
+                    "empty": "No samples yet"
+                }
+            },
             "recommendations": {
                 "title": "Recommendations",
                 "empty": "No recommendations found",

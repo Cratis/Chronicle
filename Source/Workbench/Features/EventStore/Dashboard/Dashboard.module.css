@@ -1,0 +1,42 @@
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+        'serverHealth   observers          failures'
+        'serverHealth   recommendations    jobs'
+        'eventThroughput eventThroughput   observersOverTime';
+    gap: 16px;
+    height: 100%;
+    overflow: auto;
+    padding: 16px;
+}
+
+.serverHealth {
+    grid-area: serverHealth;
+}
+
+.observers {
+    grid-area: observers;
+}
+
+.failures {
+    grid-area: failures;
+}
+
+.recommendations {
+    grid-area: recommendations;
+}
+
+.jobs {
+    grid-area: jobs;
+}
+
+.eventThroughput {
+    grid-area: eventThroughput;
+    min-height: 220px;
+}
+
+.observersOverTime {
+    grid-area: observersOverTime;
+    min-height: 220px;
+}

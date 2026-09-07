@@ -37,7 +37,7 @@ import { AreDevelopmentToolsAvailable } from 'Features/DevelopmentTools';
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 import { Captures } from './General/Captures/Captures';
-// import { Dashboard } from './Dashboard/Dashboard';
+import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
     // The server decides: development tools are only compiled into development builds, so a
@@ -48,7 +48,7 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                // { label: 'Dashboard', url: ':namespace/dashboard', icon: mdIcons.MdSpaceDashboard },
+                { label: strings.mainMenu.dashboard, url: ':namespace/dashboard', icon: mdIcons.MdSpaceDashboard },
                 { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
@@ -100,7 +100,7 @@ export const EventStore = () => {
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
-                <Route index element={<Navigate to={'Default/recommendations'} replace />} />
+                <Route index element={<Navigate to={'Default/dashboard'} replace />} />
 
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
@@ -120,8 +120,8 @@ export const EventStore = () => {
                 <Route path={'development-tools'} element={<DevelopmentTools />} />
 
                 <Route path={':namespace'}>
-                    <Route path={''} element={<Navigate to={'recommendations'} replace />} />
-                    {/* <Route path={'dashboard'} element={<Dashboard />} /> */}
+                    <Route path={''} element={<Dashboard />} />
+                    <Route path={'dashboard'} element={<Dashboard />} />
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />
