@@ -21,6 +21,7 @@ using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
 using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
@@ -185,7 +186,16 @@ public class EventScenario(
                 NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
         var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
-            InProcessCommandPipeline.Create(grainFactory, storage, jsonSerializerOptions),
+            InProcessCommandPipeline.Create(
+                grainFactory,
+                storage,
+                jsonSerializerOptions,
+                services =>
+                {
+                    services.AddSingleton<IUnitOfWorkManager>(new NoOpUnitOfWorkManager());
+                    services.AddSingleton<IEventLog>(new NoOpEventLog());
+                    services.AddSingleton(Defaults.Instance.EventTypes);
+                }),
             storage,
             eventCompliance,
             jsonSerializerOptions,
