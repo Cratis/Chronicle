@@ -1,0 +1,40 @@
+.jobsWidget {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.title {
+    margin: 0 0 8px 0;
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.total {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.totalValue {
+    color: var(--text-color);
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.totalLabel {
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+}
+
+.subtitle {
+    color: var(--text-color-secondary);
+    font-size: 0.75rem;
+}
+
+.viewAll {
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 0;
+}

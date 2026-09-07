@@ -5,6 +5,7 @@ export interface ThemeColors {
     primaryColor: string;
     primaryColorText: string;
     primary500: string;
+    green500: string;
     surfaceGround: string;
     surfaceCard: string;
     surfaceSection: string;
@@ -21,6 +22,7 @@ const cssVariableMap: Record<keyof ThemeColors, string> = {
     primaryColor: '--primary-color',
     primaryColorText: '--primary-color-text',
     primary500: '--primary-500',
+    green500: '--green-500',
     surfaceGround: '--surface-ground',
     surfaceCard: '--surface-card',
     surfaceSection: '--surface-section',

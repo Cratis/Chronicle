@@ -1,0 +1,41 @@
+.observersWidget {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.title {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.total {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.totalValue {
+    color: var(--text-color);
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.totalLabel {
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+}
+
+.breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.viewAll {
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 0;
+}
