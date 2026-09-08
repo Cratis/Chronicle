@@ -34,11 +34,13 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting ExpandoObjects.</param>
 /// <param name="languageService"><see cref="ILanguageService"/> for handling projection declaration language.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
+/// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
 internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
     ILanguageService languageService,
-    IServiceProvider serviceProvider) : IProjections
+    IServiceProvider serviceProvider,
+    IReadModelsCompliance readModelsCompliance) : IProjections
 {
     /// <summary>
     /// The property a materialized read model carries its key in, which is what the read side looks it up by.
@@ -186,8 +188,11 @@ internal sealed class Projections(
                     result = await projection.Process(request.Namespace, events);
                 }
 
-                var readModels = result
-                    .Select(r => WithReadModelKey(r, expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration())).ToString())
+                var schema = readModelDefinition.GetSchemaForLatestGeneration();
+                var releasedResult = await ReleaseComplianceForPreview(request.EventStore, request.Namespace, schema, result);
+
+                var readModels = releasedResult
+                    .Select(r => WithReadModelKey(r, expandoObjectConverter.ToJsonObject(r, schema)).ToString())
                     .ToArray();
 
                 return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionPreview
@@ -476,5 +481,63 @@ internal sealed class Projections(
         }
 
         return json;
+    }
+
+    /// <summary>
+    /// Resolves the compliance subject for a previewed instance: an explicit <see cref="WellKnownProperties.Subject"/>
+    /// when the projection already tagged one, otherwise the same key the instance was projected for.
+    /// </summary>
+    /// <param name="instance">The projected instance, as a property dictionary.</param>
+    /// <returns>The resolved subject, or <see langword="null"/> when none could be found.</returns>
+    static string? GetOrInferSubject(IDictionary<string, object?> instance)
+    {
+        if (instance.TryGetValue(WellKnownProperties.Subject, out var subject) && subject is not null)
+        {
+            return subject.ToString();
+        }
+
+        return _projectedKeyPropertyNames
+            .Select(name => instance.TryGetValue(name, out var value) ? value : null)
+            .FirstOrDefault(value => value is not null)
+            ?.ToString();
+    }
+
+    /// <summary>
+    /// Decrypts PII fields in a set of previewed read model instances, projected directly from stored
+    /// (encrypted) events.
+    /// </summary>
+    /// <param name="eventStore">The event store the events were projected from.</param>
+    /// <param name="namespace">The namespace the events were projected from.</param>
+    /// <param name="schema">The read model's schema, used to resolve which properties are PII.</param>
+    /// <param name="instances">The projected instances to decrypt.</param>
+    /// <returns>The instances with PII fields decrypted, in the same order.</returns>
+    /// <remarks>
+    /// Unlike a materialized read model, a previewed instance never passes through the projection engine's
+    /// changeset pipeline that stamps <see cref="WellKnownProperties.Subject"/> for the compliance manager to
+    /// key off - it is a plain projection of the requested events into a shape, produced on the fly for the
+    /// Workbench. Its compliance subject has to be inferred here, the same way the Read Models views infer it
+    /// for a directly-projected instance, so the encrypted PII fields the projection copied straight out of the
+    /// events can be released before the preview reaches the client.
+    /// </remarks>
+    async Task<IEnumerable<ExpandoObject>> ReleaseComplianceForPreview(
+        string eventStore,
+        string @namespace,
+        JsonSchema schema,
+        IEnumerable<ExpandoObject> instances)
+    {
+        var released = new List<ExpandoObject>();
+        foreach (var instance in instances)
+        {
+            var dictionary = (IDictionary<string, object?>)instance;
+            var subject = GetOrInferSubject(dictionary);
+            if (!string.IsNullOrWhiteSpace(subject))
+            {
+                dictionary[WellKnownProperties.Subject] = subject;
+            }
+
+            released.Add(await readModelsCompliance.Release(eventStore, @namespace, schema, instance));
+        }
+
+        return released;
     }
 }
