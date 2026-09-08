@@ -742,7 +742,7 @@ static class ChildrenDefinitionExtensions
             return childType;
         }
 
-        var implementations = Types.Types.Instance.All
+        var implementations = TypeUniverse.Current.All
             .Where(type => !type.IsAbstract && !type.IsInterface &&
                            childType.IsAssignableFrom(type) &&
                            Attribute.IsDefined(type, typeof(DerivedTypeAttribute)))
