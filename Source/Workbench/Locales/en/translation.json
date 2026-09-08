@@ -375,7 +375,8 @@
                 "empty": "No recommendations found",
                 "actions": {
                     "perform": "Perform",
-                    "ignore": "Ignore"
+                    "ignore": "Ignore",
+                    "selectAll": "Select All"
                 },
                 "columns": {
                     "name": "Name",
@@ -387,6 +388,10 @@
                     "ignoreRecommendation": {
                         "title": "Ignore Recommendation",
                         "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                    },
+                    "ignoreRecommendations": {
+                        "title": "Ignore Recommendations",
+                        "message": "Are you sure you want to ignore {count} recommendations? This action cannot be undone."
                     }
                 }
             },
@@ -396,7 +401,8 @@
                 "actions": {
                     "resume": "Resume",
                     "stop": "Stop",
-                    "delete": "Delete"
+                    "delete": "Delete",
+                    "selectAll": "Select All"
                 },
                 "columns": {
                     "type": "Type",
@@ -404,6 +410,12 @@
                     "details": "Details",
                     "status": "Status",
                     "progress": "Progress"
+                },
+                "dialogs": {
+                    "deleteJobs": {
+                        "title": "Delete Jobs",
+                        "message": "Are you sure you want to delete {count} jobs? This action cannot be undone."
+                    }
                 },
                 "status": {
                     "none": "None",
