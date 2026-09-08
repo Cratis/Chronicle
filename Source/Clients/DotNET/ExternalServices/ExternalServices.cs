@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Microsoft.Extensions.Logging;
 
@@ -24,12 +25,10 @@ public class ExternalServices(IEventStore eventStore, ILogger<ExternalServices> 
         var definition = builder.Build(name, name);
         logger.RegisterExternalService(name);
 
-        var request = new AddExternalServices
+        await _servicesAccessor.Services.ExternalServices.AddExternalServices(new AddExternalServicesRequest
         {
             EventStore = eventStore.Name,
             ExternalServices = [definition]
-        };
-
-        await _servicesAccessor.Services.ExternalServices.Add(request);
+        }).EnsureSuccess();
     }
 }

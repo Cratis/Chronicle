@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Events;
 using ProtoBuf.Grpc;
 
@@ -14,8 +14,7 @@ public class and_deserializing_events : given.an_event_sequence
     EventSourceId _eventSourceId;
     List<EventType> _eventTypes;
     List<TestEvent> _expectedEvents;
-    GetForEventSourceIdAndEventTypesRequest _request;
-    GetForEventSourceIdAndEventTypesResponse _response;
+    Contracts.Sequences.ForEventSourceIdAndEventTypesRequest _request;
     IImmutableList<AppendedEvent> _result;
 
     void Establish()
@@ -39,48 +38,39 @@ public class and_deserializing_events : given.an_event_sequence
             base._eventTypes.GetClrTypeFor(eventType.Id).Returns(typeof(TestEvent));
         }
 
-        var contractEvents = _expectedEvents.Select((evt, idx) => new Contracts.Events.AppendedEvent
+        var contractEvents = _expectedEvents.Select((evt, idx) => new Contracts.Sequences.AppendedEventResponse
         {
-            Context = new Contracts.Events.EventContext
+            Context = new Contracts.Sequences.EventContext
             {
-                EventType = _eventTypes[idx].ToContract(),
+                EventType = _eventTypes[idx].ToSequencesContract(),
                 SequenceNumber = (ulong)(42 + idx),
                 EventSourceId = _eventSourceId,
                 EventSourceType = EventSourceType.Default,
                 EventStreamType = EventStreamType.All,
                 EventStreamId = EventStreamId.Default,
                 Occurred = DateTimeOffset.UtcNow,
-                EventStore = "event-store",
-                Namespace = "namespace",
                 CorrelationId = Guid.NewGuid(),
                 Causation = [],
-                CausedBy = new Contracts.Identities.Identity(),
-                Tags = [],
-                Hash = "hash",
-                ObservationState = Contracts.Events.EventObservationState.None
+                CausedBy = new Contracts.Sequences.Identity(),
+                Tags = []
             },
             Content = JsonSerializer.Serialize(evt, JsonSerializerOptions.Default)
         }).ToList();
 
-        _response = new()
-        {
-            Events = contractEvents
-        };
+        _sequences
+            .When(_ => _.ForEventSourceIdAndEventTypes(Arg.Any<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>(), CallContext.Default))
+            .Do(callInfo => _request = callInfo.Arg<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>());
 
-        _eventSequences
-            .When(_ => _.GetForEventSourceIdAndEventTypes(Arg.Any<GetForEventSourceIdAndEventTypesRequest>(), CallContext.Default))
-            .Do(callInfo => _request = callInfo.Arg<GetForEventSourceIdAndEventTypesRequest>());
-
-        _eventSequences
-            .GetForEventSourceIdAndEventTypes(Arg.Any<GetForEventSourceIdAndEventTypesRequest>(), CallContext.Default)
-            .Returns(_response);
+        _sequences
+            .ForEventSourceIdAndEventTypes(Arg.Any<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>(), CallContext.Default)
+            .Returns(QueryResult<IEnumerable<Contracts.Sequences.AppendedEventResponse>>.Success(Guid.NewGuid(), contractEvents));
     }
 
     async Task Because() => _result = await _eventSequence.GetForEventSourceIdAndEventTypes(_eventSourceId, _eventTypes);
 
     [Fact] void should_call_service() => _request.ShouldNotBeNull();
     [Fact] void should_pass_event_source_id() => _request.EventSourceId.ShouldEqual(_eventSourceId.Value);
-    [Fact] void should_pass_event_types() => _request.EventTypes.Select(_ => _.ToClient()).ShouldEqual(_eventTypes);
+    [Fact] void should_pass_event_types() => _request.EventTypeIds.ShouldEqual(string.Join(',', _eventTypes.Select(_ => _.Id.Value)));
     [Fact] void should_return_correct_number_of_events() => _result.Count.ShouldEqual(_expectedEvents.Count);
     [Fact] void should_deserialize_all_events_correctly() => _result.Select(e => (e.Content as TestEvent)?.Name).ShouldEqual(_expectedEvents.Select(e => e.Name));
 

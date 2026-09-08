@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
+using Cratis.Chronicle.Storage.InMemory.Identities;
 
 namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints.for_UniqueEventTypesConstraintsStorage.given;
 
@@ -27,7 +28,8 @@ public class a_unique_event_types_constraints_storage : Specification
         _eventSequenceStorage = new(
             new EventStoreName("event-store"),
             EventStoreNamespaceName.Default,
-            EventSequenceId.Log);
+            EventSequenceId.Log,
+            new IdentityStorage());
 
         _storage = new(_eventSequenceStorage);
     }

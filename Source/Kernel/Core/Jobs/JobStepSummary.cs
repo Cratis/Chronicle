@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Jobs;
 
 namespace Cratis.Chronicle.Jobs;
 
@@ -50,36 +49,10 @@ public record JobStepSummary(
 
         if (result.IsSuccess)
         {
-            return result.AsT0.Select(ToJobStep);
+            return result.AsT0.Select(JobStepSummaryConverters.ToJobStep);
         }
 
         result.TryGetException(out var exception);
         throw exception!;
     }
-
-    private static JobStepSummary ToJobStep(JobStepState step) =>
-        new(
-            step.Id.JobStepId,
-            step.Type,
-            step.Name,
-            (JobStepStatus)(int)step.Status,
-            step.StatusChanges.Select(ToStatusChanged),
-            ToProgress(step.Progress));
-
-    private static JobStepStatusChanged ToStatusChanged(Concepts.Jobs.JobStepStatusChanged sc) =>
-        new()
-        {
-            Status = (JobStepStatus)(int)sc.Status,
-            Occurred = sc.Occurred,
-            ExceptionMessages = sc.ExceptionMessages.ToList(),
-            ExceptionStackTrace = sc.ExceptionStackTrace
-        };
-
-    private static JobStepProgress ToProgress(Concepts.Jobs.JobStepProgress p) =>
-        new()
-        {
-            Percentage = (int)p.Percentage,
-            Message = (string)p.Message
-        };
 }
-

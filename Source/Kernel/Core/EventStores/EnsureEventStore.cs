@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.EventStores;
 /// <param name="Name">The name of the event store to ensure.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventStores)]
-public record EnsureEventStore(string Name)
+public record EnsureEventStore(EventStoreName Name)
 {
     /// <summary>
     /// Handles the command by registering server event types and reactors, and if new, appending an <see cref="EventStoreAdded"/> event.
@@ -30,26 +30,25 @@ public record EnsureEventStore(string Name)
     /// <returns>Awaitable task.</returns>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes, IReactors reactors)
     {
-        var eventStoreName = new EventStoreName(Name);
-        var exists = await storage.HasEventStore(eventStoreName);
-        _ = storage.GetEventStore(eventStoreName);
+        var exists = await storage.HasEventStore(Name);
+        _ = storage.GetEventStore(Name);
 
         // Always register server event types, even if the store already exists, so that
         // built-in types such as EventRedactionRequested are always up to date.
-        await eventTypes.DiscoverAndRegister(eventStoreName);
+        await eventTypes.DiscoverAndRegister(Name);
 
         // Always register kernel reactors in the default namespace.
         // A store can exist without having emitted EventStoreAdded (for example if it was
         // implicitly created), in which case ReactorsReactor would not have run.
-        await reactors.DiscoverAndRegister(eventStoreName, Concepts.EventStoreNamespaceName.Default);
+        await reactors.DiscoverAndRegister(Name, Concepts.EventStoreNamespaceName.Default);
 
         if (!exists)
         {
             var systemEventSequence = grainFactory.GetSystemEventSequence(EventStoreName.System);
-            await systemEventSequence.Append(eventStoreName.Value, new EventStoreAdded(eventStoreName));
+            await systemEventSequence.Append(Name.Value, new EventStoreAdded(Name));
         }
 
-        var namespaces = grainFactory.GetGrain<INamespaces>(eventStoreName);
+        var namespaces = grainFactory.GetGrain<INamespaces>(Name);
         await namespaces.EnsureDefault();
     }
 }

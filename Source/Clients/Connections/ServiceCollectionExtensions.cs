@@ -118,7 +118,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Namespaces);
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Recommendations);
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Identities);
-        services.AddTransient(sp => sp.GetRequiredService<IServices>().EventSequences);
         services.AddTransient(sp => sp.GetRequiredService<IServices>().EventTypes);
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Constraints);
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Observers);

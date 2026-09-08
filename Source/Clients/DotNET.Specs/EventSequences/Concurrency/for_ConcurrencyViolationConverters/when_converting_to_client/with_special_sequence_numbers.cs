@@ -14,6 +14,7 @@ public class with_special_sequence_numbers : Specification
     {
         _contractViolation = new Contracts.EventSequences.Concurrency.ConcurrencyViolation
         {
+            EventSourceId = Guid.NewGuid().ToString(),
             ExpectedSequenceNumber = 0ul,
             ActualSequenceNumber = ulong.MaxValue
         };

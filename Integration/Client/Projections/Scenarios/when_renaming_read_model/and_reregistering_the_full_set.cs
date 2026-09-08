@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Events;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_renaming_read_model.and_reregistering_the_full_set.context;
@@ -26,7 +27,7 @@ public class and_reregistering_the_full_set(context context) : Given<context>(co
         public EventSourceId BoardId;
         public original.Board ResultBeforeRename;
         public IEnumerable<string> DefinitionIdentifiers;
-        public IEnumerable<Recommendation> Recommendations;
+        public IEnumerable<RecommendationDetailsResponse> Recommendations;
         public ObserverInformation OrphanObserver;
 
         public override IEnumerable<Type> Projections => _projectionTypes;
@@ -63,7 +64,7 @@ public class and_reregistering_the_full_set(context context) : Given<context>(co
             var servicesAccessor = (IChronicleServicesAccessor)EventStore.Connection;
             var definitions = await servicesAccessor.Services.Projections.GetAllDefinitions(new() { EventStore = EventStore.Name });
             DefinitionIdentifiers = definitions.Select(definition => definition.Identifier).ToArray();
-            Recommendations = await servicesAccessor.Services.Recommendations.GetRecommendations(new() { EventStore = EventStore.Name, Namespace = EventStore.Namespace });
+            Recommendations = await servicesAccessor.Services.Recommendations.GetRecommendations(new() { EventStore = EventStore.Name, Namespace = EventStore.Namespace }).EnsureSuccess();
             OrphanObserver = await servicesAccessor.Services.Observers.GetObserverInformation(new()
             {
                 EventStore = EventStore.Name,

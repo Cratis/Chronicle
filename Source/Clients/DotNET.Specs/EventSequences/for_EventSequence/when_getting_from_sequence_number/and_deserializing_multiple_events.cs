@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Events;
 using ProtoBuf.Grpc;
 
@@ -14,7 +14,6 @@ public class and_deserializing_multiple_events : given.an_event_sequence
     EventSequenceNumber _sequenceNumber;
     EventType _eventType;
     List<TestEvent> _expectedEvents;
-    GetFromEventSequenceNumberResponse _response;
     IImmutableList<AppendedEvent> _result;
 
     void Establish()
@@ -31,37 +30,28 @@ public class and_deserializing_multiple_events : given.an_event_sequence
         _eventTypes.HasFor(_eventType.Id).Returns(true);
         _eventTypes.GetClrTypeFor(_eventType.Id).Returns(typeof(TestEvent));
 
-        var contractEvents = _expectedEvents.Select((evt, idx) => new Contracts.Events.AppendedEvent
+        var contractEvents = _expectedEvents.Select((evt, idx) => new Contracts.Sequences.AppendedEventResponse
         {
-            Context = new Contracts.Events.EventContext
+            Context = new Contracts.Sequences.EventContext
             {
-                EventType = _eventType.ToContract(),
+                EventType = _eventType.ToSequencesContract(),
                 SequenceNumber = (ulong)(_sequenceNumber + idx),
                 EventSourceId = Guid.NewGuid().ToString(),
                 EventSourceType = EventSourceType.Default,
                 EventStreamType = EventStreamType.All,
                 EventStreamId = EventStreamId.Default,
                 Occurred = DateTimeOffset.UtcNow,
-                EventStore = "event-store",
-                Namespace = "namespace",
                 CorrelationId = Guid.NewGuid(),
                 Causation = [],
-                CausedBy = new Contracts.Identities.Identity(),
-                Tags = [],
-                Hash = "hash",
-                ObservationState = Contracts.Events.EventObservationState.None
+                CausedBy = new Contracts.Sequences.Identity(),
+                Tags = []
             },
             Content = JsonSerializer.Serialize(evt, JsonSerializerOptions.Default)
         }).ToList();
 
-        _response = new()
-        {
-            Events = contractEvents
-        };
-
-        _eventSequences
-            .GetEventsFromEventSequenceNumber(Arg.Any<GetFromEventSequenceNumberRequest>(), CallContext.Default)
-            .Returns(_response);
+        _sequences
+            .FromSequenceNumber(Arg.Any<Contracts.Sequences.FromSequenceNumberRequest>(), CallContext.Default)
+            .Returns(QueryResult<IEnumerable<Contracts.Sequences.AppendedEventResponse>>.Success(Guid.NewGuid(), contractEvents));
     }
 
     async Task Because() => _result = await _eventSequence.GetFromSequenceNumber(_sequenceNumber);

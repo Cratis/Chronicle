@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
+import { ObserverRunningState } from 'Features/Contracts/Observation';
 
 export const getObserverRunningStateAsText = (
     runningState: ObserverRunningState | string

@@ -5,11 +5,6 @@
         "outputPath": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net10.0/Cratis.Chronicle.Server.dll"
     },
     {
-        "name": "Api",
-        "path": "${workspaceFolder}/Source/Clients/Api",
-        "outputPath": "${workspaceFolder}/Source/Clients/Api/bin/Debug/net10.0/Cratis.Chronicle.Api.dll"
-    },
-    {
         "name": "AspNetCore Sample",
         "path": "${workspaceFolder}/Samples/AspNetCore",
         "outputPath": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net10.0/AspNetCore.dll"

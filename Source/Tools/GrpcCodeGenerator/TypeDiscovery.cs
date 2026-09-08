@@ -14,6 +14,8 @@ public class TypeDiscovery(Assembly assembly)
     const string CommandAttributeName = "CommandAttribute";
     const string ReadModelAttributeName = "ReadModelAttribute";
     const string BelongsToAttributeName = "BelongsToAttribute";
+    const string KeyedByAttributeName = "KeyedByAttribute`1";
+    const string QueryAttributeName = "QueryAttribute";
 
     /// <summary>
     /// Discovers all service definitions from the assembly.
@@ -86,24 +88,7 @@ public class TypeDiscovery(Assembly assembly)
                 continue;
             }
 
-            var serviceName = belongsTo;
-            var typeNamespace = type.Namespace ?? string.Empty;
-            var key = $"{typeNamespace}.{serviceName}";
-
-            if (!services.TryGetValue(key, out var serviceDefinition))
-            {
-                serviceDefinition = new ServiceDefinition(serviceName, typeNamespace);
-                services[key] = serviceDefinition;
-            }
-
-            if (serviceDefinition.Namespace != typeNamespace)
-            {
-                throw new NamespaceMismatchException(
-                    serviceName,
-                    serviceDefinition.Namespace,
-                    typeNamespace,
-                    type.FullName ?? type.Name);
-            }
+            var serviceDefinition = GetOrCreateService(services, belongsTo, type);
 
             bool isCommand;
             bool isReadModel;
@@ -131,7 +116,117 @@ public class TypeDiscovery(Assembly assembly)
             }
         }
 
+        DiscoverKeyedQueries(types, services);
+
         return services;
+    }
+
+    /// <summary>
+    /// Discovers <c>[Query]</c>-marked methods on <c>[KeyedBy&lt;TKey&gt;]</c> grain interfaces and adds them to
+    /// their declared service.
+    /// </summary>
+    /// <param name="types">Every type in the assembly.</param>
+    /// <param name="services">The services discovered so far, keyed by "namespace.ServiceName".</param>
+    static void DiscoverKeyedQueries(IEnumerable<Type> types, Dictionary<string, ServiceDefinition> services)
+    {
+        foreach (var type in types)
+        {
+            bool isInterface;
+            try
+            {
+                isInterface = type.IsInterface;
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (!isInterface)
+            {
+                continue;
+            }
+
+            var keyType = GetKeyedByType(type);
+            if (keyType is null)
+            {
+                continue;
+            }
+
+            var belongsTo = GetBelongsToAttribute(type);
+            if (belongsTo is null)
+            {
+                Console.WriteLine($"  Skipped type '{type.FullName}' (has [KeyedBy<>] but no [BelongsTo] attribute).");
+                continue;
+            }
+
+            var serviceDefinition = GetOrCreateService(services, belongsTo, type);
+
+            foreach (var method in type.GetMethods())
+            {
+                if (!HasQueryAttribute(method))
+                {
+                    continue;
+                }
+
+                serviceDefinition.KeyedQueries.Add(new KeyedQueryDefinition(type, keyType, method));
+            }
+        }
+    }
+
+    static ServiceDefinition GetOrCreateService(Dictionary<string, ServiceDefinition> services, string serviceName, Type type)
+    {
+        var typeNamespace = type.Namespace ?? string.Empty;
+        var key = $"{typeNamespace}.{serviceName}";
+
+        if (!services.TryGetValue(key, out var serviceDefinition))
+        {
+            serviceDefinition = new ServiceDefinition(serviceName, typeNamespace);
+            services[key] = serviceDefinition;
+        }
+
+        if (serviceDefinition.Namespace != typeNamespace)
+        {
+            throw new NamespaceMismatchException(
+                serviceName,
+                serviceDefinition.Namespace,
+                typeNamespace,
+                type.FullName ?? type.Name);
+        }
+
+        return serviceDefinition;
+    }
+
+    static Type? GetKeyedByType(Type type)
+    {
+        IList<CustomAttributeData> attrs;
+        try
+        {
+            attrs = type.GetCustomAttributesData();
+        }
+        catch
+        {
+            return null;
+        }
+
+        var attr = attrs.FirstOrDefault(a =>
+        {
+            try { return a.AttributeType.Name == KeyedByAttributeName; }
+            catch { return false; }
+        });
+
+        return attr?.AttributeType.GetGenericArguments().FirstOrDefault();
+    }
+
+    static bool HasQueryAttribute(MethodInfo method)
+    {
+        try
+        {
+            return method.GetCustomAttributesData().Any(a => a.AttributeType.Name == QueryAttributeName);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     static bool HasCommandAttribute(Type type)

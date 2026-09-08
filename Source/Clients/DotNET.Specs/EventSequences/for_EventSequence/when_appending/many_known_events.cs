@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -21,8 +21,8 @@ public class many_known_events : given.an_event_sequence
     IEnumerable<Causation> _causation;
     Identity _causedBy;
     ConcurrencyScope _scope;
-    AppendManyRequest _command;
-    AppendManyResponse _response;
+    Contracts.Sequences.AppendManyRequest _command;
+    Contracts.Sequences.AppendManyResponse _response;
     AppendManyResult _result;
 
     void Establish()
@@ -40,9 +40,9 @@ public class many_known_events : given.an_event_sequence
         _scope = new(42UL, _eventSourceId);
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
-        _eventSequences
-            .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+        _sequences
+            .When(_ => _.AppendMany(Arg.Any<Contracts.Sequences.AppendManyRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendManyRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
         _concurrencyScopeStrategy.GetScope(_eventSourceId, EventStreamType.All, EventStreamId.Default, EventSourceType.Default, default).Returns(Task.FromResult(_scope));
         _identityProvider.GetCurrent().Returns(_causedBy);
@@ -51,19 +51,21 @@ public class many_known_events : given.an_event_sequence
             CorrelationId = Guid.NewGuid(),
             SequenceNumbers = [42, 43, 44],
             ConstraintViolations = [],
-            Errors = []
+            Errors = [],
+            ConcurrencyViolations = []
         };
-        _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(_response);
+        _sequences.AppendMany(Arg.Any<Contracts.Sequences.AppendManyRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => _result = await _eventSequence.AppendMany(_eventSourceId, _events);
 
     [Fact] void should_append_events() => _command.ShouldNotBeNull();
-    [Fact] void should_append_events_with_correct_event_source_id() => _command.Events.All(e => e.EventSourceId == _eventSourceId).ShouldBeTrue();
+    [Fact] void should_append_events_with_correct_event_source_id() => _command.EventSourceId.ShouldEqual(_eventSourceId.Value);
     [Fact] void should_append_events_with_correct_event_type() => _command.Events.All(e => e.EventType.ToClient().Equals(_eventType)).ShouldBeTrue();
-    [Fact] void should_append_events_with_correct_content() => _command.Events.Select(e => e.Content).ShouldEqual(_eventContexts.Select(c => c.ToString()));
+    [Fact] void should_append_events_with_correct_content() => _command.Events.Select(e => e.Content).ShouldEqual(_eventContexts);
     [Fact] void should_append_events_with_correct_causations() => _command.Causation.ToClient().ShouldEqual(_causation);
     [Fact] void should_append_events_with_correct_caused_by() => _command.CausedBy.ToClient().ShouldEqual(_causedBy);
-    [Fact] void should_append_events_with_strategy_concurrency_scope() => _command.ConcurrencyScopes[_eventSourceId.Value].SequenceNumber.ShouldEqual((ulong)_scope.SequenceNumber);
+    [Fact] void should_append_events_with_strategy_concurrency_scope() => _command.ConcurrencyScope.SequenceNumber.ShouldEqual((ulong)_scope.SequenceNumber);
     [Fact] void should_return_result_with_sequence_numbers() => _result.SequenceNumbers.Select(_ => _.Value).ShouldEqual(_response.SequenceNumbers);
 }

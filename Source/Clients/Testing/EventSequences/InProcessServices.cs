@@ -4,10 +4,9 @@
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
@@ -31,18 +30,18 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// Represents an in-process implementation of <see cref="IServices"/> for test scenarios.
 /// </summary>
 /// <remarks>
-/// Only <see cref="EventSequences"/> and <see cref="Constraints"/> are provided with real
+/// Only <see cref="Sequences"/> and <see cref="Constraints"/> are provided with real
 /// implementations. All other service properties throw <see cref="NotSupportedException"/>
 /// since they are not needed for event-sequence testing.
 /// </remarks>
-/// <param name="eventSequences">The <see cref="IEventSequences"/> service.</param>
+/// <param name="sequences">The <see cref="Contracts.Sequences.IEventSequences"/> service.</param>
 /// <param name="constraints">The <see cref="IConstraints"/> service.</param>
 internal sealed class InProcessServices(
-    IEventSequences eventSequences,
+    Contracts.Sequences.IEventSequences sequences,
     IConstraints constraints) : IServices
 {
     /// <inheritdoc/>
-    public IEventSequences EventSequences => eventSequences;
+    public Contracts.Sequences.IEventSequences Sequences => sequences;
 
     /// <inheritdoc/>
     public IConstraints Constraints => constraints;
@@ -100,6 +99,9 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public IMaterializedReadModels MaterializedReadModels => throw new NotSupportedException("MaterializedReadModels is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public Contracts.ReadModelExplorer.IReadModelExplorer ReadModelExplorer => throw new NotSupportedException("ReadModelExplorer is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public IJobs Jobs => throw new NotSupportedException("Jobs is not supported in test scenarios.");

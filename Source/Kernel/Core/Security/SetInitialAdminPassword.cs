@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ConfirmedPassword">Confirmation of the password; must match <paramref name="Password"/>.</param>
 [Command]
 [BelongsTo(WellKnownServices.Users)]
-public record SetInitialAdminPassword(Guid UserId, string Password, string ConfirmedPassword)
+public record SetInitialAdminPassword(UserId UserId, Password Password, Password ConfirmedPassword)
 {
     /// <summary>
     /// Handles the command by verifying the user has not yet logged in and appending a <see cref="UserPasswordChanged"/> event.
@@ -26,21 +26,21 @@ public record SetInitialAdminPassword(Guid UserId, string Password, string Confi
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
     /// <param name="storage">The <see cref="IStorage"/> to load the user record from.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="Services.Security.PasswordConfirmationMismatch">Thrown when the confirmed password does not match the password.</exception>
-    /// <exception cref="Services.Security.UserNotFound">Thrown when the specified user does not exist.</exception>
-    /// <exception cref="Services.Security.InitialAdminPasswordAlreadyUsed">Thrown when the user has already logged in and has an initial password set.</exception>
+    /// <exception cref="PasswordConfirmationMismatch">Thrown when the confirmed password does not match the password.</exception>
+    /// <exception cref="UserNotFound">Thrown when the specified user does not exist.</exception>
+    /// <exception cref="InitialAdminPasswordAlreadyUsed">Thrown when the user has already logged in and has an initial password set.</exception>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
         {
-            throw new Services.Security.PasswordConfirmationMismatch();
+            throw new PasswordConfirmationMismatch();
         }
 
-        var user = await storage.System.Users.GetById(UserId) ?? throw new Services.Security.UserNotFound(UserId);
+        var user = await storage.System.Users.GetById(UserId) ?? throw new UserNotFound(UserId);
 
         if (user.HasLoggedIn)
         {
-            throw new Services.Security.InitialAdminPasswordAlreadyUsed();
+            throw new InitialAdminPasswordAlreadyUsed();
         }
 
         var passwordHash = new PasswordHasher<object>().HashPassword(null!, Password);

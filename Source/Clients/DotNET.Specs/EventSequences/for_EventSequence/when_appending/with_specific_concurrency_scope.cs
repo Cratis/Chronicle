@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -16,11 +16,11 @@ public class with_specific_concurrency_scope : given.an_event_sequence
     EventSourceId _eventSourceId;
     string _event;
     EventType _eventType;
-    AppendRequest _command;
+    Contracts.Sequences.AppendRequest _command;
     JsonObject _eventContext;
     Identity _causedBy;
     ConcurrencyScope _scope;
-    AppendResponse _response;
+    Contracts.Sequences.AppendResponse _response;
 
     void Establish()
     {
@@ -46,10 +46,11 @@ public class with_specific_concurrency_scope : given.an_event_sequence
 
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
-        _eventSequences
-            .When(_ => _.Append(Arg.Any<AppendRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendRequest>());
-        _serviceAccessor.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(_response);
+        _sequences
+            .When(_ => _.Append(Arg.Any<Contracts.Sequences.AppendRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendRequest>());
+        _sequences.Append(Arg.Any<Contracts.Sequences.AppendRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => await _eventSequence.Append(_eventSourceId, _event, concurrencyScope: _scope);
@@ -57,7 +58,7 @@ public class with_specific_concurrency_scope : given.an_event_sequence
     [Fact] void should_append_event() => _command.ShouldNotBeNull();
     [Fact] void should_append_event_with_correct_event_source_id() => _command.EventSourceId.ShouldEqual(_eventSourceId.Value);
     [Fact] void should_append_event_with_correct_event_type() => _command.EventType.ToClient().ShouldEqual(_eventType);
-    [Fact] void should_append_event_with_correct_event() => _command.Content.ShouldEqual(_eventContext.ToString());
+    [Fact] void should_append_event_with_correct_event() => _command.Content.ShouldEqual(_eventContext);
     [Fact]
     void should_append_event_with_correct_concurrency_scope() => _command.ConcurrencyScope.ShouldMatch(scope =>
         scope.SequenceNumber == _scope.SequenceNumber.Value &&
@@ -65,6 +66,6 @@ public class with_specific_concurrency_scope : given.an_event_sequence
         scope.EventStreamType == _scope.EventStreamType &&
         scope.EventStreamId == _scope.EventStreamId &&
         scope.EventSourceType == _scope.EventSourceType &&
-        scope.EventTypes.Count == _scope.EventTypes.Count() &&
+        scope.EventTypes.Count() == _scope.EventTypes.Count() &&
         scope.EventTypes.Any(et => et.Id == _eventType.Id && et.Generation == _eventType.Generation));
 }

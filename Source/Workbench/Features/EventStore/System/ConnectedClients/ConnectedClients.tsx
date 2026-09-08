@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { AllConnectedClients, ConnectedClient } from 'Api/Clients';
+import { AllConnectedClients, ConnectedClientDetails } from 'Features/Clients';
 import { Page } from 'Components/Common/Page';
 import { Column } from '@cratis/components/DataTables';
 import { Dropdown } from '@cratis/components/Dropdown';
@@ -26,12 +26,12 @@ export const ConnectedClients = () => {
         { label: strings.connectedClients.views.flat, value: ConnectedClientsView.Flat }
     ];
 
-    const lastSeenColumn = (client: ConnectedClient) => <>{new Date(client.lastSeen).toLocaleString()}</>;
+    const lastSeenColumn = (client: ConnectedClientDetails) => <>{new Date(client.lastSeen).toLocaleString()}</>;
 
-    const debuggerColumn = (client: ConnectedClient) =>
+    const debuggerColumn = (client: ConnectedClientDetails) =>
         <>{client.isRunningWithDebugger ? strings.general.buttons.yes : strings.general.buttons.no}</>;
 
-    const siloGroupHeaderTemplate = (client: ConnectedClient) =>
+    const siloGroupHeaderTemplate = (client: ConnectedClientDetails) =>
         <span style={{ fontWeight: 'bold' }}>{strings.connectedClients.columns.server}: {client.siloAddress}</span>;
 
     return (

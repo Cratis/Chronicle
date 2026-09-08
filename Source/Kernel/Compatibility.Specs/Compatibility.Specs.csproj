@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Compatibility.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Compatibility</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Compatibility/Compatibility.csproj" />
+        <ProjectReference Include="../Contracts/Contracts.csproj" />
+    </ItemGroup>
+</Project>

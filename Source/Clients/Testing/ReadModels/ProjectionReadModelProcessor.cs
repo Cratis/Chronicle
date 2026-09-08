@@ -3,6 +3,7 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
+extern alias KernelGrpc;
 
 using System.Dynamic;
 using System.Text.Json;
@@ -19,6 +20,7 @@ using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using FrameworkNullLoggerFactory = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelEventTypes = KernelConcepts::Cratis.Chronicle.Concepts.EventTypes;
@@ -116,7 +118,7 @@ internal static class ProjectionReadModelProcessor
         var schema = jsonSchemaGenerator.Generate(readModelType);
 
         var kernelReadModelDefinition = BuildKernelReadModelDefinition(readModelType, schema);
-        var kernelProjectionDefinition = KernelCore::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
+        var kernelProjectionDefinition = KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
             projectionDefinition,
             KernelConceptsNs::Projections.ProjectionOwner.Client);
 
@@ -153,7 +155,8 @@ internal static class ProjectionReadModelProcessor
         var inMemoryEventSequenceStorage = new InMemoryEventSequenceStorage(
             KernelConceptsNs::EventStoreName.NotSet,
             KernelConceptsNs::EventStoreNamespaceName.NotSet,
-            eventSequenceId);
+            eventSequenceId,
+            new InMemoryIdentityStorage());
         foreach (var appendedEvent in appendedEvents)
         {
             await inMemoryEventSequenceStorage.Append(

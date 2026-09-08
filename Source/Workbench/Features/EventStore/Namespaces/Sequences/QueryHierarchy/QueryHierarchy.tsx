@@ -3,9 +3,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import strings from 'Strings';
-import { QueryFolder } from 'Api/SequenceQueries/QueryFolder';
-import { SequenceQuery } from 'Api/SequenceQueries/SequenceQuery';
-import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
+import { QueryFolder } from 'Features/SequenceQueries';
+import { SequenceQuery } from 'Features/SequenceQueries';
+import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
 import { buildQueryTree, folderNodeId, queryNodeId } from './buildQueryTree';
 import { renamedFolderPath, rewriteFolderPath } from './folderNaming';
 import { QueryNode } from './QueryNode';

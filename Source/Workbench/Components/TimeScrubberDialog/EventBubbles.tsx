@@ -66,9 +66,9 @@ export const EventBubbles = ({ steps, current, onScrub }: EventBubblesProps) => 
             <div className='time-scrubber__caption'>
                 {steps[current] && (
                     <>
-                        <span className='time-scrubber__caption-event'>{steps[current].event.type}</span>
+                        <span className='time-scrubber__caption-event'>{steps[current].event.context.eventType.id}</span>
                         <span className='time-scrubber__caption-occurred'>
-                            {new Date(steps[current].event.occurred).toLocaleString()}
+                            {new Date(steps[current].event.context.occurred).toLocaleString()}
                         </span>
                         <span className='time-scrubber__caption-position'>
                             {strings.components.timeScrubber.position
@@ -103,7 +103,7 @@ export const EventBubbles = ({ steps, current, onScrub }: EventBubblesProps) => 
                     step={1}
                     value={current}
                     aria-label={strings.components.timeScrubber.scrub}
-                    aria-valuetext={steps[current]?.event.type}
+                    aria-valuetext={steps[current]?.event.context.eventType.id}
                     onChange={event => onScrub(Number(event.target.value))} />
             </div>
 

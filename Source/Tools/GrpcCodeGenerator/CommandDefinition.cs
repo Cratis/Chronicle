@@ -22,6 +22,11 @@ public class CommandDefinition(Type type)
         Type.GetConstructors().FirstOrDefault()?.GetParameters() ?? [];
 
     /// <summary>
+    /// Gets the command's Handle method, or null when it has none the generator can see.
+    /// </summary>
+    public MethodInfo? Handle => ResolveHandle();
+
+    /// <summary>
     /// Gets the type the command's Handle method responds with, or null when the command produces no response.
     /// </summary>
     /// <remarks>
@@ -30,12 +35,11 @@ public class CommandDefinition(Type type)
     /// </remarks>
     public Type? ResponseType => ResolveResponseType();
 
-    Type? ResolveResponseType()
+    MethodInfo? ResolveHandle()
     {
-        MethodInfo? handle;
         try
         {
-            handle = Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            return Type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .FirstOrDefault(method => method.Name == "Handle");
         }
         catch (Exception ex)
@@ -45,7 +49,11 @@ public class CommandDefinition(Type type)
             Console.WriteLine($"  WARNING: Could not inspect the Handle method of '{Type.FullName}' to determine its response: {ex.Message}");
             return null;
         }
+    }
 
+    Type? ResolveResponseType()
+    {
+        var handle = ResolveHandle();
         if (handle is null)
         {
             return null;

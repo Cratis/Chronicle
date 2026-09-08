@@ -4,7 +4,6 @@
 using System.Globalization;
 using System.Reflection;
 using Cratis.Arc.MongoDB;
-using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
@@ -70,7 +69,7 @@ builder.Services.AddHealthChecks();
 
 if (chronicleOptions.Features.Api)
 {
-    builder.Services.AddCratisChronicleApi(useGrpc: false);
+    builder.Services.AddChronicleWorkbenchApi();
 }
 
 // The Chronicle port multiplexes gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1)
@@ -142,7 +141,7 @@ var hostBuilder = builder.Host
 .AddCratisArc(options =>
 {
     options.GeneratedApis.RoutePrefix = "api";
-    options.GeneratedApis.SegmentsToSkipForRoute = 3;
+    options.GeneratedApis.SegmentsToSkipForRoute = 2;
 })
 .AddCratisMongoDB(
    configureOptions: mongo =>
@@ -372,17 +371,7 @@ if (chronicleOptions.Features.Api)
     // Configure API endpoints but without calling UseRouting again (already called above)
     app.UseWebSockets();
     app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        var resourceName = typeof(ApiApplicationBuilderExtensions).Namespace + ".SwaggerDark.css";
-        using var stream = typeof(ApiApplicationBuilderExtensions).Assembly.GetManifestResourceStream(resourceName);
-        if (stream is not null)
-        {
-            using var streamReader = new StreamReader(stream);
-            var styles = streamReader.ReadToEnd();
-            options.HeadContent = $"{options.HeadContent}<style>{styles}</style>";
-        }
-    });
+    app.UseSwaggerUI(WorkbenchApiExtensions.ConfigureSwaggerUI);
 }
 
 // Map Identity API endpoints for SPA authentication - MUST be before MapControllers. They are backed by the
@@ -452,7 +441,19 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 // fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
 app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
-await app.RunAsync(cancellationToken.Token);
+try
+{
+    await app.RunAsync(cancellationToken.Token);
+}
+catch (OperationCanceledException)
+{
+    // A shutdown signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is
+    // still binding, or an ILifecycleParticipant is still running - cancels the host's own lifetime token
+    // and surfaces as an OperationCanceledException out of RunAsync instead of RunAsync completing
+    // normally. Left uncaught, that reaches AppDomain.CurrentDomain.UnhandledException and the process
+    // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
+    logger.ServerShutdownDuringStartup();
+}
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

@@ -16,14 +16,17 @@ public class all_dependencies : Specification
     protected IEventTypeMigrators _eventTypeMigrators;
     protected IChronicleServicesAccessor _servicesAccessor;
     protected IServices _services;
-    protected Contracts.Events.IEventTypes _eventTypesService;
+    protected Contracts.EventTypes.IEventTypes _eventTypesService;
 
     void Establish()
     {
         var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
         _servicesAccessor = connection as IChronicleServicesAccessor;
         _services = Substitute.For<IServices>();
-        _eventTypesService = Substitute.For<Contracts.Events.IEventTypes>();
+        _eventTypesService = Substitute.For<Contracts.EventTypes.IEventTypes>();
+        _eventTypesService
+            .RegisterEventTypes(Arg.Any<Contracts.EventTypes.RegisterEventTypesRequest>())
+            .Returns(Task.FromResult(Contracts.Commands.CommandResult.Success(Guid.NewGuid())));
         _services.EventTypes.Returns(_eventTypesService);
         _servicesAccessor.Services.Returns(_services);
 

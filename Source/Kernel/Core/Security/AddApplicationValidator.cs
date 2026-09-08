@@ -16,7 +16,9 @@ internal class AddApplicationValidator : CommandValidator<AddApplication>
     /// </summary>
     public AddApplicationValidator()
     {
-        RuleFor(_ => _.Id).NotEmpty().WithMessage("Application identifier is required.");
+        // Id is the application being created, not a reference to one that must already exist - the
+        // cross-cutting ApplicationIdValidator existence check does not apply here.
+        RuleFor(_ => _.Id).IgnoreConceptRules().NotEmpty().WithMessage("Application identifier is required.");
         RuleFor(_ => _.ClientId).NotEmpty().WithMessage("Client identifier is required.");
         RuleFor(_ => _.ClientSecret).NotEmpty().WithMessage("Client secret is required.");
     }

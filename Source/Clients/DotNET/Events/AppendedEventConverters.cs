@@ -58,4 +58,86 @@ internal static class AppendedEventConverters
     /// <returns>An immutable collection of <see cref="AppendedEvent"/>.</returns>
     internal static IImmutableList<AppendedEvent> ToClient(this IEnumerable<Contracts.Events.AppendedEvent> events, IEventTypes eventTypes, JsonSerializerOptions jsonSerializerOptions) =>
         events.Select(_ => _.ToClient(eventTypes, jsonSerializerOptions)).ToImmutableList();
+
+    /// <summary>
+    /// Convert to client version of <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="event"><see cref="Contracts.Sequences.AppendedEventResponse"/> to convert.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the event belongs to.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the event belongs to.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
+    /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
+    /// <returns>Converted Chronicle version.</returns>
+    internal static AppendedEvent ToClient(
+        this Contracts.Sequences.AppendedEventResponse @event,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IEventTypes eventTypes,
+        JsonSerializerOptions jsonSerializerOptions)
+    {
+        var context = @event.Context.ToClient(eventStore, @namespace);
+        object content;
+
+        if (eventTypes.HasFor(context.EventType.Id))
+        {
+            var clrType = eventTypes.GetClrTypeFor(context.EventType.Id);
+            content = JsonSerializer.Deserialize(@event.Content, clrType, jsonSerializerOptions)!;
+        }
+        else
+        {
+            content = JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions) ?? new ExpandoObject();
+        }
+
+        return new(context, content);
+    }
+
+    /// <summary>
+    /// Convert to a client version of a collection of <see cref="Contracts.Sequences.AppendedEventResponse"/>.
+    /// </summary>
+    /// <param name="events">Collection of <see cref="Contracts.Sequences.AppendedEventResponse"/> to convert from.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the events belong to.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the events belong to.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
+    /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
+    /// <returns>An immutable collection of <see cref="AppendedEvent"/>.</returns>
+    internal static IImmutableList<AppendedEvent> ToClient(
+        this IEnumerable<Contracts.Sequences.AppendedEventResponse> events,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IEventTypes eventTypes,
+        JsonSerializerOptions jsonSerializerOptions) =>
+        events.Select(_ => _.ToClient(eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
+
+    /// <summary>
+    /// Convert to a client version of a collection of <see cref="Contracts.ReadModelExplorer.Event"/>.
+    /// </summary>
+    /// <param name="events">Collection of <see cref="Contracts.ReadModelExplorer.Event"/> to convert from.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the events belong to.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the events belong to.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
+    /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
+    /// <returns>An immutable collection of <see cref="AppendedEvent"/>.</returns>
+    internal static IImmutableList<AppendedEvent> ToClient(
+        this IEnumerable<Contracts.ReadModelExplorer.Event> events,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IEventTypes eventTypes,
+        JsonSerializerOptions jsonSerializerOptions) =>
+        events.Select(_ => ToClient(_.Context, _.Content, eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
+
+    static AppendedEvent ToClient(
+        Contracts.Sequences.EventContext context,
+        string content,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IEventTypes eventTypes,
+        JsonSerializerOptions jsonSerializerOptions)
+    {
+        var clientContext = context.ToClient(eventStore, @namespace);
+        var clientContent = eventTypes.HasFor(clientContext.EventType.Id)
+            ? JsonSerializer.Deserialize(content, eventTypes.GetClrTypeFor(clientContext.EventType.Id), jsonSerializerOptions)!
+            : JsonSerializer.Deserialize<ExpandoObject>(content, jsonSerializerOptions) ?? new ExpandoObject();
+
+        return new(clientContext, clientContent);
+    }
 }

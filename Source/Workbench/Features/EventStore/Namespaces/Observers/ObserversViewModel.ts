@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { ObserverInformation } from 'Api/Observation/ObserverInformation';
-import { ClearObserverQuarantine, Replay } from 'Api/Observation';
+import { ObserverInformation } from 'Features/Observation';
+import { ClearObserverQuarantine, ReplayObserver as Replay } from 'Features/Observation';
 import { INamespaces } from 'State/Namespaces';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
+import { ObserverRunningState } from 'Features/Contracts/Observation';
 
 @injectable()
 export class ObserversViewModel {

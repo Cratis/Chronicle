@@ -4,7 +4,7 @@
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { inject, injectable } from 'tsyringe';
 import { AddNamespaceRequest, AddNamespaceResponse } from './AddNamespace';
-import { EnsureNamespace } from 'Api/Namespaces';
+import { EnsureNamespace } from 'Features/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
 @injectable()

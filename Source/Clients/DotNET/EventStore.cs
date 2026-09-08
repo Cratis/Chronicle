@@ -62,6 +62,8 @@ public class EventStore : IEventStore
     readonly RegistrationRetryOptions _registrationRetry;
     readonly RegistrationBackoff _registrationBackoff;
     SingleFlightRegistration? _registerAllFlight;
+    int _backgroundRegistrationRetryActive;
+    Task? _backgroundRegistrationRetryTask;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -121,6 +123,7 @@ public class EventStore : IEventStore
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
         _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
+        var types = TypeUniverse.For(serviceProvider);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
@@ -170,7 +173,7 @@ public class EventStore : IEventStore
             identityProvider,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
             reactorSideEffectHandlers,
-            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(Types.Types.Instance, serviceProvider)),
+            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(types, serviceProvider)),
             new ReactorMethodArgumentsResolver(),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
@@ -233,7 +236,7 @@ public class EventStore : IEventStore
 
         var readModelReactorInvoker = new ReadModels.ReadModelReactorInvoker(
             reactorSideEffectHandlers,
-            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(Types.Types.Instance, serviceProvider)),
+            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(types, serviceProvider)),
             loggerFactory.CreateLogger<ReadModels.ReadModelReactorInvoker>());
 
         ReadModelReactors = new ReadModels.ReadModelReactors(
@@ -337,6 +340,12 @@ public class EventStore : IEventStore
     /// </summary>
     internal IEventSerializer EventSerializer { get; }
 
+    /// <summary>
+    /// Gets the currently running background registration retry loop, if <see cref="StartBackgroundRegistrationRetry"/>
+    /// has started one that has not yet finished.
+    /// </summary>
+    internal Task? PendingBackgroundRegistrationRetry => _backgroundRegistrationRetryTask;
+
     /// <inheritdoc/>
     public async Task DiscoverAll()
     {
@@ -395,7 +404,7 @@ public class EventStore : IEventStore
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
         var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
-        return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
+        return namespaces.Select(_ => (EventStoreNamespaceName)_.Name).ToArray();
     }
 
     async Task RegisterAllCore()
@@ -420,7 +429,77 @@ public class EventStore : IEventStore
             // consumer now has. The connection lifecycle still gets the exception, and a later reconnect that
             // succeeds replaces this outcome wholesale.
             Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, exception);
+            StartBackgroundRegistrationRetry();
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Keeps retrying registration in the background after <see cref="RegisterAllArtifactsWithRetries"/> exhausts
+    /// its bounded attempts, until it succeeds or the connection drops.
+    /// </summary>
+    /// <remarks>
+    /// A registration failure here happens after the transport has already reconnected successfully - the
+    /// connection watchdog only re-drives a full reconnect (and therefore a fresh registration) when the keep-alive
+    /// goes stale, which a healthy transport never does again on its own. Without this, some observers can stay
+    /// unsubscribed indefinitely even though the client and kernel are both otherwise fine, because nothing ever
+    /// asks the kernel again. Idempotent to start - a second failure while one of these loops is already running is
+    /// a no-op, since <see cref="RegisterAll"/> is single-flighted and this loop already owns retrying it.
+    /// </remarks>
+    void StartBackgroundRegistrationRetry()
+    {
+        if (Interlocked.CompareExchange(ref _backgroundRegistrationRetryActive, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _logger.EnteringBackgroundRegistrationRetry();
+
+        // Tracked (not discarded) so a caller that needs to observe the loop's completion - a graceful shutdown, a
+        // specification - can, without this method itself depending on anything awaiting it.
+        _backgroundRegistrationRetryTask = RetryRegistrationInBackgroundUntilSuccessOrDisconnect();
+    }
+
+    async Task RetryRegistrationInBackgroundUntilSuccessOrDisconnect()
+    {
+        var disconnected = false;
+        Task StopOnDisconnect()
+        {
+            disconnected = true;
+            return Task.CompletedTask;
+        }
+
+        Connection.Lifecycle.OnDisconnected += StopOnDisconnect;
+        try
+        {
+            var attempt = 1;
+            while (!disconnected)
+            {
+                var delay = _registrationBackoff.NextDelay(attempt);
+                await Task.Delay(delay);
+
+                if (disconnected)
+                {
+                    return;
+                }
+
+                try
+                {
+                    await RegisterAll();
+                    _logger.BackgroundRegistrationRetrySucceeded(attempt);
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    _logger.RetryingRegisterAllArtifactsInBackground(exception, attempt, delay);
+                    attempt++;
+                }
+            }
+        }
+        finally
+        {
+            Connection.Lifecycle.OnDisconnected -= StopOnDisconnect;
+            Interlocked.Exchange(ref _backgroundRegistrationRetryActive, 0);
         }
     }
 

@@ -32,6 +32,22 @@ kotlin {
     jvmToolchain(17)
 }
 
+// The canonical descriptor set travels with the package so a client can hand the kernel exactly the contracts it
+// was built against, and the kernel can own the one compatibility check instead of every language reimplementing
+// it. See Source/Kernel/Compatibility.
+val embedDescriptorSet by tasks.registering(Copy::class) {
+    from(file("../../Kernel/Protobuf/chronicle.desc"))
+    into(layout.buildDirectory.dir("generated/resources/chronicle"))
+}
+
+sourceSets.named("main") {
+    resources.srcDir(layout.buildDirectory.dir("generated/resources"))
+}
+
+tasks.named("processResources") {
+    dependsOn(embedDescriptorSet)
+}
+
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:$protobufVersion"
@@ -86,5 +102,16 @@ mavenPublishing {
             connection.set("scm:git:git://github.com/cratis/chronicle.git")
             developerConnection.set("scm:git:ssh://git@github.com/cratis/chronicle.git")
         }
+    }
+}
+
+// The sources jar (registered by signAllPublications() above, but only once the maven-publish plugin's own
+// afterEvaluate callback runs) packages the main source set's resources, which now include the generated
+// directory embedDescriptorSet writes into - without this, Gradle's implicit-dependency validation fails the
+// build because nothing orders the two tasks relative to each other. afterEvaluate defers this until after
+// that callback has had a chance to register the task.
+afterEvaluate {
+    tasks.named("sourcesJar") {
+        dependsOn(embedDescriptorSet)
     }
 }

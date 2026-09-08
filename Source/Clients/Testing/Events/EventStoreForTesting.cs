@@ -3,6 +3,8 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
+extern alias KernelGrpc;
+
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -41,12 +43,14 @@ using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
 using ExternalServicesImpl = Cratis.Chronicle.ExternalServices.ExternalServices;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
 using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
@@ -120,7 +124,8 @@ public class EventStoreForTesting : IEventStore
         var topLevelStorage = new InMemoryStorage(new InMemoryEventSequenceStorage(
             (KernelConceptsNs::EventStoreName)(string)Name,
             (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace,
-            KernelSequenceConcepts::EventSequenceId.Log));
+            KernelSequenceConcepts::EventSequenceId.Log,
+            new InMemoryIdentityStorage()));
         Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _jsonSerializerOptions);
 
         var loggerFactory = new NullLoggerFactory();
@@ -231,7 +236,6 @@ public class EventStoreForTesting : IEventStore
         _jobs = new Lazy<IJobs>(() => new JobsImpl(this));
         _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this));
         _patterns = new Lazy<IPatterns>(() => new Patterns.Patterns(this));
-
         _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
             Name,
             Connection,
@@ -371,12 +375,12 @@ public class EventStoreForTesting : IEventStore
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)Name;
         var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)Namespace;
 
-        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId);
+        var identityStorage = new InMemoryIdentityStorage();
+        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId, identityStorage);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
         var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var constraintsStorage = new InMemoryConstraintsStorage(_constraintProvider);
-        var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
 
         var storage = new InMemoryStorage(
@@ -401,14 +405,26 @@ public class EventStoreForTesting : IEventStore
                 NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
 
-        var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
-            grainFactory,
+        var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
+            InProcessCommandPipeline.Create(
+                grainFactory,
+                storage,
+                _jsonSerializerOptions,
+                services =>
+                {
+                    services.AddSingleton<IUnitOfWorkManager>(new NoOpUnitOfWorkManager());
+                    services.AddSingleton<IEventLog>(new NoOpEventLog());
+                    services.AddSingleton<IEventTypes>(_eventTypes);
+                }),
             storage,
             eventCompliance,
-            _jsonSerializerOptions);
+            _jsonSerializerOptions,
+            new InProcessQueryContextManager(),
+            grainFactory,
+            NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 
         var constraintsService = new InProcessNoOpConstraintsService();
-        var services = new InProcessServices(eventSequencesService, constraintsService);
+        var services = new InProcessServices(sequencesService, constraintsService);
 #pragma warning disable CA2000 // Dispose objects before losing scope — EventLog/EventSequence takes ownership
         var connection = new InProcessChronicleConnection(services);
 #pragma warning restore CA2000

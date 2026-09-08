@@ -28,27 +28,26 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public Task Register<TReadModel>() => inner.Register<TReadModel>();
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Nothing seeded under this key - whether because the id was never seeded at all, or a different id
+    /// was - resolves to null rather than falling through to the inner IReadModels, which needs a grain and
+    /// throws GrainNotAvailableInTestScenario in-process. This matches what the interface's nullable return
+    /// already promises for "the instance does not exist" (#3927).
+    /// </remarks>
     public Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         var identifier = typeof(TReadModel).GetReadModelIdentifier();
-        if (_instances.TryGetValue((identifier, key.Value), out var instance))
-        {
-            return Task.FromResult((TReadModel)instance);
-        }
-
-        return inner.GetInstanceById<TReadModel>(key, sessionId);
+        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? (TReadModel)instance : default!);
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// See the generic overload above - the same reasoning applies here (#3927).
+    /// </remarks>
     public Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         var identifier = readModelType.GetReadModelIdentifier();
-        if (_instances.TryGetValue((identifier, key.Value), out var instance))
-        {
-            return Task.FromResult(instance);
-        }
-
-        return inner.GetInstanceById(readModelType, key, sessionId);
+        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? instance : null!);
     }
 
     /// <inheritdoc/>

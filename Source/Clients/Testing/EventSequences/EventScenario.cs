@@ -3,6 +3,7 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
+extern alias KernelGrpc;
 
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -20,8 +21,10 @@ using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
 using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
@@ -150,13 +153,13 @@ public class EventScenario(
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)eventStoreName;
         var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)namespaceName;
 
-        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId);
+        var identityStorage = new InMemoryIdentityStorage();
+        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventStoreName, kernelNamespaceName, kernelEventSequenceId, identityStorage);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
         var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
         var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
-        var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
 
         var storage = new InMemoryStorage(
@@ -182,14 +185,26 @@ public class EventScenario(
                 new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>(),
                 NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
             new ExpandoObjectConverter(new TypeFormats()));
-        var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
-            grainFactory,
+        var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
+            InProcessCommandPipeline.Create(
+                grainFactory,
+                storage,
+                jsonSerializerOptions,
+                services =>
+                {
+                    services.AddSingleton<IUnitOfWorkManager>(new NoOpUnitOfWorkManager());
+                    services.AddSingleton<IEventLog>(new NoOpEventLog());
+                    services.AddSingleton(Defaults.Instance.EventTypes);
+                }),
             storage,
             eventCompliance,
-            jsonSerializerOptions);
+            jsonSerializerOptions,
+            new InProcessQueryContextManager(),
+            grainFactory,
+            NullLogger<KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences>.Instance);
 
         var constraintsService = new InProcessNoOpConstraintsService();
-        var services = new InProcessServices(eventSequencesService, constraintsService);
+        var services = new InProcessServices(sequencesService, constraintsService);
         var connection = new InProcessChronicleConnection(services);
 
         var defaults = Defaults.Instance;

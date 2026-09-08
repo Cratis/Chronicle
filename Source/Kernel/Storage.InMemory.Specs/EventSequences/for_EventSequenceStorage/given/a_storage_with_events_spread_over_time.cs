@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
+using Cratis.Chronicle.Storage.InMemory.Identities;
 
 namespace Cratis.Chronicle.Storage.InMemory.for_EventSequenceStorage.given;
 
@@ -30,7 +31,8 @@ public class a_storage_with_events_spread_over_time : Specification
         _storage = new EventSequenceStorage(
             new EventStoreName("event-store"),
             new EventStoreNamespaceName("default"),
-            EventSequenceId.Log);
+            EventSequenceId.Log,
+            new IdentityStorage());
 
         _firstEventSourceId = "first";
         _secondEventSourceId = "second";

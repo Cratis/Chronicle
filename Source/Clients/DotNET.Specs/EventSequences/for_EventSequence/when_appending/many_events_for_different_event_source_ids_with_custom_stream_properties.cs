@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
-using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using ProtoBuf.Grpc;
@@ -18,8 +18,8 @@ public class many_events_for_different_event_source_ids_with_custom_stream_prope
     JsonObject _eventContext;
     IEnumerable<Causation> _causation;
     Identity _causedBy;
-    AppendManyRequest _command;
-    AppendManyResponse _response;
+    Contracts.Sequences.AppendManyForEventSourcesRequest _command;
+    Contracts.Sequences.AppendManyResponse _response;
 
     void Establish()
     {
@@ -54,9 +54,9 @@ public class many_events_for_different_event_source_ids_with_custom_stream_prope
 
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
-        _eventSequences
-            .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+        _sequences
+            .When(_ => _.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendManyForEventSourcesRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
         _identityProvider.GetCurrent().Returns(_causedBy);
 
@@ -65,18 +65,20 @@ public class many_events_for_different_event_source_ids_with_custom_stream_prope
             CorrelationId = Guid.NewGuid(),
             SequenceNumbers = [42, 43],
             ConstraintViolations = [],
-            Errors = []
+            Errors = [],
+            ConcurrencyViolations = []
         };
 
-        _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(_response);
+        _sequences.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default)
+            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => await _eventSequence.AppendMany(_events);
 
-    [Fact] void should_append_first_event_with_custom_stream_type() => _command.Events[0].EventStreamType.ShouldEqual(_events[0].EventStreamType.Value);
-    [Fact] void should_append_first_event_with_custom_stream_id() => _command.Events[0].EventStreamId.ShouldEqual(_events[0].EventStreamId.Value);
-    [Fact] void should_append_first_event_with_custom_source_type() => _command.Events[0].EventSourceType.ShouldEqual(_events[0].EventSourceType.Value);
-    [Fact] void should_append_second_event_with_another_stream_type() => _command.Events[1].EventStreamType.ShouldEqual(_events[1].EventStreamType.Value);
-    [Fact] void should_append_second_event_with_another_stream_id() => _command.Events[1].EventStreamId.ShouldEqual(_events[1].EventStreamId.Value);
-    [Fact] void should_append_second_event_with_another_source_type() => _command.Events[1].EventSourceType.ShouldEqual(_events[1].EventSourceType.Value);
+    [Fact] void should_append_first_event_with_custom_stream_type() => _command.Events.ElementAt(0).EventStreamType.ShouldEqual(_events[0].EventStreamType.Value);
+    [Fact] void should_append_first_event_with_custom_stream_id() => _command.Events.ElementAt(0).EventStreamId.ShouldEqual(_events[0].EventStreamId.Value);
+    [Fact] void should_append_first_event_with_custom_source_type() => _command.Events.ElementAt(0).EventSourceType.ShouldEqual(_events[0].EventSourceType.Value);
+    [Fact] void should_append_second_event_with_another_stream_type() => _command.Events.ElementAt(1).EventStreamType.ShouldEqual(_events[1].EventStreamType.Value);
+    [Fact] void should_append_second_event_with_another_stream_id() => _command.Events.ElementAt(1).EventStreamId.ShouldEqual(_events[1].EventStreamId.Value);
+    [Fact] void should_append_second_event_with_another_source_type() => _command.Events.ElementAt(1).EventSourceType.ShouldEqual(_events[1].EventSourceType.Value);
 }

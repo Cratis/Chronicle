@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries;
-using Cratis.Chronicle.Api.EventStores;
+using Cratis.Chronicle.EventStores;
 using context = Cratis.Chronicle.Integration.Api.for_EventStoreQueries.when_getting_event_stores.context;
 
 namespace Cratis.Chronicle.Integration.Api.for_EventStoreQueries;
@@ -13,18 +13,18 @@ public class when_getting_event_stores(context context) : Given<context>(context
     public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.an_http_client(fixture)
     {
         public QueryResult Result;
-        public IEnumerable<string> Data;
+        public IEnumerable<EventStoreNames> Data;
 
-        Task Establish() => Client.ExecuteCommand("/api/event-stores/add", new AddEventStore("testing"));
+        Task Establish() => Client.ExecuteCommand("/api/event-stores/ensure-event-store", new EnsureEventStore("testing"));
 
         async Task Because()
         {
-            Result = await Client.ExecuteQuery<IEnumerable<string>>("/api/event-stores");
-            Data = Result.Data as IEnumerable<string>;
+            Result = await Client.ExecuteQuery<IEnumerable<EventStoreNames>>("/api/event-stores/all-event-stores");
+            Data = Result.Data as IEnumerable<EventStoreNames>;
         }
     }
 
     [Fact] void should_succeed_query() => Context.Result.IsSuccess.ShouldBeTrue();
 
-    [Fact] void should_return_two_event_stores_including_system() => Context.Data.ShouldContainOnly(EventStoreName.System.Value, "testing");
+    [Fact] void should_return_two_event_stores_including_system() => Context.Data.Select(_ => _.Name).ShouldContainOnly(EventStoreName.System.Value, "testing");
 }

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { FailedPartition } from 'Api/Observation';
+import { FailedPartitionDetails as FailedPartition } from 'Features/Observation';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { getFailedPartitionAttemptsNewestFirst } from './getFailedPartitionAttemptsNewestFirst';
 import css from './FailedPartitionDetails.module.css';

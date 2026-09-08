@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Recommendations;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_removing_child_collection.and_reregistering_after_the_child_collection_was_removed.context;
 
@@ -21,7 +22,7 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
     {
         public Conversation ResultAfterReregistration;
         public Contracts.Projections.ProjectionDefinition StoredDefinition;
-        public IEnumerable<Recommendation> Recommendations;
+        public IEnumerable<RecommendationDetailsResponse> Recommendations;
         public CommentAdded SecondComment;
 
         public override IEnumerable<Type> EventTypes => [typeof(ConversationStarted), typeof(CommentAdded), typeof(ReactionGiven)];
@@ -60,7 +61,7 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
             var definitions = await servicesAccessor.Services.Projections.GetAllDefinitions(new() { EventStore = EventStore.Name });
             var projectionId = EventStore.Projections.GetProjectionIdForModel<Conversation>();
             StoredDefinition = definitions.Single(definition => definition.Identifier == projectionId.Value);
-            Recommendations = await servicesAccessor.Services.Recommendations.GetRecommendations(new() { EventStore = EventStore.Name, Namespace = EventStore.Namespace });
+            Recommendations = await servicesAccessor.Services.Recommendations.GetRecommendations(new() { EventStore = EventStore.Name, Namespace = EventStore.Namespace }).EnsureSuccess();
         }
     }
 

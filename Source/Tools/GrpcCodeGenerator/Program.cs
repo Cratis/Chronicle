@@ -8,7 +8,15 @@ Console.WriteLine("\nGrpc Code Generator\n");
 
 if (args.Length < 2)
 {
-    Console.WriteLine("Usage: GrpcCodeGenerator <assembly> <output-directory> [--skip-namespaces <n>] [--base-namespace <ns>]");
+    Console.WriteLine("Usage: GrpcCodeGenerator <assembly> <output-directory> [options]");
+    Console.WriteLine();
+    Console.WriteLine("  --skip-namespaces <n>              Leading namespace segments to drop from the artifact namespace.");
+    Console.WriteLine("  --base-namespace <ns>              Base namespace for the generated contracts.");
+    Console.WriteLine("  --implementations <dir>            Where to write the generated service implementations.");
+    Console.WriteLine("  --implementations-namespace <ns>   Base namespace for the generated implementations.");
+    Console.WriteLine("  --registrations <file>             Where to write the generated service registrations.");
+    Console.WriteLine("  --registrations-namespace <ns>     Namespace for the generated registrations.");
+    Console.WriteLine("  --exclude <a,b,c>                  Services that are not derived - neither contract nor implementation.");
     Environment.Exit(1);
 }
 
@@ -16,6 +24,11 @@ var assemblyPath = args[0];
 var outputDirectory = args[1];
 var skipNamespaces = 0;
 var baseNamespace = string.Empty;
+var implementationsDirectory = string.Empty;
+var implementationsNamespace = string.Empty;
+var registrationsFile = string.Empty;
+var registrationsNamespace = string.Empty;
+var excluded = new HashSet<string>(StringComparer.Ordinal);
 
 for (var i = 2; i < args.Length - 1; i++)
 {
@@ -26,6 +39,21 @@ for (var i = 2; i < args.Length - 1; i++)
             break;
         case "--base-namespace":
             baseNamespace = args[++i];
+            break;
+        case "--implementations":
+            implementationsDirectory = args[++i];
+            break;
+        case "--implementations-namespace":
+            implementationsNamespace = args[++i];
+            break;
+        case "--registrations":
+            registrationsFile = args[++i];
+            break;
+        case "--registrations-namespace":
+            registrationsNamespace = args[++i];
+            break;
+        case "--exclude":
+            excluded.UnionWith(args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
             break;
     }
 }
@@ -64,13 +92,28 @@ if (serviceGroups.Count == 0)
 Console.WriteLine($"Found {serviceGroups.Count} service group(s)");
 
 var generator = new ServiceInterfaceGenerator(skipNamespaces, baseNamespace);
+var generatesImplementations = !string.IsNullOrEmpty(implementationsDirectory);
+var implementationGenerator = new ServiceImplementationGenerator(skipNamespaces, baseNamespace, implementationsNamespace);
+var generated = new List<GeneratedService>();
 var hasError = false;
+
+SharedTypeRegistry.Configure(skipNamespaces, baseNamespace);
 
 foreach (var (_, serviceDefinition) in serviceGroups)
 {
     Console.WriteLine($"\nService: {serviceDefinition.ServiceName} (namespace: {serviceDefinition.Namespace})");
     Console.WriteLine($"  Commands: {serviceDefinition.Commands.Count}");
     Console.WriteLine($"  Queries: {serviceDefinition.Queries.Count}");
+    if (serviceDefinition.KeyedQueries.Count > 0)
+    {
+        Console.WriteLine($"  Keyed queries: {serviceDefinition.KeyedQueries.Count}");
+    }
+
+    if (excluded.Contains(serviceDefinition.ServiceName))
+    {
+        Console.WriteLine($"  Skipped {serviceDefinition.ServiceName} - it is not derived yet and keeps its hand-written contract and implementation.");
+        continue;
+    }
 
     try
     {
@@ -81,10 +124,34 @@ foreach (var (_, serviceDefinition) in serviceGroups)
     {
         Console.Error.WriteLine($"  ERROR: Namespace mismatch in service '{serviceDefinition.ServiceName}': {ex.Message}");
         hasError = true;
+        continue;
     }
     catch (Exception ex)
     {
         Console.Error.WriteLine($"  ERROR generating service '{serviceDefinition.ServiceName}': {ex.Message}");
+        hasError = true;
+        continue;
+    }
+
+    if (!generatesImplementations)
+    {
+        continue;
+    }
+
+    try
+    {
+        var service = implementationGenerator.Generate(serviceDefinition, implementationsDirectory);
+        generated.Add(service);
+        Console.WriteLine($"  Generated implementation for {serviceDefinition.ServiceName}");
+    }
+    catch (UnsupportedServiceShape ex)
+    {
+        Console.Error.WriteLine($"  ERROR implementing service '{serviceDefinition.ServiceName}': {ex.Message}");
+        hasError = true;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"  ERROR implementing service '{serviceDefinition.ServiceName}': {ex.Message}");
         hasError = true;
     }
 }
@@ -92,6 +159,39 @@ foreach (var (_, serviceDefinition) in serviceGroups)
 if (hasError)
 {
     Environment.Exit(1);
+}
+
+// Every service has now had a chance to reference a Core-owned shared type, but generating one can itself
+// reference another (Identity.OnBehalfOf is even self-referential) - SharedTypeRegistry.Discovered only ever
+// grows, so re-scanning it for anything not yet generated converges once nothing new turns up.
+var generatedSharedTypes = new HashSet<Type>();
+while (SharedTypeRegistry.Discovered.Keys.Except(generatedSharedTypes).ToList() is { Count: > 0 } pendingSharedTypes)
+{
+    foreach (var sharedType in pendingSharedTypes)
+    {
+        generatedSharedTypes.Add(sharedType);
+        try
+        {
+            generator.GenerateSharedType(sharedType, outputDirectory);
+            Console.WriteLine($"  Generated shared type {sharedType.Name}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"  ERROR generating shared type '{sharedType.Name}': {ex.Message}");
+            hasError = true;
+        }
+    }
+}
+
+if (hasError)
+{
+    Environment.Exit(1);
+}
+
+if (generatesImplementations && !string.IsNullOrEmpty(registrationsFile))
+{
+    new ServiceRegistrationsGenerator(registrationsNamespace).Generate(generated, registrationsFile);
+    Console.WriteLine($"\nGenerated registrations for {generated.Count} service(s).");
 }
 
 Console.WriteLine("\nGeneration complete.");

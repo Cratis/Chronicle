@@ -9,7 +9,7 @@ import { InputText } from 'primereact/inputtext';
 import { ToggleButton } from 'primereact/togglebutton';
 import { ToggleButtonGroup, type ToggleButtonGroupValueChangeEvent } from 'primereact/togglebuttongroup';
 import strings from 'Strings';
-import { SequenceQueryScope } from 'Api/SequenceQueries/SequenceQueryScope';
+import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
 import './SaveQueryDialog.css';
 
 /**

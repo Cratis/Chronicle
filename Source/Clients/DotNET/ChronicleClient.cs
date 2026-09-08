@@ -279,7 +279,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
     {
         var eventStores = await _servicesAccessor.Services.EventStores.AllEventStores().EnsureSuccess();
-        return eventStores.Select(_ => (EventStoreName)_).ToArray();
+        return eventStores.Select(_ => (EventStoreName)_.Name).ToArray();
     }
 
     /// <inheritdoc/>
@@ -312,9 +312,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
             { ProcessMetadataKey, Environment.ProcessPath ?? string.Empty }
         });
 
+        var types = TypeUniverse.For(_serviceProvider);
         var complianceMetadataResolver = new ComplianceMetadataResolver(
-            new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, _serviceProvider),
-            new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, _serviceProvider));
+            new InstancesOf<ICanProvideComplianceMetadataForType>(types, _serviceProvider),
+            new InstancesOf<ICanProvideComplianceMetadataForProperty>(types, _serviceProvider));
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, _namingPolicy);
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider);
         var artifactActivator = new ClientArtifactsActivator(_serviceProvider, _loggerFactory);

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Api;
 using Cratis.Chronicle.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -86,13 +85,6 @@ public class WebServer(
         // recreates its service proxies on reconnect/failover.
         builder.Services.AddTransient(_ => serviceProvider.GetRequiredService<IServices>());
 
-        // Forward the hosting application's connection when it has one, so nothing in this
-        // application tries to construct its own.
-        if (serviceProvider.GetService<Connections.IChronicleConnection>() is { } connection)
-        {
-            builder.Services.AddSingleton(connection);
-        }
-
         builder.Host
             .AddCratisArc(
                 options =>
@@ -104,14 +96,14 @@ public class WebServer(
                     // The Workbench frontend proxies are generated against the same route
                     // shape the kernel-embedded API uses.
                     options.GeneratedApis.RoutePrefix = "api";
-                    options.GeneratedApis.SegmentsToSkipForRoute = 3;
+                    options.GeneratedApis.SegmentsToSkipForRoute = 2;
                 });
 
         // The API must reuse the IServices from the hosting application (registered above) -
         // with useGrpc left at its default, AddCratisChronicleApi registers its own
         // connection-backed IServices pointing at the default localhost endpoint, shadowing
         // the host's connection.
-        builder.Services.AddCratisChronicleApi(useGrpc: false);
+        builder.Services.AddChronicleWorkbenchApi();
         builder.Services.Configure<MvcOptions>(options => options.UseRoutePrefix(workbenchOptions.Value.BasePath));
         builder.WebHost
             .UseKestrel(options =>
@@ -126,7 +118,7 @@ public class WebServer(
         if (!basePath.StartsWith('/')) basePath = $"/{basePath}";
         if (basePath.EndsWith('/')) basePath = basePath[0..^1];
 
-        _webApplication.UseCratisChronicleApi();
+        _webApplication.UseChronicleWorkbenchApi();
 
         var rootType = typeof(WorkbenchWebApplicationBuilderExtensions);
         var rootResourceNamespace = $"{rootType.Namespace}.Files";

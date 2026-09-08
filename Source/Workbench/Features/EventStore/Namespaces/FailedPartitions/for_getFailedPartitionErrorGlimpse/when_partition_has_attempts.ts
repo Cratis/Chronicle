@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { FailedPartition, FailedPartitionAttempt } from 'Api/Observation';
+import { FailedPartitionDetails as FailedPartition, FailedPartitionAttemptDetails as FailedPartitionAttempt } from 'Features/Observation';
 import { getFailedPartitionErrorGlimpse } from '../getFailedPartitionErrorGlimpse';
 
 const attempt = (sequenceNumber: number, messages: string[]): FailedPartitionAttempt =>

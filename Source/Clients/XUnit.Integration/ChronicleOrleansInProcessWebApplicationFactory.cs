@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelGrpc;
 
 using System.Net;
 using System.Net.Sockets;
@@ -59,6 +60,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     where TStartup : class
 {
     readonly IChronicleSetupFixture _fixture = fixture;
+
+    /// <inheritdoc/>
+    protected override bool RegistersOwnChronicleClient => true;
 
     /// <inheritdoc/>
     protected override IHostBuilder CreateHostBuilder()
@@ -158,7 +162,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 silo.Services.AddBindingsByConvention();
                 silo.Services.AddSelfBindings();
 
-                KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
+                KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     silo,
                     chronicleBuilder =>
                         (configureStorage ?? (cb => cb.WithMongoDB(mongoServer, Constants.EventStore)))(chronicleBuilder));
@@ -178,7 +182,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     // The ChronicleServerStartupTask deadlocks during test silo startup because
                     // PatchManager grain activation hangs while other test infrastructure is
                     // initializing concurrently. Tests handle their own setup via the fixture.
-                    var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
+                    var startupTaskType = typeof(Configuration.ChronicleOptions).Assembly
                         .GetType("Orleans.Hosting.ChronicleServerStartupTask");
                     if (startupTaskType is not null)
                     {

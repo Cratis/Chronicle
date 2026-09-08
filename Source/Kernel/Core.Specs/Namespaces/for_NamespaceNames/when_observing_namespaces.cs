@@ -18,6 +18,7 @@ public class when_observing_namespaces : Specification
 {
     static readonly JsonSerializerOptions _serializerOptions = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters =
         {
             new EnumerableConceptAsJsonConverterFactory(),
@@ -26,7 +27,7 @@ public class when_observing_namespaces : Specification
     };
 
     IStorage _storage;
-    IEnumerable<string> _emitted;
+    IEnumerable<NamespaceNames> _emitted;
     string _json;
 
     void Establish()
@@ -47,6 +48,6 @@ public class when_observing_namespaces : Specification
         _json = JsonSerializer.Serialize<object>(_emitted, _serializerOptions);
     }
 
-    [Fact] void should_emit_the_names_as_strings() => _emitted.ShouldContainOnly(EventStoreNamespaceName.Default.Value, "tenant-a");
-    [Fact] void should_serialize_as_a_plain_string_array() => _json.ShouldEqual("""["Default","tenant-a"]""");
+    [Fact] void should_emit_every_name() => _emitted.Select(_ => _.Name).ShouldContainOnly(EventStoreNamespaceName.Default.Value, "tenant-a");
+    [Fact] void should_serialize_the_name_of_each() => _json.ShouldEqual("""[{"id":"Default","name":"Default"},{"id":"tenant-a","name":"tenant-a"}]""");
 }

@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.ReadModelExplorer;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -291,31 +292,7 @@ public class ReadModels(
         {
             var readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
 
-            var request = new GetSnapshotsByKeyRequest
-            {
-                EventStore = eventStore.Name,
-                Namespace = eventStore.Namespace,
-                ReadModelIdentifier = readModelIdentifier,
-                EventSequenceId = EventSequenceId.Log,
-                ReadModelKey = readModelKey
-            };
-
-            var response = await _chronicleServicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
-
-            var snapshots = new List<ReadModelSnapshot<TReadModel>>();
-            foreach (var snapshot in response.Snapshots)
-            {
-                var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
-                var events = snapshot.Events.ToClient(eventTypes, jsonSerializerOptions);
-
-                snapshots.Add(new ReadModelSnapshot<TReadModel>(
-                    readModel,
-                    events,
-                    snapshot.Occurred,
-                    snapshot.CorrelationId));
-            }
-
-            return snapshots;
+            return await GetSnapshots<TReadModel>(readModelIdentifier, EventSequenceId.Log, readModelKey);
         }
 
         // Explicitly check reducers existence using HasReducerFor(Type) to satisfy specs
@@ -333,31 +310,8 @@ public class ReadModels(
             var readModelIdentifier = typeof(TReadModel).GetReadModelIdentifier();
             var handler = reducers.GetHandlerForReadModelType(typeof(TReadModel));
 
-            var request = new GetSnapshotsByKeyRequest
-            {
-                EventStore = eventStore.Name,
-                Namespace = eventStore.Namespace,
-                ReadModelIdentifier = readModelIdentifier,
-                EventSequenceId = handler.EventSequenceId,
-                ReadModelKey = readModelKey
-            };
-
-            var response = await _chronicleServicesAccessor.Services.ReadModels.GetSnapshotsByKey(request);
-
-            var snapshots = new List<ReadModelSnapshot<TReadModel>>();
-            foreach (var snapshot in response.Snapshots)
-            {
-                var readModel = JsonSerializer.Deserialize<TReadModel>(snapshot.ReadModel, jsonSerializerOptions)!;
-                var events = snapshot.Events.ToClient(eventTypes, jsonSerializerOptions);
-
-                snapshots.Add(new ReadModelSnapshot<TReadModel>(
-                    readModel,
-                    events,
-                    snapshot.Occurred,
-                    snapshot.CorrelationId));
-            }
-
-            return await ReleaseSnapshotInstances(snapshots);
+            return await ReleaseSnapshotInstances(
+                await GetSnapshots<TReadModel>(readModelIdentifier, handler.EventSequenceId, readModelKey));
         }
 
         throw new UnknownReadModel(typeof(TReadModel));
@@ -422,6 +376,36 @@ public class ReadModels(
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) => _releaser.Release(instances);
 
     /// <summary>
+    /// Reads the snapshots one read model instance passed through.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model to read snapshots of.</typeparam>
+    /// <param name="readModelIdentifier">The identifier of the read model.</param>
+    /// <param name="eventSequenceId">The event sequence the read model observes.</param>
+    /// <param name="readModelKey">The key of the instance.</param>
+    /// <returns>The snapshots, oldest first.</returns>
+    async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshots<TReadModel>(
+        ReadModelIdentifier readModelIdentifier,
+        EventSequenceId eventSequenceId,
+        ReadModelKey readModelKey)
+    {
+        var response = await _chronicleServicesAccessor.Services.ReadModelExplorer.AllSnapshotsForReadModel(
+            new AllSnapshotsForReadModelRequest
+            {
+                EventStore = eventStore.Name,
+                Namespace = eventStore.Namespace,
+                ReadModel = readModelIdentifier,
+                ReadModelKey = readModelKey,
+                EventSequenceId = eventSequenceId
+            });
+
+        return response.Data.Select(snapshot => new ReadModelSnapshot<TReadModel>(
+            JsonSerializer.Deserialize<TReadModel>(snapshot.Instance, jsonSerializerOptions)!,
+            snapshot.Events.ToClient(eventStore.Name, eventStore.Namespace, eventTypes, jsonSerializerOptions),
+            snapshot.Occurred,
+            snapshot.CorrelationId)).ToList();
+    }
+
+    /// <summary>
     /// Check whether a read model has to be reduced here rather than read from the Kernel's materialized store.
     /// </summary>
     /// <param name="readModelType">The read model type to check.</param>
@@ -483,13 +467,20 @@ public class ReadModels(
         }
         visitedTypes.Add(type);
 
+        // The record shorthand — [Index] on a positional parameter, without the property: target. The
+        // attribute is valid on both a property and a parameter, and C# binds it to the *parameter* on a
+        // positional record whenever the attribute allows it, so looking only at properties misses the form
+        // the documentation recommends — and misses it silently, producing no index at all. The same
+        // shorthand is honored for [Subject] (see SubjectResolver), so a reader expects it here too.
+        var indexedParameterNames = IndexedParameterNames(type);
+
         foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             var propertyPath = string.IsNullOrEmpty(prefix)
                 ? namingPolicy.GetPropertyName(property.Name)
                 : $"{prefix}.{namingPolicy.GetPropertyName(property.Name)}";
 
-            if (Attribute.IsDefined(property, typeof(IndexAttribute)))
+            if (Attribute.IsDefined(property, typeof(IndexAttribute)) || indexedParameterNames.Contains(property.Name))
             {
                 indexes.Add(new IndexDefinition { PropertyPath = propertyPath });
             }
@@ -510,6 +501,17 @@ public class ReadModels(
                 // Recurse into complex types
                 CollectIndexes(propertyType, propertyPath, indexes, visitedTypes);
             }
+        }
+
+        static HashSet<string> IndexedParameterNames(Type type)
+        {
+            var primaryConstructor = type.GetConstructors().MaxBy(constructor => constructor.GetParameters().Length);
+
+            return primaryConstructor is null
+                ? []
+                : [.. primaryConstructor.GetParameters()
+                    .Where(parameter => parameter.IsDefined(typeof(IndexAttribute), inherit: false))
+                    .Select(parameter => parameter.Name!)];
         }
     }
 }

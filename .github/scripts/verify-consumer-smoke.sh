@@ -53,9 +53,9 @@ cat > "$WORK_DIR/nuget.config" <<CONFIG
 CONFIG
 
 # Arc floats to whatever is current, because that is what an application installing both gets today.
-# Both testing packages are included: they carry their own type registrations, and a mismatch there
-# reaches every consumer's specs rather than their production code.
-cat > "$WORK_DIR/Consumer.csproj" <<PROJECT
+# Keep separate consumers: one embedded kernel package must not supply an assembly missing from the other.
+mkdir -p "$WORK_DIR/Testing" "$WORK_DIR/XUnitIntegration"
+cat > "$WORK_DIR/Testing/Consumer.csproj" <<PROJECT
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -68,6 +68,24 @@ cat > "$WORK_DIR/Consumer.csproj" <<PROJECT
     <PackageReference Include="Cratis.Arc" Version="*" />
     <PackageReference Include="Cratis.Arc.Chronicle" Version="*" />
     <PackageReference Include="Cratis.Arc.Chronicle.Testing" Version="*" />
+    <Compile Include="../Program.cs" Link="Program.cs" />
+  </ItemGroup>
+</Project>
+PROJECT
+
+cat > "$WORK_DIR/XUnitIntegration/Consumer.csproj" <<PROJECT
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Cratis.Chronicle" Version="$CHRONICLE_VERSION" />
+    <PackageReference Include="Cratis.Chronicle.XUnit.Integration" Version="$CHRONICLE_VERSION" />
+    <PackageReference Include="Cratis.Arc" Version="*" />
+    <PackageReference Include="Cratis.Arc.Chronicle" Version="*" />
+    <Compile Include="../Program.cs" Link="Program.cs" />
   </ItemGroup>
 </Project>
 PROJECT
@@ -91,14 +109,15 @@ Console.WriteLine($"Registered {services.Count} services.");
 return 0;
 PROGRAM
 
-echo "Installing Chronicle $CHRONICLE_VERSION beside the current Arc packages and starting it..."
-if dotnet run --project "$WORK_DIR/Consumer.csproj" > "$WORK_DIR/run.log" 2>&1; then
-    tail -1 "$WORK_DIR/run.log"
-    echo "Chronicle $CHRONICLE_VERSION and the current Arc packages start together."
-    exit 0
-fi
-
-echo "::error::Chronicle $CHRONICLE_VERSION and the current Arc packages do not work together. An application installing both would fail on startup, before any of its own code runs. If Arc is behind, bump and release Arc rather than changing Chronicle."
-echo "--- output ---"
-tail -30 "$WORK_DIR/run.log"
-exit 1
+for consumer in Testing XUnitIntegration; do
+    echo "Installing Chronicle $CHRONICLE_VERSION ($consumer) beside the current Arc packages and starting it..."
+    if dotnet run --project "$WORK_DIR/$consumer/Consumer.csproj" > "$WORK_DIR/$consumer/run.log" 2>&1; then
+        tail -1 "$WORK_DIR/$consumer/run.log"
+        echo "Chronicle $CHRONICLE_VERSION ($consumer) and the current Arc packages start together."
+    else
+        echo "::error::Chronicle $CHRONICLE_VERSION ($consumer) and the current Arc packages failed consumer startup. Inspect the exception below before assigning the failure to either package family."
+        echo "--- output ---"
+        tail -30 "$WORK_DIR/$consumer/run.log"
+        exit 1
+    fi
+done
