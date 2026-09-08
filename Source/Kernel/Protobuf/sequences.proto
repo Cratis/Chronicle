@@ -51,7 +51,7 @@ message AppendRequest {
    string EventStreamType = 6;
    string EventStreamId = 7;
    EventType EventType = 8;
-   map<string,JsonNode> Content = 9;
+   string Content = 9;
    .bcl.Guid CorrelationId = 10;
    repeated string Tags = 11;
    SerializableDateTimeOffset Occurred = 12;
@@ -197,7 +197,7 @@ message EventForEventSourceId {
    string EventStreamType = 3;
    string EventStreamId = 4;
    EventType EventType = 5;
-   map<string,JsonNode> Content = 6;
+   string Content = 6;
    repeated string Tags = 7;
    SerializableDateTimeOffset Occurred = 8;
    string Subject = 9;
@@ -230,7 +230,7 @@ message EventSourceEventsResponse {
 }
 message EventToAppend {
    EventType EventType = 1;
-   map<string,JsonNode> Content = 2;
+   string Content = 2;
    string Subject = 3;
 }
 message EventType {
@@ -297,8 +297,6 @@ message Identity {
    string Name = 2;
    string UserName = 3;
    Identity OnBehalfOf = 4;
-}
-message JsonNode {
 }
 message KeyValuePair_Int32_String {
    int32 Key = 1;
@@ -409,7 +407,7 @@ message ReviseRequest {
    string EventSequenceId = 3;
    uint64 SequenceNumber = 4;
    EventType EventType = 5;
-   map<string,JsonNode> Content = 6;
+   string Content = 6;
    repeated Causation Causation = 7;
    Identity CausedBy = 8;
 }

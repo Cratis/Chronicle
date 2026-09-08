@@ -223,7 +223,7 @@ public class AppendRequest
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(9)]
-    public global::System.Text.Json.Nodes.JsonObject Content { get; set; }
+    public string Content { get; set; }
 
     /// <summary>
     /// Gets or sets the CorrelationId.
@@ -742,7 +742,7 @@ public class ReviseRequest
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(6)]
-    public global::System.Text.Json.Nodes.JsonObject Content { get; set; }
+    public string Content { get; set; }
 
     /// <summary>
     /// Gets or sets the Causation.
