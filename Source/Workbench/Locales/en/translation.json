@@ -77,6 +77,7 @@
             "users": "Users",
             "applications": "Applications",
             "connectedClients": "Connected Clients",
+            "servers": "Servers",
             "developmentTools": "Development Tools"
         }
     },
@@ -744,6 +745,16 @@
                         "title": "Remove Application",
                         "message": "Are you sure you want to remove application '{clientId}'? This action cannot be undone."
                     }
+                }
+            },
+            "servers": {
+                "title": "Servers",
+                "empty": "No server instances found",
+                "columns": {
+                    "address": "Address",
+                    "status": "Status",
+                    "cpu": "CPU",
+                    "memory": "Memory"
                 }
             },
             "developmentTools": {
