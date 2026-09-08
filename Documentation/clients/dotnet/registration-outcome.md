@@ -70,6 +70,16 @@ if (!outcome.IsSuccess)
 
 It waits for registration to have *run*, not to have succeeded — ask the returned outcome about that. A run that failed returns here too, carrying its `Failure`; the timeout is for a registration that never finished, not for one that finished badly. If it has not finished within the timeout, the wait throws `TaskCanceledException`.
 
+## Discovery happens before registration
+
+Before Chronicle can register artifacts, `DefaultClientArtifactsProvider` discovers their types through `ICanProvideAssembliesForDiscovery`. The first access to any artifact collection initializes **all** collections. Concurrent readers wait for that discovery to finish rather than seeing an empty or partially populated collection. Later reads reuse the completed collections; they do not scan assemblies again.
+
+If assembly initialization or type discovery throws, that access fails with the original exception. The provider does not publish the incomplete collections, and the next access retries initialization. This is a retry on access, not an automatic background retry.
+
+If you supply custom assembly discovery, finish that work before reading the provider's artifact collections. Reading them again on the initializing thread throws `ReentrantClientArtifactsInitialization`: discovery cannot consume its own unfinished result. Avoid waiting inside discovery for another thread that reads artifacts too, because that reader waits for discovery to finish.
+
+A complete discovery result only says which types exist. It does **not** mean the kernel has registered them; use the registration outcome and observer-state helpers described here for that distinction.
+
 ## What it covers
 
 `Registration` reports projection artifacts: the fluent `IProjectionFor<T>` implementations and the model-bound read models. Those are the artifacts whose registration round-trips to the kernel inside `RegisterAll`, so the outcome is observed rather than assumed.
