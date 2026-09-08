@@ -67,7 +67,18 @@ public partial class Observer
     /// job and is left alone. Clearing it inside <see cref="CatchUp"/> instead is not an option: the flag is also what
     /// stops <see cref="Observing"/> from bouncing straight back to <see cref="Routing"/> over the very gap the failed
     /// catch-up was meant to close, which would spin the state machine between the two states. Re-routing through
-    /// <see cref="Routing"/> is what makes the retry the job-start path promises actually happen.
+    /// <see cref="Routing"/> is what makes the retry the job-start path promises actually happen - unconditionally,
+    /// even when the observer is no longer subscribed, because leaving it un-routed in that case was itself a second
+    /// wedge: the flag came down but nothing carried the observer on to <see cref="Disconnected"/> or wherever routing
+    /// would otherwise have taken it.
+    /// <para>
+    /// Re-routing only ever fixes a <em>transient</em> reason the job could not start. A structural one - the job
+    /// subsystem itself being unreachable, for example - turns the fix into a loop with zero forward progress: each
+    /// tick clears the flag, routes back through <see cref="Routing"/>, which calls <see cref="CatchUp"/> again,
+    /// which fails to start a job again, leaving the flag raised for the next tick to find stranded again. Bounding
+    /// the number of consecutive stranded recoveries and quarantining the observer once that bound is exceeded turns
+    /// the silent infinite loop into a visible, operator-actionable state instead.
+    /// </para>
     /// </remarks>
     async Task<bool> CheckStrandedCatchupPreparation()
     {
@@ -79,11 +90,25 @@ public partial class Observer
         logger.WatchdogRescuingStrandedCatchupPreparation();
         _isPreparingCatchup = false;
 
-        if (_subscription.IsSubscribed)
+        if (!_subscription.IsSubscribed)
         {
+            // Nothing subscribed means nothing was ever going to drive a catch-up forward - route the observer on
+            // regardless, so it settles into Disconnected (or wherever routing decides) instead of being left
+            // stuck in whatever state it happened to be in when the flag came down.
             await TransitionTo<Routing>();
+            return true;
         }
 
+        _catchupRecoveryAttempts++;
+        var config = await configurationProvider.GetFor(_observerKey);
+        if (_catchupRecoveryAttempts > config.MaxCatchupRecoveryAttempts)
+        {
+            logger.GivingUpOnCatchupPreparationRecovery(_catchupRecoveryAttempts, config.MaxCatchupRecoveryAttempts);
+            await TransitionTo<QuarantinedObserver>();
+            return true;
+        }
+
+        await TransitionTo<Routing>();
         return true;
     }
 }

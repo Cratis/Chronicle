@@ -155,6 +155,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Error, "Observer has failed to recover from a stranded catch-up preparation {Attempts} times in a row (max {MaxAttempts}). Quarantining the observer - starting a catch-up job is repeatedly failing for a reason retrying again is not expected to fix. Manual intervention required to resume processing.")]
+    internal static partial void GivingUpOnCatchupPreparationRecovery(this ILogger<Observer> logger, int attempts, int maxAttempts);
 }
 
 internal static class ObserverScopes
