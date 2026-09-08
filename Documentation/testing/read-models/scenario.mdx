@@ -28,6 +28,21 @@ dotnet add package Cratis.Chronicle.Testing
 
 `Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to feed events through the read model's projection or reducer in order. The result is stored in `Instance`.
 
+## Event input serialization
+
+For projection-backed read models, seeded events pass through the `IEventSerializer` supplied by the
+scenario's `Defaults`, then through Chronicle's schema-aware JSON conversion. Projections therefore consume
+the event's serialized representation, including serializer-owned property names, rather than a reflection
+walk of the CLR object. This also avoids reflecting over the parent links inside a nonempty `JsonObject`
+event property. Serialized content is re-read as case-sensitive JSON data before conversion, so a serializer's
+case-insensitive CLR member matching cannot collapse distinct dictionary keys. This preserves JSON data
+spelling; it is not a verification of the network marshaller or wire compatibility.
+
+This fidelity applies to **event input** for fluent and model-bound projections. Reducers still receive typed
+events directly. The optional initial read model state follows a separate conversion path; do not pass an
+initial state containing nonempty `JsonObject` values, because that path still reflects over their parent
+links.
+
 ## Optional initial state
 
 Pass an initial state to the constructor when the read model starts from a non-default baseline:

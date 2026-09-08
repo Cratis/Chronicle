@@ -46,6 +46,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly TReadModel? _initialState = initialState;
     readonly INamingPolicy _namingPolicy = new CamelCaseNamingPolicy();
     readonly IEventTypes _eventTypes = defaults.EventTypes;
+    readonly IEventSerializer _eventSerializer = defaults.EventSerializer;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
@@ -420,6 +421,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 projectionDefinition,
                 eventsList,
                 _eventTypes,
+                _eventSerializer,
                 _jsonSchemaGenerator,
                 _initialState,
                 _strictEventSubscription);
