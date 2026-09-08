@@ -21,6 +21,7 @@ using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Servers;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.Observation;
 using Cratis.Chronicle.Setup;
@@ -68,6 +69,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedClientsPlacementStrategy, ConnectedClientsPlacementDirector>()
+            .AddPlacementDirector<ServerInstancePlacementStrategy, ServerInstancePlacementDirector>()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
             .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
