@@ -1,35 +1,37 @@
 ---
 name: ship-changes
 description: >
-  Ship staged or unstaged local changes: create a branch, make logical commits,
-  push to origin, open a PR with the correct description and label, merge it,
-  close the issues it resolves, and delete the branch locally and on origin.
-  Use whenever the user asks to commit, push, create a PR, ship, or land changes.
+  Use when asked to commit, push, create a PR, ship, or land changes. Stop at
+  the requested verb; separately authorize merge, publication, issue effects,
+  label mutations, and branch deletion. Preserve history and explicit staging.
+
 ---
 
 # Ship Changes
 
-This skill takes local modifications from the working tree and lands them on
-`main` via a properly structured branch, commits, and PR — following all
-project conventions for commits, PR descriptions, and labels — and leaves no
-resolved issue open behind it.
+This skill handles only the requested shipping endpoint. Preserve repository-specific
+conventions and stricter private/effect gates; do not infer authority for later steps.
 
-> **Never rewrite history while shipping.** No `rebase`, no `commit --amend`, no
-> `reset --hard`, no `push --force` (or `--force-with-lease`), no deleting a branch that
-> still holds unmerged commits — on any branch, including your own, unless the human asks
-> for that exact command in that exact message. Correct a mistake with a **new commit**;
-> undo with `git revert`; move work with `git cherry-pick`; integrate with `git merge`.
-> Do not tidy a messy series before opening the PR — the series is the record.
-> See [git-commits.md](../../rules/git-commits.md#never-rewrite-history) for the full
-> prohibition and the recovery procedure.
+## Authorization and stopping points
+
+The requested verb is the stopping point, not permission for the whole workflow:
+
+- **Commit-only:** review, explicitly stage authorized paths, commit, and stop. Do not push or open a PR.
+- **Push-only:** push the authorized branch/commits and stop. Do not create additional commits or a PR unless requested.
+- **PR-only:** prepare/open the requested PR and report required checks; stop before merge.
+- **Ship/land:** clarify the exact intended endpoint and effects. These words alone do not authorize destructive or notification-bearing effects.
+
+Merge, issue comments or closure, label mutations (especially labels that trigger publication/releases), publication, and local or remote branch deletion each require separate explicit authorization for exact targets and effects. Apply the repository's current mutation protocol and stricter local/private gates; tool access and inverse escrow alone supply no authority. For destructive/bulk effects, prepare an exact dry-run, capture pre-state and deterministic inverse escrow in ignored `.ai-work/`, obtain approval, recheck preconditions, and record/read back outcomes through the approved repository-owned adapter. If a required adapter, safe inverse/compensation, or authorization is missing, stop. Preserve any stricter prohibition below.
+
+Never rewrite history: no amend, rebase, squash merge, hard reset, force-push, or forced branch deletion. Use new commits, revert, cherry-pick, and merge instead. A request to ship does not override this prohibition.
 
 ## Inputs
 
 Collect the following before starting:
 
-- **Semantic label** — `patch`, `minor`, `major`, or none. Skip labeling entirely if the user says no label or omits the label. Do not ask — infer from the nature of the change or follow the user's explicit instruction.
+- **Release intent** — propose `major`, `minor`, `patch`, or repository-supported non-release intent (ordinarily `no-release`) from the actual impact; confirm the current workflow contract. Apply a label only with explicit authorization for that exact label and any publication effects. If the user forbids labels but the repository requires one, report the blocker; do not silently omit it or bypass the gate.
 - **Branch name suffix** — short kebab-case description of the work, e.g. `fix/testing-orleans-runtime-assemblies`. Determine from the nature of the changes if not provided.
-- **Related GitHub issue** — search GitHub issues if the change likely relates to one; use the real number or omit the reference when none exists. Never invent or reuse example numbers. Keep the numbers you find — they are needed twice: as the `(#N)` reference in the PR bullets, and to close the issues after the merge (step 9).
+- **Related GitHub issue** — search GitHub issues if the change likely relates to one; use the real number or omit the reference when none exists. Never invent or reuse example numbers. Record exact tracker IDs for PR references and no-effect post-merge dispositions; discovering an issue never authorizes closure or comments.
 
 ## Step 1 — Review the working tree
 
@@ -117,11 +119,15 @@ Replace with ReplaceOne using upsert: true.
 
 ## Step 4 — Push the branch
 
+**Stop after step 3 for commit-only.** Run this step only for an authorized push; push-only does not authorize new commits or a PR.
+
 ```bash
 git push -u origin <branch-name>
 ```
 
 ## Step 5 — Create the PR
+
+**Stop after step 4 for push-only.** Create a PR only when requested; PR-only stops before merge.
 
 Use `mcp_github_github_create_pull_request` with:
 
@@ -167,7 +173,7 @@ mcp_github_github_search_issues  query="<keywords> repo:<owner>/<repo>"
 ```
 
 (Use the current repository's `<owner>/<repo>`, derived from the `origin` remote —
-unless `.agents/PROJECT.md` says issues are tracked in a separate repo, in which
+unless canonical `.cratis/PROJECT.md` (legacy `.agents/PROJECT.md` only if canonical is absent) says issues are tracked in a separate repo, in which
 case search *that* one. See "When issues live in a different repository" in step 9.)
 
 If nothing relevant is found, omit the issue reference from affected bullets.
@@ -179,43 +185,29 @@ For every issue you do find, record two things — both are needed in step 9:
 
 **Do not put closing keywords (`Closes #N`, `Fixes #N`) in the PR body.** The
 published release notes are the PR description verbatim, so a closing keyword
-would ship into the changelog. Issues are closed explicitly after the merge
-instead.
+would ship into the changelog. Any post-merge issue effect instead requires separate exact authorization and the repository-owned operation policy.
 
-## Step 6 — Add the label (optional)
+## Step 6 — Confirm release intent
 
-Skip this step entirely if the user said no label or did not provide one.
+**Release intent** — propose `major`, `minor`, `patch`, or repository-supported non-release intent (ordinarily `no-release`) from the actual impact; confirm the current workflow contract. Apply a label only with explicit authorization for that exact label and any publication effects. If the user forbids labels but the repository requires one, report the blocker; do not silently omit it or bypass the gate.
 
-**Skip it unconditionally when every changed file is documentation** — a docs-only PR carries no version label, so that no release is cut for it. See [pull-requests.md](../../rules/pull-requests.md).
+Documentation-only changes use repository-supported non-release intent, ordinarily `no-release`; confirm the workflow contract rather than assuming a label or API state. Run relevant content, link, frontmatter, and corpus checks instead of unrelated application builds, and satisfy every repository-required check, including release-intent checks where supported. Documentation is never a blanket exemption from red CI.
 
-Otherwise use `gh pr edit <number> --add-label "<label>"` with one of:
+Read back an authorized label/body edit to confirm the exact requested change; API errors or ambiguous results require reconciliation, not blind retries. This skill assumes no external API state.
 
-| Label | When |
-|-------|------|
-| `patch` | bug fixes, refactoring with identical behavior |
-| `minor` | new features, new slices, non-breaking additions |
-| `major` | breaking changes to public APIs |
+## Step 7 — Wait for required CI
 
-If `gh pr edit` fails on the Projects-classic GraphQL deprecation, add the label with the REST API instead: `gh api -X POST repos/<owner>/<repo>/issues/<number>/labels -f "labels[]=<label>"`. Label **before** the PR's first `verify` run where you can — a run that starts before the label lands sees no label and fails, and needs re-running.
-
-> **The same deprecation breaks `gh pr edit --body-file`, and it fails silently.** `gh pr edit` queries `repository.pullRequest.projectCards` whatever you are editing, so it can error on the deprecation *after* printing nothing useful and leave the body untouched. Always re-read the body after editing it — `gh api repos/<owner>/<repo>/pulls/<number> --jq '.body'` — and if it did not take, PATCH it directly:
->
-> ```bash
-> printf '%s' "$(cat body.md)" | python3 -c 'import json,sys; print(json.dumps({"body": sys.stdin.read()}))' \
->   | gh api -X PATCH repos/<owner>/<repo>/pulls/<number> --input -
-> ```
-
-## Step 7 — Wait for CI to pass
-
-**Skip this step entirely for a documentation-only PR** — merge as soon as it is open. Its `verify` will be red for the deliberately absent version label, and that is the expected outcome, not a failure to chase.
-
-Otherwise, before merging, poll the PR checks with `pull_request_read`:
-
-- Use `method: get_check_runs` (and `get_job_logs` on any failure).
-- Merge **only** when all required checks are green. If a check fails, investigate, fix, and push again.
-- Do not merge while red unless the user explicitly accepts confirmed pre-existing flakes unrelated to the change.
+Documentation-only work is not exempt from required CI or release-intent checks.
+Inspect required checks read-only with the repository-supported tools. Before any
+separately authorized merge, every required check must pass. Diagnose a failure
+within a bounded attempt, fix only in-scope causes with authorized additive
+commits/pushes, and re-run the affected gate. Report unrelated, environmental, or
+unresolved failures as blockers; do not keep editing or retrying indefinitely and
+do not treat an expected failure as green.
 
 ## Step 8 — Merge the PR
+
+**Separate explicit merge authorization required for the exact PR/head and declared effects. PR-only stops here.** Required checks must pass; use a true merge commit, never squash or rebase. A release label is not merge/publication authority.
 
 Use `mcp_github_github_merge_pull_request` with:
 
@@ -226,118 +218,67 @@ Use `mcp_github_github_merge_pull_request` with:
 **`merge_method` is `merge` and nothing else. Never `squash`, never `rebase`** — and the same
 applies if you reach for the CLI instead: `gh pr merge --merge`, never `gh pr merge --squash` or
 `--rebase`. Squashing is a **history rewrite** (`.ai/rules/git-commits.md#never-rewrite-history`):
-it replaces the branch's commits with one new commit, and because step 10 deletes the branch
-immediately afterwards, nothing is left pointing at the originals. It does not feel like a rewrite
+it replaces the branch's commits with one new commit, and if a later separately authorized operation deletes the branch, nothing is left pointing at the originals. It does not feel like a rewrite
 — it looks like an integration step, and the tidier result looks like an improvement — which is
 precisely why it is the easiest way to break the rule by accident.
 
 If the repository's settings permit only squash or rebase merges, **stop and ask the human.** That
 is a setting to change, not a reason to squash.
 
-## Step 9 — Close the related issues
+## Step 9 — Prepare related-issue dispositions
 
-**The ship is not finished until every issue the PR resolves is verified `CLOSED`.**
-This step is mandatory whenever step 5 found issues — treat a merged PR with an
-issue still open as an incomplete ship, not a loose end to mention in passing.
+A reference is a link, not authority to notify or close an issue. Prepare a
+no-effect disposition with the exact tracker repository and issue number,
+merged-PR evidence, and whether the issue is fully resolved, partly addressed,
+or uncertain. Leave uncertain and partly addressed issues open.
 
-Referencing an issue with `(#N)` does **not** close it — GitHub only auto-closes
-on a closing keyword, and this repo deliberately keeps those out of the PR body
-(see step 5). Nothing closes these issues but this step.
-
-For each issue the merged PR **fully resolves**:
-
-```bash
-gh issue close <N> --repo <owner>/<tracker-repo> --comment "Fixed in <owner>/<repo>#<pr-number>."
-gh issue view <N> --repo <owner>/<tracker-repo> --json number,state    # verify it is CLOSED
-```
-
-- **Always verify** — re-read the state after closing. `gh issue close` can no-op
-  or fail on permissions and still look like it worked; an unverified close leaves
-  the issue open and nobody notices.
-- **Close every issue in one sweep, then verify them all**, so a long list cannot
-  end with the last few silently skipped. Re-read the list you recorded in step 5
-  and account for each number explicitly.
-- **Only close what the change actually resolves.** If the PR addresses part of
-  an issue, leave it open and comment what landed and what remains:
-  `gh issue comment <N> --repo <owner>/<tracker-repo> --body "Partly addressed in #<pr-number>: <what landed>. Still open: <what remains>."`
-- Skip this step entirely when no issue was found — never close an issue you are
-  not confident the change resolves.
-- If the PR was merged but an issue close fails, say so explicitly in the final
-  report rather than leaving it silently open.
+Do not execute issue comments, closure, labels, or other notification effects as
+an automatic shipping step. Each exact operation and comment text needs separate
+explicit authorization and the repository-owned operation profile/adapter,
+pre-state, inverse/compensation, read-back, and reconciliation required by the
+current mutation protocol. If these are absent, report the pending disposition;
+an open issue does not make an authorized commit, push, or PR incomplete.
 
 ### When issues live in a different repository
 
-Some repositories are private with Issues disabled and track their issues in a
-separate public repo (check `.agents/PROJECT.md`). Two consequences:
-
-- **Every `gh issue` command needs `--repo <owner>/<tracker-repo>`.** Without it
-  `gh` resolves against the current repository and either fails or hits an
-  unrelated object.
-- **A bare `(#N)` in the PR body points at the wrong repo** — issues and pull
-  requests share one number sequence per repository, so `#109` in the code repo
-  links to *its* PR #109. Write the fully qualified `(<owner>/<tracker-repo>#N)`
-  in release-note bullets instead, so the reference resolves for a changelog
-  reader. Auto-closing still does not apply: keywords remain banned from the body
-  (step 5), so this step is the only thing that closes them.
+Use `.cratis/PROJECT.md`, or `.agents/PROJECT.md` only when canonical context is
+absent, to identify the tracker. Record `<owner>/<tracker-repo>#<number>` in each
+read-only lookup and disposition; fully qualify cross-repository PR references.
+Never infer the tracker from a sample number or mutate another repository merely
+because it is linked.
 
 ## Step 10 — Clean up the branch
 
-```bash
-git checkout main && git pull && git branch -d <branch-name> && git push origin --delete <branch-name>
-```
-
-Run all four commands in one shell invocation to avoid partial state.
-After this completes, `main` is fully up to date locally.
-
-**Only ever after the merge, and only with lowercase `-d`.** `-d` refuses to delete a
-branch holding commits that are not merged anywhere — that refusal is a safety net, not an
-obstacle. **Never reach for `-D` to force past it**: it strands those commits with no ref,
-and `git gc` then deletes them permanently. If `-d` refuses, the branch still holds work
-that exists nowhere else — stop and find out what it is.
+Branch deletion is optional, not completion criteria. Only after a verified merge
+and separate explicit authorization for each exact local/remote ref may cleanup
+proceed through the repository’s mutation protocol. Capture pre-state and inverse
+escrow, recheck refs immediately before each action, and read back each outcome.
+Do not batch checkout, pull, and deletion into one unreviewed command. Use only
+`git branch -d`, never `-D`; stop if it refuses or any ref/precondition drifts.
+Leave branches intact and report pending cleanup when authorization is absent.
 
 ## Full example sequence
 
-An illustrative end-to-end run for a new slice (paths and numbers are placeholders — use the current repo's):
+These are separate authorized endpoints, not one command batch. Paths and IDs
+are placeholders; derive the current repository and real targets before acting.
 
 ```bash
-# 1. Review
-git status
-git diff
-
-# 2. Branch
-git checkout -b feat/authors-registration
-
-# 3a. First commit — backend slice
-git add Authors/Registration/Registration.cs
+# Commit-only: explicitly authorized paths, review, commit, then STOP.
+git add <authorized-path>
 git diff --cached
-git commit -m "Add author registration slice
+git commit -m "Fix the scoped behavior"
 
-Register command + AuthorRegistered event + uniqueness constraint."
+# Only when push was requested: push authorized commits, then STOP for push-only.
+git push -u origin <authorized-branch>
 
-# 3b. Second commit — specs
-git add Authors/Registration/when_registering_an_author/
-git commit -m "Add specs for author registration"
-
-# 4. Push
-git push -u origin feat/authors-registration
-
-# 5. PR (via mcp_github_github_create_pull_request) — owner/repo from the origin remote
-
-# 6. Label (optional)
-gh pr edit <pr-number> --add-label "minor"
-
-# 7. Wait for CI — pull_request_read get_check_runs until green
-
-# 8. Merge (via mcp_github_github_merge_pull_request, merge_method: merge)
-#    CLI equivalent: gh pr merge <pr-number> --merge   # NEVER --squash / --rebase
-
-# 9. Close the issues the PR resolves, and verify
-gh issue close <issue-number> --comment "Fixed in #<pr-number>."
-gh issue view <issue-number> --json number,state
-
-# 10. Clean up (pulls main as part of the same command)
-git checkout main && git pull && git branch -d feat/authors-registration && git push origin --delete feat/authors-registration
+# Only when PR creation was requested: use the reviewed template/body.
+gh pr create --base main --head <authorized-branch> --body-file <reviewed-body-path>
+# STOP before merge for PR-only. Report relevant required checks.
 ```
+
+A release-intent label, merge, issue comment/closure, or branch deletion is not an
+implied next command. First obtain separate explicit authorization for the exact
+effect and satisfy the authorization, current workflow, and mutation gates above.
 
 ## Common mistakes to avoid
 
@@ -346,6 +287,6 @@ git checkout main && git pull && git branch -d feat/authors-registration && git 
 - **Never leave placeholder text** in PR bodies (`(#issue)`, `(#123)`).
 - **Never commit code that does not compile** — every commit must be a working state.
 - **Never push directly to `main`** — always go through the branch + PR flow.
-- **Never leave a resolved issue open** — a `(#N)` reference in the PR body is a link, not a close. Close it in step 9 and verify.
+- **Never infer issue-effect authority** — return no-effect dispositions; exact comments/closure require separate authorization and owning-repository gates.
 - **Never put `Closes #N` / `Fixes #N` in the PR body** — the release notes are the body verbatim.
-- **Never skip branch cleanup** — delete both the local and remote branch after merging.
+- **Never delete branches automatically** — leave local/remote refs intact unless their exact deletion is separately authorized after verified merge.
