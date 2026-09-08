@@ -6,21 +6,21 @@ lifecycle: pre-commit
 
 > **This is lifecycle guidance, not a wired tool hook.** To *enforce* it, wire it per tool — Claude Code: a `PreToolUse` hook in `.claude/settings.json` with a matcher on `Bash` (or your terminal tool) gating `git commit` (and its rtk-rewritten `rtk git commit` form — see [rtk](../rules/rtk.md)); GitHub Copilot: a hook in a `.github/hooks/*.json` file. The steps below are what that hook (or the agent) should do.
 
-Before executing any `git commit` terminal command, automatically run the specs for every affected project to ensure nothing is broken before changes are recorded in version control.
+Before an explicitly authorized commit, verify the staged scope with proportional checks. Reuse fresh passing results only when they cover the exact unchanged staged inputs; otherwise run the relevant checks. Never stage unrelated edits.
 
-## When this hook applies
+## When this guidance applies
 
-This guidance applies before any `git commit` (including `git commit -m`, `git commit --amend`, etc.) — and equally to the rtk-rewritten `rtk git commit ...`, since the rtk hook prefixes terminal commands. If the command being run is not a commit, do nothing and proceed.
+Apply before an authorized `git commit`, including `rtk git commit` or `rtk proxy git commit`. Do not interpret recognizing a command as authorization. History rewriting (`commit --amend`, rebase, squash, or force-push) remains prohibited.
 
 ## Steps
 
-1. **Detect a git commit command** — inspect the terminal command string for `git commit ...` (treat the rtk-rewritten `rtk git commit ...` as the same thing, since the rtk hook prefixes commands). If it does not match, skip all steps below and proceed normally.
+1. **Confirm authorization and scope** — this guidance does not authorize a commit or create executable hook wiring. Select documentation/corpus checks for rule-only edits; do not run application tests without affected application code.
 
 2. **Identify affected projects** from the staged changes:
    ```
    git diff --name-only --cached
    ```
-   Collect unique project roots using the same rules as the agent-stop guidance:
+   Collect unique affected project roots:
    - `.cs` files → walk up to the nearest `.csproj`.
    - `.ts` / `.tsx` files → walk up to the nearest `package.json` with a `"test"` script.
 
@@ -28,7 +28,7 @@ This guidance applies before any `git commit` (including `git commit -m`, `git c
    ```
    dotnet test <specs-project-path> --no-build
    ```
-   If the specs project cannot be identified, run `dotnet test` from the repository root.
+   Use `--no-build` only when matching build outputs are current; otherwise incrementally build the affected specs project first. If the owning specs project cannot be identified, inspect project references or report the uncertainty; do not default to a root-wide test run.
 
 4. **Run specs for each affected TypeScript project**:
    ```
@@ -36,15 +36,12 @@ This guidance applies before any `git commit` (including `git commit -m`, `git c
    ```
    Run from the package root that owns the changed files.
 
-5. **If any spec fails**:
-   - Report the full test output including which specs failed and why.
-   - **Do not proceed with the `git commit`** — block the tool call and fix the failures first.
-   - Re-run the relevant specs to confirm they pass before retrying the commit.
+5. **If a relevant check fails** — diagnose within a bounded attempt, fix only in-scope causes, and re-run the failed gate. Report unrelated/environmental failures as blockers instead of repeated retries or broad edits. Do not claim completion or bypass required gates.
 
-6. **If all specs pass** — proceed with the `git commit` as originally requested.
+6. **When relevant required checks pass** — proceed only with the originally authorized commit and staged scope. Report the exact verification and any checks not run.
 
 ## Rules
 
-- Never skip the spec run before a commit, even for "minor" or "documentation-only" changes.
-- A commit must not be made while any spec is failing.
-- If a spec was already failing before the current changes (pre-existing failure), report it but do not block the commit — note the pre-existing failure clearly in the session output.
+- Documentation/rule-only commits run relevant content, link, frontmatter, and corpus checks, not application builds/tests.
+- Code changes run affected-project incremental checks and targeted regression specs after coherent changes. Wider suites and clean/Release builds require cross-cutting scope or repository merge/release gates.
+- Do not bypass required failures, suppress diagnostics, or expand into unrelated cleanup. Missing prerequisites and pre-existing failures must be reported honestly.

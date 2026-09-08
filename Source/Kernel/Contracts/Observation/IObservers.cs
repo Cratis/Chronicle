@@ -32,9 +32,9 @@ public interface IObservers
     /// </summary>
     /// <param name="command">The retry command.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>A <see cref="RetryPartitionResponse"/> describing what happened.</returns>
     [Operation]
-    Task RetryPartition(RetryPartition command, CallContext context = default);
+    Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default);
 
     /// <summary>
     /// Clear quarantine for an observer.
@@ -44,6 +44,19 @@ public interface IObservers
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default);
+
+    /// <summary>
+    /// Clear all failed partition records for an observer.
+    /// </summary>
+    /// <param name="command">The clear failed partitions command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Gives an operator a supported way to recover a wedged observer whose partitions are individually
+    /// quarantined, or whose failure records are otherwise blocking progress, without direct storage surgery.
+    /// </remarks>
+    [Operation]
+    Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default);
 
     /// <summary>
     /// Get the current details of an observer.

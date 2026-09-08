@@ -29,6 +29,6 @@ public class from_an_event_caused_by_named_commands : given.an_extractor
         })
     ]));
 
-    [Fact] void should_name_the_command_that_produced_the_event() => _result.CommandType.Value.ShouldEqual("ApproveExpenseReport");
-    [Fact] void should_name_the_command_one_level_up() => _result.CausedByCommand.Value.ShouldEqual("SubmitExpenseReport");
+    [Fact] void should_name_the_command_that_produced_the_event() => _result.CommandType.Value.ShouldEqual("Command: ApproveExpenseReport");
+    [Fact] void should_name_the_command_one_level_up() => _result.CausedByCommand.Value.ShouldEqual("Command: SubmitExpenseReport");
 }

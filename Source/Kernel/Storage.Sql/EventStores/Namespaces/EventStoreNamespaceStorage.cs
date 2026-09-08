@@ -120,4 +120,12 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId) => new ClosedStreams.ClosedStreamsConstraintStorage(eventStore, @namespace, eventSequenceId, database);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// SQL does not materialize a database per namespace, but the same "has this namespace ever been used" signal
+    /// still matters for deciding whether eager rehydration has anything to do - so it is answered the same way as
+    /// the other backends: whether any event sequence has recorded state for this namespace.
+    /// </remarks>
+    public async Task<bool> HasData() => (await GetEventSequences()).Any();
 }

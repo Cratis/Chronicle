@@ -6,3 +6,4 @@ export * from './Page';
 export * from './QueryModal';
 export * from './EventStoreCard';
 export * from './Typography';
+export * from './SelectionCheckbox';

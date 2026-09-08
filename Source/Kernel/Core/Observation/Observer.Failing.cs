@@ -95,20 +95,50 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task TryStartRecoverJobForFailedPartition(Key partition)
+    public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
-            return;
+            return PartitionRecoveryOutcome.ObserverQuarantined;
         }
 
         if (!Failures.TryGet(partition, out var failure))
         {
-            return;
+            logger.SkippingFailedPartitionRecoveryBecausePartitionNotFound(partition);
+            return PartitionRecoveryOutcome.PartitionNotFound;
+        }
+
+        if (failure.IsQuarantined)
+        {
+            logger.SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(partition);
+            return PartitionRecoveryOutcome.PartitionQuarantined;
         }
 
         await StartRecoverJobForFailedPartition(failure);
+        return PartitionRecoveryOutcome.Started;
+    }
+
+    /// <inheritdoc/>
+    public async Task ClearFailedPartitions()
+    {
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        var partitions = Failures.Partitions.Select(p => p.Partition).ToArray();
+        if (partitions.Length == 0)
+        {
+            return;
+        }
+
+        logger.ClearingFailedPartitions(partitions.Length);
+        foreach (var partition in partitions)
+        {
+            await RemoveReminder(partition);
+            failures.State.Remove(partition);
+        }
+
+        State = State with { FailedPartitionCount = 0 };
+        await failures.WriteStateAsync();
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>

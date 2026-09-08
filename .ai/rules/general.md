@@ -40,11 +40,21 @@ Where a rule is convention rather than contract, this file says so. Do not claim
 
 ## Project-Specific Instructions
 
-This corpus is the shared, generic instruction set common to every Cratis repository. Individual projects need extra context that does not belong here — credentials, HTTP headers, environment endpoints, and other local conventions ("Product policy" above).
+This corpus is the shared, generic instruction set common to every Cratis
+repository. Individual projects need extra context that does not belong here,
+such as product composition, approved environment names, directions for
+obtaining credentials, and other local conventions ("Product policy" above).
 
-- Always look for a `.agents/PROJECT.md` file at the repository root. If it exists, read it and treat its contents as additional, project-specific instructions.
-- `.agents/PROJECT.md` lives in the **consuming project** and is never part of this shared corpus — it is the designated home for anything project-local, such as the HTTP headers or credentials needed to talk to that project's APIs.
-- When its guidance conflicts with these shared instructions, the project-specific file wins for that repository.
+- Read `.cratis/PROJECT.md` as the canonical project-specific context when it
+  exists.
+- Read `.agents/PROJECT.md` only as the documented legacy fallback when
+  `.cratis/PROJECT.md` does not exist; never merge both contexts.
+- Project context may explain which approved secret mechanism or local setup to
+  use, but it must never contain credential values, tokens, keys, passwords, or
+  other secrets.
+- Project-specific guidance wins when it deliberately narrows shared behavior,
+  but it may not weaken organization security, authorization, or required
+  quality gates.
 
 ## Collaboration Default
 
@@ -127,11 +137,11 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 ## Implementation Workflow
 
 - **Phase 0 — Model the request.** Confirm Module/Feature, Slice name, slice type, domain rules. For new behavior or unclear event vocabulary, run the **event-modeling** skill before writing code.
-- **Phase 1 — Backend.** Write the slice file. **Gate:** build clean Debug *and* Release (Debug regenerates the TypeScript proxies and compiles `#if DEBUG` spec code; Release is a build-only check — see the proxy-generation note below).
+- **Phase 1 — Backend.** Implement a coherent slice change. **Gate:** incrementally build the affected Debug project to regenerate proxies and compile spec code; add Release verification when required for cross-cutting or merge/release gates (see the proxy-generation note below).
 - **Phase 2 — Specs.** Mandatory for every slice type, in-process scenario family first: `CommandScenario<T>` (commands), `EventScenario` (constraints/append), `ReadModelScenario<T>` (projections/reducers), `ReactorScenario<T>` (reactors). Reserve out-of-process integration specs for host/infra/transport boundaries. **Gate:** tests pass.
 - **Phase 3 — Frontend.** Proxies now exist. Build React components from generated proxies, register in the composition page, wire routing. **Gate:** lint, conditional test, and build all clean.
 
-**Backend before frontend, always** — the frontend depends on proxies that only exist after a successful Debug build. After creating each new file, build (C#) or compile (TypeScript) before moving on — fix every error as it appears rather than accumulating it.
+**Backend before frontend, always** — the frontend depends on proxies that only exist after a successful Debug build. After a coherent set of changes, incrementally build/compile the affected project and run targeted regression checks before proceeding; do not build after every file.
 
 **Proxy generation runs on Debug, not Release.** `dotnet build -c Debug` is the canonical trigger for regenerating TypeScript proxies — it carries the fullest, most reliably-emitted PDB debug information the proxy generator relies on to place generated files. Generate proxies with a Debug build first; when you (or an agent) subsequently build Release purely to verify the app compiles in that configuration, skip proxy regeneration so the second build can't re-run the generator against a different compilation and touch already-correct generated files: `dotnet build -c Release -p:CratisProxiesOutputPath=`. The empty override clears the output path property the generator's MSBuild target is conditioned on, so the target no-ops for that invocation — no generated file is read or written.
 
@@ -146,7 +156,9 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 | Frontend | test | zero failures when frontend specs/behavior changed |
 | Frontend | build | zero errors |
 
-All gates pass before merging, opening a PR, or marking a slice complete — except for a **documentation-only** pull request, which waits for nothing and carries no version label (see [pull-requests.md](./pull-requests.md)). After pushing to a PR, monitor CI with the GitHub MCP tools (`pull_request_read` → `get_check_runs`, `get_job_logs`); investigate and fix any failure, then push again — the task is not done until CI is green or the only remaining failures are confirmed pre-existing flakes unrelated to the change.
+Run affected-project incremental checks after a coherent change, then targeted regression tests for the changed behavior. Re-run a failed gate after a relevant fix. Reserve wider matrices and clean/Release builds for cross-cutting changes, demonstrated stale outputs, or required merge/release gates. Documentation/rule-only edits need relevant Markdown, frontmatter, link, and corpus checks, not an application build. Diagnose unrelated or environmental failures within a bounded attempt; report the evidence and blocker instead of broadening scope or retrying indefinitely. Required gates remain blocking until satisfied; never silently waive red CI.
+
+Documentation-only changes use repository-supported non-release intent, ordinarily `no-release`; confirm the workflow contract rather than assuming a label or API state. Run relevant content, link, frontmatter, and corpus checks instead of unrelated application builds, and satisfy every repository-required check, including release-intent checks where supported. Documentation is never a blanket exemption from red CI. See [pull-requests.md](./pull-requests.md).
 
 ---
 
@@ -210,6 +222,6 @@ AI-assisted sessions produce working artifacts: plans, handover documents, sessi
 
 - Create every such artifact inside **`.ai-work/`** at the repository root — never at the repository root itself, never under documentation folders, never anywhere else.
 - `.ai-work/` is gitignored and must stay untracked. Never commit anything inside it, never `git add -f` anything inside it, and never remove the ignore entry.
-- These artifacts must never enter git history or reach GitHub — not on any branch. If you find one tracked in git, move it into `.ai-work/` and remove it from tracking in a dedicated commit.
+- These artifacts must never enter git history or reach GitHub — not on any branch. If you find an unrelated tracked work record, report its path and obtain explicit authorization before moving it into `.ai-work/`, removing it from tracking, or making a dedicated cleanup commit. Discovery alone does not authorize unrelated changes or a commit.
 - A genuine follow-up that must survive the session is **not** a work record — suggest opening a GitHub issue for it (or open one when asked) so future work is tracked where everyone can see it, instead of leaving a planning file behind.
 - Knowledge that must outlive the session belongs in the repository's documentation structure through normal review, not in a work record.

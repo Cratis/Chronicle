@@ -114,4 +114,11 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
     /// <inheritdoc/>
     public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(KernelEventSequences::EventSequenceId eventSequenceId) =>
         closedStreamsStorage ?? throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The in-process harness always serves the "Log" sequence, so it always reports having data - there is no
+    /// "brand new, never touched" namespace state to model here.
+    /// </remarks>
+    public Task<bool> HasData() => Task.FromResult(true);
 }

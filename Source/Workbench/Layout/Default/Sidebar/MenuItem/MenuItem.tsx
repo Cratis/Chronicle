@@ -7,6 +7,7 @@ import { IconType } from "react-icons/lib";
 import { useLayoutContext } from "../../context/LayoutContext";
 import { useContext, useEffect, useState } from "react";
 import { MenuContext } from "../../context/MenuContext";
+import { resolveMenuItemParams } from "./resolveMenuItemParams";
 
 export interface IMenuItem {
     label: string;
@@ -30,7 +31,7 @@ export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
     const location = useLocation();
     const ctx = useContext(MenuContext);
     const itemPath = cleanupPath(basePath) + item.url;
-    const resolvedPath = generatePath(itemPath ?? '', Object.assign({}, params, ctx.paramsFallback));
+    const resolvedPath = generatePath(itemPath ?? '', resolveMenuItemParams(params, ctx.paramsFallback));
 
     const [labelClass, setLabelClass] = useState(css.label);
     useEffect(() => {

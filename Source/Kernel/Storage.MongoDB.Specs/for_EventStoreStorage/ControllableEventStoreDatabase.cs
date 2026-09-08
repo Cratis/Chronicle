@@ -99,5 +99,7 @@ public sealed class ControllableEventStoreDatabase : IEventStoreDatabase, IDispo
         public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>();
 
         public Task EnsureIndexesForEventSequence(EventSequenceId eventSequenceId) => Task.CompletedTask;
+
+        public Task<bool> HasAnyCollections() => Task.FromResult(true);
     }
 }
