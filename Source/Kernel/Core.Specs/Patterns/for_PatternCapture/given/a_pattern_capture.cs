@@ -21,6 +21,7 @@ public class a_pattern_capture : Specification
     protected IReactorDefinitionsStorage _reactors;
     protected IObserver _observer;
     protected INamespaces _namespaces;
+    protected IEventStoreNamespaceStorage _namespaceStorage;
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
 
@@ -32,12 +33,15 @@ public class a_pattern_capture : Specification
         _eventTypes = Substitute.For<IEventTypesStorage>();
         _reactors = Substitute.For<IReactorDefinitionsStorage>();
         _observer = Substitute.For<IObserver>();
+        _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+        _namespaceStorage.HasData().Returns(Task.FromResult(true));
 
         var storage = Substitute.For<IStorage>();
         var eventStoreStorage = Substitute.For<IEventStoreStorage>();
         storage.GetEventStore(_eventStore).Returns(eventStoreStorage);
         eventStoreStorage.EventTypes.Returns(_eventTypes);
         eventStoreStorage.Reactors.Returns(_reactors);
+        eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(SiloAddress.Zero);

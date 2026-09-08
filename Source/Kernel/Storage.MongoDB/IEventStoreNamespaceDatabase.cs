@@ -53,4 +53,18 @@ public interface IEventStoreNamespaceDatabase
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to ensure indexes for.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task EnsureIndexesForEventSequence(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Checks whether the database backing this namespace has ever been materialized.
+    /// </summary>
+    /// <returns>True if at least one collection exists in the database; false if MongoDB has never actually
+    /// created it.</returns>
+    /// <remarks>
+    /// MongoDB creates a database lazily - connecting to it, or even getting a collection reference from it, does
+    /// not create anything on the server. Only a write (an insert, an upsert, or an index creation) does. Listing
+    /// the collection names is itself a read and never creates the database, which is what makes it a safe check
+    /// for "does this namespace have anything in it yet" without the check itself being the very thing that
+    /// materializes it.
+    /// </remarks>
+    Task<bool> HasAnyCollections();
 }
