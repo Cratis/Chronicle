@@ -269,6 +269,18 @@ public class PatternScopeResponse
     /// </summary>
     [ProtoMember(1)]
     public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Name.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UserName.
+    /// </summary>
+    [ProtoMember(3)]
+    public string UserName { get; set; }
 }
 
 /// <summary>

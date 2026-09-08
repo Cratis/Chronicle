@@ -20,6 +20,6 @@ public class from_an_event_caused_by_a_single_named_command : given.an_extractor
         })
     ]));
 
-    [Fact] void should_name_the_command() => _result.CommandType.Value.ShouldEqual("ApproveExpenseReport");
+    [Fact] void should_name_the_command() => _result.CommandType.Value.ShouldEqual("Command: ApproveExpenseReport");
     [Fact] void should_read_the_request_as_the_link_above_it() => _result.CausedByCommand.Value.ShouldEqual("ASP.NET Request");
 }
