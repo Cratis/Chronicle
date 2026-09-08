@@ -374,7 +374,8 @@
                 "empty": "No recommendations found",
                 "actions": {
                     "perform": "Perform",
-                    "ignore": "Ignore"
+                    "ignore": "Ignore",
+                    "selectAll": "Select All"
                 },
                 "columns": {
                     "name": "Name",
@@ -386,6 +387,10 @@
                     "ignoreRecommendation": {
                         "title": "Ignore Recommendation",
                         "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                    },
+                    "ignoreRecommendations": {
+                        "title": "Ignore Recommendations",
+                        "message": "Are you sure you want to ignore {count} recommendations? This action cannot be undone."
                     }
                 }
             },
