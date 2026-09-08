@@ -395,7 +395,8 @@
                 "actions": {
                     "resume": "Resume",
                     "stop": "Stop",
-                    "delete": "Delete"
+                    "delete": "Delete",
+                    "selectAll": "Select All"
                 },
                 "columns": {
                     "type": "Type",
@@ -403,6 +404,12 @@
                     "details": "Details",
                     "status": "Status",
                     "progress": "Progress"
+                },
+                "dialogs": {
+                    "deleteJobs": {
+                        "title": "Delete Jobs",
+                        "message": "Are you sure you want to delete {count} jobs? This action cannot be undone."
+                    }
                 },
                 "status": {
                     "none": "None",

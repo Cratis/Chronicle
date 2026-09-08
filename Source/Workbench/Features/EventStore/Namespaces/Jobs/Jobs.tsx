@@ -10,8 +10,10 @@ import { JobStatus } from 'Features/Contracts/Jobs';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { withViewModel } from '@cratis/arc.react.mvvm';
+import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { JobsViewModel } from './JobsViewModel';
 import { Page } from 'Components/Common/Page';
+import { SelectionCheckbox } from 'Components/Common/SelectionCheckbox';
 
 const jobStatus = (job: JobSummary) => {
     switch (job.status) {
@@ -47,9 +49,35 @@ const progress = (job: JobSummary) => {
 
 export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [showConfirmation] = useConfirmationDialog();
     const queryArgs: ObserveJobsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
+    };
+    const [jobs] = ObserveJobs.use(queryArgs);
+
+    const handleDelete = async () => {
+        const jobIds = viewModel.selectedJobIds;
+        if (jobIds.length === 0) {
+            return;
+        }
+
+        if (jobIds.length > 1) {
+            const result = await showConfirmation(
+                strings.eventStore.namespaces.jobs.dialogs.deleteJobs.title,
+                strings.eventStore.namespaces.jobs.dialogs.deleteJobs.message.replace('{count}', jobIds.length.toString()),
+                DialogButtons.YesNo);
+
+            if (result !== DialogResult.Yes) {
+                return;
+            }
+        }
+
+        try {
+            await viewModel.deleteJobs(jobIds);
+        } catch (error) {
+            console.error('Failed to delete jobs:', error);
+        }
     };
 
     return (
@@ -63,6 +91,9 @@ export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
             onSelectionChange={e => viewModel.selectedJob = e.value as JobSummary}>
             <DataPage.MenuItems>
                 <MenuItem
+                    label={strings.eventStore.namespaces.jobs.actions.selectAll} icon={faIcons.FaSquareCheck}
+                    command={() => viewModel.selectAllJobs(jobs.data.map(job => job.id))} />
+                <MenuItem
                     label={strings.eventStore.namespaces.jobs.actions.stop} icon={faIcons.FaStop}
                     disableOnUnselected
                     command={() => viewModel.stop()} />
@@ -72,10 +103,16 @@ export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
                     command={() => viewModel.resume()} />
                 <MenuItem
                     label={strings.eventStore.namespaces.jobs.actions.delete} icon={faIcons.FaDeleteLeft}
-                    disableOnUnselected
-                    command={() => viewModel.delete()} />
+                    disabled={viewModel.selectedJobIds.length === 0}
+                    command={() => handleDelete()} />
             </DataPage.MenuItems>
             <DataPage.Columns>
+                <Column
+                    body={(job: JobSummary) => (
+                        <SelectionCheckbox
+                            checked={viewModel.isJobSelected(job.id)}
+                            onToggle={() => viewModel.toggleJobSelection(job.id)} />
+                    )} />
                 <Column field='type' header={strings.eventStore.namespaces.jobs.columns.type} sortable />
                 <Column field='name' header={strings.eventStore.namespaces.jobs.columns.name} sortable />
                 <Column field='details' header={strings.eventStore.namespaces.jobs.columns.details} sortable />
