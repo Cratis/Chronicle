@@ -16,4 +16,7 @@ internal static partial class PatternCaptureLogging
 
     [LoggerMessage(LogLevel.Debug, "No event types are registered for event store {EventStore}, so there is nothing for pattern capture to observe yet")]
     internal static partial void NoEventTypesToCapture(this ILogger<PatternCapture> logger, EventStoreName eventStore);
+
+    [LoggerMessage(LogLevel.Debug, "Namespace {Namespace} in event store {EventStore} has no data yet, so pattern capture is not subscribed until it does")]
+    internal static partial void NamespaceHasNoDataToCapture(this ILogger<PatternCapture> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }
