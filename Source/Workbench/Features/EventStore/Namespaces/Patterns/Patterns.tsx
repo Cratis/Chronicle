@@ -101,7 +101,7 @@ export const Patterns = () => {
 
     // Every scope's patterns are loaded together so the scope is one facet among the others rather than something
     // that has to be chosen before anything can be seen.
-    const [patterns] = AllPatterns.use({ eventStore: params.eventStore!, namespace: params.namespace! });
+    const [patterns] = AllPatterns.when(!!params.namespace).use({ eventStore: params.eventStore!, namespace: params.namespace! });
 
     return (
         <Page title={strings.mainMenu.patterns} noBackground noPadding>

@@ -31,7 +31,9 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
     const [namespace, setNamespace] = useState(params.namespace ?? '');
 
     useEffect(() => {
-        setNamespace(params.namespace ?? '');
+        if (params.namespace) {
+            setNamespace(params.namespace);
+        }
     }, [params.namespace]);
 
     const namespaceSelected = (namespace: string) => {
@@ -70,7 +72,7 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
 
                     <main className={css.appOutlet}>
                         <ErrorBoundary>
-                            <Outlet />
+                            <Outlet key={params.namespace} />
                         </ErrorBoundary>
                     </main>
                     <footer className={css.appFooter}>

@@ -31,7 +31,7 @@ export const PatternHeatmap = () => {
     const [scope, setScope] = useState<string | undefined>(undefined);
     const [selectedSlot, setSelectedSlot] = useState<Slot | undefined>(undefined);
 
-    const [scopes] = AllPatternScopes.use({ eventStore: params.eventStore!, namespace: params.namespace! });
+    const [scopes] = AllPatternScopes.when(!!params.namespace).use({ eventStore: params.eventStore!, namespace: params.namespace! });
     const scopeIds = useMemo(() => (scopes.data ?? []).map((_) => _.id), [scopes.data]);
 
     useEffect(() => {
