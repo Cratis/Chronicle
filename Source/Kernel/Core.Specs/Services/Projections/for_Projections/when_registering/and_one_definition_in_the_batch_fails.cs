@@ -27,7 +27,8 @@ public class and_one_definition_in_the_batch_fails : Specification
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
             Substitute.For<ILanguageService>(),
-            Substitute.For<IServiceProvider>());
+            Substitute.For<IServiceProvider>(),
+            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>());
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _service.Register(new RegisterRequest

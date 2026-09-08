@@ -19,7 +19,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
-using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events.Constraints;
@@ -119,12 +118,15 @@ public static class ChronicleServerSiloBuilderExtensions
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
-            var projections = new Cratis.Chronicle.Services.Projections.Projections(grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp);
 
             // The generated implementations declare their dependencies through their primary constructors,
             // which change whenever the generator's dispatch shape does. Constructing them through
             // ActivatorUtilities keeps this composition from repeating - and drifting from - those
-            // constructor signatures.
+            // constructor signatures. Projections is hand-authored rather than generated, but its
+            // constructor is just as free to grow a dependency (it did, for compliance release in preview),
+            // so it is built the same way rather than as a manual `new` that has to be kept in sync by hand.
+            var projections = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Projections.Projections>(sp);
+
             return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.Compliance.ComplianceService(
                     grainFactory,
