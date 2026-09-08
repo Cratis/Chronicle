@@ -24,8 +24,8 @@ public record RetryPartition(string EventStore, string Namespace, string Observe
     /// Handles the command by invoking <see cref="IObserver.TryStartRecoverJobForFailedPartition"/> on the target observer grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
-    /// <returns>Awaitable task.</returns>
-    public Task Handle(IGrainFactory grainFactory)
+    /// <returns>The <see cref="PartitionRecoveryOutcome"/> describing what happened.</returns>
+    public Task<PartitionRecoveryOutcome> Handle(IGrainFactory grainFactory)
     {
         var eventSequenceId = string.IsNullOrEmpty(EventSequenceId) ? Concepts.EventSequences.EventSequenceId.Log : (Concepts.EventSequences.EventSequenceId)EventSequenceId;
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);

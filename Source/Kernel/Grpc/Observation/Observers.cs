@@ -22,8 +22,11 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     const int ObserverCompletionPollingDelayMs = 50;
 
     /// <inheritdoc/>
-    public Task RetryPartition(RetryPartition command, CallContext context = default) =>
-        grainFactory.GetObserver(command).TryStartRecoverJobForFailedPartition(command.Partition);
+    public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
+    {
+        var outcome = await grainFactory.GetObserver(command).TryStartRecoverJobForFailedPartition(command.Partition);
+        return new RetryPartitionResponse { Outcome = (PartitionRecoveryOutcome)(int)outcome };
+    }
 
     /// <inheritdoc/>
     public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
@@ -87,6 +90,10 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     /// <inheritdoc/>
     public Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default) =>
         grainFactory.GetObserver(command).ClearObserverQuarantine();
+
+    /// <inheritdoc/>
+    public Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default) =>
+        grainFactory.GetObserver(command).ClearFailedPartitions();
 
     /// <inheritdoc/>
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
