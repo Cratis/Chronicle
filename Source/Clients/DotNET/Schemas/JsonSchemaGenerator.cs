@@ -34,11 +34,11 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// </summary>
     /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-    /// <param name="derivedTypes"><see cref="IDerivedTypes"/> used to recognize polymorphic base types adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the global <see cref="DerivedTypes.Instance"/>.</param>
+    /// <param name="derivedTypes"><see cref="IDerivedTypes"/> used to recognize polymorphic base types adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the derived types of the current type universe.</param>
     public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy, IDerivedTypes? derivedTypes = null)
     {
         _metadataResolver = metadataResolver;
-        _derivedTypes = derivedTypes ?? DerivedTypes.Instance;
+        _derivedTypes = derivedTypes ?? TypeUniverse.CurrentDerivedTypes();
         _typeFormats = new TypeFormats();
 
         var resolver = new DefaultJsonTypeInfoResolver();

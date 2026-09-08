@@ -275,8 +275,15 @@ public interface IObserver : IGrainWithStringKey
     /// Attempt to recover a failed partition.
     /// </summary>
     /// <param name="partition">The partition that is failed.</param>
+    /// <returns>The <see cref="PartitionRecoveryOutcome"/> describing what happened.</returns>
+    Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition);
+
+    /// <summary>
+    /// Clear all failed partition records for the observer, giving an operator a supported way to recover a wedged
+    /// observer without direct storage surgery.
+    /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task TryStartRecoverJobForFailedPartition(Key partition);
+    Task ClearFailedPartitions();
 
     /// <summary>
     /// Attempt to recover all failed partitions.

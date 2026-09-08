@@ -21,6 +21,24 @@ namespace Cratis.Chronicle.Patterns;
 [Singleton]
 public class EventFeatureExtractor(ITimeBucketResolver timeBucketResolver) : IEventFeatureExtractor
 {
+    /// <summary>
+    /// The causation type name a client Reactor invocation is recorded under.
+    /// </summary>
+    /// <remarks>
+    /// Kept as a literal because the Kernel does not reference the Reactor client that owns the constant
+    /// (<c>ReactorHandler.CausationType</c>) - the two are kept in sync by convention.
+    /// </remarks>
+    const string ClientReactorCausationType = "Client Reactor";
+
+    /// <summary>
+    /// The causation type name an ASP.NET request is recorded under.
+    /// </summary>
+    /// <remarks>
+    /// Kept as a literal because the Kernel does not reference the ASP.NET Core client that owns the constant
+    /// (<c>CausationMiddleware.CausationType</c>) - the two are kept in sync by convention.
+    /// </remarks>
+    const string AspNetRequestCausationType = "ASP.NET Request";
+
     /// <inheritdoc/>
     public EventFeatures Extract(AppendedEvent @event)
     {
@@ -72,12 +90,33 @@ public class EventFeatureExtractor(ITimeBucketResolver timeBucketResolver) : IEv
         return (commandType, causedByCommand);
     }
 
-    static string NameOf(Causation causation) =>
-        causation.Properties is not null &&
-        causation.Properties.TryGetValue(WellKnownCausationProperties.CommandType, out var commandType) &&
-        !string.IsNullOrEmpty(commandType)
-            ? commandType
-            : causation.Type.Value;
+    static string NameOf(Causation causation)
+    {
+        if (causation.Properties is not null &&
+            causation.Properties.TryGetValue(WellKnownCausationProperties.CommandType, out var commandType) &&
+            !string.IsNullOrEmpty(commandType))
+        {
+            return $"Command: {commandType}";
+        }
+
+        if (causation.Type.Value == ClientReactorCausationType &&
+            causation.Properties is not null &&
+            causation.Properties.TryGetValue(WellKnownCausationProperties.ReactorId, out var reactorId) &&
+            !string.IsNullOrEmpty(reactorId))
+        {
+            return $"Reactor: {reactorId}";
+        }
+
+        if (causation.Type.Value == AspNetRequestCausationType &&
+            causation.Properties is not null &&
+            causation.Properties.TryGetValue(WellKnownCausationProperties.Route, out var route) &&
+            !string.IsNullOrEmpty(route))
+        {
+            return $"Request: {route}";
+        }
+
+        return causation.Type.Value;
+    }
 
     static bool IsNamed(CausationType type) =>
         !string.IsNullOrEmpty(type?.Value) && type != CausationType.Root && type != CausationType.Unknown;

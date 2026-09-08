@@ -123,6 +123,7 @@ public class EventStore : IEventStore
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
         _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
+        var types = TypeUniverse.For(serviceProvider);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
@@ -172,7 +173,7 @@ public class EventStore : IEventStore
             identityProvider,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
             reactorSideEffectHandlers,
-            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(Types.Types.Instance, serviceProvider)),
+            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(types, serviceProvider)),
             new ReactorMethodArgumentsResolver(),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
@@ -235,7 +236,7 @@ public class EventStore : IEventStore
 
         var readModelReactorInvoker = new ReadModels.ReadModelReactorInvoker(
             reactorSideEffectHandlers,
-            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(Types.Types.Instance, serviceProvider)),
+            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(types, serviceProvider)),
             loggerFactory.CreateLogger<ReadModels.ReadModelReactorInvoker>());
 
         ReadModelReactors = new ReadModels.ReadModelReactors(

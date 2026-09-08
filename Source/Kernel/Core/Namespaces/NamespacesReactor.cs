@@ -29,9 +29,10 @@ public class NamespacesReactor(IGrainFactory grainFactory, IPatternCapture patte
     /// <returns>Await Task.</returns>
     /// <exception cref="EventSeedingIncomplete">Thrown when at least one global seed entry was not appended to the namespace.</exception>
     /// <remarks>
-    /// Startup subscribes pattern capture for every namespace that exists, and event type registration
-    /// re-subscribes when the type list grows - but a namespace added while the server runs, with no type change
-    /// to piggyback on, would otherwise mine nothing until the next restart.
+    /// A namespace is empty the instant it is added, so <see cref="IPatternCapture.Subscribe"/> is a no-op here -
+    /// it checks the namespace's data itself and only actually subscribes once the namespace has something to
+    /// observe. Startup rehydration picks up pattern capture for namespaces that do go on to receive data, and
+    /// event type registration re-subscribes across namespaces that already have data when the type list grows.
     /// </remarks>
     public async Task Added(NamespaceAdded @event, EventContext eventContext)
     {

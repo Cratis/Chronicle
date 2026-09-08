@@ -291,13 +291,15 @@ export const Projections = () => {
         <Page title='Projections'>
             <Allotment className="h-full" proportionalLayout={false}>
                 <Allotment.Pane preferredSize="350px">
-                    <div className="px-4 py-4">
+                    <div className="h-full overflow-hidden px-4 py-4">
                         <DataTableCore<ProjectionWithDeclaration>
                             data={projections.data}
                             dataKey="identifier"
                             selectionMode="single"
                             selection={selectedProjection as ProjectionWithDeclaration | null}
                             emptyMessage={strings.eventStore.general.projections.empty}
+                            scrollable
+                            scrollHeight='flex'
                             onSelectionChange={async (event) => {
                                 if (hasUnsavedChanges) {
                                     const result = await showConfirmation(

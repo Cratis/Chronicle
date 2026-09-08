@@ -91,6 +91,17 @@ internal sealed class ChronicleServerStartupTask(
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
+                var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
+                if (!await namespaceStorage.HasData())
+                {
+                    // Nothing has ever been written to this namespace - there is no jobs, reactor subscriptions,
+                    // event sequence state or observer to rehydrate. Skipping it avoids materializing its storage
+                    // (for example creating a MongoDB database) for a namespace that has only ever been registered,
+                    // never used. The moment it receives its first genuine write, that write lazily materializes
+                    // whatever storage it needs on its own.
+                    return;
+                }
+
                 await reactors.DiscoverAndRegister(eventStore, namespaceName);
                 await patternCapture.Subscribe(eventStore, namespaceName);
 

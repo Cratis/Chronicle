@@ -7,6 +7,12 @@ message AllObserversRequest {
    string EventStore = 1;
    string Namespace = 2;
 }
+message ClearFailedPartitions {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+}
 message ClearObserverQuarantine {
    string EventStore = 1;
    string Namespace = 2;
@@ -113,6 +119,12 @@ enum ObserverType {
    Reducer = 3;
    External = 4;
 }
+enum PartitionRecoveryOutcome {
+   Started = 0;
+   PartitionNotFound = 1;
+   ObserverQuarantined = 2;
+   PartitionQuarantined = 3;
+}
 message Replay {
    string EventStore = 1;
    string Namespace = 2;
@@ -136,6 +148,9 @@ message RetryPartition {
    string EventSequenceId = 4;
    string Partition = 5;
 }
+message RetryPartitionResponse {
+   PartitionRecoveryOutcome Outcome = 1;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
@@ -155,6 +170,7 @@ service FailedPartitions {
    rpc ObserveFailedPartitions (GetFailedPartitionsRequest) returns (stream IEnumerable_FailedPartition);
 }
 service Observers {
+   rpc ClearFailedPartitions (.Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions) returns (.google.protobuf.Empty);
    rpc ClearObserverQuarantine (.Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine) returns (.google.protobuf.Empty);
    rpc GetConnectedClientsForObserver (GetConnectedClientsForObserverRequest) returns (IEnumerable_ConnectedClient);
    rpc GetObserverInformation (GetObserverInformationRequest) returns (ObserverInformation);
@@ -163,6 +179,6 @@ service Observers {
    rpc ObserveObservers (AllObserversRequest) returns (stream IEnumerable_ObserverInformation);
    rpc Replay (.Cratis.Chronicle.Contracts.Observation.Replay) returns (ReplayResponse);
    rpc ReplayPartition (.Cratis.Chronicle.Contracts.Observation.ReplayPartition) returns (.google.protobuf.Empty);
-   rpc RetryPartition (.Cratis.Chronicle.Contracts.Observation.RetryPartition) returns (.google.protobuf.Empty);
+   rpc RetryPartition (.Cratis.Chronicle.Contracts.Observation.RetryPartition) returns (RetryPartitionResponse);
    rpc WaitForCompletion (WaitForObserverCompletionRequest) returns (WaitForObserverCompletionResponse);
 }
