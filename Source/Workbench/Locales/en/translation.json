@@ -44,7 +44,7 @@
         },
         "views": {
             "flat": "Flat",
-            "bySilo": "By Silo"
+            "bySilo": "By Instance"
         }
     },
     "mainMenu": {
