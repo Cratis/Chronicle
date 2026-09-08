@@ -61,6 +61,10 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
+
+        // Reached only when a brand-new job's steps actually prepared - genuine forward progress, so the
+        // consecutive-stranding count the watchdog uses to decide when to give up resets with it.
+        _catchupRecoveryAttempts = 0;
     }
 
     /// <inheritdoc/>

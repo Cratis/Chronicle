@@ -107,4 +107,19 @@ public class Observers
     /// on the partition key, keeping every partition sticky to one instance) and "random".
     /// </summary>
     public string FanOutStrategy { get; init; } = "round-robin";
+
+    /// <summary>
+    /// Gets the maximum number of consecutive times the watchdog will recover an observer stuck "preparing
+    /// catch-up" with no catch-up job driving it forward before giving up and quarantining the observer instead.
+    /// </summary>
+    /// <remarks>
+    /// Starting a catch-up job can fail for reasons a retry cannot fix - a persistently unreachable job subsystem,
+    /// for example - which turns unconditional retrying into a busy loop: every watchdog tick clears the stranded
+    /// flag, re-routes the observer, asks for a new catch-up job, fails again, and is found stranded again next
+    /// tick, forever, with zero forward progress. Bounding the count and quarantining once it is exceeded turns
+    /// that silent, permanent spin into a visible, operator-actionable state. Unlike <see cref="MaxRetryAttempts"/>,
+    /// 0 is not treated as infinite here - a value of 0 or less always quarantines on the very first stranded
+    /// recovery, since leaving this unbounded reintroduces the loop this setting exists to close.
+    /// </remarks>
+    public int MaxCatchupRecoveryAttempts { get; init; } = 5;
 }
