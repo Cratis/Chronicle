@@ -94,7 +94,7 @@ export const AppendEventDialog = () => {
         appendEvent.eventStreamType = eventStreamType;
         appendEvent.eventStreamId = eventStreamId;
         appendEvent.eventType = selectedEventType.type;
-        appendEvent.content = eventContent as Record<string, Record<string, unknown>>;
+        appendEvent.content = JSON.stringify(eventContent);
 
         const executeResult = await appendEvent.execute();
         return executeResult.isSuccess;

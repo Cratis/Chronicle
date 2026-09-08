@@ -61,10 +61,10 @@ export const ReviseDialog = () => {
                 eventSequenceId: 'event-log',
                 sequenceNumber: request.event.context.sequenceNumber,
                 eventType: request.event.context.eventType,
-                content: parsedContent
+                content: JSON.stringify(parsedContent)
             }}
             onBeforeExecute={(command) => {
-                command.content = parsedContent;
+                command.content = JSON.stringify(parsedContent);
                 return command;
             }}
             title={`Revise Event #${request.event.context.sequenceNumber}`}
