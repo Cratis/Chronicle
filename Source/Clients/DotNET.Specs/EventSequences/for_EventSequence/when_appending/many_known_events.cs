@@ -63,7 +63,7 @@ public class many_known_events : given.an_event_sequence
     [Fact] void should_append_events() => _command.ShouldNotBeNull();
     [Fact] void should_append_events_with_correct_event_source_id() => _command.EventSourceId.ShouldEqual(_eventSourceId.Value);
     [Fact] void should_append_events_with_correct_event_type() => _command.Events.All(e => e.EventType.ToClient().Equals(_eventType)).ShouldBeTrue();
-    [Fact] void should_append_events_with_correct_content() => _command.Events.Select(e => e.Content).ShouldEqual(_eventContexts);
+    [Fact] void should_append_events_with_correct_content() => _command.Events.Select(e => e.Content).ShouldEqual(_eventContexts.ConvertAll(e => e.ToJsonString()));
     [Fact] void should_append_events_with_correct_causations() => _command.Causation.ToClient().ShouldEqual(_causation);
     [Fact] void should_append_events_with_correct_caused_by() => _command.CausedBy.ToClient().ShouldEqual(_causedBy);
     [Fact] void should_append_events_with_strategy_concurrency_scope() => _command.ConcurrencyScope.SequenceNumber.ShouldEqual((ulong)_scope.SequenceNumber);

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Arc.Commands;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Chronicle.Concepts;
@@ -32,7 +31,7 @@ public class and_all_values_are_provided : Specification
             "All",
             "Default",
             new EventType("SomeEvent", 1, false),
-            new JsonObject())]));
+            "{}")]));
 
     [Fact] void should_be_valid() => _result.ShouldBeValid();
 }
