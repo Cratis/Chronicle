@@ -117,6 +117,7 @@ public class a_startup_task : Specification
         _eventStoreStorage.GetNamespace(_namespace).Returns(_namespaceStorage);
         _eventStoreStorage.Reactors.Returns(_reactorDefinitionsStorage);
         _eventStoreStorage.Reducers.Returns(_reducerDefinitionsStorage);
+        _namespaceStorage.HasData().Returns(Task.FromResult(true));
         _namespaceStorage.Observers.Returns(_observerStateStorage);
         _observerStateStorage.GetAll().Returns(Task.FromResult<IEnumerable<ObserverState>>([]));
         _reactorDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReactorDefinition>>([]));
