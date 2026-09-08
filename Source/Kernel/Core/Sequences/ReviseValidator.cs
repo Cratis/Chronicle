@@ -30,6 +30,6 @@ internal class ReviseValidator : CommandValidator<Revise>
             .Must(eventType => !string.IsNullOrEmpty(eventType.Id))
             .When(_ => _.EventType is not null)
             .WithMessage("Event type identifier is required.");
-        RuleFor(_ => _.Content).NotNull().WithMessage("Event content is required.");
+        RuleFor(_ => _.Content).NotEmpty().WithMessage("Event content is required.");
     }
 }

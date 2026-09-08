@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
@@ -22,7 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventStreamType">The stream type within the event source.</param>
 /// <param name="EventStreamId">The stream within the stream type.</param>
 /// <param name="EventType">The type of event being appended.</param>
-/// <param name="Content">The content of the event.</param>
+/// <param name="Content">The content of the event, as a JSON-encoded string.</param>
 /// <param name="CorrelationId">Optional correlation identifier. Defaults to a new one when not provided.</param>
 /// <param name="Tags">The tags to associate with the event.</param>
 /// <param name="Occurred">Optional occurred time. If null, the server sets it to approximately the time of append.</param>
@@ -41,7 +40,7 @@ public record Append(
     EventStreamType EventStreamType,
     EventStreamId EventStreamId,
     EventType EventType,
-    JsonObject Content,
+    string Content,
     Guid? CorrelationId = default,
     IEnumerable<string>? Tags = default,
     DateTimeOffset? Occurred = default,
@@ -73,7 +72,7 @@ public record Append(
             EventStreamType,
             EventStreamId,
             EventType.ToChronicle(),
-            Content,
+            Content.ToJsonObject(),
             CorrelationId ?? Guid.NewGuid(),
             Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),

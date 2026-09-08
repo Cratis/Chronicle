@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
@@ -21,7 +19,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventSequenceId">The event sequence holding the event.</param>
 /// <param name="SequenceNumber">The sequence number of the event to revise.</param>
 /// <param name="EventType">The type of the event being revised.</param>
-/// <param name="Content">The revised content.</param>
+/// <param name="Content">The revised content, as a JSON-encoded string.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <remarks>
@@ -36,7 +34,7 @@ public record Revise(
     Concepts.EventSequences.EventSequenceId EventSequenceId,
     ulong SequenceNumber,
     EventType EventType,
-    JsonObject Content,
+    string Content,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default)
 {
@@ -63,7 +61,7 @@ public record Revise(
                 EventSequenceId,
                 SequenceNumber,
                 EventType.ToChronicle(),
-                JsonSerializer.Serialize(Content)),
+                Content),
             correlationId: Guid.NewGuid(),
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());

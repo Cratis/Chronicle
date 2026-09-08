@@ -31,7 +31,7 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
             @event.RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");
             @event.RuleFor(_ => _.EventType).NotNull().WithMessage("Event type is required.");
             @event.RuleFor(_ => _.EventType.Id).NotEmpty().When(_ => _.EventType is not null).WithMessage("Event type identifier is required.");
-            @event.RuleFor(_ => _.Content).NotNull().WithMessage("Event content is required.");
+            @event.RuleFor(_ => _.Content).NotEmpty().WithMessage("Event content is required.");
         });
     }
 }

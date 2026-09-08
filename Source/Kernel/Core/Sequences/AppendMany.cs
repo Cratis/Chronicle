@@ -64,7 +64,7 @@ public record AppendMany(
             EventStreamId.Default,
             @event.EventType.ToChronicle(),
             tags,
-            @event.Content,
+            @event.Content.ToJsonObject(),
             Occurred,
             Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject)));
 

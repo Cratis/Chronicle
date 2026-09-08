@@ -138,7 +138,7 @@ public class EventSequence(
             EventStreamId = eventStreamId?.Value ?? string.Empty,
             CorrelationId = correlationId,
             EventType = eventType.ToSequencesContract(),
-            Content = content,
+            Content = content.ToJsonString(),
             Causation = causation.ToSequencesContract(),
             CausedBy = identity.ToSequencesContract(),
             Tags = allTags,
@@ -221,7 +221,7 @@ public class EventSequence(
             eventsToAppend.Add(new Contracts.Sequences.EventToAppend
             {
                 EventType = eventType.ToSequencesContract(),
-                Content = content,
+                Content = content.ToJsonString(),
                 Subject = (subject ?? SubjectResolver.ResolveFrom(@event))?.Value
             });
         }
@@ -301,7 +301,7 @@ public class EventSequence(
                 EventStreamType = @event.EventStreamType,
                 EventStreamId = @event.EventStreamId,
                 EventType = eventType.ToSequencesContract(),
-                Content = await eventSerializer.Serialize(@event.Event),
+                Content = (await eventSerializer.Serialize(@event.Event)).ToJsonString(),
                 Tags = allTags,
                 Occurred = ToWireOccurred(@event.Occurred),
                 Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value
@@ -481,7 +481,7 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             SequenceNumber = sequenceNumber,
             EventType = eventType.ToSequencesContract(),
-            Content = content,
+            Content = content.ToJsonString(),
             Causation = causation.ToSequencesContract(),
             CausedBy = identity.ToSequencesContract()
         }).EnsureSuccess();

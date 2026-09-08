@@ -61,7 +61,7 @@ public record AppendManyForEventSources(
             (EventStreamId)@event.EventStreamId,
             @event.EventType.ToChronicle(),
             (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
-            @event.Content,
+            @event.Content.ToJsonObject(),
             @event.Occurred,
             Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject)));
 
