@@ -315,3 +315,10 @@ certificates/
 
 # Local AI work artifacts (plans, handovers, session notes) — never tracked
 .ai-work/
+
+# Version managed Pi adapter provenance; keep other local Pi state ignored.
+!/.pi/
+/.pi/*
+!/.pi/agents/
+/.pi/agents/*
+!/.pi/agents/.generated.json

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "outputs": {
+    "backend-developer.md": "ff631dddce1da522aa34d4e3c85e099b445c05680eda1cede165e68b325fd8a5",
+    "code-reviewer.md": "ad6bffabb312f87daddecdcb31e8d80a8f65c011df3ad07df9aa75ffcac4fb59",
+    "coordinator.md": "c4ad26e2a89c731350d98e21b1e2ed7bb2ddc046f19c14850c7f8309fe63399c",
+    "frontend-developer.md": "a04a5a0882848311d3dd7cce3983ad90b23ec6b1dc02bf0f128a4fd9a7cc45f4",
+    "orchestrator.md": "4b9e6939b44207a45ba9a88007956f8da3e364730a8c79d857d354280cdb82bc",
+    "performance-reviewer.md": "a1e2e6a91a17f054fd403bbb7566a9bbf400f700ce4d77caaabf13d30a760b94",
+    "planner.md": "a2017c2be5eac7fef18f49b2817ba8fce3b2787db25adf19544e2d20e4f2aea4",
+    "repository-investigation-reviewer.md": "06d571517a0e8eb42f57ac46c83b0abe831817de725e0a2d0f5f341bdb6fa4c1",
+    "repository-investigator.md": "91bb52b3c10209fb0ff715ab5a65818d2726470ce0acc2b5f974f48f034a7bb0",
+    "security-reviewer.md": "3fa887cedb078ee7a717e6ab0d6215be690f7f97f92fdfe58ca678ede04dab35",
+    "slice-implementer.md": "723eb59782db29d62c8d43beb80c504f7002321c43753e336f940e5f61e9e7d8",
+    "spec-writer.md": "913dcebd2538ed03032f8daf1513b125730258a04aafbb5a285853e406c3c9d4"
+  }
+}
