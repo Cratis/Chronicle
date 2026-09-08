@@ -16,6 +16,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import * as Shared from 'Shared';
 import { WorkbenchProvider } from './context/WorkbenchContext';
 import { replaceEventStoreNamespaceInPath } from './replaceEventStoreNamespaceInPath';
+import { resolveSidebarNamespace } from './resolveSidebarNamespace';
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];
@@ -31,9 +32,7 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
     const [namespace, setNamespace] = useState(params.namespace ?? '');
 
     useEffect(() => {
-        if (params.namespace) {
-            setNamespace(params.namespace);
-        }
+        setNamespace(previous => resolveSidebarNamespace(params.namespace, previous));
     }, [params.namespace]);
 
     const namespaceSelected = (namespace: string) => {
