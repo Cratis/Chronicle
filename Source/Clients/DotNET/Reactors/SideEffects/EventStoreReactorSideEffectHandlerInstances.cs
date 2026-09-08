@@ -21,7 +21,7 @@ internal sealed class EventStoreReactorSideEffectHandlerInstances(IServiceProvid
         typeof(MixedSideEffectsResultHandler)
     ];
 
-    readonly Type[] _otherHandlerTypes = Types.Types.Instance
+    readonly Type[] _otherHandlerTypes = TypeUniverse.For(serviceProvider)
         .FindMultiple<IReactorSideEffectHandler>()
         .Where(type => !_eventTypeRegistryHandlerTypes.Contains(type))
         .ToArray();
