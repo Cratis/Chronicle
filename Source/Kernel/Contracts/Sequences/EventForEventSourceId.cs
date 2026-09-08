@@ -48,7 +48,7 @@ public class EventForEventSourceId
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(6)]
-    public global::System.Text.Json.Nodes.JsonObject Content { get; set; }
+    public string Content { get; set; }
 
     /// <summary>
     /// Gets or sets the Tags.

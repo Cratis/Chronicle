@@ -119,7 +119,7 @@ public class EventSequence(
         subject ??= SubjectResolver.ResolveFrom(@event);
 
         var eventType = eventTypes.GetEventTypeFor(eventClrType);
-        var content = await eventSerializer.Serialize(@event);
+        var content = (await eventSerializer.Serialize(@event)).ToJsonString();
         var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
 
@@ -217,7 +217,7 @@ public class EventSequence(
             ThrowIfUnknownEventType(eventTypes, eventClrType);
 
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
-            var content = await eventSerializer.Serialize(@event);
+            var content = (await eventSerializer.Serialize(@event)).ToJsonString();
             eventsToAppend.Add(new Contracts.Sequences.EventToAppend
             {
                 EventType = eventType.ToSequencesContract(),
@@ -301,7 +301,7 @@ public class EventSequence(
                 EventStreamType = @event.EventStreamType,
                 EventStreamId = @event.EventStreamId,
                 EventType = eventType.ToSequencesContract(),
-                Content = await eventSerializer.Serialize(@event.Event),
+                Content = (await eventSerializer.Serialize(@event.Event)).ToJsonString(),
                 Tags = allTags,
                 Occurred = ToWireOccurred(@event.Occurred),
                 Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value
@@ -470,7 +470,7 @@ public class EventSequence(
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
         var eventType = eventTypes.GetEventTypeFor(eventClrType);
-        var content = await eventSerializer.Serialize(@event);
+        var content = (await eventSerializer.Serialize(@event)).ToJsonString();
         var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
 
