@@ -44,6 +44,16 @@ public record ConstraintValidationContext
         BatchClaims = batchClaims;
         _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
         Validators = validators.Where(_ => _.CanValidate(this)).ToArray();
+
+        // Runs for every event in the batch regardless of CanValidate, and in the same order events are
+        // established - see the remarks on IObserveConstraintBatchEvents for why CanValidate alone is not enough.
+        if (batchClaims is not null)
+        {
+            foreach (var observer in validators.OfType<IObserveConstraintBatchEvents>())
+            {
+                observer.RecordBatchEvent(this);
+            }
+        }
     }
 
     /// <summary>

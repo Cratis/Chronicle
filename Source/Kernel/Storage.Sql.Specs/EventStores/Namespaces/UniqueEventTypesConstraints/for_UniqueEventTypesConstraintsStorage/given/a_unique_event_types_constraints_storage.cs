@@ -1,18 +1,28 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Storage.InMemory.EventSequences;
-using Cratis.Chronicle.Storage.InMemory.Identities;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints.for_UniqueEventTypesConstraintsStorage.given;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueEventTypesConstraints.for_UniqueEventTypesConstraintsStorage.given;
 
+/// <summary>
+/// Sets up a <see cref="UniqueEventTypesConstraintsStorage"/> backed by a shared in-memory SQLite database, with a
+/// helper to append raw event rows the storage under test reads back through.
+/// </summary>
 public class a_unique_event_types_constraints_storage : Specification
 {
+    protected static readonly EventStoreName _eventStore = "test-store";
+    protected static readonly EventStoreNamespaceName _namespace = "test-namespace";
+    protected static readonly EventSourceId _borrower = "borrower";
+    protected static readonly EventType _checkedOutEventType = new("LoanCheckedOut", EventTypeGeneration.First);
+    protected static readonly EventType _returnedEventType = new("LoanReturned", EventTypeGeneration.First);
     protected const string ConstraintNameValue = "loan-open";
 
     /// <summary>
@@ -20,34 +30,33 @@ public class a_unique_event_types_constraints_storage : Specification
     /// a real event source type, stream type or stream id.
     /// </summary>
     protected const string Marker = "_scoped_";
-    protected static readonly EventType _checkedOutEventType = new("LoanCheckedOut", EventTypeGeneration.First);
-    protected static readonly EventType _returnedEventType = new("LoanReturned", EventTypeGeneration.First);
-    protected static readonly EventType _writtenOffEventType = new("LoanWrittenOff", EventTypeGeneration.First);
-    protected static readonly EventSourceId _borrower = "borrower";
-    protected static readonly EventSourceId _anotherBorrower = "another-borrower";
 
-    protected EventSequenceStorage _eventSequenceStorage;
+    protected SqliteConnection _connection;
     protected UniqueEventTypesConstraintsStorage _storage;
+
+    ulong _nextSequenceNumber;
 
     void Establish()
     {
-        _eventSequenceStorage = new(
-            new EventStoreName("event-store"),
-            EventStoreNamespaceName.Default,
-            EventSequenceId.Log,
-            new IdentityStorage());
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
 
-        _storage = new(_eventSequenceStorage);
+        using (var schemaContext = CreateContext())
+        {
+            schemaContext.Database.EnsureCreated();
+        }
+
+        var database = Substitute.For<IDatabase>();
+        database.EventSequenceTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
+            .Returns(_ => Task.FromResult(new DbContextScope<EventSequenceDbContext>(CreateContext(), () => { })));
+
+        _storage = new UniqueEventTypesConstraintsStorage(_eventStore, _namespace, EventSequenceId.Log, database);
     }
+
+    void Destroy() => _connection.Dispose();
 
     protected static UniqueEventTypeConstraintDefinition DefinitionReleasedByReturn =>
         new(ConstraintNameValue, [_checkedOutEventType.Id], [_returnedEventType.Id]);
-
-    protected static UniqueEventTypeConstraintDefinition DefinitionWithoutRemovalEvent =>
-        new(ConstraintNameValue, [_checkedOutEventType.Id]);
-
-    protected static UniqueEventTypeConstraintDefinition DefinitionReleasedByReturnOrWriteOff =>
-        new(ConstraintNameValue, [_checkedOutEventType.Id], [_returnedEventType.Id, _writtenOffEventType.Id]);
 
     /// <summary>
     /// Gets a definition scoped to the dimensions named by <paramref name="scope"/>, shaped exactly as the client
@@ -86,25 +95,34 @@ public class a_unique_event_types_constraints_storage : Specification
             eventStreamType ?? EventStreamType.All,
             eventStreamId ?? EventStreamId.Default);
 
-    protected Task Append(
-        ulong sequenceNumber,
+    protected async Task Append(
         EventType eventType,
         EventSourceId eventSourceId,
         EventSourceType? eventSourceType = null,
         EventStreamType? eventStreamType = null,
-        EventStreamId? eventStreamId = null) =>
-        _eventSequenceStorage.Append(
-            sequenceNumber,
-            eventSourceType ?? EventSourceType.Default,
-            eventSourceId,
-            eventStreamType ?? EventStreamType.All,
-            eventStreamId ?? EventStreamId.Default,
-            eventType,
-            CorrelationId.New(),
-            [],
-            [],
-            [],
-            DateTimeOffset.UtcNow,
-            new Dictionary<EventTypeGeneration, ExpandoObject> { { EventTypeGeneration.First, new ExpandoObject() } },
-            new Dictionary<EventTypeGeneration, EventHash>());
+        EventStreamId? eventStreamId = null)
+    {
+        await using var context = CreateContext();
+        context.Events.Add(new EventEntry
+        {
+            SequenceNumber = _nextSequenceNumber++,
+            Type = eventType.Id,
+            Occurred = DateTimeOffset.UtcNow,
+            EventSourceType = eventSourceType ?? EventSourceType.Default,
+            EventSourceId = eventSourceId,
+            EventStreamType = eventStreamType ?? EventStreamType.All,
+            EventStreamId = eventStreamId ?? EventStreamId.Default
+        });
+        await context.SaveChangesAsync();
+    }
+
+    EventSequenceDbContext CreateContext()
+    {
+        var options = new DbContextOptionsBuilder<EventSequenceDbContext>()
+            .UseSqlite(_connection)
+            .AddConceptAsSupport()
+            .Options;
+
+        return new EventSequenceDbContext(options, $"{EventSequenceId.Log}_events", Substitute.For<IEventSequenceMigrator>());
+    }
 }

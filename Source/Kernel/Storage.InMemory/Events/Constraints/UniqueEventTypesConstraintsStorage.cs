@@ -24,11 +24,11 @@ public class UniqueEventTypesConstraintsStorage(
     public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(
         UniqueEventTypeConstraintDefinition definition,
         EventSourceId eventSourceId,
-        string scopeKey = "")
+        ResolvedConstraintScope? scope = null)
     {
         var coveredEventTypeIds = definition.EventTypeIds.ToHashSet();
         var forEventSource = eventSequenceStorage.Events
-            .Where(_ => _.Context.EventSourceId == eventSourceId)
+            .Where(_ => _.Context.EventSourceId == eventSourceId && IsWithinScope(scope, _.Context))
             .ToArray();
 
         var latestRemoval = GetLatestRemoval(definition, forEventSource);
@@ -74,4 +74,21 @@ public class UniqueEventTypesConstraintsStorage(
 
         return removals.Length == 0 ? null : removals.Max();
     }
+
+    /// <summary>
+    /// Check whether an already-appended event falls within the same scope as the event being validated.
+    /// </summary>
+    /// <param name="scope">The <see cref="ResolvedConstraintScope"/> of the event being validated, or <see langword="null"/> when unscoped.</param>
+    /// <param name="context">The <see cref="EventContext"/> of the already-appended event being considered.</param>
+    /// <returns>True if the event is within scope, false if it belongs to a different scope.</returns>
+    /// <remarks>
+    /// Every dimension is compared as its own typed value, mirroring the equality predicate the persistent
+    /// providers push into the database. A dimension the constraint is not scoped by is <see langword="null"/> and
+    /// narrows nothing.
+    /// </remarks>
+    static bool IsWithinScope(ResolvedConstraintScope? scope, EventContext context) =>
+        scope is null ||
+        ((scope.EventSourceType is null || context.EventSourceType == scope.EventSourceType) &&
+        (scope.EventStreamType is null || context.EventStreamType == scope.EventStreamType) &&
+        (scope.EventStreamId is null || context.EventStreamId == scope.EventStreamId));
 }

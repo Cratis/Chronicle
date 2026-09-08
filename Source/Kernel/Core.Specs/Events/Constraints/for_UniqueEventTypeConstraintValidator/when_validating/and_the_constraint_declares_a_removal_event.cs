@@ -36,7 +36,7 @@ public class and_the_constraint_declares_a_removal_event : Specification
         _context = new([], EventSourceId.New(), _checkedOutEventType.Id, new ExpandoObject());
 
         _storage
-            .IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<string>())
+            .IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((true, EventSequenceNumber.Unavailable));
     }
 
@@ -47,5 +47,5 @@ public class and_the_constraint_declares_a_removal_event : Specification
         await _storage.Received(1).IsAllowed(
             Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.RemovedWith.Contains(_returnedEventType.Id)),
             _context.EventSourceId,
-            Arg.Any<string>());
+            Arg.Any<ResolvedConstraintScope>());
 }

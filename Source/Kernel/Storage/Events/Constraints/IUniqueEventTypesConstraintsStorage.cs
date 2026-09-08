@@ -16,7 +16,7 @@ public interface IUniqueEventTypesConstraintsStorage
     /// </summary>
     /// <param name="definition">The <see cref="UniqueEventTypeConstraintDefinition"/> to check against.</param>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check.</param>
-    /// <param name="scopeKey">Optional scope key for scoped constraints.</param>
+    /// <param name="scope">Optional <see cref="ResolvedConstraintScope"/> narrowing the lookup to the dimensions the constraint is scoped by, or <see langword="null"/> for an unscoped constraint.</param>
     /// <returns>
     /// Tuple containing a boolean saying whether or not its allowed to perform and the <see cref="EventSequenceNumber"/> for the item it violates.
     /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
@@ -34,6 +34,13 @@ public interface IUniqueEventTypesConstraintsStorage
     /// A definition may declare several removal events, because a cycle can end in more than one way. The cycle
     /// ends at the most recent of them, not at the most recent of any one of them.
     /// </para>
+    /// <para>
+    /// A scoped definition is answered within one scope only: covered events and removal events outside the
+    /// <paramref name="scope"/> belong to a different cycle and neither block nor release this one. The scope
+    /// arrives as the appending event's own typed dimension values so that an implementation can narrow with a
+    /// native, indexable predicate on each dimension - <see cref="ConstraintScope"/> itself only says which
+    /// dimensions participate and never carries a value to compare against.
+    /// </para>
     /// </remarks>
-    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(UniqueEventTypeConstraintDefinition definition, EventSourceId eventSourceId, string scopeKey = "");
+    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(UniqueEventTypeConstraintDefinition definition, EventSourceId eventSourceId, ResolvedConstraintScope? scope = null);
 }

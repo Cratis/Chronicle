@@ -1,18 +1,25 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Storage.InMemory.EventSequences;
-using Cratis.Chronicle.Storage.InMemory.Identities;
+using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using MongoDB.Bson;
 
-namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints.for_UniqueEventTypesConstraintsStorage.given;
+namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.for_UniqueEventTypesConstraintsStorage.given;
 
-public class a_unique_event_types_constraints_storage : Specification
+/// <summary>
+/// Sets up a <see cref="UniqueEventTypesConstraintsStorage"/> against a real MongoDB event sequence collection,
+/// with a helper to append raw event documents the storage under test reads back through.
+/// </summary>
+/// <param name="fixture">The shared <see cref="MongoDBFixture"/> providing a MongoDB container.</param>
+public abstract class a_unique_event_types_constraints_storage(MongoDBFixture fixture) : Cratis.Chronicle.Storage.MongoDB.Indexing.given.a_real_namespace_database(fixture)
 {
+    protected static readonly EventSourceId _borrower = "borrower";
+    protected static readonly EventType _checkedOutEventType = new("LoanCheckedOut", EventTypeGeneration.First);
+    protected static readonly EventType _returnedEventType = new("LoanReturned", EventTypeGeneration.First);
     protected const string ConstraintNameValue = "loan-open";
 
     /// <summary>
@@ -20,34 +27,15 @@ public class a_unique_event_types_constraints_storage : Specification
     /// a real event source type, stream type or stream id.
     /// </summary>
     protected const string Marker = "_scoped_";
-    protected static readonly EventType _checkedOutEventType = new("LoanCheckedOut", EventTypeGeneration.First);
-    protected static readonly EventType _returnedEventType = new("LoanReturned", EventTypeGeneration.First);
-    protected static readonly EventType _writtenOffEventType = new("LoanWrittenOff", EventTypeGeneration.First);
-    protected static readonly EventSourceId _borrower = "borrower";
-    protected static readonly EventSourceId _anotherBorrower = "another-borrower";
 
-    protected EventSequenceStorage _eventSequenceStorage;
     protected UniqueEventTypesConstraintsStorage _storage;
 
-    void Establish()
-    {
-        _eventSequenceStorage = new(
-            new EventStoreName("event-store"),
-            EventStoreNamespaceName.Default,
-            EventSequenceId.Log,
-            new IdentityStorage());
+    ulong _nextSequenceNumber;
 
-        _storage = new(_eventSequenceStorage);
-    }
+    void Establish() => _storage = new UniqueEventTypesConstraintsStorage(_database, EventSequenceId.Log);
 
     protected static UniqueEventTypeConstraintDefinition DefinitionReleasedByReturn =>
         new(ConstraintNameValue, [_checkedOutEventType.Id], [_returnedEventType.Id]);
-
-    protected static UniqueEventTypeConstraintDefinition DefinitionWithoutRemovalEvent =>
-        new(ConstraintNameValue, [_checkedOutEventType.Id]);
-
-    protected static UniqueEventTypeConstraintDefinition DefinitionReleasedByReturnOrWriteOff =>
-        new(ConstraintNameValue, [_checkedOutEventType.Id], [_returnedEventType.Id, _writtenOffEventType.Id]);
 
     /// <summary>
     /// Gets a definition scoped to the dimensions named by <paramref name="scope"/>, shaped exactly as the client
@@ -87,24 +75,28 @@ public class a_unique_event_types_constraints_storage : Specification
             eventStreamId ?? EventStreamId.Default);
 
     protected Task Append(
-        ulong sequenceNumber,
         EventType eventType,
         EventSourceId eventSourceId,
         EventSourceType? eventSourceType = null,
         EventStreamType? eventStreamType = null,
-        EventStreamId? eventStreamId = null) =>
-        _eventSequenceStorage.Append(
-            sequenceNumber,
+        EventStreamId? eventStreamId = null)
+    {
+        var collection = _database.GetEventSequenceCollectionFor(EventSequenceId.Log);
+        var @event = new Event(
+            _nextSequenceNumber++,
+            CorrelationId.New(),
+            [],
+            [IdentityId.New()],
+            eventType.Id,
+            DateTimeOffset.UtcNow,
             eventSourceType ?? EventSourceType.Default,
             eventSourceId,
             eventStreamType ?? EventStreamType.All,
             eventStreamId ?? EventStreamId.Default,
-            eventType,
-            CorrelationId.New(),
             [],
-            [],
-            [],
-            DateTimeOffset.UtcNow,
-            new Dictionary<EventTypeGeneration, ExpandoObject> { { EventTypeGeneration.First, new ExpandoObject() } },
-            new Dictionary<EventTypeGeneration, EventHash>());
+            new Dictionary<string, BsonDocument>(),
+            new Dictionary<string, string>(),
+            []);
+        return collection.InsertOneAsync(@event);
+    }
 }
