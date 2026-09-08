@@ -10,7 +10,7 @@ describe('when clearing observer quarantine and selected observer is not quarant
     beforeEach(() => {
         context.viewModel.selectedObserver = new ObserverInformation();
         context.viewModel.selectedObserver.runningState = ObserverRunningState.active;
-        context.viewModel.clearObserverQuarantine();
+        context.viewModel.clearObserverQuarantine(context.params.eventStore!, context.params.namespace!);
     });
 
     it('should indicate that quarantine cannot be cleared', () => context.viewModel.canClearObserverQuarantine.should.be.false);
