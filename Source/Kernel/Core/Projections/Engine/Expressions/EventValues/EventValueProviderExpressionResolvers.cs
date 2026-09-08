@@ -91,7 +91,12 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             return TypeConversion.Convert(targetType, input);
         }
 
-        if (input.GetType().IsEnumerable())
+        // Dictionaries are values to preserve, not sequences of key/value pairs to project as arrays.
+        var inputType = input.GetType();
+        var isDictionary = input is IDictionary ||
+            inputType.IsDictionary() ||
+            inputType.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>));
+        if (!isDictionary && inputType.IsEnumerable())
         {
             var children = new List<object>();
             foreach (var child in (input as IEnumerable)!)
