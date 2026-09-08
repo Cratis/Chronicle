@@ -143,7 +143,7 @@ export const Pivot = () => {
         eventSequenceId: 'event-log'
     };
 
-    const [events] = AppendedEvents.use(queryArgs);
+    const [events] = AppendedEvents.when(!!params.namespace).use(queryArgs);
     const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
 
     return (

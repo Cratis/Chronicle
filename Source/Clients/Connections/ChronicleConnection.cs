@@ -387,6 +387,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         finally
         {
+            // Re-arm the staleness clock right before the watchdog starts evaluating it. The clock was last set
+            // when the keep-alive stream was subscribed, above - potentially a full connect timeout ago if the wait
+            // just above timed out. Starting the watchdog on that stale a timestamp let it declare the session
+            // dropped on its very first tick, against a connection that never finished establishing (or, on a
+            // kernel slow to answer during its own restart, one still legitimately coming up) - tearing the channel
+            // down and immediately reconnecting on top of an attempt that might still have succeeded. Refreshing it
+            // here gives whatever comes out of this attempt a full staleness window from when monitoring actually
+            // begins, rather than one that was already partly spent waiting for the attempt itself.
+            _watchDog.NotifyKeepAlive();
             _watchDog.Start();
         }
     }

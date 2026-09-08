@@ -106,6 +106,14 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         _indexedEventSequences.TryAdd(eventSequenceId, true);
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> HasAnyCollections()
+    {
+        using var cursor = await _database.ListCollectionNamesAsync().ConfigureAwait(false);
+        var names = await cursor.ToListAsync().ConfigureAwait(false);
+        return names.Count > 0;
+    }
+
     static IEnumerable<CreateIndexModel<Event>> DesiredEventIndexes()
     {
         yield return new(

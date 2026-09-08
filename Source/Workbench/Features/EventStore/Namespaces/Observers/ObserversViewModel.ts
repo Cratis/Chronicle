@@ -1,44 +1,34 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { inject, injectable } from 'tsyringe';
+import { injectable } from 'tsyringe';
 import { ObserverInformation } from 'Features/Observation';
 import { ClearObserverQuarantine, ReplayObserver as Replay } from 'Features/Observation';
-import { INamespaces } from 'State/Namespaces';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
-import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ObserverRunningState } from 'Features/Contracts/Observation';
 
 @injectable()
 export class ObserversViewModel {
 
     constructor(
-        namespaces: INamespaces,
         private readonly _replay: Replay,
         private readonly _clearObserverQuarantine: ClearObserverQuarantine,
-        private readonly _dialogs: IDialogs,
-        @inject('params') private readonly _params: EventStoreAndNamespaceParams) {
-        this.currentNamespace = '';
-
-        namespaces.currentNamespace.subscribe(namespace => {
-            this.currentNamespace = namespace;
-        });
+        private readonly _dialogs: IDialogs) {
     }
 
-    currentNamespace: string;
     selectedObserver: ObserverInformation | undefined;
     get canClearObserverQuarantine() {
         return this.selectedObserver?.runningState === ObserverRunningState.quarantined;
     }
 
-    async replay() {
+    async replay(eventStore: string, namespace: string) {
         if (this.selectedObserver) {
             const observerId = this.selectedObserver.id;
             const result = await this._dialogs.showConfirmation('Replay?', `Are you sure you want to replay ${observerId}?`, DialogButtons.YesNo);
             if (result == DialogResult.Yes) {
-                this._replay.eventStore = this._params.eventStore!;
-                this._replay.namespace = this.currentNamespace;
+                this._replay.eventStore = eventStore;
+                this._replay.namespace = namespace;
                 this._replay.observerId = observerId;
                 const commandResult = await this._replay.execute();
                 commandResult
@@ -49,14 +39,14 @@ export class ObserversViewModel {
         }
     }
 
-    async clearObserverQuarantine() {
+    async clearObserverQuarantine(eventStore: string, namespace: string) {
         if (!this.canClearObserverQuarantine || !this.selectedObserver) {
             return;
         }
 
         const observerId = this.selectedObserver.id;
-        this._clearObserverQuarantine.eventStore = this._params.eventStore!;
-        this._clearObserverQuarantine.namespace = this.currentNamespace;
+        this._clearObserverQuarantine.eventStore = eventStore;
+        this._clearObserverQuarantine.namespace = namespace;
         this._clearObserverQuarantine.observerId = observerId;
         const commandResult = await this._clearObserverQuarantine.execute();
         commandResult

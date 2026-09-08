@@ -22,7 +22,8 @@ public class and_the_registration_is_the_full_set : Specification
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
             Substitute.For<ILanguageService>(),
-            Substitute.For<IServiceProvider>());
+            Substitute.For<IServiceProvider>(),
+            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>());
     }
 
     async Task Because() => await _service.Register(new RegisterRequest

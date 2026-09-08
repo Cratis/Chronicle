@@ -105,4 +105,5 @@
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_different_event_source_ids_are_acquired_concurrently.cs  # deadline
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/given/a_striped_pipeline_over_a_shared_read_model.cs  # interleave
+1 Source/Kernel/Core.Specs/Projections/for_ProjectionsManager/when_registering/and_more_definitions_than_the_concurrency_limit_are_new.cs  # knob
 1 Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs  # interleave

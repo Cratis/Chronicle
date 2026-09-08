@@ -10,7 +10,7 @@ describe('when replaying and there is a selected observer', given(a_view_model, 
     beforeEach(() => {
         context.viewModel.selectedObserver = new ObserverInformation();
         context.dialogs.showConfirmation.resolves(DialogResult.Yes);
-        context.viewModel.replay();
+        context.viewModel.replay(context.params.eventStore!, context.params.namespace!);
     });
 
     it('should display dialog', () => context.dialogs.showConfirmation.should.be.called);

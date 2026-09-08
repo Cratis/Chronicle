@@ -60,10 +60,10 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
 
     const queryArgs: AllObserversParameters = {
         eventStore: params.eventStore!,
-        namespace: viewModel.currentNamespace
+        namespace: params.namespace!
     };
 
-    const [observers] = AllObservers.when(!!viewModel.currentNamespace).use(queryArgs);
+    const [observers] = AllObservers.when(!!params.namespace).use(queryArgs);
 
     const searchTerm = searchText.trim().toLowerCase();
 
@@ -81,13 +81,13 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             label: strings.eventStore.namespaces.observers.actions.replay,
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
             disabled: !viewModel.selectedObserver,
-            command: () => viewModel.replay()
+            command: () => viewModel.replay(params.eventStore!, params.namespace!)
         },
         {
             label: strings.eventStore.namespaces.observers.actions.clearQuarantine,
             icon: <faIcons.FaShield className='mr-2' />,
             disabled: !viewModel.canClearObserverQuarantine,
-            command: () => viewModel.clearObserverQuarantine()
+            command: () => viewModel.clearObserverQuarantine(params.eventStore!, params.namespace!)
         }
     ];
 
@@ -175,7 +175,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                             <ObserverDetails
                                 observer={viewModel.selectedObserver}
                                 eventStore={params.eventStore!}
-                                namespace={viewModel.currentNamespace} />
+                                namespace={params.namespace!} />
                         </Allotment.Pane>}
                 </Allotment>
             </div>

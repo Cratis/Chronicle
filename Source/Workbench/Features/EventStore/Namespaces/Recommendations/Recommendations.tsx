@@ -3,8 +3,6 @@
 
 import strings from 'Strings';
 import { AllRecommendations, AllRecommendationsParameters } from 'Features/Recommendations';
-import { type DataTableFilterMeta } from '@cratis/components/DataTables';
-import { FilterMatchMode } from '@primereact/headless/datatable';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { RecommendationDetails } from 'Features/Recommendations';
@@ -13,11 +11,8 @@ import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
+import { SelectionCheckbox } from 'Components/Common/SelectionCheckbox';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-
-const defaultFilters: DataTableFilterMeta = {
-    tombstone: { value: null, matchMode: FilterMatchMode.In },
-};
 
 const occurred = (recommendation: RecommendationDetails) => {
     return recommendation.occurred.toLocaleString();
@@ -31,18 +26,36 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };
+    const [recommendations] = AllRecommendations.use(queryArgs);
 
     const handleIgnore = async () => {
-        if (viewModel.selectedRecommendation) {
-            const result = await showConfirmation(
-                strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.title,
-                strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.message.replace('{name}', viewModel.selectedRecommendation.name),
-                DialogButtons.YesNo
-            );
+        const recommendationIds = viewModel.selectedRecommendationIds;
+        if (recommendationIds.length === 0) {
+            return;
+        }
 
-            if (result === DialogResult.Yes) {
-                await viewModel.ignore();
-            }
+        const isBulk = recommendationIds.length > 1;
+        const singleRecommendation = isBulk
+            ? undefined
+            : recommendations.data.find(recommendation => recommendation.id.equals(recommendationIds[0]));
+
+        const result = await showConfirmation(
+            isBulk
+                ? strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendations.title
+                : strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.title,
+            isBulk
+                ? strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendations.message.replace('{count}', recommendationIds.length.toString())
+                : strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.message.replace('{name}', singleRecommendation?.name ?? ''),
+            DialogButtons.YesNo);
+
+        if (result !== DialogResult.Yes) {
+            return;
+        }
+
+        try {
+            await viewModel.ignoreRecommendations(recommendationIds);
+        } catch (error) {
+            console.error('Failed to ignore recommendations:', error);
         }
     };
 
@@ -54,22 +67,29 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
             queryArguments={queryArgs}
             onSelectionChange={(e) => (viewModel.selectedRecommendation = e.value as RecommendationDetails)}
             dataKey='id'
-            defaultFilters={defaultFilters}
-            globalFilterFields={['tombstone']}
             emptyMessage={strings.eventStore.namespaces.recommendations.empty}>
 
             <DataPage.MenuItems>
+                <MenuItem
+                    label={strings.eventStore.namespaces.recommendations.actions.selectAll} icon={faIcons.FaSquareCheck}
+                    command={() => viewModel.selectAllRecommendations(recommendations.data.map((recommendation: RecommendationDetails) => recommendation.id))} />
                 <MenuItem
                     label={strings.eventStore.namespaces.recommendations.actions.perform} icon={faIcons.FaArrowsRotate}
                     disableOnUnselected
                     command={() => viewModel.perform()} />
                 <MenuItem
-                    label={strings.eventStore.namespaces.recommendations.actions.ignore} icon={faIcons.FaArrowsRotate}
-                    disableOnUnselected
+                    label={strings.eventStore.namespaces.recommendations.actions.ignore} icon={faIcons.FaBan}
+                    disabled={viewModel.selectedRecommendationIds.length === 0}
                     command={() => handleIgnore()} />
             </DataPage.MenuItems>
 
             <DataPage.Columns>
+                <Column
+                    body={(recommendation: RecommendationDetails) => (
+                        <SelectionCheckbox
+                            checked={viewModel.isRecommendationSelected(recommendation.id)}
+                            onToggle={() => viewModel.toggleRecommendationSelection(recommendation.id)} />
+                    )} />
                 <Column field='name' header={strings.eventStore.namespaces.recommendations.columns.name} sortable />
                 <Column field='description' header={strings.eventStore.namespaces.recommendations.columns.description} />
                 <Column field='occurred' header={strings.eventStore.namespaces.recommendations.columns.occurred} body={occurred} />

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { Allotment } from 'allotment';
@@ -102,7 +102,22 @@ const ReadModelsContent = () => {
         return options;
     }, [occurrences.data, selectedReadModel]);
 
+    const previousNamespaceRef = useRef<string | undefined>(undefined);
+
     useEffect(() => {
+        const namespaceChanged = previousNamespaceRef.current !== undefined
+            && previousNamespaceRef.current !== params.namespace;
+        previousNamespaceRef.current = params.namespace;
+
+        if (namespaceChanged) {
+            setSelectedReadModel(null);
+            setSelectedOccurrence(null);
+            setSelectedInstance(null);
+            setPage(0);
+            navigate(`/event-store/${params.eventStore}/${params.namespace}/read-models`, { replace: true });
+            return;
+        }
+
         if (params.readModel && allReadModels.data.length > 0 && !selectedReadModel) {
             const readModel = allReadModels.data.find(rm => rm.identifier === params.readModel);
             if (readModel) {
