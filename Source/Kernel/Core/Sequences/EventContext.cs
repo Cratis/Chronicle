@@ -34,4 +34,15 @@ public record EventContext(
     Identity CausedBy,
     IEnumerable<string> Tags,
     EventHash Hash,
-    EventObservationState ObservationState);
+    EventObservationState ObservationState)
+{
+    /// <summary>
+    /// Gets the subject the event is about - the compliance identity. Defaults to the event source id when no
+    /// explicit subject was appended.
+    /// </summary>
+    /// <remarks>
+    /// Declared in the body rather than on the primary constructor so the existing constructor and deconstruction
+    /// shape stay exactly as they were.
+    /// </remarks>
+    public string Subject { get; init; } = string.Empty;
+}

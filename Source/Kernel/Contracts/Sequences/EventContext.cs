@@ -91,4 +91,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(13)]
     public global::Cratis.Chronicle.Contracts.Events.EventObservationState ObservationState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(14)]
+    public string Subject { get; set; }
 }

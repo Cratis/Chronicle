@@ -42,6 +42,42 @@ Declaring several event types under one name makes them a single constraint, and
 
 The [model-bound form](../model-bound/unique-event-type) expresses the same thing with `[RemoveConstraint]` on the event that ends the cycle.
 
+## Scoping the constraint
+
+By default the rule is "at most one per event source identifier", wherever the event is appended. Some rules are narrower than that: one open loan per borrower **per branch**, one active session per user **per device type**. Call `PerEventStreamId()`, `PerEventStreamType()` or `PerEventSourceType()` before declaring the constraint and it holds one cycle per value of that dimension instead of one for the event source as a whole:
+
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/scoping" />
+
+The dimensions of the event being appended decide which cycle it belongs to:
+
+| Scope | One cycle per |
+|---|---|
+| *(none)* | event source identifier |
+| `PerEventSourceType()` | event source identifier + event source type |
+| `PerEventStreamType()` | event source identifier + event stream type |
+| `PerEventStreamId()` | event source identifier + event stream id |
+
+Chain several of them and every declared dimension has to match for two events to share a cycle — one differing dimension is a different cycle.
+
+Scoping narrows the rule; it never weakens it. Within one scope the constraint behaves exactly as an unscoped one: a second covered event is refused, and only a removal event **in that same scope** opens the next cycle. A removal appended elsewhere — another branch, another stream type — leaves this scope's cycle exactly as it was.
+
+### Custom storage providers
+
+Scoping is enforced by the storage provider, so a provider has to be able to see which scope an append belongs to. The storage interface `IUniqueEventTypesConstraintsStorage` therefore has two members:
+
+| Member | Narrows by | Who should implement it |
+|---|---|---|
+| `IsAllowedWithinScope(definition, eventSourceId, scope)` | the appending event's typed dimension values | every provider |
+| `IsAllowed(definition, eventSourceId, scopeKey)` | a single flattened string key | every provider, for compatibility — it stays abstract on the interface |
+
+The engine only ever calls `IsAllowedWithinScope`. A provider that implements just `IsAllowed` still works: the interface's default implementation flattens the scope into exactly the key that provider already received, so its behavior is carried over unchanged. It is not thereby corrected — a flattened key cannot tell two scopes apart when a dimension value contains the characters the key joins on, and that is the whole reason the typed member exists. **Scoped isolation is guaranteed only for providers that implement `IsAllowedWithinScope`.** If you maintain a custom provider and rely on scoping, implement it. Because `IsAllowed` stays abstract, a new provider still has to supply it too — a small legacy wrapper is enough: an empty or omitted key answers the unscoped lookup through `IsAllowedWithinScope`; a non-empty key has no typed dimensions to reconstruct, so it should fail closed with `NotSupportedException` rather than guess.
+
+The providers shipped with Chronicle — MongoDB, SQL and in-memory — implement the typed member and narrow natively per dimension. Calling their `IsAllowed` with a non-empty key throws `NotSupportedException` rather than answering against a scope it cannot reconstruct; an empty or omitted key is an unscoped lookup and is answered as one.
+
+## Appending several events at once
+
+A constraint is checked against everything the append will produce, not only what is already stored. When you append several events in a single call, each event is checked in order against the events before it in that same call, so two covered events for the same event source (and scope) in one call are refused just as they would be across two separate calls — and a removal event earlier in the call opens the next cycle for a covered event later in it. Either the whole call is appended or none of it is.
+
 ## Mutually exclusive event types
 
 Declare several event types under the **same constraint name** and they become one constraint: at most one event drawn from that set is allowed per event source. Use it when an event source has more than one terminal outcome and the outcomes exclude each other — cancelled *or* completed, merged *or* erased, approved *or* permanently rejected.

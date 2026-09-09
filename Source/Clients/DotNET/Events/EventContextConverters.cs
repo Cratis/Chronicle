@@ -32,7 +32,8 @@ internal static class EventContextConverters
         CausedBy = context.CausedBy.ToContract(),
         Tags = context.Tags.Select(_ => _.Value).ToArray(),
         Hash = context.Hash,
-        ObservationState = context.ObservationState.ToContract()
+        ObservationState = context.ObservationState.ToContract(),
+        Subject = context.Subject?.Value ?? string.Empty
     };
 
     /// <summary>
@@ -56,7 +57,7 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash,
         context.ObservationState.ToClient(),
-        Subject: new Subject(context.EventSourceId));
+        Subject: ResolveSubject(context.Subject, context.EventSourceId));
 
     /// <summary>
     /// Convert to Chronicle version of <see cref="EventContext"/>.
@@ -85,5 +86,20 @@ internal static class EventContextConverters
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash ?? EventHash.NotSet,
         context.ObservationState.ToClient(),
-        Subject: new Subject(context.EventSourceId));
+        Subject: ResolveSubject(context.Subject, context.EventSourceId));
+
+    /// <summary>
+    /// Resolves the <see cref="Subject"/> a server sent, falling back to the event source id when the server did not carry one.
+    /// </summary>
+    /// <param name="subject">The subject as carried on the contract.</param>
+    /// <param name="eventSourceId">The event source id to fall back to.</param>
+    /// <returns>The resolved <see cref="Subject"/>.</returns>
+    /// <remarks>
+    /// The fallback exists only for a server that predates the subject member on the contract, where an absent value
+    /// meant "the subject is the event source id". An explicitly carried subject is never replaced by the event source id.
+    /// </remarks>
+    static Subject ResolveSubject(string? subject, string eventSourceId) =>
+        string.IsNullOrEmpty(subject)
+            ? new Subject(eventSourceId)
+            : new Subject(subject);
 }

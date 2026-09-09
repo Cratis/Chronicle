@@ -27,7 +27,8 @@ internal static class EventContextConverters
         CausedBy = context.CausedBy.ToContract(),
         Tags = context.Tags.ToList(),
         Hash = context.Hash,
-        ObservationState = context.ObservationState.ToContract()
+        ObservationState = context.ObservationState.ToContract(),
+        Subject = context.Subject
     };
 
     /// <summary>
@@ -48,7 +49,10 @@ internal static class EventContextConverters
         context.CausedBy.ToApi(),
         context.Tags.Select(tag => tag.Value),
         context.Hash,
-        context.ObservationState);
+        context.ObservationState)
+    {
+        Subject = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value
+    };
 
     static Contracts.Events.EventObservationState ToContract(this Concepts.Events.EventObservationState state) => state switch
     {

@@ -22,7 +22,7 @@ public class and_a_covered_event_followed_the_release : given.a_unique_event_typ
         await Append(2, _checkedOutEventType, _borrower);
     }
 
-    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowed(DefinitionReleasedByReturn, _borrower);
+    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowedWithinScope(DefinitionReleasedByReturn, _borrower);
 
     [Fact] void should_not_be_allowed() => _isAllowed.ShouldBeFalse();
     [Fact] void should_report_the_sequence_number_from_the_current_cycle() => _sequenceNumber.ShouldEqual((EventSequenceNumber)2U);

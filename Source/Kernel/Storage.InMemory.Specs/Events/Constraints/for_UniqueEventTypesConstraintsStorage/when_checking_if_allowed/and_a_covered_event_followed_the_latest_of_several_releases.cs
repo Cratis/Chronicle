@@ -26,7 +26,7 @@ public class and_a_covered_event_followed_the_latest_of_several_releases : given
         await Append(4, _checkedOutEventType, _borrower);
     }
 
-    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowed(DefinitionReleasedByReturnOrWriteOff, _borrower);
+    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowedWithinScope(DefinitionReleasedByReturnOrWriteOff, _borrower);
 
     [Fact] void should_not_be_allowed() => _isAllowed.ShouldBeFalse();
     [Fact] void should_report_the_covered_event_that_holds_the_open_cycle() => _sequenceNumber.ShouldEqual((EventSequenceNumber)4U);
