@@ -49,9 +49,7 @@ public class EventSequenceMigrator(
                 ContentHashes = table.StringColumn(migrationBuilder),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
-                Tags = table.StringColumn(migrationBuilder),
-                Revisions = table.StringColumn(migrationBuilder, nullable: false, defaultValue: string.Empty),
-                LastMutationOrdinal = table.NumberColumn<long>(migrationBuilder, nullable: false, defaultValue: 0L)
+                Tags = table.StringColumn(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.SequenceNumber));
 
@@ -80,55 +78,25 @@ public class EventSequenceMigrator(
             table: tableName,
             columns: ["EventStreamType", "EventStreamId"]);
 
-        migrationBuilder.CreateIndex(
-            name: $"IX_{tableName}_LastMutationOrdinal_SequenceNumber",
-            table: tableName,
-            columns: [nameof(EventEntry.LastMutationOrdinal), nameof(EventEntry.SequenceNumber)]);
-
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
     async Task UpgradeTable(EventSequenceDbContext context, string tableName)
     {
+        if (await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
+        {
+            return;
+        }
+
+        logger.AddingTagsColumn(tableName);
+
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.AddColumn<string>(
+            name: nameof(EventEntry.Tags),
+            table: tableName,
+            nullable: false,
+            defaultValue: string.Empty);
 
-        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
-        {
-            logger.AddingTagsColumn(tableName);
-            migrationBuilder.AddColumn<string>(
-                name: nameof(EventEntry.Tags),
-                table: tableName,
-                nullable: false,
-                defaultValue: string.Empty);
-        }
-
-        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Revisions)))
-        {
-            logger.AddingRevisionsColumn(tableName);
-            migrationBuilder.AddColumn<string>(
-                name: nameof(EventEntry.Revisions),
-                table: tableName,
-                nullable: false,
-                defaultValue: string.Empty);
-        }
-
-        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.LastMutationOrdinal)))
-        {
-            logger.AddingLastMutationOrdinalColumnAndIndex(tableName);
-            migrationBuilder.AddColumn<long>(
-                name: nameof(EventEntry.LastMutationOrdinal),
-                table: tableName,
-                nullable: false,
-                defaultValue: 0L);
-            migrationBuilder.CreateIndex(
-                name: $"IX_{tableName}_LastMutationOrdinal_SequenceNumber",
-                table: tableName,
-                columns: [nameof(EventEntry.LastMutationOrdinal), nameof(EventEntry.SequenceNumber)]);
-        }
-
-        if (migrationBuilder.Operations.Count > 0)
-        {
-            await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
-        }
+        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 }

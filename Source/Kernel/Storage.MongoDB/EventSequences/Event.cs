@@ -41,11 +41,5 @@ public record Event(
     IDictionary<string, BsonDocument> Content,
     IDictionary<string, string> ContentHashes,
     IEnumerable<EventRevision> Revisions,
-    Subject? Subject = null)
-{
-    /// <summary>
-    /// Gets the ordinal of the last mutation applied to the event.
-    /// </summary>
-    public long LastMutationOrdinal { get; init; }
-}
+    Subject? Subject = null);
 
