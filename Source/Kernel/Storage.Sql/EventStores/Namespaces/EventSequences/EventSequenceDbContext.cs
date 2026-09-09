@@ -72,6 +72,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
             entity.HasIndex(e => e.SequenceNumber);
             entity.HasIndex(e => e.EventSourceId);
             entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => new { e.LastMutationOrdinal, e.SequenceNumber });
             entity.Property(e => e.SequenceNumber).IsRequired().ValueGeneratedNever();
             entity.Property(e => e.EventSourceId).IsRequired();
             entity.Property(e => e.EventSourceType).IsRequired();
@@ -79,6 +80,8 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
             entity.Property(e => e.EventStreamType).IsRequired();
             entity.Property(e => e.Type).IsRequired();
             entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.Revisions).IsRequired().HasDefaultValue(string.Empty);
+            entity.Property(e => e.LastMutationOrdinal).IsRequired().HasDefaultValue(0L);
             entity.Property(e => e.Occurred).IsRequired();
         });
     }

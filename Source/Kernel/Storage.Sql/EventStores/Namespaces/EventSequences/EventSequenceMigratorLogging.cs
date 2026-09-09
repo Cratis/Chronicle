@@ -15,4 +15,10 @@ internal static partial class EventSequenceMigratorLogging
 
     [LoggerMessage(LogLevel.Information, "Adding Tags column to existing event sequence table {TableName}")]
     internal static partial void AddingTagsColumn(this ILogger<EventSequenceMigrator> logger, string tableName);
+
+    [LoggerMessage(LogLevel.Information, "Adding Revisions column to existing event sequence table {TableName}")]
+    internal static partial void AddingRevisionsColumn(this ILogger<EventSequenceMigrator> logger, string tableName);
+
+    [LoggerMessage(LogLevel.Information, "Adding LastMutationOrdinal column and ordinal-sequence index to existing event sequence table {TableName}")]
+    internal static partial void AddingLastMutationOrdinalColumnAndIndex(this ILogger<EventSequenceMigrator> logger, string tableName);
 }

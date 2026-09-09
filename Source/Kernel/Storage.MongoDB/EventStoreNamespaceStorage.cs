@@ -10,6 +10,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
@@ -17,6 +18,7 @@ using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Changes;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
@@ -108,6 +110,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ReplayedReadModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
         EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
         ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase, jsonSerializerOptions);
+        EventSequenceMutations = new EventSequenceMutationRegistry(eventStore, @namespace, eventStoreNamespaceDatabase);
 
         _converter = new EventConverter(
             eventStore,
@@ -164,6 +167,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IProjectionFuturesStorage ProjectionFutures { get; }
+
+    /// <inheritdoc/>
+    public IEventSequenceMutationRegistry EventSequenceMutations { get; }
 
     /// <inheritdoc/>
     /// <remarks>
