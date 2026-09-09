@@ -28,10 +28,10 @@ public class and_the_constraint_is_unscoped(MongoDBFixture fixture) : given.a_un
 
     async Task Because()
     {
-        (_isAllowedElsewhere, _sequenceNumberElsewhere) = await _storage.IsAllowed(DefinitionReleasedByReturn, _borrower, ScopeFor(DefinitionReleasedByReturn, eventStreamId: _anotherBranch));
+        (_isAllowedElsewhere, _sequenceNumberElsewhere) = await _storage.IsAllowedWithinScope(DefinitionReleasedByReturn, _borrower, ScopeFor(DefinitionReleasedByReturn, eventStreamId: _anotherBranch));
 
         await Append(_returnedEventType, _borrower, eventStreamId: _anotherBranch);
-        (_isAllowedAfterARemovalElsewhere, _) = await _storage.IsAllowed(DefinitionReleasedByReturn, _borrower, ScopeFor(DefinitionReleasedByReturn, eventStreamId: _thisBranch));
+        (_isAllowedAfterARemovalElsewhere, _) = await _storage.IsAllowedWithinScope(DefinitionReleasedByReturn, _borrower, ScopeFor(DefinitionReleasedByReturn, eventStreamId: _thisBranch));
     }
 
     [Fact] void should_not_allow_a_covered_event_appended_with_other_dimensions() => _isAllowedElsewhere.ShouldBeFalse();

@@ -32,7 +32,7 @@ public class and_scopes_that_would_collide_under_a_flat_key_are_claimed_in_the_s
     void Establish()
     {
         var storage = Substitute.For<IUniqueEventTypesConstraintsStorage>();
-        storage.IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
+        storage.IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((true, EventSequenceNumber.Unavailable));
 
         var definition = new UniqueEventTypeConstraintDefinition(

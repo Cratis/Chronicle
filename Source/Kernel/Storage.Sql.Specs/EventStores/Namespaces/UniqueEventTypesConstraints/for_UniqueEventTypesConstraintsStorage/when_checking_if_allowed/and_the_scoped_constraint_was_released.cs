@@ -28,10 +28,10 @@ public class and_the_scoped_constraint_was_released : given.a_unique_event_types
 
     async Task Because()
     {
-        (_isAllowedAfterAReleaseOnAnotherStream, _sequenceNumberAfterAReleaseOnAnotherStream) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventStreamId: _thisBranch));
+        (_isAllowedAfterAReleaseOnAnotherStream, _sequenceNumberAfterAReleaseOnAnotherStream) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventStreamId: _thisBranch));
 
         await Append(_returnedEventType, _borrower, eventStreamId: _thisBranch);
-        (_isAllowedAfterAReleaseOnTheSameStream, _) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventStreamId: _thisBranch));
+        (_isAllowedAfterAReleaseOnTheSameStream, _) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventStreamId: _thisBranch));
     }
 
     [Fact] void should_not_let_a_release_on_another_stream_open_this_cycle() => _isAllowedAfterAReleaseOnAnotherStream.ShouldBeFalse();

@@ -26,7 +26,7 @@ public class and_two_different_event_sources_are_claimed_in_the_same_batch : Spe
     void Establish()
     {
         var storage = Substitute.For<IUniqueEventTypesConstraintsStorage>();
-        storage.IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
+        storage.IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((true, EventSequenceNumber.Unavailable));
 
         var definition = new UniqueEventTypeConstraintDefinition("loan-open", [_checkedOutEventType.Id]);

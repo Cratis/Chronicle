@@ -27,8 +27,8 @@ public class and_the_constraint_is_scoped_to_the_event_source_type(MongoDBFixtur
 
     async Task Because()
     {
-        (_isAllowedForTheSameEventSourceType, _sequenceNumberForTheSameEventSourceType) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventSourceType: _loan));
-        (_isAllowedForAnotherEventSourceType, _) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventSourceType: _reservation));
+        (_isAllowedForTheSameEventSourceType, _sequenceNumberForTheSameEventSourceType) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventSourceType: _loan));
+        (_isAllowedForAnotherEventSourceType, _) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventSourceType: _reservation));
     }
 
     [Fact] void should_not_allow_a_covered_event_for_the_same_event_source_type() => _isAllowedForTheSameEventSourceType.ShouldBeFalse();

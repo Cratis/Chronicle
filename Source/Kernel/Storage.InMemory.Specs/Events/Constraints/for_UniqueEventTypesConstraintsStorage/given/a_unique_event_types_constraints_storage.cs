@@ -54,7 +54,7 @@ public class a_unique_event_types_constraints_storage : Specification
     /// builds it: <see cref="UniqueEventTypeConstraintDefinition.Scope"/> only records which dimensions participate,
     /// each marked with the presence marker <c>ConstraintBuilder.GetScope</c> writes, never a real value. Which
     /// scope an append falls into is decided by the <see cref="ResolvedConstraintScope"/> passed to
-    /// <c>IsAllowed</c>, built from the appending event's own dimension values by <see cref="ScopeFor"/> exactly as
+    /// <c>IsAllowedWithinScope</c>, built from the appending event's own dimension values by <see cref="ScopeFor"/> exactly as
     /// <c>UniqueEventTypeConstraintValidator</c> builds it for a real append.
     /// </summary>
     /// <param name="scope">The <see cref="ConstraintScope"/> declaring the participating dimensions.</param>

@@ -27,8 +27,8 @@ public class and_the_constraint_is_scoped_to_the_event_stream_id(MongoDBFixture 
 
     async Task Because()
     {
-        (_isAllowedOnTheSameStream, _sequenceNumberOnTheSameStream) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventStreamId: _thisBranch));
-        (_isAllowedOnAnotherStream, _) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventStreamId: _anotherBranch));
+        (_isAllowedOnTheSameStream, _sequenceNumberOnTheSameStream) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventStreamId: _thisBranch));
+        (_isAllowedOnAnotherStream, _) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventStreamId: _anotherBranch));
     }
 
     [Fact] void should_not_allow_a_covered_event_on_the_same_stream() => _isAllowedOnTheSameStream.ShouldBeFalse();

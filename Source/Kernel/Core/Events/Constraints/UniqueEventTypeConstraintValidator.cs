@@ -54,7 +54,9 @@ public class UniqueEventTypeConstraintValidator(
         // The whole definition goes to storage rather than only its covered event types, because the answer also
         // depends on the removal event: a covered event that precedes the most recent removal belongs to a closed
         // cycle and no longer blocks anything.
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(definition, context.EventSourceId, scope);
+        // Deliberately the typed member. A provider that only implements the original string-keyed one still
+        // answers, through the interface's default implementation, with the exact key it used to be given.
+        var (isAllowed, sequenceNumber) = await storage.IsAllowedWithinScope(definition, context.EventSourceId, scope);
 
         // The persisted index does not yet reflect events earlier in the same batch, so also reconcile against
         // the in-batch cycle state to catch two covered (or duplicate) events for the same event source in one

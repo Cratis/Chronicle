@@ -23,7 +23,7 @@ public class and_the_constraint_was_released(MongoDBFixture fixture) : given.a_u
         await Append(_returnedEventType, _borrower);
     }
 
-    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowed(DefinitionReleasedByReturn, _borrower);
+    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowedWithinScope(DefinitionReleasedByReturn, _borrower);
 
     [Fact] void should_be_allowed() => _isAllowed.ShouldBeTrue();
     [Fact] void should_have_no_sequence_number_to_report() => _sequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);

@@ -27,7 +27,7 @@ public class and_a_covered_event_is_followed_by_its_removal_in_the_batch : Speci
     void Establish()
     {
         var storage = Substitute.For<IUniqueEventTypesConstraintsStorage>();
-        storage.IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
+        storage.IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((true, EventSequenceNumber.Unavailable));
 
         var definition = new UniqueEventTypeConstraintDefinition("shift-open", [_startedEventType.Id], [_endedEventType.Id]);

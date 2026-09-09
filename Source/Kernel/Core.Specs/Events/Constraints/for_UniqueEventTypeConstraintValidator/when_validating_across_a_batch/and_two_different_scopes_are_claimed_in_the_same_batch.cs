@@ -29,7 +29,7 @@ public class and_two_different_scopes_are_claimed_in_the_same_batch : Specificat
     void Establish()
     {
         var storage = Substitute.For<IUniqueEventTypesConstraintsStorage>();
-        storage.IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
+        storage.IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((true, EventSequenceNumber.Unavailable));
 
         var definition = new UniqueEventTypeConstraintDefinition(

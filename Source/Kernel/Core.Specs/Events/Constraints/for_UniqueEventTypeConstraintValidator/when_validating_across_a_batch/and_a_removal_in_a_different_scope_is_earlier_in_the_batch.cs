@@ -28,7 +28,7 @@ public class and_a_removal_in_a_different_scope_is_earlier_in_the_batch : Specif
     void Establish()
     {
         var storage = Substitute.For<IUniqueEventTypesConstraintsStorage>();
-        storage.IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
+        storage.IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((true, EventSequenceNumber.Unavailable));
 
         var definition = new UniqueEventTypeConstraintDefinition(

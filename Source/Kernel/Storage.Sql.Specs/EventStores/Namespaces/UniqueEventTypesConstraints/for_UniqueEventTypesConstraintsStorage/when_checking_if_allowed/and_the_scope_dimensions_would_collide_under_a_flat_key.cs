@@ -25,7 +25,7 @@ public class and_the_scope_dimensions_would_collide_under_a_flat_key : given.a_u
 
     async Task Establish() => await Append(_checkedOutEventType, _borrower, _appendedSourceType, _appendedStreamType);
 
-    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, _validatedSourceType, _validatedStreamType));
+    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, _validatedSourceType, _validatedStreamType));
 
     [Fact] void should_allow_the_covered_event_in_the_genuinely_different_scope() => _isAllowed.ShouldBeTrue();
     [Fact] void should_have_no_sequence_number_to_report() => _sequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);

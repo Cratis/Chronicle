@@ -27,11 +27,11 @@ public class and_event_type_for_event_source_id_is_allowed_with_scope : Specific
         _validator = new UniqueEventTypeConstraintValidator(definition, _storage);
         _context = new([], EventSourceId.New(), eventType.Id, new ExpandoObject(), eventSourceType: "MySourceType");
 
-        _storage.IsAllowed(Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.EventTypeIds.Contains(eventType.Id)), _context.EventSourceId, new ResolvedConstraintScope(EventSourceType: "MySourceType")).Returns((true, EventSequenceNumber.First));
+        _storage.IsAllowedWithinScope(Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.EventTypeIds.Contains(eventType.Id)), _context.EventSourceId, new ResolvedConstraintScope(EventSourceType: "MySourceType")).Returns((true, EventSequenceNumber.First));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);
 
     [Fact] void should_be_valid() => _result.IsValid.ShouldBeTrue();
-    [Fact] void should_pass_the_resolved_scope_to_storage() => _storage.Received(1).IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), new ResolvedConstraintScope(EventSourceType: "MySourceType"));
+    [Fact] void should_pass_the_resolved_scope_to_storage() => _storage.Received(1).IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), new ResolvedConstraintScope(EventSourceType: "MySourceType"));
 }

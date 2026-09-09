@@ -11,7 +11,7 @@ public class and_event_type_for_event_source_id_is_not_allowed : given.a_unique_
 
     void Establish()
     {
-        _storage.IsAllowed(Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.EventTypeIds.Contains(_eventType.Id)), _context.EventSourceId).Returns((false, 43U));
+        _storage.IsAllowedWithinScope(Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.EventTypeIds.Contains(_eventType.Id)), _context.EventSourceId).Returns((false, 43U));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);

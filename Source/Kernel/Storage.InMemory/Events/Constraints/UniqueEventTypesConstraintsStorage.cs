@@ -20,8 +20,33 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 public class UniqueEventTypesConstraintsStorage(
     EventSequenceStorage eventSequenceStorage) : IUniqueEventTypesConstraintsStorage
 {
+    const string FlattenedScopeKeyNotSupported =
+        "This storage narrows a scoped unique event type constraint by typed dimensions and cannot answer a flattened scope key. Call IsAllowedWithinScope with a ResolvedConstraintScope instead.";
+
     /// <inheritdoc/>
+    /// <remarks>
+    /// Kept so that a caller compiled against the original interface still binds. An empty or absent key means
+    /// nothing is narrowed, which is exactly an unscoped typed lookup and is answered as one. A non-empty key is
+    /// refused rather than interpreted: this storage decides scope from typed dimension values, and a flattened
+    /// key cannot be turned back into them without reintroducing the aliasing it exists to avoid. Refusing is a
+    /// behavior change for a caller that used to pass a real key straight to this class - that call was silently
+    /// answered against the wrong cycle before, so there is no correct behavior to preserve.
+    /// <para>
+    /// The key never reaches the message. It is built from event source type, stream type and stream id, which are
+    /// caller data and potentially personal.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="NotSupportedException">Thrown when a non-empty flattened scope key is supplied.</exception>
     public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(
+        UniqueEventTypeConstraintDefinition definition,
+        EventSourceId eventSourceId,
+        string scopeKey = "") =>
+        string.IsNullOrEmpty(scopeKey)
+            ? IsAllowedWithinScope(definition, eventSourceId)
+            : throw new NotSupportedException(FlattenedScopeKeyNotSupported);
+
+    /// <inheritdoc/>
+    public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowedWithinScope(
         UniqueEventTypeConstraintDefinition definition,
         EventSourceId eventSourceId,
         ResolvedConstraintScope? scope = null)

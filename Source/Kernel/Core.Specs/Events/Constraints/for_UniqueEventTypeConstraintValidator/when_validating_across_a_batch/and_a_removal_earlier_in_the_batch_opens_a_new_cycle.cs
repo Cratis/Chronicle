@@ -31,7 +31,7 @@ public class and_a_removal_earlier_in_the_batch_opens_a_new_cycle : Specificatio
 
         // Durable, pre-batch history still shows an unresolved cycle - the removal below only releases it
         // within the batch, not in storage, which is only updated after the whole batch is durably appended.
-        storage.IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
+        storage.IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((false, (EventSequenceNumber)0U));
 
         var definition = new UniqueEventTypeConstraintDefinition("shift-open", [_startedEventType.Id], [_endedEventType.Id]);

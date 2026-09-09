@@ -24,8 +24,8 @@ public class and_the_constraint_is_scoped_to_the_event_stream_type : given.a_uni
 
     async Task Because()
     {
-        (_isAllowedForTheSameEventStreamType, _sequenceNumberForTheSameEventStreamType) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventStreamType: _loans));
-        (_isAllowedForAnotherEventStreamType, _) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, eventStreamType: _reservations));
+        (_isAllowedForTheSameEventStreamType, _sequenceNumberForTheSameEventStreamType) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventStreamType: _loans));
+        (_isAllowedForAnotherEventStreamType, _) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, eventStreamType: _reservations));
     }
 
     [Fact] void should_not_allow_a_covered_event_on_the_same_event_stream_type() => _isAllowedForTheSameEventStreamType.ShouldBeFalse();

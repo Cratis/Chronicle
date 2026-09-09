@@ -26,8 +26,8 @@ public class and_the_constraint_is_scoped_to_every_dimension : given.a_unique_ev
 
     async Task Because()
     {
-        (_isAllowedForTheSameTuple, _sequenceNumberForTheSameTuple) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, _loan, _loans, _thisBranch));
-        (_isAllowedWhenOneDimensionDiffers, _) = await _storage.IsAllowed(_definition, _borrower, ScopeFor(_definition, _loan, _loans, _anotherBranch));
+        (_isAllowedForTheSameTuple, _sequenceNumberForTheSameTuple) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, _loan, _loans, _thisBranch));
+        (_isAllowedWhenOneDimensionDiffers, _) = await _storage.IsAllowedWithinScope(_definition, _borrower, ScopeFor(_definition, _loan, _loans, _anotherBranch));
     }
 
     [Fact] void should_not_allow_a_covered_event_with_the_same_dimensions() => _isAllowedForTheSameTuple.ShouldBeFalse();
