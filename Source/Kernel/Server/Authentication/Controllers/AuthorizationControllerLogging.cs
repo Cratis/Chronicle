@@ -26,6 +26,9 @@ internal static partial class AuthorizationControllerLogging
     [LoggerMessage(LogLevel.Debug, "Client credentials validated successfully for ClientId: {ClientId}")]
     internal static partial void ClientCredentialsValidated(this ILogger<AuthorizationController> logger, string clientId);
 
+    [LoggerMessage(LogLevel.Warning, "Rejecting token request: application has no stable identifier for ClientId: {ClientId}")]
+    internal static partial void ApplicationHasNoStableIdentifier(this ILogger<AuthorizationController> logger, string clientId);
+
     [LoggerMessage(LogLevel.Debug, "Processing password grant for user: {Username}")]
     internal static partial void ProcessingPasswordGrant(this ILogger<AuthorizationController> logger, string username);
 
@@ -34,6 +37,9 @@ internal static partial class AuthorizationControllerLogging
 
     [LoggerMessage(LogLevel.Debug, "Password validated successfully for user: {Username}")]
     internal static partial void PasswordValidated(this ILogger<AuthorizationController> logger, string username);
+
+    [LoggerMessage(LogLevel.Warning, "Rejecting password grant: user has no stable identifier")]
+    internal static partial void PasswordGrantUserHasNoStableIdentifier(this ILogger<AuthorizationController> logger);
 
     [LoggerMessage(LogLevel.Debug, "Processing refresh token grant")]
     internal static partial void ProcessingRefreshTokenGrant(this ILogger<AuthorizationController> logger);

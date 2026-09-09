@@ -21,20 +21,11 @@ public class FailedPartitionStorage(
     IDatabase database) : IFailedPartitionsStorage
 {
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Concepts.Observation.FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
-    {
-        // For SQL implementation, we'll create a simple subject that provides current data
-        // This could be enhanced with actual database change tracking in the future
-        var subject = new BehaviorSubject<IEnumerable<Concepts.Observation.FailedPartition>>([]);
-
-        Task.Run(async () =>
-        {
-            var failedPartitions = await GetFor(observerId);
-            subject.OnNext(failedPartitions.Partitions);
-        });
-
-        return subject;
-    }
+    public ISubject<IEnumerable<Concepts.Observation.FailedPartition>> ObserveAllFor(ObserverId? observerId = default) =>
+        LiveQuery.Observe(
+            async () => (await GetFor(observerId)).Partitions.OrderBy(_ => _.Id.Value),
+            database.LiveQueryPollingInterval,
+            FailedPartitionEqualityComparer.Instance);
 
     /// <inheritdoc/>
     public async Task Save(ObserverId observerId, Concepts.Observation.FailedPartitions failedPartitions)

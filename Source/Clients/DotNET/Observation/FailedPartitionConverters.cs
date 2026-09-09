@@ -19,7 +19,11 @@ internal static class FailedPartitionConverters
             failedPartition.Id,
             failedPartition.ObserverId,
             failedPartition.Partition,
-            failedPartition.Attempts.Select(_ => _.ToClient()));
+            failedPartition.Attempts.Select(_ => _.ToClient()))
+        {
+            IsResolved = failedPartition.IsResolved,
+            IsQuarantined = failedPartition.IsQuarantined
+        };
     }
 
     /// <summary>

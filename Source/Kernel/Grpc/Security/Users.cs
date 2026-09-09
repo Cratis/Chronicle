@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Services.Security;
 internal sealed class Users(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
+    global::Microsoft.Extensions.Options.IOptions<global::Cratis.Chronicle.Configuration.ChronicleOptions> optionsOfChronicleOptions,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Security.Users> logger) : global::Cratis.Chronicle.Contracts.Security.IUsers
 {
     /// <inheritdoc/>
@@ -44,17 +45,19 @@ internal sealed class Users(
             new global::Cratis.Chronicle.Security.RequirePasswordChange((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId));
 
     /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetInitialAdminPassword(global::Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
             new global::Cratis.Chronicle.Security.SetInitialAdminPassword((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId, (global::Cratis.Chronicle.Concepts.Security.Password)request.Password, (global::Cratis.Chronicle.Concepts.Security.Password)request.ConfirmedPassword));
 
     /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse>> GetStatus(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Security.AdminPasswordStatusResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Security.AdminPasswordStatus.GetStatus(storage);
+                var result = await global::Cratis.Chronicle.Security.AdminPasswordStatus.GetStatus(storage, optionsOfChronicleOptions);
                 return ToAdminPasswordStatusResponse(result);
             },
             exception => logger.QueryFailed(exception, "Users", "GetStatus"));
@@ -71,7 +74,8 @@ internal sealed class Users(
         new()
         {
             IsRequired = source.IsRequired,
-            AdminUserId = source.AdminUserId
+            AdminUserId = source.AdminUserId,
+            AdminUsername = source.AdminUsername
         };
 
     static global::Cratis.Chronicle.Contracts.Security.UserResponse ToUserResponse(global::Cratis.Chronicle.Security.User source) =>

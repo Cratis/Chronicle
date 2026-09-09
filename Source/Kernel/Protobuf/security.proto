@@ -17,6 +17,7 @@ message AddUserRequest {
 message AdminPasswordStatusResponse {
    bool IsRequired = 1;
    .bcl.Guid AdminUserId = 2;
+   string AdminUsername = 3;
 }
 message ApplicationResponse {
    .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000

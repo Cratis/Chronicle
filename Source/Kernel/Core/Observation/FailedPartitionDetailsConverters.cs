@@ -26,7 +26,11 @@ internal static class FailedPartitionDetailsConverters
             failedPartition.Id,
             failedPartition.ObserverId.ToString(),
             failedPartition.Partition.ToString(),
-            [.. failedPartition.Attempts.Select(ToReadModel)]);
+            [.. failedPartition.Attempts.Select(ToReadModel)])
+        {
+            IsResolved = failedPartition.IsResolved,
+            IsQuarantined = failedPartition.IsQuarantined
+        };
 
     /// <summary>
     /// Converts a failed-partition attempt to its read model representation.

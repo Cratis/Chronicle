@@ -47,7 +47,8 @@ public static class ImplementationMethods
                 $"Task<{CommandResultType}>",
                 command.Name,
                 parameters,
-                $"CommandExecutor.Execute(\n            {pipeline},\n            {construction})");
+                $"CommandExecutor.Execute(\n            {pipeline},\n            {construction})",
+                AllowsAnonymous(command.Type));
         }
 
         var mapping = MappingFor(responseType, command.Name, context);
@@ -57,7 +58,8 @@ public static class ImplementationMethods
             $"Task<{CommandResultType}<{mapping.ContractTypeName}>>",
             command.Name,
             parameters,
-            $"CommandExecutor.Execute<{QualifiedTypeName.For(responseType)}, {mapping.ContractTypeName}>(\n            {pipeline},\n            {construction},\n            response => {mapped})");
+            $"CommandExecutor.Execute<{QualifiedTypeName.For(responseType)}, {mapping.ContractTypeName}>(\n            {pipeline},\n            {construction},\n            response => {mapped})",
+            AllowsAnonymous(command.Type));
     }
 
     /// <summary>
@@ -81,7 +83,10 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        return QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context);
+        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context);
+        return AllowsAnonymous(readModelType) || AllowsAnonymous(method.Method)
+            ? source.Replace("    public ", "    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]\n    public ", StringComparison.Ordinal)
+            : source;
     }
 
     /// <summary>
@@ -323,10 +328,18 @@ public static class ImplementationMethods
             parameter.ParameterType,
             NullableAnnotations.IsNullable(parameter));
 
-    static string Method(string returnType, string name, string parameters, string body)
+    static bool AllowsAnonymous(MemberInfo member) => member.GetCustomAttributesData().Any(attribute =>
+        string.Equals(attribute.AttributeType.FullName, "Cratis.Arc.Authorization.AllowAnonymousAttribute", StringComparison.Ordinal) ||
+        string.Equals(attribute.AttributeType.FullName, "Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute", StringComparison.Ordinal));
+
+    static string Method(string returnType, string name, string parameters, string body, bool allowsAnonymous = false)
     {
         var builder = new StringBuilder();
         builder.AppendLine("    /// <inheritdoc/>");
+        if (allowsAnonymous)
+        {
+            builder.AppendLine("    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]");
+        }
         builder.AppendLine($"    public {returnType} {name}({parameters}) =>");
         builder.AppendLine($"        {body};");
         return builder.ToString();
