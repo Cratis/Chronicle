@@ -49,6 +49,17 @@ explicit subject is provided:
 
 An explicit `subject` argument always takes precedence over a `[Subject]` property. This declarative form is C#-only — Elixir, Kotlin, and Java pass the subject explicitly on every append (shown above), and TypeScript doesn't support a subject at all yet.
 
+## Reading the subject back
+
+The subject travels with the event. Whatever an event was appended with is what you get back on
+`EventContext.Subject` — both when reading an event sequence and when an observer such as a reactor
+or reducer is notified. When no explicit subject was supplied, that value is the `EventSourceId`,
+exactly as on append.
+
+This matters when an observer forwards an event onward: forwarding `context.Subject` keeps the
+original compliance identity, so the encryption key, erasure target and cross-store propagation stay
+with the person the event is about rather than with the stream it happened to be written to.
+
 ## Compliance
 
 When an event type declares `[PII]` properties, Chronicle encrypts those properties at append

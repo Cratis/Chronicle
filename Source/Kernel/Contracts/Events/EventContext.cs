@@ -101,4 +101,14 @@ public class EventContext
     /// </summary>
     [ProtoMember(15)]
     public string Hash { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the subject the event is about - the compliance identity.
+    /// </summary>
+    /// <remarks>
+    /// An empty value means the sender does not carry a subject on the wire; the receiver then falls back
+    /// to <see cref="EventSourceId"/>, which is the value an older server would have implied.
+    /// </remarks>
+    [ProtoMember(16)]
+    public string Subject { get; set; } = string.Empty;
 }

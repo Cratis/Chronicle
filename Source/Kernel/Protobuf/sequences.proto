@@ -190,6 +190,7 @@ message EventContext {
    repeated string Tags = 11;
    string Hash = 12;
    EventObservationState ObservationState = 13;
+   string Subject = 14;
 }
 message EventForEventSourceId {
    string EventSourceId = 1;
