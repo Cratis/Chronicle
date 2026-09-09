@@ -14,13 +14,11 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
-using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
@@ -40,8 +38,10 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// The internal implementation wires the real client <see cref="EventLog"/> to the real kernel
 /// <c>EventSequences</c> service backed by an <see cref="InProcessGrainFactory"/> that returns the
 /// real kernel <c>EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
-/// layer is in-memory. All business logic (constraint validation, hash calculation, event serialization,
-/// migration, compliance) runs through the actual kernel code paths.
+/// layer is in-memory. Constraint validation, hash calculation, event serialization and event compliance
+/// run through the actual kernel code paths. PII is protected in in-memory event storage and released on
+/// read with scenario-local keys and generation-specific schemas. Erasure and production read-model
+/// sink encryption are not supported by this scenario.
 /// </para>
 /// <para>
 /// Use the <see cref="Given"/> property to seed pre-existing events into the event log before
@@ -74,7 +74,7 @@ public class EventScenario(
     EventStoreNamespaceName namespaceName,
     ICanProvideConstraints? constraintProvider) : IDisposable
 {
-    readonly (EventLog EventLog, InProcessChronicleConnection Connection) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
+    readonly (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class.
@@ -143,12 +143,25 @@ public class EventScenario(
     /// <inheritdoc/>
     public void Dispose() => _created.Connection.Dispose();
 
-    static (EventLog EventLog, InProcessChronicleConnection Connection) CreateEventLog(
+    /// <summary>
+    /// Reads stored event JSON before compliance release, for the harness's own regression specs only.
+    /// </summary>
+    /// <param name="sequenceNumber">The stored event position.</param>
+    /// <returns>The protected event content.</returns>
+    internal async Task<string> ReadContentAtRest(EventSequenceNumber sequenceNumber)
+    {
+        var stored = await _created.Storage.GetEventAt((KernelConceptsNs::Events.EventSequenceNumber)sequenceNumber.Value);
+        return JsonSerializer.Serialize(stored.Content);
+    }
+
+    static (EventLog EventLog, InProcessChronicleConnection Connection, InMemoryEventSequenceStorage Storage) CreateEventLog(
         EventSequenceId eventSequenceId,
         EventStoreName eventStoreName,
         EventStoreNamespaceName namespaceName,
         ICanProvideConstraints? constraintProvider)
     {
+        var defaults = Defaults.Instance;
+        var compliance = new InProcessCompliance();
         var kernelEventSequenceId = (KernelSequenceConcepts::EventSequenceId)(string)eventSequenceId;
         var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)eventStoreName;
         var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)namespaceName;
@@ -160,7 +173,7 @@ public class EventScenario(
         var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
         var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
-        var eventTypesStorage = new InMemoryEventTypesStorage();
+        var eventTypesStorage = new InMemoryEventTypesStorage(() => defaults.EventTypes, defaults.JsonSchemaGenerator);
 
         var storage = new InMemoryStorage(
             eventSequenceStorage,
@@ -175,16 +188,13 @@ public class EventScenario(
             storage,
             kernelEventSequenceId,
             kernelEventStoreName,
-            kernelNamespaceName).GetAwaiter().GetResult();
+            kernelNamespaceName,
+            compliance).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
 
         var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        var eventCompliance = new KernelCore::Cratis.Chronicle.Events.EventCompliance(
-            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>(),
-                NullLogger<KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager>.Instance),
-            new ExpandoObjectConverter(new TypeFormats()));
+        var eventCompliance = compliance.CreateEventCompliance();
         var sequencesService = new KernelGrpc::Cratis.Chronicle.Services.Sequences.EventSequences(
             InProcessCommandPipeline.Create(
                 grainFactory,
@@ -194,7 +204,8 @@ public class EventScenario(
                 {
                     services.AddSingleton<IUnitOfWorkManager>(new NoOpUnitOfWorkManager());
                     services.AddSingleton<IEventLog>(new NoOpEventLog());
-                    services.AddSingleton(Defaults.Instance.EventTypes);
+                    services.AddSingleton(defaults.EventTypes);
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(eventCompliance);
                 }),
             storage,
             eventCompliance,
@@ -207,7 +218,6 @@ public class EventScenario(
         var services = new InProcessServices(sequencesService, constraintsService);
         var connection = new InProcessChronicleConnection(services);
 
-        var defaults = Defaults.Instance;
         var inProcessConstraints = new InProcessConstraints(resolvedConstraintProvider);
         inProcessConstraints.Discover().GetAwaiter().GetResult();
 
@@ -225,7 +235,7 @@ public class EventScenario(
             new BaseIdentityProvider(),
             jsonSerializerOptions);
 
-        return (eventLog, connection);
+        return (eventLog, connection, eventSequenceStorage);
     }
 
     static CompositeConstraintProvider CreateDiscoveredConstraintProvider()

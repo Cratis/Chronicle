@@ -38,7 +38,6 @@ import { AreDevelopmentToolsAvailable } from 'Features/DevelopmentTools';
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 import { Captures } from './General/Captures/Captures';
-// import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
     // The server decides: development tools are only compiled into development builds, so a
@@ -49,7 +48,6 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                // { label: 'Dashboard', url: ':namespace/dashboard', icon: mdIcons.MdSpaceDashboard },
                 { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
@@ -124,7 +122,6 @@ export const EventStore = () => {
 
                 <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'recommendations'} replace />} />
-                    {/* <Route path={'dashboard'} element={<Dashboard />} /> */}
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />

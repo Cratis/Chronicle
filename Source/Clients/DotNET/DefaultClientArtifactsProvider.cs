@@ -21,6 +21,8 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <remarks>
 /// This will use type discovery through the provided <see cref="ICanProvideAssembliesForDiscovery"/>.
+/// Concurrent readers wait until all artifacts have been initialized. Failed initialization is retried on the next access.
+/// Accessing artifacts from the initializing thread before initialization completes throws <see cref="ReentrantClientArtifactsInitialization"/>.
 /// </remarks>
 /// <remarks>
 /// Initializes a new instance of the <see cref="DefaultClientArtifactsProvider"/> class.
@@ -39,7 +41,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
 #else
     readonly Lock _initLock = new();
 #endif
-    bool _initialized;
+    volatile bool _initialized;
+    bool _initializing;
     IEnumerable<Type> _eventTypes = [];
     IEnumerable<Type> _projections = [];
     IEnumerable<Type> _modelBoundProjections = [];
@@ -217,6 +220,10 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         }
     }
 
+    /// <summary>
+    /// Ensures that all artifacts are initialized before they are published to readers.
+    /// </summary>
+    /// <exception cref="ReentrantClientArtifactsInitialization">Artifact access reenters initialization on the initializing thread.</exception>
     void EnsureInitialized()
     {
         if (_initialized) return;
@@ -225,24 +232,37 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         {
             if (_initialized) return;
 
-            _initialized = true;
-            assembliesProvider.Initialize();
-            _eventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>() || _.HasAttribute<EventTypeGenerationForAttribute>()).ToArray();
-            _complianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
-            _complianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
-            _projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-            _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
-            _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
-            _readModelReactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReadModelReactor>() && !_.IsGenericType).ToArray();
-            _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
-            _reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
-            _additionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
-            _constraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
-            _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
-            _uniqueEventTypeConstraints = _eventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
-            _removeConstraintEventTypes = _eventTypes.Where(_ => _.HasAttribute<RemoveConstraintAttribute>()).ToArray();
-            _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
-            _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
+            // Only the initializing thread can reenter this lock; other readers wait for it.
+            if (_initializing) throw new ReentrantClientArtifactsInitialization();
+
+            _initializing = true;
+            try
+            {
+                assembliesProvider.Initialize();
+                _eventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>() || _.HasAttribute<EventTypeGenerationForAttribute>()).ToArray();
+                _complianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
+                _complianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
+                _projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
+                _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
+                _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
+                _readModelReactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReadModelReactor>() && !_.IsGenericType).ToArray();
+                _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
+                _reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
+                _additionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
+                _constraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
+                _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
+                _uniqueEventTypeConstraints = _eventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
+                _removeConstraintEventTypes = _eventTypes.Where(_ => _.HasAttribute<RemoveConstraintAttribute>()).ToArray();
+                _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
+                _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
+
+                // Publish all artifact arrays together only after every discovery step succeeds.
+                _initialized = true;
+            }
+            finally
+            {
+                _initializing = false;
+            }
         }
     }
 }

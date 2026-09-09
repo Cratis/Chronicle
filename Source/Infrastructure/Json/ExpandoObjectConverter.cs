@@ -219,7 +219,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             // types with custom converters), fall back to unknown-type conversion for each element.
             if (schemaProperty.Item is null)
             {
-                return array.Select(_ => ConvertUnknownSchemaTypeToClrType(_!)).ToArray();
+                return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
             }
             return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item!)).ToArray();
         }
@@ -243,12 +243,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
     }
 
-    Dictionary<object, object> ToDictionary(JsonObject childObject)
+    Dictionary<string, object> ToDictionary(JsonObject childObject)
     {
-        var dictionary = new Dictionary<object, object>();
+        var dictionary = new Dictionary<string, object>(StringComparer.Ordinal);
         foreach (var (key, value) in childObject)
         {
-            dictionary[key] = ConvertUnknownSchemaTypeToClrType(value!)!;
+            dictionary[key] = ConvertUnknownSchemaTypeToClrType(value)!;
         }
 
         return dictionary;
@@ -425,22 +425,27 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return null;
     }
 
-    object? ConvertUnknownSchemaTypeToClrType(JsonNode value)
+    object? ConvertUnknownSchemaTypeToClrType(JsonNode? value)
     {
+        if (value is null)
+        {
+            return null;
+        }
+
         if (value is JsonObject jsonObject)
         {
             var expandoObject = new ExpandoObject();
             var expandoObjectAsDictionary = expandoObject as IDictionary<string, object>;
             foreach (var (property, sourceValue) in jsonObject)
             {
-                expandoObjectAsDictionary[property] = ConvertUnknownSchemaTypeToClrType(sourceValue!)!;
+                expandoObjectAsDictionary[property] = ConvertUnknownSchemaTypeToClrType(sourceValue)!;
             }
             return expandoObject;
         }
 
         if (value is JsonArray array)
         {
-            return array.Select(_ => ConvertUnknownSchemaTypeToClrType(_!)).ToArray();
+            return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
         }
 
         var jsonValue = value.GetValue<object>();

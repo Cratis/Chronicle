@@ -21,6 +21,8 @@ public class when_converting_to_client : Specification
             Id = _failedPartitionId,
             ObserverId = "my-observer",
             Partition = "partition-42",
+            IsResolved = true,
+            IsQuarantined = true,
             Attempts =
             [
                 new Contracts.Observation.FailedPartitionAttempt
@@ -39,6 +41,8 @@ public class when_converting_to_client : Specification
     [Fact] void should_set_id() => _result.Id.ShouldEqual(new FailedPartitionId(_failedPartitionId));
     [Fact] void should_set_observer_id() => _result.ObserverId.ShouldEqual(new ObserverId("my-observer"));
     [Fact] void should_set_partition() => _result.Partition.ShouldEqual(new Partition("partition-42"));
+    [Fact] void should_set_is_resolved() => _result.IsResolved.ShouldBeTrue();
+    [Fact] void should_set_is_quarantined() => _result.IsQuarantined.ShouldEqual(true);
     [Fact] void should_have_one_attempt() => _result.Attempts.Count().ShouldEqual(1);
     [Fact] void should_set_attempt_occurred() => _result.Attempts.First().Occurred.ShouldEqual(_attemptOccurred);
     [Fact] void should_set_attempt_sequence_number() => _result.Attempts.First().SequenceNumber.ShouldEqual(new EventSequenceNumber(7));

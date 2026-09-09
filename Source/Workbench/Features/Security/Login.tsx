@@ -109,7 +109,7 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                         <form className={`${css.loginForm} ${css.changePasswordPane}`} onSubmit={(e) => { e.preventDefault(); viewModel.changePassword(); }}>
                             {viewModel.isInitialSetup && (
                                 <p className={css.initialSetupMessage}>
-                                    Welcome! Please set a password for the admin account to continue.
+                                    Welcome! Please set a password for <strong>{viewModel.username}</strong> to continue.
                                 </p>
                             )}
 

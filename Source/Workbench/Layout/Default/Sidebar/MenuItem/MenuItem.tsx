@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { generatePath, NavLink, useParams, useLocation } from "react-router-dom";
+import { generatePath, NavLink, useParams } from "react-router-dom";
 import css from "./MenuItem.module.css";
 import { IconType } from "react-icons/lib";
 import { useLayoutContext } from "../../context/LayoutContext";
@@ -28,7 +28,6 @@ export interface IMenuItemProps {
 export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
     const layoutContext = useLayoutContext();
     const params = useParams();
-    const location = useLocation();
     const ctx = useContext(MenuContext);
     const itemPath = cleanupPath(basePath) + item.url;
     const resolvedPath = generatePath(itemPath ?? '', resolveMenuItemParams(params, ctx.paramsFallback));
@@ -38,14 +37,11 @@ export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
         setLabelClass(css.label + ' ' + (!layoutContext.layoutConfig.leftSidebarOpen ? css.hidden : ''));
     }, [layoutContext.layoutConfig.leftSidebarOpen]);
 
-    // Check if this is the dashboard item and we're at a URL ending with /dashboard
-    const isDashboardActive = item.url.endsWith('/dashboard') && location.pathname.endsWith('/dashboard');
-
     return (
         <NavLink to={resolvedPath}
                  {...rest}
                  className={({ isActive, isPending }) =>
-                     css.menuItem + ' ' + (isPending ? css.pending : (isActive || isDashboardActive) ? css.active : "")
+                     css.menuItem + ' ' + (isPending ? css.pending : isActive ? css.active : "")
                  }>
             <div className={css.icon}>
                 {item.icon && <item.icon size='1.5rem'/>}

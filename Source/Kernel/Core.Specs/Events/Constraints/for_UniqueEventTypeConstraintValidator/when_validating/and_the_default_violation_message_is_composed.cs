@@ -24,7 +24,7 @@ public class and_the_default_violation_message_is_composed : given.a_unique_even
 
     void Establish() =>
         _storage
-            .IsAllowed(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<string>())
+            .IsAllowedWithinScope(Arg.Any<UniqueEventTypeConstraintDefinition>(), Arg.Any<EventSourceId>(), Arg.Any<ResolvedConstraintScope>())
             .Returns((false, (EventSequenceNumber)43U));
 
     async Task Because() => _result = await _validator.Validate(_context);

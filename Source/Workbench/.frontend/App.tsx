@@ -13,6 +13,7 @@ import { ConfirmationDialog } from 'Components/Dialogs';
 import { Arc } from '@cratis/arc.react';
 import { MVVM } from '@cratis/arc.react.mvvm';
 import { basePath as configuredBasePath } from '../Utils/basePath';
+import { getAntiforgeryHeaders } from '../Features/Security/antiforgery';
 
 const isDevelopment = import.meta.env.MODE === 'development';
 
@@ -26,7 +27,8 @@ function App() {
         <Arc
             development={isDevelopment}
             apiBasePath={basePath}
-            basePath={basePath}>
+            basePath={basePath}
+            httpHeadersCallback={getAntiforgeryHeaders}>
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>

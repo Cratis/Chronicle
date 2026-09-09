@@ -66,6 +66,7 @@ public record ProductName(string Value) : ConceptAs<string>(Value)
 /// <param name="Id">The product identifier.</param>
 /// <param name="Name">The product name.</param>
 [Command]
+[Cratis.Arc.Authorization.AllowAnonymous]
 [BelongsTo("Products")]
 public record RegisterProduct(ProductId Id, ProductName Name)
 {
@@ -84,6 +85,7 @@ public record Product(ProductId Id, ProductName Name)
 {
     /// <summary>Returns all products.</summary>
     /// <returns>An empty enumerable of products.</returns>
+    [Cratis.Arc.Authorization.AllowAnonymous]
     public static IEnumerable<Product> GetAll() => [];
 
     /// <summary>Returns a product by identifier.</summary>

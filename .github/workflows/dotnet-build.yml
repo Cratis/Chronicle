@@ -81,6 +81,11 @@ jobs:
       - name: Spec the published Docker tag verifier
         run: python3 .github/scripts/test-verify-published-docker-tags.py
 
+      - name: Spec prerelease artifact handoff without caches
+        run: |
+          python3 -m pip install PyYAML==6.0.3
+          python3 .github/scripts/test-pr-artifact-handoff.py
+
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:

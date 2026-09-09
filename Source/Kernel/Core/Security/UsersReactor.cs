@@ -37,7 +37,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
             SecurityStamp = Guid.NewGuid().ToString(),
             IsActive = true,
             RequiresPasswordChange = true,
-            HasLoggedIn = false,
+            HasLoggedIn = true,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModifiedAt = null
         };
@@ -97,6 +97,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
     /// <param name="event">The event containing the user information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
+    /// <exception cref="UserNotFound">Thrown when the prerequisite user has not been persisted.</exception>
     public async Task PasswordChanged(UserPasswordChanged @event, EventContext eventContext)
     {
         logger.ChangingPassword(eventContext.EventSourceId);
@@ -116,6 +117,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
         else
         {
             logger.UserNotFoundWhenChangingPassword(eventContext.EventSourceId);
+            throw new UserNotFound((Concepts.Security.UserId)eventContext.EventSourceId);
         }
     }
 
@@ -125,6 +127,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
     /// <param name="event">The event containing the requirement information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
+    /// <exception cref="UserNotFound">Thrown when the prerequisite user has not been persisted.</exception>
     public async Task RequiresPasswordChange(PasswordChangeRequired @event, EventContext eventContext)
     {
         logger.SettingPasswordChangeRequirement(eventContext.EventSourceId);
@@ -141,6 +144,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
         else
         {
             logger.UserNotFoundWhenSettingPasswordChangeRequirement(eventContext.EventSourceId);
+            throw new UserNotFound((Concepts.Security.UserId)eventContext.EventSourceId);
         }
     }
 }

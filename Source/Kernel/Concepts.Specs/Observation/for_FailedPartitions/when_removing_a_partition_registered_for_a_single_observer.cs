@@ -24,4 +24,5 @@ public class when_removing_a_partition_registered_for_a_single_observer : Specif
     [Fact] void should_no_longer_report_the_partition_as_failed() => _failedPartitions.IsFailed(_partition).ShouldBeFalse();
     [Fact] void should_have_no_failed_partitions() => _failedPartitions.HasFailedPartitions.ShouldBeFalse();
     [Fact] void should_track_the_partition_as_resolved() => _failedPartitions.ResolvedPartitions.Single().Partition.ShouldEqual(_partition);
+    [Fact] void should_mark_the_partition_as_resolved() => _failedPartitions.ResolvedPartitions.Single().IsResolved.ShouldBeTrue();
 }

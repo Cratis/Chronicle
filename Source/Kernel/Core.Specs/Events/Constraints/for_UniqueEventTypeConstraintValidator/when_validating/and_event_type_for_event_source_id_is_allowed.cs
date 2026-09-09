@@ -12,7 +12,7 @@ public class and_event_type_for_event_source_id_is_allowed : given.a_unique_even
 
     void Establish()
     {
-        _storage.IsAllowed(Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.EventTypeIds.Contains(_eventType.Id)), _context.EventSourceId).Returns((true, EventSequenceNumber.First));
+        _storage.IsAllowedWithinScope(Arg.Is<UniqueEventTypeConstraintDefinition>(_ => _.EventTypeIds.Contains(_eventType.Id)), _context.EventSourceId).Returns((true, EventSequenceNumber.First));
     }
 
     async Task Because() => _result = await _validator.Validate(_context);
