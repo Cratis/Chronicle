@@ -16,6 +16,17 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 internal static class ReducerReadModelProcessor
 {
     /// <summary>
+    /// Gets a value indicating whether this processor runs Chronicle's compliance stack.
+    /// </summary>
+    /// <remarks>
+    /// A deployed Chronicle encrypts a reduced read model's <c>[PII]</c> members on the way into the sink and
+    /// releases them on the way out. Nothing below does either — the reducer's own result is what a spec reads.
+    /// Wire compliance in and flip this, and <see cref="SubstitutedLayers"/> stops reporting
+    /// <see cref="ReadModelSubstitutedLayer.Compliance"/>.
+    /// </remarks>
+    public static bool AppliesCompliance => false;
+
+    /// <summary>
     /// Processes the given events through the reducer for <typeparamref name="TReadModel"/> and returns the resulting read model.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model produced by the reducer.</typeparam>

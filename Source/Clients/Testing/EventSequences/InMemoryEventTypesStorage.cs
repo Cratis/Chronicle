@@ -7,21 +7,31 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using KernelConcepts::Cratis.Chronicle.Concepts.Events;
+using ClientEventTypes = Cratis.Chronicle.Events.IEventTypes;
 using KernelEventTypes = KernelConcepts::Cratis.Chronicle.Concepts.EventTypes;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
 /// <summary>
-/// Represents a no-op in-memory implementation of <see cref="IEventTypesStorage"/> for testing.
+/// Resolves the discovered client schemas for the exact stored event generation.
 /// </summary>
 /// <remarks>
-/// Returns an empty <see cref="JsonSchema"/> for every requested event type, which causes the
-/// <see cref="Json.ExpandoObjectConverter"/> to fall back to generic unknown-type
-/// conversion — preserving all event content without schema-driven type coercion.
-/// No compliance rules, migrations, or validations are applied.
+/// Registration and migrations are not simulated. Unknown generations fail rather than borrowing
+/// the latest generation's compliance markings. The registry is resolved lazily during store construction.
 /// </remarks>
-internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
+/// <param name="eventTypes">The scenario's discovered client registry.</param>
+/// <param name="schemaGenerator">The scenario's schema generator, including its compliance metadata providers.</param>
+internal sealed class InMemoryEventTypesStorage(Func<ClientEventTypes> eventTypes, IJsonSchemaGenerator schemaGenerator) : IEventTypesStorage
 {
+    readonly Lazy<Dictionary<EventType, KernelEventTypes::EventTypeSchema>> _schemas = new(() =>
+        eventTypes().All.ToDictionary(
+            type => new EventType(type.Id.Value, type.Generation.Value),
+            type => new KernelEventTypes::EventTypeSchema(
+                new EventType(type.Id.Value, type.Generation.Value),
+                EventTypeOwner.Client,
+                EventTypeSource.Code,
+                schemaGenerator.Generate(eventTypes().GetClrTypeFor(type.Id, type.Generation)))));
+
     /// <inheritdoc/>
     public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code) =>
         Task.FromResult(false);
@@ -31,50 +41,59 @@ internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
 
     /// <inheritdoc/>
     public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetLatestForAllEventTypes() =>
-        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
+        Task.FromResult(_schemas.Value.Values.GroupBy(schema => schema.Type.Id).Select(group => group.MaxBy(schema => schema.Type.Generation.Value)!));
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<KernelEventTypes::EventTypeSchema>> ObserveLatestForAllEventTypes() =>
-        new Subject<IEnumerable<KernelEventTypes::EventTypeSchema>>();
+        new BehaviorSubject<IEnumerable<KernelEventTypes::EventTypeSchema>>(_schemas.Value.Values.GroupBy(schema => schema.Type.Id).Select(group => group.MaxBy(schema => schema.Type.Generation.Value)!));
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions() =>
-        Task.FromResult(Enumerable.Empty<EventTypeDefinition>());
+        Task.FromResult(_schemas.Value.Keys.Select(type => type.Id).Distinct().Select(DefinitionFor));
 
     /// <inheritdoc/>
-    public Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId) =>
-        Task.FromResult(new EventTypeDefinition(
-            eventTypeId,
-            EventTypeOwner.Client,
-            false,
-            [new EventTypeGenerationDefinition(EventTypeGeneration.First, new JsonSchema())],
-            []));
+    public Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId) => Task.FromResult(DefinitionFor(eventTypeId));
 
     /// <inheritdoc/>
     public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType) =>
-        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
+        Task.FromResult(_schemas.Value.Values.Where(schema => schema.Type.Id == eventType.Id));
 
     /// <inheritdoc/>
     public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds) =>
-        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
+        Task.FromResult<IEnumerable<KernelEventTypes::EventTypeSchema>>([.. eventTypeIds.Select(id => SchemaFor(id))]);
 
     /// <inheritdoc/>
     public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetFor(IEnumerable<EventType> eventTypes) =>
-        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
+        Task.FromResult<IEnumerable<KernelEventTypes::EventTypeSchema>>([.. eventTypes.Select(type => SchemaFor(type.Id, type.Generation))]);
 
     /// <inheritdoc/>
     public Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default) =>
-        Task.FromResult(true);
+        Task.FromResult(_schemas.Value.Keys.Any(key => key.Id == type && (generation is null || key.Generation == generation)));
 
     /// <inheritdoc/>
-    public Task<KernelEventTypes::EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
-    {
-        var eventType = new EventType(type, generation ?? EventTypeGeneration.First);
-        return Task.FromResult(new KernelEventTypes::EventTypeSchema(eventType, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
-    }
+    public Task<KernelEventTypes::EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default) =>
+        Task.FromResult(SchemaFor(type, generation));
 
     /// <inheritdoc/>
     public void Invalidate(EventTypeId eventTypeId)
     {
+        // Schemas are immutable discovery snapshots for the lifetime of the scenario.
+    }
+
+    KernelEventTypes::EventTypeSchema SchemaFor(EventTypeId id, EventTypeGeneration? generation = null) =>
+        _schemas.Value.TryGetValue(new EventType(id, generation ?? EventTypeGeneration.First), out var schema)
+            ? schema
+            : throw new EventSchemaNotDiscovered(id.Value, (generation ?? EventTypeGeneration.First).Value);
+
+    EventTypeDefinition DefinitionFor(EventTypeId id)
+    {
+        if (!_schemas.Value.Keys.Any(type => type.Id == id)) throw new EventSchemaNotDiscovered(id.Value, EventTypeGeneration.First.Value);
+        return new(
+            id,
+            EventTypeOwner.Client,
+            false,
+            [.. _schemas.Value.Values.Where(schema => schema.Type.Id == id).OrderBy(schema => schema.Type.Generation.Value)
+                .Select(schema => new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema))],
+            []);
     }
 }

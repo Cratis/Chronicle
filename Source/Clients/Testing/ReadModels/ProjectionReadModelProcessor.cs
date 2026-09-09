@@ -7,6 +7,7 @@ extern alias KernelGrpc;
 
 using System.Dynamic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
@@ -83,13 +84,25 @@ internal static class ProjectionReadModelProcessor
     }
 
     /// <summary>
+    /// Gets a value indicating whether this processor runs Chronicle's compliance stack.
+    /// </summary>
+    /// <remarks>
+    /// The live projection pipeline runs <c>EncryptChangeset</c> before the sink and releases what it reads
+    /// back; the pipeline below runs neither, so a <c>[PII]</c> member is projected and read as plaintext.
+    /// Wire compliance in and flip this, and <see cref="SubstitutedLayers"/> stops reporting
+    /// <see cref="ReadModelSubstitutedLayer.Compliance"/>.
+    /// </remarks>
+    public static bool AppliesCompliance => false;
+
+    /// <summary>
     /// Processes the given events through the projection for <typeparamref name="TReadModel"/> and returns the resulting read model.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model produced by the projection.</typeparam>
     /// <param name="projectionDefinition">The client-side <see cref="Contracts.Projections.ProjectionDefinition"/>.</param>
     /// <param name="events">The events with their associated <see cref="EventSourceId"/> to process.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
-    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model schema.</param>
+    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing event input with the scenario's defaults.</param>
+    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model and event schemas.</param>
     /// <param name="initialState">Optional initial read model state.</param>
     /// <param name="strictEventSubscription">
     /// When <see langword="false"/> (the default), a seeded event the projection does not subscribe to is
@@ -109,6 +122,7 @@ internal static class ProjectionReadModelProcessor
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<(EventSourceId EventSourceId, object Event)> events,
         IEventTypes eventTypes,
+        IEventSerializer eventSerializer,
         IJsonSchemaGenerator jsonSchemaGenerator,
         TReadModel? initialState = null,
         bool strictEventSubscription = false)
@@ -125,28 +139,35 @@ internal static class ProjectionReadModelProcessor
         var eventsList = events.ToList();
 
         // Build AppendedEvents with correct EventSourceIds for use in key resolution
-        var appendedEvents = eventsList
-            .Select((eventTuple, index) =>
-            {
-                var clientEventType = eventTypes.GetEventTypeFor(eventTuple.Event.GetType());
-                var kernelEventType = ToKernelEventType(clientEventType);
-                var content = eventTuple.Event.AsExpandoObject(true);
-                var eventSourceId = (KernelConceptsNs::Events.EventSourceId)eventTuple.EventSourceId.Value;
-                var context = KernelConceptsNs::Events.EventContext.Empty with
-                {
-                    EventType = kernelEventType,
-                    EventSourceId = eventSourceId,
-                    SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
+        var appendedEvents = new KernelAppendedEvent[eventsList.Count];
+        for (var index = 0; index < eventsList.Count; index++)
+        {
+            var eventTuple = eventsList[index];
+            var actualEventType = eventTuple.Event.GetType();
+            var clientEventType = eventTypes.GetEventTypeFor(actualEventType);
+            var kernelEventType = ToKernelEventType(clientEventType);
+            var serializedJson = await eventSerializer.Serialize(eventTuple.Event);
+            var eventSchema = jsonSchemaGenerator.Generate(actualEventType);
 
-                    // Give each event a distinct, monotonically increasing occurred time so time-based
-                    // projections (e.g. a [FromAll] "last updated" mapped from EventContext.Occurred)
-                    // reflect append order the same way the real runtime does — rather than every event
-                    // sharing one timestamp.
-                    Occurred = KernelConceptsNs::Events.EventContext.Empty.Occurred.AddTicks(index)
-                };
-                return new KernelAppendedEvent(context, content);
-            })
-            .ToArray();
+            // JSON data keys remain case-sensitive even when the serializer matches CLR names case-insensitively.
+            // Re-read the serialized content without carrying those node lookup options into projection input.
+            var projectionJson = JsonNode.Parse(serializedJson.ToJsonString(), new JsonNodeOptions { PropertyNameCaseInsensitive = false })!.AsObject();
+            var content = _expandoObjectConverter.ToExpandoObject(projectionJson, eventSchema);
+            var eventSourceId = (KernelConceptsNs::Events.EventSourceId)eventTuple.EventSourceId.Value;
+            var context = KernelConceptsNs::Events.EventContext.Empty with
+            {
+                EventType = kernelEventType,
+                EventSourceId = eventSourceId,
+                SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
+
+                // Give each event a distinct, monotonically increasing occurred time so time-based
+                // projections (e.g. a [FromAll] "last updated" mapped from EventContext.Occurred)
+                // reflect append order the same way the real runtime does — rather than every event
+                // sharing one timestamp.
+                Occurred = KernelConceptsNs::Events.EventContext.Empty.Occurred.AddTicks(index)
+            };
+            appendedEvents[index] = new KernelAppendedEvent(context, content);
+        }
 
         // Populate in-memory event sequence storage with all events so key resolvers
         // (e.g. FromParentHierarchy for ChildrenFrom projections) can look up parent events

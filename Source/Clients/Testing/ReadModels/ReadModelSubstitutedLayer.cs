@@ -32,5 +32,12 @@ public enum ReadModelSubstitutedLayer
     /// Deferred key handling. The harness retries an unresolved key once after every other event; a deployed
     /// Chronicle defers the partition and redelivers, so out-of-order arrival and redelivery are not modeled.
     /// </summary>
-    DeferredKeyHandling = 2
+    DeferredKeyHandling = 2,
+
+    /// <summary>
+    /// Compliance. A deployed Chronicle encrypts the <c>[PII]</c> members of a read model on the way into the
+    /// sink and releases them on the way out; the harness projects and reads plaintext, so a value that is
+    /// unreadable, erased or wrongly-subjected in a running system still looks correct here.
+    /// </summary>
+    Compliance = 3
 }

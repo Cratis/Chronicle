@@ -54,6 +54,14 @@ The returned value is an `AppendResult`, so every [append assertion](assertions)
 
 <ChronicleClientTabs snippet="testing/events/scenario/append-many" />
 
+## PII compliance
+
+A `[PII]` value on an appended event passes through the kernel's encryption handler before entering in-memory event storage. Reads release that protection using the same scenario-local subject keys. The schema comes from discovered compliance metadata providers and the **stored event generation**, not the latest generation's markings. An undiscovered generation raises `EventSchemaNotDiscovered` rather than silently borrowing another schema. A discovered provider that cannot be activated fails explicitly with its identity and underlying cause.
+
+Your specs can use the public append-result and event-sequence assertions, or read through `EventLog` and `EventSequence`, to verify successful appends and released values. Chronicle's own harness regressions also inspect the protected in-memory content; that raw-content inspection is internal, **not a public consumer assertion API**. A plaintext round trip alone does not prove encryption at rest.
+
+Keys are held only in memory and are not shared between scenario instances. This exercises event encryption and release, not production database persistence, read-model sink encryption, key-store durability, or subject erasure. **Erasure is unsupported in `EventScenario`**; test it against a running kernel and the intended storage provider.
+
 ## Isolation
 
 Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero.

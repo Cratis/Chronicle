@@ -46,6 +46,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly TReadModel? _initialState = initialState;
     readonly INamingPolicy _namingPolicy = new CamelCaseNamingPolicy();
     readonly IEventTypes _eventTypes = defaults.EventTypes;
+    readonly IEventSerializer _eventSerializer = defaults.EventSerializer;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
@@ -186,10 +187,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// seeded. To have it fail a spec rather than inform one, opt in with <see cref="WithStrictFidelity"/>.
     /// </para>
     /// </remarks>
-    public IReadOnlyList<ReadModelSubstitution> Substitutions =>
-        _substitutions ??= SubstitutedLayers.DetectFor(
-            typeof(TReadModel),
-            FindReducerType(typeof(TReadModel)) is null ? ProjectionDefinition() : null);
+    public IReadOnlyList<ReadModelSubstitution> Substitutions => _substitutions ??= DetectSubstitutions();
 
     /// <summary>
     /// Gets an <see cref="IReadModels"/> instance that returns pre-seeded read model instances for this scenario.
@@ -358,6 +356,16 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
+    IReadOnlyList<ReadModelSubstitution> DetectSubstitutions()
+    {
+        var isReduced = FindReducerType(typeof(TReadModel)) is not null;
+        return SubstitutedLayers.DetectFor(
+            typeof(TReadModel),
+            isReduced ? null : ProjectionDefinition(),
+            _jsonSchemaGenerator.Generate(typeof(TReadModel)),
+            isReduced ? ReducerReadModelProcessor.AppliesCompliance : ProjectionReadModelProcessor.AppliesCompliance);
+    }
+
     Contracts.Projections.ProjectionDefinition? ProjectionDefinition()
     {
         if (!_projectionDefinitionResolved)
@@ -420,6 +428,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 projectionDefinition,
                 eventsList,
                 _eventTypes,
+                _eventSerializer,
                 _jsonSchemaGenerator,
                 _initialState,
                 _strictEventSubscription);
