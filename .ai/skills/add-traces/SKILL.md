@@ -1,39 +1,45 @@
 ---
 name: add-traces
-description: Use this skill when asked to add OpenTelemetry tracing to a class in a Cratis Chronicle Kernel project. Produces `*Traces.cs` companion files using the `[Span]` source-generator pattern from `Cratis.Traces`, registers `IActivitySource<T>` as a keyed DI service, and injects it into the target class.
+description: Add OpenTelemetry tracing to a class in the Chronicle repository using the Cratis.Traces [Span] source generator, keyed IActivitySource<T> injection, and the Chronicle tag extensions. Use when instrumenting Chronicle kernel or client internals; this is contributor guidance for the Chronicle repository itself, not for an application built on Chronicle.
 ---
 
-# Adding Traces to a Class
+# Add tracing to a Chronicle class
 
-Chronicle uses the **Fundamentals Traces** pattern from `Cratis.Traces`. Never call `System.Diagnostics.ActivitySource` directly. Always use the source-generator `[Span]` attribute and `IActivitySource<T>`.
+Chronicle instruments itself with the **Fundamentals traces** pattern from
+`Cratis.Traces`. Never call `System.Diagnostics.ActivitySource` directly. Declare
+spans with the `[Span]` source generator and take an `IActivitySource<T>` on the
+class being traced.
 
-## Overview
+This is contributor guidance for the **Chronicle repository**. An application
+built on Chronicle instruments itself with ordinary OpenTelemetry; nothing here
+applies to it.
 
-1. Create a `*Traces.cs` companion file with `[Span]` methods.
-2. Register `IActivitySource<T>` via `services.AddNamedActivitySource(WellKnown.MeterName)` in `ChronicleMetersExtensions` (one call covers all types via open-generic keyed DI).
-3. Inject `[FromKeyedServices(WellKnown.MeterName)] IActivitySource<TTarget>` into the class.
-4. Call the generated extension methods and apply tags via `TagExtensions`.
-5. Update specs to pass `new ActivitySource<T>()` (not a substitute).
+## Verified product sources
 
----
+This skill is verified against these exact sources:
 
-## DI registration architecture
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Fundamentals` | `Cratis.Traces.SpanAttribute`, `IActivitySource<T>`, `IActivityScope<T>`, `AddNamedMeter`, `AddNamedActivitySource` |
+| `Cratis.Chronicle` (kernel and clients) | `ChronicleMetersExtensions`, `WellKnown.MeterName`, the tag extensions |
 
-Chronicle's `ActivitySource` follows the same keyed DI pattern as `Meter`:
+Confirm the pinned `Cratis.Fundamentals` version in the repository's package
+management before relying on a member.
 
-| Layer | Meter | ActivitySource |
-|---|---|---|
-| Shared well-known instance (keyed by `WellKnown.MeterName`) | `Meter("Cratis.Chronicle")` | `System.Diagnostics.ActivitySource("Cratis.Chronicle")` |
-| Per-type wrapper (keyed by `WellKnown.MeterName`) | `IMeter<T>` / `Meter<T>` | `IActivitySource<T>` / `ActivitySource<T>` |
-| Registered by | `services.AddNamedMeter(WellKnown.MeterName)` | `services.AddNamedActivitySource(WellKnown.MeterName)` |
+## The shape
 
-Both calls are made from `ChronicleMetersExtensions.AddChronicleMeters()`. They use open-generic keyed DI (`TryAddKeyedSingleton(typeof(IMeter<>), name, typeof(Meter<>))`), so any new type added to a keyed-injected class is automatically covered — **no per-type registration step is needed**.
+1. Declare the spans in a `<ClassName>Traces.cs` companion file.
+2. Take `IActivitySource<TClass>` on the class.
+3. Open a scope with the generated method and tag it.
+4. Update the specifications to supply a real activity source.
 
----
+No per-type dependency-injection registration is needed — the registration is
+open-generic.
 
-## Step 1 — Create a `*Traces.cs` companion file
+## Step 1 — Declare the spans
 
-Each class that needs tracing gets its own `*Traces.cs` file in the same folder.
+Each traced class gets its own `<ClassName>Traces.cs`, in the same folder as
+`<ClassName>.cs`.
 
 ```csharp
 // Copyright (c) Cratis. All rights reserved.
@@ -51,85 +57,104 @@ namespace Cratis.Chronicle.<Namespace>;
 internal static partial class <ClassName>Traces
 {
     [Span("cratis.chronicle.<domain>.<operation>", ActivityKind.Internal)]
-    internal static partial IActivityScope<<ClassName>> <OperationName>(this IActivitySource<<ClassName>> source);
+    internal static partial IActivityScope<<ClassName>> <OperationName>(
+        this IActivitySource<<ClassName>> source);
 }
 ```
 
-**Rules:**
-- File name: `<ClassName>Traces.cs`, next to `<ClassName>.cs`.
-- Class name: `<ClassName>Traces` (partial, static, internal).
-- One `[Span]` method per traced operation.
-- Span names follow `cratis.chronicle.<domain>.<operation>` (lower_snake_case).
-- Use `ActivityKind.Internal` for grain-to-grain/internal calls.
-- Use `ActivityKind.Server` for gRPC service entry points.
-- No parameters in `[Span]` methods — tags are set manually via `TagExtensions`.
-
----
-
-## Step 2 — Register `IActivitySource<T>` in DI
-
-### 2a — Open-generic registration (no per-type step needed)
-
-`ChronicleMetersExtensions.AddChronicleMeters()` calls:
+The attribute is `Cratis.Traces.SpanAttribute`:
 
 ```csharp
-services.AddNamedActivitySource(WellKnown.MeterName);
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class SpanAttribute(string name, ActivityKind kind = ActivityKind.Internal) : Attribute
 ```
 
-This uses `TryAddKeyedSingleton(typeof(IActivitySource<>), name, typeof(ActivitySource<>))`, so any class
-that injects `[FromKeyedServices(WellKnown.MeterName)] IActivitySource<T>` is automatically resolved — no
-extra registration line is required.
+Conventions:
 
-> **Note:** `AddNamedMeter` and `AddNamedActivitySource` are currently provided by a local compatibility shim
-> (`NamedDiagnosticsServiceCollectionExtensions.cs`) that mirrors the Fundamentals upstream API. When
-> `Cratis.Fundamentals` is upgraded to a version that includes `DiagnosticsServiceCollectionExtensions`,
-> delete that shim file and bump the version in `Directory.Packages.props`.
+- File named `<ClassName>Traces.cs`, next to `<ClassName>.cs`.
+- Class `<ClassName>Traces`, `internal static partial`.
+- One `[Span]` method per traced operation, declared `internal static partial`
+  and returning `IActivityScope<TClass>`, as an extension on
+  `IActivitySource<TClass>`.
+- **Span names are lower snake case, dot separated**, and the prefix says which
+  side of the wire the span is on: `cratis.chronicle.<domain>.<operation>` in the
+  kernel, `client.<domain>.<operation>` in the client.
+- `ActivityKind.Internal` for internal and grain-to-grain work,
+  `ActivityKind.Server` for gRPC service entry points, and `Client` or `Consumer`
+  on the client side as appropriate.
 
----
+A `[Span]` method **may take parameters** after the source — the client's
+sequence traces pass the event store, namespace, and sequence identifiers that
+way. In the kernel the established style is a parameterless span plus explicit
+tagging (below), because the tag extensions already know how to render the
+domain concepts. Follow the style of the area you are editing.
 
-## Step 3 — Inject `IActivitySource<T>` into the class
+## Step 2 — Take the activity source
 
-### Primary constructor (grain / primary constructor class)
+The registration is keyed by `Cratis.Chronicle.Concepts.WellKnown.MeterName`
+(the constant is `"Cratis.Chronicle"`), so kernel classes ask for the keyed
+service:
 
 ```csharp
-/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
-public class MyClass(
-    ...
-    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<MyClass> activitySource,
-    ...)
+using Cratis.Traces;
+using Microsoft.Extensions.DependencyInjection;
+
+public class <ClassName>(
+    <OtherDependencies>,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<<ClassName>> activitySource)
 ```
 
-### Traditional constructor (non-grain class, registered in DI)
+For a class constructed manually — a service factory, for instance — resolve it
+the same way:
 
 ```csharp
-readonly IActivitySource<MyClass> _activitySource;
+serviceProvider.GetRequiredKeyedService<IActivitySource<<ClassName>>>(WellKnown.MeterName)
+```
 
-public MyClass(
-    ...
-    IActivitySource<MyClass> activitySource,
-    ...)
+### Why no per-type registration
+
+`ChronicleMetersExtensions.AddChronicleMeters()` calls
+`services.AddNamedMeter(WellKnown.MeterName)` and
+`services.AddNamedActivitySource(WellKnown.MeterName)` — both from
+`Cratis.Fundamentals` — and then replaces the open-generic keyed
+`IActivitySource<>` registration with Chronicle's own `KeyedActivitySource<>`.
+Because the registration is **open generic**, any new `T` injected into a keyed
+class resolves automatically. Adding a traced class is a one-file change plus the
+constructor parameter.
+
+`IActivitySource<T>` itself is minimal:
+
+```csharp
+public interface IActivitySource<T>
 {
-    _activitySource = activitySource;
+    System.Diagnostics.ActivitySource ActualSource { get; }
+}
+
+public interface IActivityScope<T> : IDisposable
+{
+    System.Diagnostics.Activity? Activity { get; }
 }
 ```
 
-> Non-grain classes constructed **manually** (e.g., in service factories) must use:
-> ```csharp
-> sp.GetRequiredKeyedService<IActivitySource<MyClass>>(WellKnown.MeterName)
-> ```
-
----
-
-## Step 4 — Use the generated span methods and apply tags
+## Step 3 — Open the scope and tag it
 
 ```csharp
-using var span = activitySource.MyOperation(); // or _activitySource.MyOperation()
-span?.Activity?.Tag(someEventStore);
-span?.Activity?.Tag(someNamespace);
-span?.Activity?.Tag(someObserverKey);
+using var span = activitySource.<OperationName>();
+span?.Activity?.Tag(<domainConcept>);
+```
+
+**Always use the null-conditional `span?.Activity?.Tag(...)`.** The scope's
+`Activity` is null when no listener is attached, which is the normal case in
+specifications.
+
+Record failure on the activity rather than losing it:
+
+```csharp
+using var span = activitySource.<OperationName>();
+span?.Activity?.Tag(<domainConcept>);
 try
 {
-    // ... work ...
+    // work
 }
 catch (Exception ex)
 {
@@ -138,62 +163,65 @@ catch (Exception ex)
 }
 ```
 
-**Always use null-conditional `span?.Activity?.Tag(...)`** because the source generator's `IActivityScope<T>` can be null when no listener is attached (e.g., in tests).
+### The tag extensions
 
-### Available `TagExtensions` (in `Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing`)
+`Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing.TagExtensions` provides
+`Tag` overloads on `Activity` for the domain concepts:
 
-| Method signature | Tags set |
-|---|---|
-| `Tag(EventStoreName)` | `cratis.eventstore.name` |
-| `Tag(EventStoreNamespaceName)` | `cratis.eventstore.namespace` |
-| `Tag(EventSequenceId)` | `cratis.eventsequence.id` |
-| `Tag(EventType)` | `cratis.eventtype.id` |
-| `Tag(EventSourceType, EventSourceId)` | `cratis.eventsource.type`, `cratis.eventsource.id` |
-| `Tag(ObserverId)` | `cratis.observer.id` |
-| `Tag(ObserverType)` | `cratis.observer.type` |
-| `Tag(ConnectionId)` | `cratis.connection.id` |
-| `Tag(ObserverKey)` | observer id, event sequence id, namespace, event store |
-| `Tag(ConnectedObserverKey, ObserverType?)` | observer id, event sequence id, connection id, namespace, event store, type |
+| Overload | Tags |
+| --- | --- |
+| `Tag(EventStoreName)` | event store name |
+| `Tag(EventStoreNamespaceName)` | namespace |
+| `Tag(EventSequenceId)` | event sequence id |
+| `Tag(EventType)` | event type id |
+| `Tag(EventSourceType, EventSourceId)` | event source type and id |
+| `Tag(ObserverId)` | observer id |
+| `Tag(ObserverType)` | observer type |
+| `Tag(ConnectionId)` | connection id |
+| `Tag(ObserverKey)` | observer id, event sequence, namespace, event store |
+| `Tag(ConnectedObserverKey, ObserverType?)` | the above plus connection id and type |
 
-Add new overloads to `TagExtensions.cs` for any domain concept not already listed.
+Each returns the `Activity`, so calls chain. Add a new overload here rather than
+setting a raw tag name at the call site — that is what keeps the tag vocabulary
+consistent across the kernel.
 
----
+Never put an event payload, a read-model value, or anything else that may carry
+personal data into a tag. Tags carry identifiers and types.
 
-## Step 5 — Update specs
+## Step 4 — Update the specifications
 
-In specs, **never** use `Substitute.For<IActivitySource<T>>()`. The source-generator accesses `.ActualSource` which NSubstitute returns as null, causing `NullReferenceException`. Instead, use:
-
-```csharp
-new ActivitySource<MyClass>()
-```
-
-Add `using Cratis.Traces;` where needed.
-
-### For Orleans TestKit grains
+**Never substitute `IActivitySource<T>`.** The generated extension reads
+`ActualSource`, which a substitute returns as null, and the span call then throws.
+Supply a real one:
 
 ```csharp
-_silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
+new ActivitySource<<ClassName>>()
 ```
 
-### For manually instantiated classes
+For a grain under the Orleans test kit:
 
 ```csharp
-new MyClass(
-    ...,
-    new ActivitySource<MyClass>(),
-    ...);
+_silo.AddKeyedService<IActivitySource<<ClassName>>>(
+    WellKnown.MeterName,
+    new ActivitySource<<ClassName>>());
 ```
 
----
+For a manually constructed class, pass `new ActivitySource<<ClassName>>()` in the
+constructor call. Add `using Cratis.Traces;` where needed.
 
-## Checklist
+## Verify
 
-- [ ] `<ClassName>Traces.cs` created with `[Span]` methods
-- [ ] No per-type DI registration needed — open-generic `AddNamedActivitySource` covers all types automatically
-- [ ] Class constructor injects `IActivitySource<T>` (keyed with `[FromKeyedServices(WellKnown.MeterName)]` or non-keyed for non-grain DI)
-- [ ] Span methods called with `span?.Activity?.Tag(...)` null-safe pattern
-- [ ] `using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;` added for `TagExtensions`
-- [ ] `using Cratis.Traces;` added for `ActivitySource<T>`, `IActivitySource<T>`
-- [ ] Specs updated to use `new ActivitySource<T>()` instead of `Substitute.For<...>()`
-- [ ] Build passes with no errors
-- [ ] Specs pass
+- `<ClassName>Traces.cs` exists beside `<ClassName>.cs`, with the standard
+  license header and the three suppressions.
+- The traces class is `internal static partial`; each span method is
+  `internal static partial`, returns `IActivityScope<TClass>`, and extends
+  `IActivitySource<TClass>`.
+- Span names use the prefix and casing of the side they belong to, and the
+  `ActivityKind` matches the call's nature.
+- The class takes `IActivitySource<T>`, keyed with `WellKnown.MeterName` where
+  the surrounding code is keyed.
+- No per-type registration was added — the open-generic registration covers it.
+- Every span use is null-conditional, and failures set the activity status.
+- Tags come from the tag extensions, and no payload data is tagged.
+- Specifications use `new ActivitySource<T>()`, never a substitute.
+- The solution builds with zero warnings and the affected specifications pass.
