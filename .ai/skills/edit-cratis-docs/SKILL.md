@@ -31,6 +31,16 @@ Example: `/chronicle/concepts/event-source/` → `Chronicle/Documentation/concep
 - **Verify every framework API in a code example against real source** before writing it — readers paste them verbatim. (See the `writing-correct-examples` rule; grep Studio `*.cs`/`*.tsx` and the product `Source/` trees.)
 - Link rules: product `.md` may use `./foo.md`; links to a `.mdx` page must be **extension-less** (`./foo`); site-level `.mdx` uses clean root-relative URLs (`/arc/...`).
 
+### Chronicle shared client tabs
+
+In the Chronicle repository, a shared page that contains `<ChronicleClientTabs>` must be `.mdx`. Write each placeholder as a self-closing component on its own line:
+
+```mdx
+<ChronicleClientTabs snippet="events/appending/example" />
+```
+
+The snippet id is extensionless. Matching snippets may exist for only the participating clients; use an explicit unsupported snippet when a participating client's tab must remain visible. Follow `Documentation/contributing/clients/index.mdx` for ownership and validation.
+
 ## 3. Sync, preview, verify
 
 ```bash

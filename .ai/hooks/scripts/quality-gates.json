@@ -32,6 +32,14 @@
     "maxOutputLines": 60,
     "gates": [
         {
+            "id": "documentation-authoring",
+            "description": "verify-markdown.sh — Markdown, MDX, toc, and authoring checks",
+            "changed": ["Documentation/**", ".markdownlint.json", ".github/workflows/markdown-verification.yml"],
+            "requires": { "commands": ["bash", "node", "npx"], "paths": ["Documentation/verify-markdown.sh", "Documentation/verify-authoring.mjs"] },
+            "workingDirectory": ".",
+            "command": ["bash", "Documentation/verify-markdown.sh"]
+        },
+        {
             "id": "backend-build-debug",
             "description": "dotnet build (Debug) — compiles #if DEBUG spec code and regenerates the TypeScript proxies",
             "changed": ["**/*.cs", "**/*.csproj", "**/*.slnx", "**/*.sln", "**/*.props", "**/*.targets"],

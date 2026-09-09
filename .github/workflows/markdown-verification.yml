@@ -10,6 +10,8 @@ on:
     branches:
       - "**"
     paths:
+      - ".github/workflows/markdown-verification.yml"
+      - ".markdownlint.json"
       - "Documentation/**"
 
 permissions:
@@ -27,7 +29,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Lint Markdown files
+      - name: Lint Markdown and MDX files
         uses: DavidAnson/markdownlint-cli2-action@v18
         with:
-          globs: 'Documentation/**/*.md'
+          globs: 'Documentation/**/*.{md,mdx}'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23.x
+
+      - name: Validate Starlight authoring
+        run: node ./Documentation/verify-authoring.mjs
