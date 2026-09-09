@@ -23,6 +23,7 @@ public class when_configuring_internal_token_validation : given.chronicle_authen
 
     void Destroy() => _services.ServiceProvider.Dispose();
 
+    [Fact] void should_validate_data_protection_token_audiences() => _result.Audiences.ShouldContainOnly(WellKnownAudiences.Chronicle);
     [Fact] void should_validate_the_audience() => _result.TokenValidationParameters.ValidateAudience.ShouldBeTrue();
     [Fact] void should_require_the_chronicle_audience() => _result.TokenValidationParameters.ValidAudience.ShouldEqual(WellKnownAudiences.Chronicle);
 }

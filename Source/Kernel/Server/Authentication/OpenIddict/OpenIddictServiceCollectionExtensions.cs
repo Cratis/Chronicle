@@ -163,6 +163,9 @@ public static class OpenIddictServiceCollectionExtensions
                 options.UseAspNetCore();
                 options.UseDataProtection();
 
+                // Data Protection tokens use OpenIddict's audience validation, not IdentityModel's JWT parameters.
+                options.AddAudiences(WellKnownAudiences.Chronicle);
+
                 var authorityValue = chronicleOptions.Authentication.Authority;
                 string scheme;
                 string host;

@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server.Authentication.for_ServiceCollectionExtensions.given;
 
-public class chronicle_authentication_services : Specification
+public class chronicle_authentication_services : Cratis.Chronicle.Server.for_CertificateLoader.given.a_certificate_file
 {
     protected ChronicleAuthenticationServices BuildServices(
         SharedDataProtectionKeys? sharedKeys = null,
@@ -24,12 +24,22 @@ public class chronicle_authentication_services : Specification
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IDataProtectionKeys>(Arg.Any<string>()).Returns(dataProtectionKeys);
 
+        if (authenticationEnabled && useInternalAuthority)
+        {
+            // Exercise the production certificate requirement in both build configurations.
+            WritePkcs12(null);
+        }
+
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(grainFactory);
         services.AddChronicleAuthentication(new Cratis.Chronicle.Configuration.ChronicleOptions
         {
             Storage = new() { Type = Cratis.Chronicle.Storage.StorageType.InMemory },
+            EncryptionCertificate = new()
+            {
+                CertificatePath = authenticationEnabled && useInternalAuthority ? _certificatePath : null
+            },
             Authentication = new Cratis.Chronicle.Configuration.Authentication
             {
                 Enabled = authenticationEnabled,
