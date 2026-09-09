@@ -1,4 +1,7 @@
-# Concepts
+---
+title: Concepts
+description: Understand Chronicle's core event-sourcing concepts, terminology, and consistency model.
+---
 
 This area contains explanations and guidance on the concepts in Cratis.
 

@@ -1,4 +1,7 @@
-# Read Models
+---
+title: Read models
+description: Build specialized, queryable views from events and choose how to retrieve and observe them.
+---
 
 Your events are the truth of *what happened*, but they're a terrible thing to query — to show an
 account balance you'd have to replay every deposit and withdrawal. A **read model** is the answer to
@@ -34,7 +37,7 @@ the events:
 | [Getting snapshots](./getting-snapshots) | Retrieve historical snapshots of a read model's state. |
 | [Watching read models](./watching-read-models) | Observe a read model and react to changes in real time. |
 | [Releasing PII](./releasing-pii) | Decrypt PII in a read model instance you already have, and how the subject is resolved. |
-| [Indexing read models](./indexing.md) | Declare indexes with `[Index]` so they are recreated whenever the container is — including after a replay. |
+| [Indexing read models](./indexing) | Declare indexes with `[Index]` so they are recreated whenever the container is — including after a replay. |
 
 To expose a read model to a React frontend, pair it with an [Arc query](/arc/backend/queries/) — or see
 the whole loop in [Build a full-stack feature](/build-a-full-app/).

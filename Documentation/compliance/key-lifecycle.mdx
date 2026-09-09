@@ -6,7 +6,7 @@ uid: Chronicle.Compliance.KeyLifecycle
 
 Crypto-shredding only works if a destroyed key stays destroyed. Deleting a key is easy; making sure nothing puts it back is the hard part, and it is what this page is about.
 
-Read [Erasing a subject](erasing-a-subject.md) first if you only need to know which call to make. This page explains the machinery underneath it: the states a subject's key moves through, what stops an erased key coming back, how a person who returns gets a new key, and — just as important — what Chronicle *cannot* protect you from.
+Read [Erasing a subject](erasing-a-subject) first if you only need to know which call to make. This page explains the machinery underneath it: the states a subject's key moves through, what stops an erased key coming back, how a person who returns gets a new key, and — just as important — what Chronicle *cannot* protect you from.
 
 ## Why deleting the key is not enough
 
@@ -192,7 +192,7 @@ Backend by backend, the fence needs:
 
 | Topic | Description |
 |---|---|
-| [Erasing a subject](erasing-a-subject.md) | The call to make, and how to certify an erasure is complete |
+| [Erasing a subject](erasing-a-subject) | The call to make, and how to certify an erasure is complete |
 | [Compliance](index.md) | How Chronicle protects personal data in an immutable log |
 | [Compliance and PII in subscriptions](../subscriptions/compliance-and-pii.md) | What forwarding preserves, and what it no longer copies |
 | [Compliance Storage](../hosting/configuration/compliance-storage.md) | Where encryption keys and their fences are stored |

@@ -42,7 +42,7 @@ rather than copying an image digest into a getting-started command.
      cratis/chronicle:latest-development
    ```
 
-2. Wait for the local health endpoint to report readiness. The development
+1. Wait for the local health endpoint to report readiness. The development
    image uses a self-signed certificate, so this command disables certificate
    verification only for this local check.
 
@@ -54,11 +54,12 @@ rather than copying an image digest into a getting-started command.
    A successful response prints `Healthy`. At that point the kernel is ready for
    the next local evaluation step.
 
-3. Stop and remove it when the evaluation is complete.
+1. Stop and remove it when the evaluation is complete.
 
    ```bash
    docker rm -f chronicle
    ```
+
 </Steps>
 
 :::caution[What this local start proves]

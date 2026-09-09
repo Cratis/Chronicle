@@ -12,12 +12,5 @@
   href: external-event-store-subscriptions.mdx
 - name: Filtering by appended event metadata
   href: filtering.mdx
-  items:
-    - name: By tag
-      href: ../events/filtering/by-tag.mdx
-    - name: By event source type
-      href: ../events/filtering/by-event-source-type.mdx
-    - name: By event stream type
-      href: ../events/filtering/by-event-stream-type.mdx
 - name: Tagging Reducers
   href: tagging-reducers.mdx
