@@ -101,11 +101,11 @@ public class and_a_dictionary_shaped_property_is_set : Specification
     void Destroy() => _connection.Dispose();
 
     [Fact] void should_find_the_read_model() => _result.ShouldNotBeNull();
-    [Fact] void should_store_entries_as_a_dictionary() => GetEntries().ShouldBeOfExactType<Dictionary<object, object>>();
+    [Fact] void should_store_entries_as_a_dictionary() => GetEntries().ShouldBeOfExactType<Dictionary<string, object>>();
     [Fact] void should_preserve_the_first_entry() => GetEntries()["first"].ShouldEqual("firstValue");
     [Fact] void should_preserve_the_second_entry() => GetEntries()["second"].ShouldEqual("secondValue");
 
-    Dictionary<object, object> GetEntries() => (Dictionary<object, object>)((IDictionary<string, object?>)_result!)["entries"]!;
+    Dictionary<string, object> GetEntries() => (Dictionary<string, object>)((IDictionary<string, object?>)_result!)["entries"]!;
 
     ReadModelDbContext CreateContext()
     {
