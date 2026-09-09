@@ -259,7 +259,11 @@ internal sealed class TestingServices : IServices
         _constraints = new(() => new KernelConstraintsService(grainFactory));
 
         _users = new(() =>
-            new KernelUsersService(commandPipeline.Value, storage, NullLogger<KernelUsersService>.Instance));
+            new KernelUsersService(
+                commandPipeline.Value,
+                storage,
+                Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
+                NullLogger<KernelUsersService>.Instance));
 
         _applications = new(() =>
             new KernelApplicationsService(commandPipeline.Value, storage, NullLogger<KernelApplicationsService>.Instance));
