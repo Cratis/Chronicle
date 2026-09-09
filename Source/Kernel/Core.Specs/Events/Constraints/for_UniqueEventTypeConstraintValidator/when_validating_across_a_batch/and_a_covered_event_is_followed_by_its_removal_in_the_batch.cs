@@ -37,13 +37,15 @@ public class and_a_covered_event_is_followed_by_its_removal_in_the_batch : Speci
 
     async Task Because()
     {
-        _startedResult = await _validator.Validate(new([_validator], _shift, _startedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims));
+        var startedContext = new ConstraintValidationContext([_validator], _shift, _startedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims);
+        _startedResult = await startedContext.Validate();
 
-        // The removal is never itself validated by this constraint - establishing its context is what
-        // records the release, exactly as AppendMany would do while iterating the batch in order.
-        _ = new ConstraintValidationContext([_validator], _shift, _endedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims);
+        // The removal has no matching validators but its context must still validate to record the release.
+        var endedContext = new ConstraintValidationContext([_validator], _shift, _endedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims);
+        await endedContext.Validate();
 
-        _nextCycleResult = await _validator.Validate(new([_validator], _shift, _startedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims));
+        var nextCycleContext = new ConstraintValidationContext([_validator], _shift, _startedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims);
+        _nextCycleResult = await nextCycleContext.Validate();
     }
 
     [Fact] void should_accept_the_covered_event_that_opens_the_cycle() => _startedResult.IsValid.ShouldBeTrue();

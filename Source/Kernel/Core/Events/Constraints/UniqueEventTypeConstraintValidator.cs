@@ -23,11 +23,10 @@ public class UniqueEventTypeConstraintValidator(
 
     /// <inheritdoc cref="IObserveConstraintBatchEvents.RecordBatchEvent"/>
     /// <remarks>
-    /// A removal event is never itself validated by this constraint (<see cref="CanValidate"/> only matches the
-    /// covered event types), so it would otherwise be invisible to a covered event later in the same
-    /// <c>AppendMany</c> batch - the persisted index only reflects events already durably appended. Recording it
-    /// here releases the in-batch cycle so that later covered event sees the release the same way it would if the
-    /// removal had been appended in an earlier, separate call.
+    /// A removal need not be a covered event, so it must be observed even when <see cref="CanValidate"/> is false.
+    /// When it is also covered, it must pass validation against preceding events before releasing its own claim.
+    /// Recording the release after successful validation lets later events in the batch see the same cycle as
+    /// if the removal had been appended in an earlier, separate call.
     /// </remarks>
     void IObserveConstraintBatchEvents.RecordBatchEvent(ConstraintValidationContext context)
     {

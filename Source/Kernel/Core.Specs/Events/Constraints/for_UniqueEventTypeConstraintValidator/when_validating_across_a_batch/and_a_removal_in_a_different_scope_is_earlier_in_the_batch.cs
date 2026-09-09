@@ -42,12 +42,12 @@ public class and_a_removal_in_a_different_scope_is_earlier_in_the_batch : Specif
 
     async Task Because()
     {
-        _firstResult = await _validator.Validate(ContextFor(_checkedOutEventType, _branch));
+        _firstResult = await ContextFor(_checkedOutEventType, _branch).Validate();
 
-        // Established the way AppendMany walks the batch - the removal is never validated by this constraint.
-        _ = ContextFor(_returnedEventType, _otherBranch);
+        // AppendMany validates the removal's context even though this constraint does not cover it.
+        await ContextFor(_returnedEventType, _otherBranch).Validate();
 
-        _secondResult = await _validator.Validate(ContextFor(_checkedOutEventType, _branch));
+        _secondResult = await ContextFor(_checkedOutEventType, _branch).Validate();
     }
 
     [Fact] void should_accept_the_covered_event_that_opens_the_cycle() => _firstResult.IsValid.ShouldBeTrue();

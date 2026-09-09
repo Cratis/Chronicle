@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 public record ConstraintValidationContext
 {
     readonly IEnumerable<IUpdateConstraintIndex> _updaters;
+    readonly IEnumerable<IObserveConstraintBatchEvents> _batchObservers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConstraintValidationContext"/> class.
@@ -45,15 +46,7 @@ public record ConstraintValidationContext
         _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
         Validators = validators.Where(_ => _.CanValidate(this)).ToArray();
 
-        // Runs for every event in the batch regardless of CanValidate, and in the same order events are
-        // established - see the remarks on IObserveConstraintBatchEvents for why CanValidate alone is not enough.
-        if (batchClaims is not null)
-        {
-            foreach (var observer in validators.OfType<IObserveConstraintBatchEvents>())
-            {
-                observer.RecordBatchEvent(this);
-            }
-        }
+        _batchObservers = batchClaims is not null ? validators.OfType<IObserveConstraintBatchEvents>().ToArray() : [];
     }
 
     /// <summary>
@@ -103,11 +96,21 @@ public record ConstraintValidationContext
     public async Task<ConstraintValidationResult> Validate()
     {
         var results = await Task.WhenAll(Validators.Select(v => v.Validate(this)));
-        var violations = results.Where(r => !r.IsValid).SelectMany(r => r.Violations);
-        return new()
+        var result = new ConstraintValidationResult
         {
-            Violations = violations.ToImmutableList()
+            Violations = results.Where(r => !r.IsValid).SelectMany(r => r.Violations).ToImmutableList()
         };
+        if (result.IsValid)
+        {
+            // A covered event can also be a removal. Validate against preceding events first, then let its
+            // release supersede its own claim for subsequent events, even if no validator covers this event.
+            foreach (var observer in _batchObservers)
+            {
+                observer.RecordBatchEvent(this);
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

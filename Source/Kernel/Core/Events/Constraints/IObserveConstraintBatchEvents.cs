@@ -26,8 +26,10 @@ internal interface IObserveConstraintBatchEvents
     /// </summary>
     /// <param name="context">The <see cref="ConstraintValidationContext"/> for the event.</param>
     /// <remarks>
-    /// Called for every event in a batch append, regardless of <see cref="IConstraintValidator.CanValidate"/>,
-    /// and in the same order the events are validated. Never called when validating a single, non-batched append -
+    /// Called after all validators accept an event in a batch append, regardless of
+    /// <see cref="IConstraintValidator.CanValidate"/>, and in the same order the events are validated. An event's
+    /// effects are visible only to subsequent events, never its own validation. Never called for a failed
+    /// validation or when validating a single, non-batched append -
     /// <see cref="ConstraintValidationContext.BatchClaims"/> is <see langword="null"/> in that case, so there is
     /// no shared state to observe.
     /// </remarks>

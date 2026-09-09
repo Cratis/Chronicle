@@ -9,8 +9,7 @@ using Cratis.Chronicle.Storage.Events.Constraints;
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueEventTypeConstraintValidator.when_validating_across_a_batch;
 
 /// <summary>
-/// A removal event is never itself validated by this constraint - <see cref="IConstraintValidator.CanValidate"/>
-/// only matches the covered event types - so without observing every event in the batch, a removal appended
+/// This removal event is not covered by the constraint, so without observing every event in the batch, a removal appended
 /// earlier in the same <c>AppendMany</c> call would be invisible to a covered event later in it: durable storage
 /// still reports the closed, pre-batch cycle as unresolved. The removal must release the cycle for the rest of the
 /// batch the same way it would if it had been appended in an earlier, separate call.
@@ -41,12 +40,12 @@ public class and_a_removal_earlier_in_the_batch_opens_a_new_cycle : Specificatio
 
     async Task Because()
     {
-        // The removal event is established (as AppendMany would, in order) but never validated by this
-        // constraint - constructing its context is what records the release for the rest of the batch.
-        _ = new ConstraintValidationContext([_validator], _shift, _endedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims);
+        // AppendMany validates even a context with no matching validators before moving to the next event.
+        var endedContext = new ConstraintValidationContext([_validator], _shift, _endedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims);
+        await endedContext.Validate();
 
         var startedContext = new ConstraintValidationContext([_validator], _shift, _startedEventType.Id, new ExpandoObject(), batchClaims: _batchClaims);
-        _result = await _validator.Validate(startedContext);
+        _result = await startedContext.Validate();
     }
 
     [Fact] void should_accept_the_next_cycle() => _result.IsValid.ShouldBeTrue();
