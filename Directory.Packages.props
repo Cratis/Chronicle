@@ -10,65 +10,65 @@
          prunes it from declared dependencies. Declare it explicitly so consumers do not hit missing types. -->
     <PackageVersion Include="System.Collections.Immutable" Version="10.0.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.11" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.12" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.19.1" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.19.1" />
-    <PackageVersion Include="Cratis.Arc" Version="22.7.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.7.0" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.7.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.7.0" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.6.0" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.7.0" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.7.0" />
-    <PackageVersion Include="Cratis.Screenplay" Version="4.6.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.19.2" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.19.2" />
+    <PackageVersion Include="Cratis.Arc" Version="22.13.1" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.13.1" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.13.1" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.13.1" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.13.1" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.13.1" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.13.1" />
+    <PackageVersion Include="Cratis.Screenplay" Version="4.12.1" />
     <!-- Microsoft -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
     <!-- Pin the native SQLite library to a patched build (GHSA-2m69-gcr7-jv3q affects <= 2.1.11 pulled in transitively by EF Core Sqlite). -->
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!-- Orleans -->
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.3.1" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.2.2" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.2.2" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization" Version="10.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.3.1" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization" Version="10.3.1" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="10.3.1" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.3.1" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="10.3.1" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
+    <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="10.3.1" />
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.3.1" />
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
     <!-- Open Telemetry -->
@@ -80,7 +80,7 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.18.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.18.0" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.3" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.9.0" />
     <!-- Roslyn-->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
@@ -92,14 +92,14 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.2.2" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.177" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.235" />
     <!-- Testing & Specifications -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
-    <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
+    <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
-    <PackageVersion Include="Testcontainers" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers" Version="4.15.0" />
     <!--
         Testcontainers 4.13.0 brings in SSH.NET 2025.1.0, which GHSA-q939-rpr3-3284 covers. 2026.0.0 is the
         patched release, so every project referencing Testcontainers also references SSH.NET directly to pull
@@ -111,10 +111,10 @@
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.11.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.11.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
-    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.6.0" />
+    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.7.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
     <PackageVersion Include="humanizer" Version="3.0.10" />
@@ -125,12 +125,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
-    <PackageVersion Include="protobuf-net.Reflection" Version="3.4.19" />
+    <PackageVersion Include="protobuf-net.Reflection" Version="3.4.21" />
     <!-- Declared so the compatibility checker can use ProtoBuf.Serializer, which protobuf-net.Reflection does not
          bring (it depends on protobuf-net.Core). It also pins the version: without an entry here, transitive
          resolution settles on protobuf-net 2.4.x for some projects and its attributes then collide with
          protobuf-net.Core 3.x. -->
-    <PackageVersion Include="protobuf-net" Version="3.4.19" />
+    <PackageVersion Include="protobuf-net" Version="3.4.21" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.14" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.83.0" />
@@ -141,7 +141,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
-    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.1" />
     <PackageVersion Include="AzureKeyVaultEmulator.TestContainers" Version="3.1.0" />
     <PackageVersion Include="VaultSharp" Version="1.17.5.1" />
     <PackageVersion Include="handlebars.net" Version="2.1.6" />
