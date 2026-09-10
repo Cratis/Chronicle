@@ -14,6 +14,7 @@ public record Chr0010ViolationOrderPlaced(decimal Amount);
 // multiple event stores: "customers", "orders". All event types in a projection must
 // originate from the same event store.
 [FromEvent<Chr0010ViolationCustomerRegistered>]
-[SetFrom<Chr0010ViolationOrderPlaced>]
-public record Chr0010ViolationCustomerSummary(string Name, decimal TotalSpent);
+public record Chr0010ViolationCustomerSummary(
+    string Name,
+    [property: SetFrom<Chr0010ViolationOrderPlaced>] decimal TotalSpent);
 ```
