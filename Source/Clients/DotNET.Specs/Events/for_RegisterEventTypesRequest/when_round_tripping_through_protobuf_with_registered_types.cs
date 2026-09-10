@@ -2,8 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.EventTypes;
 using ProtoBuf;
+
+// The 16.45 compatibility surface also declares Cratis.Chronicle.Contracts.Events.RegisterEventTypesRequest
+// (restored beside the generated contracts); the alias keeps this spec - which exercises the generated
+// contract - unambiguous while both namespaces are in scope (the generated request itself carries
+// EventTypeRegistration from the Events namespace).
+using RegisterEventTypesRequest = Cratis.Chronicle.Contracts.EventTypes.RegisterEventTypesRequest;
 
 namespace Cratis.Chronicle.Events.for_RegisterEventTypesRequest;
 
