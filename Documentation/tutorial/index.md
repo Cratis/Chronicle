@@ -23,7 +23,7 @@ Every block is a real Chronicle primitive — which is what makes an event model
 
 ## What you'll need
 
-A Chronicle project running locally — the [Get started](/chronicle/get-started/) guide gets you there in a couple of minutes (install the template, scaffold, `docker compose up`). Come back when `dotnet run` works, and we'll start writing the library.
+Start the Chronicle kernel with [Get started](/chronicle/get-started/), then [choose and connect an application host](/chronicle/get-started/choose-hosting-model/). The worked narrative follows C#, while the client tabs show the supported equivalents for the other Chronicle clients.
 
 ## The tour
 
@@ -31,4 +31,6 @@ A Chronicle project running locally — the [Get started](/chronicle/get-started
 2. **[Building a read model](./read-model)** — turn that stream of facts into something you can actually query.
 3. **[Reacting to events](./reacting)** — do something useful when a book comes back.
 
-By the end you'll have built the loop at the heart of every Chronicle app — *append a fact, project it into state, react to it* — and you'll know it well enough to leave the library behind and model your own domain. Ready? [Let's record the first thing that happens →](./first-event)
+By the end you'll have built the loop at the heart of every Chronicle app — *append a fact, project it into state, react to it* — and you'll know it well enough to leave the library behind and model your own domain. After the tour, use the [Scenarios](../scenarios/) recipes when you need to solve a focused Chronicle task.
+
+Ready? [Let's record the first thing that happens →](./first-event)

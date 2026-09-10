@@ -9,6 +9,9 @@ These are recipes: "I need to do X — how?" Each is short and assumes you've be
 |---|---|
 | [Rebuild a read model](./rebuild-a-read-model.md) | You changed a projection and need the read model to reflect the new logic |
 | [Enforce a unique value](./enforce-a-unique-value.md) | A value (email, ISBN, username) must be unique across a stream |
+| [React to an event](./react-to-an-event) | An event should trigger a notification, external call, or follow-up fact |
+| [Get read models](./real-time-query) | You need one instance, a collection, a page, or live updates |
+| [Test a slice](./test-a-slice) | You want to verify event appends and derived read model state in-process |
 | [Evolve an event's shape](./evolve-an-event.md) | An event type needs to change without rewriting history |
 
 Missing a recipe you expected? The [feature guides](../events/) and [Troubleshooting](../troubleshooting/) cover the long tail.

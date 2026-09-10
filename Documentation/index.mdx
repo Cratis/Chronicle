@@ -14,6 +14,15 @@ For information systems, this is the default architecture we recommend: store **
 ## Start here
 
 <CardGrid>
+  <SimpleCard title="Get started" icon="rocket" link="/chronicle/get-started/">
+    Start the kernel, pick a client, and follow one event through the Chronicle loop.
+  </SimpleCard>
+  <SimpleCard title="Tutorial" icon="list-format" link="/chronicle/tutorial/">
+    Build a small event-sourced library one concept at a time.
+  </SimpleCard>
+  <SimpleCard title="Why Event Sourcing" icon="puzzle" link="/chronicle/why-event-sourcing/">
+    Understand why Chronicle keeps meaningful changes instead of only current state.
+  </SimpleCard>
   <SimpleCard title="Run Chronicle locally" icon="rocket" link="#run-chronicle-locally">
     Start the development image, wait for readiness, and clean it up.
   </SimpleCard>
@@ -31,6 +40,10 @@ For the shortest local path, use `latest-development`. It bundles Chronicle and
 MongoDB and tracks the newest published development image. When repeatability
 matters, pin a released version in your application or deployment configuration
 rather than copying an image digest into a getting-started command.
+
+This command exposes only the kernel port, `35000`; the bundled MongoDB stays
+inside the container. Use the [two-port host quickstart](/chronicle/get-started/choose-hosting-model/#run-chronicle-locally)
+when local database tools also need access to port `27017`.
 
 <Steps>
 1. Pull and start the current development image with Chronicle available only
