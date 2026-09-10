@@ -23,7 +23,7 @@ public class RegisterEventTypesRequest
 
     /// <summary>
     /// Gets or sets a value indicating whether generation chain validation should be skipped for this registration.
-    /// The server only honours this when compiled with the <c>DEVELOPMENT</c> preprocessor symbol.
+    /// The server only honours this when compiled with the DEVELOPMENT preprocessor symbol.
     /// </summary>
     [ProtoMember(3)]
     public bool DisableValidation { get; set; }
