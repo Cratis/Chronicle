@@ -1,1 +1,0 @@
-../../.ai/rules/documentation-structure-and-formatting.md

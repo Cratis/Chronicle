@@ -1,1 +1,0 @@
-../../.ai/prompts/scaffold-feature.prompt.md

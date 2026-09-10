@@ -1,1 +1,0 @@
-../../.ai/prompts/new-vertical-slice.prompt.md
