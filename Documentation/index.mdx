@@ -42,8 +42,8 @@ matters, pin a released version in your application or deployment configuration
 rather than copying an image digest into a getting-started command.
 
 This command exposes only the kernel port, `35000`; the bundled MongoDB stays
-inside the container. Use the [two-port host quickstart](/chronicle/get-started/choose-hosting-model/#run-chronicle-locally)
-when local database tools also need access to port `27017`.
+inside the container. For a setup that also exposes MongoDB on port `27017` so
+local database tools can connect, see the [two-port host quickstart](/chronicle/get-started/choose-hosting-model/#run-chronicle-locally).
 
 <Steps>
 1. Pull and start the current development image with Chronicle available only
