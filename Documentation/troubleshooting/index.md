@@ -66,9 +66,9 @@ Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary
 
 ## I can't connect to the Chronicle kernel
 
-- Confirm the kernel is running — if you scaffolded from a template, `docker compose up -d` and check the container is healthy.
-- Confirm the client URL matches the kernel's address and port.
-- Confirm your storage (MongoDB by default) is reachable from the kernel.
+- **Confirm the kernel is running** — for local development, the quickest path is `docker run -d -p 27017:27017 -p 35000:35000 cratis/chronicle:latest-development`. For other setups (Docker Compose, Aspire, or production), see [Choose an application host model](/chronicle/get-started/choose-hosting-model/).
+- **Confirm the client URL matches the kernel's address and port** — the default is `chronicle://localhost:35000`.
+- **Confirm your storage is reachable** — the development image bundles MongoDB on port 27017; if you're using separate storage, verify the kernel can reach it.
 
 See [Connection strings](/chronicle/connection-strings/) and [Get started](/chronicle/get-started/).
 
