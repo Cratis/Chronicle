@@ -48,6 +48,29 @@ internal static class InProcessCommandPipeline
         services.AddLogging();
         services.Configure<ArcOptions>(_ => { });
         services.AddCratisArcCore();
+
+        // The in-process kernel pipeline serves the append path, not the host application's commands - the
+        // same isolation rule the execution-scope shadowing below documents (see a3c4e6e75): type
+        // discovery inside a test host sweeps up the consuming application's assemblies, and without
+        // these shadows its command filters and execution scopes are constructed from THIS pipeline's
+        // provider whenever an append executes - activating application types whose dependencies
+        // (tenancy read models, event stores, current user) were never registered here. The
+        // application's own filters and scopes already ran around the application command, in the
+        // outer Arc pipeline the scenario built; they must not run - or fail to construct - a second
+        // time inside the kernel.
+        //
+        // Filters are narrowed rather than emptied: Arc's own built-ins (validation among them) must
+        // still run, and the kernel's Testing services rely on them - only filters from Arc and
+        // Chronicle's own assemblies are kept, which is exactly the set a real kernel host's discovery
+        // would find, since a kernel host has no application assemblies loaded.
+        //
+        // The authorization extension points are narrowed for the same reason: an application that
+        // flips Arc's default with its own IAuthorizationAttributeEvaluator (deny-by-default, say)
+        // must not get to deny the kernel's internal append operations, which a real kernel host's
+        // authorization never sees an opinion about at all.
+        services.AddSingleton<IInstancesOf<ICommandFilter>, KernelInstancesOf<ICommandFilter>>();
+        services.AddSingleton<IInstancesOf<IAuthorizationAttributeEvaluator>, KernelInstancesOf<IAuthorizationAttributeEvaluator>>();
+        services.AddSingleton<IInstancesOf<IAnonymousEvaluator>, KernelInstancesOf<IAnonymousEvaluator>>();
         services.AddSingleton<IInstancesOf<ICommandExecutionScope>>(new KnownInstancesOf<ICommandExecutionScope>());
         services.AddSingleton(grainFactory);
         services.AddSingleton(storage);
@@ -71,3 +94,4 @@ internal static class InProcessCommandPipeline
         return services.BuildServiceProvider().GetRequiredService<ICommandPipeline>();
     }
 }
+
