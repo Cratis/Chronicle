@@ -3,13 +3,33 @@ title: Testing
 description: Test event appends, read models, and reactor side effects in process without running infrastructure.
 ---
 
-Chronicle provides lightweight, in-process test utilities that let you verify event appending behavior, read model projections, and reactor side-effects without a running server or database. Tests are fast, isolated, and require no infrastructure.
+Chronicle provides lightweight test utilities that let you verify event appending behavior, read model projections, and reactor side-effects. `Cratis.Chronicle.Testing` and its in-process `*Scenario` helpers run the real Chronicle engines with in-memory storage, so tests are fast and isolated. `Cratis.Chronicle.XUnit.Integration` exercises the full client and kernel stack against MongoDB via Testcontainers when you need to prove storage, network, or full-stack behavior.
 
 :::note[Client coverage]
 `Cratis.Chronicle.Testing` and its in-process `*Scenario` helpers (`EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>`) are a C#-specific test library layered on xUnit and Cratis.Specifications. Kotlin, Elixir, and TypeScript each have their own general-purpose test tooling (Kotest/JUnit, ExUnit, Vitest/Mocha) but no Chronicle-specific in-process test utility package — testing a Chronicle-backed slice in those clients means exercising the real client SDK directly against a running event store, not an in-process scenario helper. All of `testing/**` in this section is therefore C#-only.
 :::
 
 In Cratis applications, Chronicle tests usually sit inside [Cratis Specifications](/testing-with-cratis/). That makes the event-sourced shape explicit: `Establish()` or a scenario's `Given` builder seeds facts that already happened, `Because()` appends or provides the event under test, and each `[Fact]` asserts the new facts, read model state, or side effect.
+
+## Choosing the right test boundary
+
+Start with the in-process scenarios. They prove the Chronicle slice—appending, projection, reactor logic—with no infrastructure cost. Use the integration fixtures when the thing you need to prove crosses the boundary the in-process harness stands in for.
+
+| What to prove | Start with | What it does not prove |
+|---|---|---|
+| Event appends, constraint violations, sequencing | `EventScenario` | Network serialization, kernel connection, storage write |
+| Read model projection or reducer logic | `ReadModelScenario<T>` | Sink writes, MongoDB queries, change stream subscription |
+| Reactor side effects, idempotence, event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch |
+| Actual storage writes, kernel connectivity, change streams | `ChronicleInProcessFixture` / `ChronicleOutOfProcessFixture` | Client isolation—the kernel is shared across tests |
+
+The integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:
+
+- `ChronicleInProcessFixture` — an in-process Chronicle kernel with MongoDB via Testcontainers.
+- `ChronicleOutOfProcessFixture` — a Chronicle kernel in a separate container, also using Testcontainers.
+- `ChronicleClientFixture` — a base for integration tests that only need a Chronicle client reference.
+- `ChronicleOrleansFixture` — an Orleans-based Chronicle kernel for testing Chronicle's own kernel internals.
+
+Only the in-process and out-of-process fixtures are documented here; the others are for framework or advanced scenarios.
 
 ## Packages
 
@@ -20,7 +40,7 @@ In Cratis applications, Chronicle tests usually sit inside [Cratis Specification
 
 Use `Cratis.Testing` instead of `Cratis.Chronicle.Testing` when the same spec also tests Arc commands.
 
-Application command execution scopes, including Chronicle transactions, belong to the outer Arc command pipeline. The in-process kernel does not discover or invoke your application's `ICommandExecutionScope` implementations when processing an event append. Your application scopes still run around the application command; you do not need to register their dependencies with the kernel test harness.
+Application command execution scopes, including Chronicle transactions, belong to the outer Arc command pipeline. The in-process scenario helpers do not discover or invoke your application's `ICommandExecutionScope` implementations when processing an event append. Your application scopes still run around the application command; you do not need to register their dependencies with the scenario harness.
 
 ## Topics
 
@@ -29,11 +49,20 @@ Application command execution scopes, including Chronicle transactions, belong t
 | [Events](events/index.md) | Test event appends and constraint behavior in-process using `EventScenario` |
 | [Read Models](read-models/index.md) | Test projections and reducers in-process using `ReadModelScenario<TReadModel>` |
 | [Reactors](reactors/index.md) | Test reactor side-effects in-process using `ReactorScenario<TReactor>` |
+| [Event append collection](event-append-collection) | Integration testing: capture every appended event in a scoped collector with `IEventAppendCollection` |
 
 ## A specification-shaped example
 
 <ChronicleClientTabs snippet="testing/index/example-spec" />
 
 The projection runs in-process, but the spec still reads like the domain: given the `AuthorRegistered` fact, the `Author` read model should contain the name the screen needs.
+
+## What the harness stands in for
+
+The in-process scenario helpers run the real projection and reducer engines, the real constraint evaluation, and the real reactor dispatch — but they substitute in-memory storage for the kernel's gRPC boundary and the persistent event log. That substitution is what makes them fast and isolated, and it's also the boundary they don't cross.
+
+When a test needs to prove behavior **across** that boundary — that a projection's sink writes actually landed in MongoDB, that a reactor registered its observer subscription with a running kernel, that change streams fired and advanced the checkpoint — reach for the [integration fixtures](#choosing-the-right-test-boundary) and `IEventAppendCollection` instead. Those exercise the full client-to-kernel-to-storage stack.
+
+For a worked example of `IEventAppendCollection` and the integration fixtures, see [Event append collection](event-append-collection). For the full slice testing story — how `/chronicle/scenarios/test-a-slice/` fits with the in-process helpers and the integration boundary — see [Test a slice](/chronicle/scenarios/test-a-slice/).
 
 For the bigger testing model across Specifications, Arc, Chronicle, and full stack slices, see [Testing with Cratis](/testing-with-cratis/).
