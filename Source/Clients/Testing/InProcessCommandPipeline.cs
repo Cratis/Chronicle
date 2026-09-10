@@ -52,7 +52,19 @@ internal static class InProcessCommandPipeline
         services.AddSingleton(grainFactory);
         services.AddSingleton(storage);
         services.AddSingleton(jsonSerializerOptions);
-        services.AddSingleton(new KernelRequestCausation(new HttpContextAccessor()));
+
+        // One accessor instance serves both the request causation and anything else that asks for
+        // IHttpContextAccessor. AddCratisArcCore() discovers the host application's own filters and
+        // handlers through type discovery - in a test host that means the application under test's
+        // types, whose construction can depend on the accessor exactly the way it does behind a real
+        // request. Without this registration, any application type taking IHttpContextAccessor fails
+        // to activate here with "Unable to resolve service for type
+        // 'Microsoft.AspNetCore.Http.IHttpContextAccessor'" - which is what broke every Arc command
+        // scenario in consuming applications (e.g. Cratis/Stagehand: 341 of 4411 specs).
+        var httpContextAccessor = new HttpContextAccessor();
+        services.AddSingleton(httpContextAccessor);
+        services.AddSingleton<IHttpContextAccessor>(httpContextAccessor);
+        services.AddSingleton(new KernelRequestCausation(httpContextAccessor));
         services.AddSingleton<ICurrentPrincipalAccessor>(new InProcessCurrentPrincipalAccessor());
         configure?.Invoke(services);
 
