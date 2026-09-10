@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "version": "1.0.0",
+  "profiles": [
+    "cratis/documentation",
+    "cratis/engineering/csharp",
+    "cratis/engineering/react",
+    "cratis/application/csharp",
+    "cratis/application/react"
+  ],
+  "harnesses": [
+    "claude",
+    "codex",
+    "copilot",
+    "cursor",
+    "pi"
+  ],
+  "updatePolicy": "reviewed-pull-request",
+  "projectContext": ".cratis/PROJECT.md"
+}

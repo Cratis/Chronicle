@@ -1,1 +1,0 @@
-../../.ai/rules/local-work-artifacts.md
