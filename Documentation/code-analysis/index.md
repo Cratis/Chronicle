@@ -15,6 +15,10 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0005](CHR0005) | Reactor event parameter must have [EventType] attribute | Error | Event parameters in reactor methods must be marked with [EventType] attribute |
 | [CHR0006](CHR0006) | Reducer method signature must match allowed signatures | Warning | Reducer methods must follow allowed signatures |
 | [CHR0007](CHR0007) | Reducer event parameter must have [EventType] attribute | Error | Event parameters in reducer methods must be marked with [EventType] attribute |
+| [CHR0008](CHR0008) | Reactor event types must be from the same event store | Error | Reactor event types must all originate from the same event store |
+| [CHR0009](CHR0009) | Reducer event types must be from the same event store | Error | Reducer event types must all originate from the same event store |
+| [CHR0010](CHR0010) | Model-bound projection event types must be from the same event store | Error | Model-bound projection event types must all originate from the same event store |
+| [CHR0011](CHR0011) | Declarative projection event types must be from the same event store | Error | Declarative projection event types must all originate from the same event store |
 | [CHR0012](CHR0012) | Event types should avoid nullable properties | Warning | Nullable properties are supported on events but are often better modeled as separate event types |
 | [CHR0013](CHR0013) | Reactor cannot combine EventStore with explicit event sequence | Error | Reactors with [EventStore] must not also configure an explicit event sequence |
 | [CHR0014](CHR0014) | Reducer cannot combine EventStore with explicit event sequence | Error | Reducers with [EventStore] must not also configure an explicit event sequence |
@@ -50,6 +54,8 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0047](CHR0047) | A clear declaration is never applied by projection construction | Retired | Both declarations it reported - a null [SetValue] and a member-level [ClearWith] - are a working scalar clear now, so the rule was removed; the id stays reserved and is never reused |
 | [CHR0048](CHR0048) | A clear is declared for a member that cannot hold null | Warning | Clearing means returning a member to no value; a non-nullable member has no such state, so the only thing the projection could write is the type default - a different fact the read model cannot tell apart from a real value |
 | [CHR0049](CHR0049) | `EventTypeGenerationFor<T>` must reference a type marked with [EventType] | Error | A type marked with `EventTypeGenerationFor<T>` references a type that is not itself marked with [EventType], so there is no id to resolve the previous generation's identity from |
+| [CHR0050](CHR0050) | `[EventType]` and `[EventTypeGenerationFor<T>]` cannot be combined | Error | A type is either the current event type or a previous generation, never both |
+| [CHR0051](CHR0051) | Reducer current read model parameter must be nullable | Warning | Chronicle passes null as the current read model for the event that brings an instance into existence |
 
 ## Quick Fixes
 

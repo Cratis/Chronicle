@@ -28,7 +28,7 @@ Step 4 is what makes the two event stores share one key pair per subject. It is 
 
 The copy means a subject's key can live in more event stores than you ever appended to. Chronicle handles both consequences of that:
 
-- **An erasure covers every event store in the namespace**, which is exactly how far the copy can reach. Erasing through any one event store reaches them all — see [Erasing a subject](../compliance/erasing-a-subject.md).
+- **An erasure covers every event store in the namespace**, which is exactly how far the copy can reach. Erasing through any one event store reaches them all — see [Erasing a subject](../compliance/erasing-a-subject).
 - **The copy cannot resurrect an erased key.** Step 3 above is the reason. Before the erasure was recorded in the target, "the target has no key" was indistinguishable from "the target never had one" — which is precisely the state an erasure creates, so a forwarded event copied the survivor back in and made already-shredded personal data readable again.
 
 > [!IMPORTANT]
@@ -65,6 +65,6 @@ The subject is deliberately left out of both. It is the identity the personal da
 - [Outbox and Inbox](outbox-inbox)
 - [Implicit Event Store Subscriptions](implicit-subscriptions)
 - [Explicit Event Store Subscriptions](explicit-subscriptions)
-- [Erasing a subject](../compliance/erasing-a-subject.md)
-- [The encryption key lifecycle](../compliance/key-lifecycle.md)
+- [Erasing a subject](../compliance/erasing-a-subject)
+- [The encryption key lifecycle](../compliance/key-lifecycle)
 - [Compliance](../compliance/index.md)

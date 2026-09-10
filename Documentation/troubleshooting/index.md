@@ -20,7 +20,13 @@ A child collection with no children is stored as an absent field rather than as 
 
 ## My projection isn't picking up a change I made
 
-After you change a projection, the existing read model still reflects the *old* logic. Rebuild it by **replaying** — re-running the projection over historical events. Because events are the source of truth, read models are disposable and safe to rebuild at any time.
+After you change a projection, the existing read model still reflects the *old* logic. Rebuild it by **replaying** — re-running the projection over historical events. Because events are the source of truth, read models are disposable and safe to rebuild at any time. See [Rebuild a read model](/chronicle/scenarios/rebuild-a-read-model/) for the workflow.
+
+To inspect or replay observers, use the [Cratis CLI](/cli/):
+
+- [`cratis chronicle observers list`](/cli/chronicle/observers/#list) shows all registered observers.
+- [`cratis chronicle observers show`](/cli/chronicle/observers/#show) shows detailed state for a specific observer.
+- [`cratis chronicle observers replay`](/cli/chronicle/observers/#replay) rebuilds the entire observer from scratch.
 
 ## My reactor ran twice (or sent a duplicate notification)
 
@@ -28,7 +34,14 @@ That's expected — reactors can run more than once for the same event during re
 
 ## My reactor throws and the stream seems stuck
 
-If a reactor throws, the failing event source partition pauses until the problem is resolved — by design, so it doesn't silently skip events. Fix the underlying error (and make the reactor resilient), and processing resumes.
+When a reactor throws, the failing event source partition pauses until the problem is resolved — by design, so it doesn't silently skip events. Fix the underlying error (and make the reactor resilient), then use the [Cratis CLI](/cli/) to resume processing:
+
+- [`cratis chronicle failed-partitions list`](/cli/chronicle/failed-partitions/#list) shows all failed partitions.
+- [`cratis chronicle failed-partitions show`](/cli/chronicle/failed-partitions/#show) shows the error message and failing sequence number for a specific partition.
+- [`cratis chronicle observers retry-partition`](/cli/chronicle/observers/#retry-partition) retries the partition after you've fixed the bug.
+- [`cratis chronicle observers replay-partition`](/cli/chronicle/observers/#replay-partition) replays the partition from the beginning if the state is corrupt.
+
+Failed reactor processing does **not** resume automatically after fixing code and redeploying — you must explicitly retry or replay the partition.
 
 ## A constraint is rejecting an append I expected to succeed
 
@@ -53,9 +66,9 @@ Two shapes *are* a cause, deliberately: a polymorphic base type and a dictionary
 
 ## I can't connect to the Chronicle kernel
 
-- Confirm the kernel is running — if you scaffolded from a template, `docker compose up -d` and check the container is healthy.
-- Confirm the client URL matches the kernel's address and port.
-- Confirm your storage (MongoDB by default) is reachable from the kernel.
+- **Confirm the kernel is running** — for local development, the quickest path is `docker run -d -p 27017:27017 -p 35000:35000 cratis/chronicle:latest-development`. For other setups (Docker Compose, Aspire, or production), see [Choose an application host model](/chronicle/get-started/choose-hosting-model/).
+- **Confirm the client URL matches the kernel's address and port** — the default is `chronicle://localhost:35000`.
+- **Confirm your storage is reachable** — the development image bundles MongoDB on port 27017; if you're using separate storage, verify the kernel can reach it.
 
 See [Connection strings](/chronicle/connection-strings/) and [Get started](/chronicle/get-started/).
 

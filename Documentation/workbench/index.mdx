@@ -34,7 +34,7 @@ import TopicHero from '@components/TopicHero.astro';
      cratis/chronicle:latest-development
    ```
 
-2. Wait for the local health endpoint to report readiness. The development
+1. Wait for the local health endpoint to report readiness. The development
    image uses a self-signed certificate, so this command disables certificate
    verification only for this local check.
 
@@ -45,16 +45,16 @@ import TopicHero from '@components/TopicHero.astro';
 
    Continue when the response prints `Healthy`.
 
-3. Open `https://localhost:35000` in a browser and follow the authentication
+1. Open `https://localhost:35000` in a browser and follow the authentication
    flow shown by the local development image. Browser handling of its self-signed
    certificate varies by environment.
 
-4. Select the event store and namespace you are authorized to inspect.
+1. Select the event store and namespace you are authorized to inspect.
 
-5. Review only the runtime state and projection-preview paths needed for the
+1. Review only the runtime state and projection-preview paths needed for the
    evaluation.
 
-6. Stop and remove the container when finished.
+1. Stop and remove the container when finished.
 
    ```bash
    docker rm -f chronicle

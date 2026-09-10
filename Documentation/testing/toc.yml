@@ -1,5 +1,7 @@
 - name: Overview
   href: index.mdx
+- name: Event Append Collection
+  href: event-append-collection.mdx
 - name: Events
   href: events/toc.yml
 - name: Read Models

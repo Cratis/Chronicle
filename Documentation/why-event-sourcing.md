@@ -124,7 +124,7 @@ That makes it easier to build features such as:
 
 ## Event sourcing is not just aggregate roots
 
-Event sourcing is often introduced together with aggregate roots, and that can be useful. Chronicle supports that approach through [aggregate roots support](xref:Arc.Chronicle.AggregateRoots).
+Event sourcing is often introduced together with aggregate roots, and that can be useful. Chronicle supports that approach through [aggregate roots support](/arc/backend/chronicle/aggregates/).
 
 An aggregate root gives you a fixed consistency boundary around a model. You load the aggregate, make a decision, and append new events from that boundary.
 

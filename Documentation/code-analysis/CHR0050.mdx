@@ -1,0 +1,32 @@
+# CHR0050: `[EventType]` and `[EventTypeGenerationFor<T>]` cannot be combined
+
+## Rule Description
+
+A type is either the current event type (marked with `[EventType]`) or a previous generation of one (marked with `[EventTypeGenerationFor<T>]`), never both. Remove one of the two attributes.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0050/violation" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0050/fix" />
+
+## Why This Rule Exists
+
+`[EventType]` declares a type as the current representation of an event, giving it an event type id. `[EventTypeGenerationFor<T>]` declares a type as a **previous generation** that should be migrated forward into the current shape. Combining them is contradictory: a type cannot simultaneously be the current generation and a previous one.
+
+Without this check, a type marked with both attributes compiles cleanly but fails when the client connects to Chronicle, throwing `EventTypeGenerationForCannotBeCombinedWithEventType` at startup. This rule surfaces the same mistake at compile time instead.
+
+The same analyzer class also reports **CHR0049** (`EventTypeGenerationForMustReferenceEventType`, Error) when `[EventTypeGenerationFor<T>]` references a type that itself has no `[EventType]` attribute — see [CHR0049](CHR0049) for that related check.
+
+## Related Rules
+
+- [CHR0049](CHR0049): `[EventTypeGenerationFor<T>]` must reference a type marked with `[EventType]` — validates that the referenced type is actually an event type.
+- [CHR0037](CHR0037): Event type migration generations must belong to one event type — validates that a migration's two generations resolve to the same event type id.
