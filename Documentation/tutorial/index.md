@@ -23,7 +23,10 @@ Every block is a real Chronicle primitive — which is what makes an event model
 
 ## What you'll need
 
-Start the Chronicle kernel with [Get started](/chronicle/get-started/), then [choose and connect an application host](/chronicle/get-started/choose-hosting-model/). The worked narrative follows C#, while the client tabs show the supported equivalents for the other Chronicle clients.
+Start the Chronicle kernel and pick a client. The worked narrative follows C#, while the client tabs show the supported equivalents for the other Chronicle clients.
+
+- [Get started](/chronicle/get-started/) walks through starting the kernel.
+- [Choose an application host model](/chronicle/get-started/choose-hosting-model/) picks the level your code runs at — console, worker, or ASP.NET Core.
 
 ## The tour
 
