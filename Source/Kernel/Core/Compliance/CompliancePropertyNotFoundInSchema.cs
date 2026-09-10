@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Compliance;
 /// drifted apart — typically a stored event whose event type gained or renamed a property without a migration.
 /// Without this exception the mismatch surfaced as a bare LINQ error naming neither the property nor the subject.
 /// </remarks>
-/// <param name="action">The action being performed — <c>apply</c> or <c>release</c>.</param>
+/// <param name="action">The action being performed — <c language="csharp">apply</c> or <c language="csharp">release</c>.</param>
 /// <param name="propertyPath">The path of the property that has no schema counterpart.</param>
 /// <param name="identifier">The compliance subject the value was being handled under.</param>
 /// <param name="knownPropertyNames">The property names the schema actually declares.</param>

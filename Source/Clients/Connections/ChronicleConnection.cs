@@ -409,7 +409,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <remarks>
     /// The comparison itself is the server's, not this client's - Chronicle has clients in four languages and only
     /// two of those can build a descriptor set at runtime, so every client ships the one its contracts package was
-    /// built with and the server does the one comparison. See <c>Source/Kernel/Compatibility</c>.
+    /// built with and the server does the one comparison. See <c language="csharp">Source/Kernel/Compatibility</c>.
     /// </remarks>
     async Task CheckCompatibility(IConnectionService connectionService)
     {
@@ -456,7 +456,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     }
 
     /// <summary>
-    /// Runs the pre-server-side compatibility check against a server too old to have <c>CheckCompatibility</c>.
+    /// Runs the pre-server-side compatibility check against a server too old to have <c language="csharp">CheckCompatibility</c>.
     /// </summary>
     /// <param name="connectionService">The connection service to ask.</param>
     /// <returns>Awaitable task.</returns>

@@ -7,10 +7,10 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_nested_in_nested_from_pdl;
 
 /// <summary>
-/// Verifies that PDL compilation produces the inner <c>nested validation</c> entry inside
-/// the outer command block, with the expected <c>From</c> mapping for
+/// Verifies that PDL compilation produces the inner <c language="csharp">nested validation</c> entry inside
+/// the outer command block, with the expected <c language="csharp">From</c> mapping for
 /// <see cref="given.PdlDeepNestedValidationConfigured"/>. This is the PDL-level counterpart of
-/// Phase 1's <c>when_projecting_with_nested_in_nested.setting_the_inner_nested_object</c>,
+/// Phase 1's <c language="csharp">when_projecting_with_nested_in_nested.setting_the_inner_nested_object</c>,
 /// which already verifies that the engine sets the inner validation from such a definition.
 /// </summary>
 public class setting_the_inner_nested_object_from_pdl : given.a_compiled_pdl_nested_projection

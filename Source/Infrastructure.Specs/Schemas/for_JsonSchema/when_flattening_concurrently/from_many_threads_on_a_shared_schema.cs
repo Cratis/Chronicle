@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchema.when_flattening_concurrently;
 
 /// <summary>
 /// A single <see cref="JsonSchema"/> instance is cached and shared (for example the event-type schemas held by the
-/// client <c>EventTypes</c>) and flattened concurrently by constraint registration, projections, and key resolvers.
-/// This exercises the lazy <c>Properties</c>/<c>Definitions</c> caches from many threads on a freshly-built schema so
+/// client <c language="csharp">EventTypes</c>) and flattened concurrently by constraint registration, projections, and key resolvers.
+/// This exercises the lazy <c language="csharp">Properties</c>/<c language="csharp">Definitions</c> caches from many threads on a freshly-built schema so
 /// that a reader never observes a half-populated cache (which previously surfaced as a valid property "not existing").
 /// </summary>
 public class from_many_threads_on_a_shared_schema : Specification

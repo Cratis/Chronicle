@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Read model projected by the fluent <see cref="MembershipRosterProjection"/>: a group with a keyed child
-/// collection of members, each enriched with the member's name through a child-level <c>[Join]</c> against
+/// collection of members, each enriched with the member's name through a child-level <c language="csharp">[Join]</c> against
 /// <see cref="MemberProfileCreated"/> on a separate member stream. Used to verify that a child join updates the
 /// existing child in place — rather than appending a duplicate — regardless of seed order.
 /// </summary>

@@ -35,7 +35,7 @@ public class and_read_model_has_pii_property(context context) : Given<context>(c
         /// </summary>
         /// <returns>The instances once at least one is visible.</returns>
         /// <remarks>
-        /// <see cref="PiiReadModel"/> is materialized, so <c>GetInstances</c> reads the sink instead of
+        /// <see cref="PiiReadModel"/> is materialized, so <c language="csharp">GetInstances</c> reads the sink instead of
         /// replaying — a read straight after appending can race the projection engine's catch-up unless
         /// something polls for the result to appear.
         /// </remarks>

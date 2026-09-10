@@ -6,18 +6,18 @@ using System.Reflection;
 namespace Cratis.Chronicle.Testing;
 
 /// <summary>
-/// Manages the Orleans <c>RuntimeContext</c> for in-process grain construction without a silo.
+/// Manages the Orleans <c language="csharp">RuntimeContext</c> for in-process grain construction without a silo.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="Grain"/> base class constructor accesses <c>RuntimeContext.Current!.ObservableLifecycle</c>,
+/// The <see cref="Grain"/> base class constructor accesses <c language="csharp">RuntimeContext.Current!.ObservableLifecycle</c>,
 /// which requires a valid <see cref="IGrainContext"/> to be set as the current execution context. This class
-/// uses reflection to call the internal <c>RuntimeContext.SetExecutionContext</c> method, following the same
+/// uses reflection to call the internal <c language="csharp">RuntimeContext.SetExecutionContext</c> method, following the same
 /// approach used by the OrleansTestKit project.
 /// </para>
 /// <para>
 /// Usage: wrap grain construction in a <see langword="using"/> block to ensure the context is properly cleaned up:
-/// <code>
+/// <code language="csharp">
 /// using (RuntimeContextScope.SetExecutionContext(testGrainContext))
 /// {
 ///     var grain = new MyGrain(dependencies...);

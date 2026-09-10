@@ -309,9 +309,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="identifiedByProperty">The property that identifies items at the leaf level.</param>
     /// <remarks>
     /// For a 3-level hierarchy (Root → Feature → Slice), the Feature projection's
-    /// <c>ChildrenPropertyPath</c> is already relative to root (e.g. "features"), so the path
+    /// <c language="csharp">ChildrenPropertyPath</c> is already relative to root (e.g. "features"), so the path
     /// is simply "features.id". For a 4-level hierarchy (Root → Feature → Slice → EventItem),
-    /// the Slice projection's <c>ChildrenPropertyPath</c> is "slices" (relative to Feature),
+    /// the Slice projection's <c language="csharp">ChildrenPropertyPath</c> is "slices" (relative to Feature),
     /// not to root. Walking up the chain gives ["features", "slices"], yielding the correct
     /// MongoDB path "features.slices.id" for a flat document query.
     /// </remarks>

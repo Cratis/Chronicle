@@ -8,7 +8,7 @@ using Cratis.Serialization;
 namespace Cratis.Chronicle.Events.Constraints;
 
 /// <summary>
-/// The message on a property-level <c>[Unique]</c>, which used to be dropped here and nowhere else - the
+/// The message on a property-level <c language="csharp">[Unique]</c>, which used to be dropped here and nowhere else - the
 /// class-level provider reads the same argument off the same attribute.
 /// </summary>
 /// <remarks>

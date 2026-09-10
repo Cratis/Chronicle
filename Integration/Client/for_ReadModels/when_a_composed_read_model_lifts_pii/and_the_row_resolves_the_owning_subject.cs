@@ -8,7 +8,7 @@ using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_composed_read
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_composed_read_model_lifts_pii;
 
 /// <summary>
-/// The single-subject path a read model has always had: the row's own <c>Id</c> is the person the value
+/// The single-subject path a read model has always had: the row's own <c language="csharp">Id</c> is the person the value
 /// belongs to, so it decrypts. A control for the whole undeclared release path, at the tier where the value
 /// is genuinely ciphertext — this is what must not move.
 /// </summary>

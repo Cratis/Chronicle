@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_project
 /// <summary>
 /// Regression for https://github.com/Cratis/Chronicle/issues/3940 — the event that creates a child entry
 /// applied the child's property mappers twice, which is invisible for a plain set but doubles an
-/// accumulating <c>[AddFrom]</c>. The root-level accumulation on the same event must stay correct too.
+/// accumulating <c language="csharp">[AddFrom]</c>. The root-level accumulation on the same event must stay correct too.
 /// </summary>
 public class and_a_child_property_accumulates_with_add_from : Specification
 {

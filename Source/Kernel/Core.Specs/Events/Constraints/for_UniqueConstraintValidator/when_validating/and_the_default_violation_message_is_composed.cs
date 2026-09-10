@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintValidator.when
 /// <remarks>
 /// Nothing else pins this text either, so the assertions state what must be absent rather than the exact wording.
 /// The offending value remains reachable through the violation details, which
-/// <c>and_the_violation_details_are_read</c> covers.
+/// <c language="csharp">and_the_violation_details_are_read</c> covers.
 /// </remarks>
 public class and_the_default_violation_message_is_composed : given.a_unique_constraint_validator_with_valid_definition
 {

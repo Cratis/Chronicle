@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// default event log sequence (<see cref="EventSequenceId.Log"/>).
 /// </summary>
 /// <remarks>
-/// Equivalent to <c>[EventSequence(EventSequenceId.LogId)]</c> but more expressive.
+/// Equivalent to <c language="csharp">[EventSequence(EventSequenceId.LogId)]</c> but more expressive.
 /// Use this when you want to be explicit that the observer reads from the local event log
 /// rather than an inbox or another sequence.
 /// </remarks>

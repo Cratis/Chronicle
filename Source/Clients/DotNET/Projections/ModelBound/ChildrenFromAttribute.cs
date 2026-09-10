@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// This subscribes <typeparamref name="TEvent"/> only for the child collection - AutoMap eligibility for its
 /// payload stays scoped to the child, and it cannot, by itself, overwrite a root property of the same name.
 /// That changes the moment anything else on the same model root also references <typeparamref name="TEvent"/>
-/// (for example a <c>[SetFromContext&lt;TEvent&gt;]</c> on an unrelated root property that only wants an
+/// (for example a <c language="csharp">[SetFromContext&lt;TEvent&gt;]</c> on an unrelated root property that only wants an
 /// <see cref="Cratis.Chronicle.Events.EventContext"/> value): the event then also gets a root-level subscription, and every one of its
 /// payload properties becomes AutoMap-eligible against any same-named root property - independent of which
 /// attribute added the root subscription. Fence an affected root property with <see cref="NoAutoMapAttribute"/>

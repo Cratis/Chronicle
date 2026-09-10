@@ -59,7 +59,7 @@ public class EventValueMapBuilder<TUpgrade, TPrevious> : IEventValueMapBuilder<T
     /// <remarks>
     /// Several source values collapsing onto one target value have no single inverse, so the first pair declared for
     /// a target value is the one that gets to represent it going back. A migration that needs a different answer
-    /// states the reverse map itself in its <c>Downcast</c>, which overrides what is derived here.
+    /// states the reverse map itself in its <c language="csharp">Downcast</c>, which overrides what is derived here.
     /// </remarks>
     static ValueMapping[] Invert(IEnumerable<ValueMapping> mappings) =>
         [.. mappings

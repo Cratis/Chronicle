@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Aspire.for_ChronicleContainerImageTags;
 
 /// <summary>
 /// Pins the container environment variable keys as literals. The Chronicle server binds them through the
-/// <c>Cratis__Chronicle__</c> prefix onto <c>ChronicleOptions</c>, so a renamed constant would leave every
+/// <c language="csharp">Cratis__Chronicle__</c> prefix onto <c language="csharp">ChronicleOptions</c>, so a renamed constant would leave every
 /// other spec green while the server silently ignored the configuration.
 /// </summary>
 public class when_referencing_the_configuration_keys : Specification

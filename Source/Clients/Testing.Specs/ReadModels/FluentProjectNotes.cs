@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Read model for the fluent scalar clear: a note at the root, a note on a child item, and a note on a nested
-/// object, all cleared through <c>.Clear(...)</c>.
+/// object, all cleared through <c language="csharp">.Clear(...)</c>.
 /// </summary>
 /// <param name="Id">Project identifier (the event source id).</param>
 /// <param name="Note">The current root note, or <see langword="null"/> when there is none.</param>

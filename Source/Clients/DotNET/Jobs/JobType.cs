@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Jobs;
 /// </summary>
 /// <param name="Value">String representation of the job type.</param>
 /// <remarks>
-/// The expected format is <c>Namespace.Type</c>.
+/// The expected format is <c language="csharp">Namespace.Type</c>.
 /// </remarks>
 public record JobType(string Value) : ConceptAs<string>(Value)
 {

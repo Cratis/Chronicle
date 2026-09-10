@@ -82,7 +82,7 @@ namespace Cratis.Chronicle.Testing;
 /// </summary>
 /// <remarks>
 /// All gRPC service contracts are backed by the real kernel implementations from
-/// <c>Cratis.Chronicle.Services</c>. Command-dispatching implementations execute through one shared Arc
+/// <c language="csharp">Cratis.Chronicle.Services</c>. Command-dispatching implementations execute through one shared Arc
 /// command pipeline, whose service provider carries the in-memory collaborators the command handlers
 /// resolve their parameters from.
 /// </remarks>

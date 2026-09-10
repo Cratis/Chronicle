@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// </para>
 /// <para>
 /// Usage:
-/// <code>
+/// <code language="csharp">
 /// var scenario = new ReadModelScenario&lt;MyReadModel&gt;();
 /// await scenario.Given.ForEventSource(myId).Events(new SomeEvent(), new SomeOtherEvent());
 /// scenario.Instance.SomeProperty.ShouldBe(expectedValue);
@@ -145,7 +145,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </summary>
     /// <remarks>
     /// Usage:
-    /// <code>
+    /// <code language="csharp">
     /// await scenario.Given
     ///     .ForEventSource(myId)
     ///     .Events(new SomeEvent(), new SomeOtherEvent());
@@ -176,7 +176,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <remarks>
     /// <para>
     /// Running in-process means standing in for the sink, for storage and the observer lifecycle, for the event
-    /// context, for <c>[Join]</c> key resolution and for deferred handling. Most of that applies to every
+    /// context, for <c language="csharp">[Join]</c> key resolution and for deferred handling. Most of that applies to every
     /// scenario alike and is described in the testing documentation. This property reports the part that does
     /// not: the substituted layers <typeparamref name="TReadModel"/>'s own shape reaches, so a spec asserting
     /// against behavior that lives in one of them can be recognized as needing a kernel-backed sibling rather
@@ -194,8 +194,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </summary>
     /// <remarks>
     /// Pass this to production code that depends on <see cref="IReadModels"/> to have
-    /// <c>GetInstanceById</c> calls return the instances registered via
-    /// <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
+    /// <c language="csharp">GetInstanceById</c> calls return the instances registered via
+    /// <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
     public IReadModels ReadModels => EventStore().ReadModels;
 
@@ -207,12 +207,12 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// Read this instead of reflecting over your own assemblies when a spec needs to know what Chronicle
     /// registered — the event types, projections, reducers, reactors and constraints — including the
     /// classifications the registry draws itself, such as an event type with a property-level
-    /// <c>[Unique]</c> landing in <see cref="IClientArtifactsProvider.UniqueConstraints"/> while one with a
-    /// class-level <c>[Unique]</c> lands in <see cref="IClientArtifactsProvider.UniqueEventTypeConstraints"/>.
+    /// <c language="csharp">[Unique]</c> landing in <see cref="IClientArtifactsProvider.UniqueConstraints"/> while one with a
+    /// class-level <c language="csharp">[Unique]</c> lands in <see cref="IClientArtifactsProvider.UniqueEventTypeConstraints"/>.
     /// It is read-only: reading it neither triggers nor alters registration, and every read hands out the
     /// same instance — the one from the <see cref="Defaults"/> the scenario was constructed with, which by
     /// default is the process-wide <see cref="Defaults.Instance"/>. The same registry is reachable outside a
-    /// scenario as <c>Defaults.Instance.ClientArtifactsProvider</c>.
+    /// scenario as <c language="csharp">Defaults.Instance.ClientArtifactsProvider</c>.
     /// </remarks>
     public IClientArtifactsProvider ClientArtifactsProvider { get; } = defaults.ClientArtifactsProvider;
 
@@ -270,7 +270,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     /// <summary>
     /// Registers a pre-built read model instance for a specific event source, making it available via
-    /// <see cref="ReadModels"/> for calls to <c>GetInstanceById</c>.
+    /// <see cref="ReadModels"/> for calls to <c language="csharp">GetInstanceById</c>.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
     /// <param name="readModel">The read model instance to register.</param>
@@ -292,7 +292,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// This method accumulates events without immediately processing them. Processing is deferred until
     /// <see cref="Instance"/> is first accessed, allowing events across multiple event sources to be
     /// collected and then processed together. This is required for projections that use
-    /// <c>ChildrenFrom</c> with events on separate event source streams.
+    /// <c language="csharp">ChildrenFrom</c> with events on separate event source streams.
     /// If events are collected after <see cref="Instance"/> has already been accessed, the next access
     /// to <see cref="Instance"/> will re-process all collected events including the newly added ones.
     /// </remarks>

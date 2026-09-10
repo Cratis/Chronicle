@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Storage;
 /// <para>
 /// Comparison is ordinal, matching how event store names are compared everywhere else in the kernel — they are
 /// identifiers that become database names, not linguistic text. Kernel projects build with
-/// <c>InvariantGlobalization</c> enabled, where culture-aware comparison already collapses to ordinal semantics,
+/// <c language="csharp">InvariantGlobalization</c> enabled, where culture-aware comparison already collapses to ordinal semantics,
 /// so this only narrows resolution in a host that turns invariant globalization back off.
 /// </para>
 /// </remarks>

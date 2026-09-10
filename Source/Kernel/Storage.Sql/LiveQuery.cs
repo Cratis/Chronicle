@@ -11,9 +11,9 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// </summary>
 /// <remarks>
 /// MongoDB delivers live updates through collection change-streams. The SQL backends cannot use Arc's
-/// push-based <c>DbSet.Observe()</c> here because every event store and namespace lives in its own
+/// push-based <c language="csharp">DbSet.Observe()</c> here because every event store and namespace lives in its own
 /// database created on demand with a per-store connection string — those contexts are not registered
-/// in dependency injection, which <c>DbSet.Observe()</c> requires to build its listener. Instead this
+/// in dependency injection, which <c language="csharp">DbSet.Observe()</c> requires to build its listener. Instead this
 /// polls the supplied query on an interval and re-emits only when the result actually changes, giving
 /// subscribers automatic updates without a manual refresh while honoring the per-store connection.
 /// </remarks>

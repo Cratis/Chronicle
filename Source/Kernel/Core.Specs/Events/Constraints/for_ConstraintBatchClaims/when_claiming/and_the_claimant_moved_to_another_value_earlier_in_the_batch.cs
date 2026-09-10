@@ -38,7 +38,7 @@ public class and_the_claimant_moved_to_another_value_earlier_in_the_batch : Spec
 
     /// <summary>
     /// Pins the defect. The batch's constraint index updates are applied in event order by
-    /// <c>EventSequence.CompleteDurableAppend</c>, and each update replaces the event source's single entry, so once
+    /// <c language="csharp">EventSequence.CompleteDurableAppend</c>, and each update replaces the event source's single entry, so once
     /// this batch lands the holder owns the current value and the released one is owned by nobody. The second event
     /// source should therefore be allowed to claim it. Flip this assertion to ShouldBeTrue when the accumulator is
     /// corrected to release a superseded claim.

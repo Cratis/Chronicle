@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 /// <summary>
 /// Starting a catch-up job can fail for a structural reason no retry will fix, which used to leave the observer
 /// looping forever between the stranded-preparation rescue and a fresh, doomed catch-up attempt - one recovery, one
-/// re-route, one failed <c>CatchUp</c>, repeated with zero forward progress. Up to the configured bound, though, the
+/// re-route, one failed <c language="csharp">CatchUp</c>, repeated with zero forward progress. Up to the configured bound, though, the
 /// loop must keep retrying rather than giving up early: a bound reached prematurely would quarantine an observer
 /// that was only ever going to need one more attempt.
 /// </summary>

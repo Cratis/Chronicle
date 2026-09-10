@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCom
 
 /// <summary>
 /// Regression for child-collection PII being written to the sink in the clear. A projection that adds a
-/// child carrying a <c>[PII]</c> member goes through the real projection encryption step (EncryptChangeset)
+/// child carrying a <c language="csharp">[PII]</c> member goes through the real projection encryption step (EncryptChangeset)
 /// and a real MongoDB sink; the stored child element must be ciphertext at rest and release back to the
 /// original plaintext, mirroring how the read path decrypts per array element.
 /// </summary>

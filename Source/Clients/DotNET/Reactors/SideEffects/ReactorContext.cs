@@ -19,7 +19,7 @@ public record ReactorContext(EventContext EventContext, object Reactor, ReactorC
     /// Chronicle invocation pipeline.
     /// </summary>
     /// <remarks>
-    /// This lets callers of the previous event-store-less <c>CanHandle</c> contract reach the same per-store path
+    /// This lets callers of the previous event-store-less <c language="csharp">CanHandle</c> contract reach the same per-store path
     /// as current callers. It is not a constructor parameter so the previous three-parameter constructor and
     /// deconstruction shape remain binary compatible.
     /// </remarks>

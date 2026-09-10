@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_joining_a_guid_keyed_source;
 
 /// <summary>
-/// A root <c>[Join]</c> keyed by its own Guid identifier backfills the joined value when the row-creating
+/// A root <c language="csharp">[Join]</c> keyed by its own Guid identifier backfills the joined value when the row-creating
 /// FROM event is seeded BEFORE the join-source event (the entity-first order). The join source arriving after
 /// the row already exists must enrich the EXISTING root document — mirroring the real engine / MongoDB — rather
 /// than writing a phantom document keyed by the join source's own id.

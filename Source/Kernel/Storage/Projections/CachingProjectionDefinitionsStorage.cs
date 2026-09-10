@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Storage.Projections;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Projection definitions are read repeatedly and change rarely: <c>Has</c> and <c>Get</c> run on every projection grain
-/// activation and <c>GetAll</c> on every projections-manager activation. This cache serves those reads from memory after
+/// Projection definitions are read repeatedly and change rarely: <c language="csharp">Has</c> and <c language="csharp">Get</c> run on every projection grain
+/// activation and <c language="csharp">GetAll</c> on every projections-manager activation. This cache serves those reads from memory after
 /// the first load, avoiding a backing-store round-trip per call while keeping writes correct through write-through on
 /// <see cref="Save"/> and eviction on <see cref="Delete"/>.
 /// </para>
@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Storage.Projections;
 /// <b>Staleness / eventual consistency:</b> within a single silo every read and write routes through this same cached
 /// instance, so local write-through keeps the cache authoritative for that silo. Across a cluster, a <see cref="Save"/> or
 /// <see cref="Delete"/> performed on another silo leaves this silo's cache stale until it is discarded. This is acceptable
-/// because the <c>Projection</c> grain is single-activation per (event store, projection id) cluster-wide and is the
+/// because the <c language="csharp">Projection</c> grain is single-activation per (event store, projection id) cluster-wide and is the
 /// authoritative writer holding the definition in grain state — this cache is only a read-accelerator for activation and
 /// listing and is intentionally eventually consistent. Cross-silo invalidation is deliberately out of scope for this cache.
 /// </para>

@@ -3,6 +3,7 @@
 
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
@@ -57,7 +58,7 @@ internal sealed class AppendedEventSerializer(
     /// <inheritdoc/>
     public object ReadValue<TInput>(ref Reader<TInput> reader, Field field)
     {
-        var json = StringCodec.ReadValue(ref reader, field);
+        var json = StringCodec.ReadValue(ref reader, field)!;
         var jsonObject = JsonNode.Parse(json)!;
         var appendedEventWithSchema = JsonSerializer.Deserialize<AppendedEventWithSchema>(json, jsonSerializerOptions)!;
         var appendedEventJson = jsonObject[nameof(AppendedEventWithSchema.AppendedEvent).ToCamelCase()]!;
@@ -69,10 +70,10 @@ internal sealed class AppendedEventSerializer(
     }
 
     /// <inheritdoc/>
-    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, Type expectedType, object value)
+    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, [AllowNull] Type expectedType, [AllowNull] object? value)
         where TBufferWriter : IBufferWriter<byte>
     {
-        var appendedEvent = (AppendedEvent)value;
+        var appendedEvent = (AppendedEvent)value!;
         var schemaJson = schemaCache.GetSchemaJsonFor(
             appendedEvent.Context.EventStore,
             appendedEvent.Context.EventType.Id,

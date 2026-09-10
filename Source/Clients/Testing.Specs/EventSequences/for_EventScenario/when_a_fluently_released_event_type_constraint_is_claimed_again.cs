@@ -7,7 +7,7 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
-/// The fluent release path end to end: <c>builder.Unique&lt;T&gt;().RemovedWith&lt;TRemoval&gt;()</c>. The release is
+/// The fluent release path end to end: <c language="csharp">builder.Unique&lt;T&gt;().RemovedWith&lt;TRemoval&gt;()</c>. The release is
 /// per event source, so one employee ending a shift opens their own next cycle and nobody else's.
 /// </summary>
 public class when_a_fluently_released_event_type_constraint_is_claimed_again : Specification, IDisposable

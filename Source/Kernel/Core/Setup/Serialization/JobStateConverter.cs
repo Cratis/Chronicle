@@ -38,9 +38,9 @@ public sealed class JobStateConverter : JsonConverter<JobState>
     /// <inheritdoc/>
     /// <remarks>
     /// Job grains persist their own <see cref="JobState"/>-derived state type, so the converter must own those types
-    /// too - exactly as MongoDB's <c>JobStateSerializationProvider</c> hands every <see cref="JobState"/> subclass to
+    /// too - exactly as MongoDB's <c language="csharp">JobStateSerializationProvider</c> hands every <see cref="JobState"/> subclass to
     /// its serializer. Without this, System.Text.Json falls back to the default converter for a derived state, which
-    /// writes the <see cref="JobState.Request"/> declared as the empty marker interface <c>IJobRequest</c> as an empty
+    /// writes the <see cref="JobState.Request"/> declared as the empty marker interface <c language="csharp">IJobRequest</c> as an empty
     /// object and cannot read it back at all.
     /// </remarks>
     public override bool CanConvert(Type typeToConvert) => typeof(JobState).IsAssignableFrom(typeToConvert);

@@ -6,7 +6,7 @@ using Cratis.Chronicle.SharedTypeCatalog;
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_SharedTypeRegistry.when_asking_for_the_qualified_name;
 
 /// <summary>
-/// A <c>ConceptAs&lt;T&gt;</c> already travels as its unwrapped primitive - it must never also be treated as a
+/// A <c language="csharp">ConceptAs&lt;T&gt;</c> already travels as its unwrapped primitive - it must never also be treated as a
 /// type to mirror in its own right, or the wire would carry a message for something that is really just a string.
 /// </summary>
 [Collection(SharedTypeRegistryCollection.Name)]

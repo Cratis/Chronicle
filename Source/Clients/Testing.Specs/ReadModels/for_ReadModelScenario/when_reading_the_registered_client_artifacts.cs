@@ -9,8 +9,8 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 /// <summary>
 /// Verifies that a scenario hands out the very registry Chronicle discovered its artifacts from, so a spec can
 /// ask what was registered instead of re-deriving it by reflecting over its own assemblies. The classification a
-/// consumer re-deriving it would most easily get wrong is pinned here as well: a property-level <c>[Unique]</c>
-/// makes an event type a unique constraint, while a class-level <c>[Unique]</c> makes it a unique event type
+/// consumer re-deriving it would most easily get wrong is pinned here as well: a property-level <c language="csharp">[Unique]</c>
+/// makes an event type a unique constraint, while a class-level <c language="csharp">[Unique]</c> makes it a unique event type
 /// constraint, and the two never overlap.
 /// </summary>
 public class when_reading_the_registered_client_artifacts : Specification

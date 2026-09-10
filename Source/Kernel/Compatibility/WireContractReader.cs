@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Compatibility;
 public static class WireContractReader
 {
     /// <summary>
-    /// Reads a wire contract from the serialized <c>FileDescriptorSet</c> bytes a client or server carries.
+    /// Reads a wire contract from the serialized <c language="csharp">FileDescriptorSet</c> bytes a client or server carries.
     /// </summary>
     /// <param name="descriptorSet">The serialized descriptor set.</param>
     /// <returns>The normalized <see cref="WireContract"/>.</returns>
@@ -22,7 +22,7 @@ public static class WireContractReader
     }
 
     /// <summary>
-    /// Reads a wire contract from a parsed <c>FileDescriptorSet</c>.
+    /// Reads a wire contract from a parsed <c language="csharp">FileDescriptorSet</c>.
     /// </summary>
     /// <param name="descriptorSet">The descriptor set.</param>
     /// <returns>The normalized <see cref="WireContract"/>.</returns>

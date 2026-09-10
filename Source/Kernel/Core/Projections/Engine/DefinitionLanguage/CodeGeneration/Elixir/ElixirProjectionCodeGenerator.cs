@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// Renders a projection as Elixir for the Elixir client.
 /// </summary>
 /// <remarks>
-/// Both forms are the same <c>from</c> macros; what differs is where they live. The declarative form
+/// Both forms are the same <c language="csharp">from</c> macros; what differs is where they live. The declarative form
 /// puts them in a projection module that names the read model it targets, the model-bound form puts
 /// them on the read model itself - as the client's own samples write them.
 /// </remarks>

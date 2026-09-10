@@ -6,8 +6,8 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_projecting_with_children_from;
 
 /// <summary>
-/// The <c>AddChild(...)</c> spelling of <see cref="and_the_same_event_maps_parent_fields_and_a_child"/>.
-/// <c>AddChild</c> desugars into <c>Children(...).From&lt;TEvent&gt;(...)</c>, so the same event type both maps a
+/// The <c language="csharp">AddChild(...)</c> spelling of <see cref="and_the_same_event_maps_parent_fields_and_a_child"/>.
+/// <c language="csharp">AddChild</c> desugars into <c language="csharp">Children(...).From&lt;TEvent&gt;(...)</c>, so the same event type both maps a
 /// parent scalar and feeds the child collection.
 /// </summary>
 public class and_the_same_event_maps_parent_fields_and_adds_a_child : Specification

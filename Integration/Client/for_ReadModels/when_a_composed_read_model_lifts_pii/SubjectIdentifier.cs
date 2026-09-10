@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_composed_read_model
 
 /// <summary>
 /// The person a retention decision is about. Deliberately not an <see cref="EventSourceId{T}"/> and
-/// deliberately not named <c>Id</c>, because that is what the composed rows below need in order to reproduce
+/// deliberately not named <c language="csharp">Id</c>, because that is what the composed rows below need in order to reproduce
 /// a row that resolves no compliance subject of its own.
 /// </summary>
 /// <param name="Value">Actual value.</param>

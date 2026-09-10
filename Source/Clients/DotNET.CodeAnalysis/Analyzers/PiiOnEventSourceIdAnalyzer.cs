@@ -9,8 +9,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a <c>[PII]</c> attribute placed on a property or record positional parameter
-/// whose type derives from <c>EventSourceId&lt;T&gt;</c>.
+/// Analyzer that reports a <c language="csharp">[PII]</c> attribute placed on a property or record positional parameter
+/// whose type derives from <c language="csharp">EventSourceId&lt;T&gt;</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class PiiOnEventSourceIdAnalyzer : DiagnosticAnalyzer

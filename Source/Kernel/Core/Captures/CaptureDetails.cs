@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Captures;
 /// <param name="Declaration">The capture declaration language source text.</param>
 /// <param name="Status">Whether the capture is started or stopped.</param>
 /// <remarks>
-/// Named for what it carries rather than for the concept, because <c>Capture</c> in this namespace is already
+/// Named for what it carries rather than for the concept, because <c language="csharp">Capture</c> in this namespace is already
 /// the stored capture the engine works with.
 /// </remarks>
 [ReadModel]

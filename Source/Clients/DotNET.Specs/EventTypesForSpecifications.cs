@@ -70,7 +70,7 @@ public class EventTypesForSpecifications : IEventTypes
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Answers a type that is not an event type the way the real <c>EventTypes</c> does, so that a spec measuring
+    /// Answers a type that is not an event type the way the real <c language="csharp">EventTypes</c> does, so that a spec measuring
     /// what a caller does with the miss measures the real failure rather than a dictionary lookup.
     /// </remarks>
     public EventType GetEventTypeFor(Type clrType)

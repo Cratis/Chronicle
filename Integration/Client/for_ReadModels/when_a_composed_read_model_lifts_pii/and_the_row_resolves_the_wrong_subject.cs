@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_composed_read_model
 
 /// <summary>
 /// The other outcome available to an undeclared composed row, and the reason renaming the identity to
-/// <c>Id</c> is not the repair it looks like: the row now resolves a subject, but not the one the lifted
+/// <c language="csharp">Id</c> is not the repair it looks like: the row now resolves a subject, but not the one the lifted
 /// value belongs to, so the value is decrypted under the wrong key and degrades to empty.
 /// <para>
 /// A control. It must stay green on both sides — the change adds a way to say which subject a value belongs

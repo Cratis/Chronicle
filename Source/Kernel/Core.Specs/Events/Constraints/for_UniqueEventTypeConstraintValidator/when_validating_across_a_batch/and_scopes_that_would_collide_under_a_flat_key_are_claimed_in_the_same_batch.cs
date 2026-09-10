@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueEventTypeConstraintValid
 /// <summary>
 /// Two genuinely different scopes must stay different. These two events carry different event source types and
 /// different event stream types, but joining the dimensions into one delimited string produces the exact same text
-/// for both (<c>est:{sourceType}|estt:{streamType}</c>), so tracking the batch by such a key would let one of them
+/// for both (<c language="csharp">est:{sourceType}|estt:{streamType}</c>), so tracking the batch by such a key would let one of them
 /// cancel the other's claim. The dimensions are kept typed and compared one by one, so both are admitted.
 /// </summary>
 public class and_scopes_that_would_collide_under_a_flat_key_are_claimed_in_the_same_batch : Specification

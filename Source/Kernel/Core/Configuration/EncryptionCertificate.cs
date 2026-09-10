@@ -32,7 +32,7 @@ public class EncryptionCertificate
     /// </para>
     /// <para>
     /// A previous certificate is removed once nothing depends on it any longer — which
-    /// <c>GET /diagnostics/encryption-certificates</c> reports. Removing it while something still does makes
+    /// <c language="csharp">GET /diagnostics/encryption-certificates</c> reports. Removing it while something still does makes
     /// that data unreadable, so keep the file in the backup set for as long as the oldest restorable backup.
     /// </para>
     /// </remarks>

@@ -36,7 +36,7 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
-        foreach (var failedPartition in actualGrainState.State.Partitions)
+        foreach (var failedPartition in actualGrainState.State!.Partitions)
         {
             failedPartition.ObserverId = observerKey.ObserverId;
         }

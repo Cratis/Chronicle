@@ -7,7 +7,7 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
-/// The model-bound release path end to end: <c>[Unique]</c> on the event type and <c>[RemoveConstraint]</c> on the
+/// The model-bound release path end to end: <c language="csharp">[Unique]</c> on the event type and <c language="csharp">[RemoveConstraint]</c> on the
 /// event that ends the cycle. The attribute was already resolved into a removal event on the client definition and
 /// then discarded on the way to the contract, so the documented behavior compiled, registered, and did nothing -
 /// the second cycle was refused forever with no indication of why.

@@ -17,19 +17,19 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_nested_in_nested_from_pdl.given;
 
 /// <summary>
-/// Reusable context that compiles a two-level <c>nested</c> + <c>clear with</c> PDL document
+/// Reusable context that compiles a two-level <c language="csharp">nested</c> + <c language="csharp">clear with</c> PDL document
 /// into a <see cref="ProjectionDefinition"/> using <see cref="LanguageService"/>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// There is currently no in-process integration harness that takes a raw PDL string and runs
 /// it through the engine — the engine's integration fixtures register typed
-/// <c>IProjectionFor&lt;T&gt;</c> classes, not free-form PDL declarations.
+/// <c language="csharp">IProjectionFor&lt;T&gt;</c> classes, not free-form PDL declarations.
 /// </para>
 /// <para>
-/// Phase 1's <c>when_projecting_with_nested_in_nested</c> specs already prove that a
+/// Phase 1's <c language="csharp">when_projecting_with_nested_in_nested</c> specs already prove that a
 /// <see cref="ProjectionDefinition"/> with the nested + clear-with structure (built via
-/// the declarative <c>.Nested(...)</c> / <c>.ClearWith&lt;T&gt;()</c> API) is processed
+/// the declarative <c language="csharp">.Nested(...)</c> / <c language="csharp">.ClearWith&lt;T&gt;()</c> API) is processed
 /// correctly by the engine — outer / inner are set, updated and cleared as expected.
 /// </para>
 /// <para>

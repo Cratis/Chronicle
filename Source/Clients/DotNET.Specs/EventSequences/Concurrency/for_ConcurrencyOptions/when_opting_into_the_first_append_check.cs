@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyOptions;
 
 /// <summary>
 /// Opting in is a single assignment on the options a consumer already reaches through
-/// <c>ChronicleOptions.ConcurrencyOptions</c>, and it does not disturb anything else on them.
+/// <c language="csharp">ChronicleOptions.ConcurrencyOptions</c>, and it does not disturb anything else on them.
 /// </summary>
 public class when_opting_into_the_first_append_check : Specification
 {

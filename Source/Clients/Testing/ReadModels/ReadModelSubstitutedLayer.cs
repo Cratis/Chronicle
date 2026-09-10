@@ -22,7 +22,7 @@ public enum ReadModelSubstitutedLayer
     Sink = 0,
 
     /// <summary>
-    /// <c>[Join]</c> key resolution. The production engine resolves a join source against its real sink; the
+    /// <c language="csharp">[Join]</c> key resolution. The production engine resolves a join source against its real sink; the
     /// harness applies its own correction to reach the same root, so the resolution itself is not the one that
     /// runs live.
     /// </summary>
@@ -35,7 +35,7 @@ public enum ReadModelSubstitutedLayer
     DeferredKeyHandling = 2,
 
     /// <summary>
-    /// Compliance. A deployed Chronicle encrypts the <c>[PII]</c> members of a read model on the way into the
+    /// Compliance. A deployed Chronicle encrypts the <c language="csharp">[PII]</c> members of a read model on the way into the
     /// sink and releases them on the way out; the harness projects and reads plaintext, so a value that is
     /// unreadable, erased or wrongly-subjected in a running system still looks correct here.
     /// </summary>

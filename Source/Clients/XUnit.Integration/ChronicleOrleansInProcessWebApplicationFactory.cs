@@ -44,7 +44,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="configureWebHost">Action to configure <see cref="IWebHostBuilder"/>.</param>
 /// <param name="configureStorage">Optional action to configure Chronicle storage on the in-process silo instead of the default MongoDB.</param>
 /// <param name="defaultSinkTypeId">Optional default sink type identifier for projection registration.</param>
-/// <param name="storageHostConfiguration">Optional key-value pairs injected into <see cref="IConfiguration"/> so that <c>IOptions&lt;ChronicleOptions&gt;</c> picks up the correct storage type and connection string for non-MongoDB backends.</param>
+/// <param name="storageHostConfiguration">Optional key-value pairs injected into <see cref="IConfiguration"/> so that <c language="csharp">IOptions&lt;ChronicleOptions&gt;</c> picks up the correct storage type and connection string for non-MongoDB backends.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>

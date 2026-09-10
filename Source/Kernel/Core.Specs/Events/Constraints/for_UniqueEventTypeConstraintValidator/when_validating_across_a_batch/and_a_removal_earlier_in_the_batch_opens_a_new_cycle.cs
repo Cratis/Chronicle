@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Events.Constraints.for_UniqueEventTypeConstraintValid
 
 /// <summary>
 /// This removal event is not covered by the constraint, so without observing every event in the batch, a removal appended
-/// earlier in the same <c>AppendMany</c> call would be invisible to a covered event later in it: durable storage
+/// earlier in the same <c language="csharp">AppendMany</c> call would be invisible to a covered event later in it: durable storage
 /// still reports the closed, pre-batch cycle as unresolved. The removal must release the cycle for the rest of the
 /// batch the same way it would if it had been appended in an earlier, separate call.
 /// </summary>

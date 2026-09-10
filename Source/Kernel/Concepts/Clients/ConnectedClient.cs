@@ -44,7 +44,7 @@ public record ConnectedClient
     public string MachineName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the type of the client (for example, <c>.NET</c>).
+    /// Gets the type of the client (for example, <c language="csharp">.NET</c>).
     /// </summary>
     public string ClientType { get; init; } = string.Empty;
 }

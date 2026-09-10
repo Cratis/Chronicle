@@ -9,7 +9,7 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.EventSequences.Migrations.for_EventTypeMigrations.when_migrating_with_a_value_map.given;
 
 /// <summary>
-/// A two-generation event type whose <c>status</c> enumeration was renumbered between the generations, with the
+/// A two-generation event type whose <c language="csharp">status</c> enumeration was renumbered between the generations, with the
 /// value map a migration declares to say what the old numbers became - and its inverse for the way back.
 /// </summary>
 public class a_definition_with_a_value_map : Migrations.for_EventTypeMigrations.given.all_dependencies

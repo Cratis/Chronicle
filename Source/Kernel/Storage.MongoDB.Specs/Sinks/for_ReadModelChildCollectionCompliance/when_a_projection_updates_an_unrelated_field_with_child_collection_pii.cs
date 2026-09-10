@@ -12,10 +12,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCom
 
 /// <summary>
 /// Regression for the projection sink UPDATE leg of child-collection PII. After a child carrying scalar
-/// <c>[PII]</c> has been added, a later event that only changes an unrelated top-level field re-encrypts
+/// <c language="csharp">[PII]</c> has been added, a later event that only changes an unrelated top-level field re-encrypts
 /// the whole decrypted state again. That re-encryption yields a nested child-PII difference with no array
-/// indexers (<c>contacts.name</c>) which — without the collapse the reducer pipeline already performs —
-/// reaches the sink as a non-positional dotted <c>$set</c> and is rejected with WriteError Code 28.
+/// indexers (<c language="csharp">contacts.name</c>) which — without the collapse the reducer pipeline already performs —
+/// reaches the sink as a non-positional dotted <c language="csharp">$set</c> and is rejected with WriteError Code 28.
 /// </summary>
 /// <param name="fixture">The shared <see cref="MongoDBFixture"/>.</param>
 [Collection(MongoDBCollection.Name)]

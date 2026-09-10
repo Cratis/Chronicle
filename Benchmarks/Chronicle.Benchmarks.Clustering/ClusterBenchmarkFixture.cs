@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// can be measured against one silo and against two.
 /// </summary>
 /// <remarks>
-/// The configuration mirrors <c>Integration/Clustering/ClusteringFixture</c> — an Orleans
+/// The configuration mirrors <c language="csharp">Integration/Clustering/ClusteringFixture</c> — an Orleans
 /// <see cref="InProcessTestCluster"/> over an EphemeralMongo instance, with every silo co-hosting an
 /// instance of the same Chronicle client application. Only the silo count and the role assignment differ
 /// between topologies, so a difference in the measurement is attributable to clustering.

@@ -13,11 +13,11 @@ namespace Cratis.Chronicle.Projections;
 /// <see cref="IProjectionChangesetNotifier"/> and forwards them to the watching client's gRPC stream.
 /// </summary>
 /// <remarks>
-/// The grain is keyed by an <c>ObserverSubscriberKey</c> whose silo address pins it (via
-/// <c>[ConnectedObserverPlacement]</c>) to the silo that terminates the client's watch connection, so the
+/// The grain is keyed by an <c language="csharp">ObserverSubscriberKey</c> whose silo address pins it (via
+/// <c language="csharp">[ConnectedObserverPlacement]</c>) to the silo that terminates the client's watch connection, so the
 /// final hop through the in-process <see cref="IProjectionChangesetMediator"/> never leaves that silo.
 /// The notifier reaches it as an ordinary — and therefore reliably routed — grain reference rather than a
-/// <c>CreateObjectReference</c> object reference.
+/// <c language="csharp">CreateObjectReference</c> object reference.
 /// </remarks>
 public interface IReadModelChangesetSubscriber : IGrainWithStringKey
 {

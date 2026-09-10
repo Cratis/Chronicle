@@ -18,7 +18,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 /// <remarks>
 /// This extension is intended for use with worker services and other non-web hosts. For ASP.NET Core web applications,
-/// use the <c>AddCratisChronicleClient</c> extension in the <c>Microsoft.AspNetCore.Builder</c> namespace instead,
+/// use the <c language="csharp">AddCratisChronicleClient</c> extension in the <c language="csharp">Microsoft.AspNetCore.Builder</c> namespace instead,
 /// which provides ASP.NET Core–specific defaults (HTTP header–based namespace resolution, HTTP context identity provider).
 /// </remarks>
 internal static class ChronicleClientServiceCollectionExtensions

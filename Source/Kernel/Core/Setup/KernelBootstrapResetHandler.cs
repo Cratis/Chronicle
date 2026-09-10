@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Setup;
 /// <summary>
 /// Re-runs the parts of <see cref="ChronicleServerStartupTask"/> that recreate data the next
 /// integration spec relies on after the storage reset wipes the underlying databases.
-/// Invoked by <c>IServer.ResetKernelState</c> after all <c>ICanPerformKernelStateReset</c>
-/// handlers have wiped their backing stores — never before, because <c>EnsureDefault*</c>
+/// Invoked by <c language="csharp">IServer.ResetKernelState</c> after all <c language="csharp">ICanPerformKernelStateReset</c>
+/// handlers have wiped their backing stores — never before, because <c language="csharp">EnsureDefault*</c>
 /// methods are no-ops when their target data already exists.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> used to look up grains.</param>

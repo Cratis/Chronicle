@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.for_EventStore.when_registering_all;
 
 /// <summary>
 /// An actual transport disconnect means the connection watchdog is about to own reconnecting - and, once
-/// reconnected, registering again via <c>OnConnected</c>. The background retry loop must stand down for that
+/// reconnected, registering again via <c language="csharp">OnConnected</c>. The background retry loop must stand down for that
 /// rather than keep racing it, so it stops trying the moment a real disconnect happens instead of only when it
 /// succeeds (#3935).
 /// </summary>

@@ -46,6 +46,6 @@ public class ProjectionDefinitionStorageProvider(IStorage storage) : IGrainStora
             return;
         }
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
-        await eventStore.Projections.Save(actualGrainState.State);
+        await eventStore.Projections.Save(actualGrainState.State!);
     }
 }

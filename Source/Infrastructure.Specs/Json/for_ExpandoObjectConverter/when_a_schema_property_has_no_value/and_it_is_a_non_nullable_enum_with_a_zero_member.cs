@@ -9,17 +9,17 @@ namespace Cratis.Chronicle.Json.for_ExpandoObjectConverter.when_a_schema_propert
 /// <summary>
 /// The non-goal of withholding illegal defaults, stated as a spec. What disqualifies a synthesized value is that
 /// the property's own member list does not contain it - not that the property happens to be an enum. An enum that
-/// declares <c>NotSet = 0</c> has said that zero is a real answer, and the round trip must keep writing it: the
+/// declares <c language="csharp">NotSet = 0</c> has said that zero is a real answer, and the round trip must keep writing it: the
 /// member list is consulted, not bypassed, and it says yes.
 /// <para>
 /// Without this, the membership test is a branch every subject in the suite takes the same way. Every other enum
 /// in the fixture is 1-based, so replacing the test with a flat "not a declared member" leaves the whole suite
 /// green and quietly turns a legal default into an absent field - the mirror-image defect, in which a read model
-/// that answered <c>NotSet</c> comes back as one that did not answer at all.
+/// that answered <c language="csharp">NotSet</c> comes back as one that did not answer at all.
 /// </para>
 /// <para>
-/// A member list that names its members is written by name, so what lands on the wire is <c>"NotSet"</c> and
-/// what comes back is the <c>0</c> behind it.
+/// A member list that names its members is written by name, so what lands on the wire is <c language="csharp">"NotSet"</c> and
+/// what comes back is the <c language="csharp">0</c> behind it.
 /// </para>
 /// </summary>
 public class and_it_is_a_non_nullable_enum_with_a_zero_member : given.an_expando_object_converter_with_a_read_model_schema

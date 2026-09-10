@@ -11,9 +11,9 @@ using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_projection_re
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_projection_redirects_its_key;
 
 /// <summary>
-/// Measures what key redirection does to erasure reach. One event carrying one person's <c>[PII]</c> is
+/// Measures what key redirection does to erasure reach. One event carrying one person's <c language="csharp">[PII]</c> is
 /// appended to that person's own stream and projected twice in the same run: once with the default key
-/// (the event source id) and once with <c>UsingKey</c> pointing the document at an unrelated request id.
+/// (the event source id) and once with <c language="csharp">UsingKey</c> pointing the document at an unrelated request id.
 /// The person's encryption key is then deleted — the client-side right-to-erasure seam — and both read
 /// models are read again.
 /// </summary>
@@ -93,7 +93,7 @@ public class and_the_source_subject_is_erased(context context) : Given<context>(
 }
 
 /// <summary>
-/// The advisor's name is personal data belonging to the advisor, and the event carries no <c>[Subject]</c>,
+/// The advisor's name is personal data belonging to the advisor, and the event carries no <c language="csharp">[Subject]</c>,
 /// so its compliance subject is the stream it is appended to — the advisor's.
 /// </summary>
 /// <param name="RequestId">The unrelated request the advisor acted on.</param>
@@ -109,7 +109,7 @@ public record AdvisorNamed(string RequestId, [property: PII] string FullName);
 public record AdvisorOnOwnStream(string Id, [property: PII] string FullName);
 
 /// <summary>
-/// The redirected case: <c>UsingKey</c> points the document at the request, so the document's compliance
+/// The redirected case: <c language="csharp">UsingKey</c> points the document at the request, so the document's compliance
 /// subject is the request rather than the advisor.
 /// </summary>
 /// <param name="Id">The request identifier.</param>

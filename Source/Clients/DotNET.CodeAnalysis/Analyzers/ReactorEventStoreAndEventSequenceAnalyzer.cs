@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that checks if a reactor combines <c>[EventStore]</c> with explicit event sequence configuration.
+/// Analyzer that checks if a reactor combines <c language="csharp">[EventStore]</c> with explicit event sequence configuration.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class ReactorEventStoreAndEventSequenceAnalyzer : DiagnosticAnalyzer

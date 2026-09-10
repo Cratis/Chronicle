@@ -25,7 +25,7 @@ public static class PatternConverters
     /// <param name="pattern">The pattern to convert.</param>
     /// <returns>The converted <see cref="BehaviorPattern"/>.</returns>
     /// <remarks>
-    /// The response carries an <c>Id</c> and a <c>Specificity</c> that the client type derives rather than stores -
+    /// The response carries an <c language="csharp">Id</c> and a <c language="csharp">Specificity</c> that the client type derives rather than stores -
     /// the identity is the scope and facets it already holds, and specificity is how many facets that is.
     /// </remarks>
     public static BehaviorPattern ToClient(this Contract.BehaviorPatternDetailsResponse pattern) => new(

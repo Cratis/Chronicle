@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Read model with a child collection keyed by a bare (non-concept) <see cref="Guid"/> on the SAME event
-/// source as the parent, with no explicit <c>parentKey</c>. Because the child key is excluded from
+/// source as the parent, with no explicit <c language="csharp">parentKey</c>. Because the child key is excluded from
 /// parent-key inference, this resolves to the event source — exercising the parent-key discovery fix.
 /// </summary>
 /// <param name="Id">Ledger identifier.</param>

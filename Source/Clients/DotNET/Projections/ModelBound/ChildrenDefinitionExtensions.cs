@@ -592,7 +592,7 @@ static class ChildrenDefinitionExtensions
     }
 
     /// <summary>
-    /// Routes a nested collection member's <c>[RemovedWith]</c> / <c>[RemovedWithJoin]</c> onto the nested child
+    /// Routes a nested collection member's <c language="csharp">[RemovedWith]</c> / <c language="csharp">[RemovedWithJoin]</c> onto the nested child
     /// definition that <see cref="ProcessChildrenFromAttributeForNestedChildren"/> just created under
     /// <paramref name="parentChildrenDef"/>, so a keyed grandchild is removed rather than the whole parent item.
     /// </summary>
@@ -728,7 +728,7 @@ static class ChildrenDefinitionExtensions
     /// Resolves a children collection's declared item type to its single concrete <see cref="DerivedTypeAttribute"/>
     /// implementation, when it is a <see cref="DerivedTypeAttribute"/> base (an interface or abstract class) with
     /// exactly one registered implementation. Reflection-based discovery (constructor parameters for
-    /// <c>[SetFrom]</c>/<c>[SetValue]</c>/<c>[SetFromContext]</c>, and the <c>[Key]</c> property for identity)
+    /// <c language="csharp">[SetFrom]</c>/<c language="csharp">[SetValue]</c>/<c language="csharp">[SetFromContext]</c>, and the <c language="csharp">[Key]</c> property for identity)
     /// finds nothing on an interface or abstract type, so without this resolution a polymorphic children
     /// collection silently loses those mappings. When the base type has zero or more than one implementation,
     /// the concrete type for this collection cannot be inferred safely, so the declared type is kept as-is.
@@ -754,7 +754,7 @@ static class ChildrenDefinitionExtensions
     /// <summary>
     /// Stamps a constant discriminator mapping for a children collection whose resolved item type is
     /// adorned with <see cref="DerivedTypeAttribute"/>. AutoMap only ever wires properties that exist by
-    /// name on both the event and the child type, so it can never discover <c>_derivedTypeId</c> — that
+    /// name on both the event and the child type, so it can never discover <c language="csharp">_derivedTypeId</c> — that
     /// property is a serialization-time artifact added by <see cref="DerivedTypeJsonConverter{T}"/>, not a
     /// real member on the type. Without this, a newly created child of a polymorphic collection is
     /// persisted without its discriminator and cannot be resolved back to its concrete type on read.
@@ -838,8 +838,8 @@ static class ChildrenDefinitionExtensions
     }
 
     /// <summary>
-    /// Infers the event property to use as the parent key for a <c>[ChildrenFrom]</c> collection when no
-    /// explicit <c>parentKey</c> is supplied, by matching the parent read model's identifier type.
+    /// Infers the event property to use as the parent key for a <c language="csharp">[ChildrenFrom]</c> collection when no
+    /// explicit <c language="csharp">parentKey</c> is supplied, by matching the parent read model's identifier type.
     /// </summary>
     /// <param name="eventType">The event type the children are built from.</param>
     /// <param name="parentModelType">The parent read model type, or <see langword="null"/> when unavailable.</param>
@@ -853,7 +853,7 @@ static class ChildrenDefinitionExtensions
     /// The child <paramref name="childKey"/> property is excluded from the candidates — a property is the
     /// child's own key or the parent reference, never both. When more than one property still matches the
     /// parent identifier type the inference is ambiguous and the first by declaration order is used; supply
-    /// an explicit <c>parentKey</c> to disambiguate.
+    /// an explicit <c language="csharp">parentKey</c> to disambiguate.
     /// </remarks>
     static string? DiscoverEventPropertyForParentId(Type eventType, Type? parentModelType, string childKey, INamingPolicy namingPolicy)
     {

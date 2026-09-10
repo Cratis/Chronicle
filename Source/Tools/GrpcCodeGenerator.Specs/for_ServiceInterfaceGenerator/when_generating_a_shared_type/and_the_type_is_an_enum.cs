@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_ServiceInterfaceGenerator
 
 /// <summary>
 /// An enum needs no protobuf attributes at all - protobuf-net serializes by declared value - so the entire
-/// wire-stability story is copying the existing values verbatim. This is what the real <c>JobStatus</c> move
+/// wire-stability story is copying the existing values verbatim. This is what the real <c language="csharp">JobStatus</c> move
 /// exercised; the spec pins the same shape down.
 /// </summary>
 [Collection(SharedTypeRegistryCollection.Name)]

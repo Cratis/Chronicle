@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// <remarks>
 /// The generated implementations sit in a namespace that shares leading segments with the artifacts they
 /// dispatch to and with the contracts they implement, so an unqualified name is ambiguous more often than not -
-/// <c>Jobs</c> alone can mean the generated class, the artifact namespace, or the contract namespace. Every
-/// type reference the generator emits for a domain type is therefore <c>global::</c>-qualified.
+/// <c language="csharp">Jobs</c> alone can mean the generated class, the artifact namespace, or the contract namespace. Every
+/// type reference the generator emits for a domain type is therefore <c language="csharp">global::</c>-qualified.
 /// </remarks>
 public static class QualifiedTypeName
 {

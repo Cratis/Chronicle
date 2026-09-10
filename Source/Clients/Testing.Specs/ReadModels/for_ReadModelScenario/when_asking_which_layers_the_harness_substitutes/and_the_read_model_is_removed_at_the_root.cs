@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_asking_which_layers_the_harness_substitutes;
 
 /// <summary>
-/// A class-level <c>[RemovedWith]</c> deletes the document in the real sink; here it is modeled by dropping
+/// A class-level <c language="csharp">[RemovedWith]</c> deletes the document in the real sink; here it is modeled by dropping
 /// the in-memory state. A spec can assert the read model came back null either way, which is exactly why the
 /// scenario has to say that the delete itself was not the one that ran.
 /// </summary>

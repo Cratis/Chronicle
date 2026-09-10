@@ -6,7 +6,7 @@ using Cratis.Chronicle.Keys;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// A child line whose bulk list is named <c>Annotations</c> — deliberately different from the
+/// A child line whose bulk list is named <c language="csharp">Annotations</c> — deliberately different from the
 /// <see cref="NotedLineAdded.Notes"/> list on the event — to reproduce the silent AutoMap-to-nothing failure.
 /// </summary>
 /// <param name="LineNumber">The line number, used as the child key.</param>

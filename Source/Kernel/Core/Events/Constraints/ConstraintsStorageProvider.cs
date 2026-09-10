@@ -23,7 +23,7 @@ public class ConstraintsStorageProvider(IStorage storage) : IGrainStorage
 
         var key = (ConstraintsKey)grainId.Key.ToString()!;
         var eventStore = storage.GetEventStore(key.EventStore);
-        actualGrainState.State.Constraints = (await eventStore.Constraints.GetDefinitions()).ToList();
+        actualGrainState.State!.Constraints = (await eventStore.Constraints.GetDefinitions()).ToList();
     }
 
     /// <inheritdoc/>
@@ -33,7 +33,7 @@ public class ConstraintsStorageProvider(IStorage storage) : IGrainStorage
         var key = (ConstraintsKey)grainId.Key.ToString()!;
         var eventStore = storage.GetEventStore(key.EventStore);
 
-        foreach (var constraint in actualGrainState.State.Constraints)
+        foreach (var constraint in actualGrainState.State!.Constraints)
         {
             await eventStore.Constraints.SaveDefinition(constraint);
         }

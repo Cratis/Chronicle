@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Services.Projections.for_Projections.when_previewing;
 
 /// <summary>
 /// Verifies that Preview infers a compliance subject from the instance's own key when the projection never
-/// stamped an explicit one - the same fallback (<c>__subject</c> -> <c>_id</c> -> <c>id</c>) already used to
+/// stamped an explicit one - the same fallback (<c language="csharp">__subject</c> -> <c language="csharp">_id</c> -> <c language="csharp">id</c>) already used to
 /// release compliance for the Read Models views, so a previewed instance decrypts under the same rules a
 /// materialized one would.
 /// </summary>

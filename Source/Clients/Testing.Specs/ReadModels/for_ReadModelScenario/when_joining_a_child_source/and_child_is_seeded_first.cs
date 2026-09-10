@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_joining_a_child_source;
 
 /// <summary>
-/// A child-level <c>[Join]</c> enriches the EXISTING child row in place when the join-source event is seeded
+/// A child-level <c language="csharp">[Join]</c> enriches the EXISTING child row in place when the join-source event is seeded
 /// AFTER the child row was created (child-first order). The join source arriving late must update the matching
 /// child — matched by its identifier / join key — rather than appending a DUPLICATE child, mirroring the real
 /// MongoDB sink.

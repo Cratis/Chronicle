@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Contracts.Clients;
 public class CompatibilityRequest
 {
     /// <summary>
-    /// Gets or sets the type of the client, for example <c>.NET</c>, <c>Kotlin</c>, <c>TypeScript</c> or <c>Elixir</c>.
+    /// Gets or sets the type of the client, for example <c language="csharp">.NET</c>, <c language="csharp">Kotlin</c>, <c language="csharp">TypeScript</c> or <c language="csharp">Elixir</c>.
     /// </summary>
     [ProtoMember(1)]
     public string ClientType { get; set; } = string.Empty;
@@ -35,7 +35,7 @@ public class CompatibilityRequest
     public string ProtocolVersion { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the serialized <c>FileDescriptorSet</c> describing every contract the client expects.
+    /// Gets or sets the serialized <c language="csharp">FileDescriptorSet</c> describing every contract the client expects.
     /// </summary>
     [ProtoMember(4)]
     public byte[] DescriptorSet { get; set; } = [];

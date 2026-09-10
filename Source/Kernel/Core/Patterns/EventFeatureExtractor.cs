@@ -26,7 +26,7 @@ public class EventFeatureExtractor(ITimeBucketResolver timeBucketResolver) : IEv
     /// </summary>
     /// <remarks>
     /// Kept as a literal because the Kernel does not reference the Reactor client that owns the constant
-    /// (<c>ReactorHandler.CausationType</c>) - the two are kept in sync by convention.
+    /// (<c language="csharp">ReactorHandler.CausationType</c>) - the two are kept in sync by convention.
     /// </remarks>
     const string ClientReactorCausationType = "Client Reactor";
 
@@ -35,7 +35,7 @@ public class EventFeatureExtractor(ITimeBucketResolver timeBucketResolver) : IEv
     /// </summary>
     /// <remarks>
     /// Kept as a literal because the Kernel does not reference the ASP.NET Core client that owns the constant
-    /// (<c>CausationMiddleware.CausationType</c>) - the two are kept in sync by convention.
+    /// (<c language="csharp">CausationMiddleware.CausationType</c>) - the two are kept in sync by convention.
     /// </remarks>
     const string AspNetRequestCausationType = "ASP.NET Request";
 

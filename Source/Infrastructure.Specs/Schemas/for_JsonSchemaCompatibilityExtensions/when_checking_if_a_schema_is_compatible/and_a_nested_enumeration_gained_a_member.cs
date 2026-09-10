@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaCompatibilityExtensions.when_checking_if_a_schema_is_compatible;
 
 /// <summary>
-/// An enumeration is as likely to sit behind a <c>$defs</c> entry or inside a nested object as it is to sit directly
+/// An enumeration is as likely to sit behind a <c language="csharp">$defs</c> entry or inside a nested object as it is to sit directly
 /// on a root property, and it grows there for exactly the same reasons.
 /// </summary>
 public class and_a_nested_enumeration_gained_a_member : Specification

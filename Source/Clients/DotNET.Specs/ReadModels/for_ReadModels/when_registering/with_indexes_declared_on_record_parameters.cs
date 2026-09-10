@@ -7,7 +7,7 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_registering;
 
 /// <summary>
-/// The record shorthand — <c>[Index]</c> on a positional parameter, which is the form the documentation
+/// The record shorthand — <c language="csharp">[Index]</c> on a positional parameter, which is the form the documentation
 /// recommends and the one everybody writes.
 /// </summary>
 /// <remarks>

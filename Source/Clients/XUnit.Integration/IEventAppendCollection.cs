@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Defines a scoped collection of <see cref="AppendedEventWithResult"/> entries captured during a test operation.
 /// </summary>
 /// <remarks>
-/// Start a collection scope with <c>StartCollectingAppends()</c> on the test fixture, then append events. All
+/// Start a collection scope with <c language="csharp">StartCollectingAppends()</c> on the test fixture, then append events. All
 /// appends to any subscribed event sequence are captured automatically. Dispose the collection to
 /// stop capturing. Inspect <see cref="All"/> or <see cref="Last"/> in your assertions.
 /// </remarks>

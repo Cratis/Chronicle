@@ -6,8 +6,8 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// Regression for CHR-14: a <c>[Join]</c> whose <c>on</c> column is populated by AutoMap (a name-matched
-/// foreign key with NO <c>[SetFrom]</c>) must be backfilled at row-creation time (Path B / ResolveJoin)
+/// Regression for CHR-14: a <c language="csharp">[Join]</c> whose <c language="csharp">on</c> column is populated by AutoMap (a name-matched
+/// foreign key with NO <c language="csharp">[SetFrom]</c>) must be backfilled at row-creation time (Path B / ResolveJoin)
 /// against the joining row's OWN join-source event — even when the join-source events already exist because
 /// they were seeded BEFORE the row-creating from-events (the common production order).
 /// <para>

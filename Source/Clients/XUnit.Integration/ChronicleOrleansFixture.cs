@@ -204,7 +204,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <summary>
     /// Gets additional host configuration key-value pairs to inject when the in-process silo
     /// uses a non-MongoDB storage backend. These are added to the host configuration before
-    /// the silo options are bound, so <c>IOptions&lt;ChronicleOptions&gt;</c> picks up the correct
+    /// the silo options are bound, so <c language="csharp">IOptions&lt;ChronicleOptions&gt;</c> picks up the correct
     /// storage type and connection string.
     /// Returns null (the default) when no extra configuration is needed.
     /// </summary>
@@ -260,7 +260,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// Wipes the in-process silo's SQL storage (files for SQLite, tables for PostgreSQL /
     /// Microsoft SQL Server) and atomically invalidates the silo's per-context migration cache.
     /// The default implementation is a no-op; SQL-backed fixtures override this to invoke
-    /// <c>IDatabase.Wipe()</c> on the silo's <c>IDatabase</c> singleton. Doing the wipe and the
+    /// <c language="csharp">IDatabase.Wipe()</c> on the silo's <c language="csharp">IDatabase</c> singleton. Doing the wipe and the
     /// cache invalidation in one operation prevents reminder-driven and deactivation-driven
     /// grain writes between the two steps from leaving the cache out of sync with the on-disk
     /// (or in-table) state.

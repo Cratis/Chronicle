@@ -22,7 +22,7 @@ public static class ChronicleHostApplicationBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="IHostApplicationBuilder"/> to configure Chronicle on.</param>
     /// <param name="configureOptions">Optional callback to configure <see cref="ChronicleClientOptions"/>.</param>
-    /// <param name="configSection">Optional configuration section path override. Defaults to <c>Cratis:Chronicle</c>.</param>
+    /// <param name="configSection">Optional configuration section path override. Defaults to <c language="csharp">Cratis:Chronicle</c>.</param>
     /// <param name="configure">Optional callback for configuring structural dependencies via <see cref="IChronicleBuilder"/>.</param>
     /// <returns>The same <see cref="IHostApplicationBuilder"/> for continuation.</returns>
     public static IHostApplicationBuilder AddCratisChronicle(

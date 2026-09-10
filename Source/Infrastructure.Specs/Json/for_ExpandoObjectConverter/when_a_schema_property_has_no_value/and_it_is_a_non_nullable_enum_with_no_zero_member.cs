@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Json.for_ExpandoObjectConverter.when_a_schema_propert
 
 /// <summary>
 /// Nullability is not what makes the synthesized value illegal - the member list is. A non-nullable enum that
-/// starts at 1 has no member to absorb a <c>0</c> either, and 1-basing is exactly what a consumer is pushed
+/// starts at 1 has no member to absorb a <c language="csharp">0</c> either, and 1-basing is exactly what a consumer is pushed
 /// towards by the opposite defect, where an explicitly projected zero-valued enum is written as an absent field.
 /// Between the two there is no safe numbering, so the synthesis has to stop producing values outside the
 /// property's own declared set regardless of how the property is declared.

@@ -31,7 +31,7 @@ static class CrossSubjectPiiJoin
     /// The kernel stores an explicit persisted event subject when it differs from the event source id and otherwise
     /// uses the resolved document key. Client release resolves [Subject] and then 'Id' from the materialized model.
     /// Neither runtime value is reproducible from a type declaration alone. The source boundary ordering is
-    /// [Subject], [Key], an <c>EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
+    /// [Subject], [Key], an <c language="csharp">EventSourceId&lt;T&gt;</c>-derived value, then 'Id'.
     /// </para>
     /// <para>
     /// The result is an apparent boundary and diagnostic context only. It is not the stored document compliance
@@ -105,7 +105,7 @@ static class CrossSubjectPiiJoin
     }
 
     /// <summary>
-    /// Find a <c>[PII]</c> value on an event that ends up on a read model.
+    /// Find a <c language="csharp">[PII]</c> value on an event that ends up on a read model.
     /// </summary>
     /// <param name="eventType">The event the value comes from.</param>
     /// <param name="readModelType">The read model the value lands on.</param>
@@ -113,8 +113,8 @@ static class CrossSubjectPiiJoin
     /// <param name="autoMapIsOn">Whether AutoMap can carry unmapped properties across.</param>
     /// <returns>The offending mapping, or <see langword="null"/> when no PII reaches the read model.</returns>
     /// <remarks>
-    /// An event fills a read model both explicitly — <c>.Set(x =&gt; x.P).To(e =&gt; e.Q)</c> for the fluent
-    /// builders, <c>[SetFrom&lt;TEvent&gt;]</c> for the model-bound ones — and implicitly through AutoMap,
+    /// An event fills a read model both explicitly — <c language="csharp">.Set(x =&gt; x.P).To(e =&gt; e.Q)</c> for the fluent
+    /// builders, <c language="csharp">[SetFrom&lt;TEvent&gt;]</c> for the model-bound ones — and implicitly through AutoMap,
     /// which matches identically named properties. The explicit route always applies; the implicit one only
     /// while AutoMap is on.
     /// </remarks>

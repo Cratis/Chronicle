@@ -487,7 +487,7 @@ public class Sink(
     /// <returns>The <see cref="FilterDefinition{TDocument}"/> matching documents behind the watermark.</returns>
     /// <remarks>
     /// Documents written before the watermark property existed carry no value at all, which the
-    /// <c>$exists</c> clause admits so they establish it on their first guarded write.
+    /// <c language="csharp">$exists</c> clause admits so they establish it on their first guarded write.
     /// </remarks>
     FilterDefinition<BsonDocument> BelowWatermark(EventSequenceNumber eventSequenceNumber) =>
         Builders<BsonDocument>.Filter.Or(

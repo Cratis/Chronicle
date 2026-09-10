@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyOptions;
 /// <summary>
 /// <para>
 /// The second half of the semver guard, next to
-/// <c>for_OptimisticConcurrencyStrategy/when_getting_a_scope/and_nothing_matches_the_narrowing</c>. That one pins
+/// <c language="csharp">for_OptimisticConcurrencyStrategy/when_getting_a_scope/and_nothing_matches_the_narrowing</c>. That one pins
 /// the behavior; this pins the value the behavior comes from, so flipping the default cannot happen by accident -
 /// it takes changing a constant a spec names out loud.
 /// </para>

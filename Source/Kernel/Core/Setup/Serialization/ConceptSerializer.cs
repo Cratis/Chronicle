@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Cloning;
@@ -40,7 +41,7 @@ public class ConceptSerializer : IGeneralizedCodec, IGeneralizedCopier, ITypeFil
     {
         if (field.WireType == WireType.Reference)
         {
-            return ReferenceCodec.ReadReference<object, TInput>(ref reader, field);
+            return ReferenceCodec.ReadReference<object, TInput>(ref reader, field)!;
         }
 
         field.EnsureWireTypeTagDelimited();
@@ -85,7 +86,7 @@ public class ConceptSerializer : IGeneralizedCodec, IGeneralizedCopier, ITypeFil
     }
 
     /// <inheritdoc/>
-    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, Type expectedType, object value)
+    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, [AllowNull] Type expectedType, [AllowNull] object? value)
         where TBufferWriter : IBufferWriter<byte>
     {
         // Handles null and back-references (and registers this value in the reference table so the

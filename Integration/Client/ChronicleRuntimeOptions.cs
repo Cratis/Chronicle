@@ -58,11 +58,11 @@ public record ChronicleRuntimeOptions(
 {
     /// <summary>
     /// Parse runtime options from multiple sources, in priority order:
-    /// 1. Environment variables (<c>CHRONICLE_RUNTIME_MODE</c>, <c>CHRONICLE_STORAGE_PROVIDER</c>).
+    /// 1. Environment variables (<c language="csharp">CHRONICLE_RUNTIME_MODE</c>, <c language="csharp">CHRONICLE_STORAGE_PROVIDER</c>).
     /// 2. The parent vstest process command line, which contains the original
-    ///    <c>dotnet test -- inprocess mongodb</c> arguments that vstest receives but does not
-    ///    forward to the test host's own <c>GetCommandLineArgs()</c>.
-    /// 3. Own process command line (for direct executable invocation, not via <c>dotnet test</c>).
+    ///    <c language="csharp">dotnet test -- inprocess mongodb</c> arguments that vstest receives but does not
+    ///    forward to the test host's own <c language="csharp">GetCommandLineArgs()</c>.
+    /// 3. Own process command line (for direct executable invocation, not via <c language="csharp">dotnet test</c>).
     /// </summary>
     /// <returns>Parsed options with defaults when arguments are not provided.</returns>
     /// <exception cref="InvalidOperationException">

@@ -11,14 +11,14 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 public class with_unique_constraint_violation_details(context context) : Given<context>(context)
 {
     /// <summary>
-    /// Mirrors <c>WellKnownConstraintDetailKeys.PropertyName</c>. That constant type is defined
+    /// Mirrors <c language="csharp">WellKnownConstraintDetailKeys.PropertyName</c>. That constant type is defined
     /// identically in both the client and kernel assemblies referenced by this project, so it cannot be
     /// named directly without an extern alias; the well-known key literals are used instead.
     /// </summary>
     const string PropertyNameDetailKey = "PropertyName";
 
     /// <summary>
-    /// Mirrors <c>WellKnownConstraintDetailKeys.PropertyValue</c> (see <see cref="PropertyNameDetailKey"/>).
+    /// Mirrors <c language="csharp">WellKnownConstraintDetailKeys.PropertyValue</c> (see <see cref="PropertyNameDetailKey"/>).
     /// </summary>
     const string PropertyValueDetailKey = "PropertyValue";
 

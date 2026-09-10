@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueEventTypeConstraintsProvider;
 
 /// <summary>
-/// The attribute form of the unique-event-type release. Several event types may carry <c>[RemoveConstraint]</c> for
+/// The attribute form of the unique-event-type release. Several event types may carry <c language="csharp">[RemoveConstraint]</c> for
 /// one constraint name, and each of them ends a cycle. The provider used to take the first one it found, so the rest
 /// declared a release that never happened.
 /// </summary>

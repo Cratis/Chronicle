@@ -195,7 +195,7 @@ public sealed class LossyCountingSketch
     /// <param name="error">The largest number of occurrences that could have been missed before it entered.</param>
     /// <param name="occurred">When the observation that created the entry occurred.</param>
     /// <remarks>
-    /// <c>LastSeen</c> answers "when did this behavior last happen" and only ever moves on an observation. The
+    /// <c language="csharp">LastSeen</c> answers "when did this behavior last happen" and only ever moves on an observation. The
     /// moment the weight is decayed to is tracked separately, because it also moves on a background decay pass.
     /// Collapsing the two would make a decay pass look like an occurrence in the stored pattern, and would let two
     /// passes over the same interval decay it twice.

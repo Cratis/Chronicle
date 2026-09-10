@@ -17,9 +17,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionDer
 
 /// <summary>
 /// Regression for https://github.com/Cratis/Chronicle/issues/3571 — a child of a polymorphic
-/// (<c>[DerivedType]</c>) collection carrying a <c>_derivedTypeId</c> discriminator must round-trip
+/// (<c language="csharp">[DerivedType]</c>) collection carrying a <c language="csharp">_derivedTypeId</c> discriminator must round-trip
 /// through the real MongoDB sink unchanged. The read model's item schema is an open object (no fixed
-/// "properties", as <c>JsonSchemaGenerator</c> emits for a type with registered derivatives), so the
+/// "properties", as <c language="csharp">JsonSchemaGenerator</c> emits for a type with registered derivatives), so the
 /// sink must preserve every property it does not recognize rather than dropping it.
 /// </summary>
 /// <param name="ctx">The shared fixture holding the stored child document.</param>

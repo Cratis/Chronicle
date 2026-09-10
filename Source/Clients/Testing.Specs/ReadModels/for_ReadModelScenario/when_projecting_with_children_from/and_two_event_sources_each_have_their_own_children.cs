@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_project
 
 /// <summary>
 /// Two roots seeded in one scenario, each with a child of its own on its own event source and no explicit
-/// <c>parentKey</c> — so the event source id is the only thing routing a child to its parent. Each instance
+/// <c language="csharp">parentKey</c> — so the event source id is the only thing routing a child to its parent. Each instance
 /// must carry only its own child, exactly as the kernel does; the harness previously let the later document
 /// accumulate the earlier one's children because every event shared one threaded state.
 /// </summary>

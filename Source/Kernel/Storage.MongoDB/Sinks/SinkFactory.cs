@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <see cref="IExpandoObjectConverter"/> lazily on <see cref="CreateFor"/> rather than
 /// eagerly via the constructor. This lets the factory be instantiated even in modes
 /// where MongoDB is not the active backend (e.g. SQL OOP integration tests load both
-/// Storage.MongoDB and Storage.Sql assemblies, and <c>IInstancesOf&lt;ISinkFactory&gt;</c>
+/// Storage.MongoDB and Storage.Sql assemblies, and <c language="csharp">IInstancesOf&lt;ISinkFactory&gt;</c>
 /// enumerates every implementation, while the DI cleanup that strips inactive backends
 /// removes MongoDB-only services such as <see cref="IExpandoObjectConverter"/>).
 /// Construction no longer fails, and the inactive backend's sink type simply never

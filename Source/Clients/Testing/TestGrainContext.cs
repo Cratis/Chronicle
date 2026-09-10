@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing;
 /// Represents a minimal <see cref="IGrainContext"/> for constructing grains outside an Orleans silo.
 /// </summary>
 /// <remarks>
-/// The <see cref="Grain"/> base class constructor accesses <c>RuntimeContext.Current!.ObservableLifecycle</c>
+/// The <see cref="Grain"/> base class constructor accesses <c language="csharp">RuntimeContext.Current!.ObservableLifecycle</c>
 /// during construction. By setting this context as the current runtime context before creating the grain,
 /// the constructor receives a valid <see cref="IGrainLifecycle"/> without requiring a full Orleans silo.
 /// </remarks>

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="KeyResolver">The <see cref="KeyResolver"/> for resolving the key.</param>
 /// <param name="ResolvesToEventSourceId">
 /// Whether the <see cref="KeyResolver"/> resolves the read-model key directly to the event's own event source id
-/// (the <c>FromEventSourceId</c> resolver). When <see langword="true"/> for every event type a projection handles,
+/// (the <c language="csharp">FromEventSourceId</c> resolver). When <see langword="true"/> for every event type a projection handles,
 /// events for different event source ids always target different read-model documents, so the pipeline may
 /// serialize handling striped per event source id rather than across the whole projection. Any resolver that can
 /// collapse distinct event sources onto one document (constant key, join, parent hierarchy, or a value read from

@@ -7,7 +7,7 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.EventSequences.Migrations.for_EventTypeMigrations.when_migrating_with_a_value_map;
 
 /// <summary>
-/// The map states that generation 1's <c>0</c> is generation 2's <c>10</c>, so upcasting an event stored at
+/// The map states that generation 1's <c language="csharp">0</c> is generation 2's <c language="csharp">10</c>, so upcasting an event stored at
 /// generation 1 has to produce the number the newer generation gives that meaning.
 /// </summary>
 public class and_the_value_is_mapped : given.a_definition_with_a_value_map

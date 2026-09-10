@@ -22,7 +22,7 @@ public class Observers
     /// the point of the knob is being able to bound it tighter for a subscriber that should always answer quickly.
     /// Raising it past the transport's own timeout has no effect, because that one gives up first. Giving up abandons
     /// the wait, not the work: the subscriber keeps processing the batch, and the events are redelivered when the
-    /// partition retries. A timeout is recorded as <c>FailureKind.Timeout</c>, which is excluded from the quarantine
+    /// partition retries. A timeout is recorded as <c language="csharp">FailureKind.Timeout</c>, which is excluded from the quarantine
     /// thresholds below, so a congested period cannot take an otherwise healthy observer out of service.
     /// </remarks>
     public int SubscriberTimeout { get; init; } = 30;
@@ -81,17 +81,17 @@ public class Observers
     /// <summary>
     /// Gets the interval in seconds between watchdog checks on each observer.
     /// The watchdog verifies that connected clients are still active, that running jobs
-    /// are progressing, and that the <c>NextEventSequenceNumber</c> is up-to-date.
+    /// are progressing, and that the <c language="csharp">NextEventSequenceNumber</c> is up-to-date.
     /// </summary>
     public int WatchdogInterval { get; init; } = 60;
 
     /// <summary>
     /// Gets the number of consecutive progress-only batches after which the observer's
-    /// <c>NextEventSequenceNumber</c> is made durable.
+    /// <c language="csharp">NextEventSequenceNumber</c> is made durable.
     /// </summary>
     /// <remarks>
     /// When an observer sees a batch that contains nothing it is subscribed to, it only advances
-    /// <c>NextEventSequenceNumber</c> past the skipped events. Persisting that advance on every such
+    /// <c language="csharp">NextEventSequenceNumber</c> past the skipped events. Persisting that advance on every such
     /// batch is pure write amplification, so it is debounced: the state is written once this many
     /// progress-only batches have accumulated. The pending advance is also flushed on the watchdog
     /// tick (the time bound, governed by <see cref="WatchdogInterval"/>) and on deactivation. Catch-up

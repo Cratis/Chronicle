@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Connections.for_ConnectionLifecycle;
 
 /// <summary>
-/// The handlers on this lifecycle are whole-artifact registrations - the event store's <c>RegisterAll</c> is one of
+/// The handlers on this lifecycle are whole-artifact registrations - the event store's <c language="csharp">RegisterAll</c> is one of
 /// them - so running one twice re-registers every event type, constraint and seeding on every reconnect.
 /// </summary>
 /// <remarks>

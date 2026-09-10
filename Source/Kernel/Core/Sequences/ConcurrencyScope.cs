@@ -16,9 +16,9 @@ namespace Cratis.Chronicle.Sequences;
 /// <remarks>
 /// Deliberately its own type rather than <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/> directly
 /// - the same reason <see cref="EventType"/> is its own local type rather than <see cref="Concepts.Events.EventType"/>
-/// directly: it keeps this command's wire shape mirroring into this service's own <c>Contracts.Sequences</c>
-/// namespace, rather than reaching into <c>Contracts.EventSequences.Concurrency</c>, where a hand-written contract
-/// of the same name still serves the not-yet-retired <c>EventSequences</c> service.
+/// directly: it keeps this command's wire shape mirroring into this service's own <c language="csharp">Contracts.Sequences</c>
+/// namespace, rather than reaching into <c language="csharp">Contracts.EventSequences.Concurrency</c>, where a hand-written contract
+/// of the same name still serves the not-yet-retired <c language="csharp">EventSequences</c> service.
 /// </remarks>
 public record ConcurrencyScope(
     ulong SequenceNumber,

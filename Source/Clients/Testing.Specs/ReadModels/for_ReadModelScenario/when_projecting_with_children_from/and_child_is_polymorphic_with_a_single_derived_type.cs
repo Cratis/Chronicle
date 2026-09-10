@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_project
 /// <summary>
 /// Regression for https://github.com/Cratis/Chronicle/issues/3571 — a child collection typed as a
 /// <see cref="DerivedTypeAttribute"/> base with a single implementation must round-trip through the
-/// correct concrete type without an explicit <c>[SetValue]</c> discriminator.
+/// correct concrete type without an explicit <c language="csharp">[SetValue]</c> discriminator.
 /// </summary>
 public class and_child_is_polymorphic_with_a_single_derived_type : Specification
 {

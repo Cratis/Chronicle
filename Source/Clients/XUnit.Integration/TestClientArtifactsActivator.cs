@@ -8,10 +8,10 @@ namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
 /// A test-specific <see cref="IClientArtifactsActivator"/> decorator that wraps any
-/// <see cref="IServiceProvider"/> passed to <c>Activate</c> with a
+/// <see cref="IServiceProvider"/> passed to <c language="csharp">Activate</c> with a
 /// <see cref="FallbackServiceProvider"/> so that types registered in the
 /// <see cref="MutableServiceRegistry"/> can be resolved — even though Microsoft DI's
-/// built-in <c>IServiceProvider</c> injection bypasses the wrapper.
+/// built-in <c language="csharp">IServiceProvider</c> injection bypasses the wrapper.
 /// </summary>
 /// <param name="rootServiceProvider">The root <see cref="IServiceProvider"/> from the DI container.</param>
 /// <param name="registry">The <see cref="MutableServiceRegistry"/> for per-test types.</param>

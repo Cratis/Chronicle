@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Jobs;
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
-/// <param name="hostJsonSerializerOptions">The host-provided <see cref="JsonSerializerOptions"/>. SQL storage derives its own options by adding <see cref="JobStateConverter"/> so the polymorphic <c>JobState.Request</c> deserializes regardless of which options the host registered.</param>
+/// <param name="hostJsonSerializerOptions">The host-provided <see cref="JsonSerializerOptions"/>. SQL storage derives its own options by adding <see cref="JobStateConverter"/> so the polymorphic <c language="csharp">JobState.Request</c> deserializes regardless of which options the host registered.</param>
 public class JobStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,

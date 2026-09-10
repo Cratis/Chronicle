@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Recommendations;
 /// The production silo allows recommendation request types by registering the Cratis JSON serializer (see
 /// SerializationConfigurationExtensions). The OrleansTestKit silo used by specs does not configure that
 /// serializer, so Orleans' strict type manifest (enforced as of Orleans 10.2) rejects these types when
-/// constructing the generic <c>IRecommendation&lt;TRequest&gt;</c> grain type. Allowing them here restores
+/// constructing the generic <c language="csharp">IRecommendation&lt;TRequest&gt;</c> grain type. Allowing them here restores
 /// the behavior for specs without relaxing production security.
 /// </remarks>
 public class SpecsTypeManifestProvider : TypeManifestProviderBase

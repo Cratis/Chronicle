@@ -87,7 +87,7 @@ public static class WellKnownServices
     /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.
     /// </summary>
     /// <remarks>
-    /// Deliberately distinct from the client-facing <c>IProjections</c> contract, which stays hand-written for the
+    /// Deliberately distinct from the client-facing <c language="csharp">IProjections</c> contract, which stays hand-written for the
     /// registration and preview operations the client SDK calls. Only the code-generation operations, which no
     /// client SDK uses, moved onto the generated path.
     /// </remarks>
@@ -99,12 +99,12 @@ public static class WellKnownServices
     public const string EventSequences = "EventSequences";
 
     /// <summary>
-    /// The name of the service exposing <c>[KeyedBy&lt;TKey&gt;]</c> grain queries for event sequences.
+    /// The name of the service exposing <c language="csharp">[KeyedBy&lt;TKey&gt;]</c> grain queries for event sequences.
     /// </summary>
     /// <remarks>
     /// Deliberately distinct from <see cref="EventSequences"/> - both live in the same generated
-    /// <c>Contracts/EventSequences</c> folder (the grain interface's own C# namespace), and sharing a service name
-    /// would generate the same file the hand-written <c>Contracts.EventSequences.IEventSequences</c> contract still
+    /// <c language="csharp">Contracts/EventSequences</c> folder (the grain interface's own C# namespace), and sharing a service name
+    /// would generate the same file the hand-written <c language="csharp">Contracts.EventSequences.IEventSequences</c> contract still
     /// occupies. See PLAN2.md's "near-miss" section.
     /// </remarks>
     public const string EventSequenceQueries = "EventSequenceQueries";

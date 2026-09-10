@@ -19,7 +19,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// Guards the two handler lists.
     /// </summary>
     /// <remarks>
-    /// Deliberately an <see cref="object"/> rather than a <c>System.Threading.Lock</c>: this assembly is packed for
+    /// Deliberately an <see cref="object"/> rather than a <c language="csharp">System.Threading.Lock</c>: this assembly is packed for
     /// net8.0 as well, and that type is net9.0 and later. The net10.0 build the gate runs would not have noticed.
     /// </remarks>
     readonly object _handlers = new();
@@ -31,7 +31,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// </summary>
     /// <remarks>
     /// A handler already subscribed is not subscribed again. These handlers are whole-artifact registrations - the
-    /// event store's <c>RegisterAll</c> is one of them - so running one twice re-registers every event type,
+    /// event store's <c language="csharp">RegisterAll</c> is one of them - so running one twice re-registers every event type,
     /// constraint and seeding on every reconnect. Nothing about a second subscription expresses an intent to do
     /// that, and a caller who cannot be sure whether it already subscribed cannot express the intent not to, so
     /// subscribing is idempotent. Removing still removes.

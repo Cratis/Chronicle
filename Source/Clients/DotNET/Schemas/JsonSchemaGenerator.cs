@@ -117,7 +117,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="schema">The schema node to add to.</param>
     /// <param name="metadata">The <see cref="ComplianceMetadata"/> to add.</param>
     /// <remarks>
-    /// A compliance marker can be declared on something that is not a single value: a <c>[PII]</c> attribute
+    /// A compliance marker can be declared on something that is not a single value: a <c language="csharp">[PII]</c> attribute
     /// on a composite value-object type, or on a property whose type is such an object. Compliance is applied
     /// per value, so leaving the marker on the container would make Chronicle hand the whole JSON object to the
     /// value handler and store one opaque ciphertext string where the schema still says "object". Releasing that
@@ -167,8 +167,8 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="metadataType">The metadata type to look for.</param>
     /// <returns>True when the metadata type is already present, false if not.</returns>
     /// <remarks>
-    /// A leaf can be reached by more than one marker — for example a <c>[PII]</c> concept inside a value object
-    /// whose type is itself marked <c>[PII]</c>. Recording the same metadata type twice adds nothing and makes
+    /// A leaf can be reached by more than one marker — for example a <c language="csharp">[PII]</c> concept inside a value object
+    /// whose type is itself marked <c language="csharp">[PII]</c>. Recording the same metadata type twice adds nothing and makes
     /// the generated schema noisier to read and to diff.
     /// </remarks>
     static bool HasMetadataOfType(JsonArray complianceArray, string metadataType) =>
@@ -374,12 +374,12 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <remarks>
     /// The declared type's compliance metadata has to travel onto the substituted schema — the classification
     /// belongs to the value, not to the shape it happens to serialize as, and losing it here would persist a
-    /// <c>[PII]</c> value in the clear.
+    /// <c language="csharp">[PII]</c> value in the clear.
     /// <para>
     /// The nullable marker has to be re-applied for the same reason: System.Text.Json's schema exporter does not
     /// propagate NRT nullable markers through custom converters, so the actual property nullability is read via
     /// <see cref="NullabilityInfoContext"/>. When the property is nullable, '?' is appended to the format so that
-    /// <c>IsNullable()</c> returns true and <c>GetDefaultValue()</c> returns null rather than the primitive
+    /// <c language="csharp">IsNullable()</c> returns true and <c language="csharp">GetDefaultValue()</c> returns null rather than the primitive
     /// default (e.g. 0 for ulong).
     /// </para>
     /// </remarks>

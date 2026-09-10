@@ -9,8 +9,8 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// <param name="Kind">What kind of source it is.</param>
 /// <param name="Value">The property path or constant the kind refers to, empty when it needs none.</param>
 /// <remarks>
-/// The declaration language spells a value's origin as a string - <c>$eventContext(occurred)</c>,
-/// <c>$eventSourceId</c>, a property path, a literal. Every language generator needs the same reading
+/// The declaration language spells a value's origin as a string - <c language="csharp">$eventContext(occurred)</c>,
+/// <c language="csharp">$eventSourceId</c>, a property path, a literal. Every language generator needs the same reading
 /// of those strings and differs only in how it writes the result, so the reading happens once and each
 /// generator only decides how to spell it.
 /// </remarks>

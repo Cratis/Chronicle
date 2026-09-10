@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Seeding;
 /// Reconciles the two groupings a seed request carries, and shapes what the seed queries answer with.
 /// </summary>
 /// <remarks>
-/// These live beside the artifacts rather than on them because a static method on a <c>[ReadModel]</c> whose
+/// These live beside the artifacts rather than on them because a static method on a <c language="csharp">[ReadModel]</c> whose
 /// return shape is a supported query shape becomes a generated query proxy and an HTTP endpoint - accessibility
 /// is not what the proxy generator looks at.
 /// </remarks>

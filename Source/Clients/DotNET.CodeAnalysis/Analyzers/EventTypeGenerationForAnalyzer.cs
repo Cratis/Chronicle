@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that validates usage of the <c>EventTypeGenerationFor&lt;TEventType&gt;</c> attribute.
+/// Analyzer that validates usage of the <c language="csharp">EventTypeGenerationFor&lt;TEventType&gt;</c> attribute.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class EventTypeGenerationForAnalyzer : DiagnosticAnalyzer

@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Testing.Compliance;
 /// <remarks>
 /// <para>
 /// The kernel's <see cref="KernelCompliance::JsonComplianceManager"/> builds its dispatch table from the
-/// property value handlers it is given, so constructing it with none makes every <c>[PII]</c> value pass
+/// property value handlers it is given, so constructing it with none makes every <c language="csharp">[PII]</c> value pass
 /// through in plaintext — silently, because a missing handler is indistinguishable from a value that
 /// carries no compliance metadata. The real <see cref="KernelGDPR::PIICompliancePropertyValueHandler"/>
 /// is registered here so an in-process scenario encrypts at rest and releases on read exactly the way a
@@ -35,7 +35,7 @@ namespace Cratis.Chronicle.Testing.Compliance;
 /// </para>
 /// <para>
 /// <see cref="InMemoryEncryptionKeyStorage"/> is chosen over the other in-memory store
-/// (<c>Storage.InMemory</c>'s <c>EncryptionKeyStorage</c>) because its <c>GetOrAddFor</c> is atomic under
+/// (<c language="csharp">Storage.InMemory</c>'s <c language="csharp">EncryptionKeyStorage</c>) because its <c language="csharp">GetOrAddFor</c> is atomic under
 /// its lock — the same get-or-create guarantee the persistent stores give — and it is the one the kernel's
 /// own compliance specs exercise.
 /// </para>

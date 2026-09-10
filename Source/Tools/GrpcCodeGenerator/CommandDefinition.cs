@@ -31,7 +31,7 @@ public class CommandDefinition(Type type)
     /// </summary>
     /// <remarks>
     /// A command that responds with a value needs that value carried across the wire, so the generated
-    /// operation returns <c>CommandResult&lt;TResponse&gt;</c> rather than a bare <c>CommandResult</c>.
+    /// operation returns <c language="csharp">CommandResult&lt;TResponse&gt;</c> rather than a bare <c language="csharp">CommandResult</c>.
     /// </remarks>
     public Type? ResponseType => ResolveResponseType();
 

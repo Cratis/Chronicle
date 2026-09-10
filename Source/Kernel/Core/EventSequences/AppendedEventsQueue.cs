@@ -511,7 +511,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <summary>
-    /// Starts an observer's catch-up out of the append path and does not swallow the outcome. <c>CatchUp</c> returns
+    /// Starts an observer's catch-up out of the append path and does not swallow the outcome. <c language="csharp">CatchUp</c> returns
     /// once the catch-up job has been started (not when it completes), so this waits only for the start — never for
     /// observer processing — and therefore never re-couples appends to observer speed. A failure to start is logged
     /// and retried a bounded number of times so a transient transport/job-subsystem fault does not permanently strand

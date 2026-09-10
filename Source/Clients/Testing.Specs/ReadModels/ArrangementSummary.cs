@@ -10,10 +10,10 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Read model whose <see cref="Location"/> is set exclusively from <see cref="ArrangementSet"/> and flagged
-/// <c>[NoAutoMap]</c>, while it also value-maps <see cref="WorkMode"/> from <see cref="WorkModeSet"/>. Because
+/// <c language="csharp">[NoAutoMap]</c>, while it also value-maps <see cref="WorkMode"/> from <see cref="WorkModeSet"/>. Because
 /// <see cref="WorkModeSet"/> is subscribed for a real value mapping (not an aggregate), the aggregate
-/// heuristic does not protect the location — this verifies that property-level <c>[NoAutoMap]</c> is what
-/// stops <see cref="WorkModeSet"/>'s identically named <c>Location</c> from overwriting it.
+/// heuristic does not protect the location — this verifies that property-level <c language="csharp">[NoAutoMap]</c> is what
+/// stops <see cref="WorkModeSet"/>'s identically named <c language="csharp">Location</c> from overwriting it.
 /// </summary>
 /// <param name="Id">Summary identifier.</param>
 /// <param name="Location">The location, sourced only from <see cref="ArrangementSet"/>.</param>

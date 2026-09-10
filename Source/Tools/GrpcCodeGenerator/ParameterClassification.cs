@@ -36,9 +36,9 @@ public static class ParameterClassification
     /// Treating it as wire data instead of a dependency does not fail loudly: protobuf-net.Grpc's SchemaGenerator
     /// silently drops the RPC method (and its request/response messages) it cannot model a field for, rather than
     /// throwing, so the method simply never reaches the wire. See
-    /// <c>Cratis.Chronicle.Sequences.AppendedEvent.QueryEvents</c> and its siblings.
+    /// <c language="csharp">Cratis.Chronicle.Sequences.AppendedEvent.QueryEvents</c> and its siblings.
     /// <para>
-    /// Matched by full name, not by <c>typeof()</c> equality - the artifact assembly is loaded via reflection from
+    /// Matched by full name, not by <c language="csharp">typeof()</c> equality - the artifact assembly is loaded via reflection from
     /// a path rather than referenced, so its copy of System.Text.Json is not guaranteed to be the same
     /// <see cref="Type"/> instance this generator's own compiled reference to the same assembly would produce.
     /// </para>

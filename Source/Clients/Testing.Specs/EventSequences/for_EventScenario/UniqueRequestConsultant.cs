@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
 /// A fluent <see cref="IConstraint"/> enforcing uniqueness of the composite (request + consultant)
-/// key, where both parts are <c>ConceptAs&lt;Guid&gt;</c> values.
+/// key, where both parts are <c language="csharp">ConceptAs&lt;Guid&gt;</c> values.
 /// </summary>
 public class UniqueRequestConsultant : IConstraint
 {

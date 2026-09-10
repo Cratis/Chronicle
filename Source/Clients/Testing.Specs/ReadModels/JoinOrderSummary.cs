@@ -8,7 +8,7 @@ using Cratis.Chronicle.ReadModels;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Read model that enriches an order with the customer's name through a <c>[Join]</c> against
+/// Read model that enriches an order with the customer's name through a <c language="csharp">[Join]</c> against
 /// <see cref="JoinCustomerRegistered"/> on a separate event source. Used to verify cross-source join
 /// behavior in the in-memory harness and to assert against the intended instance deterministically.
 /// </summary>

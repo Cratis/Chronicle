@@ -13,8 +13,8 @@ namespace Samples;
 /// Bootstraps OpenTelemetry tracing and metrics for the console sample.
 /// </summary>
 /// <remarks>
-/// Only activates when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is set in the environment.
-/// Override the service name via <c>SERVICE_NAME</c> and the version via <c>SERVICE_VERSION</c>.
+/// Only activates when <c language="csharp">OTEL_EXPORTER_OTLP_ENDPOINT</c> is set in the environment.
+/// Override the service name via <c language="csharp">SERVICE_NAME</c> and the version via <c language="csharp">SERVICE_VERSION</c>.
 /// This class MUST be invoked before the Chronicle client is created so that all
 /// client-side spans are captured by the active TracerProvider.
 /// </remarks>
@@ -25,7 +25,7 @@ public static class Telemetry
     /// </summary>
     /// <returns>
     /// A disposable <see cref="TelemetryHandles"/> that flushes and shuts down the providers on
-    /// disposal, or a no-op handle when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is not set.
+    /// disposal, or a no-op handle when <c language="csharp">OTEL_EXPORTER_OTLP_ENDPOINT</c> is not set.
     /// </returns>
     public static TelemetryHandles Build()
     {

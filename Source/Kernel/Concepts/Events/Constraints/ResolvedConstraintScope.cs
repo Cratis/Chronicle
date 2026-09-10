@@ -28,8 +28,8 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </para>
 /// </remarks>
 /// <example>
-/// A constraint declared per event stream id, resolved for an event appended to the <c>branch-1</c> stream, is
-/// <c>new ResolvedConstraintScope(EventStreamId: "branch-1")</c> - the other dimensions stay <see langword="null"/>
+/// A constraint declared per event stream id, resolved for an event appended to the <c language="csharp">branch-1</c> stream, is
+/// <c language="csharp">new ResolvedConstraintScope(EventStreamId: "branch-1")</c> - the other dimensions stay <see langword="null"/>
 /// and never narrow the lookup.
 /// </example>
 public record ResolvedConstraintScope(

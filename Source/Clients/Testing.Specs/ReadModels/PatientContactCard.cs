@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// A Guid-keyed read model holding a patient's contact details. It reaches none of the shape-dependent
-/// substitutions except the one its <c>[PII]</c>-marked concept brings, which is what makes it the pin for
+/// substitutions except the one its <c language="csharp">[PII]</c>-marked concept brings, which is what makes it the pin for
 /// the compliance report.
 /// </summary>
 /// <param name="Id">Identifier.</param>

@@ -460,7 +460,7 @@ internal sealed class Projections(
     /// conversion to JSON keeps only what the read model's schema declares - and a schema does not
     /// declare its own key. Preview results therefore reached the Workbench carrying no way to tell
     /// which instance a row came from, which is what left the Time Machine with nothing to look up.
-    /// A materialized read model carries its key as <c>_id</c> because that is what the sink writes,
+    /// A materialized read model carries its key as <c language="csharp">_id</c> because that is what the sink writes,
     /// so preview uses the same name rather than inventing a second convention for the read side.
     /// </remarks>
     static JsonObject WithReadModelKey(ExpandoObject readModel, JsonObject json)

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventSourceId">The event source the scope applies to.</param>
 /// <param name="Scope">The scope to validate against.</param>
 /// <remarks>
-/// A list of these rather than an <c>IDictionary&lt;string, ConcurrencyScope&gt;</c> - the TypeScript proxy
+/// A list of these rather than an <c language="csharp">IDictionary&lt;string, ConcurrencyScope&gt;</c> - the TypeScript proxy
 /// generator does not emit the import for a type reached only as a dictionary value, so a map here would compile
 /// on the kernel side and fail on the Workbench side. A sequence of a shared type already generates correctly.
 /// </remarks>

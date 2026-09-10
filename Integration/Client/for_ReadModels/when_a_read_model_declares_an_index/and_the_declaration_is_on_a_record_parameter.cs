@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_declares
 /// <remarks>
 /// Every other spec around indexing stops at the client — that the attribute is collected, that the sink
 /// would create what it is given. None of them would notice the chain being broken anywhere between, and it
-/// was: <c>[Index]</c> on a positional record parameter bound to the parameter while only properties were
+/// was: <c language="csharp">[Index]</c> on a positional record parameter bound to the parameter while only properties were
 /// inspected, so every declaration collected to an empty list. It compiled, it registered, the sink dutifully
 /// created nothing, and a production store ran for months with 78 read models and not one declared index.
 /// <para>

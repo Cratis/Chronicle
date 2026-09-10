@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Setup.for_KernelBootstrapResetHandler;
 
 /// <summary>
 /// The reset drops the System event store's database along with the event type schemas registered into it.
-/// Nothing else re-registers them — every other store gets them back through <c>EventStores.Ensure</c> when a
+/// Nothing else re-registers them — every other store gets them back through <c language="csharp">EventStores.Ensure</c> when a
 /// client reconnects — so bootstrap has to, or the kernel's own events cannot be appended afterwards.
 /// </summary>
 public class when_bootstrapping : given.a_bootstrap_reset_handler

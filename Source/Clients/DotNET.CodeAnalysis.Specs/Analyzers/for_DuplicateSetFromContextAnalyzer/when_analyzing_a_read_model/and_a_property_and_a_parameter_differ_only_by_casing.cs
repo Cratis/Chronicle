@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_DuplicateSetFromCont
 /// </summary>
 /// <remarks>
 /// This is the spec that fixes which direction the pairing judges. Relaxing the comparison to ignore casing
-/// pairs <c>Stamp</c> off against <c>stamp</c>, drops it from its own path, and then finds nothing under the
+/// pairs <c language="csharp">Stamp</c> off against <c language="csharp">stamp</c>, drops it from its own path, and then finds nothing under the
 /// parameter's name either - the report disappears entirely, silently, with every other spec still green.
 /// </remarks>
 public class and_a_property_and_a_parameter_differ_only_by_casing : given.a_duplicate_set_from_context_analyzer

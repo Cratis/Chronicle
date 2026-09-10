@@ -235,8 +235,8 @@ public class ClusteringFixture : IAsyncLifetime
     /// Manually bootstraps the Chronicle kernel after the cluster is fully formed.
     /// </summary>
     /// <remarks>
-    /// Equivalent to the subset of <c>ChronicleServerStartupTask</c> that the warmup requires:
-    /// system namespace creation, system reactor registration (so <c>EventStoreAdded</c> events are
+    /// Equivalent to the subset of <c language="csharp">ChronicleServerStartupTask</c> that the warmup requires:
+    /// system namespace creation, system reactor registration (so <c language="csharp">EventStoreAdded</c> events are
     /// handled), and user event store namespace creation + reactor registration.
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -384,7 +384,7 @@ public class ClusteringFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Removes the <c>ChronicleServerStartupTask</c> which activates grains during silo startup, before
+    /// Removes the <c language="csharp">ChronicleServerStartupTask</c> which activates grains during silo startup, before
     /// the cluster is formed. The fixture drives the equivalent bootstrap itself once the cluster is up.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to adjust.</param>

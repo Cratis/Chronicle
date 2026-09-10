@@ -66,15 +66,15 @@ public static class JsonSchemaExtensions
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
     /// <returns>True when the schema describes a geospatial value, false when it does not.</returns>
     /// <remarks>
-    /// A geospatial value is an object on the wire — GeoJSON, a <c>type</c> and a <c>coordinates</c> pair — but it is
+    /// A geospatial value is an object on the wire — GeoJSON, a <c language="csharp">type</c> and a <c language="csharp">coordinates</c> pair — but it is
     /// not a container of schema-declared members. Chronicle stores and materializes it as one typed value, so the
-    /// schema generator emits it as a leaf carrying only its <c>format</c> and those wire members belong to the type's
+    /// schema generator emits it as a leaf carrying only its <c language="csharp">format</c> and those wire members belong to the type's
     /// own converter. Anything walking a document against its schema has to stop at such a value rather than read its
     /// members as properties the schema failed to declare.
     /// <para>
     /// The answer is the presence of a complex format, the same positive signal the storage converters already use to
     /// decide a value is typed rather than decomposable. Deliberately not the absence of declared properties: a schema
-    /// can declare nothing because its declaration could not be reached — an unresolved <c>$ref</c>, a composition
+    /// can declare nothing because its declaration could not be reached — an unresolved <c language="csharp">$ref</c>, a composition
     /// that flattened to nothing — and treating that as a typed value would silently skip members the schema does
     /// mean to describe.
     /// </para>
@@ -247,8 +247,8 @@ public static class JsonSchemaExtensions
     /// <returns>True if it is, false if not.</returns>
     /// <remarks>
     /// Nullability is expressed two ways and a property carries whichever fits it. A formatted type - a date, a
-    /// decimal - marks it with a trailing <c>?</c> on the format. A type with no format - an enum, a boolean -
-    /// has nowhere to put the marker and declares <c>"null"</c> in its type instead. Testing only the format
+    /// decimal - marks it with a trailing <c language="csharp">?</c> on the format. A type with no format - an enum, a boolean -
+    /// has nowhere to put the marker and declares <c language="csharp">"null"</c> in its type instead. Testing only the format
     /// suffix therefore read every nullable enum and every nullable flag as non-nullable, and the round trip
     /// materialized a type default for a property whose whole point was that it might not have one.
     /// </remarks>
@@ -257,8 +257,8 @@ public static class JsonSchemaExtensions
         schemaProperty.Type.HasFlag(JsonObjectType.Null);
 
     /// <summary>
-    /// Determines whether two schemas are equal once nullability markers are ignored — a trailing <c>?</c>
-    /// appended to a <c>format</c> value to signal a nullable type. The marker only refines how an unset value
+    /// Determines whether two schemas are equal once nullability markers are ignored — a trailing <c language="csharp">?</c>
+    /// appended to a <c language="csharp">format</c> value to signal a nullable type. The marker only refines how an unset value
     /// materializes (null rather than a type-default sentinel) and does not change the data shape, so a
     /// marker-only difference must not be treated as a breaking schema change — for example when comparing a
     /// stored event schema against a newly generated one after a Chronicle upgrade.

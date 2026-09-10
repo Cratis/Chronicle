@@ -8,8 +8,8 @@ using Cratis.Chronicle.ReadModels;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Read model with a <c>[property: FromEvery]</c> context mapping on a positional record parameter, used
-/// to verify the harness fires <c>[FromEvery]</c> — the sibling of <c>[FromAll]</c> — for every event.
+/// Read model with a <c language="csharp">[property: FromEvery]</c> context mapping on a positional record parameter, used
+/// to verify the harness fires <c language="csharp">[FromEvery]</c> — the sibling of <c language="csharp">[FromAll]</c> — for every event.
 /// </summary>
 /// <param name="Id">Thing identifier.</param>
 /// <param name="Name">The thing's name.</param>

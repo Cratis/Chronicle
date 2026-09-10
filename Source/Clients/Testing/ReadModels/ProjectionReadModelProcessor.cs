@@ -87,8 +87,8 @@ internal static class ProjectionReadModelProcessor
     /// Gets a value indicating whether this processor runs Chronicle's compliance stack.
     /// </summary>
     /// <remarks>
-    /// The live projection pipeline runs <c>EncryptChangeset</c> before the sink and releases what it reads
-    /// back; the pipeline below runs neither, so a <c>[PII]</c> member is projected and read as plaintext.
+    /// The live projection pipeline runs <c language="csharp">EncryptChangeset</c> before the sink and releases what it reads
+    /// back; the pipeline below runs neither, so a <c language="csharp">[PII]</c> member is projected and read as plaintext.
     /// Wire compliance in and flip this, and <see cref="SubstitutedLayers"/> stops reporting
     /// <see cref="ReadModelSubstitutedLayer.Compliance"/>.
     /// </remarks>
@@ -111,7 +111,7 @@ internal static class ProjectionReadModelProcessor
     /// </param>
     /// <returns>
     /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
-    /// <c>Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
+    /// <c language="csharp">Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
     /// dictionary of every materialized instance keyed by its event source id (read per-key from the sink,
     /// so a multi-source projection such as a join can be asserted against the intended instance
     /// deterministically).
@@ -333,7 +333,7 @@ internal static class ProjectionReadModelProcessor
 
     /// <summary>
     /// Mirrors MongoDB's `_id` → identifier property mapping for the in-memory test harness.
-    /// Finds the read model's identifier property (preferring <c>[Key]</c>, then <c>[Subject]</c>,
+    /// Finds the read model's identifier property (preferring <c language="csharp">[Key]</c>, then <c language="csharp">[Subject]</c>,
     /// then a property named "Id" by convention) and writes the resolved projection key value into
     /// the state under that property's camel-cased name — unless an event mapping has already
     /// populated that property.
@@ -371,11 +371,11 @@ internal static class ProjectionReadModelProcessor
     /// <param name="projection">The root <see cref="KernelProjectionEngine::IProjection"/> being applied.</param>
     /// <returns>The initial state.</returns>
     /// <remarks>
-    /// The seeding matches the live kernel's <c>ProjectionFactory.CreateInitialState</c>. The exclusion is the
+    /// The seeding matches the live kernel's <c language="csharp">ProjectionFactory.CreateInitialState</c>. The exclusion is the
     /// step this harness used to be missing: the live pipeline diffs the initial state into the changeset with
     /// every children-collection path removed, so an untouched child collection is never written and reads back
     /// from the store as an absent field. Seeding it here regardless answered "what is an empty child collection"
-    /// with <c>[]</c> - the one answer the running system never gives - at exactly the point the production
+    /// with <c language="csharp">[]</c> - the one answer the running system never gives - at exactly the point the production
     /// pipeline makes a deliberate exception, and so put the question out of reach of every spec at every tier.
     /// <para>
     /// The paths come from the kernel's own <see cref="KernelProjectionEngine::ProjectionExtensions.GetChildrenPropertyPaths"/>
@@ -535,7 +535,7 @@ internal static class ProjectionReadModelProcessor
     /// <returns>True when the event removed the root instance.</returns>
     /// <remarks>
     /// State is held per instance rather than threaded across every seeded event, mirroring the live pipeline's
-    /// <c>SetInitialState</c>: an event only ever sees the state of the instance its own key addresses. The key
+    /// <c language="csharp">SetInitialState</c>: an event only ever sees the state of the instance its own key addresses. The key
     /// comes from <see cref="InMemorySink.GetKeyValue"/> so that "the same instance" means the same thing here
     /// as it does to the sink — a concept key and its underlying primitive address one document, not two.
     /// </remarks>
@@ -613,7 +613,7 @@ internal static class ProjectionReadModelProcessor
 
     /// <summary>
     /// Hands an event to a projection and then to each of its child projections, mirroring
-    /// <c>Cratis.Chronicle.Projections.Engine.Pipelines.Steps.HandleEvent.Perform</c>.
+    /// <c language="csharp">Cratis.Chronicle.Projections.Engine.Pipelines.Steps.HandleEvent.Perform</c>.
     /// </summary>
     /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> to hand the event to.</param>
     /// <param name="context">The <see cref="KernelProjectionEngine::ProjectionEventContext"/> for the event.</param>

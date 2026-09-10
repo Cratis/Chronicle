@@ -24,7 +24,7 @@ public record SampleHistoryResult(int Events, bool AlreadyGenerated);
 /// nothing anybody would call a routine.
 /// </para>
 /// <para>
-/// Every event is appended with an explicit <c>occurred</c>, because the whole history happened before the store
+/// Every event is appended with an explicit <c language="csharp">occurred</c>, because the whole history happened before the store
 /// was ever run, and the whole thing is planned first and appended in the order things happened. A real log is the
 /// week's work interleaved as people do it, and the miner reads the stream once in order.
 /// </para>

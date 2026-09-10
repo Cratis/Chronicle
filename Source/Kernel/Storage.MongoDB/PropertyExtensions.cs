@@ -27,7 +27,7 @@ public static class PropertyExtensions
 
     /// <summary>
     /// Checks whether or not a <see cref="PropertyPath"/> targets a sink-owned system property.
-    /// Sink-owned properties (such as <c>__lastHandledEventSequenceNumber</c>) are managed by the
+    /// Sink-owned properties (such as <c language="csharp">__lastHandledEventSequenceNumber</c>) are managed by the
     /// sink itself and must never be written through projection / reducer diffs: doing so combines
     /// a $set on the same path the sink writes via $max, which MongoDB rejects with a path
     /// conflict error.

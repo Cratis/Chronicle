@@ -8,7 +8,7 @@ using Cratis.Serialization;
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintProvider;
 
 /// <summary>
-/// The attribute form of the same rule: <c>[RemoveConstraint]</c> may be written on as many event types as the
+/// The attribute form of the same rule: <c language="csharp">[RemoveConstraint]</c> may be written on as many event types as the
 /// lifecycle has terminal facts, and each of them releases the constraint. The provider used to take the first one
 /// it found, so every other event carrying the attribute for that name declared a release that never happened.
 /// </summary>

@@ -35,14 +35,14 @@ static class FluentProjectionMappings
     /// Enumerate every public fluent mapping that can carry event content into the document.
     /// </summary>
     /// <param name="semanticModel">The semantic model for the callback body.</param>
-    /// <param name="builderCallback">The <c>From</c> or <c>Join</c> callback.</param>
+    /// <param name="builderCallback">The <c language="csharp">From</c> or <c language="csharp">Join</c> callback.</param>
     /// <param name="symbols">The Chronicle builder symbols.</param>
     /// <param name="readModelType">The read model being filled by the block.</param>
     /// <param name="eventType">The event being consumed by the block.</param>
     /// <returns>Each mapping as a target property path and an event property path.</returns>
     /// <remarks>
     /// This deliberately follows the semantic builder surface rather than looking for method names. It covers
-    /// typed and <c>PropertyPath</c> Set/To, SetThisValue, and Add/Subtract. AddChild creates a separate child
+    /// typed and <c language="csharp">PropertyPath</c> Set/To, SetThisValue, and Add/Subtract. AddChild creates a separate child
     /// projection operation and is deliberately analyzed through <see cref="GetAddChildMappings"/> instead. Nested member
     /// accessors retain their complete path so PII reach can be evaluated at the actual source leaf.
     /// </remarks>
@@ -156,11 +156,11 @@ static class FluentProjectionMappings
     /// <param name="invocation">The From invocation.</param>
     /// <param name="readModelType">The read model that owns the persisted document.</param>
     /// <param name="symbols">The Chronicle builder symbols.</param>
-    /// <param name="projectionBuilderFor">The <c>IProjectionBuilderFor&lt;&gt;</c> definition that declares <c>Passive</c>.</param>
+    /// <param name="projectionBuilderFor">The <c language="csharp">IProjectionBuilderFor&lt;&gt;</c> definition that declares <c language="csharp">Passive</c>.</param>
     /// <returns>True when the read model is declared passive by attribute or by the builder chain.</returns>
     /// <remarks>
-    /// Passivity has two sources and either one is enough: a <c>[Passive]</c> attribute on the read model, or a
-    /// <c>Passive()</c> call on the builder in the same Define chain. Unlike AutoMap there is no call that turns
+    /// Passivity has two sources and either one is enough: a <c language="csharp">[Passive]</c> attribute on the read model, or a
+    /// <c language="csharp">Passive()</c> call on the builder in the same Define chain. Unlike AutoMap there is no call that turns
     /// it back off, so the first one found settles it. A receiver whose forwarding cannot be proven is read as
     /// not passive: a diagnostic that fires must be able to point at a declaration that made it passive.
     /// </remarks>

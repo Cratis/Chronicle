@@ -23,7 +23,7 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// Gets the max sequence number.
     /// </summary>
     /// <remarks>
-    /// The sentinels are wire values, shared with the kernel's own copy of this type - <c>ConcurrencyScope.NotSet</c>
+    /// The sentinels are wire values, shared with the kernel's own copy of this type - <c language="csharp">ConcurrencyScope.NotSet</c>
     /// is built from this one on both sides, and a scope crosses the wire as a raw number. Changing a sentinel here
     /// without changing it there makes the same named value mean two different things on the two ends.
     /// </remarks>

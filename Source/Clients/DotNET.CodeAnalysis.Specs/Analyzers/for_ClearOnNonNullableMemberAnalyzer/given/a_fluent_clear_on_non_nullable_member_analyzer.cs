@@ -11,7 +11,7 @@ public class a_fluent_clear_on_non_nullable_member_analyzer : Specification
     /// <param name="usage">The projection declaration under analysis.</param>
     /// <returns>The full source to analyze.</returns>
     /// <remarks>
-    /// Every interface <c>FluentProjectionSymbols.TryCreate</c> looks up has to be present: it resolves the set as
+    /// Every interface <c language="csharp">FluentProjectionSymbols.TryCreate</c> looks up has to be present: it resolves the set as
     /// a whole and returns nothing if any one is missing, which would switch the analyzer off and leave every spec
     /// over this harness silently green. The positive specs are what prove it actually activated.
     /// </remarks>

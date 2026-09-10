@@ -8,7 +8,7 @@ using MongoDB.Bson;
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.for_ConstraintDefinitionSerializer.when_deserializing_a_unique_event_type_constraint;
 
 /// <summary>
-/// An earlier revision of this serializer named the concrete type with a <c>constraintType</c> element of its own
+/// An earlier revision of this serializer named the concrete type with a <c language="csharp">constraintType</c> element of its own
 /// instead of the discriminator, and stripped the discriminator on the way out. No shipped kernel ever wrote that
 /// shape - the serializer was never on the write path - but a build that registered it would have, and a store in
 /// that shape must stay readable rather than fail on a missing discriminator.

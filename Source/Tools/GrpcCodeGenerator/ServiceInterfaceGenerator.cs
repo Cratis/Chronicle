@@ -320,7 +320,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     }
 
     /// <summary>
-    /// Builds the interface method for a <c>[Query]</c>-marked method on a <c>[KeyedBy&lt;TKey&gt;]</c> grain
+    /// Builds the interface method for a <c language="csharp">[Query]</c>-marked method on a <c language="csharp">[KeyedBy&lt;TKey&gt;]</c> grain
     /// interface - a query with no read model of its own, so its request carries the grain key's fields ahead of
     /// its own parameters and its response type is named after the method, not a read model.
     /// </summary>

@@ -14,8 +14,8 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// </summary>
 /// <remarks>
 /// The fluent equivalent is covered by <see cref="FluentPassiveProjectionKeyRedirectionAnalyzer"/>; both report
-/// <see cref="DiagnosticIds.PassiveProjectionKeyRedirection"/>. Only the root <c>key:</c> is read here.
-/// <c>parentKey:</c> identifies a child inside its containing document and never moves the document a passive
+/// <see cref="DiagnosticIds.PassiveProjectionKeyRedirection"/>. Only the root <c language="csharp">key:</c> is read here.
+/// <c language="csharp">parentKey:</c> identifies a child inside its containing document and never moves the document a passive
 /// read resolves.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]

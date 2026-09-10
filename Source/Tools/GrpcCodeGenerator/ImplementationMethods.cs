@@ -22,7 +22,7 @@ public static class ImplementationMethods
     /// <param name="context">The generation context.</param>
     /// <returns>The C# source for the method.</returns>
     /// <remarks>
-    /// Dispatch goes through the Arc <c>ICommandPipeline</c> - the same authorization, validation, and
+    /// Dispatch goes through the Arc <c language="csharp">ICommandPipeline</c> - the same authorization, validation, and
     /// handler pipeline the HTTP surface runs - so the generated method only constructs the command and
     /// maps the response. The pipeline resolves the Handle method's parameters from its own per-execution
     /// service scope, which is why none of them become constructor dependencies here.
@@ -90,16 +90,16 @@ public static class ImplementationMethods
     }
 
     /// <summary>
-    /// Writes the method that dispatches a gRPC operation to a <c>[Query]</c>-marked grain method.
+    /// Writes the method that dispatches a gRPC operation to a <c language="csharp">[Query]</c>-marked grain method.
     /// </summary>
     /// <param name="method">The keyed query to dispatch to.</param>
     /// <param name="serviceName">The name of the service the query belongs to.</param>
     /// <param name="context">The generation context.</param>
     /// <returns>The C# source for the method.</returns>
     /// <remarks>
-    /// The grain key is reconstructed with <c>KeyHelper.Combine</c> over the request fields the key type's
+    /// The grain key is reconstructed with <c language="csharp">KeyHelper.Combine</c> over the request fields the key type's
     /// constructor parameters were mapped onto - not by constructing the key type itself, so this does not depend
-    /// on the key type's own <c>ToString()</c> agreeing with how it is actually combined.
+    /// on the key type's own <c language="csharp">ToString()</c> agreeing with how it is actually combined.
     /// </remarks>
     public static string ForKeyedQuery(KeyedQueryDefinition method, string serviceName, ImplementationContext context)
     {
@@ -253,15 +253,15 @@ public static class ImplementationMethods
     }
 
     /// <summary>
-    /// Finds the loaded <c>Cratis.Arc.Commands.ICommandPipeline</c> type reachable from a command.
+    /// Finds the loaded <c language="csharp">Cratis.Arc.Commands.ICommandPipeline</c> type reachable from a command.
     /// </summary>
     /// <param name="commandType">The command to resolve from.</param>
-    /// <returns>The <c>Cratis.Arc.Commands.ICommandPipeline</c> type.</returns>
+    /// <returns>The <c language="csharp">Cratis.Arc.Commands.ICommandPipeline</c> type.</returns>
     /// <remarks>
     /// The generator has no compile-time reference to Arc - it processes an arbitrary assembly loaded into an
     /// isolated context - so this has to find the type reflectively. The command was discovered by its
-    /// <c>[Command]</c> attribute, and the assembly defining that attribute is the one that also exposes
-    /// <c>ICommandPipeline</c>.
+    /// <c language="csharp">[Command]</c> attribute, and the assembly defining that attribute is the one that also exposes
+    /// <c language="csharp">ICommandPipeline</c>.
     /// </remarks>
     /// <exception cref="UnsupportedServiceShape">Thrown when the pipeline type cannot be resolved from the command's attributes.</exception>
     static Type ResolveCommandPipelineType(Type commandType)
@@ -276,15 +276,15 @@ public static class ImplementationMethods
     }
 
     /// <summary>
-    /// Finds the loaded <c>Orleans.IGrainFactory</c> type reachable from a grain interface.
+    /// Finds the loaded <c language="csharp">Orleans.IGrainFactory</c> type reachable from a grain interface.
     /// </summary>
     /// <param name="grainInterfaceType">The grain interface to resolve from.</param>
-    /// <returns>The <c>Orleans.IGrainFactory</c> type.</returns>
+    /// <returns>The <c language="csharp">Orleans.IGrainFactory</c> type.</returns>
     /// <remarks>
     /// The generator has no compile-time reference to Orleans - it processes an arbitrary assembly loaded into an
     /// isolated context - so this has to find the type reflectively. Reflecting over the grain interface's own base
-    /// interfaces (<c>IGrainWithStringKey</c> and the like) has already forced their defining assembly to load,
-    /// which is the one that also exposes <c>IGrainFactory</c>.
+    /// interfaces (<c language="csharp">IGrainWithStringKey</c> and the like) has already forced their defining assembly to load,
+    /// which is the one that also exposes <c language="csharp">IGrainFactory</c>.
     /// </remarks>
     /// <exception cref="UnsupportedServiceShape">Thrown when no assembly reachable from the grain interface exposes it.</exception>
     static Type ResolveGrainFactoryType(Type grainInterfaceType)

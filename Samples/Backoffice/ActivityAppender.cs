@@ -147,12 +147,12 @@ public class ActivityAppender(
     /// <para>
     /// This sample has no command objects to read those values from - a command here is a name - so it reconstructs
     /// the same set from what the command demonstrably acted on: the event source it targeted, and the values it
-    /// put on the event. For <c>RegisterInvoice</c> that is the invoice id plus the supplier, amount and reference,
+    /// put on the event. For <c language="csharp">RegisterInvoice</c> that is the invoice id plus the supplier, amount and reference,
     /// which is exactly what the real command would have carried.
     /// </para>
     /// <para>
-    /// A real application also decides what must <em>not</em> travel this way. Values marked <c>[PII]</c> and
-    /// <c>[NotAudited]</c> are withheld, because the causation is written into the event log and stays there for as
+    /// A real application also decides what must <em>not</em> travel this way. Values marked <c language="csharp">[PII]</c> and
+    /// <c language="csharp">[NotAudited]</c> are withheld, because the causation is written into the event log and stays there for as
     /// long as the events do. Nothing here is sensitive, so nothing is withheld.
     /// </para>
     /// </remarks>

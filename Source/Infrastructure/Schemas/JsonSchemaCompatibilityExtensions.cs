@@ -28,7 +28,7 @@ public static class JsonSchemaCompatibilityExtensions
     /// through the schema registered for its generation, so a change to the shape silently changes the meaning of
     /// history and must go through a new generation instead.
     /// <para>
-    /// The first tolerance is a nullability marker (a trailing <c>?</c> on a <c>format</c> value). It only refines
+    /// The first tolerance is a nullability marker (a trailing <c language="csharp">?</c> on a <c language="csharp">format</c> value). It only refines
     /// how an unset value materializes, and a Chronicle upgrade can introduce it on a schema that was stored before
     /// the marker existed.
     /// </para>
@@ -41,10 +41,10 @@ public static class JsonSchemaCompatibilityExtensions
     /// change that needs a new generation and a value map to state what the old values now mean.
     /// </para>
     /// <para>
-    /// The third is the <c>title</c>, which the client derives from the CLR type name. It says nothing about the
+    /// The third is the <c language="csharp">title</c>, which the client derives from the CLR type name. It says nothing about the
     /// shape of a stored payload - the event type identifier names the type and the properties describe the data -
     /// so comparing it made the CLR name load-bearing, which is exactly what pinning an identifier with
-    /// <c>[EventType("...")]</c> is documented to prevent. Renaming a record while pinning its identifier read as a
+    /// <c language="csharp">[EventType("...")]</c> is documented to prevent. Renaming a record while pinning its identifier read as a
     /// breaking schema change, and so did the documented generational escape hatch, whose previous generation has to
     /// be a separate and therefore differently named type (#3926).
     /// </para>
@@ -65,7 +65,7 @@ public static class JsonSchemaCompatibilityExtensions
     }
 
     /// <summary>
-    /// Strips every <c>title</c> declaration from a schema node.
+    /// Strips every <c language="csharp">title</c> declaration from a schema node.
     /// </summary>
     /// <param name="node">The <see cref="JsonNode"/> to strip, which may be <see langword="null"/>.</param>
     /// <remarks>
@@ -97,7 +97,7 @@ public static class JsonSchemaCompatibilityExtensions
     }
 
     /// <summary>
-    /// Strips every nullability marker - a trailing <c>?</c> appended to a <c>format</c> value - from a schema node.
+    /// Strips every nullability marker - a trailing <c language="csharp">?</c> appended to a <c language="csharp">format</c> value - from a schema node.
     /// </summary>
     /// <param name="node">The <see cref="JsonNode"/> to strip, which may be <see langword="null"/>.</param>
     internal static void StripNullableFormatMarkers(JsonNode? node)

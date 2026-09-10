@@ -9,10 +9,10 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 
 /// <summary>
-/// A children-collection path is written by <c>ChildAdded</c> and <c>ChildRemoved</c> and by nothing else, so the
+/// A children-collection path is written by <c language="csharp">ChildAdded</c> and <c language="csharp">ChildRemoved</c> and by nothing else, so the
 /// initial-state diff has to leave it alone even though the initial state carries an empty collection for it. Not
 /// leaving it alone is not a cosmetic difference: replay drives sibling partitions through their own events
-/// independently, so a root event's <c>Members=[]</c> can arrive after a sibling's <c>ChildAdded</c> and erase a
+/// independently, so a root event's <c language="csharp">Members=[]</c> can arrive after a sibling's <c language="csharp">ChildAdded</c> and erase a
 /// child that was already there.
 /// <para>
 /// The exclusion argument was optional, and the one spec that exercised this method omitted it - so the branch

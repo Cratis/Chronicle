@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaExtensions.when_checking_if_a_schema_describes_a_geospatial_value;
 
 /// <summary>
-/// The shape the schema generator emits for a <c>Point</c>, <c>LineString</c> or <c>Polygon</c>: an object
+/// The shape the schema generator emits for a <c language="csharp">Point</c>, <c language="csharp">LineString</c> or <c language="csharp">Polygon</c>: an object
 /// carrying only its format, because the GeoJSON members on the wire belong to the type's own converter.
 /// </summary>
 public class and_it_is_a_geospatial_leaf : Specification

@@ -20,7 +20,7 @@ public class WebhooksStorageProvider(IStorage storage) : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<WebhooksState>)!;
         var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
-        actualGrainState.State.Webhooks = await eventStore.Webhooks.GetAll();
+        actualGrainState.State!.Webhooks = await eventStore.Webhooks.GetAll();
     }
 
     /// <inheritdoc/>

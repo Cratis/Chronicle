@@ -12,8 +12,8 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCompliance;
 
 /// <summary>
-/// Regression for serving a read model whose property is a coarse <c>[PII]</c> list through the read-model
-/// release facade — the exact path <c>MaterializedReadModels.GetInstances</c> (queries, live/observable
+/// Regression for serving a read model whose property is a coarse <c language="csharp">[PII]</c> list through the read-model
+/// release facade — the exact path <c language="csharp">MaterializedReadModels.GetInstances</c> (queries, live/observable
 /// reads) and command-side passive reads use. The released instance must carry the list as a real
 /// collection, not the blob ciphertext string, otherwise every query/passive read of the model breaks the
 /// same way the reducer state load does.

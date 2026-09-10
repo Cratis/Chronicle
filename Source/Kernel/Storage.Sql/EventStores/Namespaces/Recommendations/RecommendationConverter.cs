@@ -61,8 +61,8 @@ public class RecommendationConverter
     /// System.Text.Json cannot deserialize directly to the <see cref="IRecommendationRequest"/>
     /// interface — it has no polymorphism configured. Resolve the concrete CLR type through the
     /// <see cref="RecommendationType"/> (which carries the assembly-qualified name of the
-    /// <see cref="IRecommendation{TRequest}"/> implementation) and deserialize to <c>TRequest</c>.
-    /// Mirrors MongoDB's <c>RecommendationStateSerializer.GetRequestClrType</c>.
+    /// <see cref="IRecommendation{TRequest}"/> implementation) and deserialize to <c language="csharp">TRequest</c>.
+    /// Mirrors MongoDB's <c language="csharp">RecommendationStateSerializer.GetRequestClrType</c>.
     /// </remarks>
     static IRecommendationRequest DeserializeRequest(RecommendationType recommendationType, string requestJson)
     {

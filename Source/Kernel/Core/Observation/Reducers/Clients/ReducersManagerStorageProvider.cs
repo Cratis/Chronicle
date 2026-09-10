@@ -20,7 +20,7 @@ public class ReducersManagerStorageProvider(IStorage storage) : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<ReducersManagerState>)!;
         var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
-        actualGrainState.State.Reducers = await eventStore.Reducers.GetAll();
+        actualGrainState.State!.Reducers = await eventStore.Reducers.GetAll();
     }
 
     /// <inheritdoc/>

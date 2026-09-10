@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <remarks>
 /// Waiting is only meaningful against a connection that actually has observers behind it. The in-process testing
-/// surfaces (<c>EventScenario</c>, <c>EventStoreForTesting</c>) run the event sequence without a silo, so no
+/// surfaces (<c language="csharp">EventScenario</c>, <c language="csharp">EventStoreForTesting</c>) run the event sequence without a silo, so no
 /// projection, reducer or reactor ever runs from an append there and there is nothing whose completion could be
 /// observed. Reporting success would let a spec assert that downstream work finished when none of it was ever
 /// started, so the wait fails by name instead - assert on the scenario's own surface, or move the spec to an

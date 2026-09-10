@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Host;
 /// </summary>
 /// <remarks>
 /// The entry assembly is the Chronicle server executable, which the publish pipeline stamps with the actual release
-/// version through <c>-p:Version=</c>. The Core assembly is a library dependency whose version stays at 1.0.0, so
+/// version through <c language="csharp">-p:Version=</c>. The Core assembly is a library dependency whose version stays at 1.0.0, so
 /// reading it instead would report every release as 1.0.0.
 /// </remarks>
 internal static class ServerVersion
@@ -30,7 +30,7 @@ internal static class ServerVersion
     /// <summary>
     /// Parses the version portion from an assembly informational version string, dropping any build metadata.
     /// </summary>
-    /// <param name="informationalVersion">The informational version string, for example <c>15.9.0+abc123</c>.</param>
+    /// <param name="informationalVersion">The informational version string, for example <c language="csharp">15.9.0+abc123</c>.</param>
     /// <returns>The version portion before any '+' separator, or the whole string when there is none.</returns>
     internal static string ParseVersion(string informationalVersion)
     {
@@ -41,7 +41,7 @@ internal static class ServerVersion
     /// <summary>
     /// Parses the commit from an assembly informational version string.
     /// </summary>
-    /// <param name="informationalVersion">The informational version string, for example <c>15.9.0+abc123</c>.</param>
+    /// <param name="informationalVersion">The informational version string, for example <c language="csharp">15.9.0+abc123</c>.</param>
     /// <returns>The build metadata after the '+' separator, or an empty string when there is none.</returns>
     internal static string ParseCommitSha(string informationalVersion)
     {

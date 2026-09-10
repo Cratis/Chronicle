@@ -6,7 +6,7 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Fluent projection for <see cref="MembershipRoster"/>, exercising a child-level <c>[Join]</c>: each member
+/// Fluent projection for <see cref="MembershipRoster"/>, exercising a child-level <c language="csharp">[Join]</c>: each member
 /// child row is created from <see cref="MemberEnrolled"/> (on the group stream) and enriched with the member's
 /// name joined from <see cref="MemberProfileCreated"/> (on the member's own stream). Mirrors the children-join
 /// integration projection shape so the in-memory harness is validated against the same behavior.

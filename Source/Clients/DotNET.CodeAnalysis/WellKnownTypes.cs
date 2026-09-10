@@ -214,10 +214,10 @@ public static class WellKnownTypes
     public const string EventTypeGenerationForAttributeGenericDisplay = "Cratis.Chronicle.Events.EventTypeGenerationForAttribute<TEventType>";
 
     /// <summary>
-    /// Check whether a type is, or derives from, the strongly-typed <c>EventSourceId&lt;T&gt;</c>.
+    /// Check whether a type is, or derives from, the strongly-typed <c language="csharp">EventSourceId&lt;T&gt;</c>.
     /// </summary>
     /// <param name="type">The type symbol to check.</param>
-    /// <returns>True if the type is or derives from <c>EventSourceId&lt;T&gt;</c>, false otherwise.</returns>
+    /// <returns>True if the type is or derives from <c language="csharp">EventSourceId&lt;T&gt;</c>, false otherwise.</returns>
     public static bool DerivesFromEventSourceId(ITypeSymbol? type)
     {
         for (var current = type; current is not null; current = current.BaseType)
@@ -246,10 +246,10 @@ public static class WellKnownTypes
         symbol.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == attributeFullName);
 
     /// <summary>
-    /// Find the <c>EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> base type of a type, if any.
+    /// Find the <c language="csharp">EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> base type of a type, if any.
     /// </summary>
     /// <param name="type">The type symbol to check.</param>
-    /// <returns>The constructed <c>EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> base, or <see langword="null"/> when the type does not derive from it.</returns>
+    /// <returns>The constructed <c language="csharp">EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> base, or <see langword="null"/> when the type does not derive from it.</returns>
     public static INamedTypeSymbol? GetEventTypeMigrationBase(ITypeSymbol? type)
     {
         for (var current = type; current is not null; current = current.BaseType)
@@ -265,10 +265,10 @@ public static class WellKnownTypes
     }
 
     /// <summary>
-    /// Get the <c>[EventType]</c> attribute data from a type, whether the client or kernel attribute.
+    /// Get the <c language="csharp">[EventType]</c> attribute data from a type, whether the client or kernel attribute.
     /// </summary>
     /// <param name="type">The type symbol to inspect.</param>
-    /// <returns>The <see cref="AttributeData"/> for the <c>[EventType]</c> attribute, or <see langword="null"/> when the type has none.</returns>
+    /// <returns>The <see cref="AttributeData"/> for the <c language="csharp">[EventType]</c> attribute, or <see langword="null"/> when the type has none.</returns>
     public static AttributeData? GetEventTypeAttributeData(ITypeSymbol type) =>
         type.GetAttributes().FirstOrDefault(attribute =>
         {
@@ -278,9 +278,9 @@ public static class WellKnownTypes
         });
 
     /// <summary>
-    /// Get the explicit id argument from an <c>[EventType]</c> attribute, or <see langword="null"/> when no explicit id was supplied.
+    /// Get the explicit id argument from an <c language="csharp">[EventType]</c> attribute, or <see langword="null"/> when no explicit id was supplied.
     /// </summary>
-    /// <param name="attributeData">The <c>[EventType]</c> attribute data.</param>
+    /// <param name="attributeData">The <c language="csharp">[EventType]</c> attribute data.</param>
     /// <returns>The explicit id string, or <see langword="null"/> when the id is absent or empty.</returns>
     public static string? GetEventTypeExplicitId(AttributeData attributeData)
     {
@@ -309,7 +309,7 @@ public static class WellKnownTypes
     }
 
     /// <summary>
-    /// Get the <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute data from a type, if present.
+    /// Get the <c language="csharp">[EventTypeGenerationFor&lt;T&gt;]</c> attribute data from a type, if present.
     /// </summary>
     /// <param name="type">The type symbol to inspect.</param>
     /// <returns>The <see cref="AttributeData"/> for the attribute, or <see langword="null"/> when the type has none.</returns>
@@ -319,7 +319,7 @@ public static class WellKnownTypes
             attributeClass.OriginalDefinition.ToDisplayString() == EventTypeGenerationForAttributeGenericDisplay);
 
     /// <summary>
-    /// Check if a type has the <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute.
+    /// Check if a type has the <c language="csharp">[EventTypeGenerationFor&lt;T&gt;]</c> attribute.
     /// </summary>
     /// <param name="typeSymbol">The type symbol to check.</param>
     /// <returns>True if the type has the attribute, false otherwise.</returns>
@@ -327,9 +327,9 @@ public static class WellKnownTypes
         GetEventTypeGenerationForAttributeData(typeSymbol) is not null;
 
     /// <summary>
-    /// Get the event type referenced by an <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute's type argument.
+    /// Get the event type referenced by an <c language="csharp">[EventTypeGenerationFor&lt;T&gt;]</c> attribute's type argument.
     /// </summary>
-    /// <param name="attributeData">The <c>[EventTypeGenerationFor&lt;T&gt;]</c> attribute data.</param>
+    /// <param name="attributeData">The <c language="csharp">[EventTypeGenerationFor&lt;T&gt;]</c> attribute data.</param>
     /// <returns>The referenced type symbol, or <see langword="null"/> if it could not be resolved.</returns>
     public static ITypeSymbol? GetEventTypeGenerationForTarget(AttributeData attributeData) =>
         attributeData.AttributeClass?.TypeArguments.FirstOrDefault();
@@ -511,9 +511,9 @@ public static class WellKnownTypes
     /// <returns>True if the expression is a member-access chain that bottoms out at a lambda parameter, false otherwise.</returns>
     /// <remarks>
     /// This is stricter than <see cref="IsPureMemberAccessChain(ExpressionSyntax)"/>: it rejects member-access chains rooted in
-    /// something other than the lambda parameter (for example <c>_ =&gt; DateTimeOffset.UtcNow</c>, which reads a static member and
+    /// something other than the lambda parameter (for example <c language="csharp">_ =&gt; DateTimeOffset.UtcNow</c>, which reads a static member and
     /// ignores the parameter), as well as a bare parameter reference that maps no property. Projection builder accessors extract a
-    /// property path at definition time and are never executed, so only <c>parameter.Property</c> chains are valid.
+    /// property path at definition time and are never executed, so only <c language="csharp">parameter.Property</c> chains are valid.
     /// </remarks>
     public static bool IsProjectionPropertyAccessor(ExpressionSyntax expression, SemanticModel semanticModel)
     {

@@ -60,7 +60,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Writes a targeted <c>$set</c> of the observer-owned fields rather than replacing the whole document, so
+    /// Writes a targeted <c language="csharp">$set</c> of the observer-owned fields rather than replacing the whole document, so
     /// fields the observer state does not own — such as legacy per-partition counts that are still awaiting
     /// migration on the next load — are left untouched instead of being wiped by a full replace.
     /// </remarks>

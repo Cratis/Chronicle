@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
 /// Represents a BSON serializer for <see cref="Point"/>.
 /// </summary>
 /// <remarks>
-/// Stores the point as a document: <c>{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }</c>.
+/// Stores the point as a document: <c language="csharp">{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }</c>.
 /// </remarks>
 public class PointSerializer : SerializerBase<Point>
 {

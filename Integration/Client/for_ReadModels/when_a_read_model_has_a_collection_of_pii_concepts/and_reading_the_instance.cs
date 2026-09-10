@@ -12,7 +12,7 @@ using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_ha
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_collection_of_pii_concepts;
 
 /// <summary>
-/// A <c>[PII]</c> concept keeps its classification when it is held in a collection. The schema for a collection
+/// A <c language="csharp">[PII]</c> concept keeps its classification when it is held in a collection. The schema for a collection
 /// of concepts is built through a separate path from the scalar one, so without the element's compliance
 /// metadata being carried onto the item schema the value would be persisted in the clear — the encrypted
 /// scalar and the plaintext list element being the same concept type.

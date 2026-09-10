@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Concepts.Patterns;
 /// </summary>
 /// <remarks>
 /// This lives with the concept rather than beside the miner because both sides of the wire need it and need to
-/// agree. The engine buckets an event's <c>Occurred</c> when it mines; anything asking what usually happens at a
+/// agree. The engine buckets an event's <c language="csharp">Occurred</c> when it mines; anything asking what usually happens at a
 /// given moment has to bucket that moment the same way, or it asks about a slot the mining never used. A caller
 /// left to write the branching itself gets one chance to write it differently, and the mismatch is silent -
 /// the query simply returns nothing.

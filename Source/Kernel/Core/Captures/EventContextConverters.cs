@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Captures;
 /// Captures is a read model, so its query methods put <see cref="Contracts.Events.EventContext"/> directly on the
 /// record - the same shared-type situation as every other area Core still reaches into Contracts for directly.
 /// The full conversion used to be reachable through the (now removed from Core) gRPC service layer; it is
-/// duplicated here rather than depended on, following the same pattern <c>Cratis.Chronicle.EventTypes.EventTypeConverters</c>
-/// and <c>Cratis.Chronicle.Identities.IdentityConverters</c> already use for their own areas.
+/// duplicated here rather than depended on, following the same pattern <c language="csharp">Cratis.Chronicle.EventTypes.EventTypeConverters</c>
+/// and <c language="csharp">Cratis.Chronicle.Identities.IdentityConverters</c> already use for their own areas.
 /// </remarks>
 internal static class EventContextConverters
 {

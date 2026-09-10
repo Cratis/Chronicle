@@ -45,7 +45,7 @@ public class NamespacesStateStorageProvider(IStorage storage) : IGrainStorage
         var eventStoreName = grainId.Key.ToString()!;
         var eventStore = storage.GetEventStore(eventStoreName);
 
-        foreach (var @namespace in actualGrainState.State.NewNamespaces)
+        foreach (var @namespace in actualGrainState.State!.NewNamespaces)
         {
             await eventStore.Namespaces.Create(@namespace.Name, @namespace.Created);
         }

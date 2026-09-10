@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Jobs;
 /// Converts stored job step state into the job step summary read model.
 /// </summary>
 /// <remarks>
-/// These live beside the read model rather than on it because a static method on a <c>[ReadModel]</c> whose return
+/// These live beside the read model rather than on it because a static method on a <c language="csharp">[ReadModel]</c> whose return
 /// shape is a supported query shape becomes a generated query proxy and an HTTP endpoint - accessibility is not
 /// what the proxy generator looks at. A conversion helper is not an operation anybody should be able to call.
 /// </remarks>

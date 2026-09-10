@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections;
 /// Represents an implementation of <see cref="IReadModelChangesetSubscriber"/>.
 /// </summary>
 /// <remarks>
-/// Placed on the silo that owns the watch connection via <c>[ConnectedObserverPlacement]</c> (the silo
+/// Placed on the silo that owns the watch connection via <c language="csharp">[ConnectedObserverPlacement]</c> (the silo
 /// address is carried in the <see cref="ObserverSubscriberKey"/>), so the hop to the
 /// <see cref="IProjectionChangesetMediator"/> — and from there to the client's gRPC stream — is entirely
 /// in-process. The subscription identifier is carried in the key's event source id slot.

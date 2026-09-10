@@ -12,9 +12,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCom
 
 /// <summary>
 /// Robustness adjacency for the projection collapse: adding a second child after a child collection with
-/// scalar <c>[PII]</c> already exists. The second add re-encrypts the whole snapshot (yielding a collapsed
-/// whole-collection difference) at the same time as the <c>$push</c> for the new child. The collapsed
-/// <c>$set</c> must be filtered against the child operation so only the <c>$push</c> applies — no Mongo
+/// scalar <c language="csharp">[PII]</c> already exists. The second add re-encrypts the whole snapshot (yielding a collapsed
+/// whole-collection difference) at the same time as the <c language="csharp">$push</c> for the new child. The collapsed
+/// <c language="csharp">$set</c> must be filtered against the child operation so only the <c language="csharp">$push</c> applies — no Mongo
 /// conflict, no duplicated child, both children ciphertext at rest.
 /// </summary>
 /// <param name="fixture">The shared <see cref="MongoDBFixture"/>.</param>

@@ -13,9 +13,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCom
 
 /// <summary>
 /// Robustness adjacency for the projection collapse: positionally updating a non-PII field on an existing
-/// child while the same child collection carries scalar <c>[PII]</c>. The projection emits a positional
-/// <c>$set contacts.$[elem].label</c> while <see cref="EncryptChangeset"/> re-encrypts and collapses the
-/// PII members into a whole-collection <c>$set contacts</c>. Both target the same collection in one update;
+/// child while the same child collection carries scalar <c language="csharp">[PII]</c>. The projection emits a positional
+/// <c language="csharp">$set contacts.$[elem].label</c> while <see cref="EncryptChangeset"/> re-encrypts and collapses the
+/// PII members into a whole-collection <c language="csharp">$set contacts</c>. Both target the same collection in one update;
 /// the sink must apply them without a Mongo path conflict, with the field updated and the PII ciphertext.
 /// </summary>
 /// <param name="fixture">The shared <see cref="MongoDBFixture"/>.</param>

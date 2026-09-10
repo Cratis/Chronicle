@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a <c>.Set(x =&gt; x.P).To(e =&gt; e.P)</c> mapping on a projection builder as redundant
+/// Analyzer that reports a <c language="csharp">.Set(x =&gt; x.P).To(e =&gt; e.P)</c> mapping on a projection builder as redundant
 /// when the source and target property names are identical, since AutoMap already maps identically named properties.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]

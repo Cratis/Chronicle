@@ -13,8 +13,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a fluent <c>From&lt;TEvent&gt;</c> block writing a property that a sibling
-/// <c>Join&lt;TOther&gt;</c> in the same projection also sets explicitly — a combination where the joined
+/// Analyzer that reports a fluent <c language="csharp">From&lt;TEvent&gt;</c> block writing a property that a sibling
+/// <c language="csharp">Join&lt;TOther&gt;</c> in the same projection also sets explicitly — a combination where the joined
 /// value always wins and the local write can never reset the property.
 /// </summary>
 /// <remarks>
@@ -112,16 +112,16 @@ public class FluentJoinOverridesLocalWriteAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Find the joins declared alongside a <c>From</c> block for the same read model, with the properties each
+    /// Find the joins declared alongside a <c language="csharp">From</c> block for the same read model, with the properties each
     /// sets explicitly.
     /// </summary>
     /// <param name="context">The analysis context.</param>
-    /// <param name="fromInvocation">The <c>From</c> invocation being analyzed.</param>
-    /// <param name="readModelType">The read model the <c>From</c> block projects into.</param>
+    /// <param name="fromInvocation">The <c language="csharp">From</c> invocation being analyzed.</param>
+    /// <param name="readModelType">The read model the <c language="csharp">From</c> block projects into.</param>
     /// <returns>Each sibling join's event type and explicitly set property names.</returns>
     /// <remarks>
-    /// Siblings are scoped to the containing member — the <c>Define</c> method — and matched on the read model
-    /// type, so a join inside a child scope never collides with a root-level <c>From</c> of the same property
+    /// Siblings are scoped to the containing member — the <c language="csharp">Define</c> method — and matched on the read model
+    /// type, so a join inside a child scope never collides with a root-level <c language="csharp">From</c> of the same property
     /// name.
     /// </remarks>
     static IEnumerable<(INamedTypeSymbol EventType, ImmutableHashSet<string> Properties)> GetSiblingJoins(
@@ -162,7 +162,7 @@ public class FluentJoinOverridesLocalWriteAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Resolve a <c>From</c>/<c>Join</c> invocation to its event and read model types.
+    /// Resolve a <c language="csharp">From</c>/<c language="csharp">Join</c> invocation to its event and read model types.
     /// </summary>
     /// <param name="context">The analysis context.</param>
     /// <param name="invocation">The invocation to resolve.</param>
@@ -186,7 +186,7 @@ public class FluentJoinOverridesLocalWriteAnalyzer : DiagnosticAnalyzer
     /// Find the read model properties a builder callback writes explicitly.
     /// </summary>
     /// <param name="context">The analysis context.</param>
-    /// <param name="builderCallback">The <c>From</c> or <c>Join</c> builder callback.</param>
+    /// <param name="builderCallback">The <c language="csharp">From</c> or <c language="csharp">Join</c> builder callback.</param>
     /// <param name="readModelType">The read model the enclosing block projects into.</param>
     /// <param name="methodNames">The property-writing builder methods to look for.</param>
     /// <returns>Each written property's name and the location of the write.</returns>

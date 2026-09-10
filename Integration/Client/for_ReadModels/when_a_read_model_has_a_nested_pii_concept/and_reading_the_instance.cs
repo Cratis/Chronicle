@@ -13,7 +13,7 @@ using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_ha
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_nested_pii_concept;
 
 /// <summary>
-/// A read model whose property is a value object holding a <c>[PII]</c> concept. The compliance walk has to
+/// A read model whose property is a value object holding a <c language="csharp">[PII]</c> concept. The compliance walk has to
 /// reach the value inside the value object on both sides: encrypt it on the way into the sink, and release it
 /// on the way back out. An asymmetry here does not surface as a missing value — it stores plaintext and then
 /// throws on release — so the document at rest is asserted directly rather than only the round trip.

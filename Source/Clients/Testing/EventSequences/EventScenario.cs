@@ -36,8 +36,8 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <remarks>
 /// <para>
 /// The internal implementation wires the real client <see cref="EventLog"/> to the real kernel
-/// <c>EventSequences</c> service backed by an <see cref="InProcessGrainFactory"/> that returns the
-/// real kernel <c>EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
+/// <c language="csharp">EventSequences</c> service backed by an <see cref="InProcessGrainFactory"/> that returns the
+/// real kernel <c language="csharp">EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
 /// layer is in-memory. Constraint validation, hash calculation, event serialization and event compliance
 /// run through the actual kernel code paths. PII is protected in in-memory event storage and released on
 /// read with scenario-local keys and generation-specific schemas. Erasure and production read-model
@@ -54,7 +54,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </para>
 /// <para>
 /// Usage:
-/// <code>
+/// <code language="csharp">
 /// var scenario = new EventScenario();
 /// await scenario.Given
 ///     .ForEventSource(myId)
@@ -81,8 +81,8 @@ public class EventScenario(
     /// </summary>
     /// <remarks>
     /// Constraints are automatically discovered from all loaded assemblies using the same discovery
-    /// mechanism as the Chronicle client (<see cref="IConstraint"/> implementations, <c>[Unique]</c>
-    /// properties, and <c>[UniqueEventType]</c> attributes).
+    /// mechanism as the Chronicle client (<see cref="IConstraint"/> implementations, <c language="csharp">[Unique]</c>
+    /// properties, and <c language="csharp">[UniqueEventType]</c> attributes).
     /// </remarks>
     public EventScenario()
         : this(
@@ -115,11 +115,11 @@ public class EventScenario(
     /// Gets the fluent builder used to append the event(s) under test during the act phase and return the resulting <see cref="AppendResult"/>.
     /// </summary>
     /// <remarks>
-    /// Symmetric to <see cref="Given"/>: where <c>Given</c> seeds pre-existing events, <c>When</c> performs the act being
+    /// Symmetric to <see cref="Given"/>: where <c language="csharp">Given</c> seeds pre-existing events, <c language="csharp">When</c> performs the act being
     /// tested. Its terminal <see cref="EventSourceWhenBuilder.Events"/> returns the <see cref="AppendResult"/> — the same
-    /// "the act returns its result" shape as <c>CommandScenario.Execute</c>, so constraint/append specs read as
+    /// "the act returns its result" shape as <c language="csharp">CommandScenario.Execute</c>, so constraint/append specs read as
     /// Given / When / then without binding the raw <see cref="IEventSequence.Append"/> overload by hand.
-    /// <code>
+    /// <code language="csharp">
     /// await scenario.Given.ForEventSource(id).Events(seedEvent);
     /// var result = await scenario.When.ForEventSource(id).Events(actEvent);
     /// result.ShouldHaveConstraintViolationFor(name);

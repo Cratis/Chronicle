@@ -10,15 +10,15 @@ namespace Cratis.Chronicle.EventSequences.Concurrency.for_ConcurrencyValidator.w
 /// <summary>
 /// <para>
 /// This spec used to describe what the shipped default strategy produced for the first append into any narrowed
-/// scope. It no longer does: <c>OptimisticConcurrencyStrategy</c> answers
+/// scope. It no longer does: <c language="csharp">OptimisticConcurrencyStrategy</c> answers
 /// <see cref="EventSequenceNumber.BeforeFirst"/> for an empty narrowing, and the kernel checks that. What is left
 /// here is the case the state was always documented as - a caller that built a scope by hand and never resolved an
-/// expected sequence number, where <c>None</c> (append without a check) or <c>NotSet</c> (let the strategy decide)
+/// expected sequence number, where <c language="csharp">None</c> (append without a check) or <c language="csharp">NotSet</c> (let the strategy decide)
 /// was what it wanted.
 /// </para>
 /// <para>
 /// The skip is deliberately kept for that case: <see cref="EventSequenceNumber.Unavailable"/> is the number
-/// <c>ConcurrencyScope.None</c> itself carries, so reading it as "expect nothing to exist" would turn every
+/// <c language="csharp">ConcurrencyScope.None</c> itself carries, so reading it as "expect nothing to exist" would turn every
 /// opted-out append into a checked one. The expectation pinned here is therefore that
 /// <see cref="EventSequenceNumber.Unavailable"/> and <see cref="EventSequenceNumber.BeforeFirst"/> stay two
 /// different answers, and only the second one is a check.

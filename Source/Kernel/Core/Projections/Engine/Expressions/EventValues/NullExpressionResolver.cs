@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 /// </summary>
 /// <remarks>
 /// The expression carries no operand: <see cref="WellKnownExpressions.Null"/> always resolves to no value at all,
-/// whatever the event holds. It is deliberately distinct from <c>$value(...)</c>, whose operand is captured as text -
+/// whatever the event holds. It is deliberately distinct from <c language="csharp">$value(...)</c>, whose operand is captured as text -
 /// routing a clear through that would write the literal characters of the operand instead of clearing anything.
 /// </remarks>
 public class NullExpressionResolver : IEventValueProviderExpressionResolver

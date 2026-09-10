@@ -78,7 +78,7 @@ internal static class SubstitutedLayers
     /// <param name="compliancePipelineIsRun">Whether the materializing pipeline runs Chronicle's compliance stack.</param>
     /// <param name="substitutions">The substitutions collected so far.</param>
     /// <remarks>
-    /// <c>HasComplianceMetadata()</c> on the read model schema is the exact gate the live projection pipeline
+    /// <c language="csharp">HasComplianceMetadata()</c> on the read model schema is the exact gate the live projection pipeline
     /// applies before encrypting a changeset and before releasing what it read, so a read model this answers
     /// yes for is one whose values a running system stores as ciphertext. When the pipeline that materializes
     /// it here does the same, there is nothing being stood in for and nothing is reported — the detection

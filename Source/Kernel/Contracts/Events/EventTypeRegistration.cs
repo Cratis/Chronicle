@@ -48,7 +48,7 @@ public class EventTypeRegistration
     /// </summary>
     /// <remarks>
     /// When set, this indicates that the event type is produced by another event store and received via the inbox.
-    /// This corresponds to the value specified on the event type's <c>EventStoreAttribute</c>.
+    /// This corresponds to the value specified on the event type's <c language="csharp">EventStoreAttribute</c>.
     /// When empty, the event type belongs to the registering event store.
     /// </remarks>
     [ProtoMember(5)]

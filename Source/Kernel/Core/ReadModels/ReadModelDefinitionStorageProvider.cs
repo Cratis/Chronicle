@@ -41,6 +41,6 @@ public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorag
         var actualGrainState = (grainState as IGrainState<ReadModelDefinition>)!;
         var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
-        await eventStore.ReadModels.Save(actualGrainState.State);
+        await eventStore.ReadModels.Save(actualGrainState.State!);
     }
 }

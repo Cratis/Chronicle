@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Grpc;
 /// </summary>
 /// <remarks>
 /// Reserved for a grain-state read with no storage-layer or read-model equivalent - most lookups belong on a
-/// <c>[ReadModel]</c> as an ordinary static query method instead, the same way every other query in a service is
+/// <c language="csharp">[ReadModel]</c> as an ordinary static query method instead, the same way every other query in a service is
 /// derived. This exists for the remainder that only a live grain can answer.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]

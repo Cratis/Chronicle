@@ -9,8 +9,8 @@ namespace Cratis.Chronicle.Json;
 /// Reads and writes a JSON object through a dotted property path.
 /// </summary>
 /// <remarks>
-/// A property path addresses a value by walking objects segment by segment, so <c>Price.Description</c> means the
-/// <c>Description</c> of the <c>Price</c> object rather than a top-level property whose name contains a dot. Event
+/// A property path addresses a value by walking objects segment by segment, so <c language="csharp">Price.Description</c> means the
+/// <c language="csharp">Description</c> of the <c language="csharp">Price</c> object rather than a top-level property whose name contains a dot. Event
 /// type migrations have always produced such paths from a nested property expression; the kernel read and wrote
 /// them flat, so a nested migration either failed validation or silently wrote a top-level key with a dot in its
 /// name that the target generation's schema then discarded (#3949).

@@ -25,5 +25,5 @@ public class a_configured_orleans_serializer : Specification
         _serializer = provider.GetRequiredService<Serializer>();
     }
 
-    protected T RoundTrip<T>(T value) => _serializer.Deserialize<T>(_serializer.SerializeToArray(value));
+    protected T RoundTrip<T>(T value) => _serializer.Deserialize<T>(_serializer.SerializeToArray(value)!)!;
 }

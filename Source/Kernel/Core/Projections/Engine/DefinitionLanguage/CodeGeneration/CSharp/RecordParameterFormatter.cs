@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// </summary>
 /// <param name="indentation">How many spaces each parameter is indented by.</param>
 /// <remarks>
-/// Roslyn's <c>NormalizeWhitespace</c> lays a parameter list out on one line however long it gets. A
+/// Roslyn's <c language="csharp">NormalizeWhitespace</c> lays a parameter list out on one line however long it gets. A
 /// model-bound read model carries its projection in attributes on those parameters, so that one line
 /// holds the whole projection - unreadable for anything past a couple of properties, and impossible
 /// to see which attribute belongs to which property.

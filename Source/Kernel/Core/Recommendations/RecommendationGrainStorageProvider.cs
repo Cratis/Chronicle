@@ -50,7 +50,7 @@ public class RecommendationGrainStorageProvider(IStorage storage) : IGrainStorag
             var key = (RecommendationKey)keyExtension!;
 
             var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
-            actualGrainState.State.Id = recommendationId;
+            actualGrainState.State!.Id = recommendationId;
             await recommendationStorage.Save(recommendationId, actualGrainState.State);
         }
     }

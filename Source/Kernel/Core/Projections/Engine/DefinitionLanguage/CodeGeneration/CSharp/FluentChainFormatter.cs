@@ -15,15 +15,15 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// <param name="indentation">How many spaces each step of the chain is indented by.</param>
 /// <remarks>
 /// <para>
-/// Roslyn's <c>NormalizeWhitespace</c> lays a chained call out as a single line however long it gets,
-/// which for a projection of any size is one unreadable run of <c>.From&lt;&gt;().From&lt;&gt;()</c>.
+/// Roslyn's <c language="csharp">NormalizeWhitespace</c> lays a chained call out as a single line however long it gets,
+/// which for a projection of any size is one unreadable run of <c language="csharp">.From&lt;&gt;().From&lt;&gt;()</c>.
 /// Breaking before the dot is the convention every hand-written projection follows, so this walks the
 /// normalized tree and does the same - on the tokens rather than the rendered text, so it cannot
 /// break a string that happens to contain a dot.
 /// </para>
 /// <para>
 /// Only the chain hanging off the builder is broken. The short chains inside a step's lambda -
-/// <c>.Set(...).To(...)</c> - read better kept together, which is also how the other languages'
+/// <c language="csharp">.Set(...).To(...)</c> - read better kept together, which is also how the other languages'
 /// generators lay them out.
 /// </para>
 /// </remarks>

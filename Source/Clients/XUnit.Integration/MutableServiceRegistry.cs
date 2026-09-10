@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 /// <remarks>
 /// The registry is registered as a singleton in DI. For each type captured from a test
-/// fixture's <c>ConfigureServices</c> override, a transient delegate is added to the DI
+/// fixture's <c language="csharp">ConfigureServices</c> override, a transient delegate is added to the DI
 /// container that delegates to this registry. Before each test the registry is updated
 /// with the new fixture's service instances so that subsequent DI resolutions return the
 /// correct objects for the current test.

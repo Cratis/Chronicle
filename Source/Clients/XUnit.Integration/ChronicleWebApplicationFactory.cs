@@ -23,7 +23,7 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
     /// (and the <see cref="IEventStore"/>/<see cref="IChronicleConnection"/> family derived from it) -
     /// for example an in-process Orleans silo that builds the client directly against its own grain
     /// factory. When <see langword="true"/>, <see cref="ConfigureWebHost"/> skips its own
-    /// <c>AddCratisChronicleClient()</c> registration so the two do not race: both register
+    /// <c language="csharp">AddCratisChronicleClient()</c> registration so the two do not race: both register
     /// <see cref="IChronicleClient"/> as a singleton, and because DI resolves the last registration,
     /// whichever ran second would service resolution for the other's dependents - here that closed a
     /// cycle (this generic client resolving <see cref="IChronicleConnection"/> via the silo's

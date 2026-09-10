@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using OneOf;
 using Orleans.Serialization;
@@ -14,7 +15,7 @@ using Orleans.Serialization.WireProtocol;
 namespace Cratis.Chronicle.Setup.Serialization;
 
 /// <summary>
-/// Represents a serializer for <see cref="OneOf"/> types and <c>OneOfBase</c> derivatives such as <c>Result&lt;,&gt;</c>.
+/// Represents a serializer for <see cref="OneOf"/> types and <c language="csharp">OneOfBase</c> derivatives such as <c language="csharp">Result&lt;,&gt;</c>.
 /// </summary>
 /// <remarks>
 /// A single generalized codec serves every OneOf type, so the read path receives no expected-type context.
@@ -64,7 +65,7 @@ public class OneOfSerializer : IGeneralizedCodec, IGeneralizedCopier, ITypeFilte
     {
         if (field.WireType == WireType.Reference)
         {
-            return ReferenceCodec.ReadReference<object, TInput>(ref reader, field);
+            return ReferenceCodec.ReadReference<object, TInput>(ref reader, field)!;
         }
 
         field.EnsureWireTypeTagDelimited();
@@ -108,7 +109,7 @@ public class OneOfSerializer : IGeneralizedCodec, IGeneralizedCopier, ITypeFilte
     }
 
     /// <inheritdoc/>
-    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, Type expectedType, object value)
+    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, [AllowNull] Type expectedType, [AllowNull] object? value)
         where TBufferWriter : IBufferWriter<byte>
     {
         if (ReferenceCodec.TryWriteReferenceField(ref writer, fieldIdDelta, expectedType, value))
@@ -159,7 +160,7 @@ public class OneOfSerializer : IGeneralizedCodec, IGeneralizedCopier, ITypeFilte
 
     /// <summary>
     /// Gets the type that carries the OneOf case type arguments — either the OneOf struct itself or the
-    /// <c>OneOfBase&lt;...&gt;</c> base of a derivative.
+    /// <c language="csharp">OneOfBase&lt;...&gt;</c> base of a derivative.
     /// </summary>
     /// <param name="type">The concrete type.</param>
     /// <returns>The generic type carrying the case type arguments.</returns>

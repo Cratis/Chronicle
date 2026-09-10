@@ -231,7 +231,7 @@ public static class DiagnosticIds
     /// Retired. A model-bound clear declaration that projection construction never applies.
     /// </summary>
     /// <remarks>
-    /// Both declarations this reported - a null <c>[SetValue]</c> and a member-level <c>[ClearWith]</c> - are a
+    /// Both declarations this reported - a null <c language="csharp">[SetValue]</c> and a member-level <c language="csharp">[ClearWith]</c> - are a
     /// working scalar clear as of the feature that retired the rule, so every reading of it became false. The id is
     /// kept reserved rather than reused: anyone who suppressed it did so to accept a clear that did nothing, and
     /// that suppression must never silently carry over to a different rule.

@@ -19,7 +19,7 @@ internal static class ReducerReadModelProcessor
     /// Gets a value indicating whether this processor runs Chronicle's compliance stack.
     /// </summary>
     /// <remarks>
-    /// A deployed Chronicle encrypts a reduced read model's <c>[PII]</c> members on the way into the sink and
+    /// A deployed Chronicle encrypts a reduced read model's <c language="csharp">[PII]</c> members on the way into the sink and
     /// releases them on the way out. Nothing below does either — the reducer's own result is what a spec reads.
     /// Wire compliance in and flip this, and <see cref="SubstitutedLayers"/> stops reporting
     /// <see cref="ReadModelSubstitutedLayer.Compliance"/>.

@@ -28,13 +28,13 @@ public class JsonSchema
     /// </summary>
     /// <remarks>
     /// A single <see cref="JsonSchema"/> instance is cached and shared (for example the event-type schemas held by the
-    /// client <c>EventTypes</c>) and read concurrently — projections, reducers, key resolvers, the MongoDB converter,
+    /// client <c language="csharp">EventTypes</c>) and read concurrently — projections, reducers, key resolvers, the MongoDB converter,
     /// constraint registration, schema validation, and compliance handling all read the same instance. Because a schema
     /// is effectively immutable once built (it is parsed from stored JSON and then only read), the derived answers below
-    /// — the flattened property set, whether the schema carries compliance metadata, and the resolved <c>$ref</c>/item
+    /// — the flattened property set, whether the schema carries compliance metadata, and the resolved <c language="csharp">$ref</c>/item
     /// schemas — are memoized on the instance rather than recomputed per read; there is no cluster-wide invalidation
     /// concern because nothing mutates a published schema, and each memo is bounded by the schema's own size. The caches
-    /// are published with release semantics: each is built fully into a local before the <c>volatile</c> field is
+    /// are published with release semantics: each is built fully into a local before the <c language="csharp">volatile</c> field is
     /// assigned, so a concurrent reader never observes a half-populated dictionary or list (which previously surfaced as
     /// a property "not existing").
     /// </remarks>
@@ -424,7 +424,7 @@ public class JsonSchema
     }
 
     /// <summary>
-    /// Gets the flattened properties of this schema, including inherited properties resolved through <c>allOf</c> references.
+    /// Gets the flattened properties of this schema, including inherited properties resolved through <c language="csharp">allOf</c> references.
     /// </summary>
     internal IReadOnlyList<JsonSchemaProperty> FlattenedProperties => _flattenedPropertiesCache ??= BuildFlattenedProperties();
 
@@ -688,7 +688,7 @@ public class JsonSchema
     }
 
     /// <summary>
-    /// Validates a value against a union of schemas expressed as <c>anyOf</c> or <c>oneOf</c>.
+    /// Validates a value against a union of schemas expressed as <c language="csharp">anyOf</c> or <c language="csharp">oneOf</c>.
     /// </summary>
     /// <param name="schema">The schema declaring the union.</param>
     /// <param name="branches">The union branches.</param>
@@ -753,7 +753,7 @@ public class JsonSchema
     /// <returns><see langword="true"/> when the kind is allowed; otherwise <see langword="false"/>.</returns>
     /// <remarks>
     /// A schema with no declared type constrains nothing, so an absent type is never a mismatch. A whole-valued number
-    /// satisfies <c>integer</c>, and any number satisfies <c>number</c> - JSON does not distinguish the two on the wire.
+    /// satisfies <c language="csharp">integer</c>, and any number satisfies <c language="csharp">number</c> - JSON does not distinguish the two on the wire.
     /// </remarks>
     static bool KindIsAllowed(JsonSchema schema, JsonNode? value)
     {
@@ -779,9 +779,9 @@ public class JsonSchema
     /// <param name="schema">The schema to check.</param>
     /// <returns><see langword="true"/> when null is allowed; otherwise <see langword="false"/>.</returns>
     /// <remarks>
-    /// This is the schema-level form of <c>JsonSchemaExtensions.IsNullable</c>: nullability is declared either as a
-    /// <c>"null"</c> member of the type, or - for a formatted type that has nowhere else to put the marker - as a
-    /// trailing <c>?</c> on the format.
+    /// This is the schema-level form of <c language="csharp">JsonSchemaExtensions.IsNullable</c>: nullability is declared either as a
+    /// <c language="csharp">"null"</c> member of the type, or - for a formatted type that has nowhere else to put the marker - as a
+    /// trailing <c language="csharp">?</c> on the format.
     /// </remarks>
     static bool AllowsNull(JsonSchema schema) =>
         schema.Type.HasFlag(JsonObjectType.Null) ||
@@ -805,12 +805,12 @@ public class JsonSchema
     }
 
     /// <summary>
-    /// Resolves a schema to the one that carries its type information, following a <c>$ref</c>.
+    /// Resolves a schema to the one that carries its type information, following a <c language="csharp">$ref</c>.
     /// </summary>
     /// <param name="schema">The schema to resolve.</param>
     /// <returns>The resolved schema, or the original when there is nothing to resolve.</returns>
     /// <remarks>
-    /// An unresolvable <c>$ref</c> falls back to the referencing node, which declares no type of its own and therefore
+    /// An unresolvable <c language="csharp">$ref</c> falls back to the referencing node, which declares no type of its own and therefore
     /// constrains nothing - a reference that cannot be followed must not become a rejection.
     /// </remarks>
     static JsonSchema Effective(JsonSchema schema) => schema.HasReference ? schema.Reference ?? schema : schema;

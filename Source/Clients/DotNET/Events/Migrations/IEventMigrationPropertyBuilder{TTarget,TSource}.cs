@@ -73,7 +73,7 @@ public interface IEventMigrationPropertyBuilder<TTarget, TSource>
     /// <returns>The builder for continued configuration.</returns>
     /// <remarks>
     /// This states the translation for one direction only. To state it once and have both directions follow, override
-    /// <c>MapValues</c> on <see cref="EventTypeMigration{TUpgrade, TPrevious}"/> instead.
+    /// <c language="csharp">MapValues</c> on <see cref="EventTypeMigration{TUpgrade, TPrevious}"/> instead.
     /// </remarks>
     IEventMigrationPropertyBuilder<TTarget, TSource> MapValues<TProperty, TSourceProperty>(
         Expression<Func<TTarget, TProperty>> targetProperty,

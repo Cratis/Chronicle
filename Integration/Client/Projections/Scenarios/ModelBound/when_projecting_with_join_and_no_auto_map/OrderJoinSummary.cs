@@ -7,9 +7,9 @@ namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_pro
 
 /// <summary>
 /// Model-bound read model whose <see cref="Status"/> is sourced only from <see cref="OrderPlacedForCustomer"/>
-/// and flagged <c>[NoAutoMap]</c>, while it <c>[Join]</c>s a <see cref="PartnerRegisteredForOrder"/> that
-/// carries an identically named <c>Status</c>. Against the real kernel the join resolves after the root
-/// projection, so without the property-level <c>[NoAutoMap]</c> exclusion the partner status would overwrite
+/// and flagged <c language="csharp">[NoAutoMap]</c>, while it <c language="csharp">[Join]</c>s a <see cref="PartnerRegisteredForOrder"/> that
+/// carries an identically named <c language="csharp">Status</c>. Against the real kernel the join resolves after the root
+/// projection, so without the property-level <c language="csharp">[NoAutoMap]</c> exclusion the partner status would overwrite
 /// the order status.
 /// </summary>
 /// <param name="Id">Order identifier.</param>

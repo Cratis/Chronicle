@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Orleans.Serialization;
@@ -62,18 +63,18 @@ public class ConcurrencyScopesSerializer(ICodecProvider codecProvider) : IGenera
         for (var i = 0; i < count; i++)
         {
             var keyField = reader.ReadFieldHeader();
-            var keyValue = codecProvider.GetCodec<string>().ReadValue(ref reader, keyField);
+            var keyValue = codecProvider.GetCodec<string>().ReadValue(ref reader, keyField)!;
             var eventSourceId = new EventSourceId(keyValue);
             var valueField = reader.ReadFieldHeader();
 
-            scopes[eventSourceId] = codecProvider.GetCodec<ConcurrencyScope>().ReadValue(ref reader, valueField);
+            scopes[eventSourceId] = codecProvider.GetCodec<ConcurrencyScope>().ReadValue(ref reader, valueField)!;
         }
 
         return new ConcurrencyScopes(scopes);
     }
 
     /// <inheritdoc/>
-    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, Type expectedType, object value)
+    public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, [AllowNull] Type expectedType, [AllowNull] object? value)
         where TBufferWriter : IBufferWriter<byte>
     {
         if (value is not ConcurrencyScopes concurrencyScopes)

@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Patches;
 /// </summary>
 /// <remarks>
 /// The original hashing rebuild (<see cref="RebuildConstraintIndexes"/>) hashed the stored content as-is, which for
-/// a constraint covering a <c>[PII]</c> property meant hashing the non-deterministic ciphertext — so two subjects
+/// a constraint covering a <c language="csharp">[PII]</c> property meant hashing the non-deterministic ciphertext — so two subjects
 /// sharing the same value never collided and the uniqueness constraint silently did nothing. This patch reindexes
 /// again, now decrypting PII before hashing, so PII-covering constraints are enforced correctly.
 /// </remarks>

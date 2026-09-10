@@ -38,7 +38,7 @@ public interface ISink
     /// <returns>An <see cref="Option{T}"/> containing the root key if found, otherwise None.</returns>
     /// <remarks>
     /// This method is used to resolve parent keys when projecting nested children.
-    /// For optimal performance, ensure the child property path has an index defined using <c>[Index]</c> attribute.
+    /// For optimal performance, ensure the child property path has an index defined using <c language="csharp">[Index]</c> attribute.
     /// </remarks>
     Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue);
 
@@ -128,7 +128,7 @@ public interface ISink
     /// <remarks>
     /// This method is called during projection registration to ensure that all indexes
     /// defined on the read model are created. This is important for performance when
-    /// using nested children with <c>UsingParentKeyFromContext</c>.
+    /// using nested children with <c language="csharp">UsingParentKeyFromContext</c>.
     /// </remarks>
     Task EnsureIndexes();
 

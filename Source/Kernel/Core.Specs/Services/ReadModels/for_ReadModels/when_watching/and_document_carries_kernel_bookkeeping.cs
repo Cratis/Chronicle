@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching;
 /// schema does not declare it, and the compliance manager rejects every property the schema does not declare —
 /// so the release has to take kernel bookkeeping off the document before handing it over. The compliance chain
 /// is wired for real here rather than substituted, because a substitute at that seam is exactly what hides the
-/// hand-off that fails. The failure it guards against is silent: <c>OnChangeset</c> is one-way, so a throw on
+/// hand-off that fails. The failure it guards against is silent: <c language="csharp">OnChangeset</c> is one-way, so a throw on
 /// this path drops the changeset without surfacing anywhere and the watching client simply stops updating.
 /// </summary>
 public class and_document_carries_kernel_bookkeeping : given.all_dependencies

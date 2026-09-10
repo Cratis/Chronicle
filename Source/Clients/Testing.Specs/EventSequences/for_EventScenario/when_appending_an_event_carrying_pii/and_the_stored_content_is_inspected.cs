@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario.when_appending_an_event_carrying_pii;
 
 /// <summary>
-/// A <c>[PII]</c> value must never reach the store as plaintext. The harness used to construct the kernel's
+/// A <c language="csharp">[PII]</c> value must never reach the store as plaintext. The harness used to construct the kernel's
 /// compliance manager with no property value handlers at all, which made every marked value pass straight
 /// through — invisibly, because an unhandled value and a value with no marker look identical downstream.
 /// </summary>

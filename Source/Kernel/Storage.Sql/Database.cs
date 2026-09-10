@@ -34,10 +34,10 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <remarks>
 /// Marked with <see cref="IgnoreConventionAttribute"/> so convention binding does not register it
 /// automatically. The SQL database has hard constructor dependencies on services that are only
-/// wired up by <c>WithSql</c> (e.g. <see cref="IEventSequenceMigrator"/>), so allowing the
-/// convention scanner to register it causes any <c>GetService&lt;IDatabase&gt;</c> call in non-SQL
+/// wired up by <c language="csharp">WithSql</c> (e.g. <see cref="IEventSequenceMigrator"/>), so allowing the
+/// convention scanner to register it causes any <c language="csharp">GetService&lt;IDatabase&gt;</c> call in non-SQL
 /// modes to fail on construction with "Unable to resolve ITableMigrator&lt;&gt;" — even when the
-/// caller used <c>?.</c> expecting <see langword="null"/> for a missing registration.
+/// caller used <c language="csharp">?.</c> expecting <see langword="null"/> for a missing registration.
 /// </remarks>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>
@@ -55,7 +55,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     /// SQL Server). Identity and Data Protection key material lives in these tables; wiping them
     /// would invalidate the client's JWT (signing keys are rotated when the table is empty) and
     /// force every test-class boundary to fail with 401 even though the bootstrap handler could
-    /// recreate the rows. Only compiled when the <c>DEVELOPMENT</c> preprocessor symbol is set.
+    /// recreate the rows. Only compiled when the <c language="csharp">DEVELOPMENT</c> preprocessor symbol is set.
     /// </summary>
     static readonly FrozenSet<string> _preservedTables = new[]
     {
@@ -505,7 +505,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     }
 
     /// <summary>
-    /// Serializes EF Core <c>MigrateAsync</c> calls per connection string to prevent concurrent migration race conditions
+    /// Serializes EF Core <c language="csharp">MigrateAsync</c> calls per connection string to prevent concurrent migration race conditions
     /// when multiple grains access the same database simultaneously.
     /// </summary>
     /// <param name="context">The <see cref="DbContext"/> to migrate.</param>
@@ -655,9 +655,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
     /// <summary>
     /// Builds the connection string for the read-model database of a given event store and namespace.
-    /// Mirrors MongoDB's read-model database naming: <c>{eventStore}</c> for the default namespace and
-    /// <c>{eventStore}+{namespace}</c> for non-default namespaces. The cluster database name is
-    /// always prefixed (separated by <c>+</c>) so SQL backends — which serve every Chronicle
+    /// Mirrors MongoDB's read-model database naming: <c language="csharp">{eventStore}</c> for the default namespace and
+    /// <c language="csharp">{eventStore}+{namespace}</c> for non-default namespaces. The cluster database name is
+    /// always prefixed (separated by <c language="csharp">+</c>) so SQL backends — which serve every Chronicle
     /// instance from the same server — can co-exist without colliding on read-model database names.
     /// </summary>
     /// <param name="eventStore">The event store the read model belongs to.</param>
@@ -671,14 +671,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     /// <summary>
     /// Builds the connection string for a per-event-store or per-namespace database.
     /// Every event store and namespace lives in its own database — mirroring MongoDB's
-    /// <c>{eventStore}+es</c> and <c>{eventStore}+es+{namespace}</c> database layout — so that
-    /// tables like <c>Namespaces</c>, <c>Reactors</c>, and <c>EventStoreSubscriptions</c> cannot
+    /// <c language="csharp">{eventStore}+es</c> and <c language="csharp">{eventStore}+es+{namespace}</c> database layout — so that
+    /// tables like <c language="csharp">Namespaces</c>, <c language="csharp">Reactors</c>, and <c language="csharp">EventStoreSubscriptions</c> cannot
     /// collide across event stores on the same SQL server. The suffix is appended to the cluster
     /// database name from configuration so the kernel can co-exist with other Chronicle instances
     /// on the same server (e.g., the in-process test silo and the out-of-process kernel both
     /// using one PostgreSQL container).
     /// </summary>
-    /// <param name="suffix">Suffix to append to the cluster database name (e.g. <c>+es+Testing</c>).</param>
+    /// <param name="suffix">Suffix to append to the cluster database name (e.g. <c language="csharp">+es+Testing</c>).</param>
     /// <returns>A connection string targeting the derived database.</returns>
     string ConnectionStringFor(string suffix)
     {

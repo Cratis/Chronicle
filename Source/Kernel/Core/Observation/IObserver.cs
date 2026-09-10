@@ -131,8 +131,8 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <remarks>
     /// This is an atomic check-and-unsubscribe operation. When a client reconnects, the old client's
-    /// stream cleanup races against the new client's <c>Subscribe</c> call: if the new client has
-    /// already replaced the subscription, the old client's <c>Unsubscribe</c> must be a no-op.
+    /// stream cleanup races against the new client's <c language="csharp">Subscribe</c> call: if the new client has
+    /// already replaced the subscription, the old client's <c language="csharp">Unsubscribe</c> must be a no-op.
     /// Doing the check inside the grain prevents the TOCTOU race where the subscription is read
     /// (still owned by the old client), then replaced by the new client, then unsubscribed by the
     /// old client — destroying the new subscription.

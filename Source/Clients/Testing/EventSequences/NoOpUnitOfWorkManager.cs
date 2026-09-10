@@ -16,11 +16,11 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// Represents a no-op <see cref="IUnitOfWorkManager"/> for the in-process kernel command pipeline.
 /// </summary>
 /// <remarks>
-/// <c>AddCratisArcCore</c> discovers every <c>ICommandExecutionScope</c> across the
+/// <c language="csharp">AddCratisArcCore</c> discovers every <c language="csharp">ICommandExecutionScope</c> across the
 /// whole process, not just the ones a given service collection cares about - an Arc.Chronicle consumer's
 /// transactional command scope is discovered here too, even though this pipeline only ever executes the kernel's
 /// own commands, which append directly through the grain and never touch a unit of work. Without a registration,
-/// that scope falls back to auto-activating the real client <c>EventStore</c>, which needs a live connection this
+/// that scope falls back to auto-activating the real client <c language="csharp">EventStore</c>, which needs a live connection this
 /// in-process kernel does not have. This satisfies the resolution harmlessly instead.
 /// </remarks>
 internal sealed class NoOpUnitOfWorkManager : IUnitOfWorkManager

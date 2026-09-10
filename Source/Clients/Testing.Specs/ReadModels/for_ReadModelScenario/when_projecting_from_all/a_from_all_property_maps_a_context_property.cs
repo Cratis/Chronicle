@@ -6,8 +6,8 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_projecting_from_all;
 
 /// <summary>
-/// A read model with a <c>[FromAll]</c> property must update that property for EVERY driven event — both
-/// the explicitly-subscribed one and the one observed only through <c>[FromAll]</c> — exactly like runtime.
+/// A read model with a <c language="csharp">[FromAll]</c> property must update that property for EVERY driven event — both
+/// the explicitly-subscribed one and the one observed only through <c language="csharp">[FromAll]</c> — exactly like runtime.
 /// </summary>
 public class a_from_all_property_maps_a_context_property : Specification
 {

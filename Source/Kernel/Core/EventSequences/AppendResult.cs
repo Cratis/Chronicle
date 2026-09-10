@@ -47,7 +47,7 @@ public class AppendResult
     /// </summary>
     /// <remarks>
     /// False means nothing was compared against the event store - either the append asked for no check
-    /// (<c>ConcurrencyScope.None</c>), or it declared a scope that carries no expectation the kernel can validate
+    /// (<c language="csharp">ConcurrencyScope.None</c>), or it declared a scope that carries no expectation the kernel can validate
     /// (an incomplete scope) and the check was skipped. A skipped check looks from the outside exactly like a
     /// passing one, which is why the outcome says which it was.
     /// </remarks>

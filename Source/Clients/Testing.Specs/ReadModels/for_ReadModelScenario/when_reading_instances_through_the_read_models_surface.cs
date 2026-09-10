@@ -6,10 +6,10 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// A scenario exposes two surfaces that look interchangeable and are not: <c>Instances</c> reads what this
-/// scenario just materialized, while <c>ReadModels</c> is the production client surface, whose read side wants
+/// A scenario exposes two surfaces that look interchangeable and are not: <c language="csharp">Instances</c> reads what this
+/// scenario just materialized, while <c language="csharp">ReadModels</c> is the production client surface, whose read side wants
 /// a running Chronicle. Pinned because the dangerous version of this difference is the quiet one — a
-/// <c>ReadModels</c> read that answered "no instances" would read as a passing assertion about a read model
+/// <c language="csharp">ReadModels</c> read that answered "no instances" would read as a passing assertion about a read model
 /// the scenario had in fact just built. It refuses instead, and this keeps it refusing.
 /// </summary>
 public class when_reading_instances_through_the_read_models_surface : Specification

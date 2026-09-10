@@ -291,9 +291,9 @@ public static class EventEntryConverter
     /// <remarks>
     /// The stored content is a JSON object keyed by generation. The deserialized
     /// <see cref="ExpandoObject"/> must contain CLR-typed values (strings, primitives,
-    /// nested <see cref="ExpandoObject"/>, <c>object[]</c>) — not <see cref="JsonElement"/> —
-    /// because downstream consumers (e.g. <c>ExpandoObjectConverter.ToJsonObject</c>) only
-    /// know how to project CLR types back to JSON. The default <c>JsonSerializer.Deserialize&lt;ExpandoObject&gt;</c>
+    /// nested <see cref="ExpandoObject"/>, <c language="csharp">object[]</c>) — not <see cref="JsonElement"/> —
+    /// because downstream consumers (e.g. <c language="csharp">ExpandoObjectConverter.ToJsonObject</c>) only
+    /// know how to project CLR types back to JSON. The default <c language="csharp">JsonSerializer.Deserialize&lt;ExpandoObject&gt;</c>
     /// path leaves nested arrays as <see cref="JsonElement"/>, which silently strips them when
     /// the content is re-projected to JSON.
     /// </remarks>

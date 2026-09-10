@@ -15,7 +15,7 @@ public static class ChronicleHealthCheckServiceCollectionExtensions
     /// The tags the Chronicle health check is registered with.
     /// </summary>
     /// <remarks>
-    /// <c>ready</c> is the conventional tag for a readiness probe - a host that cannot reach the kernel can start
+    /// <c language="csharp">ready</c> is the conventional tag for a readiness probe - a host that cannot reach the kernel can start
     /// and stay alive, but it cannot serve. It is deliberately not tagged for liveness, since restarting the host
     /// does not bring the kernel back.
     /// </remarks>
@@ -29,7 +29,7 @@ public static class ChronicleHealthCheckServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
     /// Registering a check does not expose an endpoint - the app still maps one, for instance with
-    /// <c>app.MapHealthChecks("/health/ready", new() { Predicate = _ => _.Tags.Contains("ready") })</c>.
+    /// <c language="csharp">app.MapHealthChecks("/health/ready", new() { Predicate = _ => _.Tags.Contains("ready") })</c>.
     /// Registration is idempotent, so calling this after it has been added automatically does nothing.
     /// </remarks>
     public static IServiceCollection AddChronicleHealthCheck(this IServiceCollection services, HealthStatus failureStatus = HealthStatus.Unhealthy)

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle;
 /// Extends <see cref="ChronicleOptions"/> with settings that are required for connecting to a specific
 /// event store and resolving the event store namespace. These settings apply to all .NET hosts
 /// (ASP.NET Core, worker services, etc.). For ASP.NET Core-specific options such as HTTP header-based
-/// namespace resolution, see <c>ChronicleAspNetCoreOptions</c>.
+/// namespace resolution, see <c language="csharp">ChronicleAspNetCoreOptions</c>.
 /// </remarks>
 public class ChronicleClientOptions : ChronicleOptions
 {

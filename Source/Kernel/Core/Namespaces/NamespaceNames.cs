@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Namespaces;
 /// <param name="Id">The identity of the namespace, which is its name.</param>
 /// <param name="Name">The name of the namespace.</param>
 /// <remarks>
-/// The identity is carried as <c>Id</c> because that is the property name Arc's observable delta matching keys on -
+/// The identity is carried as <c language="csharp">Id</c> because that is the property name Arc's observable delta matching keys on -
 /// a live view of a model without one falls back to whole-payload matching, which never sees a replacement and
 /// leaks removed rows.
 /// </remarks>

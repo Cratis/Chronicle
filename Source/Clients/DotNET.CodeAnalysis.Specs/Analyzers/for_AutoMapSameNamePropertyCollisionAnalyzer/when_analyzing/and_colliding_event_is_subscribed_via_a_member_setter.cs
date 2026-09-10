@@ -7,8 +7,8 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_AutoMapSameNamePropertyCollisionAnalyzer.when_analyzing;
 
 /// <summary>
-/// Mirrors the real <c>ArrangementSummary</c>: the colliding event is subscribed not class-level but via a
-/// member-level <c>[SetFrom]</c> on a different property, and still overwrites the explicitly sourced value.
+/// Mirrors the real <c language="csharp">ArrangementSummary</c>: the colliding event is subscribed not class-level but via a
+/// member-level <c language="csharp">[SetFrom]</c> on a different property, and still overwrites the explicitly sourced value.
 /// </summary>
 public class and_colliding_event_is_subscribed_via_a_member_setter : given.an_auto_map_same_name_property_collision_analyzer
 {

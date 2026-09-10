@@ -37,7 +37,7 @@ public class EventTypesStorage(
     /// </summary>
     /// <remarks>
     /// Concurrency: <see cref="ConcurrentDictionary{TKey,TValue}"/> with GetOrAdd semantics (mirroring
-    /// <c>EventTypes</c> in the kernel core) - a race may parse twice but only one instance is ever stored and
+    /// <c language="csharp">EventTypes</c> in the kernel core) - a race may parse twice but only one instance is ever stored and
     /// shared; no per-call locking is taken. Growth is bounded by the number of registered event types times
     /// their generations; generations are immutable once written, so an entry is only removed when a new
     /// generation for its type is registered (see <see cref="Invalidate"/>).

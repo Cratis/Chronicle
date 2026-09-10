@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for
 
 /// <summary>
 /// The stored tail is at sequence number 2, but the caller (an append grain whose persisted
-/// <c>State.SequenceNumber</c> lags the real tail) attempts to append at an already-occupied
+/// <c language="csharp">State.SequenceNumber</c> lags the real tail) attempts to append at an already-occupied
 /// number. The recovery contract requires the returned <see cref="DuplicateEventSequenceNumber"/>
 /// to carry the true next-available slot (3) so the grain jumps forward — returning the occupied
 /// number would livelock the sequence. Before the fix the SQL backend returned the occupied number.

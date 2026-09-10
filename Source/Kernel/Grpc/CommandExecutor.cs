@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Services;
 /// <see cref="Contracts.Commands.CommandResult"/>.
 /// </summary>
 /// <remarks>
-/// The pipeline owns validator discovery and resolution, so a <c>CommandValidator&lt;T&gt;</c> with
+/// The pipeline owns validator discovery and resolution, so a <c language="csharp">CommandValidator&lt;T&gt;</c> with
 /// constructor dependencies behaves identically on both transports. Each execution uses the pipeline's
 /// scope-free form, which creates and disposes a dedicated service scope per invocation - the handler's
 /// parameters resolve from that scope exactly as they do for an HTTP request.

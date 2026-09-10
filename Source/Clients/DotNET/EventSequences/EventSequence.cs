@@ -566,7 +566,7 @@ public class EventSequence(
     /// <remarks>
     /// <see cref="Contracts.Primitives.SerializableDateTimeOffset"/>'s own nullable-accepting conversion produces a
     /// null reference for a null input, but the wire field is declared non-nullable - protobuf-net represents
-    /// "absent" as a default-constructed instance (an empty <c>Value</c> string), not a missing message. Coalescing
+    /// "absent" as a default-constructed instance (an empty <c language="csharp">Value</c> string), not a missing message. Coalescing
     /// to <see cref="DateTimeOffset.MinValue"/> before converting would pick the non-nullable operator, but that
     /// operator serializes the value as a real (wrong) timestamp rather than the empty string the server's own
     /// SerializableDateTimeOffset-to-DateTimeOffset? conversion recognizes as "not specified".

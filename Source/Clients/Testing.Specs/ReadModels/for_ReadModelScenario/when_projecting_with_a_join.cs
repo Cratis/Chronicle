@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// Verifies that a cross-source <c>[Join]</c> enriches the intended read-model instance, even when the
+/// Verifies that a cross-source <c language="csharp">[Join]</c> enriches the intended read-model instance, even when the
 /// join-source event is seeded before the entity-under-test — the join source must not shadow the entity.
 /// </summary>
 public class when_projecting_with_a_join : Specification

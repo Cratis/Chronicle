@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
 /// Resolves a <see cref="Subject"/> from a read model instance by checking for a property or constructor
-/// parameter decorated with <see cref="SubjectAttribute"/> that has a value, falling back to a property named <c>Id</c>.
+/// parameter decorated with <see cref="SubjectAttribute"/> that has a value, falling back to a property named <c language="csharp">Id</c>.
 /// </summary>
 public static class ReadModelSubjectResolver
 {
@@ -20,10 +20,10 @@ public static class ReadModelSubjectResolver
     /// <list type="number">
     ///   <item><description>A property decorated with <see cref="SubjectAttribute"/> that has a value.</description></item>
     ///   <item><description>A constructor parameter decorated with <see cref="SubjectAttribute"/> that has a value (record shorthand).</description></item>
-    ///   <item><description>Property named <c>Id</c> (case-insensitive).</description></item>
+    ///   <item><description>Property named <c language="csharp">Id</c> (case-insensitive).</description></item>
     /// </list>
     /// An attributed property that is null, empty, or <see cref="Subject.NotSet"/> does not stop resolution;
-    /// the <c>Id</c> fallback is attempted next.
+    /// the <c language="csharp">Id</c> fallback is attempted next.
     /// </summary>
     /// <param name="instance">The read model instance to inspect, or <see langword="null"/> for a read model that does not exist (never created or removed).</param>
     /// <returns>The resolved <see cref="Subject"/>, or <see langword="null"/> when no subject can be derived (including when <paramref name="instance"/> is <see langword="null"/>).</returns>

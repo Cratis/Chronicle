@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// Renders a projection as TypeScript for the TypeScript client.
 /// </summary>
 /// <remarks>
-/// The declarative form mirrors the client's <c>IProjectionFor</c> builder, and the model-bound form
+/// The declarative form mirrors the client's <c language="csharp">IProjectionFor</c> builder, and the model-bound form
 /// its decorators - both as the client's own samples write them.
 /// </remarks>
 public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator

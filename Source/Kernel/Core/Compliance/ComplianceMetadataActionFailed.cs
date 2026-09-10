@@ -12,9 +12,9 @@ namespace Cratis.Chronicle.Compliance;
 /// A failure to release is almost always a subject mismatch, and the underlying cryptography reports it only as an
 /// opaque padding error. Chronicle keeps one compliance subject per read model and releases all of its PII under
 /// that subject, so a value encrypted under a different subject cannot be read back — the usual cause being a
-/// projection join that copies a <c>[PII]</c> value out of another event source's stream.
+/// projection join that copies a <c language="csharp">[PII]</c> value out of another event source's stream.
 /// </remarks>
-/// <param name="action">The action that failed — <c>apply</c> or <c>release</c>.</param>
+/// <param name="action">The action that failed — <c language="csharp">apply</c> or <c language="csharp">release</c>.</param>
 /// <param name="propertyPath">The path of the property being handled.</param>
 /// <param name="identifier">The compliance subject the value was handled under.</param>
 /// <param name="error">The underlying error.</param>

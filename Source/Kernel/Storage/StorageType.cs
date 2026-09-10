@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage;
 public static class StorageType
 {
     /// <summary>
-    /// MongoDB storage type. Also the default when <c>Storage.Type</c> is unspecified.
+    /// MongoDB storage type. Also the default when <c language="csharp">Storage.Type</c> is unspecified.
     /// </summary>
     public const string MongoDB = "mongodb";
 

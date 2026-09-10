@@ -13,7 +13,7 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_detecting_unmapped_collection_properties.given;
 
 /// <summary>
-/// A read model whose child body carries a bulk <c>annotations</c> list — the shape that silently projects
+/// A read model whose child body carries a bulk <c language="csharp">annotations</c> list — the shape that silently projects
 /// empty when the event's list property is named differently and nothing bridges the two.
 /// </summary>
 public class a_read_model_with_a_bulk_list_collection : Specification

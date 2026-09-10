@@ -151,7 +151,7 @@ public interface IEventStore
     /// </para>
     /// <para>
     /// Registration is wired to the connection lifecycle, so it runs on its own; reading this property never triggers
-    /// it. To block until it has run, use <c>RegistrationWaitExtensions.WaitForRegistration</c>. Do not poll
+    /// it. To block until it has run, use <c language="csharp">RegistrationWaitExtensions.WaitForRegistration</c>. Do not poll
     /// <see cref="Connections.IConnectionLifecycle.IsConnected"/> as a substitute - see
     /// <see cref="RegistrationOutcome"/> for why that races.
     /// </para>

@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration
 /// Reads the declaration language's value expressions into a form every language generator can render.
 /// </summary>
 /// <remarks>
-/// The expressions arrive as strings - <c>$eventSourceId</c>, <c>$eventContext(occurred)</c>,
-/// <c>$value(42)</c>, <c>+= amount</c>, a bare property path. What they mean is the same whichever
+/// The expressions arrive as strings - <c language="csharp">$eventSourceId</c>, <c language="csharp">$eventContext(occurred)</c>,
+/// <c language="csharp">$value(42)</c>, <c language="csharp">+= amount</c>, a bare property path. What they mean is the same whichever
 /// language the result is written in, so it is read once here and each generator only decides how to
 /// spell it.
 /// </remarks>

@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_HandleEvent.wh
 
 /// <summary>
 /// The step that writes the initial state is also the step that has to withhold part of it. A children-collection
-/// path belongs to <c>ChildAdded</c> and <c>ChildRemoved</c> for the read model's whole lifetime, so the diff this
-/// step produces must carry no difference for it - otherwise a replayed root event <c>$set</c>s the collection
+/// path belongs to <c language="csharp">ChildAdded</c> and <c language="csharp">ChildRemoved</c> for the read model's whole lifetime, so the diff this
+/// step produces must carry no difference for it - otherwise a replayed root event <c language="csharp">$set</c>s the collection
 /// empty over children a sibling partition already added.
 /// <para>
 /// Its sibling spec asserts only that <em>some</em> change was added, which a diff that wipes the children

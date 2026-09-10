@@ -32,7 +32,7 @@ public class DataProtectionKeysStorageProvider(IStorage storage) : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<DataProtectionKeysState>)!;
 
-        foreach (var key in actualGrainState.State.NewKeys)
+        foreach (var key in actualGrainState.State!.NewKeys)
         {
             await storage.System.DataProtectionKeys.Store(key);
             actualGrainState.State.Keys.Add(key);

@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Connections.for_ChronicleConnectionStringBuilder;
 
 /// <summary>
 /// A connection string carries arbitrary options, so redaction falls back to the option name to catch a
-/// credential the builder does not model - here the <c>key</c> in <c>auth=ApiKey&amp;key=...</c>.
+/// credential the builder does not model - here the <c language="csharp">key</c> in <c language="csharp">auth=ApiKey&amp;key=...</c>.
 /// </summary>
 public class when_building_redacted_connection_string_with_an_unmodelled_credential_option : Specification
 {

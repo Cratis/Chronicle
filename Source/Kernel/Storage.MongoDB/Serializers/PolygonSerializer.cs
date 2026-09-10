@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
 /// </summary>
 /// <remarks>
 /// Stores the polygon with a shell (outer ring) and optional holes (inner rings):
-/// <c>{ "shell": [{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }, ...], "holes": [[...], ...] }</c>.
+/// <c language="csharp">{ "shell": [{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }, ...], "holes": [[...], ...] }</c>.
 /// </remarks>
 public class PolygonSerializer : SerializerBase<Polygon>
 {

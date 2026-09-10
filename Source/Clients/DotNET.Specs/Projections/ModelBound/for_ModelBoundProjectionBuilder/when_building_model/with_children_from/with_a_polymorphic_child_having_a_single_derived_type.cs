@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilde
 /// <summary>
 /// Regression for https://github.com/Cratis/Chronicle/issues/3571 — AutoMap only ever wires properties
 /// that exist by name on both the event and the child type, so it can never discover the
-/// <c>_derivedTypeId</c> discriminator: it is a serialization-time artifact <see cref="DerivedTypeAttribute"/>
+/// <c language="csharp">_derivedTypeId</c> discriminator: it is a serialization-time artifact <see cref="DerivedTypeAttribute"/>
 /// adds, not a real member of the interface or its implementation. When the child collection's item type
 /// has exactly one <see cref="DerivedTypeAttribute"/> implementation, the builder must stamp a constant
-/// discriminator mapping automatically, the same way an explicit <c>[SetValue]</c> would.
+/// discriminator mapping automatically, the same way an explicit <c language="csharp">[SetValue]</c> would.
 /// </summary>
 public class with_a_polymorphic_child_having_a_single_derived_type : given.a_model_bound_projection_builder
 {

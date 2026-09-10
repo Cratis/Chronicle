@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Schemas;
 /// <remarks>
 /// Initializes a new instance of the <see cref="JsonSchemaTypeAttribute"/> class.
 /// <para>
-/// A type that brings its own <c>JsonConverter</c> serializes to something other than its own shape — a value
+/// A type that brings its own <c language="csharp">JsonConverter</c> serializes to something other than its own shape — a value
 /// object written as a single string, for instance. The generated schema is what Chronicle stores and reads
 /// values against, so it has to describe what actually goes on the wire; without this the schema would describe
 /// the CLR shape and the value would not round-trip. Adorn the type with this attribute to state what its

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
 /// Represents methods for converting the violation types an append outcome carries to their contract
-/// representations. The generator produces the surrounding <c>AppendResult</c>/<c>AppendManyResult</c> mapping
+/// representations. The generator produces the surrounding <c language="csharp">AppendResult</c>/<c language="csharp">AppendManyResult</c> mapping
 /// itself from their public properties; these are the element conversions it cannot derive on its own.
 /// </summary>
 internal static class AppendResultConverters

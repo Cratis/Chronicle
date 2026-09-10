@@ -90,7 +90,7 @@ public static class ReducerTypeExtensions
     /// <returns>True if the current read model parameter is statically non-nullable, false if not.</returns>
     /// <remarks>
     /// The current read model is null for the event that brings an instance into existence, so a non-nullable
-    /// declaration is a claim the reducer cannot keep. A method declared in a <c>#nullable disable</c> context makes
+    /// declaration is a claim the reducer cannot keep. A method declared in a <c language="csharp">#nullable disable</c> context makes
     /// no claim either way and is not reported.
     /// </remarks>
     public static bool HasNonNullableCurrentReadModelParameter(this MethodInfo methodInfo)

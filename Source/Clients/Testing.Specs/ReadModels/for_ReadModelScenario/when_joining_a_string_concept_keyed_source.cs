@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// A read model carrying a <c>[Join]</c> whose source event is keyed by a string concept (an organization
+/// A read model carrying a <c language="csharp">[Join]</c> whose source event is keyed by a string concept (an organization
 /// number) both materializes and enriches: seeding the string-keyed source no longer force-converts the join
 /// key to the read model's Guid identifier and crashes the whole scenario, and the joined value is backfilled
 /// onto the root document — parity with a Guid-keyed join.

@@ -16,7 +16,7 @@ public class EventSourceWhenBuilder(IEventLog eventLog, EventSourceId eventSourc
 {
     /// <summary>
     /// Appends the event(s) under test for the current <see cref="EventSourceId"/> through the real kernel
-    /// <c>EventSequence</c> grain and returns the resulting <see cref="AppendResult"/>.
+    /// <c language="csharp">EventSequence</c> grain and returns the resulting <see cref="AppendResult"/>.
     /// </summary>
     /// <param name="event">The event under test — the action being exercised.</param>
     /// <param name="additionalEvents">Any further events that make up the same action, appended in order.</param>

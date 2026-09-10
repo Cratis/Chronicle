@@ -70,7 +70,7 @@ static class RemovedWithExtensions
 
     /// <summary>
     /// Applies the naming policy to a key expression so it matches the serialized event property name, unless the
-    /// expression is a well-known projection expression (e.g. <c>$eventSourceId</c>) which must be left untouched.
+    /// expression is a well-known projection expression (e.g. <c language="csharp">$eventSourceId</c>) which must be left untouched.
     /// </summary>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to apply.</param>
     /// <param name="expression">The key expression to convert.</param>

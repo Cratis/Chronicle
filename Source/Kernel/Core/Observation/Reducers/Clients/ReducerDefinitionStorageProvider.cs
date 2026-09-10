@@ -41,6 +41,6 @@ public class ReducerDefinitionStorageProvider(IStorage storage) : IGrainStorage
         var actualGrainState = (grainState as IGrainState<ReducerDefinition>)!;
         var reducerKey = ReducerKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(reducerKey.EventStore);
-        await eventStore.Reducers.Save(actualGrainState.State);
+        await eventStore.Reducers.Save(actualGrainState.State!);
     }
 }

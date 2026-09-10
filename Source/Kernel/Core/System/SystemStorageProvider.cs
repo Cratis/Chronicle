@@ -21,7 +21,7 @@ public class SystemStorageProvider(IStorage storage) : IGrainStorage
         if (grainState is IGrainState<SystemInformationState> actualGrainState)
         {
             var systemInfo = await storage.System.GetSystemInformation();
-            actualGrainState.State.Version = systemInfo?.Version;
+            actualGrainState.State!.Version = systemInfo?.Version;
         }
     }
 
@@ -29,7 +29,7 @@ public class SystemStorageProvider(IStorage storage) : IGrainStorage
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         if (grainState is IGrainState<SystemInformationState> actualGrainState &&
-            actualGrainState.State.Version is not null)
+            actualGrainState.State!.Version is not null)
         {
             await storage.System.SetSystemInformation(new SystemInformation(actualGrainState.State.Version));
         }

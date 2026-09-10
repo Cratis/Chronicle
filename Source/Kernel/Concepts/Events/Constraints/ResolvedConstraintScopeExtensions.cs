@@ -15,8 +15,8 @@ public static class ResolvedConstraintScopeExtensions
     /// <returns>The flattened key, empty when nothing is narrowed.</returns>
     /// <remarks>
     /// This exists for one purpose: handing a provider that only implements the older
-    /// <c>IsAllowed(definition, eventSourceId, scopeKey)</c> member the exact key it used to receive, so that
-    /// provider keeps behaving as it did. It emits the same <c>est:</c>, <c>estt:</c> and <c>esid:</c> parts, in the
+    /// <c language="csharp">IsAllowed(definition, eventSourceId, scopeKey)</c> member the exact key it used to receive, so that
+    /// provider keeps behaving as it did. It emits the same <c language="csharp">est:</c>, <c language="csharp">estt:</c> and <c language="csharp">esid:</c> parts, in the
     /// same fixed order, omitting the same dimensions, as <see cref="ConstraintScopeExtensions.BuildScopeKey"/>
     /// does for the same event - a resolved scope is exactly the set of dimensions that key would have included.
     /// <para>

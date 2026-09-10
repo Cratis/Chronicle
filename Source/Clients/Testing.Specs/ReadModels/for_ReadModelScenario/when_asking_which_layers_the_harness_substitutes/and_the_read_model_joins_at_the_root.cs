@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_asking_which_layers_the_harness_substitutes;
 
 /// <summary>
-/// A root-level <c>[Join]</c> is the shape that reached a running system green: the harness corrects the
+/// A root-level <c language="csharp">[Join]</c> is the shape that reached a running system green: the harness corrects the
 /// engine's join key against its own sink, so the resolution a deployed Chronicle performs is not the one a
 /// spec here exercises. The scenario says so without needing an event.
 /// </summary>

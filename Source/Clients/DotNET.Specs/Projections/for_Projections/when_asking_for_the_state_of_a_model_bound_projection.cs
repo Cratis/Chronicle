@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Projections.for_Projections;
 /// is the only handle a caller holds for it.
 /// </summary>
 /// <remarks>
-/// Asking for state took a type constrained to <c>IProjection</c>, which a read model does not implement - so there
+/// Asking for state took a type constrained to <c language="csharp">IProjection</c>, which a read model does not implement - so there
 /// was no way to ask a model-bound projection for its state at all, while failed partitions for the same projection
 /// were reachable. The handler behind both is the same one; only the surface was missing.
 /// </remarks>

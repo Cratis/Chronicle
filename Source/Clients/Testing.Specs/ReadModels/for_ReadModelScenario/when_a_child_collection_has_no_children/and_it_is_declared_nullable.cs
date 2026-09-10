@@ -7,15 +7,15 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_a_child
 
 /// <summary>
 /// The harness must not answer this question on its own. A children-collection path is written only by
-/// <c>ChildAdded</c> / <c>ChildRemoved</c> - the live pipeline removes every such path from the initial-state
-/// diff, deliberately, because writing <c>[]</c> from a root event would race a sibling partition's already-added
+/// <c language="csharp">ChildAdded</c> / <c language="csharp">ChildRemoved</c> - the live pipeline removes every such path from the initial-state
+/// diff, deliberately, because writing <c language="csharp">[]</c> from a root event would race a sibling partition's already-added
 /// child away - so a collection with no children is an absent field in the store.
 /// <para>
-/// The harness used to seed <c>[]</c> for every array-typed schema property and stop there, reproducing the
+/// The harness used to seed <c language="csharp">[]</c> for every array-typed schema property and stop there, reproducing the
 /// kernel's seeding step and omitting the kernel's very next step. That put the representation of an empty child
 /// collection out of reach of every spec at every tier: a consumer could have complete, green coverage of exactly
 /// the path that dereferences null in production. A nullable declaration is what makes the difference visible -
-/// with the pre-seed it is <c>[]</c>, without it the field is absent and stays absent.
+/// with the pre-seed it is <c language="csharp">[]</c>, without it the field is absent and stays absent.
 /// </para>
 /// </summary>
 public class and_it_is_declared_nullable : Specification

@@ -7,10 +7,10 @@ using System.Text.Json.Nodes;
 namespace Cratis.Chronicle.Schemas.for_OptionalReadModelValues;
 
 /// <summary>
-/// Reproduces the CHR-16 symptom at the real release path: a projection that only ever set <c>Id</c> and
-/// <c>PlacedAt</c> (the source event for the optional <c>CompletedAt</c> never fired) stores a document with
-/// no <c>CompletedAt</c> field. Releasing that document through the schema-driven converter must NOT fabricate
-/// a type-default sentinel (<c>0001-01-01</c>) for the unset optional — it must stay null/absent.
+/// Reproduces the CHR-16 symptom at the real release path: a projection that only ever set <c language="csharp">Id</c> and
+/// <c language="csharp">PlacedAt</c> (the source event for the optional <c language="csharp">CompletedAt</c> never fired) stores a document with
+/// no <c language="csharp">CompletedAt</c> field. Releasing that document through the schema-driven converter must NOT fabricate
+/// a type-default sentinel (<c language="csharp">0001-01-01</c>) for the unset optional — it must stay null/absent.
 /// </summary>
 public class when_releasing_a_read_model_with_an_unset_optional : given.a_schema_driven_read_model_release
 {

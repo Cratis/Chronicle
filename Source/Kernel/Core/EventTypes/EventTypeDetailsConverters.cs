@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.EventTypes;
 /// Converts stored event type definitions into the read model the event type queries answer with.
 /// </summary>
 /// <remarks>
-/// These live beside the read model rather than on it because a static method on a <c>[ReadModel]</c> whose
+/// These live beside the read model rather than on it because a static method on a <c language="csharp">[ReadModel]</c> whose
 /// return shape is a supported query shape becomes a generated query proxy and an HTTP endpoint - accessibility
 /// is not what the proxy generator looks at.
 /// </remarks>

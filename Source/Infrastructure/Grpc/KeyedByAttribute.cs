@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Grpc;
 /// <remarks>
 /// Pairs with <see cref="QueryAttribute"/> on individual grain methods: the generator reads <typeparamref name="TKey"/>'s
 /// constructor parameters to build the request fields a keyed query needs to resolve the grain, and combines them with
-/// <c>KeyHelper.Combine</c> - the same construction the key type's own <c>ToString()</c> is expected to use - rather
+/// <c language="csharp">KeyHelper.Combine</c> - the same construction the key type's own <c language="csharp">ToString()</c> is expected to use - rather
 /// than assuming the key type's string conversion happens to agree.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Interface)]

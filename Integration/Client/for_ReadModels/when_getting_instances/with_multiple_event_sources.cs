@@ -38,9 +38,9 @@ public class with_multiple_event_sources(context context) : Given<context>(conte
         /// <param name="number">The number the event source's <see cref="SomeEvent"/> carried.</param>
         /// <returns>The instance belonging to that event source.</returns>
         /// <remarks>
-        /// <c>GetInstances</c> reads the sink, and no sink promises an order — MongoDB answers in
+        /// <c language="csharp">GetInstances</c> reads the sink, and no sink promises an order — MongoDB answers in
         /// insertion order while SQL Server answers in clustered-key order, which puts
-        /// <c>another-source</c> first. Identify each instance by what its event source appended
+        /// <c language="csharp">another-source</c> first. Identify each instance by what its event source appended
         /// rather than by where the backend happened to place it.
         /// </remarks>
         public SomeReadModel InstanceFor(int number) => Results.Single(_ => _.Number == number);

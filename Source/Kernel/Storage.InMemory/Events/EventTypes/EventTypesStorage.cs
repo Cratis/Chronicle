@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 /// </para>
 /// <para>
 /// An event type that was never registered still resolves to an empty <see cref="JsonSchema"/> rather than failing,
-/// which causes the <c>ExpandoObjectConverter</c> to fall back to generic unknown-type conversion - preserving all
+/// which causes the <c language="csharp">ExpandoObjectConverter</c> to fall back to generic unknown-type conversion - preserving all
 /// event content without schema-driven type coercion.
 /// </para>
 /// </remarks>

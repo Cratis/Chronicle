@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjections;
 
 /// <summary>
-/// Deliberately carries no <c>[EventType]</c>, which is what makes it unresolvable. Model-bound projection
+/// Deliberately carries no <c language="csharp">[EventType]</c>, which is what makes it unresolvable. Model-bound projection
 /// attributes take an unconstrained generic type argument, so naming this type in one compiles and passes every
 /// analyzer.
 /// </summary>

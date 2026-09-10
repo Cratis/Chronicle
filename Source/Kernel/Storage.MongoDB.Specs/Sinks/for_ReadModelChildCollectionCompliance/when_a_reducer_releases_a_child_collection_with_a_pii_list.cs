@@ -13,8 +13,8 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCompliance;
 
 /// <summary>
-/// Regression for the reducer RELEASE leg of a coarse <c>[PII]</c> list nested inside a reducer-owned
-/// child collection. A coarse <c>[PII]</c> on a whole list is blob-encrypted to a single ciphertext
+/// Regression for the reducer RELEASE leg of a coarse <c language="csharp">[PII]</c> list nested inside a reducer-owned
+/// child collection. A coarse <c language="csharp">[PII]</c> on a whole list is blob-encrypted to a single ciphertext
 /// string even though its schema type stays array; the converters must round-trip it as that scalar
 /// string rather than shredding it into per-character elements, otherwise the next reduce's initial
 /// RELEASE fails to base64-decode it. Two reduces are driven against one key — create, then

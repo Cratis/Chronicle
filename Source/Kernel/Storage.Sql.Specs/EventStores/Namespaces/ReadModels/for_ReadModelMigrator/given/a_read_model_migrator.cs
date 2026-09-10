@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_Rea
 /// <summary>
 /// Establishes a real named shared-cache in-memory SQLite database together with a real
 /// <see cref="TableMigrator{TContext}"/> and <see cref="ReadModelMigrator"/>.
-/// A named shared-cache database is used instead of the default <c>:memory:</c> connection
+/// A named shared-cache database is used instead of the default <c language="csharp">:memory:</c> connection
 /// so that the <see cref="TableMigrator{TContext}"/> can open and close its own transient
 /// connections (as it does in production) while the master connection keeps the database alive.
 /// </summary>
@@ -65,7 +65,7 @@ public class a_read_model_migrator : Specification
 
     /// <summary>
     /// Returns the column names that physically exist in the given table by querying
-    /// SQLite's <c>PRAGMA table_info</c> via the master connection.
+    /// SQLite's <c language="csharp">PRAGMA table_info</c> via the master connection.
     /// Column name is at ordinal 1 (0 = cid, 1 = name, 2 = type, …).
     /// </summary>
     /// <param name="tableName">Name of the table to inspect.</param>

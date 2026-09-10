@@ -23,10 +23,10 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelRekeyedCompliance;
 
 /// <summary>
-/// Regression for a re-keyed projection returning <c>[PII]</c> as ciphertext on read. The read model is
-/// keyed by a property other than the source event's event source id, so the document key (<c>_id</c>) and
+/// Regression for a re-keyed projection returning <c language="csharp">[PII]</c> as ciphertext on read. The read model is
+/// keyed by a property other than the source event's event source id, so the document key (<c language="csharp">_id</c>) and
 /// the source event's compliance subject diverge. The document must encrypt PII under, and stamp its
-/// <c>__subject</c> as, its own resolved key — otherwise the identity the PII is encrypted under is not the
+/// <c language="csharp">__subject</c> as, its own resolved key — otherwise the identity the PII is encrypted under is not the
 /// one the read path releases it with, and the value never decrypts. Runs the real projection encryption
 /// step through a real MongoDB sink.
 /// </summary>

@@ -6,7 +6,7 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ReactorMethodAnalyzer.when_analyzing_reactor_methods;
 
 /// <summary>
-/// A reactor is mostly ordinary helpers, and an <c>async Task</c> one is the commonest shape there is. Deciding
+/// A reactor is mostly ordinary helpers, and an <c language="csharp">async Task</c> one is the commonest shape there is. Deciding
 /// handler-versus-helper on the return type made every one of them a handler: its first parameter was demanded
 /// to be an event type, and its ordinary value-type arguments were reported as dependencies that could not be
 /// resolved. A helper returning a string or a domain record escaped, purely because its return type fell outside

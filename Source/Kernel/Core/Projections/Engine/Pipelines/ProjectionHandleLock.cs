@@ -102,7 +102,7 @@ public sealed class ProjectionHandleLock
     /// Gets the index of the stripe that serializes handling for a given <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to map to a stripe.</param>
-    /// <returns>A stable, non-negative index in the range <c>[0, NumberOfStripes)</c> for the process lifetime.</returns>
+    /// <returns>A stable, non-negative index in the range <c language="csharp">[0, NumberOfStripes)</c> for the process lifetime.</returns>
     internal static int StripeIndexFor(EventSourceId eventSourceId) =>
         StringComparer.Ordinal.GetHashCode(eventSourceId.Value) & (NumberOfStripes - 1);
 

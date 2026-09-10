@@ -8,7 +8,7 @@ using Cratis.Chronicle.Observation.Jobs;
 namespace Cratis.Chronicle.Observation.for_Observer;
 
 /// <summary>
-/// The automatic recovery loop skips individually quarantined partitions (<c>.Where(p => !p.IsQuarantined)</c> in
+/// The automatic recovery loop skips individually quarantined partitions (<c language="csharp">.Where(p => !p.IsQuarantined)</c> in
 /// <see cref="Observer.TryRecoverAllFailedPartitions"/>), but a manual retry request used not to check this at all -
 /// it would happily kick off a job for a partition the automatic loop was deliberately leaving alone, and report
 /// success while doing something the system had decided not to do on its own.

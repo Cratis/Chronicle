@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// request to derive a <see cref="QueryContext"/> from.
 /// </summary>
 /// <remarks>
-/// Kernel-side artifacts that read <c>IQueryContextManager.Current</c> need this resolvable even outside a real
+/// Kernel-side artifacts that read <c language="csharp">IQueryContextManager.Current</c> need this resolvable even outside a real
 /// ASP.NET Core pipeline.
 /// </remarks>
 internal sealed class InProcessQueryContextManager : IQueryContextManager

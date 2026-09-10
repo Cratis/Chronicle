@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
-/// Second event type sharing the <see cref="UniqueLicenseKey"/> constraint on its <see cref="LicenseKey"/> (a <c>ConceptAs&lt;Guid&gt;</c>) property.
+/// Second event type sharing the <see cref="UniqueLicenseKey"/> constraint on its <see cref="LicenseKey"/> (a <c language="csharp">ConceptAs&lt;Guid&gt;</c>) property.
 /// </summary>
 /// <param name="Key">The reissued license key.</param>
 [EventType]

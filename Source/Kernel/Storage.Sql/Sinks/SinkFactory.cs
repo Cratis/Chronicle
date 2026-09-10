@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <see cref="CreateFor"/> rather than eagerly via the constructor. This lets the factory
 /// be instantiated even in modes where SQL is not the active backend (e.g. MongoDB
 /// integration tests load both Storage.MongoDB and Storage.Sql assemblies, and
-/// <c>IInstancesOf&lt;ISinkFactory&gt;</c> enumerates every implementation). Construction
+/// <c language="csharp">IInstancesOf&lt;ISinkFactory&gt;</c> enumerates every implementation). Construction
 /// no longer fails, and the inactive backend's sink type simply never appears in any
 /// read model definition that the active backend would process.
 /// </remarks>

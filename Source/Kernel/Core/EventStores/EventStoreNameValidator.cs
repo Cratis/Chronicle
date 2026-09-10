@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.EventStores;
 /// </summary>
 /// <remarks>
 /// Lives beside the <see cref="EventStores"/> commands rather than next to the <see cref="EventStoreName"/> concept
-/// itself: <c>Concepts.csproj</c> is a dependency-free primitives project that <c>Storage.csproj</c> references, so
+/// itself: <c language="csharp">Concepts.csproj</c> is a dependency-free primitives project that <c language="csharp">Storage.csproj</c> references, so
 /// this validator - which needs <see cref="IStorage"/> - cannot live there without a circular project reference.
 /// </remarks>
 public class EventStoreNameValidator : ConceptValidator<EventStoreName>

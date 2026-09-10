@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_AutoMapSameNamePropertyCollisionAnalyzer.when_analyzing;
 
 /// <summary>
-/// The explicit setter is not limited to <c>[SetFrom]</c>: a property set with <c>[SetValue]</c> is equally at
+/// The explicit setter is not limited to <c language="csharp">[SetFrom]</c>: a property set with <c language="csharp">[SetValue]</c> is equally at
 /// risk of being overwritten by AutoMap from another event that carries the same-named property.
 /// </summary>
 public class and_set_value_property_collides_with_another_event : given.an_auto_map_same_name_property_collision_analyzer

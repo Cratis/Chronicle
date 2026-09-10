@@ -47,7 +47,7 @@ public class a_catch_up_observer_job : Specification
 
     /// <summary>
     /// Start the job and let it get as far as preparing and starting its steps. Catch-up hands that work to its own
-    /// next turn rather than doing it inside <c>Start</c>, so a spec about the steps has to fire the timer that
+    /// next turn rather than doing it inside <c language="csharp">Start</c>, so a spec about the steps has to fire the timer that
     /// carries it.
     /// </summary>
     /// <returns>The task representing the operation.</returns>

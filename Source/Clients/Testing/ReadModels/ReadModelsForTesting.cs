@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Represents a decorator around <see cref="IReadModels"/> for testing that intercepts
-/// <c>GetInstanceById</c> to return pre-seeded read model instances when available,
+/// <c language="csharp">GetInstanceById</c> to return pre-seeded read model instances when available,
 /// and delegates all other operations to the real inner implementation.
 /// </summary>
 /// <param name="inner">The real <see cref="IReadModels"/> implementation to delegate to.</param>
@@ -79,7 +79,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         inner.Release(instances);
 
     /// <summary>
-    /// Registers a pre-seeded read model instance so that subsequent <c>GetInstanceById</c> calls
+    /// Registers a pre-seeded read model instance so that subsequent <c language="csharp">GetInstanceById</c> calls
     /// return it directly without hitting the server.
     /// </summary>
     /// <typeparam name="TReadModel">The type of read model to register.</typeparam>

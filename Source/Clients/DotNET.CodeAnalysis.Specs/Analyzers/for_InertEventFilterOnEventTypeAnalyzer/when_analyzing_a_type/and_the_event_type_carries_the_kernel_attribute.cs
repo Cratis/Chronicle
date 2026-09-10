@@ -7,8 +7,8 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_InertEventFilterOnEventTypeAnalyzer.when_analyzing_a_type;
 
 /// <summary>
-/// An event type is spelled two ways - the client's <c>Cratis.Chronicle.Events.EventTypeAttribute</c> and the
-/// kernel's <c>Cratis.Chronicle.Concepts.Events.EventTypeAttribute</c> - and the shared check accepts both.
+/// An event type is spelled two ways - the client's <c language="csharp">Cratis.Chronicle.Events.EventTypeAttribute</c> and the
+/// kernel's <c language="csharp">Cratis.Chronicle.Concepts.Events.EventTypeAttribute</c> - and the shared check accepts both.
 /// Nothing pinned the kernel spelling here, so narrowing the check to the client one left every spec in this
 /// folder green while the rule went silent on half the event types it exists for.
 /// </summary>

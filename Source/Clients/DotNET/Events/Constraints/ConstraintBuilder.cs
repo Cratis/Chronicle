@@ -110,7 +110,7 @@ public class ConstraintBuilder(
     /// <param name="constraints">The constraints to merge.</param>
     /// <returns>The constraints with same-named unique event type definitions merged.</returns>
     /// <remarks>
-    /// Declaring <c>Unique&lt;A&gt;(name: x)</c> and <c>Unique&lt;B&gt;(name: x)</c> is how mutual exclusion is
+    /// Declaring <c language="csharp">Unique&lt;A&gt;(name: x)</c> and <c language="csharp">Unique&lt;B&gt;(name: x)</c> is how mutual exclusion is
     /// expressed — the two become one constraint allowing at most one event from {A, B} per event source.
     /// Merging happens here rather than downstream so that names stay unique across the built set, which
     /// registration, change detection, and violation message resolution all rely on.

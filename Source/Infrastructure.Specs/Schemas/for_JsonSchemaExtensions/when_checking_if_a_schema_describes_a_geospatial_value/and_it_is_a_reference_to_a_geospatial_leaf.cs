@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaExtensions.when_checking_if_a_schema_describes_a_geospatial_value;
 
 /// <summary>
-/// A type used more than once is emitted once under <c>$defs</c> and referenced, so the format sits on the
+/// A type used more than once is emitted once under <c language="csharp">$defs</c> and referenced, so the format sits on the
 /// definition rather than on the property that points at it.
 /// </summary>
 public class and_it_is_a_reference_to_a_geospatial_leaf : Specification

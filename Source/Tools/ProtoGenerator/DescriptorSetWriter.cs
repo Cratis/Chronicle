@@ -7,7 +7,7 @@ using ProtoBuf.Reflection;
 namespace Cratis.Chronicle.Tools.ProtoGenerator;
 
 /// <summary>
-/// Writes the canonical binary <c>FileDescriptorSet</c> describing every Chronicle wire contract.
+/// Writes the canonical binary <c language="csharp">FileDescriptorSet</c> describing every Chronicle wire contract.
 /// </summary>
 /// <remarks>
 /// This is the single artifact every Chronicle client - .NET, Kotlin, TypeScript and Elixir - ships
@@ -26,7 +26,7 @@ public static class DescriptorSetWriter
     /// <summary>
     /// Writes the descriptor set built from every proto file in a directory.
     /// </summary>
-    /// <param name="protoDirectory">Directory holding the generated <c>.proto</c> files.</param>
+    /// <param name="protoDirectory">Directory holding the generated <c language="csharp">.proto</c> files.</param>
     /// <returns>The errors reported while parsing, empty when the set was written cleanly.</returns>
     public static Error[] Write(string protoDirectory)
     {
@@ -44,7 +44,7 @@ public static class DescriptorSetWriter
     /// <summary>
     /// Builds the descriptor set from every proto file in a directory, without writing it.
     /// </summary>
-    /// <param name="protoDirectory">Directory holding the <c>.proto</c> files.</param>
+    /// <param name="protoDirectory">Directory holding the <c language="csharp">.proto</c> files.</param>
     /// <param name="additionalImportPaths">Extra directories to resolve imports from.</param>
     /// <returns>The parsed set and the errors reported while parsing.</returns>
     public static (FileDescriptorSet Set, Error[] Errors) Build(string protoDirectory, params string[] additionalImportPaths)

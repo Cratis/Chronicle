@@ -12,11 +12,11 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
 /// Analyzer that emits an informational heads-up when a model-bound read model property is explicitly sourced
-/// (via <c>[SetFrom]</c>, <c>[SetFromContext]</c>, <c>[SetValue]</c>, <c>[AddFrom]</c>, <c>[SubtractFrom]</c>,
-/// or <c>[Join]</c>) but another value-mapped event referenced by the same projection carries an identically
+/// (via <c language="csharp">[SetFrom]</c>, <c language="csharp">[SetFromContext]</c>, <c language="csharp">[SetValue]</c>, <c language="csharp">[AddFrom]</c>, <c language="csharp">[SubtractFrom]</c>,
+/// or <c language="csharp">[Join]</c>) but another value-mapped event referenced by the same projection carries an identically
 /// named property that AutoMap will write on top of it. It is informational — not a warning — because the
 /// collision has two legitimate resolutions and only the developer knows which was intended: fence the property
-/// with property-level <c>[NoAutoMap]</c>, or leave it because updates from the other event are wanted.
+/// with property-level <c language="csharp">[NoAutoMap]</c>, or leave it because updates from the other event are wanted.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
@@ -28,10 +28,10 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
     /// The attributes that subscribe the declaring type to an event whose properties can auto-map onto it.
     /// </summary>
     /// <remarks>
-    /// <c>[ChildrenFrom]</c> is deliberately absent: the event it names is subscribed by the child, not by the
+    /// <c language="csharp">[ChildrenFrom]</c> is deliberately absent: the event it names is subscribed by the child, not by the
     /// type carrying the attribute - the builder writes it into the child's definition and never into the root's
     /// - so it cannot auto-map over a root property of the same name. Counting it here reported a collision that
-    /// could not happen, and the reported fix was to fence the root property with <c>[NoAutoMap]</c>, which does
+    /// could not happen, and the reported fix was to fence the root property with <c language="csharp">[NoAutoMap]</c>, which does
     /// nothing there because nothing was overwriting it.
     /// </remarks>
     static readonly HashSet<string> NonAggregateAttributeNames = new(StringComparer.Ordinal)

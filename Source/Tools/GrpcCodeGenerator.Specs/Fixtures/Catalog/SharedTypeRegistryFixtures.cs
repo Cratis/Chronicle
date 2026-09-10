@@ -8,9 +8,9 @@ using Cratis.Arc.Queries.ModelBound;
 namespace Cratis.Chronicle.SharedTypeCatalog;
 
 /// <summary>
-/// Stands in for a <c>[ReadModel]</c> declared under a Chronicle area namespace, so it is Chronicle-owned by
+/// Stands in for a <c language="csharp">[ReadModel]</c> declared under a Chronicle area namespace, so it is Chronicle-owned by
 /// namespace and would otherwise pass every other check - the read-model exclusion is the only thing that has to
-/// reject it, since it already becomes its own <c>&lt;Name&gt;Response</c> message through the per-service DTO
+/// reject it, since it already becomes its own <c language="csharp">&lt;Name&gt;Response</c> message through the per-service DTO
 /// path.
 /// </summary>
 /// <param name="Id">The identifier.</param>
@@ -24,7 +24,7 @@ public record CoreOwnedReadModel(string Id)
 
 /// <summary>
 /// Stands in for a Core-owned enum declared directly under a Chronicle area namespace -
-/// <c>Cratis.Chronicle.Jobs.JobStatus</c> is the real shape this mirrors.
+/// <c language="csharp">Cratis.Chronicle.Jobs.JobStatus</c> is the real shape this mirrors.
 /// </summary>
 public enum CoreOwnedStatus
 {
@@ -36,8 +36,8 @@ public enum CoreOwnedStatus
 }
 
 /// <summary>
-/// Stands in for a plain Core-owned record referenced by more than one artifact - <c>Identity</c> and
-/// <c>Causation</c> are the real shapes this mirrors.
+/// Stands in for a plain Core-owned record referenced by more than one artifact - <c language="csharp">Identity</c> and
+/// <c language="csharp">Causation</c> are the real shapes this mirrors.
 /// </summary>
 public class CoreOwnedValue
 {
@@ -56,7 +56,7 @@ public interface INotAConcreteType;
 public abstract class AbstractCoreType;
 
 /// <summary>
-/// Stands in for a <c>ConceptAs&lt;T&gt;</c> declared under a Chronicle area namespace - Chronicle-owned by
+/// Stands in for a <c language="csharp">ConceptAs&lt;T&gt;</c> declared under a Chronicle area namespace - Chronicle-owned by
 /// namespace, so the concept exclusion is what has to reject it. A concept already travels as its unwrapped
 /// primitive (<see cref="Tools.GrpcCodeGenerator.TypeHelper.UnwrapConceptType"/>), so it must never reach the
 /// registry as a type to mirror in its own right.

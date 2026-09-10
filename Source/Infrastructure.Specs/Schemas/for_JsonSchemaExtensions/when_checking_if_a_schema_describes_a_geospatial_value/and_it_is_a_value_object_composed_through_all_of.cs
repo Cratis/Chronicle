@@ -4,8 +4,8 @@
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaExtensions.when_checking_if_a_schema_describes_a_geospatial_value;
 
 /// <summary>
-/// Inheritance is expressed as an <c>allOf</c> reference to the base beside the type's own properties, and
-/// <c>ActualTypeSchema</c> resolves such a schema to the base — dropping the properties the type itself declares.
+/// Inheritance is expressed as an <c language="csharp">allOf</c> reference to the base beside the type's own properties, and
+/// <c language="csharp">ActualTypeSchema</c> resolves such a schema to the base — dropping the properties the type itself declares.
 /// A predicate that answered on the resolved schema would call this a single typed value and let a compliance
 /// walk skip members that are declared right there, so the answer has to come from the format and nothing else.
 /// </summary>

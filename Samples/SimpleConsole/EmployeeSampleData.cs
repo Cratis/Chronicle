@@ -30,7 +30,7 @@ public static class EmployeeSampleData
     /// <returns>An <see cref="EmployeeSampleDataResult"/> describing what was appended.</returns>
     /// <remarks>
     /// Each employee's events are appended as a single transaction, so re-running against a store
-    /// that already holds the data leaves it untouched - the <c>UniqueEmployeeHire</c> constraint
+    /// that already holds the data leaves it untouched - the <c language="csharp">UniqueEmployeeHire</c> constraint
     /// rejects the whole batch for an employee that has already been hired.
     /// </remarks>
     public static async Task<EmployeeSampleDataResult> Generate(IEventStore store)

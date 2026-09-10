@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjections;
 
 /// <summary>
 /// A read model whose class-level removal names an event type Chronicle never discovered - a record that lost its
-/// <c>[EventType]</c> in a refactor, one in an assembly the artifacts provider does not scan, or one outside the
+/// <c language="csharp">[EventType]</c> in a refactor, one in an assembly the artifacts provider does not scan, or one outside the
 /// explicit artifact subset a test host registers.
 /// </summary>
 /// <param name="Name">The name.</param>

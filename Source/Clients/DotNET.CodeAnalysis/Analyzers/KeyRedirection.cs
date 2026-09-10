@@ -73,7 +73,7 @@ static class KeyRedirection
 
     /// <summary>
     /// Determine whether an invocation is one of the key-redirection calls belonging to this exact
-    /// <c>From&lt;TEvent&gt;</c> block.
+    /// <c language="csharp">From&lt;TEvent&gt;</c> block.
     /// </summary>
     /// <param name="semanticModel">The semantic model for the invocation.</param>
     /// <param name="invocation">The invocation to check.</param>
@@ -84,7 +84,7 @@ static class KeyRedirection
     /// <returns>True when the call redirects this block's key, false otherwise.</returns>
     /// <remarks>
     /// Matching the declaring interface together with both of its type arguments is what keeps a nested
-    /// builder — an <c>AddChild</c> callback, a sibling block written on the same chain — from being read as
+    /// builder — an <c language="csharp">AddChild</c> callback, a sibling block written on the same chain — from being read as
     /// this block's own key.
     /// </remarks>
     internal static bool IsDocumentRedirectionFor(

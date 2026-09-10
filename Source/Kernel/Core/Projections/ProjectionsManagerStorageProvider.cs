@@ -20,7 +20,7 @@ public class ProjectionsManagerStorageProvider(IStorage storage) : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<ProjectionsManagerState>)!;
         var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
-        actualGrainState.State.Projections = await eventStore.Projections.GetAll();
+        actualGrainState.State!.Projections = await eventStore.Projections.GetAll();
     }
 
     /// <inheritdoc/>

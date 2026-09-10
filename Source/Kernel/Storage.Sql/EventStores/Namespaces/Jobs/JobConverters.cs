@@ -16,7 +16,7 @@ public static class JobConverters
     /// Convert from entity to job state.
     /// </summary>
     /// <param name="entity">Entity to convert from.</param>
-    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use for deserializing the polymorphic <c>JobState.Request</c>.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use for deserializing the polymorphic <c language="csharp">JobState.Request</c>.</param>
     /// <returns>Converted job state.</returns>
     public static JobState ToJobState(this Job entity, JsonSerializerOptions options)
     {
@@ -46,7 +46,7 @@ public static class JobConverters
     /// Convert from job state to entity.
     /// </summary>
     /// <param name="jobState">Job state to convert from.</param>
-    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use for serializing the polymorphic <c>JobState.Request</c>.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use for serializing the polymorphic <c language="csharp">JobState.Request</c>.</param>
     /// <returns>Converted entity.</returns>
     public static Job ToEntity(this JobState jobState, JsonSerializerOptions options) =>
         new()

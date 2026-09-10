@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// The compatibility constructor retains the previous public surface for callers that create the handler directly.
 /// Chronicle explicitly registers this type once per event-store scope using that constructor before convention
 /// binding runs. Cached event stores use the parameterless constructor and pass their registry through the additive
-/// <c>CanHandle</c> overload instead.
+/// <c language="csharp">CanHandle</c> overload instead.
 /// </remarks>
 [Singleton]
 public class EventsResultHandler : IReactorSideEffectHandler
@@ -32,7 +32,7 @@ public class EventsResultHandler : IReactorSideEffectHandler
     /// Initializes a new instance of the <see cref="EventsResultHandler"/> class for compatibility with the previous
     /// event-store-less contract.
     /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> used when the event-store-less <c>CanHandle</c> overload is
+    /// <param name="eventTypes"><see cref="IEventTypes"/> used when the event-store-less <c language="csharp">CanHandle</c> overload is
     /// called without a current event store on its <see cref="ReactorContext"/>.</param>
     public EventsResultHandler(IEventTypes eventTypes)
     {

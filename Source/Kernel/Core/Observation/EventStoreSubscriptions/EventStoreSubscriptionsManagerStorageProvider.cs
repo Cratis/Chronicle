@@ -20,7 +20,7 @@ public class EventStoreSubscriptionsManagerStorageProvider(IStorage storage) : I
     {
         var actualGrainState = (grainState as IGrainState<EventStoreSubscriptionsState>)!;
         var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
-        actualGrainState.State.Subscriptions = await eventStore.EventStoreSubscriptions.GetAll();
+        actualGrainState.State!.Subscriptions = await eventStore.EventStoreSubscriptions.GetAll();
     }
 
     /// <inheritdoc/>
@@ -31,7 +31,7 @@ public class EventStoreSubscriptionsManagerStorageProvider(IStorage storage) : I
 
         var existing = await eventStoreSubscriptions.GetAll();
         var existingIds = existing.Select(s => s.Identifier).ToHashSet();
-        var updatedIds = actualGrainState.State.Subscriptions.Select(s => s.Identifier).ToHashSet();
+        var updatedIds = actualGrainState.State!.Subscriptions.Select(s => s.Identifier).ToHashSet();
 
         foreach (var removedId in existingIds.Where(id => !updatedIds.Contains(id)))
         {

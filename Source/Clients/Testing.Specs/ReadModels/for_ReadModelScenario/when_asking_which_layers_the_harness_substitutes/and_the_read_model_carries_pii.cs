@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_asking_
 
 /// <summary>
 /// The value a running system stores as ciphertext is projected and read as plaintext here, so a spec
-/// asserting on it looks exactly as green whether the <c>[PII]</c> marker is honored or ignored. That is the
+/// asserting on it looks exactly as green whether the <c language="csharp">[PII]</c> marker is honored or ignored. That is the
 /// one substitution whose absence from the report is indistinguishable from success, so the report has to
 /// name it.
 /// </summary>

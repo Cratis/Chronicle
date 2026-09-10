@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_getting_instance_with
 
 /// <summary>
 /// The enum case of the unset optional, driven through the compliance write path and asserted on the document at
-/// rest. A read model carrying a <c>[PII]</c> value has its whole state converted through its registered schema
+/// rest. A read model carrying a <c language="csharp">[PII]</c> value has its whole state converted through its registered schema
 /// on the way into the sink, and every schema property with no value is offered a type default there. An optional
 /// one must be offered none, so its field is simply never written - and after a projection replay, never stamped
 /// onto every stored record.

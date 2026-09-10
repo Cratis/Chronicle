@@ -6,9 +6,9 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_an_aggregate_only_event_shares_a_property_name;
 
 /// <summary>
-/// Verifies the aggregate heuristic: an event a read model subscribes to only via <c>[Count]</c> (or another
+/// Verifies the aggregate heuristic: an event a read model subscribes to only via <c language="csharp">[Count]</c> (or another
 /// aggregate) does not auto-map its other properties, so an identically named property cannot overwrite an
-/// explicitly sourced one — without needing a <c>[NoAutoMap]</c> annotation.
+/// explicitly sourced one — without needing a <c language="csharp">[NoAutoMap]</c> annotation.
 /// </summary>
 public class and_the_property_is_not_overwritten : Specification
 {

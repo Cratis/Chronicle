@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// in the cache key. Two different read models can declare the same table name (for example,
 /// integration specs that re-use a generic CLR type name across scenarios), so the column
 /// set must participate in the cache key — otherwise EF Core hands back a cached model whose
-/// PK ClrType belongs to a different read model and any subsequent <c>Add</c> on the wrong
+/// PK ClrType belongs to a different read model and any subsequent <c language="csharp">Add</c> on the wrong
 /// shape throws <see cref="InvalidCastException"/> inside the change tracker.
 /// </summary>
 public class ReadModelCacheKeyFactory : IModelCacheKeyFactory

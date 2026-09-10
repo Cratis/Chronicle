@@ -10,9 +10,9 @@ using Orleans.TestKit;
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager.when_waiting_until_subscribed;
 
 /// <summary>
-/// Proves the fix for the race condition where the gRPC <c>Add</c> handler calls
-/// <c>WaitUntilSubscribed</c> before the <c>EventStoreSubscriptionsReactor</c> has processed
-/// the <c>EventStoreSubscriptionAdded</c> event and written the definition into grain state.
+/// Proves the fix for the race condition where the gRPC <c language="csharp">Add</c> handler calls
+/// <c language="csharp">WaitUntilSubscribed</c> before the <c language="csharp">EventStoreSubscriptionsReactor</c> has processed
+/// the <c language="csharp">EventStoreSubscriptionAdded</c> event and written the definition into grain state.
 /// The old code threw <see cref="InvalidOperationException"/> immediately; the fix polls until
 /// the definition appears.
 /// </summary>

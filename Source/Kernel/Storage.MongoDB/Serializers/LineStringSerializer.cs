@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
 /// Represents a BSON serializer for <see cref="LineString"/>.
 /// </summary>
 /// <remarks>
-/// Stores the line string as an array of points: <c>[{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }, ...]</c>.
+/// Stores the line string as an array of points: <c language="csharp">[{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }, ...]</c>.
 /// </remarks>
 public class LineStringSerializer : SerializerBase<LineString>
 {

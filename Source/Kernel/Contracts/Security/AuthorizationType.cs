@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Contracts.Security;
 /// Represents which kind of authorization an outbound HTTP call carries.
 /// </summary>
 /// <remarks>
-/// The authorization itself travels as a <c>OneOf</c> of the concrete configurations, which says what the
+/// The authorization itself travels as a <c language="csharp">OneOf</c> of the concrete configurations, which says what the
 /// authorization <em>is</em> but not what a caller <em>intends</em> before it has filled anything in. This is the
 /// discriminator a form selects on.
 /// </remarks>

@@ -46,9 +46,9 @@ internal static partial class ProtoSchemaHelper
     /// In proto3, any message type that shares a name with an RPC method in the same service
     /// becomes unresolvable — protoc resolves the identifier as the method, not the type.
     /// The fix collects all such conflicting names and globally replaces every unqualified
-    /// <c>(TypeName)</c> and <c>(stream TypeName)</c> reference with the fully-qualified
-    /// package-prefixed form (e.g., <c>(stream ConnectionKeepAlive)</c> →
-    /// <c>(stream .Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive)</c>).
+    /// <c language="csharp">(TypeName)</c> and <c language="csharp">(stream TypeName)</c> reference with the fully-qualified
+    /// package-prefixed form (e.g., <c language="csharp">(stream ConnectionKeepAlive)</c> →
+    /// <c language="csharp">(stream .Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive)</c>).
     /// </summary>
     /// <param name="schema">The proto schema string to process.</param>
     /// <returns>The schema with RPC method name conflicts resolved.</returns>
@@ -238,13 +238,13 @@ internal static partial class ProtoSchemaHelper
         MessageDeclarationRegex.Matches(schema).Any(_ => string.Equals(_.Groups["name"].Value, messageName, StringComparison.Ordinal));
 
     /// <summary>
-    /// Emits a <c>reserved</c> declaration for every field number a contract type has retired.
+    /// Emits a <c language="csharp">reserved</c> declaration for every field number a contract type has retired.
     /// </summary>
     /// <param name="schema">The generated schema.</param>
     /// <param name="types">The contract types the schema was generated from.</param>
     /// <returns>The schema with reservations declared.</returns>
     /// <remarks>
-    /// The schema generator has no notion of a retired field, so a <c>reserved</c> line added to the generated
+    /// The schema generator has no notion of a retired field, so a <c language="csharp">reserved</c> line added to the generated
     /// file by hand disappears the next time anyone regenerates - silently, and with nothing to notice it by.
     /// Reading it from the contract instead makes the generated file reproducible, which is the only form a
     /// reservation can survive in.
@@ -293,11 +293,11 @@ internal static partial class ProtoSchemaHelper
     }
 
     /// <summary>
-    /// Adds an ISO 8601 format comment above each <c>message SerializableDateTimeOffset</c> block
+    /// Adds an ISO 8601 format comment above each <c language="csharp">message SerializableDateTimeOffset</c> block
     /// in the proto schema so that consumers know the expected wire format.
     /// </summary>
     /// <param name="schema">The proto schema string to process.</param>
-    /// <returns>The schema with comments added to <c>SerializableDateTimeOffset</c> message definitions.</returns>
+    /// <returns>The schema with comments added to <c language="csharp">SerializableDateTimeOffset</c> message definitions.</returns>
     public static string AddSerializableDateTimeOffsetComment(string schema)
     {
         const string messageDeclaration = "message SerializableDateTimeOffset {";

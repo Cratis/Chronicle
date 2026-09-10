@@ -23,7 +23,7 @@ namespace Cratis.Chronicle;
 /// <para>
 /// A host wired through dependency injection has an <see cref="ITypes"/> in its container, and that one is
 /// authoritative for it. A bare <see cref="ChronicleClient"/> has no container to ask and takes Fundamentals'
-/// current default universe instead - the same instance <c>AddTypeDiscovery()</c> registers, rebuilt when
+/// current default universe instead - the same instance <c language="csharp">AddTypeDiscovery()</c> registers, rebuilt when
 /// the registered provider set grows.
 /// </para>
 /// </remarks>

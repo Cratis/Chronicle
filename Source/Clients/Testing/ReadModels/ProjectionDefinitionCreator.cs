@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <typeparam name="TModel">The read model type the projection targets.</typeparam>
 /// <remarks>
 /// This is a top-level type — not nested inside <see cref="ReadModelScenario{TReadModel}"/> — so that
-/// <c>typeof(ProjectionDefinitionCreator&lt;&gt;)</c> has an arity of one. A generic type nested inside another
+/// <c language="csharp">typeof(ProjectionDefinitionCreator&lt;&gt;)</c> has an arity of one. A generic type nested inside another
 /// generic type inherits the enclosing type parameters, which would make the open generic arity two and break
 /// <see cref="Type.MakeGenericType"/> with a single type argument.
 /// </remarks>

@@ -417,7 +417,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <returns>Every event store whose construction has completed successfully.</returns>
     /// <remarks>
     /// A cached entry is a promise of an event store rather than one: it may still be under construction, and it may
-    /// have faulted. Reading <c>.Value.Result</c> on either would block or rethrow, in a disposal path that has to
+    /// have faulted. Reading <c language="csharp">.Value.Result</c> on either would block or rethrow, in a disposal path that has to
     /// finish. So only the ones that completed are handed back - the rest have nothing to dispose or detach anyway.
     /// </remarks>
     IEnumerable<IEventStore> CreatedEventStores() =>
