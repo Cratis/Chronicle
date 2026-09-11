@@ -18,11 +18,11 @@ public class Event
     /// Gets or sets the Context.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Sequences.EventContext Context { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventContext Context { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(2)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 }

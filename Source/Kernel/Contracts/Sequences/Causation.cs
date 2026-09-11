@@ -18,13 +18,13 @@ public class Causation
     /// Gets or sets the Occurred.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Type.
     /// </summary>
     [ProtoMember(2)]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Properties.

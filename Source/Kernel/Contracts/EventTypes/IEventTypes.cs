@@ -79,13 +79,13 @@ public class CreateEventTypeRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -98,7 +98,7 @@ public class RegisterEventTypesRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Types.
@@ -123,13 +123,13 @@ public class RegisterSingleEventTypeRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Type.
     /// </summary>
     [ProtoMember(2)]
-    public global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration Type { get; set; }
+    public global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration Type { get; set; } = new();
 }
 
 /// <summary>
@@ -142,13 +142,13 @@ public class EventTypeDetailsResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(5)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Type.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Events.EventType Type { get; set; }
+    public global::Cratis.Chronicle.Contracts.Events.EventType Type { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Owner.
@@ -166,7 +166,7 @@ public class EventTypeDetailsResponse
     /// Gets or sets the Schema.
     /// </summary>
     [ProtoMember(4)]
-    public string Schema { get; set; }
+    public string Schema { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -179,7 +179,7 @@ public class AllEventTypesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -192,7 +192,7 @@ public class ObserveEventTypesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -205,11 +205,11 @@ public class AllEventTypeGenerationsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventTypeId.
     /// </summary>
     [ProtoMember(2)]
-    public string EventTypeId { get; set; }
+    public string EventTypeId { get; set; } = string.Empty;
 }

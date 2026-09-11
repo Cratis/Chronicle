@@ -17,6 +17,8 @@ namespace Cratis.Chronicle.Contracts.Commands;
 [ProtoContract]
 public class CommandResult<TResponse>
 {
+    TResponse _response = CreateDefaultResponse();
+
     /// <summary>
     /// Gets or sets the correlation id associated with the command.
     /// </summary>
@@ -58,7 +60,11 @@ public class CommandResult<TResponse>
     /// Gets or sets the response produced by the command.
     /// </summary>
     [ProtoMember(7)]
-    public TResponse Response { get; set; } = default!;
+    public TResponse Response
+    {
+        get => _response;
+        set => _response = value is null ? CreateDefaultResponse() : value;
+    }
 
     /// <summary>
     /// Gets whether the command executed successfully.
@@ -109,4 +115,22 @@ public class CommandResult<TResponse>
     /// <returns>A <see cref="CommandResult{TResponse}"/>.</returns>
     public static CommandResult<TResponse> Invalid(Guid correlationId, IEnumerable<ValidationResult> validationResults) =>
         new() { CorrelationId = correlationId, ValidationResults = [.. validationResults] };
+
+    static TResponse CreateDefaultResponse()
+    {
+        var responseType = typeof(TResponse);
+        if (responseType == typeof(string))
+        {
+            return (TResponse)(object)string.Empty;
+        }
+
+        if (responseType.IsGenericType && responseType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+        {
+            return (TResponse)Activator.CreateInstance(typeof(List<>).MakeGenericType(responseType.GetGenericArguments()[0]))!;
+        }
+
+        return responseType.IsValueType || responseType.IsAbstract || responseType.IsInterface
+            ? default!
+            : Activator.CreateInstance<TResponse>();
+    }
 }

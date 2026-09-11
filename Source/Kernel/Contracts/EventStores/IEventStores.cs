@@ -53,7 +53,7 @@ public class EnsureEventStoreRequest
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(1)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -66,11 +66,11 @@ public class EventStoreNamesResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(2)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(1)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }

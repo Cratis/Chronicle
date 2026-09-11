@@ -7,7 +7,7 @@ using ProtoBuf;
 
 namespace Cratis.Chronicle.Queries.for_QueryResult.when_round_tripping;
 
-public class with_a_missing_single_entity : Specification
+public class with_an_empty_single_entity_response : Specification
 {
     QueryResult<AppendedEventResponse?> _result;
 
@@ -21,5 +21,5 @@ public class with_a_missing_single_entity : Specification
     }
 
     [Fact] void should_stay_successful() => _result.IsSuccess.ShouldBeTrue();
-    [Fact] void should_preserve_the_missing_entity() => _result.EnsureSuccess().ShouldBeNull();
+    [Fact] void should_supply_an_empty_entity() => _result.EnsureSuccess().ShouldNotBeNull();
 }

@@ -55,25 +55,25 @@ public class RenameIdentityRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Subject.
     /// </summary>
     [ProtoMember(3)]
-    public string Subject { get; set; }
+    public string Subject { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(4)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -86,25 +86,25 @@ public class IdentityDetailsResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(5)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Subject.
     /// </summary>
     [ProtoMember(1)]
-    public string Subject { get; set; }
+    public string Subject { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the UserName.
     /// </summary>
     [ProtoMember(3)]
-    public string UserName { get; set; }
+    public string UserName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OnBehalfOf.
@@ -123,13 +123,13 @@ public class GetIdentitiesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -142,11 +142,11 @@ public class AllIdentitiesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }

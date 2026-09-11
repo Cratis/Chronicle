@@ -18,17 +18,17 @@ public class ConcurrencyViolation
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(1)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ExpectedSequenceNumber.
     /// </summary>
     [ProtoMember(2)]
-    public global::System.UInt64 ExpectedSequenceNumber { get; set; }
+    public global::System.UInt64 ExpectedSequenceNumber { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the ActualSequenceNumber.
     /// </summary>
     [ProtoMember(3)]
-    public global::System.UInt64 ActualSequenceNumber { get; set; }
+    public global::System.UInt64 ActualSequenceNumber { get; set; } = new();
 }

@@ -79,19 +79,19 @@ public class AddExternalServiceRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(2)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(3)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EndpointType.
@@ -103,7 +103,7 @@ public class AddExternalServiceRequest
     /// Gets or sets the Url.
     /// </summary>
     [ProtoMember(5)]
-    public string Url { get; set; }
+    public string Url { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the AuthorizationType.
@@ -115,37 +115,37 @@ public class AddExternalServiceRequest
     /// Gets or sets the BasicUsername.
     /// </summary>
     [ProtoMember(7)]
-    public string BasicUsername { get; set; }
+    public string BasicUsername { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the BasicPassword.
     /// </summary>
     [ProtoMember(8)]
-    public string BasicPassword { get; set; }
+    public string BasicPassword { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the BearerToken.
     /// </summary>
     [ProtoMember(9)]
-    public string BearerToken { get; set; }
+    public string BearerToken { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OAuthAuthority.
     /// </summary>
     [ProtoMember(10)]
-    public string OAuthAuthority { get; set; }
+    public string OAuthAuthority { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OAuthClientId.
     /// </summary>
     [ProtoMember(11)]
-    public string OAuthClientId { get; set; }
+    public string OAuthClientId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OAuthClientSecret.
     /// </summary>
     [ProtoMember(12)]
-    public string OAuthClientSecret { get; set; }
+    public string OAuthClientSecret { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Headers.
@@ -157,7 +157,7 @@ public class AddExternalServiceRequest
     /// Gets or sets the Host.
     /// </summary>
     [ProtoMember(14)]
-    public string Host { get; set; }
+    public string Host { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Port.
@@ -169,19 +169,19 @@ public class AddExternalServiceRequest
     /// Gets or sets the Database.
     /// </summary>
     [ProtoMember(16)]
-    public string Database { get; set; }
+    public string Database { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Username.
     /// </summary>
     [ProtoMember(17)]
-    public string Username { get; set; }
+    public string Username { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Password.
     /// </summary>
     [ProtoMember(18)]
-    public string Password { get; set; }
+    public string Password { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Options.
@@ -200,7 +200,7 @@ public class AddExternalServicesRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ExternalServices.
@@ -219,13 +219,13 @@ public class RemoveExternalServiceRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ExternalServiceId.
     /// </summary>
     [ProtoMember(2)]
-    public string ExternalServiceId { get; set; }
+    public string ExternalServiceId { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -238,7 +238,7 @@ public class RemoveExternalServicesRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ExternalServices.
@@ -257,13 +257,13 @@ public class ExternalServiceResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EndpointType.
@@ -275,7 +275,7 @@ public class ExternalServiceResponse
     /// Gets or sets the Url.
     /// </summary>
     [ProtoMember(4)]
-    public string Url { get; set; }
+    public string Url { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the AuthorizationType.
@@ -293,7 +293,7 @@ public class ExternalServiceResponse
     /// Gets or sets the Host.
     /// </summary>
     [ProtoMember(7)]
-    public string Host { get; set; }
+    public string Host { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Port.
@@ -305,13 +305,13 @@ public class ExternalServiceResponse
     /// Gets or sets the Database.
     /// </summary>
     [ProtoMember(9)]
-    public string Database { get; set; }
+    public string Database { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Username.
     /// </summary>
     [ProtoMember(10)]
-    public string Username { get; set; }
+    public string Username { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Options.
@@ -330,7 +330,7 @@ public class GetExternalServicesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -343,5 +343,5 @@ public class ObserveExternalServicesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }

@@ -222,7 +222,7 @@ internal sealed class EventSequences(
             Context = source.Context.ToContract(),
             Content = source.Content,
             OriginalContent = source.OriginalContent,
-            Revisions = source.Revisions is null ? null : source.Revisions.Select(element0 => element0.ToContract()).ToList(),
+            Revisions = source.Revisions.Select(element0 => element0.ToContract()).ToList(),
             GenerationalContent = source.GenerationalContent
         };
 

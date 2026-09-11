@@ -63,31 +63,31 @@ public class AddSeedEntryRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventTypeId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventTypeId { get; set; }
+    public string EventTypeId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(5)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the IsGlobal.
@@ -106,7 +106,7 @@ public class SeedEventsRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the GlobalByEventType.
@@ -156,7 +156,7 @@ public class GetGlobalSeedDataRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -169,11 +169,11 @@ public class GetNamespaceSeedDataRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }

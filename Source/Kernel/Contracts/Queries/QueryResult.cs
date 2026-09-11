@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Contracts.Queries;
 [ProtoContract]
 public class QueryResult<TData>
 {
+    TData _data = CreateDefaultData();
+
     /// <summary>
     /// Gets or sets the correlation id associated with the query.
     /// </summary>
@@ -47,10 +49,11 @@ public class QueryResult<TData>
     /// Gets or sets the data returned by the query.
     /// </summary>
     [ProtoMember(6)]
-    public TData Data { get; set; } =
-        typeof(TData).IsGenericType && typeof(TData).GetGenericTypeDefinition() == typeof(IEnumerable<>)
-            ? (TData)Activator.CreateInstance(typeof(List<>).MakeGenericType(typeof(TData).GetGenericArguments()[0]))!
-            : default!;
+    public TData Data
+    {
+        get => _data;
+        set => _data = value is null ? CreateDefaultData() : value;
+    }
 
     /// <summary>
     /// Gets whether the query executed successfully.
@@ -87,4 +90,22 @@ public class QueryResult<TData>
         ExceptionMessages = [exception.Message],
         ExceptionStackTrace = exception.StackTrace ?? string.Empty
     };
+
+    static TData CreateDefaultData()
+    {
+        var dataType = typeof(TData);
+        if (dataType == typeof(string))
+        {
+            return (TData)(object)string.Empty;
+        }
+
+        if (dataType.IsGenericType && dataType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+        {
+            return (TData)Activator.CreateInstance(typeof(List<>).MakeGenericType(dataType.GetGenericArguments()[0]))!;
+        }
+
+        return dataType.IsValueType || dataType.IsAbstract || dataType.IsInterface
+            ? default!
+            : Activator.CreateInstance<TData>();
+    }
 }
