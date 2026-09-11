@@ -1,6 +1,13 @@
 {
-  "schemaVersion": "1.0.0",
-  "version": "1.0.0",
+  "schemaVersion": "1.0",
+  "harnesses": [
+    "claude",
+    "codex",
+    "copilot",
+    "cursor",
+    "opencode",
+    "pi"
+  ],
   "profiles": [
     "cratis/documentation",
     "cratis/engineering/csharp",
@@ -8,13 +15,11 @@
     "cratis/application/csharp",
     "cratis/application/react"
   ],
-  "harnesses": [
-    "claude",
-    "codex",
-    "copilot",
-    "cursor",
-    "pi"
-  ],
-  "updatePolicy": "reviewed-pull-request",
-  "projectContext": ".cratis/PROJECT.md"
+  "languages": [
+    "csharp",
+    "typescript",
+    "kotlin",
+    "elixir",
+    "python"
+  ]
 }

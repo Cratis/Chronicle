@@ -1,1 +1,1 @@
-@.cratis/PROJECT.md
+.cratis/ai/rules/project.md
