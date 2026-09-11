@@ -16,4 +16,7 @@ internal static partial class EventValueProviderExpressionResolversLogging
 {
     [LoggerMessage(LogLevel.Error, "Unsupported event value expression: {Expression} for target property type: {TargetPropertyType}")]
     internal static partial void UnsupportedEventValueExpression(this ILogger<EventValueProviderExpressionResolvers> logger, string expression, JsonObjectType targetPropertyType);
+
+    [LoggerMessage(LogLevel.Warning, "Leaving event value '{Value}' unconverted for schema property {Name}: {Reason}")]
+    internal static partial void EventValueLeftUnconverted(this ILogger<EventValueProviderExpressionResolvers> logger, string value, string name, string reason);
 }
