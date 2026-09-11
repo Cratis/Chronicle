@@ -44,6 +44,16 @@ public static class WellKnownCollectionNames
     public const string EventSequences = "event-sequences";
 
     /// <summary>
+    /// The collection that holds event sequence mutation heads.
+    /// </summary>
+    public const string EventSequenceMutationHeads = "event-sequence-mutation-heads";
+
+    /// <summary>
+    /// The collection that holds event sequence mutation history.
+    /// </summary>
+    public const string EventSequenceMutationHistory = "event-sequence-mutation-history";
+
+    /// <summary>
     /// The collection that holds connected clients state.
     /// </summary>
     public const string ConnectedClients = "connected-clients";
