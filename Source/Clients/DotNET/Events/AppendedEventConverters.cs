@@ -94,19 +94,19 @@ internal static class AppendedEventConverters
     /// <summary>
     /// Convert to a client version of a collection of <see cref="Contracts.Sequences.AppendedEventResponse"/>.
     /// </summary>
-    /// <param name="events">Collection of <see cref="Contracts.Sequences.AppendedEventResponse"/> to convert from.</param>
+    /// <param name="events">Successful query data; protobuf represents an empty repeated field as null.</param>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the events belong to.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the events belong to.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
     /// <returns>An immutable collection of <see cref="AppendedEvent"/>.</returns>
     internal static IImmutableList<AppendedEvent> ToClient(
-        this IEnumerable<Contracts.Sequences.AppendedEventResponse> events,
+        this IEnumerable<Contracts.Sequences.AppendedEventResponse>? events,
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions) =>
-        events.Select(_ => _.ToClient(eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
+        (events ?? []).Select(_ => _.ToClient(eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
 
     /// <summary>
     /// Convert to a client version of a collection of <see cref="Contracts.ReadModelExplorer.Event"/>.
