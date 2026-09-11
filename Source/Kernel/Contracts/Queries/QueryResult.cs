@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Contracts.Queries;
 [ProtoContract]
 public class QueryResult<TData>
 {
+    static readonly TData _emptyCollectionOrDefault =
+        typeof(TData).IsGenericType && typeof(TData).GetGenericTypeDefinition() == typeof(IEnumerable<>)
+            ? (TData)(object)Array.CreateInstance(typeof(TData).GetGenericArguments()[0], 0)
+            : default!;
+
     /// <summary>
     /// Gets or sets the correlation id associated with the query.
     /// </summary>
@@ -47,7 +52,7 @@ public class QueryResult<TData>
     /// Gets or sets the data returned by the query.
     /// </summary>
     [ProtoMember(6)]
-    public TData Data { get; set; } = default!;
+    public TData Data { get; set; } = _emptyCollectionOrDefault;
 
     /// <summary>
     /// Gets whether the query executed successfully.
