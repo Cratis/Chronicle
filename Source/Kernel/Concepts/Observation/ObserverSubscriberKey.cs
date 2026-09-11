@@ -62,7 +62,22 @@ public record ObserverSubscriberKey(
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ObserverKey"/> instance.</returns>
-    public static ObserverSubscriberKey Parse(string key) => KeyHelper.Parse<ObserverSubscriberKey>(key);
+    public static ObserverSubscriberKey Parse(string key)
+    {
+        var parts = key.Split(KeyHelper.Separator);
+        if (parts.Length <= 6)
+        {
+            return KeyHelper.Parse<ObserverSubscriberKey>(key);
+        }
+
+        return new(
+            parts[0],
+            parts[1],
+            parts[2],
+            parts[3],
+            string.Join(KeyHelper.Separator, parts[4..^1]),
+            parts[^1]);
+    }
 
     /// <summary>
     /// Creates an ObserverSubscriberKey from an ObserverKey and an EventSourceId.
