@@ -25,8 +25,8 @@ public class and_there_are_persisted_reducer_and_reactor_observers : given.a_sta
         ]));
 
         _reducerDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReducerDefinition>>([
-            new ReducerDefinition(_reducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true),
-            new ReducerDefinition(_unknownReducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true)
+            new ReducerDefinition(_reducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true, []),
+            new ReducerDefinition(_unknownReducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true, [])
         ]));
 
         _reactorDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReactorDefinition>>([

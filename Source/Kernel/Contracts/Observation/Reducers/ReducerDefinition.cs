@@ -50,4 +50,10 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(8)]
     public ObserverFilters Filters { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the fingerprint of the reducer implementation.
+    /// </summary>
+    [ProtoMember(9)]
+    public string Hash { get; set; } = string.Empty;
 }

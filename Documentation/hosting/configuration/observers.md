@@ -14,6 +14,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "maximumBackoffDelay": 600,
     "quarantineOnFailedPartitionCount": 0,
     "quarantineOnFailedPartitionPercentage": 0.0,
+    "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
     "fanOutStrategy": "round-robin"
   }
@@ -29,8 +30,26 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | backoffDelay | number | 1 | Initial backoff delay in seconds |
 | exponentialBackoffDelayFactor | number | 2 | Exponential backoff multiplier |
 | maximumBackoffDelay | number | 600 | Maximum backoff delay in seconds |
+| definitionEvolution | string | Automatic | Controls whether projection and reducer definition changes apply `Automatic`, `PartialOnly`, or `Manual` evolution. See [Definition evolution](#definition-evolution) |
+| replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
+
+## Definition evolution
+
+Chronicle compares every newly registered projection and reducer definition with its stored definition. It then chooses the minimum operation it can prove correct:
+
+| Classification | Behavior |
+| --- | --- |
+| No action | A newly consumed event type has no historical events, so existing read models cannot change |
+| Partial replay | A projection adds independently mapped event types, or a reducer adds event types that occur only after its previously consumed events for each affected event source. Chronicle applies only those new event types to the affected event sources |
+| Full replay | The mapping, reducer implementation fingerprint, filter, key, join, child structure, or another order-dependent part changed. Chronicle rebuilds the complete observer |
+
+`Automatic` applies every classification. `PartialOnly` applies no-action and partial plans, but creates a replay recommendation when a full replay is required. `Manual` creates a recommendation for both partial and full plans. No-action plans never create recommendations because history cannot be affected.
+
+Chronicle deliberately falls back to full replay when it cannot prove that event sources and mapped properties are independent. Auto-mapping, overlapping property mappings, joins, parent/child relationships, custom keys, removals, and subscriptions to every event can combine historical contributions and therefore cannot use partial replay safely.
+
+Reducer registrations include a fingerprint of their reducer methods. Changing reducer code therefore triggers classification even when its event-type subscription is unchanged. Reducer methods are imperative, so Chronicle only chooses a partial reducer replay when history proves every newly consumed event follows all previously consumed events within its event source. Interleaved history falls back to full replay.
 
 ## Subscriber timeout
 
