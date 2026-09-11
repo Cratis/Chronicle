@@ -66,15 +66,20 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             // deleted lookups), and a read-side key resolver must survive them. Conversions that
             // already succeed keep working; only the hard TypeConversion.Convert failure - a
             // FormatException, InvalidCast or NotSupported shape - degrades to the raw value.
+            // Throwing from the graceful path itself is never acceptable - this runs inside the
+            // partition-consuming pipeline, and any exception there quarantines the partition.
+            string converted;
             try
             {
-                return TypeConversion.Convert(schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(string), input);
+                converted = (string)TypeConversion.Convert(schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(string), input);
             }
             catch (Exception ex) when (ex is FormatException or InvalidCastException or NotSupportedException)
             {
                 logger.EventValueLeftUnconverted(text, schemaProperty.Name, ex.Message);
                 return input;
             }
+
+            return converted;
         }
 
         if (input is ExpandoObject)
