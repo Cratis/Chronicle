@@ -47,7 +47,12 @@ public class QueryResult<TData>
     /// Gets or sets the data returned by the query.
     /// </summary>
     [ProtoMember(6)]
-    public TData Data { get; set; } = default!;
+    public TData Data { get; set; } = EmptyCollectionOrDefault;
+
+    static TData EmptyCollectionOrDefault =>
+        typeof(TData).IsGenericType && typeof(TData).GetGenericTypeDefinition() == typeof(IEnumerable<>)
+            ? (TData)(object)Array.CreateInstance(typeof(TData).GetGenericArguments()[0], 0)
+            : default!;
 
     /// <summary>
     /// Gets whether the query executed successfully.

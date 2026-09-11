@@ -106,7 +106,7 @@ internal static class AppendedEventConverters
         EventStoreNamespaceName @namespace,
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions) =>
-        (events ?? []).Select(_ => _.ToClient(eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
+        events.Select(_ => _.ToClient(eventStore, @namespace, eventTypes, jsonSerializerOptions)).ToImmutableList();
 
     /// <summary>
     /// Convert to a client version of a collection of <see cref="Contracts.ReadModelExplorer.Event"/>.
