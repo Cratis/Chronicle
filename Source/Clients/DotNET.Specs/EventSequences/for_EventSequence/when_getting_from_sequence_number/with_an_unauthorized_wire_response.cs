@@ -15,5 +15,5 @@ public class with_an_unauthorized_wire_response : given.an_event_sequence_with_a
     async Task Because() => _error = await Catch.Exception(() => _eventSequence.GetFromSequenceNumber(EventSequenceNumber.First));
 
     [Fact] void should_preserve_the_query_failure() => _error.ShouldBeOfExactType<QueryFailed>();
-    [Fact] void should_receive_no_data() => _wireResponse.Data.ShouldBeNull();
+    [Fact] void should_remain_unauthorized() => _wireResponse.IsAuthorized.ShouldBeFalse();
 }

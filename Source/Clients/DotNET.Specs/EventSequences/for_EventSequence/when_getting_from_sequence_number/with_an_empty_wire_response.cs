@@ -16,6 +16,6 @@ public class with_an_empty_wire_response : given.an_event_sequence_with_a_wire_r
     async Task Because() => _result = await _eventSequence.GetFromSequenceNumber(EventSequenceNumber.First);
 
     [Fact] void should_receive_a_successful_query() => _wireResponse.IsSuccess.ShouldBeTrue();
-    [Fact] void should_receive_an_absent_repeated_field() => _wireResponse.Data.ShouldBeNull();
+    [Fact] void should_deserialize_an_empty_collection() => _wireResponse.Data.ShouldBeEmpty();
     [Fact] void should_return_an_empty_history() => _result.ShouldBeEmpty();
 }
