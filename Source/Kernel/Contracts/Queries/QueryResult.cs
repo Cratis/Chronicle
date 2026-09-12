@@ -48,6 +48,10 @@ public class QueryResult<TData>
     /// <summary>
     /// Gets or sets the data returned by the query.
     /// </summary>
+    /// <remarks>
+    /// Empty payloads are initialized even for unsuccessful queries. Check <see cref="IsSuccess"/>
+    /// before interpreting the data; an initialized response does not indicate that an entity exists.
+    /// </remarks>
     [ProtoMember(6)]
     public TData Data
     {
@@ -97,6 +101,11 @@ public class QueryResult<TData>
         if (dataType == typeof(string))
         {
             return (TData)(object)string.Empty;
+        }
+
+        if (dataType.IsArray)
+        {
+            return (TData)(object)Array.CreateInstance(dataType.GetElementType()!, new int[dataType.GetArrayRank()]);
         }
 
         if (dataType.IsGenericType && dataType.GetGenericTypeDefinition() == typeof(IEnumerable<>))

@@ -59,6 +59,10 @@ public class CommandResult<TResponse>
     /// <summary>
     /// Gets or sets the response produced by the command.
     /// </summary>
+    /// <remarks>
+    /// Empty payloads are initialized even for unsuccessful commands. Check <see cref="IsSuccess"/>
+    /// before interpreting the response; an initialized response does not indicate that the command ran.
+    /// </remarks>
     [ProtoMember(7)]
     public TResponse Response
     {
@@ -122,6 +126,11 @@ public class CommandResult<TResponse>
         if (responseType == typeof(string))
         {
             return (TResponse)(object)string.Empty;
+        }
+
+        if (responseType.IsArray)
+        {
+            return (TResponse)(object)Array.CreateInstance(responseType.GetElementType()!, new int[responseType.GetArrayRank()]);
         }
 
         if (responseType.IsGenericType && responseType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
