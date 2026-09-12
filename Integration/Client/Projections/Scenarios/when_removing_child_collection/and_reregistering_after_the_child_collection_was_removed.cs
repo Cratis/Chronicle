@@ -55,7 +55,8 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
             var replayJobs = await EventStore.Jobs.WaitForThereToBeJobOfType("ReplayObserver");
             foreach (var job in replayJobs)
             {
-                await EventStore.Jobs.WaitTillJobMeetsPredicate(job.Id, state => state.Status == JobStatus.CompletedSuccessfully);
+                var completedJob = await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job.Id);
+                completedJob?.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
             }
             await Projection.WaitTillSubscribed();
 

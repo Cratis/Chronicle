@@ -36,6 +36,17 @@ public class ReducerDefinition
     public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets whether the reducer actively observes events.
+    /// </summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the implementation fingerprint.
+    /// </summary>
+    [MaxLength(64)]
+    public string Hash { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the tags the reducer belongs to, stored as a JSON array string.
     /// </summary>
     public string Tags { get; set; } = "[]";
