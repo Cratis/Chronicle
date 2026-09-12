@@ -81,14 +81,20 @@ internal static class ProjectionReplayRecommendationEvaluator
             return false;
         }
 
+        // Distinct leaf paths can still overwrite each other through a shared parent object.
+        // Only disjoint top-level properties prove independence without analyzing those writes.
         var existingProperties = previousDefinition.From.Values
             .SelectMany(from => from.Properties.Keys)
-            .ToHashSet();
+            .Select(property => property.Segments.FirstOrDefault()?.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var addedProperties = currentDefinition.From
             .Where(_ => addedEventTypeSet.Contains(_.Key))
-            .SelectMany(_ => _.Value.Properties.Keys);
+            .SelectMany(_ => _.Value.Properties.Keys)
+            .Select(property => property.Segments.FirstOrDefault()?.Value)
+            .ToArray();
 
-        return !addedProperties.Any(existingProperties.Contains);
+        return !existingProperties.Contains(null) &&
+            addedProperties.All(property => property is not null && !existingProperties.Contains(property));
     }
 
     /// <summary>

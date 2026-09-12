@@ -22,5 +22,5 @@ public class and_only_an_event_type_was_added : Specification
     [Fact] void should_return_the_added_event_type() => _result.ShouldContainOnly(_addedEventType);
 
     static ReducerDefinition CreateDefinition(IEnumerable<EventType> eventTypes) =>
-        new("reducer", EventSequenceId.Log, eventTypes.Select(_ => new EventTypeWithKeyExpression(_, WellKnownExpressions.EventSourceId)), "read-model", true, Tags: [], Hash: "hash");
+        new("reducer", EventSequenceId.Log, eventTypes.Select(_ => new EventTypeWithKeyExpression(_, WellKnownExpressions.EventSourceId)), "read-model", true, Tags: [], Filters: new ObserverFilters(["tag"]), Hash: "hash");
 }
