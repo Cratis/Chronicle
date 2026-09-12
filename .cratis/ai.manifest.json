@@ -1,5 +1,5 @@
 {
-  "SourceRevision": "d25523dd7a72e095bb6cccb6c8f46f417defe006",
+  "SourceRevision": "4c6cd1228d1306512d1c9c367783f296a4e402b3",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
@@ -259,7 +259,7 @@
     {
       "Source": "rules/capability-is-not-authority.md",
       "Destination": "rules/capability-is-not-authority.md",
-      "Hash": "166E4121E40D4F2497AF04804B4B85C6538951EB29DC4D8587EED2E22D567284"
+      "Hash": "76B56889D8D4F2A2004892FBEFDAC3EF9A64C5F458E34B28458BC853E542EB1B"
     },
     {
       "Source": "rules/code-quality.csharp.md",
@@ -344,7 +344,7 @@
     {
       "Source": "rules/general.md",
       "Destination": "rules/general.md",
-      "Hash": "0F4394073515AECA1877164EC7A6DCBD1FA24479CC67358D8077318DC0547732"
+      "Hash": "5E3672CD42B96995004526648099608431CD87B3BEA75A418530FD56EDBF65E1"
     },
     {
       "Source": "rules/git-commits.md",
@@ -899,7 +899,7 @@
     {
       "Source": "skills/cratis-engineering-decision-record/SKILL.md",
       "Destination": "skills/cratis-engineering-decision-record/SKILL.md",
-      "Hash": "C1020A4ACCE43D32EF626393DD9FEE8B4F75C45F1F711A141B6E2C8179991BCC"
+      "Hash": "FAF058B9A55FFDEE12AA83813F6218230BEAFE89CCC4E52F4FE6563160AEBDD1"
     },
     {
       "Source": "skills/cratis-engineering-decision-record/references/record-format.md",
