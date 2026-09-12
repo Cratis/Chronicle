@@ -79,19 +79,19 @@ public class DeleteJobRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the JobId.
     /// </summary>
     [ProtoMember(3)]
-    public Guid JobId { get; set; }
+    public Guid JobId { get; set; } = new();
 }
 
 /// <summary>
@@ -104,19 +104,19 @@ public class ResumeJobRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the JobId.
     /// </summary>
     [ProtoMember(3)]
-    public Guid JobId { get; set; }
+    public Guid JobId { get; set; } = new();
 }
 
 /// <summary>
@@ -129,19 +129,19 @@ public class StopJobRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the JobId.
     /// </summary>
     [ProtoMember(3)]
-    public Guid JobId { get; set; }
+    public Guid JobId { get; set; } = new();
 }
 
 /// <summary>
@@ -160,13 +160,13 @@ public class JobStepSummaryResponse
     /// Gets or sets the Type.
     /// </summary>
     [ProtoMember(2)]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(3)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Status.
@@ -184,7 +184,7 @@ public class JobStepSummaryResponse
     /// Gets or sets the Progress.
     /// </summary>
     [ProtoMember(6)]
-    public global::Cratis.Chronicle.Contracts.Jobs.JobStepProgress Progress { get; set; }
+    public global::Cratis.Chronicle.Contracts.Jobs.JobStepProgress Progress { get; set; } = new();
 }
 
 /// <summary>
@@ -197,19 +197,19 @@ public class GetJobStepsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the jobId.
     /// </summary>
     [ProtoMember(3)]
-    public Guid JobId { get; set; }
+    public Guid JobId { get; set; } = new();
 }
 
 /// <summary>
@@ -228,13 +228,13 @@ public class JobSummaryResponse
     /// Gets or sets the Details.
     /// </summary>
     [ProtoMember(2)]
-    public string Details { get; set; }
+    public string Details { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Type.
     /// </summary>
     [ProtoMember(3)]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Status.
@@ -246,7 +246,7 @@ public class JobSummaryResponse
     /// Gets or sets the Created.
     /// </summary>
     [ProtoMember(5)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Created { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Created { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the StatusChanges.
@@ -258,7 +258,7 @@ public class JobSummaryResponse
     /// Gets or sets the Progress.
     /// </summary>
     [ProtoMember(7)]
-    public global::Cratis.Chronicle.Contracts.Jobs.JobProgress Progress { get; set; }
+    public global::Cratis.Chronicle.Contracts.Jobs.JobProgress Progress { get; set; } = new();
 }
 
 /// <summary>
@@ -271,13 +271,13 @@ public class AllJobsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -290,11 +290,11 @@ public class ObserveJobsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }

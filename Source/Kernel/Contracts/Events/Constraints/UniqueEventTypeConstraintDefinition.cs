@@ -18,5 +18,5 @@ public class UniqueEventTypeConstraintDefinition
     /// EventTypeId this replaces and is reserved so an older payload is ignored rather than misread.
     /// </remarks>
     [ProtoMember(2)]
-    public IList<string> EventTypeIds { get; set; }
+    public IList<string> EventTypeIds { get; set; } = [];
 }

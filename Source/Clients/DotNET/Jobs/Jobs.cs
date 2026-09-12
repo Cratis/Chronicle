@@ -58,6 +58,6 @@ public class Jobs(IEventStore eventStore) : IJobs
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace
         }).EnsureSuccess();
-        return (jobs ?? []).ToClient(eventStore);
+        return jobs.ToClient(eventStore);
     }
 }

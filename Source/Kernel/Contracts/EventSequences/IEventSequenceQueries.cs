@@ -39,29 +39,29 @@ public class IsStreamCompletedRequest
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(1)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(2)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(3)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventStreamType.
     /// </summary>
     [ProtoMember(4)]
-    public string EventStreamType { get; set; }
+    public string EventStreamType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventStreamId.
     /// </summary>
     [ProtoMember(5)]
-    public string EventStreamId { get; set; }
+    public string EventStreamId { get; set; } = string.Empty;
 }

@@ -17,6 +17,8 @@ namespace Cratis.Chronicle.Contracts.Commands;
 [ProtoContract]
 public class CommandResult<TResponse>
 {
+    TResponse _response = ResponseDefaults.Create<TResponse>();
+
     /// <summary>
     /// Gets or sets the correlation id associated with the command.
     /// </summary>
@@ -57,8 +59,16 @@ public class CommandResult<TResponse>
     /// <summary>
     /// Gets or sets the response produced by the command.
     /// </summary>
+    /// <remarks>
+    /// Empty payloads are initialized even for unsuccessful commands. Check <see cref="IsSuccess"/>
+    /// before interpreting the response; an initialized response does not indicate that the command ran.
+    /// </remarks>
     [ProtoMember(7)]
-    public TResponse Response { get; set; } = default!;
+    public TResponse Response
+    {
+        get => _response;
+        set => _response = value is null ? ResponseDefaults.Create<TResponse>() : value;
+    }
 
     /// <summary>
     /// Gets whether the command executed successfully.

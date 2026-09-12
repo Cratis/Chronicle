@@ -18,37 +18,37 @@ public class EventForEventSourceId
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(1)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceType.
     /// </summary>
     [ProtoMember(2)]
-    public string EventSourceType { get; set; }
+    public string EventSourceType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamType.
     /// </summary>
     [ProtoMember(3)]
-    public string EventStreamType { get; set; }
+    public string EventStreamType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventStreamId { get; set; }
+    public string EventStreamId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventType.
     /// </summary>
     [ProtoMember(5)]
-    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(6)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Tags.

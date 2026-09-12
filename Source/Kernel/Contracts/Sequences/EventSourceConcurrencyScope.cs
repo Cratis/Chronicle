@@ -18,11 +18,11 @@ public class EventSourceConcurrencyScope
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(1)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Scope.
     /// </summary>
     [ProtoMember(2)]
-    public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope Scope { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope Scope { get; set; } = new();
 }

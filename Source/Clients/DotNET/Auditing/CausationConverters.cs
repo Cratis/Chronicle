@@ -43,7 +43,7 @@ internal static class CausationConverters
     /// <param name="causation"><see cref="Contracts.Auditing.Causation"/> to convert from.</param>
     /// <returns>Converted <see cref="Causation"/>.</returns>
     internal static Causation ToClient(this Contracts.Auditing.Causation causation) =>
-        new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
+        new(causation.Occurred, causation.Type, causation.Properties);
 
     /// <summary>
     /// Convert to Chronicle representation.
@@ -59,7 +59,7 @@ internal static class CausationConverters
     /// <param name="causation"><see cref="Contracts.Sequences.Causation"/> to convert from.</param>
     /// <returns>Converted <see cref="Causation"/>.</returns>
     internal static Causation ToClient(this Contracts.Sequences.Causation causation) =>
-        new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
+        new(causation.Occurred, causation.Type, causation.Properties);
 
     /// <summary>
     /// Convert to the <see cref="Contracts.Sequences.Causation"/> contract representation.

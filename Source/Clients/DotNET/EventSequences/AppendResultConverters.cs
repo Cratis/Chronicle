@@ -24,8 +24,8 @@ internal static class AppendResultConverters
         {
             CorrelationId = result.CorrelationId,
             SequenceNumber = result.SequenceNumber,
-            ConstraintViolations = (result.ConstraintViolations ?? []).Select(v => v.ToClient()).ToImmutableList(),
-            Errors = (result.Errors ?? []).Select(e => (AppendError)e).ToImmutableList(),
+            ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
+            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
             ConcurrencyViolation = result.ConcurrencyViolation?.ToClient(),
             ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
@@ -41,10 +41,10 @@ internal static class AppendResultConverters
         return new AppendManyResult
         {
             CorrelationId = result.CorrelationId,
-            SequenceNumbers = (result.SequenceNumbers ?? []).Select(_ => (EventSequenceNumber)_).ToImmutableList(),
-            ConstraintViolations = (result.ConstraintViolations ?? []).Select(v => v.ToClient()).ToImmutableList(),
-            Errors = (result.Errors ?? []).Select(e => (AppendError)e).ToImmutableList(),
-            ConcurrencyViolations = (result.ConcurrencyViolations ?? []).Select(_ => _.ToClient()).ToImmutableList(),
+            SequenceNumbers = result.SequenceNumbers.Select(_ => (EventSequenceNumber)_).ToImmutableList(),
+            ConstraintViolations = result.ConstraintViolations.Select(v => v.ToClient()).ToImmutableList(),
+            Errors = result.Errors.Select(e => (AppendError)e).ToImmutableList(),
+            ConcurrencyViolations = result.ConcurrencyViolations.Select(_ => _.ToClient()).ToImmutableList(),
             ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed
         };
     }

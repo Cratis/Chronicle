@@ -39,7 +39,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
         Directory.CreateDirectory(folderPath);
 
-        var requestResponseTypes = new List<(string TypeName, List<(string PropName, string PropType)> Properties)>();
+        var requestResponseTypes = new List<(string TypeName, List<(string PropName, string PropType, bool Initialize)> Properties)>();
         var responseTypeNamesByClrType = new Dictionary<Type, string>();
 
         var interfaceMembers = new List<MemberDeclarationSyntax>();
@@ -158,7 +158,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             var existingIndexes = ProtoMemberIndexReader.ReadExistingIndexes(filePath, type.Name);
             var properties = type.GetProperties()
                 .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
-                .Select(p => (p.Name, NullableAnnotations.For(MemberTypeName(p.PropertyType, targetNamespace), p)))
+                .Select(p => BuildDtoPropertyDefinition(p, targetNamespace))
                 .ToList();
 
             typeDecl = BuildDtoClass(type.Name, properties, existingIndexes);
@@ -242,7 +242,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         QueryMethodDefinition method,
         Type readModelType,
         string targetNamespace,
-        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
+        List<(string TypeName, List<(string PropName, string PropType, bool Initialize)> Properties)> requestResponseTypes)
     {
         var returnType = method.ReturnType;
         var isObservable = TypeHelper.IsObservableType(returnType);
@@ -285,7 +285,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             // implementation generator has to apply identically.
             var props = method.Parameters
                 .Where(p => !ParameterClassification.IsDependency(p.ParameterType))
-                .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)))
+                .Select(p => BuildDtoPropertyDefinition(p, targetNamespace))
                 .ToList();
 
             if (props.Count > 0 && !requestResponseTypes.Exists(r => r.TypeName == requestTypeName))
@@ -331,7 +331,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     static MethodDeclarationSyntax BuildKeyedQueryMethod(
         KeyedQueryDefinition method,
         string targetNamespace,
-        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
+        List<(string TypeName, List<(string PropName, string PropType, bool Initialize)> Properties)> requestResponseTypes)
     {
         var returnType = method.ReturnType;
         var isObservable = TypeHelper.IsObservableType(returnType);
@@ -362,10 +362,10 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         // The grain key's fields come first, then the method's own parameters - the implementation generator
         // reads the same two groups in the same order to reconstruct the key and call the method.
         var keyProps = method.KeyParameters
-            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)));
+            .Select(p => BuildDtoPropertyDefinition(p, targetNamespace));
         var methodProps = method.Parameters
             .Where(p => !ParameterClassification.IsDependency(p.ParameterType))
-            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)));
+            .Select(p => BuildDtoPropertyDefinition(p, targetNamespace));
         var props = keyProps.Concat(methodProps).ToList();
 
         if (props.Count > 0)
@@ -446,17 +446,17 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
     static ClassDeclarationSyntax BuildDtoClass(
         string typeName,
-        List<(string PropName, string PropType)> properties,
+        List<(string PropName, string PropType, bool Initialize)> properties,
         IReadOnlyDictionary<string, int> existingIndexes)
     {
         var nextIndex = existingIndexes.Values.DefaultIfEmpty(0).Max() + 1;
 
         var propertyMembers = new List<MemberDeclarationSyntax>();
-        foreach (var (propName, propType) in properties)
+        foreach (var (propName, propType, initialize) in properties)
         {
             var pascalName = ToPascalCase(propName);
             var index = existingIndexes.TryGetValue(pascalName, out var existing) ? existing : nextIndex++;
-            propertyMembers.Add(BuildDtoProperty(propName, propType, index));
+            propertyMembers.Add(BuildDtoProperty(propName, propType, initialize, index));
         }
 
         return SyntaxFactory.ClassDeclaration(typeName)
@@ -468,7 +468,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             .AddMembers([.. propertyMembers]);
     }
 
-    static PropertyDeclarationSyntax BuildDtoProperty(string propName, string propType, int protoMemberIndex)
+    static PropertyDeclarationSyntax BuildDtoProperty(string propName, string propType, bool initialize, int protoMemberIndex)
     {
         var property = SyntaxFactory.PropertyDeclaration(
                 SyntaxFactory.ParseTypeName(propType),
@@ -495,49 +495,83 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         // elements on the wire - deserializes as null rather than empty, because protobuf-net only ever assigns
         // through the setter when elements are actually present. Defaulting it matches what Core's own non-nullable
         // annotation promises callers: always present, never null.
-        var initializer = BuildDtoPropertyInitializer(propType);
+        var initializer = BuildDtoPropertyInitializer(propType, initialize);
         return initializer is null
             ? property
             : property.WithInitializer(initializer).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
     }
 
-    static EqualsValueClauseSyntax? BuildDtoPropertyInitializer(string propType)
+    static EqualsValueClauseSyntax? BuildDtoPropertyInitializer(string propType, bool initialize)
     {
-        if (IsNonNullableCollection(propType))
+        // protobuf-net can populate the existing collection through its getter. Interface-typed
+        // members therefore need mutable concrete defaults, not arrays or shared empty instances.
+        if (MutableCollectionType(propType) is { } concreteType)
         {
-            // A `[]` collection expression targeting the IEnumerable<T> interface has no natural mutable
-            // implementation, so the compiler lowers it to an empty array. protobuf-net.Grpc's server-side
-            // deserializer reuses whatever instance the getter already returns to populate a repeated field -
-            // via ICollection<T>.Add - rather than replacing it, and arrays report ICollection<T>.IsReadOnly
-            // as true, so any incoming payload that actually carries elements throws. Seed a concrete List<T>
-            // instead so the property stays both non-null and mutable.
-            var concreteType = propType.Replace("IEnumerable<", "List<", StringComparison.Ordinal);
             return SyntaxFactory.EqualsValueClause(
                 SyntaxFactory.ObjectCreationExpression(SyntaxFactory.ParseTypeName(concreteType))
                     .WithArgumentList(SyntaxFactory.ArgumentList()));
         }
 
-        if (IsNonNullableDictionary(propType))
+        if (!initialize)
         {
-            // IDictionary<TKey,TValue> has no natural collection-expression target type, so the concrete
-            // Dictionary<TKey,TValue> is spelled out instead. The interface can render either short ("IDictionary<...>")
-            // or fully qualified ("global::System.Collections.Generic.IDictionary<...>") depending on how GetTypeName
-            // reached it - swapping just the "IDictionary<" token keeps whichever prefix and the (possibly
-            // nested-generic) key/value arguments intact without having to parse them apart.
-            var concreteType = propType.Replace("IDictionary<", "Dictionary<", StringComparison.Ordinal);
-            return SyntaxFactory.EqualsValueClause(
-                SyntaxFactory.ObjectCreationExpression(SyntaxFactory.ParseTypeName(concreteType))
-                    .WithArgumentList(SyntaxFactory.ArgumentList()));
+            return null;
         }
 
-        return null;
+        if (propType.EndsWith("[]", StringComparison.Ordinal))
+        {
+            return SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseExpression("[]"));
+        }
+
+        if (propType == "string")
+        {
+            return SyntaxFactory.EqualsValueClause(
+                SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)),
+                    SyntaxFactory.IdentifierName(nameof(string.Empty))));
+        }
+
+        return SyntaxFactory.EqualsValueClause(
+            SyntaxFactory.ImplicitObjectCreationExpression()
+                .WithArgumentList(SyntaxFactory.ArgumentList()));
     }
 
-    static bool IsNonNullableCollection(string propType) =>
-        propType.StartsWith("IEnumerable<", StringComparison.Ordinal) && !propType.EndsWith('?');
+    static (string PropName, string PropType, bool Initialize) BuildDtoPropertyDefinition(ParameterInfo parameter, string targetNamespace)
+    {
+        var propertyType = NullableAnnotations.For(MemberTypeName(parameter.ParameterType, targetNamespace), parameter);
+        return (parameter.Name ?? "value", propertyType, ShouldInitialize(parameter.ParameterType, propertyType));
+    }
 
-    static bool IsNonNullableDictionary(string propType) =>
-        propType.Contains("IDictionary<", StringComparison.Ordinal) && !propType.EndsWith('?');
+    static (string PropName, string PropType, bool Initialize) BuildDtoPropertyDefinition(PropertyInfo property, string targetNamespace)
+    {
+        var propertyType = NullableAnnotations.For(MemberTypeName(property.PropertyType, targetNamespace), property);
+        return (property.Name, propertyType, ShouldInitialize(property.PropertyType, propertyType));
+    }
+
+    static bool ShouldInitialize(Type sourceType, string propertyType) =>
+        !propertyType.EndsWith('?') &&
+        (sourceType == typeof(string) || !sourceType.IsValueType || TransportTypes.NameFor(sourceType) is not null);
+
+    static string? MutableCollectionType(string propertyType)
+    {
+        var argumentsStart = propertyType.IndexOf('<');
+        if (propertyType.EndsWith('?') || argumentsStart < 0)
+        {
+            return null;
+        }
+
+        var outerType = propertyType[..argumentsStart];
+        var nameStart = outerType.LastIndexOf('.') + 1;
+        var concreteName = outerType[nameStart..] switch
+        {
+            "IEnumerable" or "ICollection" or "IList" or "IReadOnlyCollection" or "IReadOnlyList" => "List",
+            "IDictionary" or "IReadOnlyDictionary" => "Dictionary",
+            "ISet" or "IReadOnlySet" => "HashSet",
+            _ => null
+        };
+
+        return concreteName is null ? null : $"{outerType[..nameStart]}{concreteName}{propertyType[argumentsStart..]}";
+    }
 
     static ParameterSyntax BuildCallContextParameter() =>
         SyntaxFactory.Parameter(SyntaxFactory.Identifier("callContext"))
@@ -603,7 +637,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     static string? GenerateCommandRequestType(
         CommandDefinition command,
         string targetNamespace,
-        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes)
+        List<(string TypeName, List<(string PropName, string PropType, bool Initialize)> Properties)> requestResponseTypes)
     {
         var parameters = command.Parameters;
         if (parameters.Count == 0)
@@ -613,7 +647,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
         var requestTypeName = $"{command.Name}Request";
         var properties = parameters
-            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)))
+            .Select(p => BuildDtoPropertyDefinition(p, targetNamespace))
             .ToList();
 
         requestResponseTypes.Add((requestTypeName, properties));
@@ -623,7 +657,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     static string? GenerateCommandResponseType(
         CommandDefinition command,
         string targetNamespace,
-        List<(string TypeName, List<(string PropName, string PropType)> Properties)> requestResponseTypes,
+        List<(string TypeName, List<(string PropName, string PropType, bool Initialize)> Properties)> requestResponseTypes,
         Dictionary<Type, string> responseTypeNamesByClrType)
     {
         if (command.ResponseType is not { } responseType)
@@ -653,7 +687,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         {
             var properties = responseType.GetProperties()
                 .Where(_ => _.CanRead && _.GetIndexParameters().Length == 0)
-                .Select(_ => (_.Name, NullableAnnotations.For(MemberTypeName(_.PropertyType, targetNamespace), _)))
+                .Select(_ => BuildDtoPropertyDefinition(_, targetNamespace))
                 .ToList();
 
             requestResponseTypes.Add((responseTypeName, properties));
@@ -716,7 +750,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         return observableInterface?.GetGenericArguments()[0];
     }
 
-    static List<(string PropName, string PropType)> GetReadModelProperties(Type readModelType, string targetNamespace)
+    static List<(string PropName, string PropType, bool Initialize)> GetReadModelProperties(Type readModelType, string targetNamespace)
     {
         var constructor = readModelType.GetConstructors().FirstOrDefault();
         if (constructor is null)
@@ -725,7 +759,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         }
 
         return constructor.GetParameters()
-            .Select(p => (p.Name ?? "value", NullableAnnotations.For(MemberTypeName(p.ParameterType, targetNamespace), p)))
+            .Select(p => BuildDtoPropertyDefinition(p, targetNamespace))
             .ToList();
     }
 

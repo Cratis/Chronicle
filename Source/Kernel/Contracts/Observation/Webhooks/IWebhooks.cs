@@ -79,25 +79,25 @@ public class AddWebhookRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Url.
     /// </summary>
     [ProtoMember(3)]
-    public string Url { get; set; }
+    public string Url { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventTypes.
@@ -115,37 +115,37 @@ public class AddWebhookRequest
     /// Gets or sets the BasicUsername.
     /// </summary>
     [ProtoMember(7)]
-    public string BasicUsername { get; set; }
+    public string BasicUsername { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the BasicPassword.
     /// </summary>
     [ProtoMember(8)]
-    public string BasicPassword { get; set; }
+    public string BasicPassword { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the BearerToken.
     /// </summary>
     [ProtoMember(9)]
-    public string BearerToken { get; set; }
+    public string BearerToken { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OAuthAuthority.
     /// </summary>
     [ProtoMember(10)]
-    public string OAuthAuthority { get; set; }
+    public string OAuthAuthority { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OAuthClientId.
     /// </summary>
     [ProtoMember(11)]
-    public string OAuthClientId { get; set; }
+    public string OAuthClientId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OAuthClientSecret.
     /// </summary>
     [ProtoMember(12)]
-    public string OAuthClientSecret { get; set; }
+    public string OAuthClientSecret { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Headers.
@@ -176,7 +176,7 @@ public class AddWebhooksRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Webhooks.
@@ -195,13 +195,13 @@ public class RemoveWebhookRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the WebhookId.
     /// </summary>
     [ProtoMember(2)]
-    public string WebhookId { get; set; }
+    public string WebhookId { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -214,7 +214,7 @@ public class RemoveWebhooksRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Webhooks.
@@ -233,25 +233,25 @@ public class WebhookDetailsResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(9)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Identifier.
     /// </summary>
     [ProtoMember(1)]
-    public string Identifier { get; set; }
+    public string Identifier { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Url.
     /// </summary>
     [ProtoMember(2)]
-    public string Url { get; set; }
+    public string Url { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventTypes.
@@ -294,7 +294,7 @@ public class GetWebhooksRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -307,5 +307,5 @@ public class ObserveWebhooksRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }

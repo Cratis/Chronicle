@@ -47,7 +47,7 @@ internal sealed class MaterializedReadModels(
             request.EventStore,
             request.Namespace,
             schema,
-            instances ?? []);
+            instances);
 
         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()

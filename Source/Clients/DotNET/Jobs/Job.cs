@@ -61,6 +61,6 @@ public class Job(IEventStore eventStore)
             JobId = Id
         }).EnsureSuccess();
 
-        return (result ?? []).ToClient();
+        return result.ToClient();
     }
 }

@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Context">The context for the event.</param>
 /// <param name="Content">The JSON representation content of the event.</param>
 /// <param name="OriginalContent">The original JSON content before any revisions. Only present when revised.</param>
-/// <param name="Revisions">The revisions applied to this event, if any.</param>
+/// <param name="Revisions">The revisions applied to this event.</param>
 /// <param name="GenerationalContent">Content for each generation stored for this event, keyed by generation number.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.EventSequences)]
@@ -29,9 +29,9 @@ public record AppendedEvent(
     string Id,
     EventContext Context,
     string Content,
-    string OriginalContent = "",
-    IEnumerable<EventRevision>? Revisions = null,
-    IEnumerable<KeyValuePair<int, string>>? GenerationalContent = null)
+    string OriginalContent,
+    IEnumerable<EventRevision> Revisions,
+    IEnumerable<KeyValuePair<int, string>> GenerationalContent)
 {
     /// <summary>
     /// Query events in an event sequence, narrowed and ordered by the values a saved query carries.

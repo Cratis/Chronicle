@@ -18,7 +18,7 @@ public class ProjectionDeclarationSyntaxError
     /// Gets or sets the Message.
     /// </summary>
     [ProtoMember(1)]
-    public string Message { get; set; }
+    public string Message { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Line.

@@ -17,6 +17,6 @@ public static class JobStepProgressConverters
         new()
         {
             Percentage = progress.Percentage,
-            Message = progress.Message ?? string.Empty
+            Message = progress.Message
         };
 }

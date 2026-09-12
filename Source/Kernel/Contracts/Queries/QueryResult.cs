@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Contracts.Queries;
 [ProtoContract]
 public class QueryResult<TData>
 {
+    TData _data = ResponseDefaults.Create<TData>();
+
     /// <summary>
     /// Gets or sets the correlation id associated with the query.
     /// </summary>
@@ -46,11 +48,16 @@ public class QueryResult<TData>
     /// <summary>
     /// Gets or sets the data returned by the query.
     /// </summary>
+    /// <remarks>
+    /// Empty payloads are initialized even for unsuccessful queries. Check <see cref="IsSuccess"/>
+    /// before interpreting the data; an initialized response does not indicate that an entity exists.
+    /// </remarks>
     [ProtoMember(6)]
-    public TData Data { get; set; } =
-        typeof(TData).IsGenericType && typeof(TData).GetGenericTypeDefinition() == typeof(IEnumerable<>)
-            ? (TData)Activator.CreateInstance(typeof(List<>).MakeGenericType(typeof(TData).GetGenericArguments()[0]))!
-            : default!;
+    public TData Data
+    {
+        get => _data;
+        set => _data = value is null ? ResponseDefaults.Create<TData>() : value;
+    }
 
     /// <summary>
     /// Gets whether the query executed successfully.

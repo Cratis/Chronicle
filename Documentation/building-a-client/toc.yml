@@ -6,6 +6,8 @@
   href: starting-points.md
 - name: Layering an idiomatic client
   href: layering-an-idiomatic-client.mdx
+- name: Empty results and query failures
+  href: empty-results.md
 - name: Authentication and bearer tokens
   href: authentication-and-bearer-tokens.md
 - name: Clustering and the connection lifecycle
