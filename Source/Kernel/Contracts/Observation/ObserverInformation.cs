@@ -39,7 +39,7 @@ public class ObserverInformation
     /// Gets or sets the types of events the observer is observing.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<EventType> EventTypes { get; set; }
+    public IEnumerable<EventType> EventTypes { get; set; } = new List<EventType>();
 
     /// <summary>
     /// Gets or sets the next event sequence number the observer will observe.

@@ -25,7 +25,7 @@ public class FailedPartitionAttempt
     /// Gets or sets the error messages for the last error on this failed partition.
     /// </summary>
     [ProtoMember(3)]
-    public IEnumerable<string> Messages { get; set; }
+    public IEnumerable<string> Messages { get; set; } = new List<string>();
 
     /// <summary>
     /// Gets or sets the stack trace for the last error on this failed partition.

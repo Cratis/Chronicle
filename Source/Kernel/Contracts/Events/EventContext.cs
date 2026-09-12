@@ -76,7 +76,7 @@ public class EventContext
     /// Gets or sets a collection of causation for what caused the event.
     /// </summary>
     [ProtoMember(11)]
-    public IList<Causation> Causation { get; set; }
+    public IList<Causation> Causation { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a collection of Identities that caused the event.

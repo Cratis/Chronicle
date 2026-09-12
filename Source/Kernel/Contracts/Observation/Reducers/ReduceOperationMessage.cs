@@ -27,7 +27,7 @@ public class ReduceOperationMessage
     /// Gets or sets a collection of <see cref="AppendedEvent"/>.
     /// </summary>
     [ProtoMember(3)]
-    public IList<AppendedEvent> Events { get; set; }
+    public IList<AppendedEvent> Events { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the replay state for this message.

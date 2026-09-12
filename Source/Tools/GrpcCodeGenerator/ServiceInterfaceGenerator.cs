@@ -503,28 +503,10 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
     static EqualsValueClauseSyntax? BuildDtoPropertyInitializer(string propType, bool initialize)
     {
-        if (IsNonNullableCollection(propType))
+        // protobuf-net can populate the existing collection through its getter. Interface-typed
+        // members therefore need mutable concrete defaults, not arrays or shared empty instances.
+        if (MutableCollectionType(propType) is { } concreteType)
         {
-            // A `[]` collection expression targeting the IEnumerable<T> interface has no natural mutable
-            // implementation, so the compiler lowers it to an empty array. protobuf-net.Grpc's server-side
-            // deserializer reuses whatever instance the getter already returns to populate a repeated field -
-            // via ICollection<T>.Add - rather than replacing it, and arrays report ICollection<T>.IsReadOnly
-            // as true, so any incoming payload that actually carries elements throws. Seed a concrete List<T>
-            // instead so the property stays both non-null and mutable.
-            var concreteType = propType.Replace("IEnumerable<", "List<", StringComparison.Ordinal);
-            return SyntaxFactory.EqualsValueClause(
-                SyntaxFactory.ObjectCreationExpression(SyntaxFactory.ParseTypeName(concreteType))
-                    .WithArgumentList(SyntaxFactory.ArgumentList()));
-        }
-
-        if (IsNonNullableDictionary(propType))
-        {
-            // IDictionary<TKey,TValue> has no natural collection-expression target type, so the concrete
-            // Dictionary<TKey,TValue> is spelled out instead. The interface can render either short ("IDictionary<...>")
-            // or fully qualified ("global::System.Collections.Generic.IDictionary<...>") depending on how GetTypeName
-            // reached it - swapping just the "IDictionary<" token keeps whichever prefix and the (possibly
-            // nested-generic) key/value arguments intact without having to parse them apart.
-            var concreteType = propType.Replace("IDictionary<", "Dictionary<", StringComparison.Ordinal);
             return SyntaxFactory.EqualsValueClause(
                 SyntaxFactory.ObjectCreationExpression(SyntaxFactory.ParseTypeName(concreteType))
                     .WithArgumentList(SyntaxFactory.ArgumentList()));
@@ -533,6 +515,11 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         if (!initialize)
         {
             return null;
+        }
+
+        if (propType.EndsWith("[]", StringComparison.Ordinal))
+        {
+            return SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseExpression("[]"));
         }
 
         if (propType == "string")
@@ -565,11 +552,26 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         !propertyType.EndsWith('?') &&
         (sourceType == typeof(string) || !sourceType.IsValueType || TransportTypes.NameFor(sourceType) is not null);
 
-    static bool IsNonNullableCollection(string propType) =>
-        propType.StartsWith("IEnumerable<", StringComparison.Ordinal) && !propType.EndsWith('?');
+    static string? MutableCollectionType(string propertyType)
+    {
+        var argumentsStart = propertyType.IndexOf('<');
+        if (propertyType.EndsWith('?') || argumentsStart < 0)
+        {
+            return null;
+        }
 
-    static bool IsNonNullableDictionary(string propType) =>
-        propType.Contains("IDictionary<", StringComparison.Ordinal) && !propType.EndsWith('?');
+        var outerType = propertyType[..argumentsStart];
+        var nameStart = outerType.LastIndexOf('.') + 1;
+        var concreteName = outerType[nameStart..] switch
+        {
+            "IEnumerable" or "ICollection" or "IList" or "IReadOnlyCollection" or "IReadOnlyList" => "List",
+            "IDictionary" or "IReadOnlyDictionary" => "Dictionary",
+            "ISet" or "IReadOnlySet" => "HashSet",
+            _ => null
+        };
+
+        return concreteName is null ? null : $"{outerType[..nameStart]}{concreteName}{propertyType[argumentsStart..]}";
+    }
 
     static ParameterSyntax BuildCallContextParameter() =>
         SyntaxFactory.Parameter(SyntaxFactory.Identifier("callContext"))
