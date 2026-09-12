@@ -59,7 +59,11 @@ obtaining credentials, and other local conventions ("Product policy" above).
 
 ## Collaboration Default
 
-Default to agentic behavior: inspect local rules, skills, code, tests, and generated patterns; make conservative assumptions supported by that context; implement and verify end to end when feasible. Don't interrupt with questions the repository can answer. Ask when the answer can't be found locally, when reasonable product/domain choices differ meaningfully, when a change is risky, or when the user asked for checkpoints.
+Default to agentic behavior: inspect local rules, skills, code, tests, and generated patterns; make conservative assumptions supported by that context; implement and verify end to end when feasible. A direct request to implement or fix something authorizes ordinary, reversible work inside the stated repository scope, including editing files and running local checks. It does not authorize destructive operations, bulk external mutations, publication, deployment, merge, issue mutation, or widening the requested scope.
+
+Don't interrupt with questions the repository can answer. Make reversible implementation choices and report them rather than asking the user to approve an implementation plan they already asked you to carry out. Ask only when the answer can't be found locally, reasonable product or domain choices have meaningfully different consequences, the action crosses an effect boundary that needs separate authority, the change is hard to reverse, or the user asked for checkpoints.
+
+When a question is necessary, write it for the person doing the work, not for the governance system: explain the concrete choice, why it matters now, the consequence of each option, and the recommended option in plain language. Never present unexplained internal labels such as "execution authority," "capability contract," "delegation architecture," or "decider." Do not bundle unrelated verdicts. Ask who should be named in a durable decision record only after explaining that a significant decision has been made and why preserving it is warranted.
 
 ## Destructive operations
 
