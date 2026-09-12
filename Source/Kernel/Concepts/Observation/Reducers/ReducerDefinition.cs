@@ -16,11 +16,13 @@ namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 /// <param name="IsActive">Whether or not the reducer is an actively observing reducer.</param>
 /// <param name="Tags">Collection of tags the reducer belongs to.</param>
 /// <param name="Filters">The <see cref="ObserverFilters"/> to apply when observing events.</param>
+/// <param name="Hash">Fingerprint of the reducer implementation.</param>
 public record ReducerDefinition(
     ReducerId Identifier,
     EventSequenceId EventSequenceId,
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
     ReadModelIdentifier ReadModel,
     bool IsActive,
-    IEnumerable<string>? Tags = default,
-    ObserverFilters? Filters = default);
+    IEnumerable<string> Tags,
+    ObserverFilters? Filters = default,
+    string Hash = "");

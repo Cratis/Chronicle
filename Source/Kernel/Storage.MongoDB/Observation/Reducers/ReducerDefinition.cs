@@ -38,6 +38,11 @@ public class ReducerDefinition
     public bool IsActive { get; set; }
 
     /// <summary>
+    /// Gets or sets the implementation fingerprint.
+    /// </summary>
+    public string Hash { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the tags the reducer belongs to.
     /// </summary>
     public IEnumerable<string> Tags { get; set; } = [];

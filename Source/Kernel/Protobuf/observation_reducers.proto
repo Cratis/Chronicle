@@ -87,6 +87,7 @@ message ReducerDefinition {
    bool IsActive = 5;
    repeated string Tags = 7;
    ObserverFilters Filters = 8;
+   string Hash = 9;
 }
 message ReducerMessage {
    OneOf_RegisterReducer_ReducerResult Content = 1;

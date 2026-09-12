@@ -156,6 +156,14 @@ public interface IObserver : IGrainWithStringKey
     Task ReplayPartition(Key partition);
 
     /// <summary>
+    /// Replays selected event types for a specific partition without rebuilding unaffected contributions.
+    /// </summary>
+    /// <param name="partition">The partition to replay.</param>
+    /// <param name="eventTypes">The affected event types to apply.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayPartition(Key partition, IEnumerable<EventType> eventTypes);
+
+    /// <summary>
     /// Rewind the observer for a specific partition to a specific sequence number.
     /// </summary>
     /// <param name="partition">The partition to rewind.</param>

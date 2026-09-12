@@ -90,19 +90,7 @@ public class Projection(
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
-            // Schedule replay as a separate grain turn so that SetDefinition() returns immediately.
-            // Replay triggers observer.Replay() which calls GetDefinition() back on this grain — if
-            // triggered inline, that re-entrant call deadlocks because the grain's execution slot is
-            // still held by SetDefinition(). Deferring to a separate turn lets this call return first,
-            // so GetDefinition() is free to execute.
-            if (options.Value.Observers.ReplayOnDefinitionChange)
-            {
-                this.ScheduleInSeparateTurn(() => ReplayForAllNamespaces(key, namespaceNames));
-            }
-            else
-            {
-                await AddReplayRecommendationForAllNamespaces(key, namespaceNames, previousDefinition, definition);
-            }
+            await EvolveForAllNamespaces(key, namespaceNames, previousDefinition, definition);
         }
     }
 
@@ -572,30 +560,83 @@ public class Projection(
         return await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
     }
 
-    async Task ReplayForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)
-    {
-        foreach (var @namespace in namespaces)
-        {
-            logger.AutoReplayingProjection(key.ProjectionId, @namespace);
-            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
-            await observer.Replay();
-        }
-    }
-
-    async Task AddReplayRecommendationForAllNamespaces(
+    async Task EvolveForAllNamespaces(
         ProjectionKey key,
         IEnumerable<EventStoreNamespaceName> namespaces,
         ProjectionDefinition previousDefinition,
         ProjectionDefinition currentDefinition)
     {
-        var readModelDefinitions = storage.GetEventStore(key.EventStore).ReadModels;
-        var readModelDefinition = await readModelDefinitions.Get(currentDefinition.ReadModel);
-        var readModelMigrationRecommendation = ProjectionReplayRecommendationEvaluator.GetReadModelMigrationRecommendation(readModelDefinition);
-
-        var eventTypesToCheckFor = ProjectionReplayRecommendationEvaluator.GetAddedEventTypesIfOnlyEventTypesChanged(
+        var namespacePlans = new List<(EventStoreNamespaceName Namespace, DefinitionEvolutionPlan Plan)>();
+        var addedEventTypes = ProjectionReplayRecommendationEvaluator.GetAddedEventTypesIfOnlyEventTypesChanged(
             previousDefinition,
             currentDefinition,
             objectComparer);
+
+        foreach (var @namespace in namespaces)
+        {
+            var plan = DefinitionEvolutionPlan.FullReplay;
+            if (addedEventTypes.Length > 0)
+            {
+                var eventSequence = storage.GetEventStore(key.EventStore).GetNamespace(@namespace).GetEventSequence(currentDefinition.EventSequenceId);
+                plan = await DefinitionEvolutionPlan.ForAddedEventTypes(
+                    eventSequence,
+                    addedEventTypes,
+                    ProjectionReplayRecommendationEvaluator.CanPartiallyReplay(previousDefinition, currentDefinition, addedEventTypes));
+            }
+            namespacePlans.Add((@namespace, plan));
+        }
+
+        var policy = options.Value.Observers.DefinitionEvolution;
+        foreach (var (@namespace, plan) in namespacePlans)
+        {
+            switch (plan.Operation)
+            {
+                case DefinitionEvolutionOperation.NoAction:
+                    logger.ProjectionEvolutionNeedsNoAction(key.ProjectionId, @namespace);
+                    break;
+                case DefinitionEvolutionOperation.PartialReplay when policy.Allows(plan.Operation):
+                    this.ScheduleInSeparateTurn(() => ReplayProjectionPartitions(key, @namespace, plan.AffectedEventSources, plan.AffectedEventTypes));
+                    break;
+                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation):
+                    this.ScheduleInSeparateTurn(() => ReplayProjection(key, @namespace));
+                    break;
+                default:
+                    await AddReplayRecommendation(key, @namespace, currentDefinition);
+                    break;
+            }
+        }
+    }
+
+    async Task ReplayProjection(ProjectionKey key, EventStoreNamespaceName @namespace)
+    {
+        logger.AutoReplayingProjection(key.ProjectionId, @namespace);
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
+        await observer.Replay();
+    }
+
+    async Task ReplayProjectionPartitions(
+        ProjectionKey key,
+        EventStoreNamespaceName @namespace,
+        IEnumerable<EventSourceId> eventSourceIds,
+        IEnumerable<EventType> eventTypes)
+    {
+        var affectedEventSources = eventSourceIds.ToArray();
+        logger.PartiallyReplayingProjection(key.ProjectionId, @namespace, affectedEventSources.Length);
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
+        foreach (var eventSourceId in affectedEventSources)
+        {
+            await observer.ReplayPartition(eventSourceId, eventTypes);
+        }
+    }
+
+    async Task AddReplayRecommendation(
+        ProjectionKey key,
+        EventStoreNamespaceName @namespace,
+        ProjectionDefinition currentDefinition)
+    {
+        var readModelDefinitions = storage.GetEventStore(key.EventStore).ReadModels;
+        var readModelDefinition = await readModelDefinitions.Get(currentDefinition.ReadModel);
+        var readModelMigrationRecommendation = ProjectionReplayRecommendationEvaluator.GetReadModelMigrationRecommendation(readModelDefinition);
 
         (string Description, ReplayCandidateReason Reason) replayRecommendation = readModelMigrationRecommendation switch
         {
@@ -610,27 +651,14 @@ public class Projection(
                 new ProjectionDefinitionChangedReplayCandidateReason())
         };
 
-        foreach (var @namespace in namespaces)
-        {
-            if (eventTypesToCheckFor.Length > 0)
+        var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
+        await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+            replayRecommendation.Description,
+            new()
             {
-                var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(@namespace).GetEventSequence(State.EventSequenceId);
-                var tailSequenceNumberForAddedEventTypes = await eventSequenceStorage.GetTailSequenceNumber(eventTypes: eventTypesToCheckFor);
-                if (!tailSequenceNumberForAddedEventTypes.IsActualValue)
-                {
-                    continue;
-                }
-            }
-
-            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
-            await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
-                replayRecommendation.Description,
-                new()
-                {
-                    ObserverId = key.ProjectionId,
-                    ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
-                    Reasons = [replayRecommendation.Reason]
-                });
-        }
+                ObserverId = key.ProjectionId,
+                ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
+                Reasons = [replayRecommendation.Reason]
+            });
     }
 }

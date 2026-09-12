@@ -21,8 +21,14 @@ internal static partial class ProjectionLogging
     [LoggerMessage(LogLevel.Debug, "Registering projection '{Identifier}' has changed its definition")]
     internal static partial void ProjectionHasChanged(this ILogger<Projection> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Auto-replaying projection '{Identifier}' for namespace '{Namespace}' due to definition change")]
+    [LoggerMessage(LogLevel.Information, "Full replay - projection '{Identifier}' in namespace '{Namespace}' changed in a way that may affect existing read models")]
     internal static partial void AutoReplayingProjection(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Information, "Partial replay - projection '{Identifier}' in namespace '{Namespace}' only affects {AffectedEventSourceCount} event sources")]
+    internal static partial void PartiallyReplayingProjection(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace, int affectedEventSourceCount);
+
+    [LoggerMessage(LogLevel.Information, "No action - projection '{Identifier}' in namespace '{Namespace}' only consumes newly added event types with no historical events")]
+    internal static partial void ProjectionEvolutionNeedsNoAction(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Information, "Rehydrating projections and pipelines")]
     internal static partial void Rehydrate(this ILogger<Projection> logger);

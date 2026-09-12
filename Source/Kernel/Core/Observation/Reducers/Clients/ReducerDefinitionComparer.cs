@@ -23,13 +23,14 @@ public class ReducerDefinitionComparer(IStorage storage) : IReducerDefinitionCom
             return ReducerDefinitionCompareResult.New;
         }
 
-        var firstEventTypes = first.EventTypes.Select(_ => _.EventType.Id).Order().ToArray();
-        var secondEventTypes = second.EventTypes.Select(_ => _.EventType.Id).Order().ToArray();
-        if (firstEventTypes.SequenceEqual(secondEventTypes) && first.IsActive == second.IsActive)
-        {
-            return ReducerDefinitionCompareResult.Same;
-        }
+        var firstEventTypes = first.EventTypes.OrderBy(_ => _.EventType.Id).ToArray();
+        var secondEventTypes = second.EventTypes.OrderBy(_ => _.EventType.Id).ToArray();
+        var definitionsAreEqual =
+            ReducerDefinitionEvolution.HasSameConfiguration(first, second) &&
+            firstEventTypes.SequenceEqual(secondEventTypes);
 
-        return ReducerDefinitionCompareResult.Different;
+        return definitionsAreEqual
+            ? ReducerDefinitionCompareResult.Same
+            : ReducerDefinitionCompareResult.Different;
     }
 }
