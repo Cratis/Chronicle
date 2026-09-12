@@ -13,14 +13,19 @@ folder and is reviewed like any other documentation. A handover may summarize a
 decision; it never holds the only copy.
 
 This skill owns the *procedure* — how to consult, author, accept, and supersede
-a record. It does not decide what to decide, and it never grants acceptance.
+a record. It does not decide what to decide, and it never grants acceptance. Do
+not turn an implementation request, issue plan, or reversible technical choice
+into an approval ceremony merely because this skill is available.
 
 ## When you need this
 
-- You are about to make an architectural, contract, scope, or cross-cutting
-  change. Consult first: a decision you did not read still binds the change.
-- A ruling was made — in review, in chat, in a meeting — that later work has to
-  obey. Record it in the same turn, while the reasoning is still available.
+- You are about to make a significant architectural, contract, scope, or
+  cross-cutting change. Consult existing records first: a decision you did not
+  read still binds the change. Consulting does not imply that a new record or
+  human approval is required.
+- A human made a durable ruling — in review, in chat, or in a meeting — that
+  later work has to obey. Record it in the same turn, while the reasoning is
+  still available.
 - An accepted decision no longer holds and has to be replaced, narrowed, or
   qualified.
 - Your change would contradict an accepted record. Stop: supersession or a human
@@ -35,7 +40,12 @@ a record. It does not decide what to decide, and it never grants acceptance.
   documentation says how the thing works. Use the documentation workflow.
 - **A work item's status.** "Blocked on X" is a work item field, not a decision.
 - **A reversible choice inside your own scope that nobody will re-litigate.**
-  Make it and move on; see the significance test in step 2.
+  Make it and move on; see the significance test in step 3.
+- **An implementation request or an issue's proposed plan.** A request to do the
+  work authorizes ordinary in-scope implementation; it is not automatically a
+  request to create or accept an architectural record. Apply the significance
+  test and ask only about a concrete unresolved choice with meaningfully
+  different consequences.
 - **A decision this repository does not own.** Company-level and portfolio
   decisions live in the record set that owns them. Cite that id; do not copy the
   record into a repository that cannot supersede it.
@@ -51,11 +61,13 @@ a record. It does not decide what to decide, and it never grants acceptance.
    request body, and as a `Decision: <id>` commit trailer. A change that
    silently contradicts an accepted record is a defect even when the code is
    correct.
-3. **Apply the significance test before writing anything.** Write a record only
-   when at least one of these holds: someone will otherwise re-litigate the
-   choice; it binds paths beyond the one you are changing; reversing it would
-   cost real migration or rework; or it rejects an option a reasonable reader
-   would reach for. If none holds, say so and make the change without a record.
+3. **Apply the significance test before proposing a record or asking for
+   acceptance.** Write a record only when at least one of these holds: someone
+   will otherwise re-litigate the choice; it binds paths beyond the one you are
+   changing; reversing it would cost real migration or rework; or it rejects an
+   option a reasonable reader would reach for. If none holds, make the change
+   without a record. Do not ask the user to approve labels or abstractions they
+   have not been given enough context to understand.
 4. **Pass the completeness gate, or open with `status: returned`.** A proposed
    record states the options considered *including the one not taken and why*,
    the default that applies if the question is never answered and what that
@@ -69,9 +81,12 @@ a record. It does not decide what to decide, and it never grants acceptance.
 6. **Open the record as `status: proposed`, `stage: none`, and regenerate the
    index.** A record the index does not list is a record the consult step in
    step 1 will never find.
-7. **Accept by recording a resolved actor and a date.** Set `status: accepted`,
-   `decided` to the date, and `decider` to a named person — never a role, a
-   team, or a tool. Acceptance is a human verdict: draft it, do not grant it.
+7. **Accept only after a human makes the significant choice.** Set `status` to
+   `accepted`, `decided` to the date, and `decider` to a named person — never a
+   role, a team, or a tool. Acceptance is a human verdict: draft it, do not grant
+   it. If the decider is not already explicit, first explain in plain language
+   that the choice will become durable repository documentation and why it
+   passed the significance test; only then ask whose name should be recorded.
 8. **Spawn the build work carrying the criterion verbatim.** The `Done when` and
    `Verify by` text written in step 5 travels onto the work item unchanged, so
    the thing that gets built is the thing that was decided.
@@ -95,6 +110,10 @@ The exact front-matter fields, the closed value sets, and the index shape are in
 
 ## What breaks
 
+- **Governance ceremony before user clarity.** Asking someone to choose between
+  unexplained policy labels, approve an issue plan they already asked to
+  implement, or name a decider before explaining the durable decision transfers
+  the agent's interpretation burden to the user.
 - **A role in the `decider` field.** "The architecture team decided" names
   nobody who can be asked what they meant or who can supersede it. The record
   reads as authority but resolves to no one.
