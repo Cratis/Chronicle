@@ -15,7 +15,10 @@ branch → commits → PR → merge → no-effect issue disposition → cleanup 
 ## Inputs
 
 - **What changed** — brief description of the work (used for branch name and PR title)
-- **Label** — `patch`, `minor`, or `major`, or omit entirely if no label should be applied
-- **Related issue** — optional exact repository and issue number; if unknown, search read-only first. Prepare a post-merge disposition, but do not comment on or close an issue without a separately accepted exact operation profile
+- **Label** — `no-release`, `patch`, `minor`, or `major`, or omit entirely if no label should be applied
+- **Related issue** — optional exact repository and issue number; if unknown, search read-only first. Comment on or close it only when the user's request includes that effect.
 
-Load and follow the full instructions from the `ship-changes` skill.
+Invoking this prompt is direct authority for the standard branch, commit, push, pull-request,
+requested-label, merge, and branch-cleanup effects. Do not pause to ask for separate approval at
+each step. Follow the repository's Git commit and pull-request rules, use a true merge commit,
+and verify required checks before merging.

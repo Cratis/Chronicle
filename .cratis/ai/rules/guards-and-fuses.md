@@ -37,10 +37,11 @@ default) per the Three Levels of Authority in [`general.md`](./general.md).
 - **[contract] Every unattended destructive pass carries a per-pass fuse** — a maximum
   number of subjects it may act on in one run, which stops the run rather than trimming
   the work silently.
-- **[contract] Prepare the inverse before the forward action**, per the Interactive Agent
-  Mutation Protocol in [`general.md`](./general.md). If an exact inverse or a safe
-  compensation cannot be prepared, stop.
-- **[contract] Re-read preconditions immediately before each mutation and stop on drift.**
-  An authorization is for the state that was shown, not for whatever the state became.
-- **[convention] Dry-run output is the review artifact.** If a human cannot tell from the
-  dry run exactly what will change, the dry run is not finished.
+- **[contract] Prepare the inverse before the forward action.** If an exact inverse or a
+  safe compensation cannot be prepared, stop.
+- **[contract] Re-read preconditions immediately before each mutation and stop when drift
+  invalidates the authorized scope, safety assumptions, or recovery plan.** Benign drift
+  within an already authorized bounded pass does not require another confirmation.
+- **[convention] Dry-run output is the review artifact for a destructive pass whose exact
+  targets were not already established in the conversation.** A user who has reviewed
+  and authorized those targets is not asked to approve the same pass again.
