@@ -24,7 +24,7 @@ cp .cratis/ai/hooks/settings.template.json .claude/settings.json
 If you already have a `.claude/settings.json`, merge the template's `hooks` block into it rather
 than overwriting — the rest of that file is yours. Re-copy after the template changes; the copy is
 not a symlink, so it does not update itself. **Edit the template, never the copy**: `.cratis/ai/` is the
-source of truth (see [`../rules/managing-ai-rules.md`](../rules/managing-ai-rules.md)), and
+source of truth (see the [corpus README](../README.md)), and
 `scripts/validate-ai-setup.sh` checks the template against the script names this page documents.
 
 The markdown files in this folder (`agent-stop.md`, `pre-commit.md`) remain *lifecycle guidance* —
@@ -408,10 +408,10 @@ printf 'Return `EventForEventSourceId`, or a `ReactorSideEffectFailure` from an 
 CRATIS_HOOKS_TYPE_REPORT=1 .cratis/ai/hooks/scripts/validate-type-references.sh
 ```
 
-Run `bash -n` on every script and `jq .` on every JSON file before committing. The hook scripts are
-kept at **zero** `shellcheck --external-sources --severity=style` findings by the **Lint the hook
-scripts** step of the `Verify AI Corpus` workflow (`.github/workflows/verify-ai-corpus.yml`), which
-fails the run on any finding at that severity or above. Run the same command before committing:
+Run `bash -n` on every script and `jq .` on every JSON file before committing. The owning
+repository's verification workflow should keep the hook scripts at **zero**
+`shellcheck --external-sources --severity=style` findings and fail on any finding at that severity
+or above. Run the same command before committing:
 
 ```bash
 shellcheck --external-sources --severity=style .cratis/ai/hooks/scripts/*.sh

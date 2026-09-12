@@ -16,7 +16,3 @@ authored a file or preserve a chain of evidence about how it arrived.
 - Never replace a real behavior check with a checksum, inventory, generated
   receipt, or provenance record.
 - Report failures and skipped checks honestly.
-
-For this repository, `Source/Verification` validates corpus structure, profile
-composition, skill scenarios, and native package behavior. `Source/Harness.Setup`
-verifies that repository harness adapters still point to `.cratis/ai`.
