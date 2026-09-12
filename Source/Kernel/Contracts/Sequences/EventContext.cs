@@ -18,19 +18,19 @@ public class EventContext
     /// Gets or sets the EventType.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the EventSourceType.
     /// </summary>
     [ProtoMember(2)]
-    public string EventSourceType { get; set; }
+    public string EventSourceType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the SequenceNumber.
@@ -42,19 +42,19 @@ public class EventContext
     /// Gets or sets the EventStreamType.
     /// </summary>
     [ProtoMember(5)]
-    public string EventStreamType { get; set; }
+    public string EventStreamType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamId.
     /// </summary>
     [ProtoMember(6)]
-    public string EventStreamId { get; set; }
+    public string EventStreamId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Occurred.
     /// </summary>
     [ProtoMember(7)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the CorrelationId.
@@ -72,7 +72,7 @@ public class EventContext
     /// Gets or sets the CausedBy.
     /// </summary>
     [ProtoMember(10)]
-    public global::Cratis.Chronicle.Contracts.Sequences.Identity CausedBy { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.Identity CausedBy { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Tags.
@@ -84,7 +84,7 @@ public class EventContext
     /// Gets or sets the Hash.
     /// </summary>
     [ProtoMember(12)]
-    public string Hash { get; set; }
+    public string Hash { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ObservationState.
@@ -96,5 +96,5 @@ public class EventContext
     /// Gets or sets the Subject.
     /// </summary>
     [ProtoMember(14)]
-    public string Subject { get; set; }
+    public string Subject { get; set; } = string.Empty;
 }

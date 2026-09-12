@@ -62,19 +62,19 @@ public class AddApplicationRequest
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the ClientId.
     /// </summary>
     [ProtoMember(2)]
-    public string ClientId { get; set; }
+    public string ClientId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ClientSecret.
     /// </summary>
     [ProtoMember(3)]
-    public string ClientSecret { get; set; }
+    public string ClientSecret { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -87,13 +87,13 @@ public class ChangeApplicationSecretRequest
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the ClientSecret.
     /// </summary>
     [ProtoMember(2)]
-    public string ClientSecret { get; set; }
+    public string ClientSecret { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -106,7 +106,7 @@ public class RemoveApplicationRequest
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = new();
 }
 
 /// <summary>
@@ -125,7 +125,7 @@ public class ApplicationResponse
     /// Gets or sets the ClientId.
     /// </summary>
     [ProtoMember(2)]
-    public string ClientId { get; set; }
+    public string ClientId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the IsActive.
@@ -137,7 +137,7 @@ public class ApplicationResponse
     /// Gets or sets the CreatedAt.
     /// </summary>
     [ProtoMember(4)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the LastModifiedAt.

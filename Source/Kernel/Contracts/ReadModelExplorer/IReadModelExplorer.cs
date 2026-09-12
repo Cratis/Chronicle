@@ -39,7 +39,7 @@ public class ReadModelSnapshotResponse
     /// Gets or sets the Occurred.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the CorrelationId.
@@ -51,7 +51,7 @@ public class ReadModelSnapshotResponse
     /// Gets or sets the Instance.
     /// </summary>
     [ProtoMember(3)]
-    public string Instance { get; set; }
+    public string Instance { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Events.
@@ -70,35 +70,35 @@ public class AllSnapshotsForReadModelRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the readModel.
     /// </summary>
     [ProtoMember(3)]
-    public string ReadModel { get; set; }
+    public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the readModelKey.
     /// </summary>
     [ProtoMember(4)]
-    public string ReadModelKey { get; set; }
+    public string ReadModelKey { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(5)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the grouping.
     /// </summary>
     [ProtoMember(6)]
-    public string Grouping { get; set; }
+    public string Grouping { get; set; } = string.Empty;
 }

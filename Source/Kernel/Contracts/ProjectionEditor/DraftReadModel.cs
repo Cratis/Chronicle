@@ -18,23 +18,23 @@ public class DraftReadModel
     /// Gets or sets the Identifier.
     /// </summary>
     [ProtoMember(1)]
-    public string Identifier { get; set; }
+    public string Identifier { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the DisplayName.
     /// </summary>
     [ProtoMember(2)]
-    public string DisplayName { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ContainerName.
     /// </summary>
     [ProtoMember(3)]
-    public string ContainerName { get; set; }
+    public string ContainerName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Schema.
     /// </summary>
     [ProtoMember(4)]
-    public string Schema { get; set; }
+    public string Schema { get; set; } = string.Empty;
 }

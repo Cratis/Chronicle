@@ -17,11 +17,11 @@ public static class JobStepConverters
         new()
         {
             Id = jobStep.Id,
-            Type = jobStep.Type ?? string.Empty,
-            Name = jobStep.Name ?? string.Empty,
+            Type = jobStep.Type,
+            Name = jobStep.Name,
             Status = (JobStepStatus)(int)jobStep.Status,
-            StatusChanges = jobStep.StatusChanges?.ToClient() ?? [],
-            Progress = jobStep.Progress?.ToClient() ?? new()
+            StatusChanges = jobStep.StatusChanges.ToClient(),
+            Progress = jobStep.Progress.ToClient()
         };
 
     /// <summary>
