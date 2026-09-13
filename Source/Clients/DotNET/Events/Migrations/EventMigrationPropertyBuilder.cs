@@ -4,13 +4,16 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Properties;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Migrations;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventMigrationPropertyBuilder"/>.
 /// </summary>
-public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
+/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> used to render property names the way they appear in an event's payload. Defaults to <see cref="DefaultNamingPolicy"/>.</param>
+public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy = null) : IEventMigrationPropertyBuilder
 {
     const string SplitExpression = "$split";
     const string CombineExpression = "$combine";
@@ -19,6 +22,7 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     const string MapValuesExpression = "$mapValues";
 
     readonly Dictionary<PropertyExpression, JsonNode> _properties = [];
+    readonly INamingPolicy _namingPolicy = namingPolicy ?? new DefaultNamingPolicy();
 
     /// <summary>
     /// Gets the configured properties.
@@ -28,11 +32,11 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void Split(PropertyName targetProperty, PropertyName sourceProperty, PropertySeparator separator, SplitPartIndex part)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)Render(targetProperty)] = new JsonObject
         {
             [SplitExpression] = new JsonObject
             {
-                ["source"] = (string)sourceProperty,
+                ["source"] = Render(sourceProperty),
                 ["separator"] = (string)separator,
                 ["part"] = (int)part
             }
@@ -42,11 +46,11 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void Combine(PropertyName targetProperty, PropertySeparator separator, params PropertyName[] sourceProperties)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)Render(targetProperty)] = new JsonObject
         {
             [CombineExpression] = new JsonObject
             {
-                ["sources"] = new JsonArray(sourceProperties.Select(p => JsonValue.Create((string)p)).ToArray()),
+                ["sources"] = new JsonArray(sourceProperties.Select(p => JsonValue.Create(Render(p))).ToArray()),
                 ["separator"] = (string)separator
             }
         };
@@ -55,16 +59,16 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void RenamedFrom(PropertyName targetProperty, PropertyName oldName)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)Render(targetProperty)] = new JsonObject
         {
-            [RenameExpression] = (string)oldName
+            [RenameExpression] = Render(oldName)
         };
     }
 
     /// <inheritdoc/>
     public void DefaultValue(PropertyName targetProperty, object value)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)Render(targetProperty)] = new JsonObject
         {
             [DefaultValueExpression] = JsonValue.Create(value)
         };
@@ -73,11 +77,11 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void MapValues(PropertyName targetProperty, PropertyName sourceProperty, IEnumerable<ValueMapping> mappings)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)Render(targetProperty)] = new JsonObject
         {
             [MapValuesExpression] = new JsonObject
             {
-                ["source"] = (string)sourceProperty,
+                ["source"] = Render(sourceProperty),
                 ["mappings"] = new JsonArray([.. mappings.Select(ToMappingNode)])
             }
         };
@@ -105,4 +109,15 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
             Convert.ChangeType(enumValue, Enum.GetUnderlyingType(enumValue.GetType()), CultureInfo.InvariantCulture)),
         _ => JsonSerializer.SerializeToNode(value, value.GetType())
     };
+
+    /// <summary>
+    /// Renders a property name the way it appears in an event's payload.
+    /// </summary>
+    /// <param name="property">The <see cref="PropertyName"/> to render.</param>
+    /// <returns>The rendered name.</returns>
+    /// <remarks>
+    /// A migration map is matched against the serialized payload, so its names have to go through the same
+    /// naming policy the payload was written with. Without this the map silently matches nothing.
+    /// </remarks>
+    string Render(PropertyName property) => _namingPolicy.GetPropertyName(new PropertyPath((string)property));
 }
