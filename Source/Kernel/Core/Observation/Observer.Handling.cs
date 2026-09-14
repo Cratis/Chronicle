@@ -290,7 +290,7 @@ public partial class Observer
     /// <returns>A new <see cref="ObserverState"/> with the partition's counts subtracted from the aggregates.</returns>
     static ObserverState WithSubtractedPartitionHandledEventCounts(
         ObserverState state,
-        IReadOnlyDictionary<EventTypeId, EventCount> partitionCounts)
+        Dictionary<EventTypeId, EventCount> partitionCounts)
     {
         if (partitionCounts.Count == 0)
         {
