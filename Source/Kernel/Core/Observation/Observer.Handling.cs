@@ -54,7 +54,10 @@ public partial class Observer
 
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
-        if (!events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id)))
+        // An observer subscribed to all events has no fixed event type list to match against - every event is
+        // of interest to it by definition, so this "none of these events are ones we're subscribed to" fast
+        // path never applies to it.
+        if (!State.SubscribesToAllEvents && !events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id)))
         {
             State = State with
             {
