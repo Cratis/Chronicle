@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from '@cratis/components/DataTables';
-import { DataTable } from 'Components/DataTable';
+import { Column, DataTableCore } from '@cratis/components/DataTables';
 import { ObserverInformation } from 'Features/Observation';
 import strings from 'Strings';
 import css from './ObserverEventTypes.module.css';
@@ -27,8 +26,8 @@ export const ObserverEventTypes = ({ observer }: ObserverEventTypesProps) => {
 
     return (
         <div className={css.observerEventTypes}>
-            <DataTable
-                value={observer.eventTypes ?? []}
+            <DataTableCore
+                data={observer.eventTypes ?? []}
                 dataKey='id'
                 emptyMessage={eventTypesStrings.empty}
                 scrollable
@@ -42,7 +41,7 @@ export const ObserverEventTypes = ({ observer }: ObserverEventTypesProps) => {
                     field='generation'
                     header={eventTypesStrings.columns.generation}
                     sortable />
-            </DataTable>
+            </DataTableCore>
         </div>
     );
 };

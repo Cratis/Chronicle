@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.SequenceQueries;
 /// </summary>
 /// <remarks>
 /// These live beside the read models rather than on them, because every static method on a
-/// <c>[ReadModel]</c> whose return shape is a supported query shape is published as a query proxy and an
+/// <c language="csharp">[ReadModel]</c> whose return shape is a supported query shape is published as a query proxy and an
 /// endpoint - accessibility is not what the proxy generator looks at.
 /// </remarks>
 public static class SequenceQueryConverters

@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_InertEventFilterOnEv
 
 /// <summary>
 /// The rule is scoped to event types, and this is the only spec that measures that scoping on its own. The type
-/// carries neither <c>[EventType]</c> nor any of the roles that read the attribute, so every other negative in
+/// carries neither <c language="csharp">[EventType]</c> nor any of the roles that read the attribute, so every other negative in
 /// this folder would stay green with the event type check deleted - each of them is skipped for its role first.
 /// This one is not, and reddens the moment the rule stops asking whether the type is an event type at all.
 /// </summary>

@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Testing.Reactors;
 
 /// <summary>
-/// The exception that is thrown when a read model is seeded through <c>Given.ForEventSourceId(...).ReadModel(...)</c>
+/// The exception that is thrown when a read model is seeded through <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>
 /// while the <see cref="ReactorScenario{TReactor}"/> was constructed with an explicit <see cref="IEventStore"/> that
 /// the scenario does not own — seeding requires the scenario's own in-process event store.
 /// </summary>

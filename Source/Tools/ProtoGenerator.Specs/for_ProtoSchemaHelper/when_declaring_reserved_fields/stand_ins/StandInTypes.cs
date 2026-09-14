@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_decla
 /// </summary>
 /// <remarks>
 /// It lives in its own namespace so it cannot shadow the real one where that is what is under test. That the two
-/// names still agree is pinned by <c>and_the_real_contract_attribute_is_used</c>, not assumed here.
+/// names still agree is pinned by <c language="csharp">and_the_real_contract_attribute_is_used</c>, not assumed here.
 /// </remarks>
 /// <param name="fieldNumbers">The retired field numbers.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]

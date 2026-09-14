@@ -15,12 +15,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// <remarks>
 /// The serializer exists for one reason: to upgrade a definition persisted by an older kernel on the way in. It
 /// therefore writes exactly what the driver's own discriminated-interface path writes - the concrete type's
-/// document with its <c>_t</c> discriminator - so that putting it on the read path migrates nothing and leaves
+/// document with its <c language="csharp">_t</c> discriminator - so that putting it on the read path migrates nothing and leaves
 /// every stored document readable by a kernel that does not have it.
 /// <para>
 /// It is put on that path by <see cref="ConstraintDefinitionSerializationProvider"/>. Registering it as a bare
 /// <see cref="IBsonSerializer"/> does not work: the driver resolves every interface to a
-/// <c>DiscriminatedInterfaceSerializer</c> of its own, so the auto-registration in
+/// <c language="csharp">DiscriminatedInterfaceSerializer</c> of its own, so the auto-registration in
 /// <see cref="Serialization.CustomSerializers"/> finds one already there and skips this one.
 /// </para>
 /// </remarks>

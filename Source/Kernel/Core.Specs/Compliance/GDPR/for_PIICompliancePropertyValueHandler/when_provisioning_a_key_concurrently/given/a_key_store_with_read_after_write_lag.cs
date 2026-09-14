@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler
 /// An <see cref="IEncryptionKeyStorage"/> that models a MongoDB replica set (or a second silo) where a
 /// read can observe state older than the latest write: writes land on a "primary" but reads are served
 /// from a "secondary" that only catches up when <see cref="LaggingReadKeyStorage.Replicate"/> is called. This is enough to
-/// defeat the check-then-act provisioning in <c>EnsureKeyFor</c> — two provisioners for one subject can
+/// defeat the check-then-act provisioning in <c language="csharp">EnsureKeyFor</c> — two provisioners for one subject can
 /// both observe "no key" and each save a key, and the store then returns whichever was written last.
 /// It delegates to a real <see cref="InMemoryEncryptionKeyStorage"/> for the actual revisioned behavior.
 /// </summary>

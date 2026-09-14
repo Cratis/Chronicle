@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Read model whose child collection is named differently from the event list, but bridged with
-/// <c>[SetFrom]</c> on <see cref="BridgedNotedLine.Annotations"/> so it projects correctly — proving a rename
+/// <c language="csharp">[SetFrom]</c> on <see cref="BridgedNotedLine.Annotations"/> so it projects correctly — proving a rename
 /// is not the only fix for the AutoMap-to-nothing failure.
 /// </summary>
 /// <param name="Id">Order identifier.</param>

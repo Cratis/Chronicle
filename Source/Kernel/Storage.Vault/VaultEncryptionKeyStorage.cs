@@ -20,12 +20,12 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// identifier is stored at a distinct path so that revisions can be retrieved or deleted independently.
 /// </para>
 /// <para>
-/// The Vault token is read from the <c>VAULT_TOKEN</c> environment variable. The Vault address is
-/// taken from the <c>connectionDetails</c> constructor parameter.
+/// The Vault token is read from the <c language="csharp">VAULT_TOKEN</c> environment variable. The Vault address is
+/// taken from the <c language="csharp">connectionDetails</c> constructor parameter.
 /// </para>
 /// </remarks>
-/// <param name="connectionDetails">The Vault server address (for example <c>http://vault:8200</c>).</param>
-/// <param name="mountPoint">KV v2 mount point. Defaults to <c>secret</c> when <see langword="null"/> or empty.</param>
+/// <param name="connectionDetails">The Vault server address (for example <c language="csharp">http://vault:8200</c>).</param>
+/// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
 public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPoint = null) : IEncryptionKeyStorage
 {
     const string DefaultMountPoint = "secret";

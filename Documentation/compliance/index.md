@@ -1,8 +1,7 @@
 ---
-uid: Chronicle.Compliance
+title: Compliance
+description: Protect personally identifiable information in an immutable event log with encryption, erasure, and redaction.
 ---
-
-# Compliance
 
 Modern applications collect and store personal data. Regulations such as the General Data Protection Regulation (GDPR) require that this data be protected, identifiable, and erasable on demand. Chronicle provides first-class support for compliance requirements directly in the event sourcing model, so that protection is applied consistently and automatically rather than scattered across application code.
 
@@ -27,7 +26,7 @@ When a projection or observer reads the event, Chronicle performs the reverse: i
 
 Encryption keys are managed by the `IPIIManager` grain in the Chronicle kernel. Keys are stored and retrieved by event source identifier, so every individual whose data lives in the event store has their own key. Deleting a key is the Chronicle equivalent of GDPR erasure.
 
-A key belongs to one event store and one namespace, and an event store subscription copies a subject's key into the event store it forwards to. An erasure therefore covers every event store in the namespace it is issued in, and records itself there so that nothing provisions or copies a key for that subject afterwards. [Erasing a subject](erasing-a-subject.md) walks through the call and what it reaches; [The encryption key lifecycle](key-lifecycle.md) explains the mechanism and its limits.
+A key belongs to one event store and one namespace, and an event store subscription copies a subject's key into the event store it forwards to. An erasure therefore covers every event store in the namespace it is issued in, and records itself there so that nothing provisions or copies a key for that subject afterwards. [Erasing a subject](erasing-a-subject) walks through the call and what it reaches; [The encryption key lifecycle](key-lifecycle) explains the mechanism and its limits.
 
 ## Marking data as PII
 
@@ -38,9 +37,9 @@ Chronicle supports two complementary approaches for marking data as personally i
 | `[PII]` on an event property | The property is a primitive type or an untyped value that holds personal data in a specific event. |
 | `[PII]` on a `ConceptAs<T>` type | The concept itself is inherently personal — any use of this type anywhere in any event is PII by definition. |
 
-The `ConceptAs<T>` approach is the preferred one. It is declared once and applies everywhere the type is used, so there is no risk of forgetting to mark a property in a future event. See [Applying PII to ConceptAs types](pii-with-concepts) for details.
+The `ConceptAs<T>` approach is the preferred one. It is declared once and applies everywhere the type is used, so there is no risk of forgetting to mark a property in a future event. See [Declaring PII on a concept](pii-with-concepts) for details.
 
-For a full description of the `[PII]` attribute and its rules, see [PII Attribute](pii).
+For a full description of the `[PII]` marker and its rules, see [Marking data as PII](pii).
 
 ## Event source identifiers cannot be encrypted
 
@@ -52,10 +51,10 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the 
 
 | Topic | Description |
 |---|---|
-| [PII Attribute](pii) | The `[PII]` attribute — rules, usage, and constraints |
-| [Applying PII to ConceptAs types](pii-with-concepts) | How to mark domain value types as PII once and apply everywhere |
+| [Marking data as PII](pii) | The `[PII]` marker — rules, usage, and constraints |
+| [Declaring PII on a concept](pii-with-concepts) | How to mark domain value types as PII once and apply everywhere |
 | [Working with compliance from the client](client) | How to annotate events and ConceptAs types in your .NET client code |
 | [Read models and PII](read-models) | How PII encryption affects projections, reducers, and read model queries |
-| [Erasing a subject](erasing-a-subject.md) | What one erasure reaches, and how to erase across every event store |
+| [Erasing a subject](erasing-a-subject) | What one erasure reaches, and how to erase across every event store |
 | [Compliance in Arc applications](arc.md) | Using read models and queries with compliance in Arc |
 | [Event Redaction](../events/redaction) | Removing event content for GDPR right-to-erasure requests |

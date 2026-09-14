@@ -30,7 +30,7 @@ static class KeyRedirectionPii
     /// The severity is deliberately one line, and deliberately a warning for its first release: unlike
     /// Unlike a joined value with tracked per-property ownership, this shape need not produce a runtime symptom — the value
     /// can re-encrypt and read back cleanly while erasure misses it — and the analyzer cannot prove the runtime
-    /// subject stored with every historical and future event. Change <c>defaultSeverity</c> below to
+    /// subject stored with every historical and future event. Change <c language="csharp">defaultSeverity</c> below to
     /// <see cref="DiagnosticSeverity.Error"/> only through a separately reviewed rollout decision.
     /// </remarks>
     internal static readonly DiagnosticDescriptor Rule = new(
@@ -48,11 +48,11 @@ static class KeyRedirectionPii
     const string EventContextDisplayName = "EventContext";
 
     /// <summary>
-    /// The <c>EventContext</c> members that keep document routing aligned with the kernel's compliance-identifier
+    /// The <c language="csharp">EventContext</c> members that keep document routing aligned with the kernel's compliance-identifier
     /// resolution.
     /// </summary>
     /// <remarks>
-    /// An explicit <c>EventContext.Subject</c> wins in the kernel regardless of the resolved key. Otherwise the
+    /// An explicit <c language="csharp">EventContext.Subject</c> wins in the kernel regardless of the resolved key. Otherwise the
     /// subject defaults to the event source id, and routing by that id leaves the default document key unchanged.
     /// </remarks>
     static readonly string[] _contextMembersAlignedWithComplianceResolution = ["EventSourceId", "Subject"];
@@ -73,10 +73,10 @@ static class KeyRedirectionPii
     }
 
     /// <summary>
-    /// Determine whether keying a document by an <c>EventContext</c> member can redirect it away from the kernel's
+    /// Determine whether keying a document by an <c language="csharp">EventContext</c> member can redirect it away from the kernel's
     /// resolved compliance identity.
     /// </summary>
-    /// <param name="contextMemberName">The name of the member on <c>EventContext</c>.</param>
+    /// <param name="contextMemberName">The name of the member on <c language="csharp">EventContext</c>.</param>
     /// <returns>True when the member can redirect compliance identity, false otherwise.</returns>
     internal static bool ContextMemberRedirects(string contextMemberName) =>
         !_contextMembersAlignedWithComplianceResolution.Contains(contextMemberName, StringComparer.OrdinalIgnoreCase);
@@ -89,9 +89,9 @@ static class KeyRedirectionPii
     internal static string DescribeConstantKey(string value) => $"the constant '{value}'";
 
     /// <summary>
-    /// Describe an <c>EventContext</c>-sourced key for the diagnostic message.
+    /// Describe an <c language="csharp">EventContext</c>-sourced key for the diagnostic message.
     /// </summary>
-    /// <param name="contextMemberName">The name of the member on <c>EventContext</c>.</param>
+    /// <param name="contextMemberName">The name of the member on <c language="csharp">EventContext</c>.</param>
     /// <returns>The description to name in the diagnostic.</returns>
     internal static string DescribeContextKey(string contextMemberName) => $"{EventContextDisplayName}.{contextMemberName}";
 }

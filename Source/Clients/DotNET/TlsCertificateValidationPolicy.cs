@@ -21,7 +21,7 @@ static class TlsCertificateValidationPolicy
     /// certificate is accepted without any setup. They therefore combine with AND: validation is
     /// skipped only while neither input asks for it, and setting either one to <see langword="false"/>
     /// is enough to turn it on. Combining with OR would let the untouched input swallow an explicit
-    /// <c>skipTlsValidation=false</c> and go on accepting any certificate.
+    /// <c language="csharp">skipTlsValidation=false</c> and go on accepting any certificate.
     /// </remarks>
     public static bool ShouldSkip(Tls tls, ChronicleConnectionString connectionString) =>
         tls.SkipCertificateValidation && connectionString.SkipTlsValidation;

@@ -23,7 +23,7 @@ public enum AuthenticationMode
     /// </summary>
     /// <remarks>
     /// Only usable against a server running with authentication turned off
-    /// (<c>Cratis:Chronicle:Authentication:Enabled=false</c>), which is meant for a Chronicle embedded in the
+    /// (<c language="csharp">Cratis:Chronicle:Authentication:Enabled=false</c>), which is meant for a Chronicle embedded in the
     /// same container or process as its client. Against any server that enforces authentication, every call
     /// fails as unauthenticated.
     /// </remarks>

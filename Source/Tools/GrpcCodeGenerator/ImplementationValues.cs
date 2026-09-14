@@ -104,7 +104,7 @@ public static class ImplementationValues
     /// <param name="declaredType">The type the artifact declares.</param>
     /// <returns>The expression to assign to the contract property.</returns>
     /// <remarks>
-    /// A concept converts down to its primitive implicitly through <c>ConceptAs&lt;T&gt;</c>, but the cast is
+    /// A concept converts down to its primitive implicitly through <c language="csharp">ConceptAs&lt;T&gt;</c>, but the cast is
     /// written out anyway: it states which primitive the contract expects, so a concept whose underlying type
     /// changes fails here rather than silently changing the wire shape.
     /// </remarks>

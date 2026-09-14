@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Represents a decorator around <see cref="IReadModels"/> for testing that intercepts
-/// <c>GetInstanceById</c> to return pre-seeded read model instances when available,
+/// <c language="csharp">GetInstanceById</c> to return pre-seeded read model instances when available,
 /// and delegates all other operations to the real inner implementation.
 /// </summary>
 /// <param name="inner">The real <see cref="IReadModels"/> implementation to delegate to.</param>
@@ -28,27 +28,26 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public Task Register<TReadModel>() => inner.Register<TReadModel>();
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Nothing seeded under this key - whether because the id was never seeded at all, or a different id
+    /// was - resolves to null rather than falling through to the inner IReadModels, which needs a grain and
+    /// throws GrainNotAvailableInTestScenario in-process. This matches what the interface's nullable return
+    /// already promises for "the instance does not exist" (#3927).
+    /// </remarks>
     public Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         var identifier = typeof(TReadModel).GetReadModelIdentifier();
-        if (_instances.TryGetValue((identifier, key.Value), out var instance))
-        {
-            return Task.FromResult((TReadModel)instance);
-        }
-
-        return inner.GetInstanceById<TReadModel>(key, sessionId);
+        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? (TReadModel)instance : default!);
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// See the generic overload above - the same reasoning applies here (#3927).
+    /// </remarks>
     public Task<object> GetInstanceById(Type readModelType, ReadModelKey key, ReadModelSessionId? sessionId = null)
     {
         var identifier = readModelType.GetReadModelIdentifier();
-        if (_instances.TryGetValue((identifier, key.Value), out var instance))
-        {
-            return Task.FromResult(instance);
-        }
-
-        return inner.GetInstanceById(readModelType, key, sessionId);
+        return Task.FromResult(_instances.TryGetValue((identifier, key.Value), out var instance) ? instance : null!);
     }
 
     /// <inheritdoc/>
@@ -80,7 +79,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         inner.Release(instances);
 
     /// <summary>
-    /// Registers a pre-seeded read model instance so that subsequent <c>GetInstanceById</c> calls
+    /// Registers a pre-seeded read model instance so that subsequent <c language="csharp">GetInstanceById</c> calls
     /// return it directly without hitting the server.
     /// </summary>
     /// <typeparam name="TReadModel">The type of read model to register.</typeparam>

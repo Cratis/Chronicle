@@ -1,23 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BehaviorSubject } from 'rxjs';
 import sinon, { SinonStubbedInstance } from 'sinon';
 import { ObserversViewModel } from '../../../ObserversViewModel';
-import { INamespaces } from 'State/Namespaces';
 import { ClearObserverQuarantine, ReplayObserver as Replay } from 'Features/Observation';
 import { Dialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 
 export class a_view_model {
     constructor() {
-        this.namespaces = {
-            currentNamespace: new BehaviorSubject<string>(''),
-            setCurrentNamespace: sinon.stub(),
-            namespaces: new BehaviorSubject<string[]>([]),
-            setEventStore: sinon.stub()
-
-        };
         this.replay = sinon.createStubInstance(Replay);
         this.replay.execute = sinon.stub().returns({ onException: sinon.stub() });
         this.clearObserverQuarantine = sinon.createStubInstance(ClearObserverQuarantine);
@@ -26,10 +17,9 @@ export class a_view_model {
 
         this.params = { eventStore: 'eventStore', namespace: 'namespace' };
 
-        this.viewModel = new ObserversViewModel(this.namespaces, this.replay, this.clearObserverQuarantine, this.dialogs, this.params);
+        this.viewModel = new ObserversViewModel(this.replay, this.clearObserverQuarantine, this.dialogs);
     }
 
-    namespaces: INamespaces;
     replay: Replay;
     clearObserverQuarantine: ClearObserverQuarantine;
     dialogs: SinonStubbedInstance<Dialogs>;

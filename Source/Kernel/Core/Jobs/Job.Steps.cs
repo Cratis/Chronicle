@@ -169,6 +169,31 @@ public abstract partial class Job<TRequest, TJobState>
     Task<Dictionary<JobStepId, IJobStep>> GetIdAndGrainReferenceForNonCompletedJobSteps() =>
         GetIdAndGrainReferenceJobSteps(JobStepStatus.Running, JobStepStatus.Scheduled, JobStepStatus.Unknown, JobStepStatus.Stopped);
 
+    /// <summary>
+    /// Recount the job's progress from the persisted state of its steps.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The progress is maintained by counting step outcomes as they are reported, so an outcome that never reached
+    /// storage leaves it permanently short of the total and the job never finishes (#3944). The steps are the record
+    /// of what actually happened, so they are what a stalled job's progress is rebuilt from.
+    /// </remarks>
+    async Task ReconcileProgressFromJobSteps()
+    {
+        var getJobSteps = await Storage.JobSteps.GetForJob(JobId);
+        if (getJobSteps.TryGetException(out var exception))
+        {
+            _logger.FailedReconcilingProgressFromJobSteps(exception);
+            return;
+        }
+
+        var steps = getJobSteps.AsT0;
+        State.Progress.TotalSteps = steps.Count;
+        State.Progress.SuccessfulSteps = steps.Count(_ => _.Status is JobStepStatus.CompletedSuccessfully);
+        State.Progress.FailedSteps = steps.Count(_ => _.Status is JobStepStatus.CompletedWithFailure or JobStepStatus.Failed);
+        State.Progress.StoppedSteps = 0;
+    }
+
     IJobStep GetJobStepGrain(JobStepDetails details) => (GrainFactory.GetGrain(details.Type, details.Id, keyExtension: details.Key) as IJobStep)!;
     IJobStep GetJobStepGrain(JobStepState state) => (GrainFactory.GetGrain((Type)state.Type, state.Id.JobStepId, keyExtension: new JobStepKey(state.Id.JobId, JobKey.EventStore, JobKey.Namespace)) as IJobStep)!;
 

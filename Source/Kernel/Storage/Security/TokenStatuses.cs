@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.Security;
 /// Holds the well-known values for <see cref="Token.Status"/>.
 /// </summary>
 /// <remarks>
-/// The values mirror OpenIddict's <c>OpenIddictConstants.Statuses</c> so the storage layer can reason
+/// The values mirror OpenIddict's <c language="csharp">OpenIddictConstants.Statuses</c> so the storage layer can reason
 /// about a token's lifecycle (for example when pruning) without taking a dependency on OpenIddict.
 /// </remarks>
 public static class TokenStatuses

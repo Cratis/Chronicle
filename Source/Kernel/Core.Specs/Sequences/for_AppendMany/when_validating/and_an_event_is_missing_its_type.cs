@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Arc.Commands;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Chronicle.Concepts;
@@ -27,7 +26,7 @@ public class and_an_event_is_missing_its_type : Specification
         "some-namespace",
         "event-log",
         "some-event-source",
-        [new EventToAppend(null!, new JsonObject())]));
+        [new EventToAppend(null!, "{}")]));
 
     [Fact] void should_not_be_successful() => _result.ShouldNotBeSuccessful();
     [Fact] void should_have_validation_errors() => _result.ShouldHaveValidationErrors();

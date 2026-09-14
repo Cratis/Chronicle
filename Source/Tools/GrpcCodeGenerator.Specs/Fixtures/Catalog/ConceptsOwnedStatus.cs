@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Concepts.SharedTypeCatalog;
 
 /// <summary>
 /// Stands in for a type reused from a Kernel project Core depends on, one namespace segment deeper than a
-/// Core-declared type - <c>Concepts.Jobs.JobStatus</c> is the real shape this mirrors, and the whole reason
+/// Core-declared type - <c language="csharp">Concepts.Jobs.JobStatus</c> is the real shape this mirrors, and the whole reason
 /// <see cref="Tools.GrpcCodeGenerator.SharedTypeRegistry"/> treats "Concepts" as a transparent layer segment.
 /// </summary>
 public enum ConceptsOwnedStatus

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// </summary>
 /// <remarks>
 /// Bare events are appended to the event source id and metadata resolved from the <see cref="ReactorContext"/>
-/// (the reactor's <c>[EventStreamType]</c> / <c>[EventSourceType]</c> attributes and <c>ICanProvide*</c> interfaces),
+/// (the reactor's <c language="csharp">[EventStreamType]</c> / <c language="csharp">[EventSourceType]</c> attributes and <c language="csharp">ICanProvide*</c> interfaces),
 /// exactly as if returned on their own; each <see cref="EventForEventSourceId"/> keeps its own self-describing
 /// metadata. All events are appended as a single transaction. Homogeneous collections are handled by
 /// <see cref="EventsResultHandler"/> (all bare events) and <see cref="EventsForEventSourceIdResultHandler"/>
@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// The compatibility constructor retains the previous public surface for callers that create the handler directly.
 /// Chronicle explicitly registers this type once per event-store scope using that constructor before convention
 /// binding runs. Cached event stores use the parameterless constructor and pass their registry through the additive
-/// <c>CanHandle</c> overload instead.
+/// <c language="csharp">CanHandle</c> overload instead.
 /// </remarks>
 [Singleton]
 public class MixedSideEffectsResultHandler : IReactorSideEffectHandler
@@ -40,7 +40,7 @@ public class MixedSideEffectsResultHandler : IReactorSideEffectHandler
     /// Initializes a new instance of the <see cref="MixedSideEffectsResultHandler"/> class for compatibility with the
     /// previous event-store-less contract.
     /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> used when the event-store-less <c>CanHandle</c> overload is
+    /// <param name="eventTypes"><see cref="IEventTypes"/> used when the event-store-less <c language="csharp">CanHandle</c> overload is
     /// called without a current event store on its <see cref="ReactorContext"/>.</param>
     public MixedSideEffectsResultHandler(IEventTypes eventTypes)
     {

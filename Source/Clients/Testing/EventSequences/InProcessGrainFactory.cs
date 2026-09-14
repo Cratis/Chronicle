@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// and an optional in-process <see cref="KernelConstraints::IConstraints"/> for the grain's own constraints-version lookups.
 /// </summary>
 /// <remarks>
-/// All grain factory methods other than <c>GetGrain&lt;TGrainInterface&gt;(string, string?)</c> throw
+/// All grain factory methods other than <c language="csharp">GetGrain&lt;TGrainInterface&gt;(string, string?)</c> throw
 /// <see cref="NotSupportedException"/>, since only string-keyed grain lookups are needed in test scenarios.
 /// </remarks>
 /// <param name="grain">The kernel <see cref="KernelEventSequences::EventSequence"/> grain to return, if any.</param>

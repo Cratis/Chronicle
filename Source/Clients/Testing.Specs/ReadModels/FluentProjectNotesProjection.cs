@@ -6,8 +6,8 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Fluent projection exercising the formal <c>.Clear(...)</c> everywhere <c>.Set(...)</c> reaches - at the root,
-/// on a child item, and on a member of a nested object - alongside the older <c>.Set(...).ToValue(null)</c>
+/// Fluent projection exercising the formal <c language="csharp">.Clear(...)</c> everywhere <c language="csharp">.Set(...)</c> reaches - at the root,
+/// on a child item, and on a member of a nested object - alongside the older <c language="csharp">.Set(...).ToValue(null)</c>
 /// spelling of the same clear.
 /// </summary>
 public class FluentProjectNotesProjection : IProjectionFor<FluentProjectNotes>

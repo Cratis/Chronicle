@@ -9,7 +9,7 @@ using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_getting_from_sequence_number;
 
-public class and_deserializing_single_event : given.an_event_sequence
+public class and_deserializing_single_event : given.an_event_sequence_with_a_wire_response
 {
     EventSequenceNumber _sequenceNumber;
     EventType _eventType;
@@ -40,7 +40,8 @@ public class and_deserializing_single_event : given.an_event_sequence
                 CorrelationId = Guid.NewGuid(),
                 Causation = [],
                 CausedBy = new Contracts.Sequences.Identity(),
-                Tags = []
+                Tags = [],
+                Subject = "synthetic-subject"
             },
             Content = JsonSerializer.Serialize(_expectedEvent, JsonSerializerOptions.Default)
         };
@@ -49,9 +50,7 @@ public class and_deserializing_single_event : given.an_event_sequence
             .When(_ => _.FromSequenceNumber(Arg.Any<Contracts.Sequences.FromSequenceNumberRequest>(), CallContext.Default))
             .Do(callInfo => _request = callInfo.Arg<Contracts.Sequences.FromSequenceNumberRequest>());
 
-        _sequences
-            .FromSequenceNumber(Arg.Any<Contracts.Sequences.FromSequenceNumberRequest>(), CallContext.Default)
-            .Returns(QueryResult<IEnumerable<Contracts.Sequences.AppendedEventResponse>>.Success(Guid.NewGuid(), [contractEvent]));
+        RespondWith(QueryResult<IEnumerable<Contracts.Sequences.AppendedEventResponse>>.Success(Guid.NewGuid(), [contractEvent]));
     }
 
     async Task Because() => _result = await _eventSequence.GetFromSequenceNumber(_sequenceNumber);
@@ -59,6 +58,9 @@ public class and_deserializing_single_event : given.an_event_sequence
     [Fact] void should_call_service() => _request.ShouldNotBeNull();
     [Fact] void should_pass_correct_sequence_number() => _request.FromEventSequenceNumber.ShouldEqual((ulong)_sequenceNumber);
     [Fact] void should_return_one_event() => _result.Count.ShouldEqual(1);
+    [Fact] void should_preserve_the_subject() => _result[0].Context.Subject.Value.ShouldEqual("synthetic-subject");
+    [Fact] void should_preserve_empty_tags() => _result[0].Context.Tags.ShouldBeEmpty();
+    [Fact] void should_preserve_empty_causation() => _result[0].Context.Causation.ShouldBeEmpty();
     [Fact] void should_deserialize_content_correctly() => ((_result[0].Content as TestEvent)?.Name).ShouldEqual(_expectedEvent.Name);
     [Fact] void should_deserialize_content_value_correctly() => ((_result[0].Content as TestEvent)?.Value).ShouldEqual(_expectedEvent.Value);
     [Fact] void should_return_event_with_correct_context() => _result[0].Context.SequenceNumber.ShouldEqual(_sequenceNumber);

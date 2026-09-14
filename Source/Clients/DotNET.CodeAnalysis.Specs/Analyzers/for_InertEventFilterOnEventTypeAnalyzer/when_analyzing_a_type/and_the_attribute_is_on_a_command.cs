@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_InertEventFilterOnEv
 
 /// <summary>
 /// A command really does contribute this metadata: it tags the events its append produces and, with concurrency,
-/// joins the server-side concurrency scope. The command here also carries <c>[EventType]</c>, which is what makes
+/// joins the server-side concurrency scope. The command here also carries <c language="csharp">[EventType]</c>, which is what makes
 /// this spec measure anything: without it the type would be skipped for having no event type at all, and the
 /// command role would be scenery the analyzer never reads. Arc reads both attributes off the command type, so
 /// reporting them would be a false positive - and telling the author to "move it to the command that appends the

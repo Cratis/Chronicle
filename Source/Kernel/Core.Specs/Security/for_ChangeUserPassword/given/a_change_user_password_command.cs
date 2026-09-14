@@ -43,7 +43,12 @@ public class a_change_user_password_command : Specification
             Arg.Any<IEnumerable<Tag>>(),
             Arg.Any<EventSourceType>(),
             Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>()).Returns(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
+            Arg.Any<EventStreamId>()).Returns(call =>
+            {
+                _user.PasswordHash = call.Arg<UserPasswordChanged>().PasswordHash;
+                _user.HasLoggedIn = true;
+                return AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First);
+            });
 
         _user = new StoredUser
         {

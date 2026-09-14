@@ -34,7 +34,7 @@ public class ReactorSourceGivenBuilder<TReactor>(ReactorScenario<TReactor> scena
     /// </summary>
     /// <remarks>
     /// Use this when the reactor takes a read model as a handler-method parameter — seed the expected state here
-    /// rather than replaying events through a projection. Chain <c>.Events(...)</c> afterwards to drive the reactor.
+    /// rather than replaying events through a projection. Chain <c language="csharp">.Events(...)</c> afterwards to drive the reactor.
     /// </remarks>
     /// <typeparam name="TReadModel">The type of read model to seed.</typeparam>
     /// <param name="readModel">The read model instance to seed for this event source.</param>

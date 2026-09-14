@@ -6,10 +6,10 @@ using System.Reflection;
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 
 /// <summary>
-/// Represents a <c>[Query]</c>-marked method on a <c>[KeyedBy&lt;TKey&gt;]</c> grain interface.
+/// Represents a <c language="csharp">[Query]</c>-marked method on a <c language="csharp">[KeyedBy&lt;TKey&gt;]</c> grain interface.
 /// </summary>
 /// <param name="grainInterfaceType">The grain interface the method is declared on.</param>
-/// <param name="keyType">The type declared by the interface's <c>[KeyedBy&lt;TKey&gt;]</c> attribute.</param>
+/// <param name="keyType">The type declared by the interface's <c language="csharp">[KeyedBy&lt;TKey&gt;]</c> attribute.</param>
 /// <param name="method">The method info representing the query.</param>
 public class KeyedQueryDefinition(Type grainInterfaceType, Type keyType, MethodInfo method)
 {
@@ -36,8 +36,8 @@ public class KeyedQueryDefinition(Type grainInterfaceType, Type keyType, MethodI
 
     /// <summary>
     /// Gets the key type's constructor parameters, in declaration order - the fields <see cref="KeyType"/>'s own
-    /// <c>ToString()</c> is expected to combine into the grain key, and the fields the generated request carries so
-    /// the implementation can reconstruct that same key with <c>KeyHelper.Combine</c>.
+    /// <c language="csharp">ToString()</c> is expected to combine into the grain key, and the fields the generated request carries so
+    /// the implementation can reconstruct that same key with <c language="csharp">KeyHelper.Combine</c>.
     /// </summary>
     public IReadOnlyList<ParameterInfo> KeyParameters => KeyType.GetConstructors()[0].GetParameters();
 }

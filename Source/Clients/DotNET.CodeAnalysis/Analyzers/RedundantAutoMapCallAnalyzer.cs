@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports an explicit <c>.AutoMap()</c> call on a projection builder as redundant,
+/// Analyzer that reports an explicit <c language="csharp">.AutoMap()</c> call on a projection builder as redundant,
 /// since AutoMap is enabled by default.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]

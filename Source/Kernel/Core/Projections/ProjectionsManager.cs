@@ -39,8 +39,29 @@ public partial class ProjectionsManager(
     ILanguageService languageService,
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
-    ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
+    ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
+    /// <summary>
+    /// Maximum number of observer subscribe operations this grain lets run concurrently.
+    /// </summary>
+    /// <remarks>
+    /// On boot every ProjectionsManager (one per event store) activates independently and immediately schedules
+    /// subscribing every projection to every namespace in full parallel - see
+    /// <see cref="SetDefinitionAndSubscribeForProjections"/> fanning out over definitions and
+    /// <see cref="SetDefinitionAndSubscribeForProjection"/> fanning out over namespaces. Subscribing an observer also
+    /// drives it to recover every failed partition it remembers
+    /// (<see cref="IObserver.Subscribe{TObserverSubscriber}"/> and <see cref="IObserver.SubscribeToAllEvents{TObserverSubscriber}"/>
+    /// both call <see cref="IObserver.TryRecoverAllFailedPartitions"/>), so with enough projections, namespaces and
+    /// accumulated failures across a cluster the unrestrained fan-out from a kernel restart can saturate the silo's
+    /// CPU - the recovery storm this bound exists to prevent. The gate sits at the actual subscribe call site
+    /// (<see cref="SubscribeIfNotSubscribed"/>) rather than reshaping the fan-out itself, so the bound holds no
+    /// matter which caller reaches it: registration, a newly added namespace, or the activation-time resubscribe
+    /// timer.
+    /// </remarks>
+    const int MaxConcurrentSubscriptions = 8;
+
+    readonly SemaphoreSlim _subscriptionThrottle = new(MaxConcurrentSubscriptions, MaxConcurrentSubscriptions);
+
     EventStoreName _eventStoreName = EventStoreName.NotSet;
     IGrainTimer? _subscribeTimer;
 
@@ -53,6 +74,21 @@ public partial class ProjectionsManager(
         _eventStoreName = this.GetPrimaryKeyString();
         ScheduleSetDefinitionAndSubscribe();
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        Dispose();
+        return base.OnDeactivateAsync(reason, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _subscribeTimer?.Dispose();
+        _subscriptionThrottle.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <inheritdoc/>
@@ -325,9 +361,17 @@ public partial class ProjectionsManager(
         // The subscriber type is how the observer learns whether the projection's partitions may be spread across
         // the silos of a cluster. A projection that can collapse several event sources onto one read model
         // document is serialized by a process-local lock, so all of its partitions must reach one activation.
-        await (projection.IsEventSourceKeyed
-            ? SubscribeAs<IProjectionObserverSubscriber>()
-            : SubscribeAs<ICollapsingProjectionObserverSubscriber>());
+        await _subscriptionThrottle.WaitAsync();
+        try
+        {
+            await (projection.IsEventSourceKeyed
+                ? SubscribeAs<IProjectionObserverSubscriber>()
+                : SubscribeAs<ICollapsingProjectionObserverSubscriber>());
+        }
+        finally
+        {
+            _subscriptionThrottle.Release();
+        }
     }
 
     Task OnError(Exception exception) => Task.CompletedTask;

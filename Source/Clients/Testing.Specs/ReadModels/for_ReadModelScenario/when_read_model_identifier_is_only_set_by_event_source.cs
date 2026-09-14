@@ -9,8 +9,8 @@ using Cratis.Chronicle.ReadModels;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// In production, MongoDB sets <c>_id</c> = projection key value and the BSON deserializer maps
-/// <c>_id</c> back onto the read model's identifier property. The in-memory test harness skips
+/// In production, MongoDB sets <c language="csharp">_id</c> = projection key value and the BSON deserializer maps
+/// <c language="csharp">_id</c> back onto the read model's identifier property. The in-memory test harness skips
 /// MongoDB, so it must mirror that mapping itself; otherwise <see cref="ReadModelScenario{T}.Instance"/>
 /// returns a read model whose identifier property is <see langword="null"/> for any model whose ID
 /// is sourced from the event-source ID (the common case).

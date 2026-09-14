@@ -1,1 +1,1 @@
-../../.ai/agents/performance-reviewer.md
+../../.cratis/ai/agents/performance-reviewer.md

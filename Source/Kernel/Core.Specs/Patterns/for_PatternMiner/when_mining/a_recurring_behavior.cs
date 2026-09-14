@@ -13,14 +13,14 @@ public class a_recurring_behavior : given.a_pattern_miner
 {
     IEnumerable<BehaviorPattern> _result;
 
-    void Because()
+    async Task Because()
     {
         for (var count = 0; count < 20; count++)
         {
-            _miner.Observe(Features("user-42", "ApproveExpenseReport"));
+            await _miner.Mine([Features("user-42", "ApproveExpenseReport")]);
         }
 
-        _result = _miner.GetSurvivingPatterns("user-42");
+        _result = await _miner.GetSurvivingPatterns("user-42");
     }
 
     [Fact] void should_mine_the_full_combination() =>

@@ -9,9 +9,9 @@ namespace Cratis.Chronicle.Sequences;
 /// <remarks>
 /// Deliberately its own type rather than <see cref="Cratis.Chronicle.EventSequences.CompleteStreamError"/> directly
 /// - the same reason <see cref="EventType"/> and <see cref="ConcurrencyScope"/> are their own local types: it keeps
-/// this command's wire shape mirroring into this service's own <c>Contracts.Sequences</c> namespace, rather than
-/// reaching into <c>Contracts.EventSequences</c>, where a hand-written contract of the same name still serves the
-/// not-yet-retired <c>EventSequences</c> service.
+/// this command's wire shape mirroring into this service's own <c language="csharp">Contracts.Sequences</c> namespace, rather than
+/// reaching into <c language="csharp">Contracts.EventSequences</c>, where a hand-written contract of the same name still serves the
+/// not-yet-retired <c language="csharp">EventSequences</c> service.
 /// </remarks>
 public enum CompleteStreamError
 {

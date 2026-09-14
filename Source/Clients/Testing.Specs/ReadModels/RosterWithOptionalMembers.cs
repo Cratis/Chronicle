@@ -10,11 +10,11 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// harness's answer apart from the runtime's.
 /// </summary>
 /// <remarks>
-/// The read-model sink never writes an empty child collection - the path is owned by <c>ChildAdded</c> and
-/// <c>ChildRemoved</c>, and writing <c>[]</c> from a root event would race a sibling partition's already-added
+/// The read-model sink never writes an empty child collection - the path is owned by <c language="csharp">ChildAdded</c> and
+/// <c language="csharp">ChildRemoved</c>, and writing <c language="csharp">[]</c> from a root event would race a sibling partition's already-added
 /// child away. So a collection with no children is an absent field, and a reader that leaves a nullable
 /// declaration alone answers <see langword="null"/>. A non-nullable declaration cannot distinguish the two,
-/// because both the harness pre-seeding <c>[]</c> and the reader resolving an absent field to <c>[]</c> look
+/// because both the harness pre-seeding <c language="csharp">[]</c> and the reader resolving an absent field to <c language="csharp">[]</c> look
 /// identical from a spec.
 /// </remarks>
 /// <param name="Id">Roster identifier.</param>

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AddUser } from 'Features/Security';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { useState } from 'react';
 import strings from 'Strings';
 import { Guid } from '@cratis/fundamentals';
@@ -29,14 +29,14 @@ const PasswordActions = ({ showPassword, onToggleShow }: PasswordActionsProps) =
             <Button
                 icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
                 onClick={onToggleShow}
-                className="p-button-text"
+                variant='ghost'
                 type="button"
                 tooltip={showPassword ? strings.eventStore.system.users.dialogs.addUser.hidePassword : strings.eventStore.system.users.dialogs.addUser.showPassword}
             />
             <Button
                 icon="pi pi-refresh"
                 onClick={handleGenerate}
-                className="p-button-text"
+                variant='ghost'
                 type="button"
                 tooltip={strings.eventStore.system.users.dialogs.addUser.generatePassword}
             />

@@ -10,8 +10,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a <c>[Key]</c> or <c>[Subject]</c> attribute placed on a property or record
-/// positional parameter whose type derives from <c>EventSourceId&lt;T&gt;</c>.
+/// Analyzer that reports a <c language="csharp">[Key]</c> or <c language="csharp">[Subject]</c> attribute placed on a property or record
+/// positional parameter whose type derives from <c language="csharp">EventSourceId&lt;T&gt;</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class KeyOrSubjectOnEventSourceIdAnalyzer : DiagnosticAnalyzer

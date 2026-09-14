@@ -44,7 +44,7 @@ public interface IPatterns
     /// <para>
     /// Where <see cref="GetPatterns"/> returns patterns that <em>describe</em> a situation, this returns the ones
     /// that say what is <em>done</em> in it. Read the action off a result with
-    /// <c>pattern.Facets.ValueOf(FacetName.CommandType)</c>, and its likelihood from <c>Confidence</c> - the chance
+    /// <c language="csharp">pattern.Facets.ValueOf(FacetName.CommandType)</c>, and its likelihood from <c language="csharp">Confidence</c> - the chance
     /// of that action given the context it was established in.
     /// </para>
     /// <para>

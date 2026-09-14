@@ -115,6 +115,22 @@ public interface IEventStoreNamespaceStorage
     Task<IEnumerable<EventSequenceId>> GetEventSequences();
 
     /// <summary>
+    /// Checks whether the namespace has ever held any persisted data.
+    /// </summary>
+    /// <returns>True if the namespace has been used for something - an appended event, a job, an observer -
+    /// false if it has never been touched.</returns>
+    /// <remarks>
+    /// A namespace can be registered - and rediscovered on every server restart - long before anything is ever
+    /// written to it; some products register a namespace per tenant regardless of whether that tenant ever uses
+    /// event sourcing. Eagerly rehydrating jobs, reactors and event sequences for such a namespace materializes
+    /// its underlying storage (for example a whole MongoDB database) for no reason. Callers that only need to
+    /// rehydrate state that could genuinely exist - not create state that has no reason to exist yet - check this
+    /// first and skip the namespace entirely when it is false. The namespace's storage is still materialized
+    /// correctly, lazily, the moment it receives its first genuine write.
+    /// </remarks>
+    Task<bool> HasData();
+
+    /// <summary>
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.
     /// </summary>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>

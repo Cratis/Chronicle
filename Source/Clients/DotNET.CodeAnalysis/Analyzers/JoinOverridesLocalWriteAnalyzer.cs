@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
 /// Analyzer that reports a model-bound read model member written by both an explicit local mapping
-/// (<c>[SetFrom]</c>, <c>[SetValue]</c>, an aggregate, …) and a <c>[Join&lt;TEvent&gt;]</c> — a combination
+/// (<c language="csharp">[SetFrom]</c>, <c language="csharp">[SetValue]</c>, an aggregate, …) and a <c language="csharp">[Join&lt;TEvent&gt;]</c> — a combination
 /// where the joined value always wins and the local write can never reset the property.
 /// </summary>
 /// <remarks>

@@ -31,6 +31,7 @@ public record ChangeUserPassword(UserId UserId, Password OldPassword, Password P
     /// <exception cref="UserNotFound">Thrown when the specified user does not exist.</exception>
     /// <exception cref="InvalidOldPassword">Thrown when the supplied current password is incorrect.</exception>
     /// <exception cref="NewPasswordMustBeDifferent">Thrown when the new password is the same as the current password.</exception>
+    /// <exception cref="PasswordCouldNotBeChanged">Thrown when appending fails.</exception>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
@@ -41,12 +42,12 @@ public record ChangeUserPassword(UserId UserId, Password OldPassword, Password P
         var user = await storage.System.Users.GetById(UserId) ?? throw new UserNotFound(UserId);
 
         var passwordHasher = new PasswordHasher<object>();
-        if (user.PasswordHash is null || passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, OldPassword) != PasswordVerificationResult.Success)
+        if (user.PasswordHash is null || passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, OldPassword) == PasswordVerificationResult.Failed)
         {
             throw new InvalidOldPassword();
         }
 
-        if (passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, Password) == PasswordVerificationResult.Success)
+        if (passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, Password) != PasswordVerificationResult.Failed)
         {
             throw new NewPasswordMustBeDifferent();
         }
@@ -54,6 +55,12 @@ public record ChangeUserPassword(UserId UserId, Password OldPassword, Password P
         var passwordHash = passwordHasher.HashPassword(null!, Password);
         var @event = new UserPasswordChanged((UserPassword)passwordHash);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(UserId, @event);
+        var result = await eventSequence.Append(UserId, @event);
+        if (!result.IsSuccess)
+        {
+            throw new PasswordCouldNotBeChanged(UserId);
+        }
+
+        await UserProjection.WaitForPassword(storage.System.Users, UserId, passwordHash);
     }
 }

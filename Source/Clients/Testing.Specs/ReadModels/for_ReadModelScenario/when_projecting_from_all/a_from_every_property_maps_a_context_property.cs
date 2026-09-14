@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_projecting_from_all;
 
 /// <summary>
-/// A <c>[FromEvery]</c> property — the sibling of <c>[FromAll]</c> — must update for every driven event,
+/// A <c language="csharp">[FromEvery]</c> property — the sibling of <c language="csharp">[FromAll]</c> — must update for every driven event,
 /// the same way the real runtime does.
 /// </summary>
 public class a_from_every_property_maps_a_context_property : Specification

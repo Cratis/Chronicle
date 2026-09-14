@@ -31,8 +31,8 @@ def main() -> None:
     wheel = next(path for path in distributions if path.suffix == ".whl")
     source_distribution = next(path for path in distributions if path.name.endswith(".tar.gz"))
     required_generated_paths = (
-        "cratis_chronicle_contracts/events_pb2.py",
-        "cratis_chronicle_contracts/events_pb2_grpc.py",
+        "cratis_chronicle_contracts/eventtypes_pb2.py",
+        "cratis_chronicle_contracts/eventtypes_pb2_grpc.py",
         "cratis_chronicle_contracts/protobuf_net/bcl_pb2.py",
     )
     with zipfile.ZipFile(wheel) as archive:

@@ -174,7 +174,7 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
     /// <summary>
     /// Process a nested object block and emit a <see cref="ChildrenDefinition"/> with <see cref="PropertyPath.NotSet"/>
     /// as the identifier — the engine treats the entry as scalar (one nullable child object) rather than as a collection.
-    /// A <c>clear with</c> directive inside the block becomes a RemovedWith entry so the engine clears the nested
+    /// A <c language="csharp">clear with</c> directive inside the block becomes a RemovedWith entry so the engine clears the nested
     /// object back to null when the event is observed.
     /// </summary>
     /// <param name="nested">The nested block to process.</param>
@@ -202,9 +202,9 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
     /// <returns>The stored expression per property.</returns>
     /// <exception cref="UnsupportedProjectionSyntax">Thrown when a mapping kind has no expression to store as.</exception>
     /// <remarks>
-    /// <c>clear property</c> and <c>property = null</c> are two spellings of the same act and both become
-    /// <see cref="WellKnownExpressions.Null"/>. <c>clear</c> is the one the generator emits, because assigning a
-    /// value and taking one away are different acts and spelling both with <c>=</c> hides that.
+    /// <c language="csharp">clear property</c> and <c language="csharp">property = null</c> are two spellings of the same act and both become
+    /// <see cref="WellKnownExpressions.Null"/>. <c language="csharp">clear</c> is the one the generator emits, because assigning a
+    /// value and taking one away are different acts and spelling both with <c language="csharp">=</c> hides that.
     /// </remarks>
     Dictionary<PropertyPath, string> ProcessMappings(IEnumerable<MappingSyntax> mappings)
     {

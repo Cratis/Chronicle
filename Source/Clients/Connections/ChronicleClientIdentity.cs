@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Connections;
 internal static class ChronicleClientIdentity
 {
     /// <summary>
-    /// Gets the type of the client - always <c>.NET</c> for this SDK, so the server and its Workbench can tell it
+    /// Gets the type of the client - always <c language="csharp">.NET</c> for this SDK, so the server and its Workbench can tell it
     /// apart from clients built on the other Chronicle SDKs.
     /// </summary>
     public static string Type => ".NET";

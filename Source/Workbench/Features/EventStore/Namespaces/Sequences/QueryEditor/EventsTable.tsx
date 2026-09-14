@@ -4,7 +4,7 @@
 import { SortDirection, Sorting } from '@cratis/arc/queries';
 import { Column, type DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
 import { DataTable } from 'Components/DataTable';
-import { Paginator } from 'Components/Paginator';
+import { TablePaginator } from '@cratis/components/DataTables';
 import strings from 'Strings';
 import { AppendedEvent } from 'Features/Sequences';
 import { QueryEvents, QueryEventsParameters } from 'Features/Sequences';
@@ -75,10 +75,11 @@ export const EventsTable = ({ queryArguments, sortBy, descending, selection, onS
             </div>
 
             {result.paging.totalPages > 1 && (
-                <Paginator
+                <TablePaginator
                     page={result.paging.page}
+                    pageCount={result.paging.totalPages}
                     pageSize={pageSize}
-                    totalRecords={result.paging.totalItems}
+                    totalItems={result.paging.totalItems}
                     onPageChange={setPage} />
             )}
         </div>

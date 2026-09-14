@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_ServiceInterfaceGenerator
 /// directory, cleaned up after each spec.
 /// </summary>
 /// <remarks>
-/// Leaf specs, not this context, carry <c>[Collection(SharedTypeRegistryCollection.Name)]</c> - xUnit does not
+/// Leaf specs, not this context, carry <c language="csharp">[Collection(SharedTypeRegistryCollection.Name)]</c> - xUnit does not
 /// apply a collection attribute by inheritance, only from the concrete test class.
 /// </remarks>
 public class a_shared_type_generator : Specification

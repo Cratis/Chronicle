@@ -23,4 +23,22 @@ public static class ProjectionDeclarationSyntaxErrorConverters
     /// <returns>The converted API errors.</returns>
     public static IEnumerable<ProjectionDeclarationSyntaxError> ToApi(this IEnumerable<Contracts.Projections.ProjectionDeclarationSyntaxError> errors) =>
         errors.Select(e => e.ToApi());
+
+    /// <summary>
+    /// Converts a <see cref="ProjectionDeclarationSyntaxError"/> to its generated contract representation.
+    /// </summary>
+    /// <param name="error">The error to convert.</param>
+    /// <returns>The contract error.</returns>
+    /// <remarks>
+    /// The generated ProjectionEditor service mirrors this type into its own contract namespace, which is a
+    /// different type from the hand-written <see cref="Contracts.Projections.ProjectionDeclarationSyntaxError"/>
+    /// the client-facing projections contract still carries.
+    /// </remarks>
+    public static Contracts.ProjectionEditor.ProjectionDeclarationSyntaxError ToContract(this ProjectionDeclarationSyntaxError error) =>
+        new()
+        {
+            Message = error.Message,
+            Line = error.Line,
+            Column = error.Column
+        };
 }

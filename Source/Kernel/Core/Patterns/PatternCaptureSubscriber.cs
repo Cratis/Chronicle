@@ -1,41 +1,49 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Patterns;
 
 /// <summary>
-/// Represents an implementation of <see cref="IPatternCaptureSubscriber"/> that mines every event it observes and
-/// persists the patterns that survive.
+/// Represents an implementation of <see cref="IPatternCaptureSubscriber"/> that extracts the contextual facts of
+/// every event it observes and hands them to the <see cref="IPatternMiner"/> of its event store and namespace.
 /// </summary>
-/// <param name="miner">The <see cref="IPatternMiner"/> to mine with.</param>
 /// <param name="extractor">The <see cref="IEventFeatureExtractor"/> for reading an event's contextual facts.</param>
-/// <param name="storage">The <see cref="IStorage"/> to persist surviving patterns to.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
 /// <remarks>
 /// <para>
-/// Nothing per event is written. A batch is mined in memory and then the scopes it touched are rewritten from what
-/// currently survives, so storage holds the scope's behavior as it now stands rather than a log of how it got
-/// there.
+/// The subscriber is an adapter between the observer machinery and the miner: it extracts features and forwards
+/// each delivered batch as one call to the miner grain resolved by its own key's event store and namespace. That
+/// resolution is what keeps behavior isolated - the same scope name in two stores or two tenants' namespaces
+/// reaches two different miner grains and can never count into one sketch. Sketches, restoration, and deferred
+/// persistence all live on the miner.
 /// </para>
 /// <para>
-/// Only the scopes a batch touched are rewritten. Rewriting every scope on every batch would make the write cost
-/// grow with how many people have ever used the store rather than with how many acted just now.
+/// A failed hand-off is reported as this observer's failure and nothing more - mining is derived, secondary
+/// information, and a failure here must not stop the event sequence being observed for everything else. The miner
+/// counts nothing when it fails, so the redelivered batch counts nothing twice.
 /// </para>
 /// </remarks>
 public class PatternCaptureSubscriber(
-    IPatternMiner miner,
     IEventFeatureExtractor extractor,
-    IStorage storage,
     ILogger<PatternCaptureSubscriber> logger) : Grain, IPatternCaptureSubscriber
 {
+    ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
+    IPatternMiner _miner = null!;
+
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        _miner = GrainFactory.GetGrain<IPatternMiner>(new PatternMinerKey(_key.EventStore, _key.Namespace));
+        return base.OnActivateAsync(cancellationToken);
+    }
+
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
@@ -45,51 +53,28 @@ public class PatternCaptureSubscriber(
             return ObserverSubscriberResult.Ok(EventSequenceNumber.Unavailable);
         }
 
-        var key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
-
         try
         {
-            var touched = new HashSet<Concepts.Patterns.PatternGroupingKey>();
-            foreach (var features in batch.Select(extractor.Extract))
-            {
-                if (!features.GroupingKey.IsSpecified)
-                {
-                    continue;
-                }
+            var features = batch
+                .Select(extractor.Extract)
+                .Where(feature => feature.GroupingKey.IsSpecified)
+                .ToArray();
 
-                miner.Observe(features);
-                touched.Add(features.GroupingKey);
-            }
-
-            if (touched.Count > 0)
+            if (features.Length > 0)
             {
-                await Persist(key.EventStore, key.Namespace, touched);
+                await _miner.Mine(features);
             }
 
             return ObserverSubscriberResult.Ok(batch[^1].Context.SequenceNumber);
         }
         catch (Exception ex)
         {
-            // Mining is derived, secondary information. A failure here must not stop the event sequence being
-            // observed for everything else, so it is reported as this observer's failure and nothing more.
-            logger.FailedCapturingPatterns(key.EventStore, key.Namespace, ex);
+            logger.FailedCapturingPatterns(_key.EventStore, _key.Namespace, ex);
             return new ObserverSubscriberResult(
                 ObserverSubscriberState.Failed,
                 EventSequenceNumber.Unavailable,
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty);
-        }
-    }
-
-    async Task Persist(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<Concepts.Patterns.PatternGroupingKey> scopes)
-    {
-        var patterns = storage.GetEventStore(eventStore).GetNamespace(@namespace).Patterns;
-
-        foreach (var scope in scopes)
-        {
-            var surviving = miner.GetSurvivingPatterns(scope).ToArray();
-            await patterns.Save(surviving);
-            await patterns.RemoveAllExcept(scope, surviving.Select(pattern => pattern.Facets.Key));
         }
     }
 }

@@ -39,12 +39,12 @@ public static class ChronicleContainerImageTags
     public const string MongoDBImage = "mongo";
 
     /// <summary>
-    /// Tag for the MongoDB container image used by <c>AddCratisChronicleMongoDB</c>.
+    /// Tag for the MongoDB container image used by <c language="csharp">AddCratisChronicleMongoDB</c>.
     /// </summary>
     public const string MongoDBTag = "8.0";
 
     /// <summary>
-    /// Name of the single-node replica set that <c>AddCratisChronicleMongoDB</c> initiates.
+    /// Name of the single-node replica set that <c language="csharp">AddCratisChronicleMongoDB</c> initiates.
     /// </summary>
     public const string MongoDBReplicaSetName = "rs0";
 
@@ -59,26 +59,26 @@ public static class ChronicleContainerImageTags
     public const string MongoDBEndpointName = "tcp";
 
     /// <summary>
-    /// Environment variable key for the Chronicle storage type (e.g. <c>MongoDB</c>).
-    /// Maps to <c>Cratis:Chronicle:Storage:Type</c> in the Chronicle server configuration.
+    /// Environment variable key for the Chronicle storage type (e.g. <c language="csharp">MongoDB</c>).
+    /// Maps to <c language="csharp">Cratis:Chronicle:Storage:Type</c> in the Chronicle server configuration.
     /// </summary>
     public const string StorageTypeEnvironmentVariable = "Cratis__Chronicle__Storage__Type";
 
     /// <summary>
     /// Environment variable key for the Chronicle storage connection details (e.g. MongoDB connection string).
-    /// Maps to <c>Cratis:Chronicle:Storage:ConnectionDetails</c> in the Chronicle server configuration.
+    /// Maps to <c language="csharp">Cratis:Chronicle:Storage:ConnectionDetails</c> in the Chronicle server configuration.
     /// </summary>
     public const string StorageConnectionDetailsEnvironmentVariable = "Cratis__Chronicle__Storage__ConnectionDetails";
 
     /// <summary>
     /// Environment variable key for the Chronicle compliance encryption storage type.
-    /// Maps to <c>Cratis:Chronicle:Compliance:Encryption:Storage:Type</c> in the Chronicle server configuration.
+    /// Maps to <c language="csharp">Cratis:Chronicle:Compliance:Encryption:Storage:Type</c> in the Chronicle server configuration.
     /// </summary>
     public const string ComplianceEncryptionStorageTypeEnvironmentVariable = "Cratis__Chronicle__Compliance__Encryption__Storage__Type";
 
     /// <summary>
     /// Environment variable key for the Chronicle compliance encryption storage connection details.
-    /// Maps to <c>Cratis:Chronicle:Compliance:Encryption:Storage:ConnectionDetails</c> in the Chronicle server configuration.
+    /// Maps to <c language="csharp">Cratis:Chronicle:Compliance:Encryption:Storage:ConnectionDetails</c> in the Chronicle server configuration.
     /// </summary>
     public const string ComplianceEncryptionStorageConnectionDetailsEnvironmentVariable = "Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails";
 
@@ -90,35 +90,35 @@ public static class ChronicleContainerImageTags
 
     /// <summary>
     /// Environment variable key for the path to the TLS certificate the Chronicle port is served with.
-    /// Maps to <c>Cratis:Chronicle:Tls:CertificatePath</c> in the Chronicle server configuration.
+    /// Maps to <c language="csharp">Cratis:Chronicle:Tls:CertificatePath</c> in the Chronicle server configuration.
     /// </summary>
     public const string TlsCertificatePathEnvironmentVariable = "Cratis__Chronicle__Tls__CertificatePath";
 
     /// <summary>
     /// Environment variable key for the password protecting the TLS certificate.
-    /// Maps to <c>Cratis:Chronicle:Tls:CertificatePassword</c> in the Chronicle server configuration.
+    /// Maps to <c language="csharp">Cratis:Chronicle:Tls:CertificatePassword</c> in the Chronicle server configuration.
     /// </summary>
     public const string TlsCertificatePasswordEnvironmentVariable = "Cratis__Chronicle__Tls__CertificatePassword";
 
     /// <summary>
     /// Environment variable key for the path to the certificate protecting the Data Protection and OAuth keys.
-    /// Maps to <c>Cratis:Chronicle:EncryptionCertificate:CertificatePath</c> in the Chronicle server configuration.
+    /// Maps to <c language="csharp">Cratis:Chronicle:EncryptionCertificate:CertificatePath</c> in the Chronicle server configuration.
     /// </summary>
     public const string EncryptionCertificatePathEnvironmentVariable = "Cratis__Chronicle__EncryptionCertificate__CertificatePath";
 
     /// <summary>
     /// Environment variable key for the password protecting the encryption certificate.
-    /// Maps to <c>Cratis:Chronicle:EncryptionCertificate:CertificatePassword</c> in the Chronicle server configuration.
+    /// Maps to <c language="csharp">Cratis:Chronicle:EncryptionCertificate:CertificatePassword</c> in the Chronicle server configuration.
     /// </summary>
     public const string EncryptionCertificatePasswordEnvironmentVariable = "Cratis__Chronicle__EncryptionCertificate__CertificatePassword";
 
     /// <summary>
-    /// Path inside the Chronicle container that <c>WithTlsCertificate</c> mounts the TLS certificate at.
+    /// Path inside the Chronicle container that <c language="csharp">WithTlsCertificate</c> mounts the TLS certificate at.
     /// </summary>
     public const string TlsCertificateContainerPath = "/certs/tls.pfx";
 
     /// <summary>
-    /// Path inside the Chronicle container that <c>WithEncryptionCertificate</c> mounts the encryption certificate at.
+    /// Path inside the Chronicle container that <c language="csharp">WithEncryptionCertificate</c> mounts the encryption certificate at.
     /// </summary>
     public const string EncryptionCertificateContainerPath = "/certs/encryption.pfx";
 }

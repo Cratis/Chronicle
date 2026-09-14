@@ -34,7 +34,7 @@ static class PassiveProjectionKeyRedirection
     /// The severity is deliberately a warning for its first release, on the same reasoning recorded for
     /// <see cref="DiagnosticIds.KeyRedirectionPii"/>:
     /// the shape need not fail, a consumer may knowingly accept a read that only ever answers for the redirected
-    /// stream, and a new error would break existing builds. Change <c>defaultSeverity</c> below to
+    /// stream, and a new error would break existing builds. Change <c language="csharp">defaultSeverity</c> below to
     /// <see cref="DiagnosticSeverity.Error"/> only through a separately reviewed rollout decision.
     /// </remarks>
     internal static readonly DiagnosticDescriptor Rule = new(
@@ -60,9 +60,9 @@ static class PassiveProjectionKeyRedirection
     /// <param name="invocation">The redirection invocation.</param>
     /// <returns>The method name and key description, or <see langword="null"/> when nothing is redirected.</returns>
     /// <remarks>
-    /// <c>UsingKeyFromContext</c> goes through <see cref="KeyRedirectionPii.ContextMemberRedirects"/>, which
-    /// treats both <c>EventSourceId</c> and <c>Subject</c> as non-redirecting. <c>EventSourceId</c> is the
-    /// identity and must never be reported; <c>Subject</c> is conservatively excluded too, so this rule
+    /// <c language="csharp">UsingKeyFromContext</c> goes through <see cref="KeyRedirectionPii.ContextMemberRedirects"/>, which
+    /// treats both <c language="csharp">EventSourceId</c> and <c language="csharp">Subject</c> as non-redirecting. <c language="csharp">EventSourceId</c> is the
+    /// identity and must never be reported; <c language="csharp">Subject</c> is conservatively excluded too, so this rule
     /// under-reports rather than guessing at a shape the PII rule already reasons about.
     /// </remarks>
     internal static (string MethodName, string Key)? DescribeRootKey(

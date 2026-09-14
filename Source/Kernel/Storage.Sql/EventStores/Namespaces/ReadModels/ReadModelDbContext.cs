@@ -19,8 +19,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// and arrays / nested objects become a single JSON column (jsonb on PostgreSQL, nvarchar(max)
 /// on SQL Server, text on SQLite). The entity is registered as a shared-type entity backed by
 /// <see cref="DynamicReadModelEntity"/> with one indexer-property per <see cref="ProjectedColumn"/>,
-/// so EF's change tracker gives us per-column dirty tracking — every <c>UPDATE</c> only touches
-/// the columns that actually changed, matching MongoDB's <c>$set</c> semantics.
+/// so EF's change tracker gives us per-column dirty tracking — every <c language="csharp">UPDATE</c> only touches
+/// the columns that actually changed, matching MongoDB's <c language="csharp">$set</c> semantics.
 /// </remarks>
 /// <param name="options">The options to be used by a <see cref="DbContext"/>.</param>
 /// <param name="tableName">The name of the table (read model container name).</param>

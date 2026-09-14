@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ModelBoundProjection
 /// span two.
 /// </summary>
 /// <remarks>
-/// Counting a synthesized <c>&lt;default&gt;</c> sentinel alongside real names reported the ordinary shape as an
+/// Counting a synthesized <c language="csharp">&lt;default&gt;</c> sentinel alongside real names reported the ordinary shape as an
 /// error: a host declares its own event types locally, imports a few from a contracts assembly that pins the
 /// store name so those events route across hosts, and there is exactly one store in the deployment.
 /// <para>

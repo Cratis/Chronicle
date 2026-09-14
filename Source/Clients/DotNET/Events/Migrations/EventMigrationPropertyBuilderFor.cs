@@ -70,6 +70,23 @@ public class EventMigrationPropertyBuilderFor<TTarget, TSource>(IEventMigrationP
         return this;
     }
 
+    /// <inheritdoc/>
+    public IEventMigrationPropertyBuilder<TTarget, TSource> MapValues<TProperty, TSourceProperty>(
+        Expression<Func<TTarget, TProperty>> targetProperty,
+        Expression<Func<TSource, TSourceProperty>> sourceProperty,
+        Action<IValueMapBuilder<TSourceProperty, TProperty>> map)
+    {
+        var mapBuilder = new ValueMapBuilder<TSourceProperty, TProperty>();
+        map(mapBuilder);
+
+        inner.MapValues(
+            GetPropertyName(targetProperty),
+            GetPropertyName(sourceProperty),
+            mapBuilder.Mappings);
+
+        return this;
+    }
+
     static PropertyName GetPropertyName<T, TProp>(Expression<Func<T, TProp>> expression) =>
         new(expression.GetPropertyPath());
 }

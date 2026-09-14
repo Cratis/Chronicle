@@ -14,7 +14,7 @@ public static class DescriptorSets
     /// <summary>
     /// Reads a descriptor set that has already been generated.
     /// </summary>
-    /// <param name="path">The path to a serialized <c>FileDescriptorSet</c>.</param>
+    /// <param name="path">The path to a serialized <c language="csharp">FileDescriptorSet</c>.</param>
     /// <returns>The parsed set.</returns>
     public static FileDescriptorSet ReadFrom(string path)
     {

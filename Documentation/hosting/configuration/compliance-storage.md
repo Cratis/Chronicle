@@ -48,7 +48,7 @@ Both stores are now live, and Chronicle keeps them in step for you:
 - Erasing a key erases it from **both** stores, and records the erasure in both. A deletion that only reaches one of them fails loudly rather than reporting success, because a key surviving in either store is not an erasure — and a store that has the subject recorded as erased will not accept the other store's copy, so a half-finished erasure cannot be healed back into place by ordinary traffic.
 
 > [!CAUTION]
-> A key store written outside Chronicle has to implement the erasure members of `IEncryptionKeyStorage` before it can be composed here. One that does not fails loudly the first time an erasure is attempted through it, because an erasure it cannot record is an erasure that can be undone by the next read. See [The encryption key lifecycle](../../compliance/key-lifecycle.md).
+> A key store written outside Chronicle has to implement the erasure members of `IEncryptionKeyStorage` before it can be composed here. One that does not fails loudly the first time an erasure is attempted through it, because an erasure it cannot record is an erasure that can be undone by the next read. See [The encryption key lifecycle](../../compliance/key-lifecycle).
 
 A key moves the first time it is *read*, so a subject whose data nobody has queried still lives only in the default storage. Before you turn `migrateFromDefaultStorage` off, confirm the dedicated store actually holds every key — turning it off early puts the subjects that were never read straight back into the empty-string outcome above. Once you have confirmed it, removing the leftover keys from the general storage backend is an ordinary cleanup you decide on separately, not the irreversible last step of a sequence.
 

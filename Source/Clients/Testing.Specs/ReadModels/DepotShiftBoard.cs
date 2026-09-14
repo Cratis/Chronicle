@@ -4,8 +4,8 @@
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Read model projected by <see cref="DepotShiftBoardProjection"/>, the <c>AddChild(...)</c> spelling of the
-/// same shape <see cref="DepotShiftLog"/> covers with <c>Children(...).From&lt;T&gt;</c>.
+/// Read model projected by <see cref="DepotShiftBoardProjection"/>, the <c language="csharp">AddChild(...)</c> spelling of the
+/// same shape <see cref="DepotShiftLog"/> covers with <c language="csharp">Children(...).From&lt;T&gt;</c>.
 /// </summary>
 /// <param name="Id">Depot board identifier.</param>
 /// <param name="Depot">The depot name, mapped from the same event that feeds <see cref="Shifts"/>.</param>

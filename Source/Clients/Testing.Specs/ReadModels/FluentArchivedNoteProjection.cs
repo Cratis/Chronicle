@@ -6,8 +6,8 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Fluent projection pinning that <c>.Set(...).ToValue(null)</c> still clears - it used to write the literal string
-/// "null" - alongside a <c>ToValue</c> carrying a real constant, which must be untouched by the clear handling.
+/// Fluent projection pinning that <c language="csharp">.Set(...).ToValue(null)</c> still clears - it used to write the literal string
+/// "null" - alongside a <c language="csharp">ToValue</c> carrying a real constant, which must be untouched by the clear handling.
 /// </summary>
 public class FluentArchivedNoteProjection : IProjectionFor<FluentArchivedNote>
 {

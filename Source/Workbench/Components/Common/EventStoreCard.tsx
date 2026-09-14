@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Card } from 'Components/Card';
-import { useNavigate } from 'react-router-dom';
-import { ImDatabase } from "react-icons/im";
+import { Link } from 'react-router-dom';
+import { ImDatabase } from 'react-icons/im';
+import './EventStoreCard.css';
 
 export interface IEventStoreCard {
     logo?: string;
@@ -15,25 +16,13 @@ export interface IEventStoreCard {
 
 export function EventStoreCard(props: IEventStoreCard) {
     const { title, path, footer, description } = props;
-    const navigate = useNavigate();
-
-    const image = (
-        <div className='pl-4' style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-            <ImDatabase size={48} />
-        </div>
-    );
-    const heading = (
-        <h1 className='text-2xl cursor-pointer pt-8' onClick={() => navigate(path!)}>
-            {title}
-        </h1>
-    );
 
     return (
-        <Card
-            className='m-4 flex border-2 shadow-none w-160 h-50 overflow-hidden text-ellipsis whitespace-nowrap'
-            footer={footer}
-            header={image}>
-            {heading}
+        <Card className='workbench-event-store-card m-4 border-2 shadow-none w-160 h-50' footer={footer}>
+            <Link to={path!} className='workbench-event-store-card__link'>
+                <ImDatabase size={48} aria-hidden='true' />
+                <span className='workbench-event-store-card__title'>{title}</span>
+            </Link>
             {description}
         </Card>
     );

@@ -7,7 +7,7 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
-/// Verifies that a unique constraint whose key is a composite of two <c>ConceptAs&lt;Guid&gt;</c> values
+/// Verifies that a unique constraint whose key is a composite of two <c language="csharp">ConceptAs&lt;Guid&gt;</c> values
 /// registers and enforces: re-appending the same (request + consultant) pair is rejected.
 /// </summary>
 public class when_violating_a_composite_concept_constraint : Specification, IDisposable

@@ -14,23 +14,23 @@ using KernelProjectionEngine = KernelCore::Cratis.Chronicle.Projections.Engine;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Resolves the root read-model document a <c>[Join]</c> source event should enrich when a projection is driven
+/// Resolves the root read-model document a <c language="csharp">[Join]</c> source event should enrich when a projection is driven
 /// through the in-memory test harness.
 /// </summary>
 /// <remarks>
-/// The production engine's <c>ForJoin</c> key resolver targets a real sink (MongoDB), so a join source resolves
+/// The production engine's <c language="csharp">ForJoin</c> key resolver targets a real sink (MongoDB), so a join source resolves
 /// to the root document that actually holds the joined value. Run against the in-memory sink the same resolver
 /// instead yields a key whose value is the join source's OWN event source id — materializing a phantom document
 /// (root joins) or duplicating a child (child joins). This collaborator recovers the true root by matching the
 /// join value in the sink (<see cref="InMemorySink.TryFindRootKeyByChildValue"/>), mirroring what the real
 /// engine/Mongo does, without changing any engine behavior. It owns only the harness's join-key-resolution
-/// concern; <c>ProcessSingleEvent</c> stays orchestration.
+/// concern; <c language="csharp">ProcessSingleEvent</c> stays orchestration.
 /// </remarks>
 internal static class JoinKeyResolver
 {
     /// <summary>
-    /// Resolves the root read-model key for a root-level <c>[Join]</c> source event by matching the join's
-    /// <c>On</c> property against the join event's own event source id — the same lookup the production engine
+    /// Resolves the root read-model key for a root-level <c language="csharp">[Join]</c> source event by matching the join's
+    /// <c language="csharp">On</c> property against the join event's own event source id — the same lookup the production engine
     /// performs against its sink, applied here uniformly for any key type (Guid, string concept, and so on).
     /// </summary>
     /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> being processed.</param>
@@ -38,17 +38,17 @@ internal static class JoinKeyResolver
     /// <param name="sink">The in-memory sink holding the materialized root documents.</param>
     /// <param name="event">The event being processed.</param>
     /// <returns>
-    /// A tuple whose <c>IsRootJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
+    /// A tuple whose <c language="csharp">IsRootJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
     /// root-level join source (so the caller must resolve here rather than defer to the engine's key resolver).
-    /// <c>RootKey</c> is the matched root document key to enrich, or <see langword="null"/> when no root row
+    /// <c language="csharp">RootKey</c> is the matched root document key to enrich, or <see langword="null"/> when no root row
     /// exists yet (skip without writing a phantom).
     /// </returns>
     /// <remarks>
-    /// The engine's own <c>ForJoin</c> key resolver targets its real sink; run against the in-memory sink it
+    /// The engine's own <c language="csharp">ForJoin</c> key resolver targets its real sink; run against the in-memory sink it
     /// yields a phantom document keyed by the join source's id rather than enriching the existing root. This
-    /// replicates only the intended root lookup (<c>sink.TryFindRootKeyByChildValue</c> on the join <c>On</c>
+    /// replicates only the intended root lookup (<c language="csharp">sink.TryFindRootKeyByChildValue</c> on the join <c language="csharp">On</c>
     /// column), so no engine behavior changes — a nested join or a non-join event returns
-    /// <c>IsRootJoinSource = false</c> and falls through to the engine's normal resolution.
+    /// <c language="csharp">IsRootJoinSource = false</c> and falls through to the engine's normal resolution.
     /// </remarks>
     public static async Task<(bool IsRootJoinSource, KernelKey? RootKey)> TryResolveRootJoinKey(
         KernelProjectionEngine::IProjection projection,
@@ -85,7 +85,7 @@ internal static class JoinKeyResolver
     }
 
     /// <summary>
-    /// Resolves the root read-model key for a child-level <c>[Join]</c> source event whose engine-resolved key
+    /// Resolves the root read-model key for a child-level <c language="csharp">[Join]</c> source event whose engine-resolved key
     /// carries array indexers into a child collection — by locating the root document that contains the matching
     /// child (via the child value in the sink), mirroring the production engine's behavior against its real sink.
     /// </summary>
@@ -94,18 +94,18 @@ internal static class JoinKeyResolver
     /// <param name="event">The event being processed.</param>
     /// <param name="key">The key the engine resolved for <paramref name="event"/>, carrying the child array indexers.</param>
     /// <returns>
-    /// A tuple whose <c>IsChildJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
+    /// A tuple whose <c language="csharp">IsChildJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
     /// child-level join source (the caller must re-anchor onto the returned root, keeping the array indexers).
-    /// <c>RootKey</c> is the matched root document key whose child to enrich, or <see langword="null"/> when no
+    /// <c language="csharp">RootKey</c> is the matched root document key whose child to enrich, or <see langword="null"/> when no
     /// root contains the child yet (skip without writing a phantom).
     /// </returns>
     /// <remarks>
-    /// The engine's <c>ForJoin</c> child branch resolves the key value to the join source's OWN event source id
+    /// The engine's <c language="csharp">ForJoin</c> child branch resolves the key value to the join source's OWN event source id
     /// with an array indexer into the child collection; against the in-memory sink that would write a phantom
     /// document keyed by that id and duplicate the child. The array indexer names the child collection and the
-    /// child key, so <c>sink.TryFindRootKeyByChildValue</c> on that path recovers the true root — no engine
+    /// child key, so <c language="csharp">sink.TryFindRootKeyByChildValue</c> on that path recovers the true root — no engine
     /// behavior changes, and a non-child-join event (no array indexers or no Join flag) returns
-    /// <c>IsChildJoinSource = false</c> and falls through to normal handling.
+    /// <c language="csharp">IsChildJoinSource = false</c> and falls through to normal handling.
     /// </remarks>
     public static async Task<(bool IsChildJoinSource, KernelKey? RootKey)> TryResolveChildJoinRootKey(
         KernelProjectionEngine::IProjection projection,

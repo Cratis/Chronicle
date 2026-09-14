@@ -7,8 +7,8 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_detecting_unmapped_collection_properties;
 
 /// <summary>
-/// The explicit mapping is what a <c>[SetFrom&lt;E&gt;(nameof(E.Notes))]</c> on the child property produces —
-/// the read-model <c>annotations</c> property mapped from the differently named event <c>notes</c> list.
+/// The explicit mapping is what a <c language="csharp">[SetFrom&lt;E&gt;(nameof(E.Notes))]</c> on the child property produces —
+/// the read-model <c language="csharp">annotations</c> property mapped from the differently named event <c language="csharp">notes</c> list.
 /// </summary>
 public class and_the_collection_is_bridged_with_an_explicit_mapping : given.a_read_model_with_a_bulk_list_collection
 {

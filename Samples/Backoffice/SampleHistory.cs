@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
-
 namespace Samples.Backoffice;
 
 /// <summary>
@@ -26,7 +24,7 @@ public record SampleHistoryResult(int Events, bool AlreadyGenerated);
 /// nothing anybody would call a routine.
 /// </para>
 /// <para>
-/// Every event is appended with an explicit <c>occurred</c>, because the whole history happened before the store
+/// Every event is appended with an explicit <c language="csharp">occurred</c>, because the whole history happened before the store
 /// was ever run, and the whole thing is planned first and appended in the order things happened. A real log is the
 /// week's work interleaved as people do it, and the miner reads the stream once in order.
 /// </para>
@@ -105,9 +103,11 @@ public static class SampleHistory
         Action<int> onProgress)
     {
         // The marker goes down first and is guarded by a uniqueness constraint, so a second run is turned away
-        // here rather than laying a duplicate history on top of the first.
+        // here rather than laying a duplicate history on top of the first. The constraint allows one such event
+        // per event source, so the marker must land on the same, well-known event source every run - a fresh id
+        // would open a fresh source and sail straight past the guard.
         var marker = await appender.Append(
-            EventSourceId.New(),
+            "sample-history",
             new SampleHistoryGenerated(new Quantity(seed)),
             Workforce.Overnight,
             DateTimeOffset.UtcNow,

@@ -14,7 +14,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Cratis.Chronicle.CodeAnalysis.CodeFixes;
 
 /// <summary>
-/// Code fix provider that removes a redundant <c>.Set(x =&gt; x.P).To(e =&gt; e.P)</c> mapping from a projection builder chain.
+/// Code fix provider that removes a redundant <c language="csharp">.Set(x =&gt; x.P).To(e =&gt; e.P)</c> mapping from a projection builder chain.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(RemoveRedundantSetToCodeFixProvider)), Shared]
 public class RemoveRedundantSetToCodeFixProvider : CodeFixProvider

@@ -1,1 +1,1 @@
-../../.ai/agents/slice-implementer.md
+../../.cratis/ai/agents/slice-implementer.md

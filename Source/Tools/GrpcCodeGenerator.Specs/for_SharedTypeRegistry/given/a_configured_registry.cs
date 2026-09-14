@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_SharedTypeRegistry.given;
 
 /// <summary>
-/// Configures <see cref="SharedTypeRegistry"/> the same way <c>Program</c> does for a real run - the registry is
+/// Configures <see cref="SharedTypeRegistry"/> the same way <c language="csharp">Program</c> does for a real run - the registry is
 /// static (a single-shot CLI process has no concurrency to guard against, the same simplification
 /// <see cref="TransportTypes"/> relies on), so every spec re-establishes known configuration rather than relying
 /// on whatever a previous spec left behind.

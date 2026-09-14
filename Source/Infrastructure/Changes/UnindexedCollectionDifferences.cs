@@ -13,10 +13,10 @@ namespace Cratis.Chronicle.Changes;
 /// </summary>
 /// <remarks>
 /// When PII is re-encrypted across a whole read-model snapshot, the object comparer reports a difference
-/// for each nested child member (e.g. <c>contacts.contactEmail</c>) but has no child identity to attach,
+/// for each nested child member (e.g. <c language="csharp">contacts.contactEmail</c>) but has no child identity to attach,
 /// so the difference carries no array indexers. A sink cannot apply such a nested, unindexed array path —
-/// MongoDB rejects the dotted <c>$set</c> with WriteError Code 28. Both the reducer and the projection
-/// encryption step rely on this collapse to replace the entire collection in one safe <c>$set</c> instead.
+/// MongoDB rejects the dotted <c language="csharp">$set</c> with WriteError Code 28. Both the reducer and the projection
+/// encryption step rely on this collapse to replace the entire collection in one safe <c language="csharp">$set</c> instead.
 /// </remarks>
 public static class UnindexedCollectionDifferences
 {

@@ -280,39 +280,48 @@ public class ProjectionObserverSubscriber(
 
     bool HasProjectionRulesChanged(ProjectionDefinition oldDefinition, ProjectionDefinition newDefinition)
     {
-        if (oldDefinition.From.Count != newDefinition.From.Count ||
-            oldDefinition.Join.Count != newDefinition.Join.Count ||
-            oldDefinition.RemovedWith.Count != newDefinition.RemovedWith.Count ||
-            oldDefinition.RemovedWithJoin.Count != newDefinition.RemovedWithJoin.Count)
+        // oldDefinition can be a grain's uninitialized State (all reference members null) when this
+        // subscriber has never persisted a definition yet - the four dictionaries below are typed
+        // non-nullable but are not guaranteed non-null at runtime in that case. (#3934)
+        if ((oldDefinition.From?.Count ?? 0) != (newDefinition.From?.Count ?? 0) ||
+            (oldDefinition.Join?.Count ?? 0) != (newDefinition.Join?.Count ?? 0) ||
+            (oldDefinition.RemovedWith?.Count ?? 0) != (newDefinition.RemovedWith?.Count ?? 0) ||
+            (oldDefinition.RemovedWithJoin?.Count ?? 0) != (newDefinition.RemovedWithJoin?.Count ?? 0))
         {
             return true;
         }
 
-        foreach (var (eventType, oldFromRule) in oldDefinition.From)
+        if (oldDefinition.From is not null && newDefinition.From is not null)
         {
-            if (!newDefinition.From.TryGetValue(eventType, out var newFromRule))
+            foreach (var (eventType, oldFromRule) in oldDefinition.From)
             {
-                return true;
-            }
+                if (!newDefinition.From.TryGetValue(eventType, out var newFromRule))
+                {
+                    return true;
+                }
 
-            if (oldFromRule.Key != newFromRule.Key ||
-                oldFromRule.Properties.Count != newFromRule.Properties.Count)
-            {
-                return true;
+                if (oldFromRule.Key != newFromRule.Key ||
+                    oldFromRule.Properties.Count != newFromRule.Properties.Count)
+                {
+                    return true;
+                }
             }
         }
 
-        foreach (var (eventType, oldJoinRule) in oldDefinition.Join)
+        if (oldDefinition.Join is not null && newDefinition.Join is not null)
         {
-            if (!newDefinition.Join.TryGetValue(eventType, out var newJoinRule))
+            foreach (var (eventType, oldJoinRule) in oldDefinition.Join)
             {
-                return true;
-            }
+                if (!newDefinition.Join.TryGetValue(eventType, out var newJoinRule))
+                {
+                    return true;
+                }
 
-            if (oldJoinRule.Key != newJoinRule.Key ||
-                oldJoinRule.Properties.Count != newJoinRule.Properties.Count)
-            {
-                return true;
+                if (oldJoinRule.Key != newJoinRule.Key ||
+                    oldJoinRule.Properties.Count != newJoinRule.Properties.Count)
+                {
+                    return true;
+                }
             }
         }
 

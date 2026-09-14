@@ -168,7 +168,7 @@ public class ProjectionFactory(
 
     /// <summary>
     /// Determines whether an event is subscribed only to be aggregated — every property it maps is a
-    /// <c>[Count]</c>/<c>[Increment]</c>/<c>[Decrement]</c>/<c>[Add]</c>/<c>[Subtract]</c> operation and
+    /// <c language="csharp">[Count]</c>/<c language="csharp">[Increment]</c>/<c language="csharp">[Decrement]</c>/<c language="csharp">[Add]</c>/<c language="csharp">[Subtract]</c> operation and
     /// nothing else. The developer pulled the event in to aggregate it, not to copy values off it, so its
     /// other properties must not be name-AutoMapped onto the read model.
     /// </summary>

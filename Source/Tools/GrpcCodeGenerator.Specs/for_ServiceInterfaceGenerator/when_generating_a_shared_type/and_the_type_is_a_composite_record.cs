@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_ServiceInterfaceGenerator
 
 /// <summary>
 /// The composite-type path is the one shared-type generation had no coverage for at all until this spec - only
-/// the enum path had a real caller (<c>JobStatus</c>). Proves the generated class actually compiles as a
-/// <c>[ProtoContract]</c> message, not just that it produces syntactically plausible-looking text.
+/// the enum path had a real caller (<c language="csharp">JobStatus</c>). Proves the generated class actually compiles as a
+/// <c language="csharp">[ProtoContract]</c> message, not just that it produces syntactically plausible-looking text.
 /// </summary>
 [Collection(SharedTypeRegistryCollection.Name)]
 public class and_the_type_is_a_composite_record : given.a_shared_type_generator

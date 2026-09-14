@@ -30,6 +30,7 @@ message EventContext {
    EventObservationState ObservationState = 13;
    repeated string Tags = 14;
    string Hash = 15;
+   string Subject = 16;
 }
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;

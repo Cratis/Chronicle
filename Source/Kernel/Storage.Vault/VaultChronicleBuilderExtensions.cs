@@ -15,13 +15,13 @@ public static class VaultChronicleBuilderExtensions
     /// Configures Chronicle to use HashiCorp Vault for encryption key storage, based on the <see cref="ChronicleOptions"/>.
     /// </summary>
     /// <remarks>
-    /// When <see cref="Encryption.Storage"/> is configured and its type is <c>vault</c>,
+    /// When <see cref="Encryption.Storage"/> is configured and its type is <c language="csharp">vault</c>,
     /// this method adds a <see cref="Storage.Vault.VaultEncryptionKeyStorage"/> wrapped in a <see cref="CacheEncryptionKeyStorage"/>
     /// as <see cref="IEncryptionKeyStorage"/>, taking over from the default storage registration.
     /// With <see cref="Encryption.MigrateFromDefaultStorage"/> set it becomes the primary of a composite over the
     /// default storage instead, so keys that only exist there keep being served and are moved into Vault as they
     /// are read.
-    /// If compliance encryption storage is not configured, or the type is not <c>vault</c>, no changes are made.
+    /// If compliance encryption storage is not configured, or the type is not <c language="csharp">vault</c>, no changes are made.
     /// </remarks>
     /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
     /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>

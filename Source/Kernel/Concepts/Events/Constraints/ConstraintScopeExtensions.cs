@@ -46,4 +46,37 @@ public static class ConstraintScopeExtensions
 
         return string.Join('|', parts);
     }
+
+    /// <summary>
+    /// Resolve the scope declared on a constraint into the dimension values of the event being validated.
+    /// </summary>
+    /// <param name="scope">The <see cref="ConstraintScope"/> declaring which dimensions participate.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/> of the event.</param>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/> of the event.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> of the event.</param>
+    /// <returns>
+    /// A <see cref="ResolvedConstraintScope"/> carrying the event's own value for every participating dimension,
+    /// or <see langword="null"/> when the constraint is not scoped and nothing should be narrowed.
+    /// </returns>
+    /// <remarks>
+    /// A dimension participates only when the declaration names it and the event actually carries a value for it -
+    /// the same rule <see cref="BuildScopeKey"/> applies, so a lookup narrowed by the resolved scope and a key built
+    /// from the same event always agree on which dimensions matter.
+    /// </remarks>
+    public static ResolvedConstraintScope? ResolveFor(
+        this ConstraintScope? scope,
+        EventSourceType? eventSourceType,
+        EventStreamType? eventStreamType,
+        EventStreamId? eventStreamId)
+    {
+        if (scope?.HasScope != true)
+        {
+            return null;
+        }
+
+        return new(
+            scope.EventSourceType is not null ? eventSourceType : null,
+            scope.EventStreamType is not null ? eventStreamType : null,
+            scope.EventStreamId is not null ? eventStreamId : null);
+    }
 }

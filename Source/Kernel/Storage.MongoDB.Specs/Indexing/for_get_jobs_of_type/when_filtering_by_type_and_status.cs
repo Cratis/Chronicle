@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Indexing.for_get_jobs_of_type;
 
 /// <summary>
 /// The typed job read is what tells the kernel whether a job for an observer is already running. It used to hand
-/// <c>ToBsonDocument</c> on the filter definition to the driver, which serializes the definition object itself into
-/// <c>{ _t: ... }</c> rather than rendering the filter, so the query matched no stored job and every caller was told
+/// <c language="csharp">ToBsonDocument</c> on the filter definition to the driver, which serializes the definition object itself into
+/// <c language="csharp">{ _t: ... }</c> rather than rendering the filter, so the query matched no stored job and every caller was told
 /// there were none.
 /// </summary>
 /// <param name="fixture">The shared <see cref="MongoDBFixture"/> providing a MongoDB container.</param>

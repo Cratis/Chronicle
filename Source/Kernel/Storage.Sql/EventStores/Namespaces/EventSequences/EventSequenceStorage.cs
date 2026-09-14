@@ -40,7 +40,7 @@ public class EventSequenceStorage(
     /// <param name="value">The value to truncate.</param>
     /// <returns>The truncated <see cref="DateTimeOffset"/> with the same offset.</returns>
     /// <remarks>
-    /// PostgreSQL's <c>timestamp</c> stores microsecond precision and drops the lower .NET
+    /// PostgreSQL's <c language="csharp">timestamp</c> stores microsecond precision and drops the lower .NET
     /// tick digit on write. Applying it on append keeps the value the projection observes
     /// equal to what GetForEventSourceIdAndEventTypes returns later, so specs that compare
     /// event.Occurred.Ticks to a projected value do not flake when DateTime.UtcNow happens
@@ -913,11 +913,11 @@ public class EventSequenceStorage(
     /// <returns>The next FREE <see cref="EventSequenceNumber"/> the append grain should jump to.</returns>
     /// <remarks>
     /// The <see cref="DuplicateEventSequenceNumber"/> contract is that this value is the next FREE
-    /// slot the append grain jumps to (<c>State.SequenceNumber = nextAvailable</c>) before it
+    /// slot the append grain jumps to (<c language="csharp">State.SequenceNumber = nextAvailable</c>) before it
     /// retries. Returning the occupied number that was just attempted would make the grain retry the
     /// same number, whose pre-read finds the same existing row again, returning the same number
     /// forever — an infinite livelock that permanently stalls the event sequence when the grain's
-    /// persisted <c>State.SequenceNumber</c> lags the real tail (silo restart, reset grain state, or
+    /// persisted <c language="csharp">State.SequenceNumber</c> lags the real tail (silo restart, reset grain state, or
     /// a replayed append). Mirror the MongoDB and in-memory backends: the true next-available is the
     /// current stored tail plus one. A duplicate guarantees at least one row exists, but the empty
     /// case is guarded anyway.

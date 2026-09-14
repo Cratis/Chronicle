@@ -19,23 +19,23 @@ public static class ChronicleAspireBuilderExtensions
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Sets the <c>Cratis__Chronicle__Storage__Type</c> container environment variable to <c>MongoDB</c>
-    /// and <c>Cratis__Chronicle__Storage__ConnectionDetails</c> to the resolved MongoDB connection string.
-    /// These map to <c>Cratis:Chronicle:Storage:Type</c> and <c>Cratis:Chronicle:Storage:ConnectionDetails</c>
+    /// Sets the <c language="csharp">Cratis__Chronicle__Storage__Type</c> container environment variable to <c language="csharp">MongoDB</c>
+    /// and <c language="csharp">Cratis__Chronicle__Storage__ConnectionDetails</c> to the resolved MongoDB connection string.
+    /// These map to <c language="csharp">Cratis:Chronicle:Storage:Type</c> and <c language="csharp">Cratis:Chronicle:Storage:ConnectionDetails</c>
     /// in the Chronicle server configuration respectively.
     /// </para>
     /// <para>
     /// The MongoDB instance must be a replica set. Chronicle relies on MongoDB transactions and change
     /// streams — used by observers, projections, and observable queries — and both require a replica set
-    /// rather than a standalone <c>mongod</c>. Against a standalone server the change-stream watch never
+    /// rather than a standalone <c language="csharp">mongod</c>. Against a standalone server the change-stream watch never
     /// opens and observable read-model queries silently return their empty seed, which looks like a
-    /// projection bug rather than a storage-topology problem. Aspire's <c>AddMongoDB</c> starts a standalone
-    /// <c>mongod</c>, so point <paramref name="mongoDB"/> at a replica set instead — for example MongoDB
+    /// projection bug rather than a storage-topology problem. Aspire's <c language="csharp">AddMongoDB</c> starts a standalone
+    /// <c language="csharp">mongod</c>, so point <paramref name="mongoDB"/> at a replica set instead — for example MongoDB
     /// Atlas, or a single-node replica-set container that initializes itself.
     /// </para>
     /// <para>
     /// A single-node replica set reached through a host-mapped port must be connected to with
-    /// <c>?directConnection=true</c> in the connection string, so the driver does not try to follow the
+    /// <c language="csharp">?directConnection=true</c> in the connection string, so the driver does not try to follow the
     /// advertised replica-set member host (only reachable inside the container) back out and hang.
     /// </para>
     /// </remarks>
@@ -58,9 +58,9 @@ public static class ChronicleAspireBuilderExtensions
     /// Configures the Chronicle resource to use an external PostgreSQL connection string.
     /// </summary>
     /// <remarks>
-    /// Sets the <c>Cratis__Chronicle__Storage__Type</c> container environment variable to <c>PostgreSql</c>
-    /// and <c>Cratis__Chronicle__Storage__ConnectionDetails</c> to the resolved PostgreSQL connection string.
-    /// These map to <c>Cratis:Chronicle:Storage:Type</c> and <c>Cratis:Chronicle:Storage:ConnectionDetails</c>
+    /// Sets the <c language="csharp">Cratis__Chronicle__Storage__Type</c> container environment variable to <c language="csharp">PostgreSql</c>
+    /// and <c language="csharp">Cratis__Chronicle__Storage__ConnectionDetails</c> to the resolved PostgreSQL connection string.
+    /// These map to <c language="csharp">Cratis:Chronicle:Storage:Type</c> and <c language="csharp">Cratis:Chronicle:Storage:ConnectionDetails</c>
     /// in the Chronicle server configuration respectively.
     /// </remarks>
     /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
@@ -82,9 +82,9 @@ public static class ChronicleAspireBuilderExtensions
     /// Configures the Chronicle resource to use an external Microsoft SQL Server connection string.
     /// </summary>
     /// <remarks>
-    /// Sets the <c>Cratis__Chronicle__Storage__Type</c> container environment variable to <c>MsSql</c>
-    /// and <c>Cratis__Chronicle__Storage__ConnectionDetails</c> to the resolved SQL Server connection string.
-    /// These map to <c>Cratis:Chronicle:Storage:Type</c> and <c>Cratis:Chronicle:Storage:ConnectionDetails</c>
+    /// Sets the <c language="csharp">Cratis__Chronicle__Storage__Type</c> container environment variable to <c language="csharp">MsSql</c>
+    /// and <c language="csharp">Cratis__Chronicle__Storage__ConnectionDetails</c> to the resolved SQL Server connection string.
+    /// These map to <c language="csharp">Cratis:Chronicle:Storage:Type</c> and <c language="csharp">Cratis:Chronicle:Storage:ConnectionDetails</c>
     /// in the Chronicle server configuration respectively.
     /// </remarks>
     /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
@@ -106,13 +106,13 @@ public static class ChronicleAspireBuilderExtensions
     /// Configures the Chronicle resource to use a SQLite database with the given connection string.
     /// </summary>
     /// <remarks>
-    /// Sets the <c>Cratis__Chronicle__Storage__Type</c> container environment variable to <c>Sqlite</c>
-    /// and <c>Cratis__Chronicle__Storage__ConnectionDetails</c> to the provided SQLite connection string.
-    /// These map to <c>Cratis:Chronicle:Storage:Type</c> and <c>Cratis:Chronicle:Storage:ConnectionDetails</c>
+    /// Sets the <c language="csharp">Cratis__Chronicle__Storage__Type</c> container environment variable to <c language="csharp">Sqlite</c>
+    /// and <c language="csharp">Cratis__Chronicle__Storage__ConnectionDetails</c> to the provided SQLite connection string.
+    /// These map to <c language="csharp">Cratis:Chronicle:Storage:Type</c> and <c language="csharp">Cratis:Chronicle:Storage:ConnectionDetails</c>
     /// in the Chronicle server configuration respectively.
     /// </remarks>
     /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
-    /// <param name="connectionString">The SQLite connection string (e.g. <c>Data Source=/data/chronicle.db</c>).</param>
+    /// <param name="connectionString">The SQLite connection string (e.g. <c language="csharp">Data Source=/data/chronicle.db</c>).</param>
     /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
     public static IChronicleAspireBuilder WithSqlite(
         this IChronicleAspireBuilder builder,
@@ -131,14 +131,14 @@ public static class ChronicleAspireBuilderExtensions
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Sets the <c>Cratis__Chronicle__Compliance__Encryption__Storage__Type</c> container environment variable to <c>vault</c>,
-    /// <c>Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails</c> to the resolved Vault endpoint URL,
-    /// and <c>VAULT_TOKEN</c> to the provided token.
+    /// Sets the <c language="csharp">Cratis__Chronicle__Compliance__Encryption__Storage__Type</c> container environment variable to <c language="csharp">vault</c>,
+    /// <c language="csharp">Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails</c> to the resolved Vault endpoint URL,
+    /// and <c language="csharp">VAULT_TOKEN</c> to the provided token.
     /// </para>
     /// <para>
-    /// These map to <c>Cratis:Chronicle:Compliance:Encryption:Storage:Type</c>,
-    /// <c>Cratis:Chronicle:Compliance:Encryption:Storage:ConnectionDetails</c>, and the
-    /// <c>VAULT_TOKEN</c> environment variable in the Chronicle server configuration respectively.
+    /// These map to <c language="csharp">Cratis:Chronicle:Compliance:Encryption:Storage:Type</c>,
+    /// <c language="csharp">Cratis:Chronicle:Compliance:Encryption:Storage:ConnectionDetails</c>, and the
+    /// <c language="csharp">VAULT_TOKEN</c> environment variable in the Chronicle server configuration respectively.
     /// </para>
     /// </remarks>
     /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
@@ -164,16 +164,16 @@ public static class ChronicleAspireBuilderExtensions
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Sets the <c>Cratis__Chronicle__Compliance__Encryption__Storage__Type</c> container environment variable to <c>azure-key-vault</c>
-    /// and <c>Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails</c> to the Azure Key Vault URI.
+    /// Sets the <c language="csharp">Cratis__Chronicle__Compliance__Encryption__Storage__Type</c> container environment variable to <c language="csharp">azure-key-vault</c>
+    /// and <c language="csharp">Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails</c> to the Azure Key Vault URI.
     /// </para>
     /// <para>
-    /// Authentication is performed via <c>DefaultAzureCredential</c> on the Chronicle server side.
+    /// Authentication is performed via <c language="csharp">DefaultAzureCredential</c> on the Chronicle server side.
     /// Ensure the Chronicle container's managed identity or workload identity has the necessary Key Vault permissions.
     /// </para>
     /// </remarks>
     /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
-    /// <param name="keyVaultUri">The Azure Key Vault URI (e.g. <c>https://my-vault.vault.azure.net/</c>).</param>
+    /// <param name="keyVaultUri">The Azure Key Vault URI (e.g. <c language="csharp">https://my-vault.vault.azure.net/</c>).</param>
     /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
     public static IChronicleAspireBuilder WithAzureKeyVault(
         this IChronicleAspireBuilder builder,
@@ -194,22 +194,22 @@ public static class ChronicleAspireBuilderExtensions
     /// <para>
     /// The production image cannot start without this. The Chronicle port serves gRPC (HTTP/2) and the
     /// Workbench, API and OAuth flows (HTTP/1.1) multiplexed through ALPN on a single TLS port, so a
-    /// certificate is mandatory — the server throws <c>No TLS certificate is configured</c> at startup
+    /// certificate is mandatory — the server throws <c language="csharp">No TLS certificate is configured</c> at startup
     /// without one. Only the development images generate a self-signed certificate instead of throwing,
     /// which is why the development path works with no certificate at all.
     /// </para>
     /// <para>
     /// Bind-mounts <paramref name="certificatePath"/> read-only into the container at
     /// <see cref="ChronicleContainerImageTags.TlsCertificateContainerPath"/> and sets the
-    /// <c>Cratis__Chronicle__Tls__CertificatePath</c> container environment variable to that in-container
+    /// <c language="csharp">Cratis__Chronicle__Tls__CertificatePath</c> container environment variable to that in-container
     /// path — a path on the host means nothing to the container, so the mount is part of configuring the
     /// certificate rather than something to remember separately. When a
-    /// <paramref name="certificatePassword"/> is given, <c>Cratis__Chronicle__Tls__CertificatePassword</c>
-    /// is set to it. These map to <c>Cratis:Chronicle:Tls:CertificatePath</c> and
-    /// <c>Cratis:Chronicle:Tls:CertificatePassword</c> in the Chronicle server configuration respectively.
+    /// <paramref name="certificatePassword"/> is given, <c language="csharp">Cratis__Chronicle__Tls__CertificatePassword</c>
+    /// is set to it. These map to <c language="csharp">Cratis:Chronicle:Tls:CertificatePath</c> and
+    /// <c language="csharp">Cratis:Chronicle:Tls:CertificatePassword</c> in the Chronicle server configuration respectively.
     /// </para>
     /// <para>
-    /// The certificate must be a PKCS#12 (<c>.pfx</c>) file carrying its private key, and Chronicle reads it
+    /// The certificate must be a PKCS#12 (<c language="csharp">.pfx</c>) file carrying its private key, and Chronicle reads it
     /// as PKCS#12 only when a password is supplied — pass the password the file was protected with.
     /// </para>
     /// </remarks>
@@ -219,7 +219,7 @@ public static class ChronicleAspireBuilderExtensions
     /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
     /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
     /// <example>
-    /// <code>
+    /// <code language="csharp">
     /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
     ///     .WithMongoDB(mongo)
     ///     .WithTlsCertificate("certs/chronicle.pfx", "YourPassword"));
@@ -247,23 +247,23 @@ public static class ChronicleAspireBuilderExtensions
     /// <para>
     /// The production image needs this whenever it runs its own OAuth authority, which is the default. The
     /// certificate signs and encrypts the internal OAuth authority's keys, and the server throws
-    /// <c>An encryption certificate is required in production</c> at startup when it is missing. Turning the
-    /// <c>OAuthAuthority</c> feature off, or pointing <c>Authentication:Authority</c> at an external authority,
+    /// <c language="csharp">An encryption certificate is required in production</c> at startup when it is missing. Turning the
+    /// <c language="csharp">OAuthAuthority</c> feature off, or pointing <c language="csharp">Authentication:Authority</c> at an external authority,
     /// skips that setup entirely and with it the requirement. The development images fall back to ephemeral
     /// keys instead.
     /// </para>
     /// <para>
     /// Bind-mounts <paramref name="certificatePath"/> read-only into the container at
     /// <see cref="ChronicleContainerImageTags.EncryptionCertificateContainerPath"/> and sets the
-    /// <c>Cratis__Chronicle__EncryptionCertificate__CertificatePath</c> container environment variable to that
+    /// <c language="csharp">Cratis__Chronicle__EncryptionCertificate__CertificatePath</c> container environment variable to that
     /// in-container path. When a <paramref name="certificatePassword"/> is given,
-    /// <c>Cratis__Chronicle__EncryptionCertificate__CertificatePassword</c> is set to it. These map to
-    /// <c>Cratis:Chronicle:EncryptionCertificate:CertificatePath</c> and
-    /// <c>Cratis:Chronicle:EncryptionCertificate:CertificatePassword</c> in the Chronicle server configuration
+    /// <c language="csharp">Cratis__Chronicle__EncryptionCertificate__CertificatePassword</c> is set to it. These map to
+    /// <c language="csharp">Cratis:Chronicle:EncryptionCertificate:CertificatePath</c> and
+    /// <c language="csharp">Cratis:Chronicle:EncryptionCertificate:CertificatePassword</c> in the Chronicle server configuration
     /// respectively.
     /// </para>
     /// <para>
-    /// The certificate must be a PKCS#12 (<c>.pfx</c>) file carrying its private key. It may be the same file
+    /// The certificate must be a PKCS#12 (<c language="csharp">.pfx</c>) file carrying its private key. It may be the same file
     /// passed to <see cref="WithTlsCertificate"/> — the two are mounted separately, so pointing both at one
     /// file works.
     /// </para>
@@ -274,7 +274,7 @@ public static class ChronicleAspireBuilderExtensions
     /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
     /// <exception cref="CertificateFileDoesNotExist">Thrown when there is no file at <paramref name="certificatePath"/> on the host.</exception>
     /// <example>
-    /// <code>
+    /// <code language="csharp">
     /// builder.AddCratisChronicle("chronicle", chronicle => chronicle
     ///     .WithMongoDB(mongo)
     ///     .WithEncryptionCertificate("certs/encryption.pfx", "YourPassword"));
@@ -312,7 +312,7 @@ public static class ChronicleAspireBuilderExtensions
     /// certificate is configured at all — the opposite of what happened. Calling this for the same container
     /// path more than once replaces the earlier mount instead of adding a second one, so the certificate
     /// methods are last-call-wins like every other configuration method on the builder; a second mount on the
-    /// same target makes <c>docker run</c> refuse to start the container with a duplicate mount point.
+    /// same target makes <c language="csharp">docker run</c> refuse to start the container with a duplicate mount point.
     /// </remarks>
     static void ConfigureCertificate(
         IChronicleAspireBuilder builder,

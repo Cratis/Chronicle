@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Concepts.SequenceQueries;
 /// <param name="Value">The underlying value.</param>
 /// <remarks>
 /// A forward-slash separated path relative to the scope the query belongs to, so
-/// <c>Diagnostics/Failures</c> nests one folder inside another. An empty value files the query
+/// <c language="csharp">Diagnostics/Failures</c> nests one folder inside another. An empty value files the query
 /// directly under its scope rather than in any folder, which is why the root is a sentinel rather
 /// than a nullable value.
 /// </remarks>

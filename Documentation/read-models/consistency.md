@@ -7,7 +7,7 @@ uid: Chronicle.ReadModels.ConsistencyModels
 Read models in Chronicle can be retrieved with different consistency guarantees, depending on how they are computed and when they reflect the latest events. Understanding these models helps you make the right trade-off between data freshness, query latency, and throughput.
 
 > [!TIP]
-> For information on how to define and configure read models in Arc, see <xref:Arc.Chronicle.ReadModels>.
+> For information on how to define and configure read models in Arc, see [Chronicle read models in Arc](/arc/backend/chronicle/read-models/).
 
 ## The Consistency Spectrum
 

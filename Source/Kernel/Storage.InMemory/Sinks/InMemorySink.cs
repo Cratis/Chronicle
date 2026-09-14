@@ -363,7 +363,7 @@ public class InMemorySink(
     /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> about to be applied.</param>
     /// <returns>True when the write must be applied, false when it must be skipped.</returns>
     /// <remarks>
-    /// Callers must hold <c>_collectionLock</c>. A guarded write never creates the read model, matching the
+    /// Callers must hold <c language="csharp">_collectionLock</c>. A guarded write never creates the read model, matching the
     /// persistent sinks, so an absent instance is a skip rather than an insert.
     /// </remarks>
     bool AdvancesWatermark(object keyValue, EventSequenceNumber eventSequenceNumber)

@@ -6,8 +6,7 @@ import { Revise } from 'Features/Sequences';
 import { ObserveEventTypes } from 'Features/EventTypes';
 import { useState, useEffect, useMemo } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
-import { ObjectContentEditor as _OCE } from '@cratis/components';
-const ObjectContentEditor = _OCE.ObjectContentEditor;
+import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import type { JsonSchema, Json } from '@cratis/components/types';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
@@ -62,10 +61,10 @@ export const ReviseDialog = () => {
                 eventSequenceId: 'event-log',
                 sequenceNumber: request.event.context.sequenceNumber,
                 eventType: request.event.context.eventType,
-                content: parsedContent
+                content: JSON.stringify(parsedContent)
             }}
             onBeforeExecute={(command) => {
-                command.content = parsedContent;
+                command.content = JSON.stringify(parsedContent);
                 return command;
             }}
             title={`Revise Event #${request.event.context.sequenceNumber}`}

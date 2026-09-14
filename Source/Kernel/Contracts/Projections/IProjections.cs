@@ -52,20 +52,4 @@ public interface IProjections
     /// <param name="context">gRPC call context.</param>
     /// <returns><see cref="SaveProjectionResult"/> containing any errors.</returns>
     Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default);
-
-    /// <summary>
-    /// Generate declarative C# projection code from declaration.
-    /// </summary>
-    /// <param name="request"><see cref="GenerateDeclarativeCodeRequest"/> with all the details about the request.</param>
-    /// <param name="context">gRPC call context.</param>
-    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="GeneratedCode"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
-    Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateDeclarativeCode(GenerateDeclarativeCodeRequest request, CallContext context = default);
-
-    /// <summary>
-    /// Generate model-bound C# read model code from declaration.
-    /// </summary>
-    /// <param name="request"><see cref="GenerateModelBoundCodeRequest"/> with all the details about the request.</param>
-    /// <param name="context">gRPC call context.</param>
-    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="GeneratedCode"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
-    Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateModelBoundCode(GenerateModelBoundCodeRequest request, CallContext context = default);
 }

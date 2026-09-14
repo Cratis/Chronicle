@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
-/// Event carrying two <c>ConceptAs&lt;Guid&gt;</c> identifiers that together form a composite unique key,
+/// Event carrying two <c language="csharp">ConceptAs&lt;Guid&gt;</c> identifiers that together form a composite unique key,
 /// used to verify that a unique constraint over more than one ConceptAs-valued property registers and enforces.
 /// </summary>
 /// <param name="Request">The request the candidate was submitted for.</param>

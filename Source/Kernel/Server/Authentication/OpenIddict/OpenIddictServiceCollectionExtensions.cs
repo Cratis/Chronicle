@@ -163,6 +163,9 @@ public static class OpenIddictServiceCollectionExtensions
                 options.UseAspNetCore();
                 options.UseDataProtection();
 
+                // Data Protection tokens use OpenIddict's audience validation, not IdentityModel's JWT parameters.
+                options.AddAudiences(WellKnownAudiences.Chronicle);
+
                 var authorityValue = chronicleOptions.Authentication.Authority;
                 string scheme;
                 string host;
@@ -197,11 +200,8 @@ public static class OpenIddictServiceCollectionExtensions
                 {
                     o.TokenValidationParameters.ValidateIssuer = true;
                     o.TokenValidationParameters.ValidIssuers = issuers;
-
-                    // TODO: Re-enable audience validation when we have a way to set audiences on tokens
-#pragma warning disable CA5404 // Do not disable token validation checks
-                    o.TokenValidationParameters.ValidateAudience = false;
-#pragma warning restore CA5404 // Do not disable token validation checks
+                    o.TokenValidationParameters.ValidateAudience = true;
+                    o.TokenValidationParameters.ValidAudience = WellKnownAudiences.Chronicle;
                 });
             });
 

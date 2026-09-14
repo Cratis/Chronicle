@@ -63,19 +63,19 @@ public class IgnoreRecommendationRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the RecommendationId.
     /// </summary>
     [ProtoMember(3)]
-    public Guid RecommendationId { get; set; }
+    public Guid RecommendationId { get; set; } = new();
 }
 
 /// <summary>
@@ -88,19 +88,19 @@ public class PerformRecommendationRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the RecommendationId.
     /// </summary>
     [ProtoMember(3)]
-    public Guid RecommendationId { get; set; }
+    public Guid RecommendationId { get; set; } = new();
 }
 
 /// <summary>
@@ -119,25 +119,25 @@ public class RecommendationDetailsResponse
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Description.
     /// </summary>
     [ProtoMember(3)]
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Type.
     /// </summary>
     [ProtoMember(4)]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Occurred.
     /// </summary>
     [ProtoMember(5)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; } = new();
 }
 
 /// <summary>
@@ -150,13 +150,13 @@ public class GetRecommendationsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -169,11 +169,11 @@ public class AllRecommendationsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }

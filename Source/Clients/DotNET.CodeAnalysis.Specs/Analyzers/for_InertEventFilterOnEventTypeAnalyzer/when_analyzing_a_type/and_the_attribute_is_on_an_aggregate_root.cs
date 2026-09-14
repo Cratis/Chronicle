@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_InertEventFilterOnEv
 /// different stream type, which is the exact damage this rule exists to prevent.
 /// </summary>
 /// <remarks>
-/// Only <c>[EventStreamType]</c> is declared. The event source type is passed to the aggregate root factory as a
+/// Only <c language="csharp">[EventStreamType]</c> is declared. The event source type is passed to the aggregate root factory as a
 /// parameter and never read from an attribute, so pinning a skip for it here would pin a claim that is not true.
 /// </remarks>
 public class and_the_attribute_is_on_an_aggregate_root : given.an_inert_event_filter_on_event_type_analyzer

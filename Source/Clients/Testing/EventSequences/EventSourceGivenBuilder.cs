@@ -15,7 +15,7 @@ public class EventSourceGivenBuilder(IEventLog eventLog, EventSourceId eventSour
 {
     /// <summary>
     /// Seeds the provided event instances into the event log for the current <see cref="EventSourceId"/>
-    /// by appending them through the real kernel <c>EventSequence</c> grain.
+    /// by appending them through the real kernel <c language="csharp">EventSequence</c> grain.
     /// </summary>
     /// <param name="events">The event instances to seed, in order.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

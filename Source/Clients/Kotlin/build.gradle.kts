@@ -48,6 +48,13 @@ tasks.named("processResources") {
     dependsOn(embedDescriptorSet)
 }
 
+// sourcesJar (created by the maven-publish plugin) packages sourceSets.main.allSource, which reads the
+// generated resources directory directly rather than through processResources - so it needs the same
+// explicit dependency to avoid Gradle's implicit-dependency validation failure.
+tasks.matching { it.name == "sourcesJar" }.configureEach {
+    dependsOn(embedDescriptorSet)
+}
+
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:$protobufVersion"
@@ -102,5 +109,16 @@ mavenPublishing {
             connection.set("scm:git:git://github.com/cratis/chronicle.git")
             developerConnection.set("scm:git:ssh://git@github.com/cratis/chronicle.git")
         }
+    }
+}
+
+// The sources jar (registered by signAllPublications() above, but only once the maven-publish plugin's own
+// afterEvaluate callback runs) packages the main source set's resources, which now include the generated
+// directory embedDescriptorSet writes into - without this, Gradle's implicit-dependency validation fails the
+// build because nothing orders the two tasks relative to each other. afterEvaluate defers this until after
+// that callback has had a chance to register the task.
+afterEvaluate {
+    tasks.named("sourcesJar") {
+        dependsOn(embedDescriptorSet)
     }
 }

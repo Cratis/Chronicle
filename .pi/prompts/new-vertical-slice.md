@@ -1,1 +1,1 @@
-../../.ai/prompts/new-vertical-slice.prompt.md
+../../.cratis/ai/prompts/new-vertical-slice.prompt.md

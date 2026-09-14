@@ -6,7 +6,7 @@ using Cratis.Chronicle.Compatibility.for_WireCompatibilityChecker.given;
 namespace Cratis.Chronicle.Compatibility.for_WireCompatibilityChecker.when_the_contract_narrowed;
 
 /// <summary>
-/// Widening a string field to repeated is what Chronicle did to <c>Constraint.RemovedWith</c>, deliberately and in
+/// Widening a string field to repeated is what Chronicle did to <c language="csharp">Constraint.RemovedWith</c>, deliberately and in
 /// the belief that it was non-breaking. It half is: one occurrence of a length-delimited field encodes identically
 /// either way, so binary decoding survives - but every generated client changes the property's type, which is how
 /// the TypeScript client stopped compiling. Saying which of the two it is decides what the fix has to be.

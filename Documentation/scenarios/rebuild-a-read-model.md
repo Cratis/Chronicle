@@ -12,7 +12,14 @@ Read models are **derived data** — the [event log](../concepts/event-sequence.
 ## Do it
 
 1. Make your projection change and deploy it.
-2. **Replay** the observer so it reprocesses the event sequence from the beginning and rewrites its read model. You can trigger a replay from the [Workbench](../get-started/) or programmatically as part of your deployment.
+2. **Replay** the observer so it reprocesses the event sequence from the beginning and rewrites its read model. Use the [Cratis CLI](/cli/) to trigger a replay:
+
+   ```bash
+   cratis chronicle observers replay <observer-id>
+   ```
+
+   See [`cratis chronicle observers replay`](/cli/chronicle/observers/#replay) for the full command reference. [Chronicle Workbench](/chronicle/workbench/) provides inspection of observers and read models but does not trigger replays or mutations.
+
 3. Query the read model and confirm it reflects the new logic.
 
 :::tip

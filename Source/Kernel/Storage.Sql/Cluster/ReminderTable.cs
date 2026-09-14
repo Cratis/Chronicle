@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 public class ReminderTable(IDbContextFactory<ClusterDbContext> dbContextFactory) : IReminderTable
 {
     /// <inheritdoc/>
-    public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)
+    public async Task<ReminderEntry?> ReadRow(GrainId grainId, string reminderName)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var rowKey = ReminderEntryConverters.GetRowKey(grainId, reminderName);
@@ -66,7 +66,7 @@ public class ReminderTable(IDbContextFactory<ClusterDbContext> dbContextFactory)
     }
 
     /// <inheritdoc/>
-    public async Task<string> UpsertRow(ReminderEntry entry)
+    public async Task<string?> UpsertRow(ReminderEntry entry)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var entity = entry.ToSql();

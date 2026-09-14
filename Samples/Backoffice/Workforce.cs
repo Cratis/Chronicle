@@ -44,7 +44,7 @@ public record Actor(PersonName Name, Identity Identity)
 /// <param name="LastHour">The last hour in the bucket.</param>
 /// <remarks>
 /// These mirror Chronicle's own time bucketing so a habit placed in "Morning" lands in the Morning bucket rather
-/// than straddling two of them. Keep them in step with the kernel's <c>TimeBucketResolver</c>.
+/// than straddling two of them. Keep them in step with the kernel's <c language="csharp">TimeBucketResolver</c>.
 /// </remarks>
 public record TimeOfDay(string Name, int FirstHour, int LastHour)
 {

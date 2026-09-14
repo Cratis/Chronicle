@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Events.EventSequences;
 /// for audit purposes.
 /// </summary>
 /// <remarks>
-/// This is NOT a Chronicle system event (<c>[EventType]</c> is intentionally absent) — it is a content record
+/// This is NOT a Chronicle system event (<c language="csharp">[EventType]</c> is intentionally absent) — it is a content record
 /// stored inside the event document. The event's own context fields (Occurred, CorrelationId, Causation, CausedBy)
 /// are updated to reflect the time and identity of the redaction.
-/// See also: <see cref="EventRedactionRequested"/>, which is the <c>[EventType]</c> system event that triggers
+/// See also: <see cref="EventRedactionRequested"/>, which is the <c language="csharp">[EventType]</c> system event that triggers
 /// the reactor to perform the actual in-place replacement.
 /// </remarks>
 /// <param name="Reason">The reason for redaction.</param>

@@ -12,12 +12,12 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// A <see cref="Type"/> reaching <see cref="TypeHelper.GetTypeName"/> that is not a primitive, a collection, a
 /// concept, or a read model is normally assumed to already exist as a contract - true for everything Contracts
 /// itself declares, false for a type Core declares. This tells the two apart and remembers every one it finds, so
-/// a later pass in <c>Program</c> can generate each one exactly once, transitively, after every service has had a
+/// a later pass in <c language="csharp">Program</c> can generate each one exactly once, transitively, after every service has had a
 /// chance to reference it. The generator is a single-shot CLI process (one run, then it exits), so static state
 /// here carries no concurrency risk - the same simplification <see cref="TransportTypes"/> already relies on.
 /// <para>
 /// Candidacy is decided by namespace, not by which assembly loaded the type. A Core artifact can reference a type
-/// from a project Core itself depends on - <c>Concepts.Jobs.JobStatus</c> is a real example, already the type
+/// from a project Core itself depends on - <c language="csharp">Concepts.Jobs.JobStatus</c> is a real example, already the type
 /// Core's own storage layer uses - and that is exactly as much "not a contract yet" as a type Core declares
 /// directly. Gating on the Core assembly alone would miss it and try to invent a second, redundant mirror.
 /// </para>
@@ -66,7 +66,7 @@ public static class SharedTypeRegistry
     /// it is seen.
     /// </summary>
     /// <param name="type">The type a member declares.</param>
-    /// <returns>The <c>global::</c>-qualified contract name, or null when the type is not a shared-type candidate.</returns>
+    /// <returns>The <c language="csharp">global::</c>-qualified contract name, or null when the type is not a shared-type candidate.</returns>
     public static string? QualifiedNameFor(Type type)
     {
         if (!IsCandidate(type))
@@ -86,7 +86,7 @@ public static class SharedTypeRegistry
     /// <summary>
     /// Maps a Core namespace onto the contract namespace it mirrors into, using the same skip/base transform the
     /// per-service generation already applies - so a type Core places under (for example)
-    /// <c>Cratis.Chronicle.Jobs</c> lands under <c>Cratis.Chronicle.Contracts.Jobs</c>, exactly where it already
+    /// <c language="csharp">Cratis.Chronicle.Jobs</c> lands under <c language="csharp">Cratis.Chronicle.Contracts.Jobs</c>, exactly where it already
     /// lives today.
     /// </summary>
     /// <param name="sourceNamespace">The type's own namespace.</param>

@@ -172,7 +172,7 @@ public interface IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
     /// Clearing is its own operation rather than a set of a special value: the member is written back to null every
     /// time the event is observed, replay included. The property has to be able to hold null - clearing one that
     /// cannot is refused here, because the only value that could be written is the type default, which is a
-    /// different fact than "no value". Use <c>Set(...).ToValue(...)</c> when a type default is what you mean.
+    /// different fact than "no value". Use <c language="csharp">Set(...).ToValue(...)</c> when a type default is what you mean.
     /// The default implementation throws, so adding this member does not break an implementation outside this
     /// assembly: it keeps compiling, and only fails if it is actually asked to clear something.
     /// </remarks>

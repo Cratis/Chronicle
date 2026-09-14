@@ -12,10 +12,10 @@ namespace Cratis.Chronicle.Projections;
 /// streams owned by that silo.
 /// </summary>
 /// <remarks>
-/// This mirrors <c>IReducerMediator</c>/<c>IReactorMediator</c>: the gRPC <c>Watch</c> service registers
+/// This mirrors <c language="csharp">IReducerMediator</c>/<c language="csharp">IReactorMediator</c>: the gRPC <c language="csharp">Watch</c> service registers
 /// the connection's stream here, and the per-watch subscriber grain — placed on this silo so the hop is
 /// strictly in-process — invokes <see cref="OnChangeset"/> to push a changeset onto that stream. This
-/// replaces the previous Orleans <c>CreateObjectReference</c> grain-observer callback, whose one-way
+/// replaces the previous Orleans <c language="csharp">CreateObjectReference</c> grain-observer callback, whose one-way
 /// dispatch from the notifier grain to a service-created object reference was silently dropped on slower
 /// backends.
 /// </remarks>

@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Compliance;
 /// removes the ~245-byte plaintext cap that raw RSA-2048 imposes, so arbitrarily large PII (long free
 /// text, images) can be encrypted while the per-subject RSA key remains the root of trust for
 /// crypto-shredding. Values written by earlier versions were encrypted with raw RSA over the whole
-/// payload; <see cref="Decrypt"/> recognizes the envelope header (the <c>CENV</c> "Cratis ENVelope"
+/// payload; <see cref="Decrypt"/> recognizes the envelope header (the <c language="csharp">CENV</c> "Cratis ENVelope"
 /// marker followed by a format-version byte) and falls back to raw RSA for legacy values without the
 /// marker, so previously stored PII stays readable.
 /// </remarks>

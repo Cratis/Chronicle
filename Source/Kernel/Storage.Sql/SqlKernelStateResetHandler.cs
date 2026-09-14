@@ -12,10 +12,10 @@ namespace Cratis.Chronicle.Storage.Sql;
 
 /// <summary>
 /// Wipes the SQL backing store between integration test specs without restarting the container.
-/// Delegates to <c>IDatabase.Wipe</c> so that the file deletion / table truncation and the
+/// Delegates to <c language="csharp">IDatabase.Wipe</c> so that the file deletion / table truncation and the
 /// migration-cache invalidation always happen together. The wipe path is only compiled when the
-/// <c>DEVELOPMENT</c> preprocessor symbol is defined; production builds throw
-/// <see cref="NotSupportedException"/>, matching the gate on <c>IDatabase.Wipe</c>.
+/// <c language="csharp">DEVELOPMENT</c> preprocessor symbol is defined; production builds throw
+/// <see cref="NotSupportedException"/>, matching the gate on <c language="csharp">IDatabase.Wipe</c>.
 /// </summary>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> describing the active storage backend.</param>
 /// <param name="database">The <see cref="IDatabase"/> that performs the wipe.</param>

@@ -1,1 +1,1 @@
-../../.ai/agents/spec-writer.md
+../../.cratis/ai/agents/spec-writer.md

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
 /// Covers the read surface reachable from <see cref="EventScenario"/> beyond
-/// <c>GetFromSequenceNumber</c>. Every one of these narrows through the same storage filter, so a
+/// <c language="csharp">GetFromSequenceNumber</c>. Every one of these narrows through the same storage filter, so a
 /// regression in how "no filter" sentinels are treated silently empties them all.
 /// </summary>
 public class when_querying_the_seeded_event_log : Specification, IDisposable

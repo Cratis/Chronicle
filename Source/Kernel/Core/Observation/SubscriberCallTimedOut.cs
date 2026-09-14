@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation;
 /// configured subscriber timeout.
 /// </summary>
 /// <remarks>
-/// Derives from <see cref="TimeoutException"/> so that it classifies as <c>FailureKind.Timeout</c> alongside the
+/// Derives from <see cref="TimeoutException"/> so that it classifies as <c language="csharp">FailureKind.Timeout</c> alongside the
 /// transport's own timeout, and so that anything already handling a timeout keeps handling this one.
 /// </remarks>
 /// <param name="partition">The <see cref="Key">partition</see> whose events were being handed over.</param>

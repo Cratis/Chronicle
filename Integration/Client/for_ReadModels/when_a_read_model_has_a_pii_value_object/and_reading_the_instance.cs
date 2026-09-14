@@ -12,7 +12,7 @@ using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_ha
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_pii_value_object;
 
 /// <summary>
-/// A whole value-object type marked <c>[PII]</c>, rather than a single concept inside it. Every value the type
+/// A whole value-object type marked <c language="csharp">[PII]</c>, rather than a single concept inside it. Every value the type
 /// holds is personal, so each of its leaves must be encrypted at rest and released on read — without collapsing
 /// the value object into one opaque blob, which would change the document shape and break materialization.
 /// </summary>

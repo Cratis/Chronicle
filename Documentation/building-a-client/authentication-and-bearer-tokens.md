@@ -78,6 +78,10 @@ of behavior beyond just attaching the header: if a call comes back `Unauthentica
 refresh and retry the call exactly once before giving up. That single retry is what makes a token
 that expires mid-session invisible to the caller instead of surfacing as a hard failure.
 
+Chronicle-issued access tokens target the `chronicle` audience. After upgrading a server that previously issued tokens without an audience, reacquire those tokens rather than reusing the old cache. External-authority tokens must match the server's configured audience. Authenticated subjects must be nonblank; Chronicle no longer invents an actor identifier when a subject is missing.
+
+Bearer-only requests do not need the Workbench's `X-CSRF-TOKEN` header. That protection applies to authenticated browser-cookie mutations; it does not change the bearer gRPC exchange described here.
+
 ## Keeping the token fresh
 
 A well-behaved client refreshes proactively rather than waiting to be rejected:

@@ -12,8 +12,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a fluent <c>builder.From&lt;TEvent&gt;(_ =&gt; _.UsingKey(...))</c> carrying a
-/// <c>[PII]</c> value onto a read model whose document is keyed by something other than the stream the event
+/// Analyzer that reports a fluent <c language="csharp">builder.From&lt;TEvent&gt;(_ =&gt; _.UsingKey(...))</c> carrying a
+/// <c language="csharp">[PII]</c> value onto a read model whose document is keyed by something other than the stream the event
 /// was appended to.
 /// </summary>
 /// <remarks>
@@ -150,10 +150,10 @@ public class FluentKeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Find the call inside a <c>From&lt;TEvent&gt;</c> callback that points the document at a key other than
+    /// Find the call inside a <c language="csharp">From&lt;TEvent&gt;</c> callback that points the document at a key other than
     /// the stream the event was appended to.
     /// </summary>
-    /// <param name="builderCallback">The <c>From</c> builder callback.</param>
+    /// <param name="builderCallback">The <c language="csharp">From</c> builder callback.</param>
     /// <param name="eventType">The event the block reads.</param>
     /// <param name="readModelType">The read model being projected.</param>
     /// <param name="isChildScope">Whether the From block fills a child inside a containing document.</param>

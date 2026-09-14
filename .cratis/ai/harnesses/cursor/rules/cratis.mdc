@@ -1,0 +1,7 @@
+---
+description: Apply the Cratis repository instructions and load task-specific rules from the managed corpus.
+alwaysApply: true
+---
+<!-- cratis-ai-managed: harnesses/cursor/rules/cratis.mdc -->
+
+Read and follow `@.cratis/ai/rules/general.md`. Load the task-specific rules it references from `.cratis/ai/rules/` only when they apply to the current work.

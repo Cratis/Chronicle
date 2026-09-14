@@ -71,9 +71,9 @@ internal class ChronicleConnection(
 
     /// <summary>
     /// Re-establishes the client connection after a lifecycle disconnect.
-    /// Registers with the <c>ConnectedClients</c> grain, re-creates the keep-alive
+    /// Registers with the <c language="csharp">ConnectedClients</c> grain, re-creates the keep-alive
     /// stream, and signals <see cref="IConnectionLifecycle.Connected"/> which triggers
-    /// <c>RegisterAll</c> on the <see cref="IEventStore"/>.
+    /// <c language="csharp">RegisterAll</c> on the <see cref="IEventStore"/>.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     internal Task Reconnect() => Connect();

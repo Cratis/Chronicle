@@ -9,7 +9,7 @@ using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_getting_for_event_source_id_and_event_types;
 
-public class and_deserializing_events : given.an_event_sequence
+public class and_deserializing_events : given.an_event_sequence_with_a_wire_response
 {
     EventSourceId _eventSourceId;
     List<EventType> _eventTypes;
@@ -52,7 +52,8 @@ public class and_deserializing_events : given.an_event_sequence
                 CorrelationId = Guid.NewGuid(),
                 Causation = [],
                 CausedBy = new Contracts.Sequences.Identity(),
-                Tags = []
+                Tags = [],
+                Subject = $"synthetic-subject-{idx}"
             },
             Content = JsonSerializer.Serialize(evt, JsonSerializerOptions.Default)
         }).ToList();
@@ -61,9 +62,7 @@ public class and_deserializing_events : given.an_event_sequence
             .When(_ => _.ForEventSourceIdAndEventTypes(Arg.Any<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>(), CallContext.Default))
             .Do(callInfo => _request = callInfo.Arg<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>());
 
-        _sequences
-            .ForEventSourceIdAndEventTypes(Arg.Any<Contracts.Sequences.ForEventSourceIdAndEventTypesRequest>(), CallContext.Default)
-            .Returns(QueryResult<IEnumerable<Contracts.Sequences.AppendedEventResponse>>.Success(Guid.NewGuid(), contractEvents));
+        RespondWith(QueryResult<IEnumerable<Contracts.Sequences.AppendedEventResponse>>.Success(Guid.NewGuid(), contractEvents));
     }
 
     async Task Because() => _result = await _eventSequence.GetForEventSourceIdAndEventTypes(_eventSourceId, _eventTypes);
@@ -73,6 +72,10 @@ public class and_deserializing_events : given.an_event_sequence
     [Fact] void should_pass_event_types() => _request.EventTypeIds.ShouldEqual(string.Join(',', _eventTypes.Select(_ => _.Id.Value)));
     [Fact] void should_return_correct_number_of_events() => _result.Count.ShouldEqual(_expectedEvents.Count);
     [Fact] void should_deserialize_all_events_correctly() => _result.Select(e => (e.Content as TestEvent)?.Name).ShouldEqual(_expectedEvents.Select(e => e.Name));
+    [Fact] void should_deserialize_all_event_values_correctly() => _result.Select(e => ((TestEvent)e.Content).Value).ShouldEqual(_expectedEvents.Select(e => e.Value));
+    [Fact] void should_preserve_the_subjects() => _result.Select(e => e.Context.Subject.Value).ShouldEqual(["synthetic-subject-0", "synthetic-subject-1"]);
+    [Fact] void should_preserve_empty_tags() => _result.SelectMany(e => e.Context.Tags).ShouldBeEmpty();
+    [Fact] void should_preserve_empty_causation() => _result.SelectMany(e => e.Context.Causation).ShouldBeEmpty();
 
     record TestEvent(string Name, int Value);
 }

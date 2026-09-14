@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Standalone fluent projection for <see cref="FluentContactSheet"/>, exercising a
-/// <c>.Children(...).IdentifiedBy(...).From&lt;E&gt;(b =&gt; b.UsingKey(...))</c> child collection — the exact
+/// <c language="csharp">.Children(...).IdentifiedBy(...).From&lt;E&gt;(b =&gt; b.UsingKey(...))</c> child collection — the exact
 /// shape a consumer reaches for and the one that previously failed to build under
 /// <see cref="ReadModelScenario{TReadModel}"/>.
 /// </summary>

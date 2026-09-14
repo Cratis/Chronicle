@@ -9,13 +9,13 @@ namespace Cratis.Chronicle.for_MirroredConcepts;
 
 /// <summary>
 /// A concept that exists on both sides of the wire exists twice: once in the kernel under
-/// <c>Cratis.Chronicle.Concepts</c>, and once in the client under the same namespace without that segment. The two
+/// <c language="csharp">Cratis.Chronicle.Concepts</c>, and once in the client under the same namespace without that segment. The two
 /// copies are hand-maintained, and nothing in the compiler connects them.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The sentinels and enum values in those copies are wire values. When the client's
-/// <c>EventSequenceNumber.Max</c> said <c>ulong.MaxValue - 2</c> and the kernel's said <c>ulong.MaxValue - 1</c>, a
+/// <c language="csharp">EventSequenceNumber.Max</c> said <c language="csharp">ulong.MaxValue - 2</c> and the kernel's said <c language="csharp">ulong.MaxValue - 1</c>, a
 /// concurrency scope the client meant as "no expected sequence number" arrived at the kernel as an ordinary number,
 /// and the kernel ran a check that could only ever pass. Both sides compiled, every specification was green, and
 /// nothing anywhere compared the two.
@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.for_MirroredConcepts;
 /// share a name, with the client carrying a slimmer consumer-facing shape - so this asserts only on what both sides
 /// actually declare. A member present on both must agree; a member on only one is that side's own business.
 /// Comparison is by runtime value rather than by source text, because the two copies routinely spell the same value
-/// differently (<c>Guid.Empty</c> against <c>new(Guid.Empty)</c>, a literal against a named constant).
+/// differently (<c language="csharp">Guid.Empty</c> against <c language="csharp">new(Guid.Empty)</c>, a literal against a named constant).
 /// </para>
 /// </remarks>
 public class when_comparing_the_client_and_kernel_copies : Specification

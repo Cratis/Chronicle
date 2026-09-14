@@ -10,7 +10,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.for_ReadModelPropertiesBuilder.when_clearing.given;
 
 /// <summary>
-/// Everything the builder interface requires apart from <c>Clear</c>, so the two leaves below differ in exactly
+/// Everything the builder interface requires apart from <c language="csharp">Clear</c>, so the two leaves below differ in exactly
 /// one member and nothing else.
 /// </summary>
 /// <remarks>
@@ -42,13 +42,13 @@ public abstract class StubBuilder : IStubBuilder
 }
 
 /// <summary>
-/// An implementation written before <c>Clear</c> existed: it satisfies every other member and leaves <c>Clear</c>
+/// An implementation written before <c language="csharp">Clear</c> existed: it satisfies every other member and leaves <c language="csharp">Clear</c>
 /// to the interface's default implementation.
 /// </summary>
 public class BuilderWithoutClear : StubBuilder;
 
 /// <summary>
-/// An implementation that provides <c>Clear</c> itself, so the default implementation is never reached.
+/// An implementation that provides <c language="csharp">Clear</c> itself, so the default implementation is never reached.
 /// </summary>
 /// <remarks>
 /// <see cref="IStubBuilder"/> is re-declared here even though <see cref="StubBuilder"/> already implements it. That

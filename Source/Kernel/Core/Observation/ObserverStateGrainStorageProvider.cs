@@ -44,6 +44,6 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
-        await observers.Save(actualGrainState.State);
+        await observers.Save(actualGrainState.State!);
     }
 }

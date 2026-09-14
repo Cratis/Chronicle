@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionReplayRecommendationEvaluat
 /// added". A nullable enum has an answer for every existing row - the absence of one - so an added generation
 /// needs no events re-read, and the operator is told so.
 /// <para>
-/// Nullability here is the <c>"null"</c> entry in the property's type rather than a trailing <c>?</c> on a
+/// Nullability here is the <c language="csharp">"null"</c> entry in the property's type rather than a trailing <c language="csharp">?</c> on a
 /// format, because an enum carries no format. Read only the format and this property looks required, the 1-based
 /// member list withholds its default, and the operator is sent to a replay the data never needed.
 /// </para>

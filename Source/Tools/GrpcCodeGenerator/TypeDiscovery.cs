@@ -122,7 +122,7 @@ public class TypeDiscovery(Assembly assembly)
     }
 
     /// <summary>
-    /// Discovers <c>[Query]</c>-marked methods on <c>[KeyedBy&lt;TKey&gt;]</c> grain interfaces and adds them to
+    /// Discovers <c language="csharp">[Query]</c>-marked methods on <c language="csharp">[KeyedBy&lt;TKey&gt;]</c> grain interfaces and adds them to
     /// their declared service.
     /// </summary>
     /// <param name="types">Every type in the assembly.</param>

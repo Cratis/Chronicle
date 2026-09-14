@@ -32,6 +32,8 @@ message MatchingPatternsRequest {
 }
 message PatternScopeResponse {
    string Id = 1;
+   string Name = 2;
+   string UserName = 3;
 }
 message PatternsForScopeRequest {
    string EventStore = 1;

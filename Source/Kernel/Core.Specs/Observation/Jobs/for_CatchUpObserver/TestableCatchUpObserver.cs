@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_CatchUpObserver;
 
 /// <summary>
 /// A testable subclass of <see cref="CatchUpObserver"/> that exposes the grain interface type
-/// to satisfy the <c>IFoo → Foo</c> convention expected by the testing infrastructure.
+/// to satisfy the <c language="csharp">IFoo → Foo</c> convention expected by the testing infrastructure.
 /// </summary>
 /// <param name="catchupServiceClient">The <see cref="IObserverServiceClient"/> for catch-up notifications.</param>
 /// <param name="storage">The <see cref="IStorage"/> for accessing key indexes.</param>

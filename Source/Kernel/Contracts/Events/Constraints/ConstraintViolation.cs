@@ -18,13 +18,13 @@ public class ConstraintViolation
     /// Gets or sets the EventTypeId.
     /// </summary>
     [ProtoMember(1)]
-    public string EventTypeId { get; set; }
+    public string EventTypeId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the SequenceNumber.
     /// </summary>
     [ProtoMember(2)]
-    public global::System.UInt64 SequenceNumber { get; set; }
+    public global::System.UInt64 SequenceNumber { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the ConstraintType.
@@ -36,13 +36,13 @@ public class ConstraintViolation
     /// Gets or sets the ConstraintName.
     /// </summary>
     [ProtoMember(4)]
-    public string ConstraintName { get; set; }
+    public string ConstraintName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Message.
     /// </summary>
     [ProtoMember(5)]
-    public string Message { get; set; }
+    public string Message { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Details.

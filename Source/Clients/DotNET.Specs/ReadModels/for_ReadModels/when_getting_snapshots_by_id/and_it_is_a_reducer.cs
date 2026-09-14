@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Chronicle.Contracts.ReadModelExplorer;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reducers;
@@ -24,7 +25,7 @@ public class and_it_is_a_reducer : given.all_dependencies
 
     ReadModelKey _key;
     IEnumerable<ReadModelSnapshot<MyReadModel>> _result;
-    GetSnapshotsByKeyResponse _response;
+    QueryResult<IEnumerable<ReadModelSnapshotResponse>> _response;
     IReducerHandler _handler;
 
     void Establish()
@@ -43,30 +44,10 @@ public class and_it_is_a_reducer : given.all_dependencies
         _eventTypes.HasFor(eventTypeId).Returns(true);
         _eventTypes.GetClrTypeFor(eventTypeId).Returns(typeof(MyEvent));
 
-        var eventContext = EventContext.EmptyWithEventSourceId(Guid.NewGuid()) with
-        {
-            SequenceNumber = 42,
-            EventType = eventType
-        };
+        _response = given.a_snapshot_response.AsResult(
+            given.a_snapshot_response.With("""{"Name":"ReducerModel","Value":99}""", eventType, new MyEvent { Data = "reducer-data", Number = 456 }, _jsonSerializerOptions));
 
-        var contractEvent = new AppendedEvent(eventContext, new MyEvent { Data = "reducer-data", Number = 456 })
-            .ToContract(_jsonSerializerOptions);
-
-        _response = new GetSnapshotsByKeyResponse
-        {
-            Snapshots =
-            [
-                new()
-                {
-                    ReadModel = """{"Name":"ReducerModel","Value":99}""",
-                    Events = [contractEvent],
-                    Occurred = DateTimeOffset.UtcNow,
-                    CorrelationId = Guid.NewGuid()
-                }
-            ]
-        };
-
-        _services.ReadModels.GetSnapshotsByKey(Arg.Any<GetSnapshotsByKeyRequest>()).Returns(_response);
+        _services.ReadModelExplorer.AllSnapshotsForReadModel(Arg.Any<AllSnapshotsForReadModelRequest>()).Returns(_response);
     }
 
     async Task Because() => _result = await _readModels.GetSnapshotsById<MyReadModel>(_key);
@@ -77,5 +58,5 @@ public class and_it_is_a_reducer : given.all_dependencies
     [Fact] void should_have_deserialized_event_to_correct_type() => _result.First().Events.First().Content.ShouldBeOfExactType<MyEvent>();
     [Fact] void should_preserve_event_data() => (_result.First().Events.First().Content as MyEvent).Data.ShouldEqual("reducer-data");
     [Fact] void should_preserve_event_number() => (_result.First().Events.First().Content as MyEvent).Number.ShouldEqual(456);
-    [Fact] void should_use_handler_event_sequence_id() => _services.ReadModels.Received(1).GetSnapshotsByKey(Arg.Is<GetSnapshotsByKeyRequest>(r => r.EventSequenceId == _handler.EventSequenceId));
+    [Fact] void should_use_handler_event_sequence_id() => _services.ReadModelExplorer.Received(1).AllSnapshotsForReadModel(Arg.Is<AllSnapshotsForReadModelRequest>(r => r.EventSequenceId == _handler.EventSequenceId));
 }

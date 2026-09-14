@@ -13,12 +13,12 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
 /// <remarks>
-/// Marked <c>[KeepAlive]</c> because the subscriber registrations live only in memory — there is no
+/// Marked <c language="csharp">[KeepAlive]</c> because the subscriber registrations live only in memory — there is no
 /// persisted state and no re-subscribe recovery, so a deactivation between a client's
 /// <see cref="Subscribe"/> and the projection's <see cref="Notify"/> would drop the registration and the
 /// appended event's changeset would never reach the watching client. Every sibling subscription/queue
-/// grain (<c>Observer</c>, <c>AppendedEventsQueue</c>) is already <c>[KeepAlive]</c> for the same reason;
-/// KeepAlive grains also survive <c>ForceActivationCollection</c>. Fan-out is to
+/// grain (<c language="csharp">Observer</c>, <c language="csharp">AppendedEventsQueue</c>) is already <c language="csharp">[KeepAlive]</c> for the same reason;
+/// KeepAlive grains also survive <c language="csharp">ForceActivationCollection</c>. Fan-out is to
 /// <see cref="IReadModelChangesetSubscriber"/> grain references, which Orleans routes reliably to the silo
 /// hosting each watch connection.
 /// </remarks>

@@ -58,7 +58,7 @@ The tool generates the following proto files:
 
 - `clients.proto` - Client connection services
 - `cratis_chronicle_contracts.proto` - Event stores and namespaces
-- `events.proto` - Event type services
+- `eventtypes.proto` - Event type services
 - `events_constraints.proto` - Event constraint services
 - `eventsequences.proto` - Event sequence services
 - `host.proto` - Host/server information

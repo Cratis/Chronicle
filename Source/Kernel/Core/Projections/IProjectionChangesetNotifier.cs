@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Projections;
 /// topology-correct rendezvous between the shared projection observer (which may run on any silo) and the
 /// per-connection watch subscribers (each pinned to the silo terminating its client connection). Fan-out
 /// is to <see cref="IReadModelChangesetSubscriber"/> grain references — reliably routed by Orleans — which
-/// replaces the previous <c>CreateObjectReference</c> grain-observer callback whose one-way dispatch was
+/// replaces the previous <c language="csharp">CreateObjectReference</c> grain-observer callback whose one-way dispatch was
 /// silently dropped on slower backends.
 /// </remarks>
 public interface IProjectionChangesetNotifier : IGrainWithStringKey

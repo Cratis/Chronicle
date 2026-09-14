@@ -89,7 +89,7 @@ public static class ChronicleConnectionStringBuilderExtensions
     /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
     /// <remarks>
     /// Only works against a server running with authentication turned off
-    /// (<c>Cratis:Chronicle:Authentication:Enabled=false</c>) - typically a Chronicle embedded in the same
+    /// (<c language="csharp">Cratis:Chronicle:Authentication:Enabled=false</c>) - typically a Chronicle embedded in the same
     /// container or process as its client. It skips the token exchange entirely, which is what makes a cold
     /// start of such an instance fast.
     /// </remarks>

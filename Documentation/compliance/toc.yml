@@ -1,16 +1,16 @@
 - name: Overview
   href: index.md
-- name: PII Attribute
+- name: Marking data as PII
   href: pii.mdx
-- name: Applying PII to ConceptAs types
+- name: Declaring PII on a concept
   href: pii-with-concepts.mdx
 - name: Working with compliance from the client
   href: client.mdx
 - name: Read models and PII
   href: read-models.mdx
 - name: Erasing a subject
-  href: erasing-a-subject.md
+  href: erasing-a-subject.mdx
 - name: The encryption key lifecycle
-  href: key-lifecycle.md
+  href: key-lifecycle.mdx
 - name: Compliance in Arc applications
   href: arc.md

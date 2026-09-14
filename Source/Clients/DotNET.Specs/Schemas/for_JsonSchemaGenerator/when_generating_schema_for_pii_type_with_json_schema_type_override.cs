@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 /// <summary>
 /// Substituting the schema of a type adorned with <see cref="JsonSchemaTypeAttribute"/> must not drop the
 /// classification of the value it stands in for — the compliance metadata belongs to the value, not to the shape
-/// it happens to serialize as, and losing it here would persist a <c>[PII]</c> value in the clear.
+/// it happens to serialize as, and losing it here would persist a <c language="csharp">[PII]</c> value in the clear.
 /// </summary>
 public class when_generating_schema_for_pii_type_with_json_schema_type_override : given.a_json_schema_generator_with_pii_support
 {

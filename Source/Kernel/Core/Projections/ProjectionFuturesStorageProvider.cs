@@ -45,7 +45,7 @@ public class ProjectionFuturesStorageProvider(IStorage storage) : IGrainStorage
         var projectionKey = ProjectionFuturesKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
         var futuresStorage = eventStore.GetNamespace(projectionKey.Namespace).ProjectionFutures;
-        foreach (var future in actualGrainState.State.AddedFutures)
+        foreach (var future in actualGrainState.State!.AddedFutures)
         {
             await futuresStorage.Save(projectionKey.ProjectionId, future);
         }

@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSub
 /// <summary>
 /// Regression for https://github.com/Cratis/Chronicle/issues/3591 — an observer that is already
 /// subscribed does not automatically pick up an event type added to the subscription definition
-/// after the observer first subscribed, because <c>RefreshSubscription</c> previously returned as
-/// soon as <c>IsSubscribed()</c> was true, without comparing the observer's own event types against
+/// after the observer first subscribed, because <c language="csharp">RefreshSubscription</c> previously returned as
+/// soon as <c language="csharp">IsSubscribed()</c> was true, without comparing the observer's own event types against
 /// the current definition.
 /// </summary>
 public class and_a_subscription_is_active_with_a_newly_introduced_event_type : Specification

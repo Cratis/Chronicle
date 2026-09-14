@@ -29,31 +29,22 @@ env:
   DOTNET_VERSION: "10.0.x"
   PROTOBUF_DIRECTORY: Source/Kernel/Protobuf
 
-  # The oldest release this gate measures from, and the major it applies to. Anything older in that major is not
-  # compared against; every other major is compared in full.
+  # The oldest release this gate measures from, and the major it applies to. Empty means no floor: every released
+  # minor of the current major is compared in full, which is the default behavior for every major.
   #
-  # 16.x already lost intra-major compatibility. From 16.34.0 the Security and Jobs surfaces stopped being
-  # hand-written gRPC contracts and became generated from the Arc artifacts in Core, which renamed every method and
-  # moved every query payload behind a result envelope; COMPATIBILITY-REPORT.md measures exactly what that cost and
-  # concludes it cannot be undone without freezing a pre-Arc response shape into the generator permanently. Issue
-  # #2908 finished that conversion: every remaining hand-written service (EventSequences, EventTypes, Captures,
-  # ExternalServices, Identities, Observation/Webhooks, Recommendations, Seeding, and the rest of the Web API
-  # surface) moved onto the same generated path, for the same reason, and broke the same way.
+  # 16.x lost intra-major compatibility partway through: from 16.34.0 the Security and Jobs surfaces, then every
+  # remaining hand-written gRPC service (issue #2908), moved from hand-written contracts to ones generated from the
+  # Arc artifacts in Core, renaming every method and wrapping every query payload in a result envelope.
+  # COMPATIBILITY-REPORT.md measures what that cost. A floor naming 16.45.0 carried this gate through the rest of
+  # 16.x, comparing only from the release the conversion finished at instead of failing on a break that had already
+  # shipped.
   #
-  # A gate that fails every run on a break that already shipped stops being read, and one that is turned off
-  # entirely catches nothing. So 16.x is measured from where the conversion finished instead: 16.39.0 and
-  # everything after it is the generated contract and has to keep working, and the releases before it - including
-  # 16.34.0 through 16.38.2, which only had *part* of the conversion - are acknowledged as already broken. This is
-  # a statement about 16.x only - the major is read from the version itself, so 17 and beyond get the whole of
-  # their major compared with no floor at all, which is the behavior every major should have.
-  #
-  # Moving this number is how the project says "we broke it again on purpose". It should only move alongside a
-  # release that does, never to make a red check go away.
-  #
-  # This floor has already moved once mid-PR: it was set to 16.38.0, and 16.38.0-16.38.2 shipped (unrelated work)
-  # before this PR merged, so the number it names is never a version already released by the time this line is
-  # read - re-check the latest tag before trusting it.
-  WIRE_BASELINE_FLOOR: "16.39.0"
+  # v17.0.0 is not that release. It was cut by accident on 2026-08-25 from a routine chore PR 125 commits behind
+  # v16.42.0 - a completely different, pre-migration wire contract - and NuGet/npm/Maven/Hex.pm immutability means
+  # the version number cannot be reclaimed. The real migration ships as 17.0.1, which floors major 17 the same way
+  # 16.45.0 floored 16.x: v17.0.0 is acknowledged as already wrong and excluded, so this gate measures every 17.x
+  # release against the contract that is actually meant to be the major's baseline instead of one that never was.
+  WIRE_BASELINE_FLOOR: "17.0.1"
 
 jobs:
   wire-compatibility:

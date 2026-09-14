@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_KeyResolvers;
 
 /// <summary>
 /// When the configured parent key expression resolves to no value — the event does not carry the
-/// property named as <c>parent</c> in the projection definition — the resolution must fail with a
+/// property named as <c language="csharp">parent</c> in the projection definition — the resolution must fail with a
 /// descriptive exception naming the projection and the event, not a bare
 /// <see cref="ArgumentNullException"/> from deep inside the event-sequence lookup (issue #3725).
 /// </summary>

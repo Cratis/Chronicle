@@ -101,11 +101,11 @@ export const Patterns = () => {
 
     // Every scope's patterns are loaded together so the scope is one facet among the others rather than something
     // that has to be chosen before anything can be seen.
-    const [patterns] = AllPatterns.use({ eventStore: params.eventStore!, namespace: params.namespace! });
+    const [patterns] = AllPatterns.when(!!params.namespace).use({ eventStore: params.eventStore!, namespace: params.namespace! });
 
     return (
         <Page title={strings.mainMenu.patterns} noBackground noPadding>
-            <div className="p-4 h-full flex flex-col min-h-0">
+            <div className="h-full flex flex-col min-h-0">
                 <PivotViewer<BehaviorPatternDetails>
                     data={patterns.data ?? []}
                     dimensions={dimensions}

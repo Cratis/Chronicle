@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events.Constraints;
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 /// <summary>
-/// A fluent <see cref="IConstraint"/> enforcing a single <see cref="LicenseKey"/> (a <c>ConceptAs&lt;Guid&gt;</c>)
+/// A fluent <see cref="IConstraint"/> enforcing a single <see cref="LicenseKey"/> (a <c language="csharp">ConceptAs&lt;Guid&gt;</c>)
 /// across both <see cref="LicenseIssued"/> and <see cref="LicenseReissued"/>.
 /// </summary>
 public class UniqueLicenseKey : IConstraint

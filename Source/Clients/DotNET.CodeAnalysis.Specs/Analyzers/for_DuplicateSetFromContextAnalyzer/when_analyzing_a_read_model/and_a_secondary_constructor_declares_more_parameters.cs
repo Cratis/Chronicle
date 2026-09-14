@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_DuplicateSetFromCont
 /// <remarks>
 /// Picking the constructor with the most parameters agrees with the primary one for a type that declares no other
 /// - which is every other spec here, and is why this went unnoticed. Give the type a longer secondary constructor
-/// and the heuristic pairs the declared <c>Stamp</c> off against that constructor's parameter, drops the property
+/// and the heuristic pairs the declared <c language="csharp">Stamp</c> off against that constructor's parameter, drops the property
 /// from its own path, and re-finds its attributes through the parameter's name lookup. The finding survives and
 /// the squiggle lands on an unattributed parameter of a constructor that maps nothing - a true positive pointing
 /// at the wrong token, which is a worse failure than none: the author reads it, sees a bare parameter, and

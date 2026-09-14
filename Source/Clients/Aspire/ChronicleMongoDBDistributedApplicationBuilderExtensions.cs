@@ -12,7 +12,7 @@ namespace Aspire.Hosting;
 public static class ChronicleMongoDBDistributedApplicationBuilderExtensions
 {
     /// <summary>
-    /// The port <c>mongod</c> listens on inside the container.
+    /// The port <c language="csharp">mongod</c> listens on inside the container.
     /// </summary>
     const int MongoDBPort = 27017;
 
@@ -23,12 +23,12 @@ public static class ChronicleMongoDBDistributedApplicationBuilderExtensions
         $"try {{ rs.status() }} catch (error) {{ rs.initiate({{ _id: \"{ChronicleContainerImageTags.MongoDBReplicaSetName}\", members: [{{ _id: 0, host: \"localhost:{MongoDBPort}\" }}] }}) }}";
 
     /// <summary>
-    /// The container command that starts <c>mongod</c> as a replica set and initiates it once it accepts connections.
+    /// The container command that starts <c language="csharp">mongod</c> as a replica set and initiates it once it accepts connections.
     /// </summary>
     /// <remarks>
-    /// The initiation runs in a background subshell that first polls until <c>mongod</c> answers a ping, because
-    /// <c>rs.initiate</c> fails against a server that has not finished starting. <c>exec docker-entrypoint.sh</c>
-    /// keeps <c>mongod</c> as PID 1 so it still receives container signals and drops privileges the way the
+    /// The initiation runs in a background subshell that first polls until <c language="csharp">mongod</c> answers a ping, because
+    /// <c language="csharp">rs.initiate</c> fails against a server that has not finished starting. <c language="csharp">exec docker-entrypoint.sh</c>
+    /// keeps <c language="csharp">mongod</c> as PID 1 so it still receives container signals and drops privileges the way the
     /// official image intends.
     /// </remarks>
     static readonly string _replicaSetEntrypointCommand =
@@ -38,37 +38,37 @@ public static class ChronicleMongoDBDistributedApplicationBuilderExtensions
 
     /// <summary>
     /// Adds a MongoDB resource configured the way Chronicle needs it — a self-initiating single-node replica set
-    /// exposed through a connection string with <c>directConnection=true</c>.
+    /// exposed through a connection string with <c language="csharp">directConnection=true</c>.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Chronicle relies on MongoDB transactions and change streams, which a standalone <c>mongod</c> does not
-    /// support. Aspire's <c>AddMongoDB</c> starts exactly such a standalone server, so pointing Chronicle at it
+    /// Chronicle relies on MongoDB transactions and change streams, which a standalone <c language="csharp">mongod</c> does not
+    /// support. Aspire's <c language="csharp">AddMongoDB</c> starts exactly such a standalone server, so pointing Chronicle at it
     /// leaves observers, projections, and observable queries silently doing nothing. This method starts the
     /// official MongoDB image as a single-node replica set that initiates itself on first run, which is what
     /// Chronicle needs for local development and testing.
     /// </para>
     /// <para>
-    /// The returned connection string carries <c>?directConnection=true</c>, so the driver talks to the
+    /// The returned connection string carries <c language="csharp">?directConnection=true</c>, so the driver talks to the
     /// host-mapped port directly instead of following the replica-set member host advertised by the server —
-    /// that host (<c>localhost</c> inside the container) is not reachable from outside it, and following it
+    /// that host (<c language="csharp">localhost</c> inside the container) is not reachable from outside it, and following it
     /// makes the driver hang.
     /// </para>
     /// <para>
-    /// Two resources are added: a container named <c>{name}-server</c> running MongoDB, and a connection-string
+    /// Two resources are added: a container named <c language="csharp">{name}-server</c> running MongoDB, and a connection-string
     /// resource named <paramref name="name"/> that the returned builder represents. Pass the returned builder
     /// straight to <see cref="Cratis.Chronicle.Aspire.ChronicleAspireBuilderExtensions.WithMongoDB"/>.
     /// </para>
     /// </remarks>
     /// <param name="builder">The <see cref="IDistributedApplicationBuilder"/> to add the resources to.</param>
-    /// <param name="name">The name for the connection-string resource. Defaults to <c>"mongodb"</c>.</param>
+    /// <param name="name">The name for the connection-string resource. Defaults to <c language="csharp">"mongodb"</c>.</param>
     /// <param name="imageTag">
     /// Optional tag for the MongoDB container image. Defaults to
     /// <see cref="ChronicleContainerImageTags.MongoDBTag"/>.
     /// </param>
     /// <returns>An <see cref="IResourceBuilder{T}"/> for the MongoDB connection string.</returns>
     /// <example>
-    /// <code>
+    /// <code language="csharp">
     /// var mongo = builder.AddCratisChronicleMongoDB();
     /// builder.AddCratisChronicle("chronicle", chronicle => chronicle.WithMongoDB(mongo));
     /// </code>
