@@ -66,6 +66,12 @@ public interface IProjection
     bool IsEventSourceKeyed { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the projection subscribes to every event type in the system, including
+    /// ones that did not exist yet when the projection was created.
+    /// </summary>
+    bool SubscribesToAllEvents { get; }
+
+    /// <summary>
     /// Gets the parent projection - if any.
     /// </summary>
     IProjection? Parent { get; }
