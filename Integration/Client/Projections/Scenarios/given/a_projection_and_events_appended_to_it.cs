@@ -49,17 +49,6 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     /// </remarks>
     protected virtual bool ExpectsPrimaryReadModel => true;
 
-    /// <summary>
-    /// Gets the timeout <see cref="Because"/> waits for the projection to subscribe and become active.
-    /// </summary>
-    /// <remarks>
-    /// Defaults to the library's own default timeout. A scenario whose projection subscribes to <c language="csharp">all</c>
-    /// events has to catch up the whole shared fixture's accumulated event log - not just its own - before it
-    /// reaches Active, so it overrides this to a wider window rather than the narrow one that is otherwise
-    /// appropriate for a projection scoped to its own event source.
-    /// </remarks>
-    protected virtual TimeSpan? SubscriptionTimeout => null;
-
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(new TProjection());
@@ -81,8 +70,8 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     async Task Because()
     {
         Projection = EventStore.Projections.GetHandlerFor<TProjection>();
-        await Projection.WaitTillSubscribed(SubscriptionTimeout);
-        await Projection.WaitTillActive(SubscriptionTimeout);
+        await Projection.WaitTillSubscribed();
+        await Projection.WaitTillActive();
 
         IAppendResult appendResult = null;
         foreach (var @event in EventsToAppend)
