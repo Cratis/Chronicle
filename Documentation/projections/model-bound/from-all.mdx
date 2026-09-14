@@ -32,3 +32,4 @@ For explicit model-bound event payload or event context mappings, prefer `[FromE
 - `FromAll` is a .NET client API name, not the portable name used by every client.
 - The model-bound `[FromAll]` attribute is best kept to the convention-based form.
 - Use an event-specific mapping when a property should update only for selected event types.
+- Counting or incrementing into a dictionary-typed property with a dynamic, per-event key is available only through the fluent `.FromAll(...)` API today, not through `[FromAll]`. See [Projection With FromAll](../declarative/from-all#counting-into-a-dictionary-with-a-dynamic-key).

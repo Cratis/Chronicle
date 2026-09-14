@@ -22,6 +22,14 @@ Use `FromAll` in .NET when the projection should express that a mapping belongs 
 
 <ChronicleClientTabs snippet="projections/declarative/from-all/with-specific-mappings" />
 
+## Counting Into A Dictionary With A Dynamic Key
+
+`FromAll` also supports `Count`, `Increment`, and `Decrement` against a dictionary-typed property, where the key is resolved per event from a value on the `EventContext` — for example, one counter per event type, keyed by the event type identifier. The dictionary's value type is always `int64` for these operations; the key is always `string`.
+
+<ChronicleClientTabs snippet="projections/declarative/from-all/dictionary" />
+
+The model-bound `[FromAll]` attribute does not yet support this dictionary form — use the fluent API above until it does.
+
 ## FromAll And FromEvery
 
 | API | Use it when |
