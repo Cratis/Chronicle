@@ -15,6 +15,14 @@ public class with_events_of_two_different_types_applied(context context) : Given
     {
         public override IEnumerable<Type> EventTypes => [typeof(FirstCountableEvent), typeof(SecondCountableEvent)];
 
+        /// <summary>
+        /// An observer subscribed to all events (see <see cref="FromAllWithDynamicDictionaryKeyProjection"/>) has to
+        /// catch up the whole shared fixture's accumulated event log, not just its own event source, before it
+        /// reaches Active - a materially larger job than the narrow, single-event-source catch-up every other
+        /// projection scenario in this fixture does. Give it a wider berth than the library's default.
+        /// </summary>
+        protected override TimeSpan? SubscriptionTimeout => TimeSpan.FromMinutes(5);
+
         void Establish()
         {
             // Append 3 events of the first type
