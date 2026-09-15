@@ -175,55 +175,55 @@ public class AppendRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceType.
     /// </summary>
     [ProtoMember(5)]
-    public string EventSourceType { get; set; }
+    public string EventSourceType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamType.
     /// </summary>
     [ProtoMember(6)]
-    public string EventStreamType { get; set; }
+    public string EventStreamType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamId.
     /// </summary>
     [ProtoMember(7)]
-    public string EventStreamId { get; set; }
+    public string EventStreamId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventType.
     /// </summary>
     [ProtoMember(8)]
-    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(9)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the CorrelationId.
@@ -278,13 +278,13 @@ public class AppendResponse
     /// Gets or sets the CorrelationId.
     /// </summary>
     [ProtoMember(1)]
-    public Guid CorrelationId { get; set; }
+    public Guid CorrelationId { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the SequenceNumber.
     /// </summary>
     [ProtoMember(2)]
-    public global::System.UInt64 SequenceNumber { get; set; }
+    public global::System.UInt64 SequenceNumber { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the IsSuccess.
@@ -345,25 +345,25 @@ public class AppendManyRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Events.
@@ -418,7 +418,7 @@ public class AppendManyResponse
     /// Gets or sets the CorrelationId.
     /// </summary>
     [ProtoMember(1)]
-    public Guid CorrelationId { get; set; }
+    public Guid CorrelationId { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the SequenceNumbers.
@@ -485,19 +485,19 @@ public class AppendManyForEventSourcesRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Events.
@@ -546,31 +546,31 @@ public class CompleteStreamRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamType.
     /// </summary>
     [ProtoMember(4)]
-    public string EventStreamType { get; set; }
+    public string EventStreamType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamId.
     /// </summary>
     [ProtoMember(5)]
-    public string EventStreamId { get; set; }
+    public string EventStreamId { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -589,7 +589,7 @@ public class CompleteStreamResponse
     /// Gets or sets the SequenceNumber.
     /// </summary>
     [ProtoMember(2)]
-    public global::System.UInt64 SequenceNumber { get; set; }
+    public global::System.UInt64 SequenceNumber { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Error.
@@ -608,19 +608,19 @@ public class RedactRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the SequenceNumber.
@@ -632,7 +632,7 @@ public class RedactRequest
     /// Gets or sets the Reason.
     /// </summary>
     [ProtoMember(5)]
-    public string Reason { get; set; }
+    public string Reason { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Causation.
@@ -657,31 +657,31 @@ public class RedactForEventSourceRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Reason.
     /// </summary>
     [ProtoMember(5)]
-    public string Reason { get; set; }
+    public string Reason { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventTypes.
@@ -712,19 +712,19 @@ public class ReviseRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the SequenceNumber.
@@ -736,13 +736,13 @@ public class ReviseRequest
     /// Gets or sets the EventType.
     /// </summary>
     [ProtoMember(5)]
-    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(6)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Causation.
@@ -767,37 +767,37 @@ public class AppendedEventResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Context.
     /// </summary>
     [ProtoMember(2)]
-    public global::Cratis.Chronicle.Contracts.Sequences.EventContext Context { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventContext Context { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(3)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OriginalContent.
     /// </summary>
     [ProtoMember(4)]
-    public string OriginalContent { get; set; }
+    public string OriginalContent { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Revisions.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventRevision>? Revisions { get; set; }
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventRevision> Revisions { get; set; } = new List<global::Cratis.Chronicle.Contracts.Sequences.EventRevision>();
 
     /// <summary>
     /// Gets or sets the GenerationalContent.
     /// </summary>
     [ProtoMember(6)]
-    public IEnumerable<global::System.Collections.Generic.KeyValuePair<int, string>>? GenerationalContent { get; set; }
+    public IEnumerable<global::System.Collections.Generic.KeyValuePair<int, string>> GenerationalContent { get; set; } = new List<global::System.Collections.Generic.KeyValuePair<int, string>>();
 }
 
 /// <summary>
@@ -810,19 +810,19 @@ public class QueryEventsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(2)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(3)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSourceId.
@@ -883,19 +883,19 @@ public class AppendedEventsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(2)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(3)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSourceId.
@@ -914,25 +914,25 @@ public class ForEventSourceIdAndEventTypesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(2)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(3)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSourceId.
     /// </summary>
     [ProtoMember(5)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventTypeIds.
@@ -963,19 +963,19 @@ public class FromSequenceNumberRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(2)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(3)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the fromEventSequenceNumber.
@@ -1006,13 +1006,13 @@ public class EventSequenceNamesResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -1025,7 +1025,7 @@ public class AllEventSequencesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
@@ -1044,7 +1044,7 @@ public class EventSequenceTailResponse
     /// Gets or sets the SequenceNumber.
     /// </summary>
     [ProtoMember(1)]
-    public global::System.UInt64 SequenceNumber { get; set; }
+    public global::System.UInt64 SequenceNumber { get; set; } = new();
 }
 
 /// <summary>
@@ -1057,19 +1057,19 @@ public class TailSequenceNumberRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventTypeIds.
@@ -1125,25 +1125,25 @@ public class HasEventsForEventSourceIdRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSourceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -1162,37 +1162,37 @@ public class ExportedEventResponse
     /// Gets or sets the EventType.
     /// </summary>
     [ProtoMember(2)]
-    public string EventType { get; set; }
+    public string EventType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceType.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSourceType { get; set; }
+    public string EventSourceType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventSourceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the EventStreamType.
     /// </summary>
     [ProtoMember(5)]
-    public string EventStreamType { get; set; }
+    public string EventStreamType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the CorrelationId.
     /// </summary>
     [ProtoMember(6)]
-    public string CorrelationId { get; set; }
+    public string CorrelationId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Occurred.
     /// </summary>
     [ProtoMember(7)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Tags.
@@ -1204,7 +1204,7 @@ public class ExportedEventResponse
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(9)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -1217,19 +1217,19 @@ public class ExportEventsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(2)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(3)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(4)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSourceId.
@@ -1290,13 +1290,13 @@ public class SequenceHistogramBucketResponse
     /// Gets or sets the From.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset From { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset From { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the To.
     /// </summary>
     [ProtoMember(2)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset To { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset To { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Count.
@@ -1315,19 +1315,19 @@ public class SequenceHistogramRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the eventSequenceId.
     /// </summary>
     [ProtoMember(3)]
-    public string EventSequenceId { get; set; }
+    public string EventSequenceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the resolution.
@@ -1407,7 +1407,7 @@ public class EndOfRequest
     /// Gets or sets the start.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Start { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Start { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the resolution.

@@ -240,12 +240,83 @@ public class ModelBoundCodeGenerator
             }
         }
 
+        // Add FromAll/FromEvery mappings (only plain properties, not dynamic dictionary keys)
+        if (definition.SubscribesToAllEvents && definition.FromEvery.Properties.Count > 0)
+        {
+            foreach (var prop in definition.FromEvery.Properties)
+            {
+                var propertyName = prop.Key.Path;
+                var normalizedExpression = NormalizeExpression(prop.Value);
+
+                // Skip dynamic dictionary keys (not supported in model-bound yet)
+                if (propertyName.Contains($".{WellKnownExpressions.EventContext}."))
+                {
+                    continue;
+                }
+
+                if (!propertyInfos.TryGetValue(propertyName, out var propInfo))
+                {
+                    propInfo = new PropertyInfo { PropertyName = propertyName };
+                    propertyInfos[propertyName] = propInfo;
+                }
+
+                // Check what expression it is and mark for FromAll attribute
+                if (normalizedExpression == WellKnownExpressions.Count)
+                {
+                    propInfo.FromAllCount = true;
+                }
+                else if (normalizedExpression == WellKnownExpressions.Increment)
+                {
+                    propInfo.FromAllIncrement = true;
+                }
+                else if (normalizedExpression == WellKnownExpressions.Decrement)
+                {
+                    propInfo.FromAllDecrement = true;
+                }
+                else if (normalizedExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+                {
+                    propInfo.FromAllContextProperty = normalizedExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
+                }
+                else
+                {
+                    // Property mapping from event
+                    propInfo.FromAllProperty = GetEventPropertyName(normalizedExpression);
+                }
+            }
+        }
+
         return propertyInfos;
     }
 
     List<AttributeSyntax> CreatePropertyAttributes(PropertyInfo propInfo, string propName)
     {
         var attributes = new List<AttributeSyntax>();
+
+        // FromAll attributes come first
+        if (propInfo.FromAllCount)
+        {
+            attributes.Add(CreateFromAllAttribute("count"));
+        }
+
+        if (propInfo.FromAllIncrement)
+        {
+            attributes.Add(CreateFromAllAttribute("increment"));
+        }
+
+        if (propInfo.FromAllDecrement)
+        {
+            attributes.Add(CreateFromAllAttribute("decrement"));
+        }
+
+        if (propInfo.FromAllContextProperty is not null)
+        {
+            attributes.Add(CreateFromAllAttribute(null, propInfo.FromAllContextProperty));
+        }
+
+        if (propInfo.FromAllProperty is not null && propInfo.FromAllProperty != propName)
+        {
+            attributes.Add(CreateFromAllAttribute(propInfo.FromAllProperty, null));
+        }
 
         foreach (var addFrom in propInfo.AddFroms)
         {
@@ -340,6 +411,33 @@ public class ModelBoundCodeGenerator
         return Attribute(attribute);
     }
 
+    AttributeSyntax CreateFromAllAttribute(string? property = null, string? contextProperty = null)
+    {
+        if (property is null && contextProperty is null)
+        {
+            return Attribute(IdentifierName("FromAll"));
+        }
+
+        var arguments = new List<AttributeArgumentSyntax>();
+
+        if (contextProperty is not null)
+        {
+            arguments.Add(
+                AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty)))
+                    .WithNameEquals(NameEquals(IdentifierName("contextProperty"))));
+        }
+
+        if (property is not null)
+        {
+            arguments.Add(
+                AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(property)))
+                    .WithNameEquals(NameEquals(IdentifierName("property"))));
+        }
+
+        return Attribute(IdentifierName("FromAll"))
+            .WithArgumentList(AttributeArgumentList(SeparatedList(arguments)));
+    }
+
     AttributeSyntax CreateSetValueAttribute(string eventTypeName, string value, bool isText)
     {
         var attribute = GenericName("SetValue")
@@ -396,5 +494,10 @@ public class ModelBoundCodeGenerator
         public List<string> Increments { get; } = [];
         public List<string> Decrements { get; } = [];
         public List<string> Counts { get; } = [];
+        public bool FromAllCount { get; set; }
+        public bool FromAllIncrement { get; set; }
+        public bool FromAllDecrement { get; set; }
+        public string? FromAllProperty { get; set; }
+        public string? FromAllContextProperty { get; set; }
     }
 }

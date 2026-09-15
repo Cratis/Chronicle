@@ -47,19 +47,19 @@ public class GenerateDeclarativeCodeRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Declaration.
     /// </summary>
     [ProtoMember(3)]
-    public string Declaration { get; set; }
+    public string Declaration { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the DraftReadModel.
@@ -71,7 +71,7 @@ public class GenerateDeclarativeCodeRequest
     /// Gets or sets the Language.
     /// </summary>
     [ProtoMember(5)]
-    public string Language { get; set; }
+    public string Language { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -84,7 +84,7 @@ public class GenerateDeclarativeCodeResponse
     /// Gets or sets the Code.
     /// </summary>
     [ProtoMember(1)]
-    public string Code { get; set; }
+    public string Code { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Errors.
@@ -103,19 +103,19 @@ public class GenerateModelBoundCodeRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Declaration.
     /// </summary>
     [ProtoMember(3)]
-    public string Declaration { get; set; }
+    public string Declaration { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the DraftReadModel.
@@ -127,5 +127,5 @@ public class GenerateModelBoundCodeRequest
     /// Gets or sets the Language.
     /// </summary>
     [ProtoMember(5)]
-    public string Language { get; set; }
+    public string Language { get; set; } = string.Empty;
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -49,6 +50,7 @@ public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator
         var blocks = new List<string>();
         AppendFromBlocks(definition.From, blocks);
         AppendJoinBlocks(definition.Join, blocks);
+        AppendFromEveryBlocks(definition.FromEvery, definition.SubscribesToAllEvents, blocks);
         AppendRemovedWithBlocks(definition.RemovedWith, blocks);
 
         if (blocks.Count == 0)
@@ -88,6 +90,31 @@ public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator
             {
                 var mapping = ProjectionExpressions.ReadMapping(property, expression);
                 var decorator = ModelBoundDecorator(mapping, eventTypeName);
+                if (decorator is null) continue;
+
+                if (!setFroms.TryGetValue(mapping.Property, out var forProperty))
+                {
+                    forProperty = [];
+                    setFroms[mapping.Property] = forProperty;
+                }
+
+                forProperty.Add(decorator);
+            }
+        }
+
+        // Add FromEvery decorators (plain properties only, not dynamic dictionary keys)
+        if (definition.SubscribesToAllEvents && definition.FromEvery.Properties.Count > 0)
+        {
+            foreach (var (property, expression) in definition.FromEvery.Properties)
+            {
+                // Skip dynamic dictionary keys
+                if (property.Path.Contains($".{WellKnownExpressions.EventContext}."))
+                {
+                    continue;
+                }
+
+                var mapping = ProjectionExpressions.ReadMapping(property, expression);
+                var decorator = ModelBoundFromEveryDecorator(mapping);
                 if (decorator is null) continue;
 
                 if (!setFroms.TryGetValue(mapping.Property, out var forProperty))
@@ -163,6 +190,19 @@ public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator
             _ => null
         };
 
+    static string? ModelBoundFromEveryDecorator(ProjectionPropertyMapping mapping) =>
+        (mapping.Operation, mapping.Source?.Kind) switch
+        {
+            (ProjectionOperation.Count, _) => "@fromEvery('count')",
+            (ProjectionOperation.Increment, _) => "@fromEvery('increment')",
+            (ProjectionOperation.Decrement, _) => "@fromEvery('decrement')",
+            (ProjectionOperation.Set, ProjectionValueKind.EventContextProperty) =>
+                $"@fromEvery(undefined, '{ToCamelCase(mapping.Source.Value)}')",
+            (ProjectionOperation.Set, ProjectionValueKind.EventProperty) =>
+                $"@fromEvery('{ToCamelCase(mapping.Source.Value)}')",
+            _ => null
+        };
+
     static void AppendFromBlocks(IDictionary<Concepts.Events.EventType, FromDefinition> fromBlocks, List<string> blocks)
     {
         foreach (var (eventType, from) in fromBlocks)
@@ -200,6 +240,34 @@ public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator
             }
 
             blocks.Add($".join({eventTypeName}, j => j{string.Concat(inner)})");
+        }
+    }
+
+    static void AppendFromEveryBlocks(FromEveryDefinition fromEvery, bool subscribesToAllEvents, List<string> blocks)
+    {
+        if (!subscribesToAllEvents || fromEvery.Properties.Count == 0)
+        {
+            return;
+        }
+
+        var inner = new List<string>();
+
+        foreach (var (property, expression) in fromEvery.Properties)
+        {
+            var mapping = ProjectionExpressions.ReadMapping(property, expression);
+
+            // Skip dynamic dictionary keys for now - TypeScript client doesn't have that API yet
+            if (property.Path.Contains($".{WellKnownExpressions.EventContext}."))
+            {
+                continue;
+            }
+
+            inner.Add(BuilderCall(mapping));
+        }
+
+        if (inner.Count > 0)
+        {
+            blocks.Add($".fromEvery(fb => fb{string.Concat(inner)})");
         }
     }
 

@@ -85,25 +85,25 @@ public class AddUserRequest
     /// Gets or sets the UserId.
     /// </summary>
     [ProtoMember(1)]
-    public Guid UserId { get; set; }
+    public Guid UserId { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Username.
     /// </summary>
     [ProtoMember(2)]
-    public string Username { get; set; }
+    public string Username { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Email.
     /// </summary>
     [ProtoMember(3)]
-    public string Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Password.
     /// </summary>
     [ProtoMember(4)]
-    public string Password { get; set; }
+    public string Password { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -116,25 +116,25 @@ public class ChangeUserPasswordRequest
     /// Gets or sets the UserId.
     /// </summary>
     [ProtoMember(1)]
-    public Guid UserId { get; set; }
+    public Guid UserId { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the OldPassword.
     /// </summary>
     [ProtoMember(2)]
-    public string OldPassword { get; set; }
+    public string OldPassword { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Password.
     /// </summary>
     [ProtoMember(3)]
-    public string Password { get; set; }
+    public string Password { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ConfirmedPassword.
     /// </summary>
     [ProtoMember(4)]
-    public string ConfirmedPassword { get; set; }
+    public string ConfirmedPassword { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -147,7 +147,7 @@ public class RemoveUserRequest
     /// Gets or sets the UserId.
     /// </summary>
     [ProtoMember(1)]
-    public Guid UserId { get; set; }
+    public Guid UserId { get; set; } = new();
 }
 
 /// <summary>
@@ -160,7 +160,7 @@ public class RequirePasswordChangeRequest
     /// Gets or sets the UserId.
     /// </summary>
     [ProtoMember(1)]
-    public Guid UserId { get; set; }
+    public Guid UserId { get; set; } = new();
 }
 
 /// <summary>
@@ -173,19 +173,19 @@ public class SetInitialAdminPasswordRequest
     /// Gets or sets the UserId.
     /// </summary>
     [ProtoMember(1)]
-    public Guid UserId { get; set; }
+    public Guid UserId { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Password.
     /// </summary>
     [ProtoMember(2)]
-    public string Password { get; set; }
+    public string Password { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the ConfirmedPassword.
     /// </summary>
     [ProtoMember(3)]
-    public string ConfirmedPassword { get; set; }
+    public string ConfirmedPassword { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -210,7 +210,7 @@ public class AdminPasswordStatusResponse
     /// Gets or sets the AdminUsername.
     /// </summary>
     [ProtoMember(3)]
-    public string AdminUsername { get; set; }
+    public string AdminUsername { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -229,7 +229,7 @@ public class UserResponse
     /// Gets or sets the Username.
     /// </summary>
     [ProtoMember(2)]
-    public string Username { get; set; }
+    public string Username { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Email.
@@ -247,7 +247,7 @@ public class UserResponse
     /// Gets or sets the CreatedAt.
     /// </summary>
     [ProtoMember(5)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the LastModifiedAt.

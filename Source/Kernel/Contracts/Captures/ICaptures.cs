@@ -95,13 +95,13 @@ public class DeleteCaptureRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the CaptureId.
     /// </summary>
     [ProtoMember(2)]
-    public Guid CaptureId { get; set; }
+    public Guid CaptureId { get; set; } = new();
 }
 
 /// <summary>
@@ -114,19 +114,19 @@ public class SaveCaptureRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(2)]
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Declaration.
     /// </summary>
     [ProtoMember(3)]
-    public string Declaration { get; set; }
+    public string Declaration { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -158,13 +158,13 @@ public class StartCaptureRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the CaptureId.
     /// </summary>
     [ProtoMember(2)]
-    public Guid CaptureId { get; set; }
+    public Guid CaptureId { get; set; } = new();
 }
 
 /// <summary>
@@ -190,13 +190,13 @@ public class StopCaptureRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the CaptureId.
     /// </summary>
     [ProtoMember(2)]
-    public Guid CaptureId { get; set; }
+    public Guid CaptureId { get; set; } = new();
 }
 
 /// <summary>
@@ -209,13 +209,13 @@ public class ValidateCaptureDeclarationRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Declaration.
     /// </summary>
     [ProtoMember(2)]
-    public string Declaration { get; set; }
+    public string Declaration { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -241,19 +241,19 @@ public class CaptureDetailsResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Declaration.
     /// </summary>
     [ProtoMember(3)]
-    public string Declaration { get; set; }
+    public string Declaration { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Status.
@@ -272,7 +272,7 @@ public class GetCapturesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -285,7 +285,7 @@ public class ObserveCapturesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -298,19 +298,19 @@ public class CapturedEventResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(3)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Context.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Events.EventContext Context { get; set; }
+    public global::Cratis.Chronicle.Contracts.Events.EventContext Context { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(2)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -323,19 +323,19 @@ public class CapturedEventsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the captureName.
     /// </summary>
     [ProtoMember(2)]
-    public string CaptureName { get; set; }
+    public string CaptureName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(3)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the maxEvents.

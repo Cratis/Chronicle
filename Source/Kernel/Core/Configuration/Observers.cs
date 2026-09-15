@@ -72,10 +72,17 @@ public class Observers
     public double QuarantineOnFailedPartitionPercentage { get; init; }
 
     /// <summary>
-    /// Gets whether observers should automatically replay when their definition changes.
-    /// When enabled, projections, reducers, reactors, and webhooks replay immediately on definition change
-    /// instead of creating a recommendation for manual replay.
+    /// Gets the policy for evolving read models when a projection or reducer definition changes.
     /// </summary>
+    public DefinitionEvolutionPolicy DefinitionEvolution { get; init; } = DefinitionEvolutionPolicy.Automatic;
+
+    /// <summary>
+    /// Gets whether reactors and webhooks should automatically replay when their definition changes.
+    /// </summary>
+    /// <remarks>
+    /// Projection and reducer changes use <see cref="DefinitionEvolution"/> because Chronicle can classify those
+    /// changes and avoid a full replay when less work is safe.
+    /// </remarks>
     public bool ReplayOnDefinitionChange { get; init; }
 
     /// <summary>

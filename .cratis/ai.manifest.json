@@ -1,5 +1,5 @@
 {
-  "SourceRevision": "4c6cd1228d1306512d1c9c367783f296a4e402b3",
+  "SourceRevision": "f43680de02c01dbc8a0a32b410591bd6fc742ee5",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
@@ -259,7 +259,7 @@
     {
       "Source": "rules/capability-is-not-authority.md",
       "Destination": "rules/capability-is-not-authority.md",
-      "Hash": "76B56889D8D4F2A2004892FBEFDAC3EF9A64C5F458E34B28458BC853E542EB1B"
+      "Hash": "0423F32BD4EFBF111B0F64EE73C5ECD5FA82C23E7643E328D0F33A8A5E0E6132"
     },
     {
       "Source": "rules/code-quality.csharp.md",
@@ -344,7 +344,7 @@
     {
       "Source": "rules/general.md",
       "Destination": "rules/general.md",
-      "Hash": "5E3672CD42B96995004526648099608431CD87B3BEA75A418530FD56EDBF65E1"
+      "Hash": "C5DF184CD4BC1034CA6EC88A9E5198F4ED6994E640B9CBDF380AE1DF6F7B1F17"
     },
     {
       "Source": "rules/git-commits.md",
