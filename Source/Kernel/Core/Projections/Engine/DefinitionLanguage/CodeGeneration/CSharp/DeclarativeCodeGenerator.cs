@@ -252,6 +252,9 @@ public class DeclarativeCodeGenerator
         // Generate Children blocks
         GenerateChildrenBlocks(definition.Children, lines);
 
+        // Generate FromAll/FromEvery blocks
+        GenerateFromEveryBlocks(definition.FromEvery, definition.SubscribesToAllEvents, lines);
+
         // Generate RemovedWith blocks
         GenerateRemovedWithBlocks(definition.RemovedWith, lines);
 
@@ -415,6 +418,87 @@ public class DeclarativeCodeGenerator
                 lines.AddRange(childLines.Select(l => "    " + l));
             }
 
+            lines[^1] += ")";
+        }
+    }
+
+    void GenerateFromEveryBlocks(FromEveryDefinition fromEvery, bool subscribesToAllEvents, List<string> lines)
+    {
+        if (!subscribesToAllEvents || fromEvery.Properties.Count == 0)
+        {
+            return;
+        }
+
+        var propLines = new List<string>();
+
+        foreach (var prop in fromEvery.Properties)
+        {
+            var propertyPath = prop.Key.Path;
+            var normalizedExpression = NormalizeExpression(prop.Value);
+
+            // Check if this is a dynamic dictionary key mapping
+            var isDynamicKey = propertyPath.Contains($".{WellKnownExpressions.EventContext}.");
+
+            if (isDynamicKey)
+            {
+                // Extract dictionary property and context path
+                var parts = propertyPath.Split([$".{WellKnownExpressions.EventContext}."], StringSplitOptions.None);
+                var dictionaryProp = parts[0];
+                var contextPath = parts[1];
+
+                if (normalizedExpression == WellKnownExpressions.Count)
+                {
+                    propLines.Add($".Count(m => m.{dictionaryProp}, c => c.{contextPath})");
+                }
+                else if (normalizedExpression == WellKnownExpressions.Increment)
+                {
+                    propLines.Add($".Increment(m => m.{dictionaryProp}, c => c.{contextPath})");
+                }
+                else if (normalizedExpression == WellKnownExpressions.Decrement)
+                {
+                    propLines.Add($".Decrement(m => m.{dictionaryProp}, c => c.{contextPath})");
+                }
+            }
+            else
+            {
+                // Plain property mappings
+                if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+                {
+                    var innerExpr = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
+                    propLines.Add($".Add(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
+                }
+                else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+                {
+                    var innerExpr = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
+                    propLines.Add($".Subtract(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
+                }
+                else if (normalizedExpression == WellKnownExpressions.Increment)
+                {
+                    propLines.Add($".Increment(m => m.{propertyPath})");
+                }
+                else if (normalizedExpression == WellKnownExpressions.Decrement)
+                {
+                    propLines.Add($".Decrement(m => m.{propertyPath})");
+                }
+                else if (normalizedExpression == WellKnownExpressions.Count)
+                {
+                    propLines.Add($".Count(m => m.{propertyPath})");
+                }
+                else if (normalizedExpression == WellKnownExpressions.Null)
+                {
+                    propLines.Add($".Clear(m => m.{propertyPath})");
+                }
+                else
+                {
+                    propLines.Add($".Set(m => m.{propertyPath}).{ConvertExpressionForSet(normalizedExpression)}");
+                }
+            }
+        }
+
+        if (propLines.Count > 0)
+        {
+            lines.Add(".FromAll(_ => _");
+            lines.AddRange(propLines.Select(l => "    " + l));
             lines[^1] += ")";
         }
     }

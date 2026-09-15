@@ -49,5 +49,5 @@ public class JobProgress
     /// Gets or sets the current message associated with the progress.
     /// </summary>
     [ProtoMember(7)]
-    public string Message { get; set; }
+    public string Message { get; set; } = string.Empty;
 }

@@ -71,13 +71,13 @@ public class BehaviorPatternDetailsResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the GroupingKey.
     /// </summary>
     [ProtoMember(2)]
-    public string GroupingKey { get; set; }
+    public string GroupingKey { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Facets.
@@ -119,13 +119,13 @@ public class BehaviorPatternDetailsResponse
     /// Gets or sets the FirstSeen.
     /// </summary>
     [ProtoMember(9)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset FirstSeen { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset FirstSeen { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the LastSeen.
     /// </summary>
     [ProtoMember(10)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastSeen { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastSeen { get; set; } = new();
 }
 
 /// <summary>
@@ -138,19 +138,19 @@ public class MatchingPatternsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the groupingKey.
     /// </summary>
     [ProtoMember(3)]
-    public string GroupingKey { get; set; }
+    public string GroupingKey { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the context.
@@ -181,19 +181,19 @@ public class UsualActionsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the groupingKey.
     /// </summary>
     [ProtoMember(3)]
-    public string GroupingKey { get; set; }
+    public string GroupingKey { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the context.
@@ -224,19 +224,19 @@ public class PatternsForScopeRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the groupingKey.
     /// </summary>
     [ProtoMember(3)]
-    public string GroupingKey { get; set; }
+    public string GroupingKey { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -249,13 +249,13 @@ public class AllPatternsRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -268,19 +268,19 @@ public class PatternScopeResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the UserName.
     /// </summary>
     [ProtoMember(3)]
-    public string UserName { get; set; }
+    public string UserName { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -293,11 +293,11 @@ public class AllPatternScopesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }

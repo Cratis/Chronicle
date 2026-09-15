@@ -13,13 +13,13 @@ public class Causation
     /// Gets or sets the time and date for when it occurred.
     /// </summary>
     [ProtoMember(1)]
-    public SerializableDateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the type of cause.
     /// </summary>
     [ProtoMember(2)]
-    public string Type { get; set; }
+    public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets properties associated with the causation.

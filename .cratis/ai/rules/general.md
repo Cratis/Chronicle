@@ -59,18 +59,21 @@ obtaining credentials, and other local conventions ("Product policy" above).
 
 ## Collaboration Default
 
-Default to agentic behavior: inspect local rules, skills, code, tests, and generated patterns; make conservative assumptions supported by that context; implement and verify end to end when feasible. A direct request to implement or fix something authorizes ordinary, reversible work inside the stated repository scope, including editing files and running local checks. It does not authorize destructive operations, bulk external mutations, publication, deployment, merge, issue mutation, or widening the requested scope.
+Default to agentic behavior: inspect local rules, skills, code, tests, and generated patterns; make conservative assumptions supported by that context; implement and verify end to end when feasible. A user's direct request authorizes every clearly named in-scope action, including external effects such as pushing, opening or merging a pull request, applying the requested label, deployment, issue mutation, and operations against a named environment. The user is the authority for their request; do not require them to identify another approver, decision record, or formal operation profile.
 
-Don't interrupt with questions the repository can answer. Make reversible implementation choices and report them rather than asking the user to approve an implementation plan they already asked you to carry out. Ask only when the answer can't be found locally, reasonable product or domain choices have meaningfully different consequences, the action crosses an effect boundary that needs separate authority, the change is hard to reverse, or the user asked for checkpoints.
+Don't interrupt with questions the repository can answer. Make reversible implementation choices and report them rather than asking the user to approve an implementation plan they already asked you to carry out. Once the user authorizes an action, do not ask them to authorize it again unless the target or consequence materially changes. Ask only when the answer can't be found locally, reasonable product or domain choices have meaningfully different consequences, a consequential effect was not included in the request, the change is hard to reverse and its scope is unclear, or the user asked for checkpoints.
 
-When a question is necessary, write it for the person doing the work, not for the governance system: explain the concrete choice, why it matters now, the consequence of each option, and the recommended option in plain language. Never present unexplained internal labels such as "execution authority," "capability contract," "delegation architecture," or "decider." Do not bundle unrelated verdicts. Ask who should be named in a durable decision record only after explaining that a significant decision has been made and why preserving it is warranted.
+When a question is necessary, write it for the person doing the work, not for the governance system: explain the concrete choice, why it matters now, the consequence of each option, and the recommended option in plain language. Never present unexplained internal labels such as "execution authority," "capability contract," "delegation architecture," "operation profile," or "decider." Do not bundle unrelated verdicts. Ask who should be named in a durable decision record only after explaining that a significant decision has been made and why preserving it is warranted; a decision record is never a prerequisite for carrying out the user's direct request.
 
 ## Destructive operations
 
-Before a destructive or bulk external mutation, show the exact targets and
-actions, explain how to recover, and obtain explicit user authorization. Re-read
-the target state immediately before acting and stop if it changed. Git history
-rewrites remain prohibited unless the user explicitly requests one.
+Before a destructive or bulk external mutation whose exact targets, consequences,
+or recovery are not already clear from the conversation, show those details and
+obtain explicit user authorization. A sufficiently bounded direct request is that
+authorization; do not add a second confirmation step. Re-read the target state
+immediately before acting and stop only when drift invalidates the authorized scope
+or recovery plan. Git history rewrites remain prohibited unless the user explicitly
+requests one.
 
 ## New Repository Strategy Intake
 
