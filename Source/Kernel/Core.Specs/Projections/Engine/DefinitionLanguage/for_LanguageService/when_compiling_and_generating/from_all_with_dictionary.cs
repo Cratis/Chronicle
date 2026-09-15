@@ -12,7 +12,7 @@ public class from_all_with_dictionary : given.a_language_service_with_schemas<gi
     const string Definition = """
         projection Test => Model
           all
-            count eventCountByType.$eventContext.type.name
+            count eventCountByType.$eventContext.eventType.id
         """;
 
     protected override IEnumerable<Type> EventTypes => [typeof(given.ActivityLogged)];
@@ -23,6 +23,6 @@ public class from_all_with_dictionary : given.a_language_service_with_schemas<gi
 
     [Fact] void should_have_from_every_populated() => _result.FromEvery.ShouldNotBeNull();
     [Fact] void should_have_one_property() => _result.FromEvery.Properties.Count.ShouldEqual(1);
-    [Fact] void should_map_event_count_with_dynamic_key() => _result.FromEvery.Properties[new PropertyPath("eventCountByType.$eventContext.type.name")].ShouldEqual(WellKnownExpressions.Count);
+    [Fact] void should_map_event_count_with_dynamic_key() => _result.FromEvery.Properties[new PropertyPath("eventCountByType.$eventContext.eventType.id")].ShouldEqual(WellKnownExpressions.Count);
     [Fact] void should_include_children() => _result.FromEvery.IncludeChildren.ShouldBeTrue();
 }

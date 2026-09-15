@@ -27,6 +27,7 @@ public static class ReducerDefinitionConverters
                 et => et.Key.ToString()),
             ReadModel = definition.ReadModel,
             IsActive = definition.IsActive,
+            Hash = definition.Hash,
             Tags = definition.Tags?.ToArray() ?? [],
             Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToMongoDB()
         };
@@ -44,5 +45,6 @@ public static class ReducerDefinitionConverters
             definition.ReadModel,
             definition.IsActive,
             definition.Tags,
-            definition.Filters.ToKernel());
+            definition.Filters.ToKernel(),
+            definition.Hash);
 }

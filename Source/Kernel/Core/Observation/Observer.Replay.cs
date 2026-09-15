@@ -30,34 +30,15 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public Task ReplayPartition(Key partition) => ReplayPartitionTo(partition, EventSequenceNumber.Max);
+    public Task ReplayPartition(Key partition) => ReplayPartitionTo(partition, EventSequenceNumber.Max, Definition.EventTypes, false);
 
     /// <inheritdoc/>
-    public async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber)
-    {
-        if (!Definition.IsReplayable)
-        {
-            return;
-        }
+    public Task ReplayPartition(Key partition, IEnumerable<EventType> eventTypes) =>
+        ReplayPartitionTo(partition, EventSequenceNumber.Max, eventTypes, true);
 
-        if (State.RunningState == ObserverRunningState.Replaying)
-        {
-            logger.SkippingPartitionReplayBecauseObserverIsReplaying();
-            return;
-        }
-
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        logger.AttemptReplayPartition(partition, sequenceNumber);
-
-        var handledCountsStorage = GetObserverHandledCountsStorage();
-        var partitionCounts = await handledCountsStorage.GetFor(_observerId, partition);
-        State = WithSubtractedPartitionHandledEventCounts(State, partitionCounts);
-        await handledCountsStorage.RemoveFor(_observerId, partition);
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, Definition.EventTypes));
-
-        State.ReplayingPartitions.Add(partition);
-        await WriteStateAsync();
-    }
+    /// <inheritdoc/>
+    public Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber) =>
+        ReplayPartitionTo(partition, sequenceNumber, Definition.EventTypes, false);
 
     /// <inheritdoc/>
     public async Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber)
@@ -83,6 +64,44 @@ public partial class Observer
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);
+    }
+
+    async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
+    {
+        if (!Definition.IsReplayable)
+        {
+            return;
+        }
+
+        if (State.RunningState == ObserverRunningState.Replaying)
+        {
+            logger.SkippingPartitionReplayBecauseObserverIsReplaying();
+            return;
+        }
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.AttemptReplayPartition(partition, sequenceNumber);
+
+        var eventTypesToReplay = eventTypes.ToArray();
+        var eventTypeIdsToReplay = eventTypesToReplay.Select(_ => _.Id).ToHashSet();
+        var handledCountsStorage = GetObserverHandledCountsStorage();
+        var partitionCounts = await handledCountsStorage.GetFor(_observerId, partition);
+        var replayedPartitionCounts = retainOtherCounts
+            ? partitionCounts.Where(_ => eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()
+            : partitionCounts.ToDictionary();
+        State = WithSubtractedPartitionHandledEventCounts(State, replayedPartitionCounts);
+        await handledCountsStorage.RemoveFor(_observerId, partition);
+        var retainedPartitionCounts = retainOtherCounts
+            ? partitionCounts.Where(_ => !eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()
+            : new Dictionary<EventTypeId, EventCount>();
+        if (retainedPartitionCounts.Count > 0)
+        {
+            await handledCountsStorage.Increment(_observerId, partition, retainedPartitionCounts);
+        }
+        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay));
+
+        State.ReplayingPartitions.Add(partition);
+        await WriteStateAsync();
     }
 
     async Task<bool> TransitionToReplayIfNeeded()

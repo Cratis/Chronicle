@@ -25,11 +25,25 @@ public class ObserverKeys(
     readonly IEnumerable<EventTypeId> _eventTypes = eventTypes.Select(_ => _.Id).ToArray();
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// An empty <c language="csharp">eventTypes</c> means no fixed type list to key off - see
+    /// <see cref="Cratis.Chronicle.Observation.Observer.SubscribeToAllEvents{TObserverSubscriber}"/> - so it must not
+    /// narrow to a <c language="csharp">$in: []</c> filter, which matches no document in MongoDB. That is a
+    /// different outcome from a type filter that is simply absent, so the type filter is only added when there is
+    /// an actual, non-empty set of types to narrow by.
+    /// </remarks>
     public IAsyncEnumerator<Key> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
-        var filter = Builders<Event>.Filter.And(
-            Builders<Event>.Filter.Gte(_ => _.SequenceNumber, fromEventSequenceNumber),
-            Builders<Event>.Filter.In(_ => _.Type, _eventTypes));
+        var filters = new List<FilterDefinition<Event>>
+        {
+            Builders<Event>.Filter.Gte(_ => _.SequenceNumber, fromEventSequenceNumber)
+        };
+        if (_eventTypes.Any())
+        {
+            filters.Add(Builders<Event>.Filter.In(_ => _.Type, _eventTypes));
+        }
+
+        var filter = Builders<Event>.Filter.And(filters);
 
         return new ObserverKeysAsyncEnumerator(
             ct => collection.DistinctAsync(_ => _.EventSourceId, filter, cancellationToken: ct),

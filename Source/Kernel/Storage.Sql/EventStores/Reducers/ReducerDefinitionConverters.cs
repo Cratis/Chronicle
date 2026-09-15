@@ -25,8 +25,10 @@ public static class ReducerDefinitionConverters
         {
             Id = definition.Identifier,
             EventSequenceId = definition.EventSequenceId,
-            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
+            EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType.Id, et.EventType.Generation, et.Key.Expression)).ToArray(),
             ReadModel = definition.ReadModel,
+            IsActive = definition.IsActive,
+            Hash = definition.Hash,
             Tags = JsonSerializer.Serialize(definition.Tags ?? [], _jsonOptions),
             Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToSql()
         };
@@ -42,7 +44,8 @@ public static class ReducerDefinitionConverters
             schema.EventSequenceId,
             schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
             schema.ReadModel,
-            true,
+            schema.IsActive,
             JsonSerializer.Deserialize<IEnumerable<string>>(schema.Tags ?? "[]", _jsonOptions) ?? [],
-            schema.Filters.ToKernel());
+            schema.Filters.ToKernel(),
+            schema.Hash);
 }
