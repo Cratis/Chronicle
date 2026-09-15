@@ -118,11 +118,27 @@ internal sealed class ReadModels(
         };
     }
 
+    /// <summary>
+    /// Ensures a read model definition was actually found before anything dereferences it.
+    /// </summary>
+    /// <param name="definition">The <see cref="Concepts.ReadModels.ReadModelDefinition"/> returned by the grain.</param>
+    /// <param name="identifier">The identifier that was looked up.</param>
+    /// <returns>The definition, when it is known.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no read model is registered for the identifier.</exception>
+    /// <remarks>
+    /// A lookup miss leaves the grain state unpopulated rather than returning null-free defaults, so an unknown
+    /// identifier used to surface as a <see cref="NullReferenceException"/> from the first member access.
+    /// </remarks>
+    static Concepts.ReadModels.ReadModelDefinition EnsureKnown(Concepts.ReadModels.ReadModelDefinition definition, string identifier) =>
+        definition?.Sink is null
+            ? throw new InvalidOperationException($"Read model with identifier '{identifier}' not found.")
+            : definition;
+
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = EnsureKnown(await readModel.GetDefinition(), request.ReadModel);
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
         var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
@@ -159,7 +175,7 @@ internal sealed class ReadModels(
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = EnsureKnown(await readModel.GetDefinition(), request.ReadModelIdentifier);
 
         // A materialized read model — projection or reducer alike — already has its state written to the sink by
         // its observer, so read it from there rather than re-projecting or round-tripping to a connected reducer
