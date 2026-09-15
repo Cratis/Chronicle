@@ -124,7 +124,7 @@ public class EventStore : IEventStore
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
         _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         var types = TypeUniverse.For(serviceProvider);
-        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation, namingPolicy);
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
             serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName));

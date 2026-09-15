@@ -2,15 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Migrations;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventMigrationBuilder"/>.
 /// </summary>
-public class EventMigrationBuilder : IEventMigrationBuilder
+/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> used to render property names the way they appear in an event's payload. Defaults to <see cref="DefaultNamingPolicy"/>.</param>
+public class EventMigrationBuilder(INamingPolicy? namingPolicy = null) : IEventMigrationBuilder
 {
     readonly List<EventMigrationPropertyBuilder> _propertyBuilders = [];
+    readonly INamingPolicy _namingPolicy = namingPolicy ?? new DefaultNamingPolicy();
 
     /// <summary>
     /// Gets all the property builders.
@@ -20,7 +23,7 @@ public class EventMigrationBuilder : IEventMigrationBuilder
     /// <inheritdoc/>
     public void Properties(Action<IEventMigrationPropertyBuilder> properties)
     {
-        var builder = new EventMigrationPropertyBuilder();
+        var builder = new EventMigrationPropertyBuilder(_namingPolicy);
         properties(builder);
         _propertyBuilders.Add(builder);
     }
