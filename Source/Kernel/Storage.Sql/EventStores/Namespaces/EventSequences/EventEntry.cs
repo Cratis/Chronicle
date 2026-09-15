@@ -85,6 +85,16 @@ public class EventEntry
     public string Tags { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the revisions for the event, serialized as a JSON array.
+    /// </summary>
+    public string Revisions { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ordinal of the last mutation applied to the event.
+    /// </summary>
+    public long LastMutationOrdinal { get; set; }
+
+    /// <summary>
     /// Gets or sets the compensations for the event.
     /// </summary>
     [Json]

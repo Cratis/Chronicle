@@ -4,5 +4,7 @@
   href: ./contracts.mdx
 - name: Services
   href: ./services.md
+- name: Event sequence mutation registry
+  href: ./mutation-registry.md
 - name: Patches
   href: ./patches/toc.yml
