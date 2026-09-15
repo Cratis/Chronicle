@@ -44,7 +44,7 @@
         },
         "views": {
             "flat": "Flat",
-            "bySilo": "By Silo"
+            "bySilo": "By Instance"
         }
     },
     "mainMenu": {
@@ -77,6 +77,7 @@
             "users": "Users",
             "applications": "Applications",
             "connectedClients": "Connected Clients",
+            "servers": "Servers",
             "developmentTools": "Development Tools"
         }
     },
@@ -296,7 +297,8 @@
                     "new": "New",
                     "save": "Save",
                     "preview": "Preview",
-                    "timeMachine": "Time Machine"
+                    "timeMachine": "Time Machine",
+                    "timeScrubber": "Time Scrubber"
                 },
                 "saveDisabledReasons": {
                     "emptyContent": "Editor is empty",
@@ -373,7 +375,8 @@
                 "empty": "No recommendations found",
                 "actions": {
                     "perform": "Perform",
-                    "ignore": "Ignore"
+                    "ignore": "Ignore",
+                    "selectAll": "Select All"
                 },
                 "columns": {
                     "name": "Name",
@@ -385,6 +388,10 @@
                     "ignoreRecommendation": {
                         "title": "Ignore Recommendation",
                         "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                    },
+                    "ignoreRecommendations": {
+                        "title": "Ignore Recommendations",
+                        "message": "Are you sure you want to ignore {count} recommendations? This action cannot be undone."
                     }
                 }
             },
@@ -394,7 +401,8 @@
                 "actions": {
                     "resume": "Resume",
                     "stop": "Stop",
-                    "delete": "Delete"
+                    "delete": "Delete",
+                    "selectAll": "Select All"
                 },
                 "columns": {
                     "type": "Type",
@@ -402,6 +410,12 @@
                     "details": "Details",
                     "status": "Status",
                     "progress": "Progress"
+                },
+                "dialogs": {
+                    "deleteJobs": {
+                        "title": "Delete Jobs",
+                        "message": "Are you sure you want to delete {count} jobs? This action cannot be undone."
+                    }
                 },
                 "status": {
                     "none": "None",
@@ -613,12 +627,20 @@
                 },
                 "columns": {
                     "partition": "Partition",
+                    "status": "Status",
                     "attempts": "Attempts",
                     "lastAttempt": "Last attempt"
+                },
+                "statuses": {
+                    "unknown": "Unknown",
+                    "failed": "Failed",
+                    "quarantined": "Quarantined",
+                    "resolved": "Resolved"
                 },
                 "details": {
                     "observer": "Observer",
                     "partition": "Partition",
+                    "status": "Status",
                     "attempts": "Attempts",
                     "sequenceNumber": "Sequence number",
                     "messages": "Messages",
@@ -642,7 +664,8 @@
                     "filter": "Filter",
                     "query": "Perform Query",
                     "timeMachine": "Time Machine",
-                    "navigateBack": "Navigate Back"
+                    "navigateBack": "Navigate Back",
+                    "timeScrubber": "Time Scrubber"
                 },
                 "labels": {
                     "readModel": "Read Model",
@@ -744,6 +767,16 @@
                     }
                 }
             },
+            "servers": {
+                "title": "Servers",
+                "empty": "No server instances found",
+                "columns": {
+                    "address": "Address",
+                    "status": "Status",
+                    "cpu": "CPU",
+                    "memory": "Memory"
+                }
+            },
             "developmentTools": {
                 "title": "Development Tools",
                 "reset": {
@@ -800,6 +833,13 @@
                 "deleteProperty": "Delete property"
             },
             "emptyMessage": "No properties defined"
+        },
+        "timeScrubber": {
+            "title": "Time Scrubber",
+            "empty": "No history available for this instance.",
+            "scrub": "Scrub through the history",
+            "position": "{0} of {1}",
+            "moreProperties": "+{0} more"
         }
     },
     "patterns": {

@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// The Chronicle kernel writes to a single SQLite database from many Orleans grains concurrently
 /// (event-sequence appends plus read-model/observer-state sink writes). SQLite's default
 /// rollback-journal mode takes a database-wide exclusive lock for every write, so under that load
-/// writers collide and fail immediately with <c>SQLITE_BUSY</c>, stalling observer catch-up. WAL
+/// writers collide and fail immediately with <c language="csharp">SQLITE_BUSY</c>, stalling observer catch-up. WAL
 /// mode lets readers proceed during a write and lets writers append without locking out readers, and
-/// <c>busy_timeout</c> makes a contending writer wait for the lock instead of failing instantly.
-/// Durability is preserved: <c>synchronous</c> is intentionally left at its default so a committed
+/// <c language="csharp">busy_timeout</c> makes a contending writer wait for the lock instead of failing instantly.
+/// Durability is preserved: <c language="csharp">synchronous</c> is intentionally left at its default so a committed
 /// transaction is still flushed.
 /// </remarks>
 public sealed class SqlitePragmaConnectionInterceptor : DbConnectionInterceptor
@@ -29,7 +29,7 @@ public sealed class SqlitePragmaConnectionInterceptor : DbConnectionInterceptor
 
     /// <summary>
     /// The pragmas applied on every open. WAL persists in the database header (set once, sticks);
-    /// <c>busy_timeout</c> is per-connection and is re-applied each time. 30s is comfortably above
+    /// <c language="csharp">busy_timeout</c> is per-connection and is re-applied each time. 30s is comfortably above
     /// any genuine catch-up window.
     /// </summary>
     const string Pragmas = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000;";

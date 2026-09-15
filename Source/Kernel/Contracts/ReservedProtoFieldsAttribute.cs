@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Contracts;
 /// reader would decode those bytes as whatever now claims the number. Reserving it makes that a compile-time
 /// impossibility in every generated language rather than a review-time convention.
 /// <para>
-/// It exists because the schema is generated. A <c>reserved</c> line added to the generated file by hand
+/// It exists because the schema is generated. A <c language="csharp">reserved</c> line added to the generated file by hand
 /// disappears the next time anyone regenerates, silently and with nothing to notice it by - which is the whole
 /// hazard, since the reservation matters most long after everyone has forgotten why it is there.
 /// </para>

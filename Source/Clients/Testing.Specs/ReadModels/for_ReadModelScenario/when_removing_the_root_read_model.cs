@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
 /// Verifies that <see cref="ReadModelScenario{TReadModel}"/> reflects a root-level removal: a class-level
-/// <c>[RemovedWith]</c> deletes the read model document in the real sink, so <c>Instance</c> resolves to
+/// <c language="csharp">[RemovedWith]</c> deletes the read model document in the real sink, so <c language="csharp">Instance</c> resolves to
 /// <see langword="null"/> rather than the stale pre-removal state.
 /// </summary>
 public class when_removing_the_root_read_model : Specification

@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// Proves the sanctioned fix for a child-collection name mismatch: <c>[SetFrom&lt;E&gt;(nameof(E.Notes))]</c> on
+/// Proves the sanctioned fix for a child-collection name mismatch: <c language="csharp">[SetFrom&lt;E&gt;(nameof(E.Notes))]</c> on
 /// the child property bridges the differently named event list, so the collection materializes correctly
 /// without renaming the read-model property.
 /// </summary>

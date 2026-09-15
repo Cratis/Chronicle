@@ -1,1 +1,1 @@
-../../.ai/prompts/review-pr.prompt.md
+../../.cratis/ai/prompts/review-pr.prompt.md

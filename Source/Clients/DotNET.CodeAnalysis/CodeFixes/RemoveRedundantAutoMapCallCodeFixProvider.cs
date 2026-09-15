@@ -14,7 +14,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Cratis.Chronicle.CodeAnalysis.CodeFixes;
 
 /// <summary>
-/// Code fix provider that removes a redundant <c>.AutoMap()</c> call from a projection builder chain.
+/// Code fix provider that removes a redundant <c language="csharp">.AutoMap()</c> call from a projection builder chain.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(RemoveRedundantAutoMapCallCodeFixProvider)), Shared]
 public class RemoveRedundantAutoMapCallCodeFixProvider : CodeFixProvider

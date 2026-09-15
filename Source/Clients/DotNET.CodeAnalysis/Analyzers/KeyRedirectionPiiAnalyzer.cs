@@ -11,8 +11,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a model-bound <c>[FromEvent&lt;TEvent&gt;(key: …)]</c> or
-/// <c>[ChildrenFrom&lt;TEvent&gt;(parentKey: …)]</c> carrying a <c>[PII]</c> value onto a read model whose
+/// Analyzer that reports a model-bound <c language="csharp">[FromEvent&lt;TEvent&gt;(key: …)]</c> or
+/// <c language="csharp">[ChildrenFrom&lt;TEvent&gt;(parentKey: …)]</c> carrying a <c language="csharp">[PII]</c> value onto a read model whose
 /// document is keyed by something other than the stream the event was appended to.
 /// </summary>
 /// <remarks>
@@ -123,7 +123,7 @@ public class KeyRedirectionPiiAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Read the <c>[SetFrom&lt;TEvent&gt;]</c> mappings a read model writes for one event.
+    /// Read the <c language="csharp">[SetFrom&lt;TEvent&gt;]</c> mappings a read model writes for one event.
     /// </summary>
     /// <param name="eventType">The event the mappings must name.</param>
     /// <param name="readModelType">The read model to read the mappings off.</param>

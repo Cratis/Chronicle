@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_InertEventFilterOnEv
 /// <summary>
 /// A reactor's subscription carries these values and the kernel narrows the observed stream by them, so the
 /// attribute is load-bearing here - this is the very reader whose absence for event types makes the event type
-/// placement inert. The reactor also carries <c>[EventType]</c> so that the reactor role is what the spec
+/// placement inert. The reactor also carries <c language="csharp">[EventType]</c> so that the reactor role is what the spec
 /// measures; without it the type is skipped for having no event type and the interface is scenery. The reducer,
 /// the other observer kind, has its own sibling spec.
 /// </summary>

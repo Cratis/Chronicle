@@ -6,6 +6,8 @@ import { FailedPartitionDetails as FailedPartition } from 'Features/Observation'
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { getFailedPartitionAttemptsNewestFirst } from './getFailedPartitionAttemptsNewestFirst';
 import css from './FailedPartitionDetails.module.css';
+import { getFailedPartitionStatus } from './getFailedPartitionStatus';
+import { getFailedPartitionStatusLabel } from './getFailedPartitionStatusLabel';
 
 export const FailedPartitionDetails = ({ item }: IDetailsComponentProps<FailedPartition>) => {
     const detailStrings = strings.eventStore.namespaces.failedPartitions.details;
@@ -13,6 +15,7 @@ export const FailedPartitionDetails = ({ item }: IDetailsComponentProps<FailedPa
 
     const properties = [
         { label: detailStrings.observer, value: item.observerId },
+        { label: detailStrings.status, value: getFailedPartitionStatusLabel(getFailedPartitionStatus(item)) },
         { label: detailStrings.partition, value: item.partition },
         { label: detailStrings.attempts, value: item.attempts.length.toString() }
     ];

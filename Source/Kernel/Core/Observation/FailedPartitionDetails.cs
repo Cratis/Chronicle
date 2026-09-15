@@ -24,6 +24,16 @@ public record FailedPartitionDetails(
     IEnumerable<FailedPartitionAttemptDetails> Attempts)
 {
     /// <summary>
+    /// Gets whether this failure has been resolved.
+    /// </summary>
+    public bool IsResolved { get; init; }
+
+    /// <summary>
+    /// Gets whether automatic retries are quarantined. Null means the server did not provide the state.
+    /// </summary>
+    public bool? IsQuarantined { get; init; }
+
+    /// <summary>
     /// Gets every failed partition in an event store and namespace.
     /// </summary>
     /// <param name="eventStore">The event store the failed partitions are for.</param>
@@ -59,14 +69,16 @@ public record FailedPartitionDetails(
         string? observerId,
         IStorage storage)
     {
-        var subject = new ReplaySubject<IEnumerable<FailedPartitionDetails>>(1);
-        storage
+        var observable = storage
             .GetEventStore(eventStore)
             .GetNamespace(@namespace).FailedPartitions
             .ObserveAllFor(ToObserverId(observerId))
-            .Select(partitions => partitions.ToReadModel())
-            .Subscribe(subject.OnNext);
-        return subject;
+            .Select(partitions => partitions.ToReadModel());
+
+        // Preserve subscription ownership: disconnecting an HTTP observer must stop the SQL polling too.
+        return System.Reactive.Subjects.Subject.Create<IEnumerable<FailedPartitionDetails>>(
+            System.Reactive.Observer.Create<IEnumerable<FailedPartitionDetails>>(_ => { }),
+            observable);
     }
 
     static Concepts.Observation.ObserverId? ToObserverId(string? observerId) =>

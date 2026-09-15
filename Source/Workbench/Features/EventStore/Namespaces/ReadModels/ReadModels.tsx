@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { Allotment } from 'allotment';
@@ -15,7 +15,7 @@ import strings from 'Strings';
 import { FluxCapacitor } from 'Icons';
 import { Json } from 'Features';
 import { useDialog } from '@cratis/arc.react/dialogs';
-import { TimeMachineDialog } from 'Components';
+import { TimeMachineDialog, TimeScrubberDialog } from 'Components';
 
 interface ReadModelsRouteParams {
     readonly readModel?: string;
@@ -38,6 +38,7 @@ const ReadModelsContent = () => {
     const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
     const [selectedInstance, setSelectedInstance] = useState<Json | null>(null);
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+    const [TimeScrubberDialogWrapper, showTimeScrubberDialog] = useDialog(TimeScrubberDialog);
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(50);
 
@@ -101,7 +102,22 @@ const ReadModelsContent = () => {
         return options;
     }, [occurrences.data, selectedReadModel]);
 
+    const previousNamespaceRef = useRef<string | undefined>(undefined);
+
     useEffect(() => {
+        const namespaceChanged = previousNamespaceRef.current !== undefined
+            && previousNamespaceRef.current !== params.namespace;
+        previousNamespaceRef.current = params.namespace;
+
+        if (namespaceChanged) {
+            setSelectedReadModel(null);
+            setSelectedOccurrence(null);
+            setSelectedInstance(null);
+            setPage(0);
+            navigate(`/event-store/${params.eventStore}/${params.namespace}/read-models`, { replace: true });
+            return;
+        }
+
         if (params.readModel && allReadModels.data.length > 0 && !selectedReadModel) {
             const readModel = allReadModels.data.find(rm => rm.identifier === params.readModel);
             if (readModel) {
@@ -164,7 +180,7 @@ const ReadModelsContent = () => {
                         id="readModel"
                         value={selectedReadModel}
                         options={allReadModels.data || []}
-                        onChange={(event) => handleReadModelChange(event.value)}
+                        onChange={(value) => handleReadModelChange(value)}
                         optionLabel="containerName"
                         placeholder={strings.eventStore.namespaces.readModels.placeholders.selectReadModel}
                         className="w-16rem"
@@ -175,7 +191,7 @@ const ReadModelsContent = () => {
                         options={occurrenceOptions}
                         optionLabel="label"
                         optionValue="value"
-                        onChange={(event) => handleOccurrenceChange(event.value)}
+                        onChange={(value) => handleOccurrenceChange(value)}
                         placeholder={strings.eventStore.namespaces.readModels.placeholders.selectOccurrence}
                         className="w-16rem"
                         disabled={!selectedReadModel}
@@ -190,11 +206,19 @@ const ReadModelsContent = () => {
                             },
                             {
                                 label: strings.eventStore.namespaces.readModels.actions.timeMachine,
-                                icon: <FluxCapacitor size={20} />,
+                                icon: <FluxCapacitor size={16} />,
                                 command: async () => {
                                     await showTimeMachineDialog();
                                 },
-                                disabled: !selectedReadModel || !selectedOccurrence || !selectedInstance
+                                disabled: !selectedReadModel || !selectedOccurrence || !getInstanceKey(selectedInstance)
+                            },
+                            {
+                                label: strings.eventStore.namespaces.readModels.actions.timeScrubber,
+                                icon: <faIcons.FaSliders className='mr-2' />,
+                                command: async () => {
+                                    await showTimeScrubberDialog();
+                                },
+                                disabled: !selectedReadModel || !selectedOccurrence || !getInstanceKey(selectedInstance)
                             }
                         ]}
                     />
@@ -219,6 +243,12 @@ const ReadModelsContent = () => {
 
             {(selectedReadModel && selectedOccurrence && selectedInstance) && (
                 <TimeMachineDialogWrapper
+                    readModel={selectedReadModel}
+                    readModelKey={getInstanceKey(selectedInstance)} />
+            )}
+
+            {(selectedReadModel && selectedOccurrence && getInstanceKey(selectedInstance)) && (
+                <TimeScrubberDialogWrapper
                     readModel={selectedReadModel}
                     readModelKey={getInstanceKey(selectedInstance)} />
             )}

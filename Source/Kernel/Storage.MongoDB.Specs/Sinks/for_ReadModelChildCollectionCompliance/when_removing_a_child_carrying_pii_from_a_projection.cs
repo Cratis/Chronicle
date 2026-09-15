@@ -13,8 +13,8 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCompliance;
 
 /// <summary>
-/// Regression for removing a <c>[ChildrenFrom]</c> child that carries a <c>[PII]</c> member from the real
-/// MongoDB sink. The child is stored with its <c>[PII]</c> member encrypted at rest, so a <c>$pull</c> that
+/// Regression for removing a <c language="csharp">[ChildrenFrom]</c> child that carries a <c language="csharp">[PII]</c> member from the real
+/// MongoDB sink. The child is stored with its <c language="csharp">[PII]</c> member encrypted at rest, so a <c language="csharp">$pull</c> that
 /// matches the whole plaintext removal document never matches the encrypted stored element and the child is
 /// never removed (the in-memory sink removes it by key, so the two sinks silently diverge). Two contacts are
 /// seeded encrypted, then one is removed by its identifier through the projection child-removal path.

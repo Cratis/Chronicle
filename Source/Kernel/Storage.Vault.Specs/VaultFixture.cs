@@ -9,12 +9,12 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// <summary>
 /// Provides a shared HashiCorp Vault container for integration specs.
 /// Starts Vault in development mode with a fixed root token and the KV v2 secrets engine
-/// pre-mounted at <c>secret/</c>.
+/// pre-mounted at <c language="csharp">secret/</c>.
 /// </summary>
 public sealed class VaultFixture : IAsyncLifetime
 {
     /// <summary>
-    /// The root token used in development mode. Also set as the <c>VAULT_TOKEN</c>
+    /// The root token used in development mode. Also set as the <c language="csharp">VAULT_TOKEN</c>
     /// environment variable for each test run.
     /// </summary>
     public const string RootToken = "chronicle-test-root";

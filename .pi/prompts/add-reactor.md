@@ -1,1 +1,1 @@
-../../.ai/prompts/add-reactor.prompt.md
+../../.cratis/ai/prompts/add-reactor.prompt.md

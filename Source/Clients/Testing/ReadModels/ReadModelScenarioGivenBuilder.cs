@@ -25,8 +25,8 @@ public class ReadModelScenarioGivenBuilder<TReadModel>(ReadModelScenario<TReadMo
     /// Specifies the <see cref="EventSourceId"/> to associate with seeded events or a pre-built read model instance.
     /// </summary>
     /// <remarks>
-    /// Use <c>.Events(...)</c> on the returned builder to seed events for projection processing, or
-    /// <c>.ReadModel(...)</c> to register a pre-built instance for <c>GetInstanceById</c> interception.
+    /// Use <c language="csharp">.Events(...)</c> on the returned builder to seed events for projection processing, or
+    /// <c language="csharp">.ReadModel(...)</c> to register a pre-built instance for <c language="csharp">GetInstanceById</c> interception.
     /// </remarks>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to seed for.</param>
     /// <returns>A <see cref="ReadModelSourceGivenBuilder{TReadModel}"/> to continue the fluent chain.</returns>

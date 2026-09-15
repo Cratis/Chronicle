@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// Chronicle composes its database names from the event store name and the namespace. When Arc resolves the
 /// namespace, the namespace is the tenant id — so an otherwise innocent looking tenant id such as one containing
 /// a space produces a name MongoDB rejects. Without this check MongoDB fails much later with a bare
-/// <c>Invalid namespace specified</c> that names neither the event store nor the namespace that caused it.
+/// <c language="csharp">Invalid namespace specified</c> that names neither the event store nor the namespace that caused it.
 /// </remarks>
 /// <param name="databaseName">The composed database name.</param>
 /// <param name="reason">Why the name is not legal.</param>

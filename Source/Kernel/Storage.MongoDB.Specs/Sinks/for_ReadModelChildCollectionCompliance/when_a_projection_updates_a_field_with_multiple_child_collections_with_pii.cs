@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCom
 /// <summary>
 /// Edge case for the projection collapse with more than one PII child collection. An unrelated top-level
 /// update re-encrypts every PII member across both collections, yielding two independent whole-collection
-/// replacements (<c>$set contacts</c> and <c>$set tags</c>). They target different collections so there is
+/// replacements (<c language="csharp">$set contacts</c> and <c language="csharp">$set tags</c>). They target different collections so there is
 /// no conflict; both must apply, leaving both collections intact and ciphertext at rest.
 /// </summary>
 /// <param name="fixture">The shared <see cref="MongoDBFixture"/>.</param>

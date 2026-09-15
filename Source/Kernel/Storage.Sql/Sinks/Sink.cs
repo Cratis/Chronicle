@@ -35,10 +35,10 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// SQL implementation of <see cref="ISink"/> backed by a per-read-model table whose column shape is
 /// derived from the read model's <see cref="JsonSchema"/>: each leaf
 /// property becomes a real typed column, collections and nested objects become a single JSON column
-/// (<c>jsonb</c> on PostgreSQL, <c>nvarchar(max)</c> on SQL Server, <c>TEXT</c> on SQLite). Changes
+/// (<c language="csharp">jsonb</c> on PostgreSQL, <c language="csharp">nvarchar(max)</c> on SQL Server, <c language="csharp">TEXT</c> on SQLite). Changes
 /// from the projection engine are translated into per-column updates on a tracked
-/// <see cref="DynamicReadModelEntity"/>; EF's change tracker turns those into <c>UPDATE</c>s that
-/// only touch the modified columns — matching MongoDB's <c>$set</c> semantics and removing the
+/// <see cref="DynamicReadModelEntity"/>; EF's change tracker turns those into <c language="csharp">UPDATE</c>s that
+/// only touch the modified columns — matching MongoDB's <c language="csharp">$set</c> semantics and removing the
 /// stale-snapshot overwrite class of bug that whole-document upserts suffered from.
 /// </summary>
 public class Sink : ISink
@@ -83,7 +83,7 @@ public class Sink : ISink
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
     /// <summary>
-    /// Gets the table name the sink is currently writing to. Resolves to <c>replay-{tableName}</c>
+    /// Gets the table name the sink is currently writing to. Resolves to <c language="csharp">replay-{tableName}</c>
     /// while a replay is in progress, and to the primary table name otherwise. EndReplay swaps the
     /// two so the running system observes the rebuilt state atomically.
     /// </summary>
@@ -206,9 +206,9 @@ public class Sink : ISink
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Bulk mode is a no-op for the SQL sink: every <c>ApplyChanges</c> call commits
+    /// Bulk mode is a no-op for the SQL sink: every <c language="csharp">ApplyChanges</c> call commits
     /// independently through its own <see cref="DbContext"/>. The MongoDB sink batches inside
-    /// a single bulk write because the engine may dispatch <c>ApplyChanges</c>
+    /// a single bulk write because the engine may dispatch <c language="csharp">ApplyChanges</c>
     /// concurrently for one sink, and a shared <see cref="DbContext"/> would corrupt EF's
     /// non-thread-safe change tracker and deadlock under load. The operational guarantee bulk
     /// existed to provide — queries keep observing the previous state until the rebuild is

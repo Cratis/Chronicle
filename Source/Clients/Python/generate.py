@@ -35,7 +35,7 @@ def _clean_generated_files() -> None:
 
 def _prepare_proto_tree(source: Path, destination: Path) -> list[Path]:
     # Proto files are rooted under a directory named after the installed package so that protoc computes
-    # fully-qualified, already-correct imports (e.g. `from cratis_chronicle_contracts import events_pb2`)
+    # fully-qualified, already-correct imports (e.g. `from cratis_chronicle_contracts import eventtypes_pb2`)
     # instead of the bare top-level imports it would otherwise emit for messages defined in other files.
     proto_files: list[Path] = []
     package_directory = destination / PACKAGE_NAME

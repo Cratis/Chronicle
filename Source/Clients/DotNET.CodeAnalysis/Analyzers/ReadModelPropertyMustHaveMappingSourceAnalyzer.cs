@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// </summary>
 /// <remarks>
 /// No code fix is offered: the property is flagged precisely because no subscribed event carries a same-named
-/// property, so there is no valid event type to synthesize a <c>[SetFrom&lt;T&gt;]</c> for. The fix requires a
+/// property, so there is no valid event type to synthesize a <c language="csharp">[SetFrom&lt;T&gt;]</c> for. The fix requires a
 /// human decision — either subscribe to an event that carries the value, or add the appropriate mapping attribute.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -228,10 +228,10 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     /// <param name="attribute">The attribute to inspect.</param>
     /// <returns>True when the attribute clears the member rather than sourcing it.</returns>
     /// <remarks>
-    /// A null <c>[SetValue]</c> is a clear: it says what returns the member to no value, never where a value comes
+    /// A null <c language="csharp">[SetValue]</c> is a clear: it says what returns the member to no value, never where a value comes
     /// from. Counting it as a mapping source would silence this rule for a member that genuinely has none - the
     /// member would be cleared by one event and populated by nothing, which is precisely what the rule reports.
-    /// <c>[ClearWith]</c> is not listed as a mapping attribute at all, so it needs no exclusion here.
+    /// <c language="csharp">[ClearWith]</c> is not listed as a mapping attribute at all, so it needs no exclusion here.
     /// </remarks>
     static bool DeclaresAClear(AttributeData attribute) =>
         attribute.AttributeClass?.Name == SetValueAttributeName &&

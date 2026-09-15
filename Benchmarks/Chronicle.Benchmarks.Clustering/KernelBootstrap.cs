@@ -13,7 +13,7 @@ using KernelEventStoreNamespaceName = KernelConcepts::Cratis.Chronicle.Concepts.
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
 /// <summary>
-/// Performs the kernel bootstrap that <c>ChronicleServerStartupTask</c> normally does at silo startup.
+/// Performs the kernel bootstrap that <c language="csharp">ChronicleServerStartupTask</c> normally does at silo startup.
 /// </summary>
 /// <remarks>
 /// The startup task activates grains while the silo is still starting, which with role based placement
@@ -41,7 +41,7 @@ public static class KernelBootstrap
     }
 
     /// <summary>
-    /// Removes the <c>ChronicleServerStartupTask</c> registration from a silo's services.
+    /// Removes the <c language="csharp">ChronicleServerStartupTask</c> registration from a silo's services.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to adjust.</param>
     public static void RemoveServerStartupTask(IServiceCollection services)

@@ -21,7 +21,7 @@ public class and_the_constraint_was_released_by_the_last_of_several_removal_even
         await Append(1, _writtenOffEventType, _borrower);
     }
 
-    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowed(DefinitionReleasedByReturnOrWriteOff, _borrower);
+    async Task Because() => (_isAllowed, _sequenceNumber) = await _storage.IsAllowedWithinScope(DefinitionReleasedByReturnOrWriteOff, _borrower);
 
     [Fact] void should_be_allowed() => _isAllowed.ShouldBeTrue();
     [Fact] void should_have_no_sequence_number_to_report() => _sequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);

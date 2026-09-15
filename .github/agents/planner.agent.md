@@ -1,1 +1,1 @@
-../../.ai/agents/planner.md
+../../.cratis/ai/agents/planner.md

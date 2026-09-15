@@ -1,4 +1,7 @@
-# Projections
+---
+title: Projections
+description: Build specialized, queryable read models from events and choose the right projection style and consistency model.
+---
 
 Your events are the source of truth, but events are a poor thing to *read* — nobody wants to replay a
 thousand `MoneyDeposited` facts to show an account balance. A **projection** does that folding for you:

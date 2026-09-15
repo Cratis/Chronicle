@@ -33,7 +33,8 @@ internal static class EventContextConverters
         CausedBy = context.CausedBy.ToContract(),
         Tags = context.Tags.Select(_ => _.Value),
         Hash = context.Hash,
-        ObservationState = context.ObservationState.ToContract()
+        ObservationState = context.ObservationState.ToContract(),
+        Subject = context.Subject?.Value ?? string.Empty
     };
 
     /// <summary>
@@ -56,5 +57,21 @@ internal static class EventContextConverters
         context.CausedBy.ToChronicle(),
         context.Tags.Select(_ => new Tag(_)).ToArray(),
         context.Hash,
-        context.ObservationState.ToChronicle());
+        context.ObservationState.ToChronicle(),
+        context.ResolveSubject());
+
+    /// <summary>
+    /// Resolves the <see cref="Subject"/> from a contract context, falling back to the event source id when the
+    /// sender did not carry one.
+    /// </summary>
+    /// <param name="context"><see cref="Contracts.Events.EventContext"/> to resolve for.</param>
+    /// <returns>The resolved <see cref="Subject"/>.</returns>
+    /// <remarks>
+    /// The fallback exists only for a peer that predates the subject member on the contract. An explicitly set
+    /// subject is never replaced by the event source id.
+    /// </remarks>
+    static Subject ResolveSubject(this Contracts.Events.EventContext context) =>
+        string.IsNullOrEmpty(context.Subject)
+            ? new Subject(context.EventSourceId)
+            : new Subject(context.Subject);
 }

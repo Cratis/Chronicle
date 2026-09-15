@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that warns when a model-bound <c>[ChildrenFrom]</c> child carries a collection property that has no
+/// Analyzer that warns when a model-bound <c language="csharp">[ChildrenFrom]</c> child carries a collection property that has no
 /// same-named property on the child-creating event and no explicit mapping — so AutoMap fills it from nothing
 /// and it silently projects as an empty collection.
 /// </summary>

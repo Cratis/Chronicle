@@ -29,7 +29,8 @@ public class when_round_tripping_event_context_conversion : Specification
             new Identity("TheSubject", "TheUserName"),
             [],
             EventHash.NotSet,
-            EventObservationState.Initial
+            EventObservationState.Initial,
+            new Subject("SomeComplianceSubject")
         );
     }
 
@@ -48,4 +49,6 @@ public class when_round_tripping_event_context_conversion : Specification
     [Fact] void should_preserve_causation() => _result.Causation.First().ShouldEqual(_original.Causation.First());
     [Fact] void should_preserve_caused_by() => _result.CausedBy.ShouldEqual(_original.CausedBy);
     [Fact] void should_preserve_observation_state() => _result.ObservationState.ShouldEqual(_original.ObservationState);
+    [Fact] void should_preserve_subject() => _result.Subject.ShouldEqual(_original.Subject);
+    [Fact] void should_not_replace_the_subject_with_the_event_source_id() => _result.Subject.Value.ShouldNotEqual(_original.EventSourceId.Value);
 }

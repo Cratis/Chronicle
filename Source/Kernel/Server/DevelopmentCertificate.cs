@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Server;
 public static class DevelopmentCertificate
 {
     /// <summary>
-    /// Creates a self-signed certificate valid for <c>localhost</c> and the loopback addresses.
+    /// Creates a self-signed certificate valid for <c language="csharp">localhost</c> and the loopback addresses.
     /// </summary>
     /// <returns>A self-signed <see cref="X509Certificate2"/> with a private key.</returns>
     public static X509Certificate2 Create()

@@ -1,1 +1,1 @@
-../.ai/rules/general.md
+../.cratis/ai/rules/project.md

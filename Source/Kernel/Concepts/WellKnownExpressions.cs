@@ -94,6 +94,12 @@ public static class WellKnownExpressions
     public const string Combine = "$combine";
 
     /// <summary>
+    /// The value map expression for event migrations - translates individual values of a property from what they
+    /// meant in one generation to what they mean in another.
+    /// </summary>
+    public const string MapValues = "$mapValues";
+
+    /// <summary>
     /// The all expression for subscribing to all event types.
     /// </summary>
     public const string All = "$all";

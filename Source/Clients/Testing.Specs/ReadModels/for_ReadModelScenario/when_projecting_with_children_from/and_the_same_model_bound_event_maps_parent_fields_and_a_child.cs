@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_project
 
 /// <summary>
 /// The model-bound spelling of <see cref="and_the_same_event_maps_parent_fields_and_a_child"/>: the same event
-/// type is both the root <c>[FromEvent&lt;T&gt;]</c> source and the <c>[ChildrenFrom&lt;T&gt;]</c> source.
+/// type is both the root <c language="csharp">[FromEvent&lt;T&gt;]</c> source and the <c language="csharp">[ChildrenFrom&lt;T&gt;]</c> source.
 /// </summary>
 public class and_the_same_model_bound_event_maps_parent_fields_and_a_child : Specification
 {

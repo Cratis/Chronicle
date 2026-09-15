@@ -6,13 +6,13 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_AutoMapSameNamePropertyCollisionAnalyzer.when_analyzing;
 
 /// <summary>
-/// An event named by <c>[ChildrenFrom]</c> is subscribed by the child, not by the type carrying the attribute -
+/// An event named by <c language="csharp">[ChildrenFrom]</c> is subscribed by the child, not by the type carrying the attribute -
 /// the builder writes it into the child's definition and never into the root's. So it cannot auto-map over a
 /// root property of the same name, and reporting one is a false positive.
 /// </summary>
 /// <remarks>
 /// The cost of getting this wrong is specific: the reported fix is to fence the root property with
-/// <c>[NoAutoMap]</c>, which does nothing there because nothing was overwriting it. An author following the
+/// <c language="csharp">[NoAutoMap]</c>, which does nothing there because nothing was overwriting it. An author following the
 /// diagnostic ends up with an attribute that reads as load-bearing and is not.
 /// </remarks>
 public class and_the_colliding_event_only_reaches_a_child : given.an_auto_map_same_name_property_collision_analyzer

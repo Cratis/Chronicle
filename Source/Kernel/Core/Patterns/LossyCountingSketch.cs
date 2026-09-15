@@ -102,6 +102,29 @@ public sealed class LossyCountingSketch
     }
 
     /// <summary>
+    /// Seed the sketch with entries counted by an earlier life of it, continuing from where that one left off.
+    /// </summary>
+    /// <param name="entries">The <see cref="LossyCountingEntry">entries</see> to seed with.</param>
+    /// <param name="observed">How many observations the earlier life had seen.</param>
+    /// <remarks>
+    /// The in-memory sketch dies with its process while what survived it is persisted, so a fresh sketch that
+    /// starts from zero would report its first few observations with full support - and rewriting a scope from
+    /// that would wipe established behavior in favor of whatever happened right after a restart. Restoring puts
+    /// the persisted survivors back with the counts they had, so mining continues instead of starting over.
+    /// Restored entries carry no error term: they were surviving patterns, counted precisely for as long as they
+    /// have been retained.
+    /// </remarks>
+    public void Restore(IEnumerable<LossyCountingEntry> entries, long observed)
+    {
+        Observed = observed;
+
+        foreach (var entry in entries)
+        {
+            _entries[entry.Itemset.Key] = MutableEntry.From(entry);
+        }
+    }
+
+    /// <summary>
     /// Drop every itemset that has not kept up with the stream.
     /// </summary>
     /// <remarks>
@@ -172,7 +195,7 @@ public sealed class LossyCountingSketch
     /// <param name="error">The largest number of occurrences that could have been missed before it entered.</param>
     /// <param name="occurred">When the observation that created the entry occurred.</param>
     /// <remarks>
-    /// <c>LastSeen</c> answers "when did this behavior last happen" and only ever moves on an observation. The
+    /// <c language="csharp">LastSeen</c> answers "when did this behavior last happen" and only ever moves on an observation. The
     /// moment the weight is decayed to is tracked separately, because it also moves on a background decay pass.
     /// Collapsing the two would make a decay pass look like an occurrence in the stored pattern, and would let two
     /// passes over the same interval decay it twice.
@@ -190,6 +213,15 @@ public sealed class LossyCountingSketch
         public DateTimeOffset FirstSeen { get; private set; } = occurred;
 
         public DateTimeOffset LastSeen { get; private set; } = occurred;
+
+        public static MutableEntry From(LossyCountingEntry entry) =>
+            new(entry.Itemset, entry.Error, entry.FirstSeen)
+            {
+                Frequency = entry.Frequency,
+                Weight = entry.Weight,
+                LastSeen = entry.LastSeen,
+                _weightAsOf = entry.LastSeen
+            };
 
         public void Count(DateTimeOffset occurred, double decayFactor)
         {

@@ -1,0 +1,32 @@
+# CHR0051: Reducer current read model parameter must be nullable
+
+## Rule Description
+
+Chronicle passes `null` as the current read model for the event that brings an instance into existence, so a reducer method cannot promise the parameter is never null. Declare the parameter as nullable and handle the null case as the creation of the instance.
+
+## Severity
+
+Warning
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0051/violation" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0051/fix" />
+
+## Why This Rule Exists
+
+A reducer's job is to fold an event and the current read model state into the next state. When an event is the **first** for a given event source, there is no current state — Chronicle passes `null` for the `current` parameter. A reducer method that declares `current` as non-nullable makes a promise it cannot keep, because the very first event for an instance will pass `null`.
+
+In a `#nullable disable` context, the annotation carries no claim at all, so Chronicle keeps dispatching to those methods without complaint. This rule fires only when a method makes an **explicit non-nullable annotation** — the broken promise.
+
+Declare `current` as nullable and handle the `null` case — typically by creating the initial instance — to make the reducer correct for both the first event and every subsequent one.
+
+## Related Rules
+
+- [CHR0006](CHR0006): Reducer method signature must match allowed signatures — validates the overall shape of a reducer method.
+- [CHR0036](CHR0036): Reducer must not have mutable state — ensures reducers remain stateless and replay-safe.

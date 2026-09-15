@@ -6,7 +6,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Reactors.SideEffects.for_ReactorSideEffectHandlers;
 
 /// <summary>
-/// The event store was added to <c>CanHandle</c> so a handler stops capturing one namespace's event type
+/// The event store was added to <c language="csharp">CanHandle</c> so a handler stops capturing one namespace's event type
 /// registry. A handler written against the previous contract — the overload without the event store — is
 /// outside this repository and cannot be updated in step, so it has to keep being asked.
 /// </summary>

@@ -19,7 +19,7 @@ public static class JobStepStatusChangedConverters
             Status = (JobStepStatus)(int)statusChanged.Status,
             Occurred = statusChanged.Occurred,
             ExceptionMessages = statusChanged.ExceptionMessages,
-            ExceptionStackTrace = statusChanged.ExceptionStackTrace ?? string.Empty
+            ExceptionStackTrace = statusChanged.ExceptionStackTrace
         };
 
     /// <summary>

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Seeding;
 
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -15,18 +16,28 @@ namespace Cratis.Chronicle.Namespaces;
 /// Represents a reactor that handles namespace events.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="patternCapture">The <see cref="IPatternCapture"/> for observing the new namespace's events.</param>
 [Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: true)]
-public class NamespacesReactor(IGrainFactory grainFactory) : Reactor
+public class NamespacesReactor(IGrainFactory grainFactory, IPatternCapture patternCapture) : Reactor
 {
     /// <summary>
-    /// Handles the addition of a namespace by applying any existing global seed data to it.
+    /// Handles the addition of a namespace by subscribing pattern capture for it and applying any existing global
+    /// seed data to it.
     /// </summary>
     /// <param name="event">The event containing the namespace information.</param>
     /// <param name="eventContext">The context of the event.</param>
     /// <returns>Await Task.</returns>
     /// <exception cref="EventSeedingIncomplete">Thrown when at least one global seed entry was not appended to the namespace.</exception>
+    /// <remarks>
+    /// A namespace is empty the instant it is added, so <see cref="IPatternCapture.Subscribe"/> is a no-op here -
+    /// it checks the namespace's data itself and only actually subscribes once the namespace has something to
+    /// observe. Startup rehydration picks up pattern capture for namespaces that do go on to receive data, and
+    /// event type registration re-subscribes across namespaces that already have data when the type list grows.
+    /// </remarks>
     public async Task Added(NamespaceAdded @event, EventContext eventContext)
     {
+        await patternCapture.Subscribe(@event.EventStore, @event.Namespace);
+
         var globalKey = EventSeedingKey.ForGlobal(@event.EventStore);
         var globalGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(globalKey.ToString());
         var seeds = await globalGrain.GetSeededEvents();

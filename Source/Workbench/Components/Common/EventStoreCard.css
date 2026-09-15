@@ -1,0 +1,50 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+/*
+ * The whole tile is the navigation target, so the link fills the card rather than
+ * wrapping only the title. The body absorbs the card's own padding so the link can
+ * cover it edge to edge.
+ */
+
+.workbench-event-store-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.workbench-event-store-card .workbench-card__body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+}
+
+.workbench-event-store-card__link {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1.25rem;
+    color: inherit;
+    text-decoration: none;
+    border-radius: inherit;
+}
+
+.workbench-event-store-card__link:hover {
+    background: var(--cratis-surface-hover);
+}
+
+.workbench-event-store-card__link:focus-visible {
+    outline: none;
+    box-shadow: inset var(--cratis-focus-ring);
+}
+
+.workbench-event-store-card__title {
+    font-size: 2.5rem;
+    line-height: 3rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

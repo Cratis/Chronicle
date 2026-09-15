@@ -363,8 +363,11 @@ jobs:
       version: ${{ needs.release.outputs.version }}
       protos-artifact: proto-files
 
+  # Disabled until #3806's constraints are met: PyPI trusted publishing and the protected GitHub environment
+  # are not configured yet, so every attempt fails with a 400 from PyPI's upload endpoint. Re-enable by
+  # restoring the `if:` below once that administrative setup lands - this is a deliberate hold, not a bug.
   publish-python-client:
-    if: needs.release.outputs.publish == 'true'
+    if: false
     needs: [release, generate-protos]
     uses: ./.github/workflows/publish-python-client.yml
     secrets: inherit

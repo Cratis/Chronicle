@@ -5,7 +5,7 @@ import { type ChangeEvent, useState } from 'react';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { Column } from '@cratis/components/DataTables';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import { IconField } from 'primereact/iconfield';
 import { InputText } from 'primereact/inputtext';
@@ -60,10 +60,10 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
 
     const queryArgs: AllObserversParameters = {
         eventStore: params.eventStore!,
-        namespace: viewModel.currentNamespace
+        namespace: params.namespace!
     };
 
-    const [observers] = AllObservers.when(!!viewModel.currentNamespace).use(queryArgs);
+    const [observers] = AllObservers.when(!!params.namespace).use(queryArgs);
 
     const searchTerm = searchText.trim().toLowerCase();
 
@@ -81,13 +81,13 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             label: strings.eventStore.namespaces.observers.actions.replay,
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
             disabled: !viewModel.selectedObserver,
-            command: () => viewModel.replay()
+            command: () => viewModel.replay(params.eventStore!, params.namespace!)
         },
         {
             label: strings.eventStore.namespaces.observers.actions.clearQuarantine,
             icon: <faIcons.FaShield className='mr-2' />,
             disabled: !viewModel.canClearObserverQuarantine,
-            command: () => viewModel.clearObserverQuarantine()
+            command: () => viewModel.clearObserverQuarantine(params.eventStore!, params.namespace!)
         }
     ];
 
@@ -113,8 +113,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             <div className='flex-1 overflow-hidden px-4 pb-4'>
                 <Allotment className='h-full' proportionalLayout={false}>
                     <Allotment.Pane className='flex-grow'>
-                        <DataTable<ObserverInformation>
-                            value={observerRows}
+                        <DataTableCore<ObserverInformation>
+                            data={observerRows}
                             selectionMode='single'
                             selection={viewModel.selectedObserver}
                             onSelectionChange={(event) => (viewModel.selectedObserver = event.value ?? undefined)}
@@ -168,14 +168,14 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 filter
                                 filterField='runningState'
                                 body={runningState} />
-                        </DataTable>
+                        </DataTableCore>
                     </Allotment.Pane>
                     {viewModel.selectedObserver &&
                         <Allotment.Pane preferredSize='450px'>
                             <ObserverDetails
                                 observer={viewModel.selectedObserver}
                                 eventStore={params.eventStore!}
-                                namespace={viewModel.currentNamespace} />
+                                namespace={params.namespace!} />
                         </Allotment.Pane>}
                 </Allotment>
             </div>

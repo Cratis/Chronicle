@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Fluent projection for <see cref="DepotShiftLog"/> where a single event type — <see cref="ShiftLogged"/> —
-/// is both a root <c>.From&lt;T&gt;</c> source mapping a parent scalar and a child <c>.From&lt;T&gt;</c> source
+/// is both a root <c language="csharp">.From&lt;T&gt;</c> source mapping a parent scalar and a child <c language="csharp">.From&lt;T&gt;</c> source
 /// feeding the child collection. The root then owns the key resolver for that event type, so the child's own
 /// (indexed) resolver is never folded into the root's map — the shape that exposes whether the harness resolves
 /// a child key of its own before handing the event to the child projection.

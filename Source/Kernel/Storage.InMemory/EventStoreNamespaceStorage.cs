@@ -131,6 +131,22 @@ public sealed class EventStoreNamespaceStorage(
     public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId) =>
         _closedStreamsConstraints.GetOrAdd(eventSequenceId, _ => new ClosedStreamsConstraintStorage());
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// There is no physical database to materialize in memory, so this mirrors the real backends by treating the
+    /// namespace as having data the moment anything has actually been recorded for it - an event sequence that
+    /// holds state, or a persisted observer.
+    /// </remarks>
+    public async Task<bool> HasData()
+    {
+        if (!_eventSequences.IsEmpty)
+        {
+            return true;
+        }
+
+        return (await Observers.GetAll()).Any();
+    }
+
     EventSequenceStorage GetConcreteEventSequence(EventSequenceId eventSequenceId)
     {
         if (_eventSequences.TryGetValue(eventSequenceId, out var existing))
@@ -138,7 +154,7 @@ public sealed class EventStoreNamespaceStorage(
             return existing;
         }
 
-        var created = new EventSequenceStorage(eventStore, @namespace, eventSequenceId);
+        var created = new EventSequenceStorage(eventStore, @namespace, eventSequenceId, Identities);
         return _eventSequences.GetOrAdd(eventSequenceId, created);
     }
 }

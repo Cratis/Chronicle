@@ -108,13 +108,13 @@ public class ChronicleOptions(
     /// </para>
     /// <para>
     /// For short-lived, one-shot callers the watchdog is a hazard rather than a feature. A
-    /// development-only kernel reset (<c>IServer.ResetKernelState</c>), a CLI that issues a
+    /// development-only kernel reset (<c language="csharp">IServer.ResetKernelState</c>), a CLI that issues a
     /// single command, or any other client whose lifetime is a single RPC does not benefit from
     /// liveness detection and is actively harmed by it: a single RPC that takes longer than the
     /// five-second window (for example a SQL backend wipe that has to enumerate, connect to, and
     /// drop tables across every event store / namespace / read-model database) trips the
     /// watchdog mid-call, disposes the channel out from under the in-flight call, and surfaces
-    /// as <see cref="ObjectDisposedException"/> on <c>Grpc.Net.Client.GrpcChannel</c>.
+    /// as <see cref="ObjectDisposedException"/> on <c language="csharp">Grpc.Net.Client.GrpcChannel</c>.
     /// </para>
     /// <para>
     /// Set this to <see langword="true"/> when the client will issue at most a handful of RPCs

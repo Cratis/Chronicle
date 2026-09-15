@@ -21,7 +21,7 @@ public enum SinkWriteMode
     /// <remarks>
     /// <para>
     /// Only valid for a read model whose per-document event stream is monotonic — a projection that is
-    /// <c>IsEventSourceKeyed</c>, or a reducer, both of which key every document by the event source id of the
+    /// <c language="csharp">IsEventSourceKeyed</c>, or a reducer, both of which key every document by the event source id of the
     /// events that build it. For a projection whose key collapses several event sources onto one document
     /// (a join, a constant key or a parent hierarchy) the per-document stream is deliberately out of order, and
     /// this mode would drop legitimate events.

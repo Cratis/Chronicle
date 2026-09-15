@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <remarks>
 /// The materialized API delivers a full window of instances on every change. Because the deserialized read
 /// model no longer carries the last handled event sequence number, change type is determined by comparing the
-/// serialized value of each instance — keyed by its <c>id</c> property — against the previous window.
+/// serialized value of each instance — keyed by its <c language="csharp">id</c> property — against the previous window.
 /// </remarks>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> used to serialize instances for comparison.</param>
 public class MaterializedReadModelDiffer(JsonSerializerOptions jsonSerializerOptions)

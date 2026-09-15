@@ -6,8 +6,8 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Test event touching a thing — an event the read model only observes via <c>[FromAll]</c>, never an
-/// explicit <c>[FromEvent]</c> subscription.
+/// Test event touching a thing — an event the read model only observes via <c language="csharp">[FromAll]</c>, never an
+/// explicit <c language="csharp">[FromEvent]</c> subscription.
 /// </summary>
 /// <param name="Note">A note about the touch.</param>
 [EventType]

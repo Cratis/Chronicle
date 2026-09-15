@@ -46,6 +46,9 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Information, "Shutdown signal received. Chronicle Server is shutting down...")]
     internal static partial void ServerShuttingDown(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Information, "Shutdown was requested while the server was still starting. Stopping gracefully instead of continuing to bind")]
+    internal static partial void ServerShutdownDuringStartup(this ILogger<Kernel> logger);
+
     [LoggerMessage(LogLevel.Warning, "The Workbench feature is enabled but the Workbench UI was not found - it is neither embedded in this build nor present in the web root '{WebRoot}' - the server runs without serving the Workbench UI")]
     internal static partial void WorkbenchUINotAvailable(this ILogger<Kernel> logger, string webRoot);
 

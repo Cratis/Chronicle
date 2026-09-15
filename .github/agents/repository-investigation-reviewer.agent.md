@@ -1,1 +1,1 @@
-../../.ai/agents/repository-investigation-reviewer.md
+../../.cratis/ai/agents/repository-investigation-reviewer.md

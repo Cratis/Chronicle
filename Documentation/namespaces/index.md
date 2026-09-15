@@ -17,7 +17,7 @@ Namespaces are resolved for every operation. If no namespace is explicitly provi
 
 Namespaces are a practical way to implement tenant isolation. Each tenant can map to a namespace, ensuring that all event store operations remain scoped to that tenant. This keeps data separated without requiring separate event stores per tenant.
 
-If you use Cratis Arc with the Chronicle extension, tenancy is automatically configured for namespaces. See [Arc Tenancy](xref:Arc.Chronicle.Tenancy) for details.
+If you use Cratis Arc with the Chronicle extension, tenancy is automatically configured for namespaces. See [Arc Chronicle tenancy](/arc/backend/chronicle/tenancy/) for details.
 
 ## Topics
 

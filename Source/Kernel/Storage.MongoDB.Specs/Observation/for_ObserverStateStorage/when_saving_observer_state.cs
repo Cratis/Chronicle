@@ -13,7 +13,7 @@ using KernelObserverState = Cratis.Chronicle.Storage.Observation.ObserverState;
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverStateStorage;
 
 /// <summary>
-/// Proves that saving observer state issues a targeted <c>$set</c> update rather than replacing the whole
+/// Proves that saving observer state issues a targeted <c language="csharp">$set</c> update rather than replacing the whole
 /// document: the changed scalar is applied, while a field the observer state does not own — here the legacy
 /// per-partition counts still awaiting migration — is left intact instead of being wiped by a full replace.
 /// Runs against a real MongoDB.

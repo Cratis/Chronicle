@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
 /// Analyzer that reports when the two event type generations referenced by an
-/// <c>EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> do not belong to one event type.
+/// <c language="csharp">EventTypeMigration&lt;TUpgrade, TPrevious&gt;</c> do not belong to one event type.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class MigrationGenerationEventTypeIdAnalyzer : DiagnosticAnalyzer

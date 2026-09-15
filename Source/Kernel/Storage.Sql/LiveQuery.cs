@@ -11,9 +11,9 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// </summary>
 /// <remarks>
 /// MongoDB delivers live updates through collection change-streams. The SQL backends cannot use Arc's
-/// push-based <c>DbSet.Observe()</c> here because every event store and namespace lives in its own
+/// push-based <c language="csharp">DbSet.Observe()</c> here because every event store and namespace lives in its own
 /// database created on demand with a per-store connection string — those contexts are not registered
-/// in dependency injection, which <c>DbSet.Observe()</c> requires to build its listener. Instead this
+/// in dependency injection, which <c language="csharp">DbSet.Observe()</c> requires to build its listener. Instead this
 /// polls the supplied query on an interval and re-emits only when the result actually changes, giving
 /// subscribers automatic updates without a manual refresh while honoring the per-store connection.
 /// </remarks>
@@ -36,11 +36,24 @@ public static class LiveQuery
     /// read-only — its observer side is inert because the database is the source of truth; nothing pushes
     /// into it. Polling stops when the subscriber unsubscribes.
     /// </returns>
+    public static ISubject<IEnumerable<TResult>> Observe<TResult>(Func<Task<IEnumerable<TResult>>> query, TimeSpan? pollingInterval = null) =>
+        Observe(query, pollingInterval, EqualityComparer<TResult>.Default);
+
+    /// <summary>
+    /// Observes a query using structural item equality to detect changes across snapshots.
+    /// </summary>
+    /// <param name="query">Reads the current state.</param>
+    /// <param name="pollingInterval">The interval between polls.</param>
+    /// <param name="comparer">The item equality comparer.</param>
+    /// <typeparam name="TResult">The type of each item.</typeparam>
+    /// <returns>A subject whose subscriptions stop polling when disposed.</returns>
     public static ISubject<IEnumerable<TResult>> Observe<TResult>(
         Func<Task<IEnumerable<TResult>>> query,
-        TimeSpan? pollingInterval = null)
+        TimeSpan? pollingInterval,
+        IEqualityComparer<TResult>? comparer)
     {
         var interval = pollingInterval ?? DefaultPollingInterval;
+        comparer ??= EqualityComparer<TResult>.Default;
 
         var observable = Observable.Create<IEnumerable<TResult>>(async (observer, cancellationToken) =>
         {
@@ -48,7 +61,7 @@ public static class LiveQuery
             while (!cancellationToken.IsCancellationRequested)
             {
                 var current = (await query()).ToArray();
-                if (previous is null || !current.SequenceEqual(previous))
+                if (previous is null || !current.SequenceEqual(previous, comparer))
                 {
                     observer.OnNext(current);
                     previous = current;

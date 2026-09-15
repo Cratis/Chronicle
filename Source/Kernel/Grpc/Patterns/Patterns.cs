@@ -88,6 +88,8 @@ internal sealed class Patterns(
     static global::Cratis.Chronicle.Contracts.Patterns.PatternScopeResponse ToPatternScopeResponse(global::Cratis.Chronicle.Patterns.PatternScope source) =>
         new()
         {
-            Id = source.Id
+            Id = source.Id,
+            Name = source.Name,
+            UserName = source.UserName
         };
 }

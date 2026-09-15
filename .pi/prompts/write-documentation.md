@@ -1,1 +1,1 @@
-../../.ai/prompts/write-documentation.prompt.md
+../../.cratis/ai/prompts/write-documentation.prompt.md

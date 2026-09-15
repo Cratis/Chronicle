@@ -18,4 +18,14 @@ public static class WellKnownCausationProperties
     /// The property naming the command a causation link represents.
     /// </summary>
     public const string CommandType = "commandType";
+
+    /// <summary>
+    /// The property naming the Reactor a causation link represents.
+    /// </summary>
+    public const string ReactorId = "ReactorId";
+
+    /// <summary>
+    /// The property naming the route an ASP.NET request causation link represents.
+    /// </summary>
+    public const string Route = "route";
 }

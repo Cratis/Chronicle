@@ -51,7 +51,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// linux/amd64 instead of the host architecture. SQL Server ships no native linux/arm64
     /// image — only linux/amd64 — so on Apple Silicon and Linux ARM64 hosts the container
     /// must run via emulation (Rosetta on macOS, qemu on Linux). The kernel container's
-    /// <c>Microsoft.Data.SqlClient</c> runs natively on ARM64 from 7.0.1 onward, so no
+    /// <c language="csharp">Microsoft.Data.SqlClient</c> runs natively on ARM64 from 7.0.1 onward, so no
     /// architecture override is required for the kernel itself.
     /// </summary>
     bool ShouldForceAmd64ForMsSql =>
@@ -83,9 +83,9 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// Gets a unique SQLite file path for the in-process Orleans silo. The first test class of a
     /// session does not run the wipe sequence (the factory is built lazily on first access, no
     /// prior state to wipe), so reusing a process-wide file path would carry data from earlier
-    /// <c>dotnet test</c> invocations into the next session's first test. A fixture-scoped GUID
+    /// <c language="csharp">dotnet test</c> invocations into the next session's first test. A fixture-scoped GUID
     /// guarantees every test session opens a fresh file regardless of what previous sessions
-    /// left in <c>/tmp</c>.
+    /// left in <c language="csharp">/tmp</c>.
     /// </summary>
     public string InProcessSqliteFilePath { get; } = Path.Combine(Path.GetTempPath(), $"chronicle-inprocess-{Guid.NewGuid():N}.db");
 
@@ -214,7 +214,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     public override Task RestartMongoDBAsync() => Task.CompletedTask;
 
     /// <summary>
-    /// No-op kept for the existing <c>when_server_restarts</c> spec. The integration setup is
+    /// No-op kept for the existing <c language="csharp">when_server_restarts</c> spec. The integration setup is
     /// explicitly designed around keeping every container and process running for the lifetime
     /// of the test session — restarts are too expensive and were the source of cross-test
     /// flakiness. The spec is now effectively a smoke test that appending events succeeds

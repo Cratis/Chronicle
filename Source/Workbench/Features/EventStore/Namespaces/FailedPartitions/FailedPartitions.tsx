@@ -6,6 +6,10 @@ import { AllFailedPartitions, AllFailedPartitionsParameters } from 'Features/Obs
 import { type DataTableFilterMeta } from '@cratis/components/DataTables';
 import { FilterMatchMode } from '@primereact/headless/datatable';
 import { Tooltip } from '@cratis/components/Common';
+import { Tag } from '@cratis/components/Display';
+import { getFailedPartitionStatus } from './getFailedPartitionStatus';
+import { getFailedPartitionStatusLabel } from './getFailedPartitionStatusLabel';
+import { getFailedPartitionSeverity } from './getFailedPartitionSeverity';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { FailedPartitionDetails as FailedPartition } from 'Features/Observation';
@@ -32,6 +36,11 @@ const partitionColumnBody = (failedPartition: FailedPartition) => {
             <span>{partition(failedPartition)}</span>
         </Tooltip>
     );
+};
+
+const statusColumnBody = (failedPartition: FailedPartition) => {
+    const status = getFailedPartitionStatus(failedPartition);
+    return <Tag value={getFailedPartitionStatusLabel(status)} severity={getFailedPartitionSeverity(status)} />;
 };
 
 const attempts = (failedPartition: FailedPartition) => {
@@ -73,6 +82,7 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
             </DataPage.MenuItems>
 
             <DataPage.Columns>
+                <Column field='isQuarantined' header={strings.eventStore.namespaces.failedPartitions.columns.status} body={statusColumnBody} />
                 <Column field='partition' header={strings.eventStore.namespaces.failedPartitions.columns.partition} sortable body={partitionColumnBody} />
                 <Column field='attempts' header={strings.eventStore.namespaces.failedPartitions.columns.attempts} sortable body={attempts} />
                 <Column field='lastAttempt' header={strings.eventStore.namespaces.failedPartitions.columns.lastAttempt} sortable body={lastAttempt} />

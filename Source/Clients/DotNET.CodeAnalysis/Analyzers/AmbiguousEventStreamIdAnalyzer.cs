@@ -9,8 +9,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a type that both implements <c>ICanProvideEventStreamId</c> and declares a non-null
-/// <c>[EventStreamId]</c> attribute, which throws <c>AmbiguousEventStreamId</c> at startup.
+/// Analyzer that reports a type that both implements <c language="csharp">ICanProvideEventStreamId</c> and declares a non-null
+/// <c language="csharp">[EventStreamId]</c> attribute, which throws <c language="csharp">AmbiguousEventStreamId</c> at startup.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class AmbiguousEventStreamIdAnalyzer : DiagnosticAnalyzer

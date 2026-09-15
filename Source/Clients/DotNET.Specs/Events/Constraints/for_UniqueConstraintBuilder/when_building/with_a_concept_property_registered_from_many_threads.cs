@@ -8,7 +8,7 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_building;
 
 /// <summary>
-/// Reproduces the reported failure: registering a unique constraint on a <c>ConceptAs&lt;T&gt;</c> property
+/// Reproduces the reported failure: registering a unique constraint on a <c language="csharp">ConceptAs&lt;T&gt;</c> property
 /// intermittently threw <see cref="PropertyDoesNotExistOnEventType"/> because the client hands the same cached
 /// event-type <see cref="JsonSchema"/> to every registration, and flattening its lazy caches concurrently could
 /// observe a half-built cache. Runs many registrations in parallel against one shared schema per round.

@@ -1,1 +1,1 @@
-../../.ai/prompts/audit-hooks.prompt.md
+../../.cratis/ai/prompts/audit-hooks.prompt.md

@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// Verifies that a whole <see cref="IReadOnlyList{T}"/> carried on a <c>[ChildrenFrom]</c> child — set from
+/// Verifies that a whole <see cref="IReadOnlyList{T}"/> carried on a <c language="csharp">[ChildrenFrom]</c> child — set from
 /// a single child-creating event — materializes on the child, mirroring how a top-level bulk list projects.
 /// </summary>
 public class when_projecting_a_bulk_list_on_a_child : Specification

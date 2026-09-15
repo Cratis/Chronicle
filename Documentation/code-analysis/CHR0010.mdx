@@ -1,0 +1,31 @@
+# CHR0010: Model-bound projection event types must be from the same event store
+
+## Rule Description
+
+A model-bound projection subscribes to one event store's event stream. Referencing event types from multiple event stores would require multiple subscriptions, which Chronicle does not support for a single projection. Ensure all event types referenced by the projection's attributes belong to the same event store, or split into separate projections—one per event store.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0010/violation" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0010/fix" />
+
+## Why This Rule Exists
+
+Chronicle routes events from a single event store to each observer. A projection that declares attributes referencing events from different stores would require Chronicle to multiplex subscriptions, which the observer model does not support. This rule catches the misconfiguration at compile time instead of failing when the client connects.
+
+Split projections that genuinely need to project events from different stores into one projection per store, each subscribing to its own event stream.
+
+## Related Rules
+
+- [CHR0008](CHR0008): Reactor event types must be from the same event store — the same contract for reactors.
+- [CHR0009](CHR0009): Reducer event types must be from the same event store — the same contract for reducers.
+- [CHR0011](CHR0011): Declarative projection event types must be from the same event store — the same contract for fluent projections.

@@ -1,1 +1,1 @@
-../../.ai/prompts/add-concept.prompt.md
+../../.cratis/ai/prompts/add-concept.prompt.md

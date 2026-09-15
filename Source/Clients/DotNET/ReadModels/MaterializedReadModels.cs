@@ -120,9 +120,9 @@ public class MaterializedReadModels(
     /// <param name="take">The number of instances to take.</param>
     /// <returns>The server page and page size to request, and the local skip and take to apply to the response.</returns>
     /// <remarks>
-    /// The server only exposes page-aligned offsets (its effective offset is always <c>Page * PageSize</c>).
+    /// The server only exposes page-aligned offsets (its effective offset is always <c language="csharp">Page * PageSize</c>).
     /// When <paramref name="skip"/> is a multiple of <paramref name="take"/> the requested window is exactly one
-    /// server page, so the page request is used directly. When it is not, the window <c>[skip, skip+take)</c>
+    /// server page, so the page request is used directly. When it is not, the window <c language="csharp">[skip, skip+take)</c>
     /// straddles two server pages; a covering range is fetched from the start and sliced locally so the full
     /// <paramref name="take"/> items are returned instead of only the tail of the first page.
     /// </remarks>

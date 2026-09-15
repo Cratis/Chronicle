@@ -48,7 +48,7 @@ public class AppendManyResult
     /// </summary>
     /// <remarks>
     /// False means at least one event source in the batch had nothing compared against the event store - either the
-    /// append carried no scopes at all, one of them asked for no check (<c>ConcurrencyScope.None</c>), or one
+    /// append carried no scopes at all, one of them asked for no check (<c language="csharp">ConcurrencyScope.None</c>), or one
     /// declared a scope the kernel cannot validate (an incomplete scope) and that check was skipped. A skipped check
     /// looks from the outside exactly like a passing one, which is why the outcome says which it was.
     /// </remarks>

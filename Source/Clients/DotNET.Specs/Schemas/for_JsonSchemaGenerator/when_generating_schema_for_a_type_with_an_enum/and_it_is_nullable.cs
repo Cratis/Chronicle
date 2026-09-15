@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator.when_generating_schem
 
 /// <summary>
 /// The converter's withheld-default behavior reads nullability off the generated schema, and an enum is the one
-/// case where the two do not obviously meet: a formatted scalar marks itself nullable with a trailing <c>?</c> on
-/// its <c>format</c>, but an enum has no format, so the marker has to be the <c>"null"</c> entry in its type. If
-/// the generator ever emitted a nullable enum some other way - a <c>oneOf</c>, a <c>$ref</c>, a bare
-/// <c>"integer"</c> - the converter would read it as required and start writing type defaults again, while every
+/// case where the two do not obviously meet: a formatted scalar marks itself nullable with a trailing <c language="csharp">?</c> on
+/// its <c language="csharp">format</c>, but an enum has no format, so the marker has to be the <c language="csharp">"null"</c> entry in its type. If
+/// the generator ever emitted a nullable enum some other way - a <c language="csharp">oneOf</c>, a <c language="csharp">$ref</c>, a bare
+/// <c language="csharp">"integer"</c> - the converter would read it as required and start writing type defaults again, while every
 /// spec written against a hand-authored schema stayed green.
 /// </summary>
 /// <remarks>
-/// The <c>"null"</c> entry itself is written by the <c>System.Text.Json</c> schema exporter, so no change to this
+/// The <c language="csharp">"null"</c> entry itself is written by the <c language="csharp">System.Text.Json</c> schema exporter, so no change to this
 /// repository can make that emission stop - <see cref="should_mark_it_as_nullable"/> is a contract pin on an
 /// upstream dependency, not a fence over Chronicle code. What it buys is a failing spec on the day that
 /// dependency changes shape, which is exactly the day the fix silently stops working.

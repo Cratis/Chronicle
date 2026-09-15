@@ -209,11 +209,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 
     /// <summary>
     /// Gets or sets whether the client connects without presenting any credentials, expressed as
-    /// <c>auth=none</c> in the connection string.
+    /// <c language="csharp">auth=none</c> in the connection string.
     /// </summary>
     /// <remarks>
     /// Only works against a server running with authentication turned off
-    /// (<c>Cratis:Chronicle:Authentication:Enabled=false</c>). Note that omitting credentials entirely does
+    /// (<c language="csharp">Cratis:Chronicle:Authentication:Enabled=false</c>). Note that omitting credentials entirely does
     /// <em>not</em> mean this - a connection string with no credentials still performs a client-credentials
     /// exchange using the development credentials, which is what it has always done.
     /// </remarks>
@@ -257,7 +257,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     /// <remarks>
     /// The client always connects over TLS but does not validate the server's certificate by default,
-    /// accepting any certificate, including self-signed ones. Set <c>skipTlsValidation=false</c> to
+    /// accepting any certificate, including self-signed ones. Set <c language="csharp">skipTlsValidation=false</c> to
     /// require full certificate chain validation instead — only do so against a server whose
     /// certificate is verifiable (not a self-signed development certificate).
     /// </remarks>
@@ -441,7 +441,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <remarks>
     /// Scheme, host, port and every non-sensitive option are preserved so the result stays useful for
     /// diagnostics; the password, the API key, the certificate password and any option whose name looks
-    /// like a credential are replaced by <c>REDACTED</c>. The result is not a usable connection string.
+    /// like a credential are replaced by <c language="csharp">REDACTED</c>. The result is not a usable connection string.
     /// </remarks>
     [SuppressMessage("Design", "CA1055:Uri return values should not be strings", Justification = "Returning a Chronicle URL string format")]
     public string BuildRedacted() => CreateRedactedCopy().Build();

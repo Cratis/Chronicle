@@ -16,8 +16,8 @@ public static class ProjectedColumns
 
     /// <summary>
     /// Derive the table columns for a read model from its latest-generation <see cref="JsonSchema"/>.
-    /// The returned list always includes <c>Id</c> as the primary key column (using the schema's likely
-    /// key name when it does not declare an explicit <c>Id</c> / <c>id</c>) and the sink-owned
+    /// The returned list always includes <c language="csharp">Id</c> as the primary key column (using the schema's likely
+    /// key name when it does not declare an explicit <c language="csharp">Id</c> / <c language="csharp">id</c>) and the sink-owned
     /// <see cref="WellKnownProperties.LastHandledEventSequenceNumber"/> bookkeeping column.
     /// </summary>
     /// <param name="schema">The read model's schema.</param>

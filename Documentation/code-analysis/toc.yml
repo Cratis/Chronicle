@@ -14,6 +14,14 @@
   href: CHR0006.mdx
 - name: CHR0007 - Reducer event parameter must have [EventType] attribute
   href: CHR0007.mdx
+- name: CHR0008 - Reactor event types must be from the same event store
+  href: CHR0008.mdx
+- name: CHR0009 - Reducer event types must be from the same event store
+  href: CHR0009.mdx
+- name: CHR0010 - Model-bound projection event types must be from the same event store
+  href: CHR0010.mdx
+- name: CHR0011 - Declarative projection event types must be from the same event store
+  href: CHR0011.mdx
 - name: CHR0012 - Event types should avoid nullable properties
   href: CHR0012.mdx
 - name: CHR0013 - Reactor cannot combine EventStore with explicit event sequence
@@ -84,3 +92,7 @@
   href: CHR0048.mdx
 - name: CHR0049 - [EventTypeGenerationFor<T>] must reference a type marked with [EventType]
   href: CHR0049.mdx
+- name: CHR0050 - [EventType] and [EventTypeGenerationFor<T>] cannot be combined
+  href: CHR0050.mdx
+- name: CHR0051 - Reducer current read model parameter must be nullable
+  href: CHR0051.mdx

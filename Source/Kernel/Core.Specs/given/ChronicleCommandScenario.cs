@@ -12,14 +12,14 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A scenario left to itself builds its validator lookup over the ambient <c>Types</c> singleton. In a test host
+/// A scenario left to itself builds its validator lookup over the ambient <c language="csharp">Types</c> singleton. In a test host
 /// that singleton is materialized while Cratis.Fundamentals is still loading, so it snapshots that assembly alone -
 /// 144 types, none of them a validator - and every generated type-discovery provider that registers afterwards is
 /// missed. The scenario then finds no validator for the command, validation produces nothing, and a command that
 /// should be rejected reports success. Specs that assert a rejection catch it; specs that assert success pass for
 /// the wrong reason, which is worse.
 ///
-/// Building the lookup over a <c>Types</c> created here instead reads the providers that have registered by the
+/// Building the lookup over a <c language="csharp">Types</c> created here instead reads the providers that have registered by the
 /// time the spec runs. The scenario keeps a validator lookup that is already registered rather than replacing it,
 /// so supplying one is all this takes.
 /// </para>

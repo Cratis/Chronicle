@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.XUnit.Integration.Packaging.for_the_embedded_kernel_c
 /// The package ships the kernel assemblies inside itself, so it has to ship their package dependencies too.
 /// </summary>
 /// <remarks>
-/// Nothing about a project reference marked <c>PrivateAssets=all</c> makes that happen: the assembly is embedded
+/// Nothing about a project reference marked <c language="csharp">PrivateAssets=all</c> makes that happen: the assembly is embedded
 /// and its own dependencies are suppressed, so a consumer restores a package that cannot boot. What that costs is
 /// out of proportion to the omission, because it fails at fixture initialization - every spec in the project
 /// fails at once, identically, before a single spec body runs, and the exception names one assembly. It reads as

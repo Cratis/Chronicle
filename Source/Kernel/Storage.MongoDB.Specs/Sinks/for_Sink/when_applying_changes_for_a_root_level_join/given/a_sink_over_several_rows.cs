@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_
 /// one where the column is explicitly null, and one where the column is absent entirely.
 /// </summary>
 /// <remarks>
-/// The join writes through <c>UpdateMany</c>, so the failure mode worth specifying is write amplification: a
+/// The join writes through <c language="csharp">UpdateMany</c>, so the failure mode worth specifying is write amplification: a
 /// comparand that matches more documents than it should stamps every one of them, and a null comparand
 /// matches both the null row and the absent row. Every spec built on this context therefore asserts on the
 /// documents that must NOT change, comparing them whole against the state they were seeded in.

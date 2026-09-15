@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that warns when a model-bound <c>[ChildrenFrom]</c> collection omits <c>parentKey</c> and the
+/// Analyzer that warns when a model-bound <c language="csharp">[ChildrenFrom]</c> collection omits <c language="csharp">parentKey</c> and the
 /// parent key cannot be inferred unambiguously because the event has more than one property of the parent
 /// read model's identifier type.
 /// </summary>

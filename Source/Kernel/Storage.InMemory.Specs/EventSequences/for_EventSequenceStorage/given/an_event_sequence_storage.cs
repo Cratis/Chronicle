@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.InMemory.Identities;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.InMemory.EventSequences.for_EventSequenceStorage.given;
@@ -18,7 +19,8 @@ public class an_event_sequence_storage : Specification
     void Establish() => _storage = new(
         "SomeEventStore",
         EventStoreNamespaceName.Default,
-        EventSequenceId.Log);
+        EventSequenceId.Log,
+        new IdentityStorage());
 
     protected Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId) =>
         _storage.Append(

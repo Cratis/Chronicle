@@ -19,7 +19,7 @@ public class JobStepStatusChanged
     /// Gets or sets when the event occurred.
     /// </summary>
     [ProtoMember(2)]
-    public SerializableDateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; } = new();
 
     /// <summary>
     /// Gets or sets any exception messages that happened during the job step - typically when it failed.

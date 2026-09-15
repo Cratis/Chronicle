@@ -17,7 +17,7 @@ internal static class ModuleInitialization
     /// <remarks>
     /// Its lazy initializer assigns the static field before it has finished adding the derived-type converter, so a
     /// second thread reading the property in that window gets a half-configured instance and serializing with it
-    /// freezes it - the first thread's remaining <c>Converters.Add</c> then throws "JsonSerializerOptions instance is
+    /// freezes it - the first thread's remaining <c language="csharp">Converters.Add</c> then throws "JsonSerializerOptions instance is
     /// read-only". Under xUnit's parallel execution that made any spec touching the options intermittently fail,
     /// whichever one happened to lose the race. Touching it here makes the first, and only, initialization
     /// single-threaded, the same way the kernel pre-warms it during startup configuration.

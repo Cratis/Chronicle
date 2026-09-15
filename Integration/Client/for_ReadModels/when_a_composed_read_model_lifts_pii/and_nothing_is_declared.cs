@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_composed_read_model
 
 /// <summary>
 /// The reported shape, pinned as it stands. The composed row's identity is deliberately not named
-/// <c>Id</c>, so no compliance subject resolves, so the release pass returns the instance untouched and the
+/// <c language="csharp">Id</c>, so no compliance subject resolves, so the release pass returns the instance untouched and the
 /// ciphertext the row lifted travels all the way to the caller. Nothing logs and nothing throws.
 /// <para>
 /// This is a control, and it must stay green on both sides of the change: an undeclared read model behaves
@@ -45,7 +45,7 @@ public class and_nothing_is_declared(context context) : Given<context>(context)
 }
 
 /// <summary>
-/// A composed row whose identity is named <c>SubjectId</c> rather than <c>Id</c>, and which says nothing
+/// A composed row whose identity is named <c language="csharp">SubjectId</c> rather than <c language="csharp">Id</c>, and which says nothing
 /// about the comment it lifted.
 /// </summary>
 /// <param name="SubjectId">The person the row is about.</param>

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Jobs.for_Jobs.given;
 /// </summary>
 /// <typeparam name="T">The category type the logger is for.</typeparam>
 /// <remarks>
-/// Used because <c>ILogger&lt;Jobs&gt;</c> cannot be proxied by NSubstitute (the <c>Jobs</c> type is internal in a
+/// Used because <c language="csharp">ILogger&lt;Jobs&gt;</c> cannot be proxied by NSubstitute (the <c language="csharp">Jobs</c> type is internal in a
 /// strong-named assembly), so a hand-written double is needed to verify that a failure gets logged.
 /// </remarks>
 internal sealed class RecordingLogger<T> : ILogger<T>

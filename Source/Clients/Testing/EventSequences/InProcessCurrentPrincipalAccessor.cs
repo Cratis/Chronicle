@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// request to resolve a principal from.
 /// </summary>
 /// <remarks>
-/// Kernel-side artifacts that fall back to <c>ICurrentPrincipalAccessor.Current</c> when a caller does not supply
+/// Kernel-side artifacts that fall back to <c language="csharp">ICurrentPrincipalAccessor.Current</c> when a caller does not supply
 /// an explicit identity need this resolvable even outside a real ASP.NET Core pipeline.
 /// </remarks>
 internal sealed class InProcessCurrentPrincipalAccessor : ICurrentPrincipalAccessor

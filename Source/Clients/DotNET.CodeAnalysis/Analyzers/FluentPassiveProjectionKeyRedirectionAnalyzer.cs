@@ -99,10 +99,10 @@ public class FluentPassiveProjectionKeyRedirectionAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Find the call inside a <c>From&lt;TEvent&gt;</c> callback that points the root document at a key other
+    /// Find the call inside a <c language="csharp">From&lt;TEvent&gt;</c> callback that points the root document at a key other
     /// than the stream the event was appended to.
     /// </summary>
-    /// <param name="builderCallback">The <c>From</c> builder callback.</param>
+    /// <param name="builderCallback">The <c language="csharp">From</c> builder callback.</param>
     /// <param name="eventType">The event the block reads.</param>
     /// <param name="readModelType">The read model being projected.</param>
     /// <param name="symbols">The Chronicle builder symbols.</param>

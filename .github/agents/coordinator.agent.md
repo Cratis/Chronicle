@@ -1,1 +1,1 @@
-../../.ai/agents/coordinator.md
+../../.cratis/ai/agents/coordinator.md

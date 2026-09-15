@@ -14,10 +14,10 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_subject_owns_a_pii_
 
 /// <summary>
 /// End-to-end regression for #3463. A subject owns two read models projected in the same run: a root-PII
-/// model (a simple fluent projection) and a sibling <b>non-passive, model-bound <c>[ChildrenFrom]</c></b>
-/// model whose children carry <c>[PII]</c>. Both are keyed by — and encrypt under — the same subject
+/// model (a simple fluent projection) and a sibling <b>non-passive, model-bound <c language="csharp">[ChildrenFrom]</c></b>
+/// model whose children carry <c language="csharp">[PII]</c>. Both are keyed by — and encrypt under — the same subject
 /// (the event source id). The child collection reliably fails to materialize in the out-of-process kernel
-/// (the poll on <c>Assessments.Count</c> times out) even though the parent document is returned and the
+/// (the poll on <c language="csharp">Assessments.Count</c> times out) even though the parent document is returned and the
 /// simple sibling projection materializes fine in the exact same run.
 /// </summary>
 /// <param name="context">The test context.</param>

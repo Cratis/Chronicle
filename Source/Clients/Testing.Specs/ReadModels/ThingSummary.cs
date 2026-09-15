@@ -9,8 +9,8 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
 /// Read model that mixes an explicitly-subscribed mapping (<see cref="OpenedAt"/> via
-/// <c>[SetFromContext]</c>) with a global <c>[FromAll]</c> mapping (<see cref="LastUpdatedAt"/>), used to
-/// verify the in-memory harness fires <c>[FromAll]</c> for every event the same way the real runtime does.
+/// <c language="csharp">[SetFromContext]</c>) with a global <c language="csharp">[FromAll]</c> mapping (<see cref="LastUpdatedAt"/>), used to
+/// verify the in-memory harness fires <c language="csharp">[FromAll]</c> for every event the same way the real runtime does.
 /// </summary>
 /// <param name="Id">Thing identifier.</param>
 /// <param name="Name">The thing's name.</param>

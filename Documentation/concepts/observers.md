@@ -24,6 +24,14 @@ flowchart LR
     EV --> RC[Reactor] --> SE["Side effect: email, API call, new event"]
 ```
 
+## Failed partitions
+
+A failed partition identifies the event source an observer stopped processing and records its attempts. The Workbench distinguishes unresolved failures that remain eligible for automatic retries from **quarantined** partitions, where automatic retries have stopped. Resolved failures are no longer active failures and are normally removed from the active list.
+
+The client exposes `IsResolved` and nullable `IsQuarantined`. A missing quarantine value means the connected server did not supply that state; it does **not** mean healthy or automatically retryable. The Workbench displays it as **Unknown** rather than guessing.
+
+SQL-backed failed-partition queries observe the shared database at the configured live-query polling interval, including changes made by another instance. They emit only changed snapshots, and unsubscribe when the query consumer disconnects. Resolution and retry activity therefore update the view without a manual refresh, subject to the polling interval.
+
 ## State management
 
 One of the things you can use an observer for is to maintain application state, typically update

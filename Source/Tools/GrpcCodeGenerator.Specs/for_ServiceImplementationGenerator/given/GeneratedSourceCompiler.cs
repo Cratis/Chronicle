@@ -32,6 +32,7 @@ public static class GeneratedSourceCompiler
         [
             CSharpSyntaxTree.ParseText(GlobalUsings, parseOptions),
             CSharpSyntaxTree.ParseText(ExecutorStubs.Source, parseOptions),
+            CSharpSyntaxTree.ParseText("namespace Microsoft.AspNetCore.Authorization { public sealed class AllowAnonymousAttribute : System.Attribute { } }", parseOptions),
             .. sources.Select(source => CSharpSyntaxTree.ParseText(source, parseOptions))
         ];
 

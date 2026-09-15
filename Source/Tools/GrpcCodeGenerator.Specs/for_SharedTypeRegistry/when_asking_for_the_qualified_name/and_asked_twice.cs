@@ -6,9 +6,9 @@ using Cratis.Chronicle.SharedTypeCatalog;
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_SharedTypeRegistry.when_asking_for_the_qualified_name;
 
 /// <summary>
-/// The same type is referenced from more than one service in a real run - <c>Identity</c> alone shows up across
+/// The same type is referenced from more than one service in a real run - <c language="csharp">Identity</c> alone shows up across
 /// most areas - and it must be discovered, and eventually generated, exactly once. A self-referential type
-/// (<c>Identity.OnBehalfOf</c> is the real example) depends on the second call seeing the same cached answer
+/// (<c language="csharp">Identity.OnBehalfOf</c> is the real example) depends on the second call seeing the same cached answer
 /// rather than recursing back into resolving it again.
 /// </summary>
 [Collection(SharedTypeRegistryCollection.Name)]

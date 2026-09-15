@@ -43,11 +43,11 @@ public class a_projection_grain_with_replay_on_definition_change : Specification
 
         _silo.AddService(Options.Create(new ChronicleOptions
         {
-            Observers = new Observers { ReplayOnDefinitionChange = true }
+            Observers = new Observers { DefinitionEvolution = DefinitionEvolutionPolicy.Automatic }
         }));
 
         var namespacesGrain = Substitute.For<INamespaces>();
-        namespacesGrain.GetAll().Returns([]);
+        namespacesGrain.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespacesGrain);
 
         _definition = CreateDefinition("the-read-model");

@@ -2,36 +2,57 @@
 uid: Chronicle.Compliance.PII
 ---
 
-# PII Attribute
+# Marking data as PII
 
-The `[PII]` attribute marks data as personally identifiable information (PII) under GDPR. When Chronicle sees this attribute on an event property or a type, it encrypts the value automatically when the event is written to the event log and decrypts it transparently on read.
+Marking a value `[PII]` tells Chronicle it holds personally identifiable information under GDPR — a C# attribute, a Kotlin/Java `@Pii` annotation, a TypeScript `@pii()` decorator, or an Elixir `pii` macro, depending on the client. When Chronicle sees the marker on an event property or a type, it encrypts the value automatically when the event is written to the event log and decrypts it transparently on read.
 
 Personal data rarely sits in a flat list of properties. A date of birth arrives wrapped in a `VerifiedDateOfBirth` value object alongside who verified it; a diagnosis carries the condition and the clinician together. Chronicle follows the marker down through that structure: whether you mark a concept nested inside a value object, or the value object type itself, encryption lands on the individual values at the bottom. The document keeps its shape, each value stays independently encrypted, and the release on read mirrors the encryption on write.
 
 <ChronicleClientTabs snippet="compliance/pii/import" />
 
 :::note[Client coverage]
-Kotlin (`@Pii`), Elixir (`pii/1,2`), and TypeScript (`@pii()`) all have a real, working equivalent for marking an **event property** as PII — see [Applying to an event property](#applying-to-an-event-property) below. The **class-level** form (marking a `ConceptAs<T>` type itself as PII, so every property using that type is covered) is tied to C#'s `ConceptAs<T>` pattern specifically; Kotlin/Java/Elixir have no equivalent typed-wrapper convention established in this corpus, so those tabs — and the `EventSourceId` restriction that only makes sense in that context — stay C#-only for now.
+Chronicle resolves `[PII]` on a property through four paths, checked in this order: a marker on the property itself, a marker on the type that declares the property, a marker on the property's own type (the concept case), and a marker on a matching constructor parameter. C#'s `PIIMetadataProvider` implements all four.
+
+| Path | C# | Kotlin/Java | TypeScript | Elixir |
+|---|---|---|---|---|
+| Property | yes | yes | yes | yes |
+| Declaring type | yes | yes | yes | no |
+| Property type (concept) | yes | yes | yes | yes |
+| Constructor parameter | yes | yes | no | n/a |
+
+Every client covers the **property** path, and every client resolves a marker on the property's **concept type** — declare it once on the concept and every event and read model using that type is covered. That is the preferred approach; see [Declaring PII on a concept](pii-with-concepts).
+
+Two gaps remain. Elixir has no way to mark a whole multi-field struct as PII in one declaration — a concept wraps a single value, so mark the fields you need. And the TypeScript decorator does not read a constructor parameter, which matters only for classes that take their values positionally rather than as declared properties.
+
+Whichever path applies, the marker lands on the individual **leaf** values in the schema, not on the object that contains them — so a concept nested inside a value object is still encrypted, and the document keeps its shape on release.
 :::
 
-## Attribute definition
+## Marker signatures
 
-The signature, for reference:
+The marker, in each client:
 
 ```text
 // C#
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
 public sealed class PIIAttribute(string details = "") : Attribute
 
+// Kotlin / Java
+@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY, AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Pii(val description: String = "")
+
 // TypeScript
 export function pii(details?: string): PropertyDecorator & ClassDecorator
+
+// Elixir
+defmacro pii(field, details \\ "")
 ```
 
 The optional `details` parameter lets you record *why* the value is classified as PII — for example, the legal basis under which it is collected or the retention period. This information is stored in the event schema and can be used by compliance reporting tools.
 
 <ChronicleClientTabs snippet="compliance/pii/with-details" />
 
-## Where the attribute is valid
+## Where you can mark PII
 
 | Target | Supported | Notes |
 |---|---|---|
@@ -43,6 +64,8 @@ The optional `details` parameter lets you record *why* the value is classified a
 | Geospatial (`Point`, `LineString`, `Polygon`) | **No** | Never classified inside, and marking one encrypts a value that cannot be materialized back after erasure — see [Geospatial values are not looked inside](#geospatial-values-are-not-looked-inside) |
 | Polymorphic base type or dictionary | **No** | Chronicle cannot classify values inside either and fails rather than store them unprotected |
 | `EventSourceId` or `EventSourceId<T>` | **No** | Throws `PIINotSupportedOnEventSourceId` at runtime |
+
+This table describes what the C# client validates. No other client performs the same checks yet: Kotlin/Java, TypeScript, and Elixir don't verify that a `[PII]`-marked type actually extends the client's `ConceptAs<T>` equivalent, and none of them throws an equivalent of `PIINotSupportedOnEventSourceId` when you mark an event-source identifier type — the marker is silently accepted rather than rejected. Treat both restrictions as rules to follow across every client, not ones every client enforces for you today.
 
 ## Applying to an event property
 
@@ -59,7 +82,7 @@ The preferred approach is to mark the `ConceptAs<T>` type itself as PII. Every p
 <ChronicleClientTabs snippet="compliance/pii/concept-level" />
 
 > [!TIP]
-> Use <xref:Fundamentals.Concepts> as a reference for the full `ConceptAs<T>` pattern. For guidance on declaring compliance on concept types, see [Applying PII to ConceptAs types](pii-with-concepts).
+> Use <xref:Fundamentals.Concepts> as a reference for the full `ConceptAs<T>` pattern. For guidance on declaring compliance on concept types, see [Declaring PII on a concept](pii-with-concepts).
 
 ## Applying to a value object
 

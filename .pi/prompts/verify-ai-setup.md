@@ -1,1 +1,1 @@
-../../.ai/prompts/verify-ai-setup.prompt.md
+../../.cratis/ai/prompts/verify-ai-setup.prompt.md

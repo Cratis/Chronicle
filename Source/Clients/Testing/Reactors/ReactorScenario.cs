@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -20,11 +21,11 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// supplied <see cref="IServiceProvider"/>) and routes events directly through the <see cref="ReactorInvoker"/> — no
 /// Chronicle server, gRPC, or observer registration required. The reactor's constructor dependencies and any
 /// service-typed handler-method parameters are resolved from that provider; read-model handler parameters are
-/// materialized from read models seeded via <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
+/// materialized from read models seeded via <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
 /// </para>
 /// <para>
 /// Usage:
-/// <code>
+/// <code language="csharp">
 /// var scenario = new ReactorScenario&lt;MyReactor&gt;();
 /// scenario.Services.AddSingleton(_someService);
 /// scenario.Given.ForEventSourceId(myId).ReadModel(new MyReadModel(...));
@@ -51,7 +52,7 @@ public class ReactorScenario<TReactor>
     /// </summary>
     /// <remarks>
     /// Every event the scenario delivers gets its own number, contiguously from the first, across every
-    /// <c>Given</c> call. Without that, a reactor keyed on <see cref="ReactorDelivery"/> would see two distinct
+    /// <c language="csharp">Given</c> call. Without that, a reactor keyed on <see cref="ReactorDelivery"/> would see two distinct
     /// events as the same delivery and skip the second - the scenario would report an idempotent reactor broken.
     /// </remarks>
     EventSequenceNumber _nextSequenceNumber = EventSequenceNumber.First;
@@ -108,7 +109,7 @@ public class ReactorScenario<TReactor>
     /// </summary>
     /// <remarks>
     /// Usage:
-    /// <code>
+    /// <code language="csharp">
     /// scenario.Given.ForEventSourceId(myId).ReadModel(new MyReadModel(...));
     /// await scenario.Given.ForEventSource(myId).Events(new SomeEvent());
     /// </code>
@@ -239,7 +240,17 @@ public class ReactorScenario<TReactor>
                 CorrelationId.New());
 
             _nextSequenceNumber += 1;
-            await invoker.Invoke(@event, context);
+            var result = await invoker.Invoke(@event, context);
+
+            // A throwing reactor handler is a documented, load-bearing behavior in production - it pauses the
+            // failing event-source partition so Chronicle can retry it. ReactorInvoker itself catches the
+            // exception so it can report it to the kernel, which would otherwise make it indistinguishable from
+            // "the reactor ran and did nothing" here - rethrow so Catch.Exception around Events(...) sees it,
+            // matching what a spec author asserting the reactor's guard clearly expects (#3933).
+            if (result.ExceptionResult.TryGetException(out var reactorException))
+            {
+                ExceptionDispatchInfo.Capture(reactorException).Throw();
+            }
         }
     }
 

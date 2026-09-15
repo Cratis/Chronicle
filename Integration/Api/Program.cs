@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Api;
 /// </summary>
 /// <remarks>
 /// The specs talk to a containerized kernel over HTTP, so this host exists only to give
-/// <c>WebApplicationFactory</c> something to start - it serves nothing itself.
+/// <c language="csharp">WebApplicationFactory</c> something to start - it serves nothing itself.
 /// </remarks>
 public sealed class Program
 {

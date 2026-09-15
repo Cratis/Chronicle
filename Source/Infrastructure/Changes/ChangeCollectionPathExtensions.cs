@@ -62,7 +62,7 @@ public static class ChangeCollectionPathExtensions
     /// <returns>A set of normalized collection paths replaced wholesale.</returns>
     /// <remarks>
     /// A difference whose property path ends in an array segment (e.g. the collapsed compliance difference
-    /// for <c>contacts</c>) replaces the entire collection in one <c>$set</c>. Any element-level difference
+    /// for <c language="csharp">contacts</c>) replaces the entire collection in one <c language="csharp">$set</c>. Any element-level difference
     /// under that same collection must then be dropped — a sink cannot apply both a whole-collection
     /// replacement and a positional update to the same path in one operation.
     /// </remarks>

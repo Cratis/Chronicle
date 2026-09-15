@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <remarks>
 /// Serialized by name rather than by number: the rotation diagnostic is read by operators, and a role that
-/// reads as <c>2</c> tells them nothing.
+/// reads as <c language="csharp">2</c> tells them nothing.
 /// </remarks>
 [JsonConverter(typeof(JsonStringEnumConverter<EncryptionCertificateRole>))]
 public enum EncryptionCertificateRole

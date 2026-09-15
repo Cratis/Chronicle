@@ -58,7 +58,7 @@ public class with_specific_concurrency_scope : given.an_event_sequence
     [Fact] void should_append_event() => _command.ShouldNotBeNull();
     [Fact] void should_append_event_with_correct_event_source_id() => _command.EventSourceId.ShouldEqual(_eventSourceId.Value);
     [Fact] void should_append_event_with_correct_event_type() => _command.EventType.ToClient().ShouldEqual(_eventType);
-    [Fact] void should_append_event_with_correct_event() => _command.Content.ShouldEqual(_eventContext);
+    [Fact] void should_append_event_with_correct_event() => _command.Content.ShouldEqual(_eventContext.ToJsonString());
     [Fact]
     void should_append_event_with_correct_concurrency_scope() => _command.ConcurrencyScope.ShouldMatch(scope =>
         scope.SequenceNumber == _scope.SequenceNumber.Value &&

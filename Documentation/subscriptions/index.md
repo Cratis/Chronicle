@@ -1,4 +1,7 @@
-# Subscriptions
+---
+title: Subscriptions
+description: Move events reliably between event stores with persistent outbox and inbox subscriptions.
+---
 
 Chronicle supports subscriptions between event stores, allowing events to flow between them in a controlled, persistent, and observable way. This is particularly useful in distributed systems where different services own separate event stores but need to react to each other's events.
 

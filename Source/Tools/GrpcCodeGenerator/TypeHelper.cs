@@ -151,7 +151,7 @@ public static class TypeHelper
     /// Gets the closed <see cref="IDictionary{TKey, TValue}"/> a type implements, if any.
     /// </summary>
     /// <param name="type">The type to check.</param>
-    /// <returns>The closed <c>IDictionary&lt;,&gt;</c> interface, or null when the type does not implement it.</returns>
+    /// <returns>The closed <c language="csharp">IDictionary&lt;,&gt;</c> interface, or null when the type does not implement it.</returns>
     public static Type? GetDictionaryInterface(Type type) =>
         type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>));
 

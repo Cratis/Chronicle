@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity;
 
 /// <summary>
 /// Cross-sink parity for a read model carrying real PII — a child collection whose children hold a scalar
-/// <c>[PII]</c> name and a coarse <c>[PII]</c> list. The same two reduces are driven through both sinks
+/// <c language="csharp">[PII]</c> name and a coarse <c language="csharp">[PII]</c> list. The same two reduces are driven through both sinks
 /// with the real compliance machinery (encrypt at rest), and the released (decrypted) read models are
 /// compared. This is the gap that let the child-collection PII bugs ship green: the suite previously used
 /// passthrough compliance and never exercised the encrypt-at-rest round trip through both sinks.

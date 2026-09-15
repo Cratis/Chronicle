@@ -9,10 +9,10 @@ namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_pro
 
 /// <summary>
 /// Faithful reproduction of Ada's CHR-18 shape: a Guid-keyed model-bound root read model whose single
-/// root-level <c>[Join]</c> matches on a NON-Guid string property (<see cref="CustomerOrgNumber"/>), whose
+/// root-level <c language="csharp">[Join]</c> matches on a NON-Guid string property (<see cref="CustomerOrgNumber"/>), whose
 /// join source (<see cref="CompanyRegistered"/>) is appended to a non-Guid org-number stream. When that
 /// source arrives with no matching root, the join value must never be materialized as this model's Guid
-/// key — otherwise the poison string <c>_id</c> is stored and the next read-back <c>Guid.Parse</c> throws.
+/// key — otherwise the poison string <c language="csharp">_id</c> is stored and the next read-back <c language="csharp">Guid.Parse</c> throws.
 /// </summary>
 /// <param name="Id">The Guid engagement identifier (key schema format "guid").</param>
 /// <param name="CustomerOrgNumber">The customer's organization number — the string join-on property.</param>

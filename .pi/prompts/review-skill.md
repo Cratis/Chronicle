@@ -1,1 +1,1 @@
-../../.ai/prompts/review-skill.prompt.md
+../../.cratis/ai/prompts/review-skill.prompt.md

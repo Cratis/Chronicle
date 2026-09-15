@@ -30,7 +30,7 @@ public static class GrainExtensions
     /// <typeparam name="TGrainInterface">The type of the grain interface.</typeparam>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> to create grains from.</param>
     /// <param name="grain">The grain to convert.</param>
-    /// <returns>A strongly typed <c>GrainReference</c> of grain interface type TGrainInterface.</returns>
+    /// <returns>A strongly typed <c language="csharp">GrainReference</c> of grain interface type TGrainInterface.</returns>
     public static TGrainInterface GetReference<TGrainInterface>(this IGrainFactory grainFactory, IGrainWithGuidCompoundKey grain)
     {
         var id = grain.GetPrimaryKey(out var keyExt);

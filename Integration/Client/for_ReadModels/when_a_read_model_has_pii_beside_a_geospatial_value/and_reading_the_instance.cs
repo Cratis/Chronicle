@@ -13,7 +13,7 @@ using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_ha
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_pii_beside_a_geospatial_value;
 
 /// <summary>
-/// One <c>[PII]</c> concept turns compliance handling on for the whole read model, so every other value in it is
+/// One <c language="csharp">[PII]</c> concept turns compliance handling on for the whole read model, so every other value in it is
 /// walked too — including a geospatial one, which is a schema leaf carrying only its format while the value on the
 /// wire is a GeoJSON object. The walk used to read those GeoJSON members as properties the schema had lost, which
 /// failed the partition on the first event carrying a location and left the read model permanently behind. The

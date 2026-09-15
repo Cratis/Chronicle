@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// modified or removed.
 /// </summary>
 /// <remarks>
-/// Method dispatch is by convention. A method named <c>Added</c>, <c>Modified</c> or <c>Removed</c> is
+/// Method dispatch is by convention. A method named <c language="csharp">Added</c>, <c language="csharp">Modified</c> or <c language="csharp">Removed</c> is
 /// invoked for the corresponding change. The first parameter is the read model — either a single instance
 /// or an <see cref="IEnumerable{T}"/> of instances — and determines which read model is watched. Further
 /// parameters are resolved as dependencies (the <see cref="Events.EventContext"/> of the causing event or

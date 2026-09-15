@@ -16,14 +16,14 @@ public static class ProjectionExtensions
     /// <param name="projection">Root <see cref="IProjection"/> to walk.</param>
     /// <returns>The set of children property paths.</returns>
     /// <remarks>
-    /// These paths are owned exclusively by <c>ChildAdded</c> / <c>ChildRemoved</c> across the read model's
+    /// These paths are owned exclusively by <c language="csharp">ChildAdded</c> / <c language="csharp">ChildRemoved</c> across the read model's
     /// lifetime, so nothing may set them from the initial model state - see the pipeline's
-    /// <c>NeedsInitialState</c> handling and <c>ChangesetExtensions.AddPropertiesFrom</c>.
+    /// <c language="csharp">NeedsInitialState</c> handling and <c language="csharp">ChangesetExtensions.AddPropertiesFrom</c>.
     /// <para>
     /// Public rather than private to the pipeline step that first needed it, because anything that reproduces
     /// the initial-state write has to reproduce this exclusion with it. The in-process spec harness is the case
     /// in point: it reimplemented the step without the exclusion, and a spec then saw an empty child collection
-    /// as <c>[]</c> where the running system has no such field at all - the one shape no spec could reach.
+    /// as <c language="csharp">[]</c> where the running system has no such field at all - the one shape no spec could reach.
     /// </para>
     /// </remarks>
     public static IEnumerable<PropertyPath> GetChildrenPropertyPaths(this IProjection projection)

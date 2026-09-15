@@ -10,13 +10,8 @@
   href: registration-lifecycle.md
 - name: Appended event metadata filters
   href: filtering.mdx
-  items:
-    - name: By tag
-      href: ../events/filtering/by-tag.mdx
-    - name: By event source type
-      href: ../events/filtering/by-event-source-type.mdx
-    - name: By event stream type
-      href: ../events/filtering/by-event-stream-type.mdx
+- name: Immediate projections
+  href: immediate-projections.md
 - name: Tagging Projections
   href: tagging-projections.mdx
 - name: Nested Objects (Design)

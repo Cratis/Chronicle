@@ -1,1 +1,1 @@
-../../.ai/prompts/add-reducer.prompt.md
+../../.cratis/ai/prompts/add-reducer.prompt.md

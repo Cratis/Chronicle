@@ -83,6 +83,11 @@ public class ChronicleOptions
     public Clients ConnectedClients { get; init; } = new Clients();
 
     /// <summary>
+    /// Gets the server instance diagnostics configuration.
+    /// </summary>
+    public Servers Servers { get; init; } = new Servers();
+
+    /// <summary>
     /// Gets the webhooks configuration.
     /// </summary>
     public Webhooks Webhooks { get; init; } = new Webhooks();

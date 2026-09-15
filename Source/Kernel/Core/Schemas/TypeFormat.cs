@@ -12,11 +12,11 @@ namespace Cratis.Chronicle.Schemas;
 /// <param name="ClrTypeName">Name of the CLR type.</param>
 /// <param name="Format">The format string.</param>
 /// <remarks>
-/// This carries no <c>[BelongsTo]</c>: the formats describe how the workbench renders and edits a schema, and
+/// This carries no <c language="csharp">[BelongsTo]</c>: the formats describe how the workbench renders and edits a schema, and
 /// nothing on the gRPC surface asks for them. Adding a service for it would put an operation on the wire that
 /// exists only for one screen.
 /// <para>
-/// It lives in the schemas namespace rather than one named for the area, because <c>TypeFormats</c> is already a
+/// It lives in the schemas namespace rather than one named for the area, because <c language="csharp">TypeFormats</c> is already a
 /// type there and a namespace of the same name shadows it everywhere it is used.
 /// </para>
 /// </remarks>

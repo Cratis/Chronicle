@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventStreamType">The stream type within the event source.</param>
 /// <param name="EventStreamId">The stream within the stream type.</param>
 /// <param name="EventType">The type of event being appended.</param>
-/// <param name="Content">The content of the event.</param>
+/// <param name="Content">The content of the event, as serialized JSON.</param>
 /// <param name="CorrelationId">Optional correlation identifier. Defaults to a new one when not provided.</param>
 /// <param name="Tags">The tags to associate with the event.</param>
 /// <param name="Occurred">Optional occurred time. If null, the server sets it to approximately the time of append.</param>
@@ -30,6 +30,11 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope to validate the append against. Defaults to no check when not provided.</param>
+/// <remarks>
+/// Content travels as a JSON string rather than <see cref="JsonObject"/> because protobuf-net has no serializer for
+/// that BCL type - it has no plain reflectable shape, so the gRPC contract generated from this command would produce
+/// a field nothing can actually put on the wire.
+/// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Append(
@@ -41,7 +46,7 @@ public record Append(
     EventStreamType EventStreamType,
     EventStreamId EventStreamId,
     EventType EventType,
-    JsonObject Content,
+    string Content,
     Guid? CorrelationId = default,
     IEnumerable<string>? Tags = default,
     DateTimeOffset? Occurred = default,
@@ -73,7 +78,7 @@ public record Append(
             EventStreamType,
             EventStreamId,
             EventType.ToChronicle(),
-            Content,
+            JsonNode.Parse(Content)!.AsObject(),
             CorrelationId ?? Guid.NewGuid(),
             Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),

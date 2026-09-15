@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.EventSequences.Concurrency.for_OptimisticConcurrencyS
 /// </para>
 /// <para>
 /// The checked behavior is opt-in and lives in
-/// <c>when_checking_the_first_append_into_a_scope/and_nothing_matches_the_narrowing</c>. If this spec ever has to
+/// <c language="csharp">when_checking_the_first_append_into_a_scope/and_nothing_matches_the_narrowing</c>. If this spec ever has to
 /// change, the release containing that change is a major one, and the default is being flipped deliberately - see
 /// <see cref="ConcurrencyOptions.CheckFirstAppendIntoAScopeByDefault"/>.
 /// </para>

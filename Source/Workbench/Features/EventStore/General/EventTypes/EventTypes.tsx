@@ -6,7 +6,7 @@ import strings from 'Strings';
 import { ObserveEventTypes, type ObserveEventTypesParameters } from 'Features/EventTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { DataTable } from 'Components/DataTable';
+import { DataTableCore } from '@cratis/components/DataTables';
 import { Page } from 'Components/Common/Page';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
@@ -105,9 +105,9 @@ export const EventTypes = () => {
                     </div>
                     <div className="flex flex-col border border-cratis-surface-border rounded mx-4 mb-4 overflow-hidden"
                          style={{ height: 'calc(100% - 76px)' }}>
-                        <DataTable
+                        <DataTableCore
                             key={refreshTrigger}
-                            value={result.data}
+                            data={result.data}
                             scrollable
                             scrollHeight='flex'
                             selectionMode='single'
@@ -146,7 +146,7 @@ export const EventTypes = () => {
                                 header={strings.eventStore.general.eventTypes.columns.tombstone}
                                 body={renderTombstone}
                                 sortable />
-                        </DataTable>
+                        </DataTableCore>
                     </div>
                 </Allotment.Pane>
                 {selectedItem &&

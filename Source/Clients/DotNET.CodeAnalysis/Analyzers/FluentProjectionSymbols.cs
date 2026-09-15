@@ -39,31 +39,31 @@ sealed class FluentProjectionSymbols
         AddChildBuilder = addChildBuilder;
     }
 
-    /// <summary>Gets the <c>IProjectionBuilder&lt;,&gt;</c> definition.</summary>
+    /// <summary>Gets the <c language="csharp">IProjectionBuilder&lt;,&gt;</c> definition.</summary>
     internal INamedTypeSymbol ProjectionBuilder { get; }
 
-    /// <summary>Gets the <c>IChildrenBuilder&lt;,&gt;</c> definition.</summary>
+    /// <summary>Gets the <c language="csharp">IChildrenBuilder&lt;,&gt;</c> definition.</summary>
     internal INamedTypeSymbol ChildrenBuilder { get; }
 
-    /// <summary>Gets the <c>IReadModelPropertiesBuilder&lt;,,&gt;</c> definition.</summary>
+    /// <summary>Gets the <c language="csharp">IReadModelPropertiesBuilder&lt;,,&gt;</c> definition.</summary>
     internal INamedTypeSymbol ReadModelPropertiesBuilder { get; }
 
-    /// <summary>Gets the <c>IJoinBuilder&lt;,&gt;</c> definition.</summary>
+    /// <summary>Gets the <c language="csharp">IJoinBuilder&lt;,&gt;</c> definition.</summary>
     internal INamedTypeSymbol JoinBuilder { get; }
 
-    /// <summary>Gets the untyped <c>ISetBuilder&lt;,,&gt;</c> definition.</summary>
+    /// <summary>Gets the untyped <c language="csharp">ISetBuilder&lt;,,&gt;</c> definition.</summary>
     internal INamedTypeSymbol SetBuilder { get; }
 
-    /// <summary>Gets the typed <c>ISetBuilder&lt;,,,&gt;</c> definition.</summary>
+    /// <summary>Gets the typed <c language="csharp">ISetBuilder&lt;,,,&gt;</c> definition.</summary>
     internal INamedTypeSymbol TypedSetBuilder { get; }
 
-    /// <summary>Gets the <c>IAddBuilder&lt;,,,&gt;</c> definition.</summary>
+    /// <summary>Gets the <c language="csharp">IAddBuilder&lt;,,,&gt;</c> definition.</summary>
     internal INamedTypeSymbol AddBuilder { get; }
 
-    /// <summary>Gets the <c>ISubtractBuilder&lt;,,,&gt;</c> definition.</summary>
+    /// <summary>Gets the <c language="csharp">ISubtractBuilder&lt;,,,&gt;</c> definition.</summary>
     internal INamedTypeSymbol SubtractBuilder { get; }
 
-    /// <summary>Gets the <c>IAddChildBuilder&lt;,&gt;</c> definition.</summary>
+    /// <summary>Gets the <c language="csharp">IAddChildBuilder&lt;,&gt;</c> definition.</summary>
     internal INamedTypeSymbol AddChildBuilder { get; }
 
     /// <summary>

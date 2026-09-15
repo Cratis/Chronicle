@@ -38,7 +38,7 @@ public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
         var actualGrainState = (grainState as IGrainState<EventSeeds>)!;
 
         var eventSeedingStorage = GetEventSeedingStorage(key);
-        await eventSeedingStorage.Save(actualGrainState.State);
+        await eventSeedingStorage.Save(actualGrainState.State!);
     }
 
     IEventSeedingStorage GetEventSeedingStorage(EventSeedingKey key)

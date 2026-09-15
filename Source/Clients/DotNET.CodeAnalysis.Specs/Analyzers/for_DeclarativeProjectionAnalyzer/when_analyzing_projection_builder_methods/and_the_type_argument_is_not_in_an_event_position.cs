@@ -6,9 +6,9 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_DeclarativeProjectionAnalyzer.when_analyzing_projection_builder_methods;
 
 /// <summary>
-/// A builder method's other type parameters are the child read-model type of <c>Children</c>, the key type of
-/// <c>IdentifiedBy</c> and the join-key property type of <c>On</c>. None of them is an event, none of them could
-/// be, and demanding <c>[EventType]</c> on them reported correct code at every such call site - as an error, and
+/// A builder method's other type parameters are the child read-model type of <c language="csharp">Children</c>, the key type of
+/// <c language="csharp">IdentifiedBy</c> and the join-key property type of <c language="csharp">On</c>. None of them is an event, none of them could
+/// be, and demanding <c language="csharp">[EventType]</c> on them reported correct code at every such call site - as an error, and
 /// pointing at a call with no visible type argument at all, because these are always inferred.
 /// </summary>
 public class and_the_type_argument_is_not_in_an_event_position : given.a_declarative_projection_analyzer_with_the_whole_builder_surface

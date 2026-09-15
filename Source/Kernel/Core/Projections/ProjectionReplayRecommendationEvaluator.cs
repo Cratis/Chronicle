@@ -53,6 +53,51 @@ internal static class ProjectionReplayRecommendationEvaluator
     }
 
     /// <summary>
+    /// Determines whether newly added event types can be applied independently to affected event sources.
+    /// </summary>
+    /// <param name="previousDefinition">The previously registered projection definition.</param>
+    /// <param name="currentDefinition">The incoming projection definition.</param>
+    /// <param name="addedEventTypes">The newly consumed event types.</param>
+    /// <returns>True when the added operations cannot interact with existing history or another event source.</returns>
+    public static bool CanPartiallyReplay(
+        ProjectionDefinition previousDefinition,
+        ProjectionDefinition currentDefinition,
+        IEnumerable<EventType> addedEventTypes)
+    {
+        var addedEventTypeSet = addedEventTypes.ToHashSet();
+        if (currentDefinition.AutoMap != AutoMap.Disabled ||
+            currentDefinition.SubscribesToAllEvents ||
+            currentDefinition.FromEventProperty is not null ||
+            currentDefinition.Join.Count > 0 ||
+            currentDefinition.RemovedWith.Count > 0 ||
+            currentDefinition.RemovedWithJoin.Count > 0 ||
+            currentDefinition.Children.Count > 0 ||
+            currentDefinition.Nested?.Count is > 0 ||
+            currentDefinition.FromEvery.Properties.Count > 0 ||
+            currentDefinition.FromDerivatives.Any() ||
+            addedEventTypeSet.Any(eventType => !currentDefinition.From.ContainsKey(eventType)) ||
+            currentDefinition.From.Values.Any(from => from.Key.IsSet() || from.ParentKey is not null))
+        {
+            return false;
+        }
+
+        // Distinct leaf paths can still overwrite each other through a shared parent object.
+        // Only disjoint top-level properties prove independence without analyzing those writes.
+        var existingProperties = previousDefinition.From.Values
+            .SelectMany(from => from.Properties.Keys)
+            .Select(property => property.Segments.FirstOrDefault()?.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var addedProperties = currentDefinition.From
+            .Where(_ => addedEventTypeSet.Contains(_.Key))
+            .SelectMany(_ => _.Value.Properties.Keys)
+            .Select(property => property.Segments.FirstOrDefault()?.Value)
+            .ToArray();
+
+        return !existingProperties.Contains(null) &&
+            addedProperties.All(property => property is not null && !existingProperties.Contains(property));
+    }
+
+    /// <summary>
     /// Evaluates whether a read model schema change can be handled without full replay.
     /// </summary>
     /// <param name="readModelDefinition">The read model definition to evaluate.</param>

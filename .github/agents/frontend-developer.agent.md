@@ -1,1 +1,1 @@
-../../.ai/agents/frontend-developer.md
+../../.cratis/ai/agents/frontend-developer.md

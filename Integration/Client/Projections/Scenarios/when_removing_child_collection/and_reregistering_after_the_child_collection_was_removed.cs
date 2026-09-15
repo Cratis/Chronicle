@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Recommendations;
+using Cratis.Chronicle.Jobs;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_removing_child_collection.and_reregistering_after_the_child_collection_was_removed.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_removing_child_collection;
@@ -11,8 +12,8 @@ namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_removing_child
 /// <summary>
 /// Reproduces the production failure behind https://github.com/Cratis/Chronicle/issues/3722: a client first
 /// registers a projection with two child collections, a later client build re-registers it with one of the
-/// child collections removed. The stored definition must follow the change, a replay recommendation must be
-/// raised, and the observer subscriber must be able to build its pipeline and keep projecting.
+/// child collections removed. The stored definition must follow the change, automatic replay must rebuild
+/// the read model, and the observer subscriber must be able to build its pipeline and keep projecting.
 /// </summary>
 /// <param name="context">The context for the specification.</param>
 [Collection(ChronicleCollection.Name)]
@@ -51,6 +52,12 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
             await EventStore.Projections.Discover();
             await EventStore.Projections.Register();
 
+            var replayJobs = await EventStore.Jobs.WaitForThereToBeJobOfType("ReplayObserver");
+            foreach (var job in replayJobs)
+            {
+                var completedJob = await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job.Id);
+                completedJob?.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
+            }
             await Projection.WaitTillSubscribed();
 
             var appendResult = await EventStore.EventLog.Append(EventSourceId, SecondComment);
@@ -69,5 +76,6 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
     [Fact] void should_project_the_comment_added_after_reregistration() => Context.ResultAfterReregistration.Comments.Select(comment => comment.Text).ShouldContain(Context.SecondComment.Text);
     [Fact] void should_store_the_definition_without_the_removed_child() => Context.StoredDefinition.Children.Keys.Any(key => key.Equals("reactions", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
     [Fact] void should_keep_the_remaining_child_in_the_stored_definition() => Context.StoredDefinition.Children.Keys.Any(key => key.Equals("comments", StringComparison.OrdinalIgnoreCase)).ShouldBeTrue();
-    [Fact] void should_recommend_replay_for_the_changed_definition() => Context.Recommendations.Any(recommendation => recommendation.Description.Contains("Projection definition has changed")).ShouldBeTrue();
+    [Fact] void should_preserve_the_existing_comment_without_duplicates() => Context.ResultAfterReregistration.Comments.Count().ShouldEqual(2);
+    [Fact] void should_not_require_manual_replay_for_the_changed_definition() => Context.Recommendations.ShouldBeEmpty();
 }

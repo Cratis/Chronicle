@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Cratis.Chronicle.Compliance.for_JsonComplianceManager;
 
 /// <summary>
-/// Inheritance is expressed as an <c>allOf</c> reference to the base beside the type's own properties, and
-/// resolving such a schema through <c>ActualTypeSchema</c> yields the base alone — without the members the type
+/// Inheritance is expressed as an <c language="csharp">allOf</c> reference to the base beside the type's own properties, and
+/// resolving such a schema through <c language="csharp">ActualTypeSchema</c> yields the base alone — without the members the type
 /// declares itself. Anything deciding whether to descend has to agree with the lookup the walk then performs, or
 /// a member classified right there is walked past and written in the clear beside a correctly encrypted sibling.
 /// </summary>

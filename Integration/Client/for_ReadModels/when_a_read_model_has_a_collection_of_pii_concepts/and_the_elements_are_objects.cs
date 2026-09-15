@@ -12,7 +12,7 @@ using context = Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_ha
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_read_model_has_a_collection_of_pii_concepts;
 
 /// <summary>
-/// The elements of the collection are objects rather than scalars, and each carries a <c>[PII]</c> member
+/// The elements of the collection are objects rather than scalars, and each carries a <c language="csharp">[PII]</c> member
 /// beside a plain one. The walk has to reach into every element and encrypt only the personal member.
 /// </summary>
 /// <param name="context">The test context.</param>
