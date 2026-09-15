@@ -59,6 +59,24 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             return null!;
         }
 
+        if (input is string text && schemaProperty.Type == JsonObjectType.String)
+        {
+            // A value that cannot be converted is left as-is rather than thrown over: historical
+            // events can legitimately carry values no current type reads (renamed identifiers,
+            // deleted lookups), and a read-side key resolver must survive them. Conversions that
+            // already succeed keep working; only the hard TypeConversion.Convert failure - a
+            // FormatException, InvalidCast or NotSupported shape - degrades to the raw value.
+            try
+            {
+                return TypeConversion.Convert(schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(string), input);
+            }
+            catch (Exception ex) when (ex is FormatException or InvalidCastException or NotSupportedException)
+            {
+                logger.EventValueLeftUnconverted(text, schemaProperty.Name, ex.Message);
+                return input;
+            }
+        }
+
         if (input is ExpandoObject)
         {
             var expandoObject = (input as IDictionary<string, object>)!;
@@ -91,7 +109,12 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             return TypeConversion.Convert(targetType, input);
         }
 
-        if (input.GetType().IsEnumerable())
+        // Dictionaries are values to preserve, not sequences of key/value pairs to project as arrays.
+        var inputType = input.GetType();
+        var isDictionary = input is IDictionary ||
+            inputType.IsDictionary() ||
+            inputType.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>));
+        if (!isDictionary && inputType.IsEnumerable())
         {
             var children = new List<object>();
             foreach (var child in (input as IEnumerable)!)

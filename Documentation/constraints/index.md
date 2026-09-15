@@ -1,4 +1,7 @@
-# Constraints
+---
+title: Constraints
+description: Enforce server-side invariants before Chronicle commits events.
+---
 
 Constraints define server-side rules that must be satisfied before events are committed. They run inside the Chronicle Kernel and protect data integrity across event streams and event sources.
 

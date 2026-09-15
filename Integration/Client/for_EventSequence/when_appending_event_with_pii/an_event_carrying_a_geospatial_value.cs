@@ -8,7 +8,7 @@ using context = Cratis.Chronicle.Integration.for_EventSequence.when_appending_ev
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_event_with_pii;
 
 /// <summary>
-/// The <c>[PII]</c> property turns compliance handling on for the whole event, so the geospatial value beside it
+/// The <c language="csharp">[PII]</c> property turns compliance handling on for the whole event, so the geospatial value beside it
 /// is walked too. It is a schema leaf carrying only its format while the value on the wire is a GeoJSON object,
 /// which the walk used to read as properties the schema had lost - failing the append outright.
 /// </summary>

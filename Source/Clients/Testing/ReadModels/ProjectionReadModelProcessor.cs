@@ -7,6 +7,7 @@ extern alias KernelGrpc;
 
 using System.Dynamic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
@@ -20,6 +21,7 @@ using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using FrameworkNullLoggerFactory = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelEventTypes = KernelConcepts::Cratis.Chronicle.Concepts.EventTypes;
@@ -82,13 +84,25 @@ internal static class ProjectionReadModelProcessor
     }
 
     /// <summary>
+    /// Gets a value indicating whether this processor runs Chronicle's compliance stack.
+    /// </summary>
+    /// <remarks>
+    /// The live projection pipeline runs <c language="csharp">EncryptChangeset</c> before the sink and releases what it reads
+    /// back; the pipeline below runs neither, so a <c language="csharp">[PII]</c> member is projected and read as plaintext.
+    /// Wire compliance in and flip this, and <see cref="SubstitutedLayers"/> stops reporting
+    /// <see cref="ReadModelSubstitutedLayer.Compliance"/>.
+    /// </remarks>
+    public static bool AppliesCompliance => false;
+
+    /// <summary>
     /// Processes the given events through the projection for <typeparamref name="TReadModel"/> and returns the resulting read model.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model produced by the projection.</typeparam>
     /// <param name="projectionDefinition">The client-side <see cref="Contracts.Projections.ProjectionDefinition"/>.</param>
     /// <param name="events">The events with their associated <see cref="EventSourceId"/> to process.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
-    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model schema.</param>
+    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing event input with the scenario's defaults.</param>
+    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model and event schemas.</param>
     /// <param name="initialState">Optional initial read model state.</param>
     /// <param name="strictEventSubscription">
     /// When <see langword="false"/> (the default), a seeded event the projection does not subscribe to is
@@ -97,7 +111,7 @@ internal static class ProjectionReadModelProcessor
     /// </param>
     /// <returns>
     /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
-    /// <c>Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
+    /// <c language="csharp">Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
     /// dictionary of every materialized instance keyed by its event source id (read per-key from the sink,
     /// so a multi-source projection such as a join can be asserted against the intended instance
     /// deterministically).
@@ -108,6 +122,7 @@ internal static class ProjectionReadModelProcessor
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<(EventSourceId EventSourceId, object Event)> events,
         IEventTypes eventTypes,
+        IEventSerializer eventSerializer,
         IJsonSchemaGenerator jsonSchemaGenerator,
         TReadModel? initialState = null,
         bool strictEventSubscription = false)
@@ -124,28 +139,35 @@ internal static class ProjectionReadModelProcessor
         var eventsList = events.ToList();
 
         // Build AppendedEvents with correct EventSourceIds for use in key resolution
-        var appendedEvents = eventsList
-            .Select((eventTuple, index) =>
-            {
-                var clientEventType = eventTypes.GetEventTypeFor(eventTuple.Event.GetType());
-                var kernelEventType = ToKernelEventType(clientEventType);
-                var content = eventTuple.Event.AsExpandoObject(true);
-                var eventSourceId = (KernelConceptsNs::Events.EventSourceId)eventTuple.EventSourceId.Value;
-                var context = KernelConceptsNs::Events.EventContext.Empty with
-                {
-                    EventType = kernelEventType,
-                    EventSourceId = eventSourceId,
-                    SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
+        var appendedEvents = new KernelAppendedEvent[eventsList.Count];
+        for (var index = 0; index < eventsList.Count; index++)
+        {
+            var eventTuple = eventsList[index];
+            var actualEventType = eventTuple.Event.GetType();
+            var clientEventType = eventTypes.GetEventTypeFor(actualEventType);
+            var kernelEventType = ToKernelEventType(clientEventType);
+            var serializedJson = await eventSerializer.Serialize(eventTuple.Event);
+            var eventSchema = jsonSchemaGenerator.Generate(actualEventType);
 
-                    // Give each event a distinct, monotonically increasing occurred time so time-based
-                    // projections (e.g. a [FromAll] "last updated" mapped from EventContext.Occurred)
-                    // reflect append order the same way the real runtime does — rather than every event
-                    // sharing one timestamp.
-                    Occurred = KernelConceptsNs::Events.EventContext.Empty.Occurred.AddTicks(index)
-                };
-                return new KernelAppendedEvent(context, content);
-            })
-            .ToArray();
+            // JSON data keys remain case-sensitive even when the serializer matches CLR names case-insensitively.
+            // Re-read the serialized content without carrying those node lookup options into projection input.
+            var projectionJson = JsonNode.Parse(serializedJson.ToJsonString(), new JsonNodeOptions { PropertyNameCaseInsensitive = false })!.AsObject();
+            var content = _expandoObjectConverter.ToExpandoObject(projectionJson, eventSchema);
+            var eventSourceId = (KernelConceptsNs::Events.EventSourceId)eventTuple.EventSourceId.Value;
+            var context = KernelConceptsNs::Events.EventContext.Empty with
+            {
+                EventType = kernelEventType,
+                EventSourceId = eventSourceId,
+                SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
+
+                // Give each event a distinct, monotonically increasing occurred time so time-based
+                // projections (e.g. a [FromAll] "last updated" mapped from EventContext.Occurred)
+                // reflect append order the same way the real runtime does — rather than every event
+                // sharing one timestamp.
+                Occurred = KernelConceptsNs::Events.EventContext.Empty.Occurred.AddTicks(index)
+            };
+            appendedEvents[index] = new KernelAppendedEvent(context, content);
+        }
 
         // Populate in-memory event sequence storage with all events so key resolvers
         // (e.g. FromParentHierarchy for ChildrenFrom projections) can look up parent events
@@ -154,7 +176,8 @@ internal static class ProjectionReadModelProcessor
         var inMemoryEventSequenceStorage = new InMemoryEventSequenceStorage(
             KernelConceptsNs::EventStoreName.NotSet,
             KernelConceptsNs::EventStoreNamespaceName.NotSet,
-            eventSequenceId);
+            eventSequenceId,
+            new InMemoryIdentityStorage());
         foreach (var appendedEvent in appendedEvents)
         {
             await inMemoryEventSequenceStorage.Append(
@@ -310,7 +333,7 @@ internal static class ProjectionReadModelProcessor
 
     /// <summary>
     /// Mirrors MongoDB's `_id` → identifier property mapping for the in-memory test harness.
-    /// Finds the read model's identifier property (preferring <c>[Key]</c>, then <c>[Subject]</c>,
+    /// Finds the read model's identifier property (preferring <c language="csharp">[Key]</c>, then <c language="csharp">[Subject]</c>,
     /// then a property named "Id" by convention) and writes the resolved projection key value into
     /// the state under that property's camel-cased name — unless an event mapping has already
     /// populated that property.
@@ -348,11 +371,11 @@ internal static class ProjectionReadModelProcessor
     /// <param name="projection">The root <see cref="KernelProjectionEngine::IProjection"/> being applied.</param>
     /// <returns>The initial state.</returns>
     /// <remarks>
-    /// The seeding matches the live kernel's <c>ProjectionFactory.CreateInitialState</c>. The exclusion is the
+    /// The seeding matches the live kernel's <c language="csharp">ProjectionFactory.CreateInitialState</c>. The exclusion is the
     /// step this harness used to be missing: the live pipeline diffs the initial state into the changeset with
     /// every children-collection path removed, so an untouched child collection is never written and reads back
     /// from the store as an absent field. Seeding it here regardless answered "what is an empty child collection"
-    /// with <c>[]</c> - the one answer the running system never gives - at exactly the point the production
+    /// with <c language="csharp">[]</c> - the one answer the running system never gives - at exactly the point the production
     /// pipeline makes a deliberate exception, and so put the question out of reach of every spec at every tier.
     /// <para>
     /// The paths come from the kernel's own <see cref="KernelProjectionEngine::ProjectionExtensions.GetChildrenPropertyPaths"/>
@@ -512,7 +535,7 @@ internal static class ProjectionReadModelProcessor
     /// <returns>True when the event removed the root instance.</returns>
     /// <remarks>
     /// State is held per instance rather than threaded across every seeded event, mirroring the live pipeline's
-    /// <c>SetInitialState</c>: an event only ever sees the state of the instance its own key addresses. The key
+    /// <c language="csharp">SetInitialState</c>: an event only ever sees the state of the instance its own key addresses. The key
     /// comes from <see cref="InMemorySink.GetKeyValue"/> so that "the same instance" means the same thing here
     /// as it does to the sink — a concept key and its underlying primitive address one document, not two.
     /// </remarks>
@@ -590,7 +613,7 @@ internal static class ProjectionReadModelProcessor
 
     /// <summary>
     /// Hands an event to a projection and then to each of its child projections, mirroring
-    /// <c>Cratis.Chronicle.Projections.Engine.Pipelines.Steps.HandleEvent.Perform</c>.
+    /// <c language="csharp">Cratis.Chronicle.Projections.Engine.Pipelines.Steps.HandleEvent.Perform</c>.
     /// </summary>
     /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> to hand the event to.</param>
     /// <param name="context">The <see cref="KernelProjectionEngine::ProjectionEventContext"/> for the event.</param>

@@ -7,12 +7,12 @@ using Cratis.Chronicle.ReadModels;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Read model for the older <c>.Set(...).ToValue(...)</c> spelling: one member cleared with a null, one set to a
+/// Read model for the older <c language="csharp">.Set(...).ToValue(...)</c> spelling: one member cleared with a null, one set to a
 /// real constant. The pair keeps both halves of that method honest.
 /// </summary>
 /// <param name="Id">Project identifier (the event source id).</param>
-/// <param name="Note">The note, cleared through <c>ToValue(null)</c>.</param>
-/// <param name="Status">The status, set through <c>ToValue</c> with a real constant.</param>
+/// <param name="Note">The note, cleared through <c language="csharp">ToValue(null)</c>.</param>
+/// <param name="Status">The status, set through <c language="csharp">ToValue</c> with a real constant.</param>
 [Passive]
 public sealed record FluentArchivedNote(
     [Key] Guid Id,

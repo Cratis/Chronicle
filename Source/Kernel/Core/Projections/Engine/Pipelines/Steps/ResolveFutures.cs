@@ -366,7 +366,7 @@ public class ResolveFutures(
 
     /// <summary>
     /// Returns the value actually stored in the collection for the given identity property and key,
-    /// using type-converting lookup so that type mismatches (e.g. <c>EventSourceId</c> vs <c>Guid</c>)
+    /// using type-converting lookup so that type mismatches (e.g. <c language="csharp">EventSourceId</c> vs <c language="csharp">Guid</c>)
     /// are resolved. Falls back to <paramref name="key"/> when the item cannot be found.
     /// </summary>
     /// <param name="collection">The collection to search.</param>

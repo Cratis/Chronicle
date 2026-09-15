@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// Decides whether a read model member can be cleared, and rejects the declaration when it cannot.
 /// </summary>
 /// <remarks>
-/// The <c>CHR0048</c> analyzer reports the same rule at build time. This is the reflection-side gate for everything
+/// The <c language="csharp">CHR0048</c> analyzer reports the same rule at build time. This is the reflection-side gate for everything
 /// the analyzer never sees - a read model from an assembly compiled without the Chronicle analyzers, or one whose
 /// diagnostic was suppressed - so a declaration that cannot work fails loudly at projection construction rather
 /// than quietly writing a type default.

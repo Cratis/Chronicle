@@ -29,7 +29,7 @@ EXCLUDED_SEGMENTS = {"bin", "obj", "node_modules"}
 EXCLUDED_PATHS = (".claude/worktrees/",)
 SLEEPS = re.compile(r"\b(?:Thread\.Sleep|Task\.Delay|SpinWait|Task\.Yield)\b")
 
-RULE = ".ai/rules/specs.csharp.md"
+RULE = "the Cratis specification-by-example guidance (github.com/Cratis/AI)"
 
 
 def normalize(path):

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
@@ -64,7 +65,7 @@ public record AppendMany(
             EventStreamId.Default,
             @event.EventType.ToChronicle(),
             tags,
-            @event.Content,
+            JsonNode.Parse(@event.Content)!.AsObject(),
             Occurred,
             Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject)));
 

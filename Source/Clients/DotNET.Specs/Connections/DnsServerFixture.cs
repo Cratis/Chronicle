@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Connections;
 
 /// <summary>
 /// Provides a shared CoreDNS container for the chronicle+srv integration specs.
-/// It runs the same <c>coredns/coredns:1.12.1</c> image and serves the exact same
-/// <c>chronicle.local</c> zone the Composition sample uses, so the client's DNS SRV resolution
+/// It runs the same <c language="csharp">coredns/coredns:1.12.1</c> image and serves the exact same
+/// <c language="csharp">chronicle.local</c> zone the Composition sample uses, so the client's DNS SRV resolution
 /// is exercised against the real records the scale-out story relies on.
 /// </summary>
 public sealed class DnsServerFixture : IAsyncLifetime
@@ -20,7 +20,7 @@ public sealed class DnsServerFixture : IAsyncLifetime
     IContainer? _container;
 
     /// <summary>
-    /// Gets the DNS server (host:port) to pass as the <c>srvNameServer</c> connection-string option.
+    /// Gets the DNS server (host:port) to pass as the <c language="csharp">srvNameServer</c> connection-string option.
     /// It targets the mapped UDP port of the CoreDNS container.
     /// </summary>
     public string SrvNameServer => $"127.0.0.1:{_container!.GetMappedPublicPort($"{DnsPort}/udp")}";

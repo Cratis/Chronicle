@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// Reads whether a query can produce nothing.
 /// </summary>
 /// <remarks>
-/// A query declared as returning <c>Task&lt;Order?&gt;</c> says the order may not exist. Dropping that from the
+/// A query declared as returning <c language="csharp">Task&lt;Order?&gt;</c> says the order may not exist. Dropping that from the
 /// contract does not just lose documentation - it makes the generated implementation map an absent read model as
 /// though it were present, which is a null reference at the first property read. Both generators consult this so
 /// the contract and the code that fills it agree on whether nothing is a possible answer.

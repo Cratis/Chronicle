@@ -18,7 +18,7 @@ public class and_the_definition_declares_no_removal_event : given.a_unique_event
         await Append(1, _returnedEventType, _borrower);
     }
 
-    async Task Because() => (_isAllowed, _) = await _storage.IsAllowed(DefinitionWithoutRemovalEvent, _borrower);
+    async Task Because() => (_isAllowed, _) = await _storage.IsAllowedWithinScope(DefinitionWithoutRemovalEvent, _borrower);
 
     [Fact] void should_not_be_allowed() => _isAllowed.ShouldBeFalse();
 }

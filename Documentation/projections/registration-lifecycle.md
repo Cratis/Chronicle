@@ -6,11 +6,22 @@ what changed, so a re-registration from an unchanged client is near-free.
 
 ## When a definition changes
 
-A changed definition — including one that *removes* a child collection — is stored, pushed to the
-engine on every silo, and the projection's observer keeps running against the new definition. The
-change also raises a **replay recommendation** ("Projection definition has changed"), because read
-models already written with the old definition may no longer match; performing the recommendation
-rebuilds them. With `ReplayOnDefinitionChange` enabled, the replay happens automatically instead.
+A changed definition — including one that *removes* a child collection — is stored and pushed to the
+engine on every silo. Chronicle then inspects the change and the namespace's event history before it
+decides what to rebuild:
+
+- **No action** when the only change adds event types and no events of those types exist yet.
+- **Partial replay** when only new event types were added, their explicit property mappings do not overlap
+  existing mappings, and every read-model instance is isolated to one event source. Chronicle applies only
+  the newly consumed event types to event sources containing those events.
+- **Full replay** for changes that can affect event ordering, keys, joins, children, removal behavior,
+  or existing mappings. Full replay is the safe fallback whenever Chronicle cannot prove independence.
+
+The [`definitionEvolution`](../hosting/configuration/observers.md#definition-evolution) policy controls
+which plans Chronicle performs automatically. The default, `Automatic`, applies all three. `PartialOnly`
+performs safe partial work but creates a recommendation for a full replay, while `Manual` creates a
+recommendation for any replay. Chronicle reports the chosen classification in its logs, and partial and
+full replays use the existing observer job progress shown in the Workbench.
 
 ## When a registration partially fails
 

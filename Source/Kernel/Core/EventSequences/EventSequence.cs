@@ -223,12 +223,19 @@ public class EventSequence(
         causation ??= [];
         tags ??= [];
 
-        if (causedBy is null &&
-            RequestContext.Get(WellKnownKeys.UserIdentity) is string userSubject && !string.IsNullOrEmpty(userSubject) &&
-            RequestContext.Get(WellKnownKeys.UserName) is string userName && !string.IsNullOrEmpty(userName) &&
-            RequestContext.Get(WellKnownKeys.UserPreferredUserName) is string userPreferredUserName && !string.IsNullOrEmpty(userPreferredUserName))
+        if (causedBy is null && RequestContext.Get(WellKnownKeys.UserIdentity) is string userSubject)
         {
-            causedBy = new Identity(userSubject, userName, userPreferredUserName);
+            if (string.IsNullOrWhiteSpace(userSubject))
+            {
+                throw new Sequences.AuthenticatedUserHasNoSubject();
+            }
+
+            var userName = RequestContext.Get(WellKnownKeys.UserName) as string;
+            var userPreferredUserName = RequestContext.Get(WellKnownKeys.UserPreferredUserName) as string;
+            causedBy = new Identity(
+                userSubject,
+                string.IsNullOrWhiteSpace(userName) ? userSubject : userName,
+                string.IsNullOrWhiteSpace(userPreferredUserName) ? userSubject : userPreferredUserName);
         }
 
         causedBy ??= Identity.System;

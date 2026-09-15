@@ -44,7 +44,7 @@ public static class CommandResultExtensions
     /// <exception cref="CommandFailed">Thrown when the command did not succeed.</exception>
     /// <remarks>
     /// This is the RPC-level outcome - authorized, valid, no exception - not any domain-level success/failure the
-    /// response itself carries (an <c>AppendResponse</c>'s own <c>IsSuccess</c>, say). The caller inspects that
+    /// response itself carries (an <c language="csharp">AppendResponse</c>'s own <c language="csharp">IsSuccess</c>, say). The caller inspects that
     /// separately on the returned response.
     /// </remarks>
     public static TResponse EnsureSuccess<TResponse>(this CommandResult<TResponse> result)

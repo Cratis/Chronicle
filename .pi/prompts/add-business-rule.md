@@ -1,1 +1,1 @@
-../../.ai/prompts/add-business-rule.prompt.md
+../../.cratis/ai/prompts/add-business-rule.prompt.md

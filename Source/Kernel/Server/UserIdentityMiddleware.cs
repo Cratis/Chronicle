@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Microsoft.AspNetCore.Mvc;
+
 namespace Cratis.Chronicle.Server;
 
 /// <summary>
@@ -18,17 +20,22 @@ public class UserIdentityMiddleware(RequestDelegate next)
     {
         if (context.User?.Identity?.IsAuthenticated ?? false)
         {
-            var subject = context.User.Claims.FirstOrDefault(_ => _.Type == "sub")?.Value ?? string.Empty;
-            var name = context.User.Claims.FirstOrDefault(_ => _.Type == "name")?.Value ?? context.User.Identity?.Name ?? string.Empty;
-            var username = context.User.Claims.FirstOrDefault(_ => _.Type == "preferred_username")?.Value ?? context.User.Identity?.Name ?? string.Empty;
-
-            if (string.IsNullOrEmpty(subject) &&
-                string.IsNullOrEmpty(name) &&
-                string.IsNullOrEmpty(username))
+            var subject = context.User.Claims.FirstOrDefault(_ => _.Type == "sub")?.Value;
+            if (string.IsNullOrWhiteSpace(subject))
             {
-                await next(context);
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsJsonAsync(new ProblemDetails
+                {
+                    Status = StatusCodes.Status401Unauthorized,
+                    Title = "The authenticated principal has no stable subject."
+                });
                 return;
             }
+
+            var name = context.User.Claims.FirstOrDefault(_ => _.Type == "name")?.Value ?? context.User.Identity?.Name;
+            var username = context.User.Claims.FirstOrDefault(_ => _.Type == "preferred_username")?.Value ?? context.User.Identity?.Name;
+            name = string.IsNullOrWhiteSpace(name) ? subject : name;
+            username = string.IsNullOrWhiteSpace(username) ? subject : username;
 
             RequestContext.Set(WellKnownKeys.UserIdentity, subject);
             RequestContext.Set(WellKnownKeys.UserName, name);

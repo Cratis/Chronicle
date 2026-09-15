@@ -1,1 +1,1 @@
-../../.ai/prompts/scaffold-feature.prompt.md
+../../.cratis/ai/prompts/scaffold-feature.prompt.md

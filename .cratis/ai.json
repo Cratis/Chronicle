@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "harnesses": [
+    "claude",
+    "codex",
+    "copilot",
+    "cursor",
+    "opencode",
+    "pi"
+  ],
+  "profiles": [
+    "cratis/documentation",
+    "cratis/engineering/csharp",
+    "cratis/engineering/react",
+    "cratis/application/csharp",
+    "cratis/application/react"
+  ],
+  "languages": [
+    "csharp",
+    "typescript",
+    "kotlin",
+    "elixir",
+    "python"
+  ]
+}

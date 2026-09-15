@@ -20,6 +20,8 @@ Identity provider certificate configuration is documented on [Identity Provider 
 | --- | --- | --- | --- |
 | enabled | bool | true | Whether authentication is enforced. See [Turning authentication off](#turning-authentication-off) |
 | authority | string | null | External OAuth authority URL |
+| audience | string | "chronicle" | Required audience for external-authority access tokens |
+| requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
 
 ## Turning authentication off
@@ -53,12 +55,13 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 
 ### How it works
 
-1. On startup, Chronicle checks whether an admin user with the configured username already exists
-2. If no matching user exists and a password is configured, Chronicle:
-   - Creates the admin user
-   - Hashes the password immediately — the plaintext is **never retained** in memory beyond this point
-3. If a user with the same username already exists, the bootstrap step is skipped entirely
-4. If no `adminUser` configuration is present (or no password is set), Chronicle falls back to the default behavior: the admin user is created without a password and must go through the initial password setup flow in the Workbench
+1. `adminUser.username` takes precedence over `defaultAdminUsername`; an empty or whitespace-only override uses the default. Existing users are matched case-insensitively, preserving their deployed identifiers.
+2. A new administrator uses one deterministic identifier across silos. Creation and initial password events use event-source and event-type concurrency checks: concurrent startup cannot append the same bootstrap step twice.
+3. A configured password initializes only an administrator without existing credentials. A restart can resume incomplete initialization, but never overwrites a password that has already been set.
+4. Without a configured password, the Workbench offers setup for the configured administrator only. Confirmation must match. Once credentials exist, including temporary credentials from older deployments, anonymous setup is rejected.
+5. Creation and password operations wait for the persisted user state. Append failures or a projection that does not complete are reported instead of returning successful setup. A completion timeout does not undo an accepted event; inspect the user state before retrying.
+
+Keep administrator configuration consistent across silos. Changing the bootstrap username is not an account-rename mechanism. Restrict network access until interactive initial setup has completed, or supply the initial password through your secret mechanism.
 
 ### Configuration file
 
@@ -105,8 +108,22 @@ When this option is `true`:
 The `password` value should be sourced from a secrets management solution such as Azure Key Vault, Kubernetes Secrets, or Docker Secrets rather than stored directly in `chronicle.json`.
 
 **Key security properties of admin user bootstrap:**
-- The plaintext password is hashed immediately — it is never persisted to storage, event logs, or application state
-- If the admin user already exists when Chronicle restarts, the bootstrap section is completely ignored — credentials are never updated through this mechanism
+- Credentials are hashed before being appended or persisted. Plaintext configuration values can remain in the process configuration; protect that configuration and never log it.
+- Bootstrap never replaces existing credentials. It may finish initialization of an existing administrator that still has no password.
+
+### Browser sessions and request protection
+
+The Workbench uses an HTTP-only, Secure, SameSite=Lax authentication cookie. Serve it over HTTPS, including local reverse-proxy deployments. Authenticated cookie requests using state-changing methods require an antiforgery token, even if the endpoint also permits anonymous callers. Only the login and token-exchange endpoints explicitly bypass this validation.
+
+After signing in, obtain a token with `GET /.cratis/antiforgery` using the authentication cookie. Send the returned `requestToken` as `X-CSRF-TOKEN` on state-changing requests, including `POST /identity/logout`. Refresh it after changing the signed-in identity; do not reuse a token from an earlier session. The Workbench manages this lifecycle automatically. With authentication disabled, the endpoint returns `204` and no request token is required.
+
+Only Identity login and refresh are anonymous. Registration and account-management endpoints require authentication. Bearer-only HTTP and gRPC callers do not require an antiforgery token; explicit bearer credentials take precedence over an ambient browser cookie.
+
+### Token compatibility
+
+Chronicle-issued access tokens now target the `chronicle` audience, and validation requires it. Previously issued tokens without that audience must be reacquired after upgrading. External authorities must issue tokens for the configured `audience` and provide a meaningful subject. Missing or blank authenticated subjects are rejected rather than replaced with random or system identities.
+
+These safeguards do not introduce role-based operator policies or enforce a future restricted-session workflow. `requirePasswordChangeOnFirstLogin` drives the Workbench password-change prompt; it is not an authorization boundary preventing other authenticated API calls.
 
 ### Azure Key Vault
 

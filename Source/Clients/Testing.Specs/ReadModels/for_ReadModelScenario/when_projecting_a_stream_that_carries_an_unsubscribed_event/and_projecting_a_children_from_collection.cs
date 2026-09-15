@@ -4,8 +4,8 @@
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_projecting_a_stream_that_carries_an_unsubscribed_event;
 
 /// <summary>
-/// Seeds a <c>[ChildrenFrom]</c> projection's event source with the root event, its child events, and an
-/// unsubscribed audit/marker event. This guards that the skip predicate (<c>HasKeyResolverFor</c>) still treats
+/// Seeds a <c language="csharp">[ChildrenFrom]</c> projection's event source with the root event, its child events, and an
+/// unsubscribed audit/marker event. This guards that the skip predicate (<c language="csharp">HasKeyResolverFor</c>) still treats
 /// child event types as subscribed — so the child collection materializes — while ignoring only the truly
 /// unsubscribed event, leaving previously-working hierarchical scenarios unaffected.
 /// </summary>

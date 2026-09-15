@@ -38,6 +38,6 @@ public class WebhookDefinitionStorageProvider(IStorage storage) : IGrainStorage
         var actualGrainState = (grainState as IGrainState<WebhookDefinition>)!;
         var webhookKey = WebhookKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(webhookKey.EventStore);
-        await eventStore.Webhooks.Save(actualGrainState.State);
+        await eventStore.Webhooks.Save(actualGrainState.State!);
     }
 }

@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Events;
 /// <param name="value">
 /// The <see cref="EventStreamId"/> value, or <see langword="null"/> / empty string to use
 /// <see cref="EventStreamId.NotSet"/> (indicating the value should be provided dynamically via
-/// an interface such as <c>ICanProvideEventStreamId</c>).
+/// an interface such as <c language="csharp">ICanProvideEventStreamId</c>).
 /// </param>
 /// <param name="concurrency">
 /// Whether to include this metadata in the concurrency scope when appending events.

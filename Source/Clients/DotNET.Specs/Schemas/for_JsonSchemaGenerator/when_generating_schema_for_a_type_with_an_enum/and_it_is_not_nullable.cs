@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator.when_generating_schem
 /// enum is what makes that indistinguishable pass distinguishable.
 /// <para>
 /// It is also the subject the member-list guard is left holding on its own. Nullability does not exempt it, so
-/// what keeps <c>0</c> out of a 1-based enum here is only that <c>0</c> is not one of its declared members.
+/// what keeps <c language="csharp">0</c> out of a 1-based enum here is only that <c language="csharp">0</c> is not one of its declared members.
 /// </para>
 /// </summary>
 public class and_it_is_not_nullable : given.a_contract_with_an_enum

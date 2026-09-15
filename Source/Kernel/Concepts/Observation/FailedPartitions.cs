@@ -123,6 +123,7 @@ public class FailedPartitions
     {
         if (!TryGet(partition, out var failedPartition)) return;
 
+        failedPartition.IsResolved = true;
         _resolvedPartitions.Add(failedPartition);
         if (_resolvedPartitions.Count > MaxResolvedPartitions)
         {

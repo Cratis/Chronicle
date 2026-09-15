@@ -16,10 +16,10 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Chronicle.Testing.EventSequences;
 using InMemoryBehaviorPatternStorage = Cratis.Chronicle.Storage.InMemory.Patterns.BehaviorPatternStorage;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
+using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using InMemoryUniqueConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueConstraintsStorage;
 using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.UniqueEventTypesConstraintsStorage;
 using KernelEventSequences = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
@@ -114,4 +114,11 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
     /// <inheritdoc/>
     public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(KernelEventSequences::EventSequenceId eventSequenceId) =>
         closedStreamsStorage ?? throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The in-process harness always serves the "Log" sequence, so it always reports having data - there is no
+    /// "brand new, never touched" namespace state to model here.
+    /// </remarks>
+    public Task<bool> HasData() => Task.FromResult(true);
 }

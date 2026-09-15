@@ -6,10 +6,9 @@ extern alias KernelCore;
 using System.Reflection;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Traces;
-using Cratis.Types;
 using Microsoft.Extensions.Options;
-using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelConfiguration = KernelCore::Cratis.Chronicle.Configuration;
 using KernelConstraints = KernelCore::Cratis.Chronicle.Events.Constraints;
@@ -25,13 +24,15 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <remarks>
 /// <para>
 /// The kernel grain runs in-process without a real Orleans silo. Real implementations are used for all
-/// dependencies except <c>IStorage</c> (in-memory) and <see cref="Microsoft.Extensions.Logging.ILogger{T}"/>
+/// dependencies except <c language="csharp">IStorage</c> (in-memory) and <see cref="Microsoft.Extensions.Logging.ILogger{T}"/>
 /// (null logger). This means constraint validation, hash calculation, event serialization, migration, and
-/// compliance all run through the actual kernel code paths.
+/// compliance all run through the actual kernel code paths. Compliance encrypts <c language="csharp">[PII]</c> with the kernel's
+/// real <c language="csharp">PIICompliancePropertyValueHandler</c> over an in-memory encryption key store - see
+/// <see cref="InProcessCompliance"/>, whose instance must be the same one the reading side uses.
 /// </para>
 /// <para>
 /// <b>What it deliberately does not run: observers.</b> The grain is constructed directly and its
-/// <c>OnActivateAsync</c> - which is what an Orleans silo would call - never runs, so the appended-events queue it
+/// <c language="csharp">OnActivateAsync</c> - which is what an Orleans silo would call - never runs, so the appended-events queue it
 /// would resolve there stays unset and the enqueue after each append is a no-op. No projection, reducer or reactor
 /// is ever driven by an append made here. Waiting for observer completion on the resulting append result therefore
 /// throws <see cref="Observation.CannotWaitForObserverCompletion"/> rather than reporting that everything completed.
@@ -39,9 +40,9 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <para>
 /// The unset activation state is otherwise benign: the constraint-version check resolves to
 /// <see cref="InProcessConstraintsGrain"/> and is a no-op, the state-persistence interval keeps its field default,
-/// and the meter passed as <see langword="null"/> is only ever dereferenced inside <c>OnActivateAsync</c> - every
+/// and the meter passed as <see langword="null"/> is only ever dereferenced inside <c language="csharp">OnActivateAsync</c> - every
 /// metrics call on the append path goes through a null-conditional scope. Adding a kernel-side use of any of these
-/// outside <c>OnActivateAsync</c> would break that, so keep this list in step with the grain.
+/// outside <c language="csharp">OnActivateAsync</c> would break that, so keep this list in step with the grain.
 /// </para>
 /// </remarks>
 internal static class InProcessEventSequence
@@ -73,18 +74,19 @@ internal static class InProcessEventSequence
     /// <param name="eventSequenceId">The <see cref="KernelSequenceConcepts::EventSequenceId"/> the grain represents.</param>
     /// <param name="eventStoreName">The event store name.</param>
     /// <param name="namespaceName">The event store namespace name.</param>
+    /// <param name="compliance">The <see cref="InProcessCompliance"/> the scenario shares, so what this grain encrypts on append is what the reading side can release.</param>
     /// <returns>The initialized kernel <see cref="KernelEventSequences::EventSequence"/> grain.</returns>
     internal static async Task<KernelEventSequences::EventSequence> Create(
         InMemoryStorage storage,
         KernelSequenceConcepts::EventSequenceId eventSequenceId,
         KernelConceptsNs::EventStoreName eventStoreName,
-        KernelConceptsNs::EventStoreNamespaceName namespaceName)
+        KernelConceptsNs::EventStoreNamespaceName namespaceName,
+        InProcessCompliance compliance)
     {
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
 
         var eventTypeMigrations = new KernelMigrations::EventTypeMigrations(storage, expandoObjectConverter);
-        var jsonComplianceManager = new KernelCompliance::JsonComplianceManager(new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>(), NullLogger<KernelCompliance::JsonComplianceManager>.Instance);
         var eventSerializer = new KernelEventSequences::EventSerializer(
             new InMemoryKernelEventTypes(),
             expandoObjectConverter,
@@ -122,7 +124,7 @@ internal static class InProcessEventSequence
                 eventTypeMigrations,
                 null!,
                 new ActivitySource<KernelEventSequences::EventSequence>(),
-                jsonComplianceManager,
+                compliance.Manager,
                 expandoObjectConverter,
                 eventSerializer,
                 new KernelEventSequences::EventHashCalculator(),

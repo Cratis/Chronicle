@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// Locates the property a read model uses as its document identifier.
 /// </summary>
 /// <remarks>
-/// One definition of the precedence MongoDB maps to <c>_id</c>, shared by the harness code that mirrors that
+/// One definition of the precedence MongoDB maps to <c language="csharp">_id</c>, shared by the harness code that mirrors that
 /// mapping and by the code that reports the mapping as substituted — so the two cannot disagree about which
 /// property the document is keyed by.
 /// </remarks>
@@ -18,11 +18,11 @@ internal static class IdentifierProperty
 {
     /// <summary>
     /// Finds the identifier property of a read model, following the same precedence MongoDB uses to map to
-    /// <c>_id</c>:
+    /// <c language="csharp">_id</c>:
     /// <list type="number">
     /// <item><description><see cref="KeyAttribute"/> on a property or record positional parameter.</description></item>
     /// <item><description><see cref="SubjectAttribute"/> on a property or record positional parameter.</description></item>
-    /// <item><description>A property literally named <c>Id</c> (MongoDB default-id convention).</description></item>
+    /// <item><description>A property literally named <c language="csharp">Id</c> (MongoDB default-id convention).</description></item>
     /// </list>
     /// </summary>
     /// <param name="readModelType">The read model CLR type to inspect.</param>

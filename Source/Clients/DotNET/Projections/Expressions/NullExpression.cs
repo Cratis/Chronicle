@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions;
 /// </summary>
 /// <remarks>
 /// A clear is its own expression rather than a <see cref="ValueExpression"/> carrying the text of the keyword. The
-/// kernel captures a constant's operand as text, so routing a clear through <c>$value(...)</c> wrote those literal
+/// kernel captures a constant's operand as text, so routing a clear through <c language="csharp">$value(...)</c> wrote those literal
 /// four characters into the member instead of clearing it.
 /// </remarks>
 public class NullExpression : IEventValueExpression

@@ -31,5 +31,18 @@ public class FailedPartition
     /// Gets or sets the attempts for the failed partition.
     /// </summary>
     [ProtoMember(4)]
-    public IEnumerable<FailedPartitionAttempt> Attempts { get; set; }
+    public IEnumerable<FailedPartitionAttempt> Attempts { get; set; } = new List<FailedPartitionAttempt>();
+
+    /// <summary>
+    /// Gets or sets whether the failure has been resolved.
+    /// </summary>
+    [ProtoMember(5)]
+    public bool IsResolved { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the partition is quarantined from automatic retries.
+    /// Null means the connected server did not provide this additive state.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool? IsQuarantined { get; set; }
 }

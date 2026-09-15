@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// broken down by event type identifier.
 /// </summary>
 /// <remarks>
-/// These counts are kept in a dedicated store — keyed by <c>(observerId, partition)</c> and updated with
+/// These counts are kept in a dedicated store — keyed by <c language="csharp">(observerId, partition)</c> and updated with
 /// atomic increments — rather than embedded in <see cref="ObserverState"/>, whose per-partition breakdown
 /// grew unbounded with every event source ever seen and was rewritten wholesale on every handled batch. The
 /// counts exist so that a single partition's contribution can be subtracted from the observer's running

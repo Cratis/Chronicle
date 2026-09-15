@@ -6,7 +6,7 @@ using Cratis.Chronicle.SharedTypeCatalog;
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_SharedTypeRegistry.when_asking_for_the_qualified_name;
 
 /// <summary>
-/// A <c>[ReadModel]</c> type already becomes its own <c>&lt;Name&gt;Response</c> message through the per-service
+/// A <c language="csharp">[ReadModel]</c> type already becomes its own <c language="csharp">&lt;Name&gt;Response</c> message through the per-service
 /// DTO path - the registry must not also try to mirror it as a shared type, or the same read model would be
 /// generated twice, disagreeing with itself. Declared under a Chronicle namespace deliberately, so this is the
 /// read-model exclusion being exercised and not the namespace check rejecting it for an unrelated reason.

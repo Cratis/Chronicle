@@ -22,8 +22,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCom
 /// Base for child-collection PII regression scenarios. Builds a real MongoDB sink wired to the real
 /// compliance machinery (encrypt-at-rest plus release), so a derived scenario can drive a projection or
 /// reducer through the full encrypt -> store -> read -> release round trip that the in-memory sink and
-/// the passthrough-compliance parity suite do not exercise. <c>Establish</c> builds the sink stack; the
-/// derived spec drives the scenario in its own <c>Because</c>.
+/// the passthrough-compliance parity suite do not exercise. <c language="csharp">Establish</c> builds the sink stack; the
+/// derived spec drives the scenario in its own <c language="csharp">Because</c>.
 /// </summary>
 /// <param name="fixture">The shared <see cref="MongoDBFixture"/> providing a MongoDB container.</param>
 public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixture) : Specification

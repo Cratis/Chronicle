@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// Discovers the convention-based handler methods on a <see cref="IReadModelReactor"/>.
 /// </summary>
 /// <remarks>
-/// A handler method is a public instance method named <c>Added</c>, <c>Modified</c> or <c>Removed</c>. Its
+/// A handler method is a public instance method named <c language="csharp">Added</c>, <c language="csharp">Modified</c> or <c language="csharp">Removed</c>. Its
 /// first parameter is the read model — a single instance or an <see cref="IEnumerable{T}"/> of instances.
 /// </remarks>
 public static class ReadModelReactorMethods

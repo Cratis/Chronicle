@@ -1,1 +1,1 @@
-../../.ai/prompts/check-doc-drift.prompt.md
+../../.cratis/ai/prompts/check-doc-drift.prompt.md

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Popover, type PopoverRootOpenChangeEvent } from 'primereact/popover';
 import * as icons from "react-icons/fa";
 import css from './Profile.module.css';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { useDarkMode } from 'usehooks-ts';
 import strings from 'Strings';
 import { useAuth } from '../../../Features/Security/AuthContext';
@@ -22,12 +22,18 @@ const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onCli
 
 export const Profile = () => {
     const { isDarkMode, toggle: toggleDarkMode } = useDarkMode();
-    const { logout } = useAuth();
+    const { logout, isAuthenticationEnabled } = useAuth();
+    const [logoutError, setLogoutError] = useState('');
     const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
 
     const handleLogout = async () => {
-        setIsProfilePanelOpen(false);
-        await logout();
+        setLogoutError('');
+        try {
+            await logout();
+            setIsProfilePanelOpen(false);
+        } catch {
+            setLogoutError('Logout failed. Please try again.');
+        }
     };
 
     return (
@@ -40,8 +46,8 @@ export const Profile = () => {
                     <Popover.Trigger as="span">
                         <Button
                             icon={<icons.FaUser />}
-                            rounded
-                            severity="info"
+                            shape='pill'
+                            tone="accent"
                             className="p-2"
                             aria-label="User" />
                     </Popover.Trigger>
@@ -55,8 +61,9 @@ export const Profile = () => {
                                         {isDarkMode ?
                                             <ProfileItem icon={<icons.FaSun />} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode} /> :
                                             <ProfileItem icon={<icons.FaMoon />} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode} />}
-                                        <ProfileItem icon={<icons.FaSignOutAlt />} label="Logout" onClick={handleLogout} />
+                                        {isAuthenticationEnabled && <ProfileItem icon={<icons.FaSignOutAlt />} label="Logout" onClick={handleLogout} />}
                                     </ul>
+                                    {logoutError && <p role='alert'>{logoutError}</p>}
                                 </Popover.Content>
                             </Popover.Popup>
                         </Popover.Positioner>

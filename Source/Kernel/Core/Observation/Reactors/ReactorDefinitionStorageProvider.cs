@@ -38,6 +38,6 @@ public class ReactorDefinitionStorageProvider(IStorage storage) : IGrainStorage
         var actualGrainState = (grainState as IGrainState<ReactorDefinition>)!;
         var reactorKey = ReactorKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(reactorKey.EventStore);
-        await eventStore.Reactors.Save(actualGrainState.State);
+        await eventStore.Reactors.Save(actualGrainState.State!);
     }
 }

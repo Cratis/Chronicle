@@ -21,6 +21,12 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Debug, "Resuming job")]
     internal static partial void Resuming(this ILogger<IJob> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Job was left running with all of its steps already completed - finalizing it instead of resuming")]
+    internal static partial void FinalizingJobLeftRunningAfterAllStepsCompleted(this ILogger<IJob> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Job failed recounting its progress from its job steps")]
+    internal static partial void FailedReconcilingProgressFromJobSteps(this ILogger<IJob> logger, Exception ex);
+
     [LoggerMessage(LogLevel.Debug, "Stopping job")]
     internal static partial void Stopping(this ILogger<IJob> logger);
 

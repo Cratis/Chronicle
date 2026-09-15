@@ -83,6 +83,15 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddAntiforgery(options =>
+        {
+            options.HeaderName = CookieAntiforgeryMiddleware.HeaderName;
+            options.Cookie.Name = "Chronicle.Antiforgery";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+        });
+
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>
             {
@@ -113,8 +122,14 @@ public static class ServiceCollectionExtensions
         {
             options.ForwardDefaultSelector = context =>
             {
-                // If there's a cookie, use cookie authentication
-                if (context.Request.Cookies.ContainsKey("Chronicle.Auth"))
+                // Explicit bearer credentials take precedence over an ambient browser cookie.
+                if (context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    return bearerScheme;
+                }
+
+                // Otherwise, if there's a cookie, use cookie authentication
+                if (context.Request.Cookies.ContainsKey(CookieAntiforgeryMiddleware.AuthenticationCookieName))
                 {
                     return IdentityConstants.ApplicationScheme;
                 }
@@ -126,15 +141,24 @@ public static class ServiceCollectionExtensions
 
         if (!chronicleOptions.Authentication.UseInternalAuthority)
         {
-            authBuilder.AddJwtBearer();
+            authBuilder.AddJwtBearer(options =>
+            {
+                options.Authority = chronicleOptions.Authentication.Authority;
+                options.Audience = chronicleOptions.Authentication.Audience;
+                options.RequireHttpsMetadata = chronicleOptions.Authentication.RequireHttpsMetadata;
+            });
         }
+
+        // MapIdentityApi's login/refresh endpoints also support ASP.NET Identity's protected bearer tickets.
+        // Keep that scheme distinct from OAuth JWT validation; both are validated by their own handler.
+        authBuilder.AddBearerToken(IdentityConstants.BearerScheme);
 
         // Add cookie authentication for Identity API endpoints
         authBuilder.AddCookie(IdentityConstants.ApplicationScheme, options =>
         {
-            options.Cookie.Name = "Chronicle.Auth";
+            options.Cookie.Name = CookieAntiforgeryMiddleware.AuthenticationCookieName;
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.ExpireTimeSpan = TimeSpan.FromDays(14);
             options.SlidingExpiration = true;
@@ -147,7 +171,7 @@ public static class ServiceCollectionExtensions
 
             // Require authentication for all endpoints except those with [AllowAnonymous]
             // This applies zero-trust security across all gRPC services and HTTP endpoints
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder("MultiScheme", IdentityConstants.BearerScheme)
                 .RequireAuthenticatedUser()
                 .Build());
 

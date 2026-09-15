@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="IsActive">Indicates whether the user account is active.</param>
 /// <param name="CreatedAt">When the user account was created.</param>
 /// <param name="LastModifiedAt">When the user account was last modified.</param>
-/// <param name="HasLoggedIn">Whether the user has ever logged in and set their password.</param>
+/// <param name="HasLoggedIn">Whether the user's password credentials have been initialized.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Users)]
 public record User(

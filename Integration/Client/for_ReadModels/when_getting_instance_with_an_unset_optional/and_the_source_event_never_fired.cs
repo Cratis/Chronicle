@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_getting_instance_with
 /// End-to-end proof for the optional-scalar sentinel fix. An active model-bound projection whose optional
 /// <see cref="OrderTimeline.CompletedAt"/> is sourced by an event that never fires materializes (writes to the
 /// MongoDB sink) with that field absent, and reading the model back through the release path must yield
-/// <see langword="null"/> — not the type-default sentinel (<c>0001-01-01</c>). This drives the whole
+/// <see langword="null"/> — not the type-default sentinel (<c language="csharp">0001-01-01</c>). This drives the whole
 /// event -> projection -> sink -> release loop, proving both that the unset optional is stored absent and that
 /// it releases as null.
 /// </summary>

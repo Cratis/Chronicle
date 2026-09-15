@@ -32,16 +32,16 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// </para>
 /// <para>
 /// Nothing is reported when the type is itself one of the placements that reads the attribute - a command, a
-/// reactor, a reducer or an aggregate root - even though it also carries <c>[EventType]</c>. Such a type is legal
+/// reactor, a reducer or an aggregate root - even though it also carries <c language="csharp">[EventType]</c>. Such a type is legal
 /// and the attribute on it is live, read off the very symbol the rule would otherwise point away from: telling an
 /// author to "move it to the command that appends the event" when the type <em>is</em> that command is a false
 /// positive, and a false positive breaks every build that treats warnings as errors. The check is therefore on the
-/// role, not on the mere presence of <c>[EventType]</c>.
+/// role, not on the mere presence of <c language="csharp">[EventType]</c>.
 /// </para>
 /// <para>
 /// The aggregate root is the deliberately conservative one. Arc reads only the event stream type off it
-/// (<c>AggregateRootExtensions.GetEventStreamType</c>, falling back to the aggregate's type name), while the event
-/// source type is passed to <c>AggregateRootFactory.Get</c> as a parameter and never read from an attribute. The
+/// (<c language="csharp">AggregateRootExtensions.GetEventStreamType</c>, falling back to the aggregate's type name), while the event
+/// source type is passed to <c language="csharp">AggregateRootFactory.Get</c> as a parameter and never read from an attribute. The
 /// whole type is skipped regardless, because a type that is both an aggregate root and an event type is already
 /// outside what the rule can advise on, and a false negative there costs nothing that a false positive does not
 /// cost more.

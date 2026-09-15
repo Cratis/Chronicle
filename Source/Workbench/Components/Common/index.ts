@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-export * from './CardFooter';
 export { ErrorBoundary } from '@cratis/components/Common';
 export * from './Page';
 export * from './QueryModal';
 export * from './EventStoreCard';
 export * from './Typography';
+export * from './SelectionCheckbox';

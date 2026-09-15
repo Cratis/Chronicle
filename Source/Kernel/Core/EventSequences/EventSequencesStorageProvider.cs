@@ -58,7 +58,7 @@ public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
         IGrainState<EventSequenceState> actualGrainState,
         EventSequenceNumber persistedSequenceNumber)
     {
-        var state = actualGrainState.State;
+        var state = actualGrainState.State!;
         if (state.SequenceNumber <= EventSequenceNumber.First)
         {
             return;
@@ -84,7 +84,7 @@ public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
     async Task SetNextSequenceNumberFromActualTail(IEventSequenceStorage eventSequenceStorage, IGrainState<EventSequenceState> actualGrainState)
     {
         var tailSequenceNumber = await eventSequenceStorage.GetTailSequenceNumber();
-        actualGrainState.State.SequenceNumber = tailSequenceNumber == EventSequenceNumber.Unavailable
+        actualGrainState.State!.SequenceNumber = tailSequenceNumber == EventSequenceNumber.Unavailable
             ? EventSequenceNumber.First
             : tailSequenceNumber.Next();
     }

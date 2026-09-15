@@ -11,7 +11,7 @@ namespace Cratis.Chronicle;
 /// an explicit <see cref="Subject"/>. On a read model, <see cref="ReadModels.IReadModels.Release{TReadModel}(TReadModel)"/>
 /// uses this value to select the encryption key for an instance that needs manual release.
 ///
-/// <code>
+/// <code language="csharp">
 /// [EventType]
 /// public record ShippingAddressChanged(
 ///     OrderId Order,
@@ -19,7 +19,7 @@ namespace Cratis.Chronicle;
 ///     [PII] string City);
 /// </code>
 ///
-/// Appending without an explicit subject automatically uses the <c>Customer</c> property as the
+/// Appending without an explicit subject automatically uses the <c language="csharp">Customer</c> property as the
 /// subject, so PII fields are encrypted under the customer's key rather than the order's key.
 /// A read model's attribute does not override the ownership metadata maintained by Chronicle's projection
 /// pipeline; managed projection reads use the provenance of each projected value.

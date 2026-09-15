@@ -1,0 +1,21 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+/*
+ * Workbench-wide table conventions, written against the documented `data-cratis-part`
+ * surface rather than any internal structure.
+ *
+ * A table shares its row with a details pane on several pages, and the pane can take more
+ * than half the width. A plain HTML table answers that by shrinking every column until its
+ * content wraps, so a header like "Next event sequence number" stacks into four lines and
+ * the whole header row grows to match the tallest one - the columns end up unreadable while
+ * one wide column keeps all the space it wants.
+ *
+ * Keeping the header labels on one line stops a column from collapsing below its own title.
+ * The table then grows past its container, which already scrolls horizontally, so a narrow
+ * table scrolls instead of cramping.
+ */
+
+[data-cratis-part='header-cell'] {
+    white-space: nowrap;
+}

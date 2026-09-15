@@ -33,16 +33,16 @@ namespace Cratis.Chronicle.Registrations;
 /// per-definition verdict, so a finer-grained claim than that would be invented.
 /// </para>
 /// <para>
-/// <b>What it deliberately does not cover: reactors and reducers.</b> Their <c>Register()</c> only opens a duplex
+/// <b>What it deliberately does not cover: reactors and reducers.</b> Their <c language="csharp">Register()</c> only opens a duplex
 /// stream - it marks itself registered and returns before any round trip to the kernel has happened. Reporting them
 /// here would mean reporting a hope as a fact, so they are left out rather than represented optimistically. A consumer
 /// that needs to know a reactor or reducer is live should wait on its observer state instead
-/// (<c>ReactorWaitExtensions.WaitTillSubscribed</c>, <c>ReducerWaitExtensions.WaitTillActive</c>), which is answered by
+/// (<c language="csharp">ReactorWaitExtensions.WaitTillSubscribed</c>, <c language="csharp">ReducerWaitExtensions.WaitTillActive</c>), which is answered by
 /// the kernel.
 /// </para>
 /// <para>
 /// <b>Do not reach for <see cref="Connections.IConnectionLifecycle.IsConnected"/> instead of this.</b> It looks like it
-/// carries a registration verdict and it partly does - <c>ConnectionLifecycle.Connected()</c> rolls it back to
+/// carries a registration verdict and it partly does - <c language="csharp">ConnectionLifecycle.Connected()</c> rolls it back to
 /// <see langword="false"/> and rethrows when one of the connected handlers failed, and
 /// <see cref="IEventStore.RegisterAll"/> is one of those handlers. But it is set to <see langword="true"/>
 /// <em>before</em> the handlers run, and only rolled back <em>after</em> they have all finished, so polling it races:
@@ -59,7 +59,7 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     /// <remarks>
     /// Registration is wired to the connection lifecycle, so "not yet" and "never" look the same from outside - this
     /// value covers both. It does not cover "tried and failed": a run that throws still reports itself, carrying its
-    /// <see cref="Failure"/>. Use <c>RegistrationWaitExtensions.WaitForRegistration</c> to wait for whichever arrives.
+    /// <see cref="Failure"/>. Use <c language="csharp">RegistrationWaitExtensions.WaitForRegistration</c> to wait for whichever arrives.
     /// </remarks>
     public static readonly RegistrationOutcome NotRun = new(false, ImmutableList<ArtifactRegistration>.Empty);
 

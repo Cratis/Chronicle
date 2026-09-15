@@ -10,8 +10,6 @@ env:
   DOTNET8_VERSION: "8.0.410"
   DOTNET9_VERSION: "9.0.x"
   DOTNET_VERSION: "10.0.x"
-  KERNEL_CACHE: "kernel-cache-${{ github.sha }}"
-  WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
   # `edited` is deliberately absent: it fires on every PR title/description
@@ -41,42 +39,6 @@ jobs:
         id: release
         uses: cratis/release-action@v1
 
-  kernel:
-    if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [release]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v4
-        id: kernel-output
-        with:
-          path: ./Source/Kernel/Server/out
-          key: ${{ env.KERNEL_CACHE }}
-
-      - name: Add GitHub Package Registry to NuGet
-        run: |
-          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
-          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
-
-      - name: Build
-        working-directory: ./Source/Kernel/Server
-        run: |
-          dotnet publish -c Debug -o out/x64
-          cp -r out/x64 out/arm64
-
-
   workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -86,12 +48,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - uses: actions/cache@v4
-        id: workbench-output
-        with:
-          path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -124,7 +80,18 @@ jobs:
         run: |
           export NODE_OPTIONS="--max-old-space-size=4096"
           yarn build
+          test -s wwwroot/index.html
 
+      # Build outputs are required inputs to later jobs, not best-effort caches.
+      - name: Upload Workbench outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: workbench-out
+          path: ./Source/Workbench/wwwroot
+          if-no-files-found: error
+
+  # Only the DEVELOPMENT-symbol kernel is consumed by the prerelease Docker image.
+  # The normal kernel remains covered by the mandatory .NET build workflow.
   kernel-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -143,12 +110,6 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v4
-        id: kernel-dev-output
-        with:
-          path: ./Source/Kernel/Server/out/development
-          key: ${{ env.KERNEL_CACHE }}-development
-
       - name: Add GitHub Package Registry to NuGet
         run: |
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
@@ -160,13 +121,12 @@ jobs:
           dotnet publish -c Debug -p:DefineConstants=DEVELOPMENT -o out/development/x64
           cp -r out/development/x64 out/development/arm64
 
-
-
       - name: Upload development outputs
         uses: actions/upload-artifact@v4
         with:
           name: kernel-development-out
           path: ./Source/Kernel/Server/out/development
+          if-no-files-found: error
 
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
@@ -178,11 +138,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        id: workbench-output
+      - name: Download Workbench outputs
+        uses: actions/download-artifact@v4
         with:
+          name: workbench-out
           path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
+
+      - name: Verify Workbench output
+        run: test -s Source/Workbench/wwwroot/index.html
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -225,38 +188,40 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [workbench, kernel, kernel-development, release]
+    needs: [workbench, kernel-development, release]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        id: kernel-output
+      - name: Download Workbench outputs
+        uses: actions/download-artifact@v4
         with:
-          path: ./Source/Kernel/Server/out
-          key: ${{ env.KERNEL_CACHE }}
-
-      - uses: actions/cache@v4
-        id: workbench-output
-        with:
+          name: workbench-out
           path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
 
+      # The artifact already contains x64/ and arm64/. Docker/copy-server-files.sh
+      # consumes out/<architecture>, so download directly without flattening or deleting it.
       - name: Download development outputs
         uses: actions/download-artifact@v4
         with:
           name: kernel-development-out
-          path: Source/Kernel/Server/out/development
+          path: Source/Kernel/Server/out
 
-      - name: Prepare development output for Docker
+      - name: Verify development and Workbench outputs
         run: |
-          echo "Preparing development output"
-          rm -rf Source/Kernel/Server/out || true
-          mkdir -p Source/Kernel/Server/out
-          if [ -d Source/Kernel/Server/out/development/x64 ]; then
-            cp -r Source/Kernel/Server/out/development/x64/* Source/Kernel/Server/out/ || true
-          fi
+          set -euo pipefail
+          for file in \
+            Source/Workbench/wwwroot/index.html \
+            Source/Kernel/Server/out/x64/Cratis.Chronicle.Server \
+            Source/Kernel/Server/out/x64/Cratis.Chronicle.Server.dll \
+            Source/Kernel/Server/out/x64/Cratis.Chronicle.Server.deps.json \
+            Source/Kernel/Server/out/x64/Cratis.Chronicle.Server.runtimeconfig.json; do
+            if [ ! -s "$file" ]; then
+              echo "::error::Required prerelease output is missing or empty: $file"
+              exit 1
+            fi
+          done
 
       - name: Set up Docker Buildx
         id: buildx

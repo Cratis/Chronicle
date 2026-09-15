@@ -47,7 +47,7 @@ public class Events
     /// Gets how often an active event sequence checks whether the event store's constraints have changed.
     /// </summary>
     /// <remarks>
-    /// The <c>ConstraintsChanged</c> broadcast never reaches sequence grains, so a sequence instead polls the
+    /// The <c language="csharp">ConstraintsChanged</c> broadcast never reaches sequence grains, so a sequence instead polls the
     /// constraints grain for a content-derived version stamp and re-reads its validators when the stamp moves.
     /// That grain is a single activation per event store, so polling it on every append would put one
     /// cluster-wide, single-threaded grain turn — a cross-silo call for every sequence not co-located with it —

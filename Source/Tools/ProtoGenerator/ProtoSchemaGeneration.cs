@@ -94,7 +94,7 @@ public static class ProtoSchemaGeneration
     /// Deleting happens only once every schema has been generated, so a generator failure leaves the committed
     /// files untouched rather than emptying the directory.
     /// </para>
-    /// Files in subdirectories are left alone - <c>protobuf-net/bcl.proto</c> is protobuf-net's own file, an input
+    /// Files in subdirectories are left alone - <c language="csharp">protobuf-net/bcl.proto</c> is protobuf-net's own file, an input
     /// to generation rather than an output of it.
     /// </remarks>
     public static IReadOnlyList<string> Write(IReadOnlyDictionary<string, string> schemas, string outputDirectory)
@@ -123,7 +123,7 @@ public static class ProtoSchemaGeneration
     /// <param name="type">The type to check.</param>
     /// <returns>True when it carries the service attribute, false otherwise.</returns>
     /// <remarks>
-    /// The contracts assembly being read is loaded on its own, so its <c>ServiceAttribute</c> is not necessarily the
+    /// The contracts assembly being read is loaded on its own, so its <c language="csharp">ServiceAttribute</c> is not necessarily the
     /// same type as this tool's - a released assembly can carry a different protobuf-net.Grpc. Match by name.
     /// </remarks>
     static bool IsService(Type type) =>

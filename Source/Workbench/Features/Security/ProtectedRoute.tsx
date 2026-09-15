@@ -4,7 +4,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { ProgressSpinner } from 'Components/ProgressSpinner';
+import { ProgressSpinner } from '@cratis/components/Display';
 import { absolutePath } from '../../Utils/basePath';
 
 interface ProtectedRouteProps {

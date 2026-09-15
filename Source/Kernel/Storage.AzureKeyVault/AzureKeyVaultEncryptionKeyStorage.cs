@@ -20,9 +20,9 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// identifier is stored as a distinct secret so that revisions can be retrieved or deleted independently.
 /// </para>
 /// <para>
-/// Secret names follow the pattern <c>chronicle--{eventStore}--{namespace}--{identifier}--{revision}</c>
+/// Secret names follow the pattern <c language="csharp">chronicle--{eventStore}--{namespace}--{identifier}--{revision}</c>
 /// where each component is sanitized to contain only lowercase alphanumeric characters and single hyphens.
-/// Double hyphens (<c>--</c>) are used as separators and cannot appear within sanitized components.
+/// Double hyphens (<c language="csharp">--</c>) are used as separators and cannot appear within sanitized components.
 /// </para>
 /// <para>
 /// Authentication is performed using the <see cref="Azure.Core.TokenCredential"/> provided to the

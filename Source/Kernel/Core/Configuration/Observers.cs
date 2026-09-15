@@ -22,7 +22,7 @@ public class Observers
     /// the point of the knob is being able to bound it tighter for a subscriber that should always answer quickly.
     /// Raising it past the transport's own timeout has no effect, because that one gives up first. Giving up abandons
     /// the wait, not the work: the subscriber keeps processing the batch, and the events are redelivered when the
-    /// partition retries. A timeout is recorded as <c>FailureKind.Timeout</c>, which is excluded from the quarantine
+    /// partition retries. A timeout is recorded as <c language="csharp">FailureKind.Timeout</c>, which is excluded from the quarantine
     /// thresholds below, so a congested period cannot take an otherwise healthy observer out of service.
     /// </remarks>
     public int SubscriberTimeout { get; init; } = 30;
@@ -72,26 +72,33 @@ public class Observers
     public double QuarantineOnFailedPartitionPercentage { get; init; }
 
     /// <summary>
-    /// Gets whether observers should automatically replay when their definition changes.
-    /// When enabled, projections, reducers, reactors, and webhooks replay immediately on definition change
-    /// instead of creating a recommendation for manual replay.
+    /// Gets the policy for evolving read models when a projection or reducer definition changes.
     /// </summary>
+    public DefinitionEvolutionPolicy DefinitionEvolution { get; init; } = DefinitionEvolutionPolicy.Automatic;
+
+    /// <summary>
+    /// Gets whether reactors and webhooks should automatically replay when their definition changes.
+    /// </summary>
+    /// <remarks>
+    /// Projection and reducer changes use <see cref="DefinitionEvolution"/> because Chronicle can classify those
+    /// changes and avoid a full replay when less work is safe.
+    /// </remarks>
     public bool ReplayOnDefinitionChange { get; init; }
 
     /// <summary>
     /// Gets the interval in seconds between watchdog checks on each observer.
     /// The watchdog verifies that connected clients are still active, that running jobs
-    /// are progressing, and that the <c>NextEventSequenceNumber</c> is up-to-date.
+    /// are progressing, and that the <c language="csharp">NextEventSequenceNumber</c> is up-to-date.
     /// </summary>
     public int WatchdogInterval { get; init; } = 60;
 
     /// <summary>
     /// Gets the number of consecutive progress-only batches after which the observer's
-    /// <c>NextEventSequenceNumber</c> is made durable.
+    /// <c language="csharp">NextEventSequenceNumber</c> is made durable.
     /// </summary>
     /// <remarks>
     /// When an observer sees a batch that contains nothing it is subscribed to, it only advances
-    /// <c>NextEventSequenceNumber</c> past the skipped events. Persisting that advance on every such
+    /// <c language="csharp">NextEventSequenceNumber</c> past the skipped events. Persisting that advance on every such
     /// batch is pure write amplification, so it is debounced: the state is written once this many
     /// progress-only batches have accumulated. The pending advance is also flushed on the watchdog
     /// tick (the time bound, governed by <see cref="WatchdogInterval"/>) and on deactivation. Catch-up
@@ -107,4 +114,19 @@ public class Observers
     /// on the partition key, keeping every partition sticky to one instance) and "random".
     /// </summary>
     public string FanOutStrategy { get; init; } = "round-robin";
+
+    /// <summary>
+    /// Gets the maximum number of consecutive times the watchdog will recover an observer stuck "preparing
+    /// catch-up" with no catch-up job driving it forward before giving up and quarantining the observer instead.
+    /// </summary>
+    /// <remarks>
+    /// Starting a catch-up job can fail for reasons a retry cannot fix - a persistently unreachable job subsystem,
+    /// for example - which turns unconditional retrying into a busy loop: every watchdog tick clears the stranded
+    /// flag, re-routes the observer, asks for a new catch-up job, fails again, and is found stranded again next
+    /// tick, forever, with zero forward progress. Bounding the count and quarantining once it is exceeded turns
+    /// that silent, permanent spin into a visible, operator-actionable state. Unlike <see cref="MaxRetryAttempts"/>,
+    /// 0 is not treated as infinite here - a value of 0 or less always quarantines on the very first stranded
+    /// recovery, since leaving this unbounded reintroduces the loop this setting exists to close.
+    /// </remarks>
+    public int MaxCatchupRecoveryAttempts { get; init; } = 5;
 }

@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels;
 /// <para>
 /// Inspecting the document is necessarily storage-specific, and the integration matrix runs every namespace
 /// against MongoDB and three SQL backends. On a SQL backend there is no MongoDB container at all — touching
-/// <c>ChronicleFixture.ReadModels</c> there throws "Exposed port 27017/tcp is not mapped" and takes the whole
+/// <c language="csharp">ChronicleFixture.ReadModels</c> there throws "Exposed port 27017/tcp is not mapped" and takes the whole
 /// fixture down. So the read is skipped unless the run is backed by MongoDB, and the specs pair every
 /// at-rest assertion with one that fails if this read was skipped on a run where it should have happened.
 /// </para>

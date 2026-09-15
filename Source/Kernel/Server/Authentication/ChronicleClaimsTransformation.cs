@@ -21,21 +21,31 @@ public class ChronicleClaimsTransformation(UserManager<User> userManager) : ICla
         {
             var claimsIdentity = (ClaimsIdentity)principal.Identity;
 
-            // Only add sub claim if it doesn't already exist
-            if (!claimsIdentity.HasClaim(c => c.Type == "sub"))
+            var subjectClaim = claimsIdentity.FindFirst("sub");
+            if (subjectClaim is null || string.IsNullOrWhiteSpace(subjectClaim.Value))
             {
+                if (subjectClaim is not null)
+                {
+                    claimsIdentity.RemoveClaim(subjectClaim);
+                }
+
                 var userId = userManager.GetUserId(principal);
-                if (!string.IsNullOrEmpty(userId))
+                if (!string.IsNullOrWhiteSpace(userId))
                 {
                     claimsIdentity.AddClaim(new Claim("sub", userId));
                 }
             }
 
-            // Add name claim if it doesn't exist
-            if (!claimsIdentity.HasClaim(c => c.Type == "name"))
+            var nameClaim = claimsIdentity.FindFirst("name");
+            if (nameClaim is null || string.IsNullOrWhiteSpace(nameClaim.Value))
             {
+                if (nameClaim is not null)
+                {
+                    claimsIdentity.RemoveClaim(nameClaim);
+                }
+
                 var userName = userManager.GetUserName(principal);
-                if (!string.IsNullOrEmpty(userName))
+                if (!string.IsNullOrWhiteSpace(userName))
                 {
                     claimsIdentity.AddClaim(new Claim("name", userName));
                 }

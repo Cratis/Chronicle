@@ -4,7 +4,6 @@
 package io.cratis.chronicle.contracts
 
 import Cratis.Chronicle.Contracts.Clients.ConnectionServiceGrpcKt
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import Cratis.Chronicle.Contracts.EventStores.EventStoresGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.EventTypes.EventTypesGrpcKt
@@ -20,6 +19,7 @@ import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.Recommendations.RecommendationsGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.grpc.CallOptions
 import io.grpc.Channel
 import io.grpc.ClientInterceptor

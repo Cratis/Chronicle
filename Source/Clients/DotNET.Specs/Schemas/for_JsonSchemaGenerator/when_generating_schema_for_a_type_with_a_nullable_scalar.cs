@@ -4,9 +4,9 @@
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
 /// <summary>
-/// A nullable known-type scalar (e.g. <c>DateTimeOffset?</c>) must carry the nullable marker in its schema
+/// A nullable known-type scalar (e.g. <c language="csharp">DateTimeOffset?</c>) must carry the nullable marker in its schema
 /// format so <see cref="JsonSchemaExtensions.IsNullable"/> returns true and <see cref="JsonSchemaExtensions.GetDefaultValue"/>
-/// yields <see langword="null"/> rather than the type-default sentinel (<c>0001-01-01</c>). Without the marker
+/// yields <see langword="null"/> rather than the type-default sentinel (<c language="csharp">0001-01-01</c>). Without the marker
 /// an unset optional read-model value materializes at rest as that sentinel instead of null/absent.
 /// </summary>
 public class when_generating_schema_for_a_type_with_a_nullable_scalar : given.a_json_schema_generator

@@ -38,7 +38,7 @@ public sealed class NuGetContractsPackage(HttpClient client) : IDisposable
     /// <em>when</em> a contract broke rather than only that it did.
     /// <para>
     /// The earliest release of each minor is the one taken, because it is the one every later patch had to keep
-    /// serving. Not every minor starts at <c>x.y.0</c> - 11 starts at 11.0.1, 12 at 12.0.2, 15 at 15.0.3 - so this
+    /// serving. Not every minor starts at <c language="csharp">x.y.0</c> - 11 starts at 11.0.1, 12 at 12.0.2, 15 at 15.0.3 - so this
     /// reads what was actually published rather than assuming a version number exists.
     /// </para>
     /// </remarks>

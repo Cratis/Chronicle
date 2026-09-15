@@ -38,4 +38,16 @@ public interface IEventMigrationPropertyBuilder
     /// <param name="targetProperty">The name of the property to set the default value on.</param>
     /// <param name="value">The default value.</param>
     void DefaultValue(PropertyName targetProperty, object value);
+
+    /// <summary>
+    /// Translate the individual values of a property that mean something different in the target generation.
+    /// </summary>
+    /// <param name="targetProperty">The name of the property to write the translated value into.</param>
+    /// <param name="sourceProperty">The source property to read the value from.</param>
+    /// <param name="mappings">The values that change meaning, and what they become.</param>
+    /// <remarks>
+    /// A value no mapping mentions is carried across unchanged, and so is the value of a payload that does not carry
+    /// the source property at all.
+    /// </remarks>
+    void MapValues(PropertyName targetProperty, PropertyName sourceProperty, IEnumerable<ValueMapping> mappings);
 }

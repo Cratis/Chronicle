@@ -32,12 +32,12 @@ import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
 import { ConnectedClients } from './System/ConnectedClients/ConnectedClients';
+import { Servers } from './System/Servers/Servers';
 import { DevelopmentTools } from './System/DevelopmentTools/DevelopmentTools';
 import { AreDevelopmentToolsAvailable } from 'Features/DevelopmentTools';
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 import { Captures } from './General/Captures/Captures';
-// import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
     // The server decides: development tools are only compiled into development builds, so a
@@ -48,7 +48,6 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
-                // { label: 'Dashboard', url: ':namespace/dashboard', icon: mdIcons.MdSpaceDashboard },
                 { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
@@ -86,6 +85,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.system.users, url: 'users', icon: mdIcons.MdVerifiedUser },
                 { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity },
                 { label: strings.mainMenu.system.connectedClients, url: 'connected-clients', icon: mdIcons.MdDevices },
+                { label: strings.mainMenu.system.servers, url: 'servers', icon: mdIcons.MdDns },
                 ...(areDevelopmentToolsAvailable
                     ? [{ label: strings.mainMenu.system.developmentTools, url: 'development-tools', icon: mdIcons.MdConstruction }]
                     : [])
@@ -117,11 +117,11 @@ export const EventStore = () => {
                 <Route path={'users'} element={<Users />} />
                 <Route path={'applications'} element={<Applications />} />
                 <Route path={'connected-clients'} element={<ConnectedClients />} />
+                <Route path={'servers'} element={<Servers />} />
                 <Route path={'development-tools'} element={<DevelopmentTools />} />
 
                 <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'recommendations'} replace />} />
-                    {/* <Route path={'dashboard'} element={<Dashboard />} /> */}
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />

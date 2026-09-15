@@ -6,8 +6,8 @@ using Cratis.Chronicle.Projections;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Fluent projection for <see cref="DepotShiftBoard"/> using the <c>AddChild(...)</c> spelling inside the root
-/// <c>.From&lt;ShiftLogged&gt;</c> — which desugars into <c>Children(...).From&lt;ShiftLogged&gt;</c> and so
+/// Fluent projection for <see cref="DepotShiftBoard"/> using the <c language="csharp">AddChild(...)</c> spelling inside the root
+/// <c language="csharp">.From&lt;ShiftLogged&gt;</c> — which desugars into <c language="csharp">Children(...).From&lt;ShiftLogged&gt;</c> and so
 /// produces the same one-event-does-both shape as <see cref="DepotShiftLogProjection"/>.
 /// </summary>
 public class DepotShiftBoardProjection : IProjectionFor<DepotShiftBoard>

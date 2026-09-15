@@ -33,9 +33,31 @@ jobs:
             "$CONTRACTS_DLL" \
             Source/Kernel/Protobuf
 
+      # DescriptorSetWriter checks protobuf-net's parser. Published clients use Google's
+      # protoc too, which rejects some schemas that parser accepts (such as name collisions).
+      # Keep its validation descriptor separate from the canonical chronicle.desc.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install protoc tooling
+        run: python -m pip install grpcio-tools==1.83.0
+
+      - name: Validate generated proto files with protoc
+        working-directory: ./Source/Kernel/Protobuf
+        run: |
+          set -euo pipefail
+          test -s chronicle.desc
+          python -m grpc_tools.protoc -I. --fatal_warnings --include_imports \
+            --descriptor_set_out="$RUNNER_TEMP/protoc-validation.desc" \
+            ./*.proto protobuf-net/bcl.proto
+          test -s "$RUNNER_TEMP/protoc-validation.desc"
+
       - name: Upload proto files artifact
         uses: actions/upload-artifact@v4
         with:
           name: proto-files
           path: Source/Kernel/Protobuf/
           retention-days: 1
+          if-no-files-found: error

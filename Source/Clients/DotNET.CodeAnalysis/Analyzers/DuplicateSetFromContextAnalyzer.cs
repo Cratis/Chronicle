@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a member carrying several <c>[SetFromContext]</c> for the same event type.
+/// Analyzer that reports a member carrying several <c language="csharp">[SetFromContext]</c> for the same event type.
 /// </summary>
 /// <remarks>
 /// The attribute allows multiple deliberately, and that is load-bearing: one property capturing context from
@@ -31,7 +31,7 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// </para>
 /// <para>
 /// A positional record spells one member twice - the constructor parameter, and the property generated from it,
-/// which <c>[property:]</c> is the only way to reach. They are distinct symbols, and the builder's parameter and
+/// which <c language="csharp">[property:]</c> is the only way to reach. They are distinct symbols, and the builder's parameter and
 /// property passes are disjoint per symbol, so a duplicate split across the two spellings reaches the same key of
 /// the same definition from opposite sides with neither symbol carrying both attributes. The property pass runs
 /// second and wins, as quietly as before. The two symbols' attributes are therefore unioned before grouping.

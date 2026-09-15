@@ -13,9 +13,9 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ReadModelChildCollectionCompliance;
 
 /// <summary>
-/// Regression for the reducer RELEASE of a coarse <c>[PII]</c> list at the top level of a reducer-owned read
+/// Regression for the reducer RELEASE of a coarse <c language="csharp">[PII]</c> list at the top level of a reducer-owned read
 /// model. The whole list is blob-encrypted to a single ciphertext string at rest; releasing it must restore
-/// the array so it deserializes into the read model's <c>IReadOnlyList&lt;T&gt;</c> — the exact step the
+/// the array so it deserializes into the read model's <c language="csharp">IReadOnlyList&lt;T&gt;</c> — the exact step the
 /// client reducer performs on its next reduce. Before the fix the released value stayed a string and that
 /// deserialize threw, freezing the reducer. Two reduces are driven against one key: create, then
 /// read-modify-write.

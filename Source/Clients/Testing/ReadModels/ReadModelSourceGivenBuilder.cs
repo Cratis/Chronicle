@@ -20,7 +20,7 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
     /// </summary>
     /// <remarks>
     /// Events are not processed immediately. Deferred processing enables multi-stream scenarios where events
-    /// across different event sources are required (for example, <c>ChildrenFrom</c> projections that link
+    /// across different event sources are required (for example, <c language="csharp">ChildrenFrom</c> projections that link
     /// child entities to parents via a parent key on a separate event source stream).
     /// </remarks>
     /// <param name="events">The event instances to collect in order.</param>
@@ -33,10 +33,10 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
 
     /// <summary>
     /// Registers a pre-built read model instance for this event source, making it available through
-    /// <see cref="ReadModelScenario{TReadModel}.ReadModels"/> for <c>GetInstanceById</c> calls.
+    /// <see cref="ReadModelScenario{TReadModel}.ReadModels"/> for <c language="csharp">GetInstanceById</c> calls.
     /// </summary>
     /// <remarks>
-    /// Use this when testing production code that calls <c>IReadModels.GetInstanceById</c> — seed the
+    /// Use this when testing production code that calls <c language="csharp">IReadModels.GetInstanceById</c> — seed the
     /// expected read model state here rather than replaying events through a projection.
     /// </remarks>
     /// <param name="readModel">The read model instance to register for this event source.</param>

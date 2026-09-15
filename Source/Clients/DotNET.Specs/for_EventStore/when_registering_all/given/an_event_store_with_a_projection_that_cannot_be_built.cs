@@ -32,6 +32,7 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
     protected IProjections _projections;
     protected IClientArtifactsProvider _clientArtifacts;
     protected IChronicleServicesAccessor _servicesAccessor;
+    protected ConnectionLifecycle _connectionLifecycle;
 
     /// <summary>
     /// The retry settings the event store registers under. A single attempt by default, so a specification about
@@ -84,6 +85,13 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         // Zero delays: a specification about retrying asserts on how many attempts were made, never on the clock.
         SetField("_registrationBackoff", new RegistrationBackoff(TimeSpan.Zero, TimeSpan.Zero));
         SetAutoProperty("Registration", Registrations.RegistrationOutcome.NotRun);
+
+        // A real lifecycle (not a mock) so a specification can drive Disconnected()/Connected() directly and have
+        // the event store's own OnDisconnected subscription observe it exactly as it would in production.
+        _connectionLifecycle = new ConnectionLifecycle(Substitute.For<ILogger<ConnectionLifecycle>>());
+        var eventStoreConnection = Substitute.For<IChronicleConnection>();
+        eventStoreConnection.Lifecycle.Returns(_connectionLifecycle);
+        SetAutoProperty("Connection", eventStoreConnection);
         SetAutoProperty("Name", new EventStoreName("Testing"));
         SetAutoProperty("Namespace", new EventStoreNamespaceName("default"));
         SetAutoProperty("EventTypes", Substitute.For<IEventTypes>());

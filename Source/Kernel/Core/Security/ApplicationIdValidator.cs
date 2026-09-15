@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <remarks>
 /// Lives beside the Applications commands rather than next to the <see cref="ApplicationId"/> concept itself:
-/// <c>Concepts.csproj</c> is a dependency-free primitives project that <c>Storage.csproj</c> references, so this
+/// <c language="csharp">Concepts.csproj</c> is a dependency-free primitives project that <c language="csharp">Storage.csproj</c> references, so this
 /// validator - which needs <see cref="IStorage"/> - cannot live there without a circular project reference.
 /// </remarks>
 public class ApplicationIdValidator : ConceptValidator<ApplicationId>

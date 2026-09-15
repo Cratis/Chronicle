@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Patterns;
 /// <param name="LastSeen">When the pattern was last observed.</param>
 /// <remarks>
 /// Named for what it carries rather than for the concept, because <see cref="BehaviorPattern"/> in
-/// <c>Concepts.Patterns</c> already owns that name.
+/// <c language="csharp">Concepts.Patterns</c> already owns that name.
 /// </remarks>
 [ReadModel]
 [BelongsTo(WellKnownServices.Patterns)]

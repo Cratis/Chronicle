@@ -183,6 +183,11 @@ public static class ProjectionEventContextExtensions
                 if (!context.IsJoin && (!identifiedByProperty.IsSet ||
                                         !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier)))
                 {
+                    // AddChild applies the property mappers itself - it has to, because the ChildAdded change it
+                    // records is what carries the new child's values all the way to the sink. Mapping again here
+                    // is invisible for a plain set (it writes the same value twice) but runs every accumulating
+                    // mapper a second time, so [AddFrom]/[SubtractFrom] on a child doubled on the very event that
+                    // created it (#3940).
                     context.Changeset.AddChild<ExpandoObject>(
                         childrenProperty,
                         identifiedByProperty,
@@ -190,7 +195,6 @@ public static class ProjectionEventContextExtensions
                         propertyMappers,
                         context.Key.ArrayIndexers,
                         childInitialState);
-                    context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
                     return;
                 }
 

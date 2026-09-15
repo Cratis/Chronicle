@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_clearing_a_scalar_member;
 
 /// <summary>
-/// The behavior #3641 reported missing: a scalar member declared with <c>[ClearWith]</c> is actually written back
+/// The behavior #3641 reported missing: a scalar member declared with <c language="csharp">[ClearWith]</c> is actually written back
 /// to no value when the clearing event is observed, rather than keeping whatever it last held.
 /// </summary>
 public class and_the_clearing_event_has_occurred : Specification

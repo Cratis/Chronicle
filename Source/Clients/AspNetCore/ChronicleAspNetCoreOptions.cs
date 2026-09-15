@@ -13,7 +13,7 @@ namespace Microsoft.AspNetCore.Builder;
 /// Extends <see cref="Cratis.Chronicle.ChronicleClientOptions"/> with settings that are specific to
 /// ASP.NET Core hosting, such as HTTP header–based namespace resolution. For non-web hosts (worker
 /// services, console apps), use <see cref="Cratis.Chronicle.ChronicleClientOptions"/> directly via the
-/// <c>IHostApplicationBuilder.AddCratisChronicle</c> extension in the DotNET client package.
+/// <c language="csharp">IHostApplicationBuilder.AddCratisChronicle</c> extension in the DotNET client package.
 /// </remarks>
 public class ChronicleAspNetCoreOptions : Cratis.Chronicle.ChronicleClientOptions
 {

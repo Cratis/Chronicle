@@ -20,6 +20,18 @@ When you provide no runtime arguments, the suite defaults to:
 | Client | `Integration/Client` | Runs the shared .NET integration specifications in either `inprocess` or `outofprocess` mode, with runtime storage selected through command-line arguments. |
 | API (out-of-process) | `Integration/Api` | Runs a full Chronicle server via Docker and tests the HTTP/gRPC client against it. |
 
+## Checking packed test-package startup
+
+Before publishing locally packed packages, check startup from outside the repository:
+
+```bash
+bash .github/scripts/verify-consumer-smoke.sh "$CHRONICLE_VERSION" "$LOCAL_PACKAGE_FEED"
+```
+
+Set `CHRONICLE_VERSION` to the candidate version and `LOCAL_PACKAGE_FEED` to the directory containing its NuGet packages. The check requires the .NET SDK and NuGet access, but not Docker. It starts two separate applications: one using Chronicle.Testing with Arc.Chronicle.Testing, and one using Chronicle.XUnit.Integration without either Testing package. Both must complete `AddCratisArcCore()` type discovery.
+
+Each test package carries its own embedded kernel runtime assemblies, including Compatibility. Do not add a separate Compatibility package to the consumer. Testing one package alongside the other can hide a missing runtime assembly, so keep the two consumer graphs separate. This startup check does not replace the kernel/storage integration suites below.
+
 ## Running the Tests
 
 ### From the command line

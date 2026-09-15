@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.ReadModels.for_ReadModelJsonSerialization;
 
 /// <summary>
-/// The read-model sink omits an empty child collection rather than writing <c>[]</c> - deliberately, so a
+/// The read-model sink omits an empty child collection rather than writing <c language="csharp">[]</c> - deliberately, so a
 /// parallel replay cannot overwrite children a sibling event already wrote. A read model nonetheless declares
 /// that collection non-nullable, so nullable-reference analysis never warns and nothing prompts a guard, and the
 /// property came back <see langword="null"/> anyway - on the state every one of these read models is in the

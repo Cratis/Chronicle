@@ -9,8 +9,8 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_releasing.given;
 
 /// <summary>
 /// A compliance service that records every release request and answers it the way the kernel does for a
-/// value encrypted under the requested subject: the ciphertext <c>cipher(subject):value</c> comes back as
-/// <c>value</c>, and a ciphertext belonging to another subject comes back blank, which is what the kernel
+/// value encrypted under the requested subject: the ciphertext <c language="csharp">cipher(subject):value</c> comes back as
+/// <c language="csharp">value</c>, and a ciphertext belonging to another subject comes back blank, which is what the kernel
 /// degrades an undecryptable property to.
 /// </summary>
 public class a_recording_compliance_service : for_ReadModels.given.all_dependencies

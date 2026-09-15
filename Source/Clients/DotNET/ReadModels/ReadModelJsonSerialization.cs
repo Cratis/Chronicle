@@ -12,9 +12,9 @@ namespace Cratis.Chronicle.ReadModels;
 /// Serialization semantics a read model is read back with.
 /// </summary>
 /// <remarks>
-/// The read-model sink omits an empty child collection rather than writing <c>[]</c>, deliberately: a parallel
-/// replay races sibling partitions through their own events, and an unconstrained <c>Children=[]</c> from the
-/// root's own event would erase whatever a sibling's <c>ChildAdded</c> already pushed. Absence is the encoding,
+/// The read-model sink omits an empty child collection rather than writing <c language="csharp">[]</c>, deliberately: a parallel
+/// replay races sibling partitions through their own events, and an unconstrained <c language="csharp">Children=[]</c> from the
+/// root's own event would erase whatever a sibling's <c language="csharp">ChildAdded</c> already pushed. Absence is the encoding,
 /// and it is not going to change.
 /// <para>
 /// What must change is what a reader does with that absence. A read model declares its child collection as a

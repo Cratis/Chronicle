@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_composed_read_model
 /// <remarks>
 /// The ciphertext is the whole point of running these at this tier. A query method that composes a row in
 /// memory from a collection it read itself gets these bytes, not the plaintext the kernel hands back through
-/// <c>GetInstanceById</c> — and an in-memory harness that substitutes the source collection never produces
+/// <c language="csharp">GetInstanceById</c> — and an in-memory harness that substitutes the source collection never produces
 /// them at all, so no spec below this tier can tell a released value from an unreleased one.
 /// </remarks>
 /// <param name="fixture">The <see cref="ChronicleFixture"/> for the run.</param>

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -59,5 +60,15 @@ public record ProjectionDefinition(
     /// <summary>
     /// Checks if the definition is empty or not. Empty meaning that there is no definition.
     /// </summary>
-    public bool IsEmpty => From.Count == 0 && Children.Count == 0 && (Nested is null || Nested.Count == 0);
+    /// <remarks>
+    /// A grain's <see cref="ProjectionDefinition"/> state is left uninitialized (all reference members null)
+    /// when nothing has been persisted for it yet - <see cref="From"/> and <see cref="Children"/> can be null
+    /// in that state despite their non-nullable type, so this must not dereference them directly. It is also
+    /// excluded from JSON via <see cref="JsonIgnoreAttribute"/> - it is write-only (no setter, nothing reads it
+    /// back through JSON) and evaluating it during Orleans' deep-copy serialization of an uninitialized instance
+    /// would otherwise throw a NullReferenceException from inside the serializer, with no Chronicle frame on the
+    /// stack to explain it (#3934).
+    /// </remarks>
+    [JsonIgnore]
+    public bool IsEmpty => (From?.Count ?? 0) == 0 && (Children?.Count ?? 0) == 0 && (Nested is null || Nested.Count == 0);
 }

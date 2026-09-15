@@ -32,6 +32,8 @@ Place snippets in `Documentation/client-snippets/**` in the repo that owns the c
 
 Snippet files can be `.md` or `.mdx`. Prefer `.md` for ordinary fenced code snippets; use `.mdx` only when the snippet file itself needs MDX syntax.
 
+A shared page that uses `ChronicleClientTabs` must itself be `.mdx`. Put every placeholder on its own line in the self-closing form shown below. The documentation sync deliberately recognizes only that shape, so an inline, multiline, or paired component is not expanded.
+
 Do not create a public client-specific Chronicle section just to hold equivalent snippets. The snippet folders are source-only and are expanded into the shared pages by the documentation site sync.
 
 Do not add new raw `csharp`, `cs`, `java`, `kotlin`, `elixir`, `typescript`, or `ts` fenced examples to shared Chronicle docs for client SDK behavior. Use `<ChronicleClientTabs />` instead. The Documentation repo runs `npm run chronicle-client-docs:check`, which fails on missing snippets and on any increase in direct client-language fences in shared Chronicle docs.
@@ -44,7 +46,7 @@ Shared Chronicle pages reference those snippets with a placeholder:
 <ChronicleClientTabs snippet="events/appending/example" />
 ```
 
-The snippet id is extensionless. Add the same id under each participating client repo:
+The snippet id is extensionless. Add the same id under each participating client repo. A partial tab set is valid: a client participates only when that client should have a tab for this example.
 
 ```text
 Chronicle/Documentation/client-snippets/events/appending/example.md
@@ -58,7 +60,7 @@ Use one fenced code block in each snippet file unless the language needs more th
 
 `<ChronicleClientTabs />` has no `clients` property. Chronicle's shared docs never declare which clients apply to an example — the sync discovers that itself: it checks every registered client's snippet root for a file at that id and renders a tab only for the clients where one exists. When only some clients expose a concept, simply don't add a snippet file for the others; there is nothing to configure on the placeholder.
 
-When a shared workflow should be visible for a client but that client does not support it yet, keep the tab visible with an explicit unsupported snippet instead of omitting the client:
+Do not use an absent snippet to claim that a participating client lacks support. When the shared workflow should be visible for that client but its SDK does not support it yet, keep the tab visible with an explicit unsupported snippet:
 
 ````md
 ```text

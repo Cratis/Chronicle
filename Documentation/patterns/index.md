@@ -56,6 +56,12 @@ Chronicle does not store anything per event. It keeps a bounded **Lossy Counting
 
 Storage therefore scales with **distinct recurring behavior**, not with event volume. A store that appends millions of events but sees a few hundred recurring behaviors holds a few hundred rows.
 
+Mining happens in memory on every observed event; **persistence is deferred** — the scopes an interval touched are rewritten on the `PersistenceInterval` cadence, so a bulk ingest of thousands of events costs a handful of writes rather than one rewrite per event. Sketches are kept **per event store and per namespace**: the same scope name in two stores — or two tenants' namespaces — is two different people's behavior and never counts into one sketch.
+
+### Across restarts
+
+The sketch lives in memory, but what survived it is persisted — so when the server restarts, a scope's established patterns are **restored into the sketch before anything new is mined for it** and counting continues where it left off. Without that, the first events after a restart would be a fresh sketch's only observations, held with full support, and rewriting the scope from them would wipe established behavior. `Occurrences` stays a bounded approximation: a small tail of events can be re-mined after a crash, over-counting by at most the observer's checkpoint window.
+
 ### Confidence
 
 Confidence reads as the rule *"in this context, this action follows"*: the frequency of the whole combination over the frequency of the same combination without its `CommandType` facet. A combination that names no action is pure context, and its confidence is its support.
@@ -72,12 +78,13 @@ Under `Cratis:Chronicle:PatternDetection`:
 | `MinimumSupport` | `0.01` | The smallest share of events a combination must hold to survive |
 | `MinimumConfidence` | `0.5` | The smallest confidence a combination must hold to survive |
 | `DecayFactor` | `0.99` | Daily decay applied to a combination that has gone unseen |
+| `PersistenceInterval` | `5` | Seconds between persisting the scopes mining has touched |
 
 `Year` and `Month` are deliberately absent from `Facets`: they are kept on a surviving pattern for recency, but combining them multiplies the candidate space by every month the store has been running while splitting one behavior across all of them. Add them when a deployment wants to mine seasonality and can afford the cardinality.
 
 ## When capture starts
 
-Pattern capture observes the event types an event store has registered, and re-subscribes as more are registered — so a store that gains its first event types while the server is already running starts being captured then, not at the next restart.
+Pattern capture observes the event types an event store has registered, and re-subscribes as more are registered — so a store that gains its first event types while the server is already running starts being captured then, not at the next restart. A **namespace added while the server runs** is subscribed the moment it appears, so a tenant onboarded between restarts is mined from its first event.
 
 ## Naming the command
 

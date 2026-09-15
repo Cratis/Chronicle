@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Chronicle.Contracts.ReadModelExplorer;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_getting_snapshots_by_id;
@@ -22,7 +23,7 @@ public class and_it_is_a_projection : given.all_dependencies
 
     ReadModelKey _key;
     IEnumerable<ReadModelSnapshot<MyReadModel>> _result;
-    GetSnapshotsByKeyResponse _response;
+    QueryResult<IEnumerable<ReadModelSnapshotResponse>> _response;
 
     void Establish()
     {
@@ -35,37 +36,11 @@ public class and_it_is_a_projection : given.all_dependencies
         _eventTypes.HasFor(eventTypeId).Returns(true);
         _eventTypes.GetClrTypeFor(eventTypeId).Returns(typeof(MyEvent));
 
-        var eventContext = EventContext.EmptyWithEventSourceId(Guid.NewGuid()) with
-        {
-            SequenceNumber = 42,
-            EventType = eventType
-        };
+        _response = given.a_snapshot_response.AsResult(
+            given.a_snapshot_response.With("""{"Name":"First","Value":1}""", eventType, new MyEvent { Data = "test-data", Number = 123 }, _jsonSerializerOptions),
+            given.a_snapshot_response.With("""{"Name":"Second","Value":2}""", eventType, new MyEvent { Data = "test-data", Number = 123 }, _jsonSerializerOptions));
 
-        var contractEvent = new AppendedEvent(eventContext, new MyEvent { Data = "test-data", Number = 123 })
-            .ToContract(_jsonSerializerOptions);
-
-        _response = new GetSnapshotsByKeyResponse
-        {
-            Snapshots =
-            [
-                new()
-                {
-                    ReadModel = """{"Name":"First","Value":1}""",
-                    Events = [contractEvent],
-                    Occurred = DateTimeOffset.UtcNow,
-                    CorrelationId = Guid.NewGuid()
-                },
-                new()
-                {
-                    ReadModel = """{"Name":"Second","Value":2}""",
-                    Events = [contractEvent],
-                    Occurred = DateTimeOffset.UtcNow,
-                    CorrelationId = Guid.NewGuid()
-                }
-            ]
-        };
-
-        _services.ReadModels.GetSnapshotsByKey(Arg.Any<GetSnapshotsByKeyRequest>()).Returns(_response);
+        _services.ReadModelExplorer.AllSnapshotsForReadModel(Arg.Any<AllSnapshotsForReadModelRequest>()).Returns(_response);
     }
 
     async Task Because() => _result = await _readModels.GetSnapshotsById<MyReadModel>(_key);

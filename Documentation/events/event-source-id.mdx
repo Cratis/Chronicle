@@ -26,4 +26,4 @@ Because `EventSourceId<T>` carries an implicit conversion to `EventSourceId`, yo
 
 When you use `EventSourceId<T>` in a command or query parameter, the Arc ProxyGenerator reads the underlying type `T` and emits a TypeScript proxy that reflects the concrete type rather than a plain string. This gives you a fully typed frontend experience that matches the domain model on the server.
 
-See <xref:Arc.Chronicle.ProxyGeneration> for details on how proxy generation works and how to configure it.
+See [Arc type mapping](/arc/backend/proxy-generation/type-mapping/) for details on how proxy generation works and how to configure it.

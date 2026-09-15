@@ -75,7 +75,6 @@ public class and_read_model_is_passive_with_a_pii_property : given.all_dependenc
                     new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(valueHandler),
                     NullLogger<JsonComplianceManager>.Instance),
                 _expandoObjectConverter),
-            _eventCompliance,
             _materializedReadModels,
             new JsonSerializerOptions());
     }

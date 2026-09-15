@@ -27,8 +27,8 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     /// The descriptor for the diagnostic.
     /// </summary>
     /// <remarks>
-    /// A warning for its first release, following the precedent recorded on the retired <c>CHR0047</c>: these
-    /// analyzers ship inside the <c>Cratis.Chronicle</c> package, so under <c>TreatWarningsAsErrors</c> a new
+    /// A warning for its first release, following the precedent recorded on the retired <c language="csharp">CHR0047</c>: these
+    /// analyzers ship inside the <c language="csharp">Cratis.Chronicle</c> package, so under <c language="csharp">TreatWarningsAsErrors</c> a new
     /// warning already breaks a consumer build on upgrade - which is what makes it a minor release. An error is a
     /// strictly stronger break and buys little here, because the declaration never worked in the first place.
     /// The declaration has no correct reading, so this is scheduled to become
@@ -74,8 +74,8 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     /// <param name="symbols">The resolved Chronicle fluent builder symbols.</param>
     /// <remarks>
     /// C# cannot express "a nullable-annotated reference type" as a generic constraint - a non-nullable argument
-    /// converts to a nullable parameter without complaint - so <c>Clear</c> cannot refuse this at its signature and
-    /// the rule has to be applied here. <c>Set(...).ToValue(null)</c> is the same clear and is held to the same rule.
+    /// converts to a nullable parameter without complaint - so <c language="csharp">Clear</c> cannot refuse this at its signature and
+    /// the rule has to be applied here. <c language="csharp">Set(...).ToValue(null)</c> is the same clear and is held to the same rule.
     /// </remarks>
     static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, FluentProjectionSymbols symbols)
     {
@@ -125,10 +125,10 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
             : invocation.Span;
 
     /// <summary>
-    /// Resolve the member a <c>Clear</c> call targets from its accessor lambda.
+    /// Resolve the member a <c language="csharp">Clear</c> call targets from its accessor lambda.
     /// </summary>
     /// <param name="context">The syntax analysis context.</param>
-    /// <param name="invocation">The <c>Clear</c> invocation.</param>
+    /// <param name="invocation">The <c language="csharp">Clear</c> invocation.</param>
     /// <returns>The member's type and name, or a null type when the accessor is not a plain property access.</returns>
     static (ITypeSymbol? Type, string Name) GetClearedMember(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
     {
@@ -144,19 +144,19 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Determine whether a <c>ToValue</c> call declares a compile-time null, which makes it a clear.
+    /// Determine whether a <c language="csharp">ToValue</c> call declares a compile-time null, which makes it a clear.
     /// </summary>
     /// <param name="context">The syntax analysis context.</param>
-    /// <param name="invocation">The <c>ToValue</c> invocation.</param>
+    /// <param name="invocation">The <c language="csharp">ToValue</c> invocation.</param>
     /// <returns>True when the argument folds to null.</returns>
     static bool DeclaresNullArgument(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation) =>
         invocation.ArgumentList.Arguments.Count > 0 &&
         context.SemanticModel.GetConstantValue(invocation.ArgumentList.Arguments[0].Expression) is { HasValue: true, Value: null };
 
     /// <summary>
-    /// Recover the member name from the <c>Set(...)</c> that a <c>ToValue</c> continues, for the message only.
+    /// Recover the member name from the <c language="csharp">Set(...)</c> that a <c language="csharp">ToValue</c> continues, for the message only.
     /// </summary>
-    /// <param name="invocation">The <c>ToValue</c> invocation.</param>
+    /// <param name="invocation">The <c language="csharp">ToValue</c> invocation.</param>
     /// <returns>The member name, or an empty string when it cannot be read off the chain.</returns>
     static string GetSetMemberName(InvocationExpressionSyntax invocation) =>
         invocation.Expression is MemberAccessExpressionSyntax { Expression: InvocationExpressionSyntax setInvocation } &&
@@ -202,7 +202,7 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Determine whether the single <c>[SetValue]</c> argument is a compile-time null.
+    /// Determine whether the single <c language="csharp">[SetValue]</c> argument is a compile-time null.
     /// </summary>
     /// <param name="context">The syntax analysis context.</param>
     /// <param name="attribute">The attribute application.</param>
@@ -231,7 +231,7 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     /// <param name="attribute">The attribute application.</param>
     /// <returns>The member's type, or <see langword="null"/> when the attribute is not on a member.</returns>
     /// <remarks>
-    /// A class-level <c>[ClearWith]</c> on a nested type has no member type and is never a scalar clear, so it
+    /// A class-level <c language="csharp">[ClearWith]</c> on a nested type has no member type and is never a scalar clear, so it
     /// resolves to nothing and is never reported.
     /// </remarks>
     static ITypeSymbol? GetMemberType(SyntaxNodeAnalysisContext context, AttributeSyntax attribute) =>
@@ -262,7 +262,7 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     /// <remarks>
     /// A reference type in a file that has opted out of nullable analysis is oblivious rather than non-null, so it
     /// is left alone - the declaration is the author's to make and the projection builder agrees. A value type that
-    /// is not <c>Nullable&lt;T&gt;</c> cannot hold null whatever the nullable context says.
+    /// is not <c language="csharp">Nullable&lt;T&gt;</c> cannot hold null whatever the nullable context says.
     /// </remarks>
     static bool CanHoldNull(ITypeSymbol type) =>
         type.IsValueType

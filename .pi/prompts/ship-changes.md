@@ -1,1 +1,1 @@
-../../.ai/prompts/ship-changes.prompt.md
+../../.cratis/ai/prompts/ship-changes.prompt.md

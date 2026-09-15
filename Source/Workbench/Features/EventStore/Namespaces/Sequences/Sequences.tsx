@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom';
 import { Allotment } from 'allotment';
 import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 import { Tabs, type TabsRootChangeEvent } from 'primereact/tabs';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { Page } from 'Components/Common/Page';
@@ -187,7 +187,7 @@ export const Sequences = () => {
                             <Button
                                 className='sequences__add'
                                 icon='pi pi-plus'
-                                text
+                                variant='ghost'
                                 aria-label={sequenceStrings.actions.newQuery}
                                 tooltip={sequenceStrings.actions.newQuery}
                                 tooltipOptions={{ position: 'left', className: 'sequences__add-tooltip' }}

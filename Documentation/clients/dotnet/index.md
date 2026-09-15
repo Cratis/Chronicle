@@ -38,6 +38,7 @@ dotnet add package Cratis.Chronicle.AspNetCore
 
 ## .NET-specific pages
 
+- [Health checks](./health-checks.md)
 - [Console quickstart](/chronicle/get-started/console/)
 - [ASP.NET Core hosting](/chronicle/get-started/aspnetcore/)
 - [Worker Service hosting](/chronicle/get-started/worker/)

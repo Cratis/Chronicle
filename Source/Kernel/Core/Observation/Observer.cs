@@ -67,6 +67,7 @@ public partial class Observer(
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
+    int _catchupRecoveryAttempts;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;
     int _debouncedProgressWrites;
@@ -153,7 +154,19 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
+    public async Task<IEnumerable<EventType>> GetEventTypes()
+    {
+        // An observer subscribed to all events has no fixed event type list to return - the whole
+        // point is that it also covers types that did not exist when it subscribed. Resolve the full,
+        // current set from storage each time rather than a snapshot captured at subscribe time.
+        if (State.SubscribesToAllEvents)
+        {
+            var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetLatestForAllEventTypes();
+            return schemas.Select(_ => _.Type);
+        }
+
+        return Definition.EventTypes;
+    }
 
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(

@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 public class Projection : IProjection, IDisposable
 {
     readonly Subject<ProjectionEventContext> _subject = new();
+    readonly KeyResolver? _allEventsKeyResolver;
     Dictionary<EventTypeId, KeyResolver> _keyResolverByEventTypeId = [];
     Dictionary<EventTypeId, ProjectionOperationType> _operationTypeByEventTypeId = [];
 
@@ -39,6 +40,8 @@ public class Projection : IProjection, IDisposable
     /// <param name="autoMap">Whether properties should be auto-mapped from events at the projection level.</param>
     /// <param name="noAutoMapProperties">Read model property names excluded from auto-mapping even when <paramref name="autoMap"/> is enabled.</param>
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
+    /// <param name="subscribesToAllEvents">Whether the projection subscribes to every event type in the system, including ones not yet known when it was created.</param>
+    /// <param name="allEventsKeyResolver">The <see cref="KeyResolver"/> to fall back to for an event type that has no explicit key resolver, used only when <paramref name="subscribesToAllEvents"/> is <see langword="true"/>.</param>
     public Projection(
         EventSequenceId eventSequenceId,
         ProjectionId identifier,
@@ -51,7 +54,9 @@ public class Projection : IProjection, IDisposable
         bool rewindable,
         AutoMap autoMap,
         IReadOnlySet<string> noAutoMapProperties,
-        IEnumerable<IProjection> childProjections)
+        IEnumerable<IProjection> childProjections,
+        bool subscribesToAllEvents = false,
+        KeyResolver? allEventsKeyResolver = null)
     {
         EventSequenceId = eventSequenceId;
         Identifier = identifier;
@@ -61,12 +66,17 @@ public class Projection : IProjection, IDisposable
         IsRewindable = rewindable;
         AutoMap = autoMap;
         NoAutoMapProperties = noAutoMapProperties;
+        SubscribesToAllEvents = subscribesToAllEvents;
+        _allEventsKeyResolver = allEventsKeyResolver;
         Event = FilterEventTypes(_subject);
         Path = path;
         ChildrenPropertyPath = childrenPropertyPath;
         IdentifiedByProperty = identifiedByProperty;
         ChildProjections = childProjections;
     }
+
+    /// <inheritdoc/>
+    public bool SubscribesToAllEvents { get; }
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId { get; }
@@ -136,30 +146,38 @@ public class Projection : IProjection, IDisposable
     internal CompositeDisposable Subscriptions { get; } = new();
 
     /// <inheritdoc/>
-    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => _keyResolverByEventTypeId.ContainsKey(_.Event.Context.EventType.Id));
+    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(_.Event.Context.EventType.Id));
 
     /// <inheritdoc/>
-    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => _keyResolverByEventTypeId.ContainsKey(_.Context.EventType.Id));
+    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(_.Context.EventType.Id));
 
     /// <inheritdoc/>
     public void OnNext(ProjectionEventContext context) => _subject.OnNext(context);
 
     /// <inheritdoc/>
-    public bool Accepts(EventType eventType) => _keyResolverByEventTypeId.ContainsKey(eventType.Id);
+    public bool Accepts(EventType eventType) => SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(eventType.Id);
 
     /// <inheritdoc/>
     public bool HasKeyResolverFor(EventType eventType) =>
-        _keyResolverByEventTypeId.ContainsKey(eventType.Id);
+        SubscribesToAllEvents || _keyResolverByEventTypeId.ContainsKey(eventType.Id);
 
     /// <inheritdoc/>
     public KeyResolver GetKeyResolverFor(EventType eventType)
     {
-        if (!_keyResolverByEventTypeId.TryGetValue(eventType.Id, out var keyResolver))
+        if (_keyResolverByEventTypeId.TryGetValue(eventType.Id, out var keyResolver))
         {
-            throw new MissingKeyResolverForEventType(new(eventType.Id, eventType.Generation, eventType.Tombstone));
+            return keyResolver;
         }
 
-        return keyResolver;
+        // An event type with no explicit From/Join/RemovedWith registration reaches here only when the
+        // projection subscribes to all events - the whole point being that such an event type may not have
+        // existed when the projection was created, so it can never appear in the resolver map above.
+        if (SubscribesToAllEvents && _allEventsKeyResolver is not null)
+        {
+            return _allEventsKeyResolver;
+        }
+
+        throw new MissingKeyResolverForEventType(new(eventType.Id, eventType.Generation, eventType.Tombstone));
     }
 
     /// <inheritdoc/>
@@ -208,8 +226,11 @@ public class Projection : IProjection, IDisposable
 
         // A child collection routes events to a parent document, so a projection with any child projection can
         // collapse distinct event sources and must keep the coarse lock regardless of its own resolvers.
+        // A projection that subscribes to all events falls back to the event-source-id key resolver for any
+        // event type it has no explicit registration for (see GetKeyResolverFor), so it counts as event-source-
+        // keyed on its own even with zero explicitly-registered event types.
         IsEventSourceKeyed =
-            eventTypes.Length > 0 &&
+            (eventTypes.Length > 0 || SubscribesToAllEvents) &&
             !ChildProjections.Any() &&
             eventTypes.All(_ => _.ResolvesToEventSourceId);
 

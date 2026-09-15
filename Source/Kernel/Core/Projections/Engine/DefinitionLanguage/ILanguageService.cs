@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
@@ -44,18 +45,27 @@ public interface ILanguageService
     Result<ReadModelIdentifier, CompilerErrors> GetReadModelIdentifier(string definition);
 
     /// <summary>
-    /// Generates declarative C# projection code from a projection definition.
+    /// Generates declarative projection code from a projection definition.
     /// </summary>
     /// <param name="definition">The ProjectionDefinition to generate code from.</param>
     /// <param name="readModelDefinition">The read model definition the projection targets.</param>
-    /// <returns>The generated C# code for a declarative projection.</returns>
-    string GenerateDeclarativeCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition);
+    /// <param name="language">The language to generate for. Defaults to C#.</param>
+    /// <returns>The generated code for a declarative projection.</returns>
+    string GenerateDeclarativeCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, ProjectionCodeLanguage language = ProjectionCodeLanguage.CSharp);
 
     /// <summary>
-    /// Generates model-bound C# read model code from a projection definition.
+    /// Generates model-bound read model code from a projection definition.
     /// </summary>
     /// <param name="definition">The ProjectionDefinition to generate code from.</param>
     /// <param name="readModelDefinition">The read model definition the projection targets.</param>
-    /// <returns>The generated C# code for a model-bound read model.</returns>
-    string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition);
+    /// <param name="language">The language to generate for. Defaults to C#.</param>
+    /// <returns>The generated code for a model-bound read model.</returns>
+    string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, ProjectionCodeLanguage language = ProjectionCodeLanguage.CSharp);
+
+    /// <summary>
+    /// Gets the languages that can generate the given projection style.
+    /// </summary>
+    /// <param name="style">The style to check.</param>
+    /// <returns>The languages whose client offers an API for that style.</returns>
+    IEnumerable<ProjectionCodeLanguage> GetLanguagesSupporting(ProjectionCodeStyle style);
 }

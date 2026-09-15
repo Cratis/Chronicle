@@ -1,0 +1,44 @@
+{
+  "$comment": "Canonical Claude Code hook wiring for this repository. Copy to .claude/settings.json (see .cratis/ai/hooks/README.md); that copy is per-machine and gitignored. .cratis/ai/ is the source of truth, so edit this file and re-copy \u2014 never hand-edit the copy.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-guard-writes.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-pattern-scan.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-quality-gate.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "ask": [
+      "Bash(git push *)",
+      "Bash(gh pr *)"
+    ]
+  },
+  "$cratisAiManaged": "hooks/settings.template.json"
+}

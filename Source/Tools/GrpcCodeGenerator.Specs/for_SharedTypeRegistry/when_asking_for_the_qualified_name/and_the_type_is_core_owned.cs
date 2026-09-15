@@ -6,8 +6,8 @@ using Cratis.Chronicle.SharedTypeCatalog;
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_SharedTypeRegistry.when_asking_for_the_qualified_name;
 
 /// <summary>
-/// A type Core declares directly under a Chronicle area namespace - <c>JobStatus</c> under
-/// <c>Cratis.Chronicle.Jobs</c> is the real shape - has nowhere else to come from, so it is exactly the case the
+/// A type Core declares directly under a Chronicle area namespace - <c language="csharp">JobStatus</c> under
+/// <c language="csharp">Cratis.Chronicle.Jobs</c> is the real shape - has nowhere else to come from, so it is exactly the case the
 /// registry exists to mirror.
 /// </summary>
 [Collection(SharedTypeRegistryCollection.Name)]

@@ -22,7 +22,7 @@ public class ReadModelReplayManagerStorageProvider(IStorage storage) : IGrainSto
         var key = ReadModelReplayManagerGrainKey.Parse(grainId.Key.ToString()!);
         var namespaceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace);
 
-        actualGrainState.State.Occurrences = (await namespaceStorage.ReplayedReadModels.GetOccurrences(key.ReadModel)).ToList();
+        actualGrainState.State!.Occurrences = (await namespaceStorage.ReplayedReadModels.GetOccurrences(key.ReadModel)).ToList();
     }
 
     /// <inheritdoc/>
@@ -34,7 +34,7 @@ public class ReadModelReplayManagerStorageProvider(IStorage storage) : IGrainSto
         var eventStoreStorage = storage.GetEventStore(key.EventStore);
         var namespaceStorage = eventStoreStorage.GetNamespace(key.Namespace);
 
-        foreach (var occurrence in actualGrainState.State.NewOccurrences)
+        foreach (var occurrence in actualGrainState.State!.NewOccurrences)
         {
             await namespaceStorage.ReplayedReadModels.Replayed(occurrence);
         }

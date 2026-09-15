@@ -6,7 +6,7 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ReadModelPropertyMustHaveMappingSourceAnalyzer.when_analyzing;
 
 /// <summary>
-/// A mapping written as <c>[property: SetFrom&lt;T&gt;]</c> lands on the generated property rather than on the
+/// A mapping written as <c language="csharp">[property: SetFrom&lt;T&gt;]</c> lands on the generated property rather than on the
 /// constructor parameter. Both spellings declare the same mapping and both are honored at runtime, so neither may
 /// be reported as unmapped.
 /// </summary>

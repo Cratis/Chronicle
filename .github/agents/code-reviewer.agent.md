@@ -1,1 +1,1 @@
-../../.ai/agents/code-reviewer.md
+../../.cratis/ai/agents/code-reviewer.md

@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Dropdown } from '@cratis/components/Dropdown';
+import { PatternScope } from 'Features/Patterns';
 import strings from 'Strings';
 
 export interface PatternScopeSelectorProps {
-    scopes: string[];
+    scopes: PatternScope[];
     selected?: string;
     onChange: (scope: string) => void;
 }
@@ -28,10 +29,12 @@ export const PatternScopeSelector = ({ scopes, selected, onChange }: PatternScop
                     id="pattern-scope"
                     value={selected}
                     options={scopes}
+                    optionValue="id"
+                    optionLabel="name"
                     filter={scopes.length > 10}
                     placeholder={strings.patterns.scope}
                     className="min-w-[20rem]"
-                    onChange={(event) => onChange(event.value)}
+                    onChange={(value) => onChange(value)}
                 />
             )
             : scopes.length === 0 && <span className="opacity-70">{strings.patterns.noScopes}</span>}

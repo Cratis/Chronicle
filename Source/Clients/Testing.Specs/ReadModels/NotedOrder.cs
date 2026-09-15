@@ -7,7 +7,7 @@ using Cratis.Chronicle.ReadModels;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 /// <summary>
-/// Read model with a <c>[ChildrenFrom]</c> child collection whose children each carry a bulk
+/// Read model with a <c language="csharp">[ChildrenFrom]</c> child collection whose children each carry a bulk
 /// <see cref="IReadOnlyList{T}"/> of notes set whole from the child-creating event. Used to verify the
 /// in-memory harness materializes a bulk list nested inside a keyed child (not just at the top level).
 /// </summary>

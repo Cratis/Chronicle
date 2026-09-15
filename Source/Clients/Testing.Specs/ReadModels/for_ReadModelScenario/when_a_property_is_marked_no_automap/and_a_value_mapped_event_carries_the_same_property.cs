@@ -6,10 +6,10 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_a_property_is_marked_no_automap;
 
 /// <summary>
-/// Verifies that a property flagged with property-level <c>[NoAutoMap]</c> is not overwritten by AutoMap
+/// Verifies that a property flagged with property-level <c language="csharp">[NoAutoMap]</c> is not overwritten by AutoMap
 /// when another event the read model value-maps happens to carry a property with the same name. This is the
 /// case the aggregate heuristic cannot help with (the other event is subscribed for a real value mapping),
-/// so it isolates the <c>[NoAutoMap]</c> exclusion in the From AutoMap path.
+/// so it isolates the <c language="csharp">[NoAutoMap]</c> exclusion in the From AutoMap path.
 /// </summary>
 public class and_a_value_mapped_event_carries_the_same_property : Specification
 {

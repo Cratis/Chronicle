@@ -18,7 +18,7 @@ public interface IServer
 
     /// <summary>
     /// Reset the kernel's in-memory state by deactivating all grains and clearing transient
-    /// caches. The server only honours this when compiled with the <c>DEVELOPMENT</c>
+    /// caches. The server only honours this when compiled with the <c language="csharp">DEVELOPMENT</c>
     /// preprocessor symbol; production builds throw a <see cref="NotSupportedException"/>.
     /// Used by integration test fixtures to recycle the kernel between specs without
     /// restarting the container.

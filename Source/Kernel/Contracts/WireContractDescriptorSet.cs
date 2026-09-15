@@ -15,7 +15,7 @@ public static class WireContractDescriptorSet
     const string ResourceName = "Cratis.Chronicle.Contracts.chronicle.desc";
 
     /// <summary>
-    /// Gets the serialized <c>FileDescriptorSet</c> for this version of the contracts.
+    /// Gets the serialized <c language="csharp">FileDescriptorSet</c> for this version of the contracts.
     /// </summary>
     public static ReadOnlyMemory<byte> Bytes { get; } = Read();
 

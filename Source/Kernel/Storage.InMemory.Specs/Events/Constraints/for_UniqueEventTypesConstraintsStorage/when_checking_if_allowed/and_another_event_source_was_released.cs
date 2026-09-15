@@ -18,7 +18,7 @@ public class and_another_event_source_was_released : given.a_unique_event_types_
         await Append(1, _returnedEventType, _anotherBorrower);
     }
 
-    async Task Because() => (_isAllowed, _) = await _storage.IsAllowed(DefinitionReleasedByReturn, _borrower);
+    async Task Because() => (_isAllowed, _) = await _storage.IsAllowedWithinScope(DefinitionReleasedByReturn, _borrower);
 
     [Fact] void should_not_be_allowed() => _isAllowed.ShouldBeFalse();
 }

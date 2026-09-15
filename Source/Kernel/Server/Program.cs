@@ -14,7 +14,9 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -364,6 +366,7 @@ if (chronicleOptions.Authentication.Enabled)
     app.UseMiddleware<GrpcAuthenticationMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseMiddleware<CookieAntiforgeryMiddleware>();
 }
 
 if (chronicleOptions.Features.Api)
@@ -378,9 +381,20 @@ if (chronicleOptions.Features.Api)
 // ASP.NET Identity stack, which is not registered when authentication is off.
 if (chronicleOptions.Authentication.Enabled)
 {
-    app.MapGroup("/identity")
-        .MapIdentityApi<User>()
-        .AllowAnonymous();
+    app.MapGet("/.cratis/antiforgery", (HttpContext context, IAntiforgery antiforgery) =>
+        new AntiforgeryTokenResponse(antiforgery.GetAndStoreTokens(context).RequestToken!));
+
+    IdentityEndpointAuthorization.Apply(app.MapGroup("/identity").MapIdentityApi<User>());
+    app.MapPost("/identity/logout", async (SignInManager<User> signInManager) =>
+    {
+        await signInManager.SignOutAsync();
+        return Results.Ok();
+    });
+}
+else
+{
+    // Explicitly advertise disabled request protection rather than making the Workbench guess from a 404.
+    app.MapGet("/.cratis/antiforgery", () => Results.NoContent()).AllowAnonymous();
 }
 
 // Map controllers for API and OAuth
@@ -441,7 +455,19 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 // fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
 app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
-await app.RunAsync(cancellationToken.Token);
+try
+{
+    await app.RunAsync(cancellationToken.Token);
+}
+catch (OperationCanceledException)
+{
+    // A shutdown signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is
+    // still binding, or an ILifecycleParticipant is still running - cancels the host's own lifetime token
+    // and surfaces as an OperationCanceledException out of RunAsync instead of RunAsync completing
+    // normally. Left uncaught, that reaches AppDomain.CurrentDomain.UnhandledException and the process
+    // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
+    logger.ServerShutdownDuringStartup();
+}
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

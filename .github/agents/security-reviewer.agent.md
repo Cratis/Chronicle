@@ -1,1 +1,1 @@
-../../.ai/agents/security-reviewer.md
+../../.cratis/ai/agents/security-reviewer.md

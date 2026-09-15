@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Reactors.SideEffects.for_EventResultHandler;
 
 /// <summary>
 /// A caller compiled against the previous public handler surface constructs it with an event type registry and
-/// calls the event-store-less <c>CanHandle</c>. Retaining only the interface default is not enough: a concrete call
+/// calls the event-store-less <c language="csharp">CanHandle</c>. Retaining only the interface default is not enough: a concrete call
 /// binds to the class member and the constructor in metadata.
 /// </summary>
 public class when_the_previous_constructor_and_contract_are_used : Specification

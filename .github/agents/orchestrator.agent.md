@@ -1,1 +1,1 @@
-../../.ai/agents/orchestrator.md
+../../.cratis/ai/agents/orchestrator.md

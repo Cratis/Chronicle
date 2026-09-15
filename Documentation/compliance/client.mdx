@@ -7,7 +7,9 @@ uid: Chronicle.Compliance.Client
 Chronicle's PII encryption is applied transparently by the kernel. From a client perspective, your responsibility is to annotate your domain model correctly so that the kernel knows which values to encrypt. There are two places to put this annotation, and you will typically use both in the same codebase.
 
 :::note[Client coverage]
-Property-level PII annotation (Option 1) is real in Kotlin and Elixir too — see below. `ConceptAs<T>`-level annotation (Option 2), combining both, and the DI-container registration step are all tied to C#-specific patterns (`ConceptAs<T>`, `IServiceCollection`) with no equivalent elsewhere in this corpus.
+Both options work in every client. C#, Kotlin/Java and TypeScript have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`. All four serialize a concept as the value it wraps, so adopting one for a property already in production changes neither the wire format nor the registered schema.
+
+The DI-container registration step is genuinely C#-specific — it is `IServiceCollection` wiring, and each other client discovers its artifacts its own way. See [Marking data as PII](./pii) for the full per-path support matrix.
 :::
 
 ## Option 1 — Annotate your event types
@@ -41,7 +43,7 @@ Any event that uses `PersonName` is automatically encrypted — no further annot
 <ChronicleClientTabs snippet="compliance/client/concept-usage" />
 
 > [!TIP]
-> For the full `ConceptAs<T>` declaration pattern and placement rules, see [Applying PII to ConceptAs types](pii-with-concepts) and <xref:Fundamentals.Concepts>.
+> For the full `ConceptAs<T>` declaration pattern and placement rules, see [Declaring PII on a concept](pii-with-concepts) and <xref:Fundamentals.Concepts>.
 
 ### When to use this approach
 

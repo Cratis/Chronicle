@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_joining_a_guid_keyed_source;
 
 /// <summary>
-/// A root <c>[Join]</c> keyed by its own Guid identifier backfills the joined value when the join-source event
+/// A root <c language="csharp">[Join]</c> keyed by its own Guid identifier backfills the joined value when the join-source event
 /// is seeded BEFORE the row-creating FROM event (the join-source-first order). This is the ordering the engine's
 /// row-creation-time backfill (ResolveJoin) already handles; asserting it here proves the entity-first fix does
 /// not regress it — both orders produce IDENTICAL enriched results.

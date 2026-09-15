@@ -10,6 +10,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Testing.Specs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
@@ -20,6 +24,9 @@
         </ProjectReference>
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <Aliases>KernelConcepts</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Compatibility/Compatibility.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
         <ProjectReference Include="../../Kernel/Core/Core.csproj">
@@ -54,9 +61,12 @@
         </PackageReference>
     </ItemGroup>
 
-    <!-- Pack Orleans and the kernel's Screenplay compiler runtime assemblies into lib/ so they are available without nuspec dependencies -->
+    <!-- Pack Orleans, the kernel's Screenplay compiler and Roslyn runtime assemblies into lib/ so they are
+         available without nuspec dependencies. Core's projection-to-client-code generation needs the Roslyn
+         C# syntax model (CSharpSyntaxRewriter/CSharpSyntaxVisitor) at runtime, so any consumer constructing a
+         scenario needs it too. -->
     <PropertyGroup>
-        <PrivatePackageRuntimeAssemblyRegex>^(Orleans\..*|Cratis\.Screenplay)\.dll$</PrivatePackageRuntimeAssemblyRegex>
+        <PrivatePackageRuntimeAssemblyRegex>^(Orleans\..*|Cratis\.Screenplay|Microsoft\.CodeAnalysis(\.CSharp)?)\.dll$</PrivatePackageRuntimeAssemblyRegex>
     </PropertyGroup>
 
 </Project>

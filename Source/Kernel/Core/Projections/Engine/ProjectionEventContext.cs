@@ -119,7 +119,7 @@ public record ProjectionEventContext(
     /// <returns>True when a memoized result exists; otherwise false.</returns>
     /// <remarks>
     /// A context represents a single event, so the memo is scoped to that event and shared across the
-    /// <c>with</c>-copies produced as the pipeline descends the projection hierarchy. The key is the
+    /// <c language="csharp">with</c>-copies produced as the pipeline descends the projection hierarchy. The key is the
     /// <see cref="KeyResolver"/> instance: a parent projection reuses the exact resolver delegates of its
     /// descendants, so <see cref="Pipelines.Steps.HandleEvent"/> reuses the result already produced by
     /// <see cref="Pipelines.Steps.ResolveKey"/> instead of resolving the same key a second time.

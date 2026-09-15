@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reactive.Linq;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
@@ -32,12 +34,25 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting ExpandoObjects.</param>
 /// <param name="languageService"><see cref="ILanguageService"/> for handling projection declaration language.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
+/// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
 internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
     ILanguageService languageService,
-    IServiceProvider serviceProvider) : IProjections
+    IServiceProvider serviceProvider,
+    IReadModelsCompliance readModelsCompliance) : IProjections
 {
+    /// <summary>
+    /// The property a materialized read model carries its key in, which is what the read side looks it up by.
+    /// </summary>
+    const string ReadModelKeyProperty = "_id";
+
+    /// <summary>
+    /// The property names a projection may have tagged a read model's key with, in the order it
+    /// resolves them from the read model's schema.
+    /// </summary>
+    static readonly string[] _projectedKeyPropertyNames = [ReadModelKeyProperty, "Id", "id"];
+
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
@@ -173,7 +188,12 @@ internal sealed class Projections(
                     result = await projection.Process(request.Namespace, events);
                 }
 
-                var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
+                var schema = readModelDefinition.GetSchemaForLatestGeneration();
+                var releasedResult = await ReleaseComplianceForPreview(request.EventStore, request.Namespace, schema, result);
+
+                var readModels = releasedResult
+                    .Select(r => WithReadModelKey(r, expandoObjectConverter.ToJsonObject(r, schema)).ToString())
+                    .ToArray();
 
                 return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionPreview
                 {
@@ -313,108 +333,6 @@ internal sealed class Projections(
             errors => Task.FromResult(new SaveProjectionResult { Errors = errors.ToContract().Errors }));
     }
 
-    /// <inheritdoc/>
-    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateDeclarativeCode(GenerateDeclarativeCodeRequest request, CallContext context = default)
-    {
-        var storage = serviceProvider.GetRequiredService<IStorage>();
-        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
-
-        // If a draft read model is provided, create a temporary read model definition for code generation
-        ReadModelDefinition? draftDefinition = null;
-        if (request.DraftReadModel is not null)
-        {
-            draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
-            allReadModels = allReadModels
-                .Where(_ => _.Identifier != draftDefinition.Identifier)
-                .Append(draftDefinition)
-                .ToList();
-        }
-
-        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
-
-        var compileResult = languageService.Compile(
-            request.Declaration ?? string.Empty,
-            Concepts.Projections.ProjectionOwner.Server,
-            allReadModels,
-            eventTypeSchemas);
-
-        return compileResult.Match(
-            definition =>
-            {
-                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
-
-                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
-                {
-                    return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
-                        new ContractProjectionDefinitionParsingErrors
-                        {
-                            Errors = [new ProjectionDeclarationSyntaxError
-                            {
-                                Line = 1,
-                                Column = 1,
-                                Message = $"Read model '{definition.ReadModel}' not found"
-                            }]
-                        });
-                }
-
-                var code = languageService.GenerateDeclarativeCode(definition, readModelDefinition);
-
-                return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
-            },
-            errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
-    }
-
-    /// <inheritdoc/>
-    public async Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateModelBoundCode(GenerateModelBoundCodeRequest request, CallContext context = default)
-    {
-        var storage = serviceProvider.GetRequiredService<IStorage>();
-        var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
-
-        // If a draft read model is provided, create a temporary read model definition for code generation
-        ReadModelDefinition? draftDefinition = null;
-        if (request.DraftReadModel is not null)
-        {
-            draftDefinition = CreateDraftReadModelDefinition(request.DraftReadModel);
-            allReadModels = allReadModels
-                .Where(_ => _.Identifier != draftDefinition.Identifier)
-                .Append(draftDefinition)
-                .ToList();
-        }
-
-        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetLatestForAllEventTypes();
-
-        var compileResult = languageService.Compile(
-            request.Declaration ?? string.Empty,
-            Concepts.Projections.ProjectionOwner.Server,
-            allReadModels,
-            eventTypeSchemas);
-
-        return compileResult.Match(
-            definition =>
-            {
-                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
-
-                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
-                {
-                    return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(
-                        new ContractProjectionDefinitionParsingErrors
-                        {
-                            Errors = [new ProjectionDeclarationSyntaxError
-                            {
-                                Line = 1,
-                                Column = 1,
-                                Message = $"Read model '{definition.ReadModel}' not found"
-                            }]
-                        });
-                }
-
-                var code = languageService.GenerateModelBoundCode(definition, readModelDefinition);
-
-                return new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(new GeneratedCode { Code = code });
-            },
-            errors => new OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>(errors.ToContract()));
-    }
-
     static ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
     {
         var identifier = string.IsNullOrWhiteSpace(draft.Identifier)
@@ -529,5 +447,97 @@ internal sealed class Projections(
         }
 
         return schema;
+    }
+
+    /// <summary>
+    /// Carries the read model's key onto its previewed JSON.
+    /// </summary>
+    /// <param name="readModel">The projected read model, which the projection tagged with its key.</param>
+    /// <param name="json">The read model converted to JSON against its schema.</param>
+    /// <returns>The same JSON, with the key under the property the read side looks it up by.</returns>
+    /// <remarks>
+    /// A projection tags every read model it produces with the key it was projected for, but the
+    /// conversion to JSON keeps only what the read model's schema declares - and a schema does not
+    /// declare its own key. Preview results therefore reached the Workbench carrying no way to tell
+    /// which instance a row came from, which is what left the Time Machine with nothing to look up.
+    /// A materialized read model carries its key as <c language="csharp">_id</c> because that is what the sink writes,
+    /// so preview uses the same name rather than inventing a second convention for the read side.
+    /// </remarks>
+    static JsonObject WithReadModelKey(ExpandoObject readModel, JsonObject json)
+    {
+        if (json.ContainsKey(ReadModelKeyProperty))
+        {
+            return json;
+        }
+
+        var properties = (IDictionary<string, object?>)readModel;
+        var key = _projectedKeyPropertyNames
+            .Select(name => properties.TryGetValue(name, out var value) ? value : null)
+            .FirstOrDefault(value => value is not null);
+
+        if (key is not null)
+        {
+            json[ReadModelKeyProperty] = JsonValue.Create(key.ToString());
+        }
+
+        return json;
+    }
+
+    /// <summary>
+    /// Resolves the compliance subject for a previewed instance: an explicit <see cref="WellKnownProperties.Subject"/>
+    /// when the projection already tagged one, otherwise the same key the instance was projected for.
+    /// </summary>
+    /// <param name="instance">The projected instance, as a property dictionary.</param>
+    /// <returns>The resolved subject, or <see langword="null"/> when none could be found.</returns>
+    static string? GetOrInferSubject(IDictionary<string, object?> instance)
+    {
+        if (instance.TryGetValue(WellKnownProperties.Subject, out var subject) && subject is not null)
+        {
+            return subject.ToString();
+        }
+
+        return _projectedKeyPropertyNames
+            .Select(name => instance.TryGetValue(name, out var value) ? value : null)
+            .FirstOrDefault(value => value is not null)
+            ?.ToString();
+    }
+
+    /// <summary>
+    /// Decrypts PII fields in a set of previewed read model instances, projected directly from stored
+    /// (encrypted) events.
+    /// </summary>
+    /// <param name="eventStore">The event store the events were projected from.</param>
+    /// <param name="namespace">The namespace the events were projected from.</param>
+    /// <param name="schema">The read model's schema, used to resolve which properties are PII.</param>
+    /// <param name="instances">The projected instances to decrypt.</param>
+    /// <returns>The instances with PII fields decrypted, in the same order.</returns>
+    /// <remarks>
+    /// Unlike a materialized read model, a previewed instance never passes through the projection engine's
+    /// changeset pipeline that stamps <see cref="WellKnownProperties.Subject"/> for the compliance manager to
+    /// key off - it is a plain projection of the requested events into a shape, produced on the fly for the
+    /// Workbench. Its compliance subject has to be inferred here, the same way the Read Models views infer it
+    /// for a directly-projected instance, so the encrypted PII fields the projection copied straight out of the
+    /// events can be released before the preview reaches the client.
+    /// </remarks>
+    async Task<IEnumerable<ExpandoObject>> ReleaseComplianceForPreview(
+        string eventStore,
+        string @namespace,
+        JsonSchema schema,
+        IEnumerable<ExpandoObject> instances)
+    {
+        var released = new List<ExpandoObject>();
+        foreach (var instance in instances)
+        {
+            var dictionary = (IDictionary<string, object?>)instance;
+            var subject = GetOrInferSubject(dictionary);
+            if (!string.IsNullOrWhiteSpace(subject))
+            {
+                dictionary[WellKnownProperties.Subject] = subject;
+            }
+
+            released.Add(await readModelsCompliance.Release(eventStore, @namespace, schema, instance));
+        }
+
+        return released;
     }
 }

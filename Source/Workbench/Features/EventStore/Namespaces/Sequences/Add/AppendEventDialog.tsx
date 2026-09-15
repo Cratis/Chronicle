@@ -7,11 +7,10 @@ import { Append } from 'Features/Sequences';
 import { ObserveEventTypes } from 'Features/EventTypes';
 import { EventTypeDetails } from 'Features/EventTypes';
 import { Dialog } from '@cratis/components/Dialogs';
-import { ObjectContentEditor as _OCE } from '@cratis/components';
-const ObjectContentEditor = _OCE.ObjectContentEditor;
+import { ObjectContentEditor } from '@cratis/components/ObjectContentEditor';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from '@cratis/components/Dropdown';
-import { Button } from 'Components/Button';
+import { Button } from '@cratis/components/Common';
 import { useState, useEffect } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
@@ -95,7 +94,7 @@ export const AppendEventDialog = () => {
         appendEvent.eventStreamType = eventStreamType;
         appendEvent.eventStreamId = eventStreamId;
         appendEvent.eventType = selectedEventType.type;
-        appendEvent.content = eventContent as Record<string, Record<string, unknown>>;
+        appendEvent.content = JSON.stringify(eventContent);
 
         const executeResult = await appendEvent.execute();
         return executeResult.isSuccess;
@@ -118,7 +117,7 @@ export const AppendEventDialog = () => {
                         id="eventType"
                         value={selectedEventType ?? undefined}
                         options={allEventTypes.data}
-                        onChange={(e) => setSelectedEventType(e.value)}
+                        onChange={(value) => setSelectedEventType(value)}
                         optionLabel="type.id"
                         placeholder={strings.eventStore.namespaces.sequences.dialogs.appendEvent.selectEventType}
                         className="w-full"
