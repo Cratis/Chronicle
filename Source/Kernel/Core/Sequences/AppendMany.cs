@@ -41,6 +41,12 @@ public record AppendMany(
     ConcurrencyScope? ConcurrencyScope = default)
 {
     /// <summary>
+    /// Gets whether the acknowledgment should include ordered persisted metadata for every appended event.
+    /// Omitted by older callers so their response size stays unchanged.
+    /// </summary>
+    public bool IncludeReceipts { get; init; }
+
+    /// <summary>
     /// Handles the command by appending every event in one transaction.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append through.</param>
@@ -58,11 +64,12 @@ public record AppendMany(
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var tags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
+        var route = AppendRoute.Resolve(null, null, null);
         var events = Events.Select(@event => new EventSequences.EventToAppend(
-            EventSourceType.Default,
+            route.SourceType,
             EventSourceId,
-            EventStreamType.All,
-            EventStreamId.Default,
+            route.StreamType,
+            route.StreamId,
             @event.EventType.ToChronicle(),
             tags,
             JsonNode.Parse(@event.Content)!.AsObject(),
@@ -75,11 +82,12 @@ public record AppendMany(
                 [EventSourceId] = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None
             });
 
-        return eventSequence.AppendMany(
-            events,
-            CorrelationId ?? Guid.NewGuid(),
-            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
-            concurrencyScopes);
+        var correlationId = CorrelationId ?? Guid.NewGuid();
+        var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
+        var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
+
+        return IncludeReceipts
+            ? eventSequence.AppendMany(events, correlationId, causationChain, identity, concurrencyScopes, includeReceipts: true)
+            : eventSequence.AppendMany(events, correlationId, causationChain, identity, concurrencyScopes);
     }
 }
