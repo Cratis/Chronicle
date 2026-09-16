@@ -207,6 +207,9 @@ public class EventSequenceStorage(
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
         Subject? subject = null)
     {
+        occurred = StoredTimestamps.Normalize(occurred);
+        causation = causation.Select(StoredTimestamps.Normalize).ToArray();
+
         try
         {
             var generationalContent = new Dictionary<string, BsonDocument>();
@@ -292,7 +295,11 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
     {
-        var eventsArray = events.ToArray();
+        var eventsArray = events.Select(@event => @event with
+        {
+            Occurred = StoredTimestamps.Normalize(@event.Occurred),
+            Causation = @event.Causation.Select(StoredTimestamps.Normalize).ToArray()
+        }).ToArray();
         if (eventsArray.Length == 0)
         {
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
