@@ -66,6 +66,9 @@ public class known_event : given.an_event_sequence
 
     [Fact] void should_append_event() => _command.ShouldNotBeNull();
     [Fact] void should_append_event_with_correct_event_source_id() => _command.EventSourceId.ShouldEqual(_eventSourceId.Value);
+    [Fact] void should_append_with_default_source_type() => _command.EventSourceType.ShouldEqual(EventSourceType.Default.Value);
+    [Fact] void should_append_with_all_stream_type() => _command.EventStreamType.ShouldEqual(EventStreamType.All.Value);
+    [Fact] void should_append_with_default_stream_id() => _command.EventStreamId.ShouldEqual(EventStreamId.Default);
     [Fact] void should_append_event_with_correct_event_type() => _command.EventType.ToClient().ShouldEqual(_eventType);
     [Fact] void should_append_event_with_correct_event() => _command.Content.ShouldEqual(_eventContext.ToJsonString());
     [Fact] void should_append_event_with_correct_causations() => _command.Causation.ToClient().ShouldEqual(_causation);

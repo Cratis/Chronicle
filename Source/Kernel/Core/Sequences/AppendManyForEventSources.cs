@@ -56,10 +56,10 @@ public record AppendManyForEventSources(
         var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
         var eventsList = Events.ToList();
         var events = eventsList.Select(@event => new EventSequences.EventToAppend(
-            (EventSourceType)@event.EventSourceType,
+            string.IsNullOrEmpty(@event.EventSourceType) ? EventSourceType.Default : (EventSourceType)@event.EventSourceType,
             @event.EventSourceId,
-            (EventStreamType)@event.EventStreamType,
-            (EventStreamId)@event.EventStreamId,
+            string.IsNullOrEmpty(@event.EventStreamType) ? EventStreamType.All : (EventStreamType)@event.EventStreamType,
+            string.IsNullOrEmpty(@event.EventStreamId) ? (EventStreamId)EventStreamId.Default : (EventStreamId)@event.EventStreamId,
             @event.EventType.ToChronicle(),
             (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
             JsonNode.Parse(@event.Content)!.AsObject(),

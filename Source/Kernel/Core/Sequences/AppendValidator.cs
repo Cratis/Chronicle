@@ -21,11 +21,8 @@ internal class AppendValidator : CommandValidator<Append>
         RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
         RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");
 
-        // Stream metadata is deliberately not required. `EventSourceType.Unspecified`,
-        // `EventStreamType` and `EventStreamId` all carry the empty string as a first-class
-        // sentinel meaning "not narrowed - use the default", and the .NET client sends exactly
-        // that on every append (`eventSourceType?.Value ?? string.Empty`). Requiring them would
-        // reject every append the client SDK makes.
+        // Omitted or empty routing metadata is accepted for older clients and direct API callers.
+        // The handler resolves it to canonical append defaults before validating constraints or persisting.
         RuleFor(_ => _.EventType).NotNull().WithMessage("Event type is required.");
 
         // The rule below guards the identifier through the parent rather than as a nested

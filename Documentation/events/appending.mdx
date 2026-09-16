@@ -34,6 +34,20 @@ Chronicle validates every event's content against its registered JSON schema bef
 
 Schema validation runs before any other checks, so a schema error is returned immediately without touching the event sequence.
 
+## Source and stream defaults
+
+Omitted or empty append metadata is stored using these canonical values:
+
+| Metadata | Stored default |
+| --- | --- |
+| Event source type | `Default` |
+| Event stream type | `All` |
+| Event stream ID | `Default` |
+
+Single appends and batches use the same defaults. Nonempty values you supply are preserved exactly. In the .NET client, the resolved values also describe the append notification and the inputs to the concurrency strategy.
+
+Earlier 18.x kernels could store empty metadata for single appends. Upgrading corrects new writes; it does not rewrite historical events or normalize their read-back metadata. If you compare historical routes, account for those legacy empty values only where your application intended the default route. Explicit metadata filters can still distinguish those older events from events carrying canonical defaults.
+
 ## Specifying when an event occurred
 
 By default, Chronicle assigns the current server time as the event's `Occurred` timestamp when it persists the event. Some clients expose an explicit timestamp override for import and replay scenarios.

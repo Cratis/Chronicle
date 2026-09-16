@@ -32,4 +32,7 @@ public class an_event(context context) : Given<context>(context)
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
 
     [Fact] Task should_have_the_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.Event.Content));
+    [Fact] async Task should_store_default_source_type() => (await Context.EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First))[0].Context.EventSourceType.ShouldEqual(EventSourceType.Default);
+    [Fact] async Task should_store_all_stream_type() => (await Context.EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First))[0].Context.EventStreamType.ShouldEqual(EventStreamType.All);
+    [Fact] async Task should_store_default_stream_id() => (await Context.EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First))[0].Context.EventStreamId.Value.ShouldEqual(EventStreamId.Default);
 }
