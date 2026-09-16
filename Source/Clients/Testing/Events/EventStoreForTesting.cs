@@ -137,7 +137,7 @@ public class EventStoreForTesting : IEventStore
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, _serviceProvider);
 
-        _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators, namingPolicy: _namingPolicy);
+        _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation: false, namingPolicy: _namingPolicy);
         _eventTypes.Discover().GetAwaiter().GetResult();
 
         EventSerializer = new EventSerializer(ClientArtifactsProvider, _artifactActivator, _eventTypes, _jsonSerializerOptions);

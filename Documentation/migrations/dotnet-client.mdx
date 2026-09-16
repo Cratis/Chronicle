@@ -65,7 +65,9 @@ An event's payload is rarely flat — a value object groups related values, and 
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/nested-property" />
 
-The expression becomes the path `Price.Description`, and Chronicle resolves it segment by segment: reading walks into the object, writing creates the objects along the way when the stored payload does not carry them yet. That also lets a migration restructure a payload — `RenamedFrom(m => m.Price.Amount, e => e.Amount)` moves a value that used to sit at the top level into the object it now belongs to.
+The expression identifies the CLR path `Price.Description`. Chronicle applies your client's naming policy to each segment, producing `price.description` with a camelCase policy, and resolves that payload path segment by segment: reading walks into the object, writing creates the objects along the way when the stored payload does not carry them yet. That also lets a migration restructure a payload — `RenamedFrom(m => m.Price.Amount, e => e.Amount)` moves a value that used to sit at the top level into the object it now belongs to.
+
+The naming policy applies to both target and source paths for every migration operation. If you use string overloads, supply CLR property paths rather than names you have already converted to the serialized form. Separators, default values, and mapped values are literals and are not renamed. The default naming policy preserves property names unchanged.
 
 A path that goes nowhere is rejected at registration with `InvalidMigrationPropertyForEventType`, naming the path so you can see which segment is wrong.
 

@@ -36,14 +36,32 @@ public class EventTypes : IEventTypes
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for discovering event type migrators.</param>
     /// <param name="enableEventTypeGenerationValidation">Whether to enable event type generation chain validation on the server. Defaults to <see langword="false"/>.</param>
-    /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> used to render migration property names the way they appear in an event's payload. Defaults to <see cref="DefaultNamingPolicy"/>.</param>
     public EventTypes(
         IEventStore eventStore,
         IJsonSchemaGenerator jsonSchemaGenerator,
         IClientArtifactsProvider clientArtifacts,
         IEventTypeMigrators eventTypeMigrators,
-        bool enableEventTypeGenerationValidation = false,
-        INamingPolicy? namingPolicy = null)
+        bool enableEventTypeGenerationValidation = false)
+        : this(eventStore, jsonSchemaGenerator, clientArtifacts, eventTypeMigrators, enableEventTypeGenerationValidation, new DefaultNamingPolicy())
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="EventTypes"/> with the naming policy used for event payloads.
+    /// </summary>
+    /// <param name="eventStore">The event store the event types belong to.</param>
+    /// <param name="jsonSchemaGenerator">The generator for event schemas.</param>
+    /// <param name="clientArtifacts">The provider of client artifacts.</param>
+    /// <param name="eventTypeMigrators">The migrator discovery service.</param>
+    /// <param name="enableEventTypeGenerationValidation">Whether to validate the generation chain on the server.</param>
+    /// <param name="namingPolicy">The naming policy, or null to preserve declared property names.</param>
+    public EventTypes(
+        IEventStore eventStore,
+        IJsonSchemaGenerator jsonSchemaGenerator,
+        IClientArtifactsProvider clientArtifacts,
+        IEventTypeMigrators eventTypeMigrators,
+        bool enableEventTypeGenerationValidation,
+        INamingPolicy? namingPolicy)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;

@@ -33,5 +33,5 @@ public class and_event_is_generation_2(context context) : Given<context>(context
     [Fact] void should_succeed() => Context.AppendResult.IsSuccess.ShouldBeTrue();
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
     [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(1);
-    [Fact] Task should_have_combined_first_and_last_name_into_generation_1_content() => Context.ShouldHaveAppendedEvent<EmployeeRegistered>(0, Context.EventSourceId.Value, e => e.FirstName.ShouldEqual("Jane"));
+    [Fact] Task should_preserve_first_name_in_generation_2_content() => Context.ShouldHaveAppendedEvent<EmployeeRegistered>(0, Context.EventSourceId.Value, e => e.FirstName.ShouldEqual("Jane"));
 }

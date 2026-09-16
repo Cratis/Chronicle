@@ -4,7 +4,6 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Migrations;
@@ -13,7 +12,7 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// Represents an implementation of <see cref="IEventMigrationPropertyBuilder"/>.
 /// </summary>
 /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> used to render property names the way they appear in an event's payload. Defaults to <see cref="DefaultNamingPolicy"/>.</param>
-public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy = null) : IEventMigrationPropertyBuilder
+public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEventMigrationPropertyBuilder
 {
     const string SplitExpression = "$split";
     const string CombineExpression = "$combine";
@@ -23,6 +22,13 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy = null) :
 
     readonly Dictionary<PropertyExpression, JsonNode> _properties = [];
     readonly INamingPolicy _namingPolicy = namingPolicy ?? new DefaultNamingPolicy();
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="EventMigrationPropertyBuilder"/> using the default naming policy.
+    /// </summary>
+    public EventMigrationPropertyBuilder() : this(null)
+    {
+    }
 
     /// <summary>
     /// Gets the configured properties.
@@ -119,5 +125,5 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy = null) :
     /// A migration map is matched against the serialized payload, so its names have to go through the same
     /// naming policy the payload was written with. Without this the map silently matches nothing.
     /// </remarks>
-    string Render(PropertyName property) => _namingPolicy.GetPropertyName(new PropertyPath((string)property));
+    string Render(PropertyName property) => string.Join('.', property.Value.Split('.').Select(_namingPolicy.GetPropertyName));
 }

@@ -10,10 +10,17 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// Represents an implementation of <see cref="IEventMigrationBuilder"/>.
 /// </summary>
 /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> used to render property names the way they appear in an event's payload. Defaults to <see cref="DefaultNamingPolicy"/>.</param>
-public class EventMigrationBuilder(INamingPolicy? namingPolicy = null) : IEventMigrationBuilder
+public class EventMigrationBuilder(INamingPolicy? namingPolicy) : IEventMigrationBuilder
 {
     readonly List<EventMigrationPropertyBuilder> _propertyBuilders = [];
     readonly INamingPolicy _namingPolicy = namingPolicy ?? new DefaultNamingPolicy();
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="EventMigrationBuilder"/> using the default naming policy.
+    /// </summary>
+    public EventMigrationBuilder() : this(null)
+    {
+    }
 
     /// <summary>
     /// Gets all the property builders.
