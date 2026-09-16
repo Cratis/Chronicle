@@ -63,4 +63,40 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// Gets the explicit source type, preserving omission for kernel routing despite the public getter's legacy default.
     /// </summary>
     internal EventSourceType? RequestedEventSourceType { get; init; }
+
+    /// <summary>
+    /// Compares the public event values without treating omitted routing as a different value from its legacy default.
+    /// </summary>
+    /// <param name="other">The event to compare with.</param>
+    /// <returns>Whether both events have the same record type and public values.</returns>
+    public virtual bool Equals(EventForEventSourceId? other) =>
+        other is not null &&
+        EqualityContract == other.EqualityContract &&
+        EventSourceId == other.EventSourceId &&
+        Equals(Event, other.Event) &&
+        Equals(Causation, other.Causation) &&
+        Subject == other.Subject &&
+        EventStreamType == other.EventStreamType &&
+        EventStreamId == other.EventStreamId &&
+        EventSourceType == other.EventSourceType &&
+        Occurred == other.Occurred &&
+        EqualityComparer<IEnumerable<string>>.Default.Equals(Tags, other.Tags);
+
+    /// <inheritdoc/>
+    public override int GetHashCode()
+    {
+        var hashCode = default(HashCode);
+        hashCode.Add(EqualityContract);
+        hashCode.Add(EventSourceId);
+        hashCode.Add(Event);
+        hashCode.Add(Causation);
+        hashCode.Add(Subject);
+        hashCode.Add(EventStreamType);
+        hashCode.Add(EventStreamId);
+        hashCode.Add(EventSourceType);
+        hashCode.Add(Occurred);
+        hashCode.Add(Tags);
+
+        return hashCode.ToHashCode();
+    }
 }
