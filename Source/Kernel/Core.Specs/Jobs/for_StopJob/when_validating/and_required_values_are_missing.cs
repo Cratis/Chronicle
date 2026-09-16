@@ -6,7 +6,7 @@ using Cratis.Arc.Commands;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Jobs.for_StopJob.when_validating;

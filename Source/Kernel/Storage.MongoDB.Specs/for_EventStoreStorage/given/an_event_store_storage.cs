@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 

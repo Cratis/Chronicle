@@ -93,7 +93,7 @@ public class a_projections_manager_grain : Specification
         _silo.AddProbe(_ => _observerGrain);
 
         _jobsManager = Substitute.For<Jobs.IJobsManager>();
-        _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Storage.Jobs.JobState>.Empty);
+        _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Cratis.Orleans.Storage.Jobs.JobState>.Empty);
         _silo.AddProbe(_ => _jobsManager);
 
         _recommendationsManager = Substitute.For<Recommendations.IRecommendationsManager>();

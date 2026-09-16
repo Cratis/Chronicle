@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;

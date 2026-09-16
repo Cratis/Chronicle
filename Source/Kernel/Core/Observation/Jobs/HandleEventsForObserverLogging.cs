@@ -55,4 +55,3 @@ internal static partial class HandleEventsForObserverLogging
     [LoggerMessage(LogLevel.Warning, "HandleEventsForObserver job step failed, but it had successfully handled some events. Last successfully handled event was: {LastHandledEventSequenceNumber}")]
     internal static partial void FailedWithPartialSuccess(this ILogger<HandleEventsForObserver> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
 }
-

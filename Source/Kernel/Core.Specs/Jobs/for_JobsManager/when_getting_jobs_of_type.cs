@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Catch = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Jobs.for_JobsManager;
@@ -13,7 +13,7 @@ public class when_getting_jobs_of_type : given.the_manager
     {
         _jobStorage
             .GetJobs<INullJobWithSomeRequest, JobState>()
-            .Returns(Catch.Success<IImmutableList<JobState>, Storage.Jobs.JobError>([]));
+            .Returns(Catch.Success<IImmutableList<JobState>, Cratis.Orleans.Storage.Jobs.JobError>([]));
     }
 
     Task Because() => _manager.GetJobsOfType<INullJobWithSomeRequest, SomeJobRequest>();

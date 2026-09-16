@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Storage.Jobs;
 using OneOf.Types;
 using Orleans.Storage;
 
@@ -78,7 +78,7 @@ public class JobGrainStorageProvider(IStorage storage) : IGrainStorage
         .Verify(type)
         .Switch(_ => { }, error => throw new JobGrainStorageProviderError(type, error, operationName));
 
-    static async Task HandleCatchNone(Task<Catch<None, Storage.Jobs.JobError>> getResult, Type type, string methodName)
+    static async Task HandleCatchNone(Task<Catch<None, Cratis.Orleans.Storage.Jobs.JobError>> getResult, Type type, string methodName)
     {
         var monad = await getResult;
         await monad.Match(

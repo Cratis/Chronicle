@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -34,6 +33,7 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

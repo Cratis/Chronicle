@@ -12,8 +12,8 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 
@@ -455,4 +455,3 @@ public class HandleEventsForObserver(
     Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
         eventCompliance.Release(events, _eventTypeSchemas);
 }
-

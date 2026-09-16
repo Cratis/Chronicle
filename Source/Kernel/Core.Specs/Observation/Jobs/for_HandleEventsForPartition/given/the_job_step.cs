@@ -3,10 +3,10 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;

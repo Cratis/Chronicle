@@ -15,4 +15,3 @@ public record JoinDefinition(
     PropertyPath On,
     IDictionary<PropertyPath, string> Properties,
     PropertyExpression Key);
-

@@ -43,7 +43,7 @@ public class ReactorsReactor(IReactors reactors, IEventTypes eventTypes, IStorag
     /// A namespace is brand new the instant it is added, so it never has data at this point - registering reactors
     /// for it here would materialize its storage for a namespace that may never receive a single event. Reactor
     /// registration for a namespace that does go on to receive data happens the next time the server rehydrates -
-    /// <see cref="Orleans.Hosting.ChronicleServerStartupTask"/> discovers namespaces with data and registers
+    /// <see cref="global::Orleans.Hosting.ChronicleServerStartupTask"/> discovers namespaces with data and registers
     /// reactors for them then.
     /// </remarks>
     public async Task NamespaceAdded(NamespaceAdded @event, EventContext context)

@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -20,7 +19,6 @@ using Cratis.Chronicle.Storage.InMemory.Patterns;
 using Cratis.Chronicle.Storage.InMemory.Projections;
 using Cratis.Chronicle.Storage.InMemory.Recommendations;
 using Cratis.Chronicle.Storage.InMemory.Seeding;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Patterns;
@@ -29,7 +27,8 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using InMemoryReadModels = Cratis.Chronicle.Storage.InMemory.ReadModels;
 
 namespace Cratis.Chronicle.Storage.InMemory;

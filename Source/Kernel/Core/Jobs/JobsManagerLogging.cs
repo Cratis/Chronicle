@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Jobs;
@@ -67,10 +67,10 @@ internal static partial class JobsManagerLogMessages
     internal static partial void CannotResumeJobBecauseCompleted(this ILogger<JobsManager> logger, JobId jobId);
 
     [LoggerMessage(LogLevel.Warning, "Job {JobId} encountered error : {Error}")]
-    internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, Storage.Jobs.JobError error);
+    internal static partial void JobErrorOccurred(this ILogger<JobsManager> logger, JobId jobId, Cratis.Orleans.Storage.Jobs.JobError error);
 
     [LoggerMessage(LogLevel.Warning, "Unable to get jobs of type {JobType}. Encountered error : {Error}")]
-    internal static partial void UnableToGetJobs(this ILogger<JobsManager> logger, Type jobType, Storage.Jobs.JobError error);
+    internal static partial void UnableToGetJobs(this ILogger<JobsManager> logger, Type jobType, Cratis.Orleans.Storage.Jobs.JobError error);
 
     [LoggerMessage(LogLevel.Warning, "Unable to get job grain {JobId} for job type {JobType}. Error {Error}")]
     internal static partial void UnableToGetJob(this ILogger<JobsManager> logger, JobId jobId, JobType jobType, IJobTypes.GetClrTypeForError error);

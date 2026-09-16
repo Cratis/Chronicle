@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using Moq;
 
 namespace Cratis.Chronicle.Jobs.for_Job.when_a_step_completes;

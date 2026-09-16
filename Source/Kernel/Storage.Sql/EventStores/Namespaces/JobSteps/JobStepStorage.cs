@@ -6,9 +6,9 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.EntityFrameworkCore;
 using OneOf.Types;
 

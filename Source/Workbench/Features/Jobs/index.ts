@@ -3,6 +3,7 @@
 export * from './AllJobs';
 export * from './DeleteJob';
 export * from './GetJobSteps';
+export * from './JobStatus';
 export * from './JobStepSummary';
 export * from './JobSummary';
 export * from './ObserveJobs';

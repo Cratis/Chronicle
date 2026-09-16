@@ -32,7 +32,6 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Microsoft.Extensions.Logging.Abstractions;
-
 using ProjectionRegistrationError = Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;

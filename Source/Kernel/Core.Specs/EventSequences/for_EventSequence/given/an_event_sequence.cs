@@ -45,7 +45,7 @@ public class an_event_sequence : Specification
 
     protected List<EventSequenceNumber> _constraintIndexSequenceNumbers;
     protected EventSequenceNumber _appendedSequenceNumber;
-    protected Orleans.Core.IStorage<EventSequenceState> _stateStorage;
+    protected global::Orleans.Core.IStorage<EventSequenceState> _stateStorage;
 
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;

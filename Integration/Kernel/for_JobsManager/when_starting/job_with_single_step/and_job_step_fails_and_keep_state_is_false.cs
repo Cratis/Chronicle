@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Storage.Jobs;
 using context = Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails_and_keep_state_is_false.context;
 
 namespace Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_starting.job_with_single_step;
@@ -14,11 +14,11 @@ public class and_job_step_fails_and_keep_state_is_false(context context) : Given
 {
     public class context(ChronicleFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
-        public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
+        public Result<Cratis.Orleans.Jobs.JobId, StartJobError> StartJobResult;
         public Job? Job;
         public IEnumerable<JobStep> JobSteps;
-        public Concepts.Jobs.JobId JobId;
-        public Catch<JobState, Storage.Jobs.JobError> GetJobResult;
+        public Cratis.Orleans.Jobs.JobId JobId;
+        public Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError> GetJobResult;
 
         async Task Because()
         {
@@ -56,5 +56,5 @@ public class and_job_step_fails_and_keep_state_is_false(context context) : Given
     public void should_perform_work_for_job_step_only_once() => Context.JobStepProcessor.GetNumPerformCallsPerJobStep(Context.StartJobResult.AsT0).ShouldContainSingleItem();
 
     [Fact]
-    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedWithFailure, 1);
+    public void should_have_completed_work_unsuccessfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Cratis.Orleans.Jobs.JobStepStatus.CompletedWithFailure, 1);
 }

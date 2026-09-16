@@ -73,4 +73,3 @@ public class CommandDefinition(Type type)
         return returnType == typeof(void) ? null : returnType;
     }
 }
-

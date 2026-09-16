@@ -14,7 +14,7 @@ public class JobGrainStorageProviderError : Exception
     /// <param name="jobStateType">The type of the job state.</param>
     /// <param name="error">The <see cref="JobError"/>.</param>
     /// <param name="methodName">The method.</param>
-    public JobGrainStorageProviderError(Type jobStateType, Storage.Jobs.JobError error, string methodName)
+    public JobGrainStorageProviderError(Type jobStateType, Cratis.Orleans.Storage.Jobs.JobError error, string methodName)
         : base($"Error while performing {methodName} with job state type {jobStateType} : {Enum.GetName(error)}")
     {
     }
