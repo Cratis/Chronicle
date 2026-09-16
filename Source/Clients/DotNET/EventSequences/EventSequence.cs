@@ -129,6 +129,7 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.Append(new()
         {
+            IncludeReceipt = true,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
@@ -257,6 +258,7 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.AppendMany(new()
         {
+            IncludeReceipts = true,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
@@ -627,6 +629,7 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.AppendManyForEventSources(new()
         {
+            IncludeReceipts = true,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
