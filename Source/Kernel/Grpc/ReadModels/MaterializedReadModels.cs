@@ -26,7 +26,7 @@ internal sealed class MaterializedReadModels(
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
         var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
@@ -65,7 +65,7 @@ internal sealed class MaterializedReadModels(
         return Observable.FromAsync(async () =>
         {
             var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-            var definition = await readModel.GetDefinition();
+            var definition = await readModel.GetKnownDefinition(request.ReadModel);
             var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
             var sink = await sinks.GetFor(definition);
             var skip = Math.Max(0, request.Page * request.PageSize);
