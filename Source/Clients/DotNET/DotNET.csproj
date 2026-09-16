@@ -40,11 +40,19 @@
 
     <Target Name="GrpcClients" BeforeTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(NoBuild)' != 'true' ">
         <Message Text="Generating gRPC clients" Importance="high" />
-        <Exec Command="dotnet run &quot;$(TargetDir)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
+        <Exec Command="dotnet &quot;@(GrpcClientGeneratorAssembly)&quot; &quot;$(TargetDir)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" />
     </Target>
 
     <ItemGroup>
         <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" ReferenceOutputAssembly="false" />
+        <!-- Build the generator once through the MSBuild project graph. Nested dotnet run invocations raced
+             while net8/net9/net10 packaging copied runtime dependencies into the same tool directory. -->
+        <ProjectReference Include="../../Tools/GrpcClients/GrpcClients.csproj"
+                          ReferenceOutputAssembly="false"
+                          PrivateAssets="all"
+                          OutputItemType="GrpcClientGeneratorAssembly"
+                          SkipGetTargetFrameworkProperties="true"
+                          GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;IsPackaging" />
     </ItemGroup>
 
     <ItemGroup>
