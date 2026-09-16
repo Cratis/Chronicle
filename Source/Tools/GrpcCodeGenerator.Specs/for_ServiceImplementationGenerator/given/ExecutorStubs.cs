@@ -27,8 +27,11 @@ public static class ExecutorStubs
 
         internal static class CommandExecutor
         {
-            internal static Task<CommandResult> Execute(Cratis.Arc.Commands.ICommandPipeline pipeline, object command) =>
-                throw new NotSupportedException();
+            internal static async Task<CommandResult> Execute(Cratis.Arc.Commands.ICommandPipeline pipeline, object command)
+            {
+                await pipeline.Execute(command);
+                return new CommandResult();
+            }
 
             internal static Task<CommandResult<TResponse>> Execute<TDomainResponse, TResponse>(Cratis.Arc.Commands.ICommandPipeline pipeline, object command, Func<TDomainResponse, TResponse> mapResponse) =>
                 throw new NotSupportedException();
