@@ -15,14 +15,12 @@ public class and_camel_case_is_configured : Specification
 
     void Because()
     {
-        _builder.Properties(properties =>
-        {
-            properties.RenamedFrom("Contact.Email", "Contact.EmailAddress");
-            properties.Split("Contact.FirstName", "Contact.FullName", " ", 0);
-            properties.Combine("Contact.FullName", " ", "Contact.FirstName", "Contact.LastName");
-            properties.MapValues("Contact.Status", "Contact.OldStatus", [new ValueMapping("OldValue", "NewValue")]);
-            properties.DefaultValue("Contact.Label", "DoNotRename");
-        });
+        new EventMigrationBuilderFor<given.TargetEvent, given.SourceEvent>(_builder).Properties(properties => properties
+            .RenamedFrom(target => target.Contact.Email, source => source.Contact.EmailAddress)
+            .Split(target => target.Contact.FirstName, source => source.Contact.FullName, " ", 0)
+            .Combine(target => target.Contact.FullName, " ", source => source.Contact.FirstName, source => source.Contact.LastName)
+            .MapValues(target => target.Contact.Status, source => source.Contact.OldStatus, map => map.Map("OldValue", "NewValue"))
+            .DefaultValue(target => target.Contact.Label, "DoNotRename"));
         _result = _builder.ToJson();
     }
 

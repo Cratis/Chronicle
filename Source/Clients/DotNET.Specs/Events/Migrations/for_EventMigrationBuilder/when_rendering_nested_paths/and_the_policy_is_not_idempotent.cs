@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Migrations.for_EventMigrationBuilder.when_rendering_nested_paths;
 
@@ -11,16 +10,12 @@ public class and_the_policy_is_not_idempotent : Specification
     EventMigrationBuilder _builder;
     JsonObject _result;
 
-    void Establish()
-    {
-        var namingPolicy = Substitute.For<INamingPolicy>();
-        namingPolicy.GetPropertyName(Arg.Any<string>()).Returns(call => $"mapped_{call.Arg<string>()}");
-        _builder = new(namingPolicy);
-    }
+    void Establish() => _builder = new(new given.PrefixPolicy());
 
     void Because()
     {
-        _builder.Properties(properties => properties.RenamedFrom("Contact.Email", "Contact.EmailAddress"));
+        new EventMigrationBuilderFor<given.TargetEvent, given.SourceEvent>(_builder).Properties(properties =>
+            properties.RenamedFrom(target => target.Contact.Email, source => source.Contact.EmailAddress));
         _result = _builder.ToJson();
     }
 

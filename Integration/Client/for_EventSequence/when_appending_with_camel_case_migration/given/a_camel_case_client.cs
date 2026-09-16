@@ -23,6 +23,7 @@ public class a_camel_case_client(ChronicleFixture fixture, string eventStoreName
     public bool RegistrationSucceeded => _store.Registration.IsSuccess;
     public override IEnumerable<Type> EventTypes => [typeof(ContactRecordedV1), typeof(ContactRecorded)];
     public override IEnumerable<Type> EventTypeMigrators => [typeof(ContactRecordedMigration)];
+    protected virtual INamingPolicy NamingPolicy => new CamelCaseNamingPolicy();
 
     async Task Establish()
     {
@@ -30,7 +31,7 @@ public class a_camel_case_client(ChronicleFixture fixture, string eventStoreName
             new BorrowedConnection(EventStore.Connection),
             new ChronicleOptions { EnableEventTypeGenerationValidation = true },
             artifactsProvider: this,
-            namingPolicy: new CamelCaseNamingPolicy());
+            namingPolicy: NamingPolicy);
         _store = await _client.GetEventStore(eventStoreName, EventStore.Namespace);
 
         // The borrowed connection is already connected, so it need not emit another OnConnected event.

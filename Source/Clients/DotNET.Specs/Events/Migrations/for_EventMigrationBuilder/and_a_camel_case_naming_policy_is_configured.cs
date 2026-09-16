@@ -14,13 +14,11 @@ public class and_a_camel_case_naming_policy_is_configured : Specification
     void Establish()
     {
         _builder = new EventMigrationBuilder(new CamelCaseNamingPolicy());
-        _builder.Properties(pb =>
-        {
-            pb.RenamedFrom("Email", "EmailAddress");
-            pb.Split("FirstName", "FullName", " ", 0);
-            pb.Combine("FullName", " ", "FirstName", "LastName");
-            pb.MapValues("Status", "Status", [new ValueMapping(0, 10)]);
-        });
+        new EventMigrationBuilderFor<given.TargetEvent, given.SourceEvent>(_builder).Properties(properties => properties
+            .RenamedFrom(target => target.Email, source => source.EmailAddress)
+            .Split(target => target.FirstName, source => source.FullName, " ", 0)
+            .Combine(target => target.FullName, " ", source => source.FirstName, source => source.LastName)
+            .MapValues(target => target.Status, source => source.Status, map => map.Map(0, 10)));
     }
 
     void Because() => _result = _builder.ToJson();

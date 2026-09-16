@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// <summary>
 /// Represents an implementation of <see cref="IEventMigrationBuilder"/>.
 /// </summary>
-/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> used to render property names the way they appear in an event's payload. Defaults to <see cref="DefaultNamingPolicy"/>.</param>
+/// <param name="namingPolicy">The naming policy for typed property accessors. Raw JSON paths are never renamed. Defaults to <see cref="DefaultNamingPolicy"/>.</param>
 public class EventMigrationBuilder(INamingPolicy? namingPolicy) : IEventMigrationBuilder
 {
     readonly List<EventMigrationPropertyBuilder> _propertyBuilders = [];
