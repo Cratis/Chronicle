@@ -4,8 +4,8 @@
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
+using Cratis.Orleans.Jobs;
 using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

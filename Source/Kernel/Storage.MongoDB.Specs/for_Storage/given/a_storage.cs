@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;

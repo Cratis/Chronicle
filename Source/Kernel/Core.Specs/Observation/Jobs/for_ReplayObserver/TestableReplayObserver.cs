@@ -34,4 +34,3 @@ public class TestableReplayObserver(
     public Task<IImmutableList<JobStepDetails>> PrepareStepsForTesting(ReplayObserverRequest request) =>
         PrepareSteps(request);
 }
-

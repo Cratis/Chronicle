@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Jobs;
 using Cratis.Monads;
-
+using Cratis.Orleans.Jobs;
 using Catch = Cratis.Specifications.Catch;
 
 namespace Cratis.Chronicle.Core.Specs.Patches.for_RebuildConstraintIndexes.when_applying_up;

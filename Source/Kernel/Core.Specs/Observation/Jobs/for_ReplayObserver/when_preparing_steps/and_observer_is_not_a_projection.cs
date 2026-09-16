@@ -28,4 +28,3 @@ public class and_observer_is_not_a_projection : given.a_replay_observer_job
     [Fact] void should_include_first_partition() => ((HandleEventsForPartitionArguments)_steps[0].Request).Partition.ShouldEqual(_key1);
     [Fact] void should_include_second_partition() => ((HandleEventsForPartitionArguments)_steps[1].Request).Partition.ShouldEqual(_key2);
 }
-

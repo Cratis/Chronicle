@@ -3,9 +3,9 @@
 
 using System.CodeDom.Compiler;
 using System.Reflection;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.DependencyInjection;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using Cratis.Reflection;
 using Cratis.Types;
 namespace Cratis.Chronicle.Jobs;

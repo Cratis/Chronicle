@@ -24,4 +24,3 @@ public interface IHandleEventsForObserver : IJobStep<HandleEventsForObserverArgu
     /// </remarks>
     Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber);
 }
-

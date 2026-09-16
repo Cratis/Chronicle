@@ -4,11 +4,11 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;

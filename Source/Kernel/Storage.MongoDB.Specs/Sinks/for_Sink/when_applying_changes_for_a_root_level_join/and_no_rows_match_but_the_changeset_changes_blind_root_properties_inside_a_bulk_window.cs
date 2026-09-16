@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_for_a_root_level_join.given;
-
 using context = Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_for_a_root_level_join.and_no_rows_match_but_the_changeset_changes_blind_root_properties_inside_a_bulk_window.context;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_for_a_root_level_join;

@@ -3,9 +3,9 @@
 
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
-using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Jobs;

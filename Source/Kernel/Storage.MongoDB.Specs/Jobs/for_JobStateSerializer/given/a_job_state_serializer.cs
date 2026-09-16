@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.MongoDB;
-using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Orleans.Jobs;
 using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Jobs.for_JobStateSerializer.given;

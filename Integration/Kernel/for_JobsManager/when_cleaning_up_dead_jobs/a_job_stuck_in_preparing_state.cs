@@ -3,10 +3,10 @@
 
 using Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using context = Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_cleaning_up_dead_jobs.a_job_stuck_in_preparing_state.context;
-using JobId = Cratis.Chronicle.Concepts.Jobs.JobId;
-using JobStatus = Cratis.Chronicle.Concepts.Jobs.JobStatus;
+using JobId = Cratis.Orleans.Jobs.JobId;
+using JobStatus = Cratis.Orleans.Jobs.JobStatus;
 
 namespace Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_cleaning_up_dead_jobs;
 

@@ -3,9 +3,9 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using OneOf.Types;
 
 namespace Cratis.Chronicle.Storage.InMemory.Jobs;

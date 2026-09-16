@@ -39,5 +39,3 @@ public class and_event_in_context_is_part_of_definition : Specification
 
     [Fact] void should_save_to_storage() => _storage.Received(1).Save(_context.EventSourceId, _definition.Name, Arg.Any<EventSequenceNumber>(), _expectedHashedValue);
 }
-
-

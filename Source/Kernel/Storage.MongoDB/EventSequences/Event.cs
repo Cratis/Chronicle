@@ -42,4 +42,3 @@ public record Event(
     IDictionary<string, string> ContentHashes,
     IEnumerable<EventRevision> Revisions,
     Subject? Subject = null);
-

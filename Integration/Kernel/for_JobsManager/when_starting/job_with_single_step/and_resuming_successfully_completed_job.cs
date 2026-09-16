@@ -13,9 +13,9 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
 {
     public class context(ChronicleFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
-        public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
+        public Result<Cratis.Orleans.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
-        public Concepts.Jobs.JobId JobId;
+        public Cratis.Orleans.Jobs.JobId JobId;
         public IEnumerable<JobStep> JobSteps;
 
         async Task Because()
@@ -54,5 +54,5 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
     public void should_perform_work_for_job_step_only_once() => Context.JobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Cratis.Orleans.Jobs.JobStepStatus.CompletedSuccessfully, 1);
 }

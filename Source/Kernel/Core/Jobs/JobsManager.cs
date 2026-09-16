@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OneOf.Types;
@@ -337,11 +337,11 @@ public class JobsManager(
         return Task.CompletedTask;
     }
 
-    Task HandleJobStorageError(JobId jobId, Storage.Jobs.JobError jobError)
+    Task HandleJobStorageError(JobId jobId, Cratis.Orleans.Storage.Jobs.JobError jobError)
     {
         switch (jobError)
         {
-            case Storage.Jobs.JobError.NotFound:
+            case Cratis.Orleans.Storage.Jobs.JobError.NotFound:
                 logger.JobCouldNotBeFound(jobId);
                 break;
             default:

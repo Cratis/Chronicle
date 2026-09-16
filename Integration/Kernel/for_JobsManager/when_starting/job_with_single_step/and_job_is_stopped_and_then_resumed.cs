@@ -13,10 +13,10 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
 {
     public class context(ChronicleFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
-        public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
+        public Result<Cratis.Orleans.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
         public IEnumerable<JobStep> JobSteps;
-        public Concepts.Jobs.JobId JobId;
+        public Cratis.Orleans.Jobs.JobId JobId;
 
         async Task Because()
         {
@@ -60,5 +60,5 @@ public class and_job_is_stopped_and_then_resumed(context context) : Given<contex
     public void should_perform_work_for_job_step_twice() => Context.JobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 2);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Concepts.Jobs.JobStepStatus.CompletedSuccessfully, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Cratis.Orleans.Jobs.JobStepStatus.CompletedSuccessfully, 1);
 }

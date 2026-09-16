@@ -4,8 +4,8 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Orleans.Jobs;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage.InMemory;
