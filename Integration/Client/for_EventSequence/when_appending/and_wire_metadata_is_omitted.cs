@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
@@ -22,22 +23,22 @@ public class and_wire_metadata_is_omitted(context context) : Given<context>(cont
         async Task Because()
         {
             var services = ((IChronicleServicesAccessor)EventStore.Connection).Services;
-            var serializer = Services.GetRequiredService<IEventSerializer>();
             var eventType = EventStore.EventTypes.GetEventTypeFor(typeof(SomeEvent));
             Result = await services.Sequences.Append(new()
             {
                 EventStore = EventStore.Name,
                 Namespace = EventStore.Namespace,
                 EventSequenceId = EventStore.EventLog.Id,
-                EventSourceId = "source",
+                EventSourceId = "wire-metadata-source",
                 EventType = new() { Id = eventType.Id, Generation = eventType.Generation.Value, Tombstone = eventType.Tombstone },
-                Content = (await serializer.Serialize(new SomeEvent("some content"))).ToJsonString()
+                Content = JsonSerializer.Serialize(new SomeEvent("some content"))
             }).EnsureSuccess();
-            Stored = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First, "source");
+            Stored = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First, "wire-metadata-source");
         }
     }
 
-    [Fact] void should_append_successfully() => Context.Result.Errors.ShouldBeEmpty();
+    [Fact] void should_append_successfully() => Context.Result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_have_no_constraint_violations() => Context.Result.ConstraintViolations.ShouldBeEmpty();
     [Fact] void should_store_one_event() => Context.Stored.Count.ShouldEqual(1);
     [Fact] void should_store_default_source_type() => Context.Stored[0].Context.EventSourceType.ShouldEqual(EventSourceType.Default);
     [Fact] void should_store_all_stream_type() => Context.Stored[0].Context.EventStreamType.ShouldEqual(EventStreamType.All);

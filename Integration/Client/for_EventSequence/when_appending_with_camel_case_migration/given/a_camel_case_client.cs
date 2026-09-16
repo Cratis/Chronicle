@@ -31,7 +31,7 @@ public class a_camel_case_client(ChronicleFixture fixture) : Specification(fixtu
             new ChronicleOptions { EnableEventTypeGenerationValidation = true },
             artifactsProvider: this,
             namingPolicy: new CamelCaseNamingPolicy());
-        _store = await _client.GetEventStore("camel-case-migrations", EventStore.Namespace);
+        _store = await _client.GetEventStore($"camel-case-migrations-{GetType().DeclaringType!.Name}", EventStore.Namespace);
 
         // The borrowed connection is already connected, so it need not emit another OnConnected event.
         await _store.RegisterAll();
