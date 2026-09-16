@@ -13,19 +13,19 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.12" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.5.4" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.19.2" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.19.2" />
-    <PackageVersion Include="Cratis.Arc" Version="22.15.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.15.0" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.15.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.15.0" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.15.0" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.15.0" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.15.0" />
+    <PackageVersion Include="Cratis.Arc" Version="22.16.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.16.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.16.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.16.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.16.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.16.0" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.16.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.12.1" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
@@ -92,9 +92,9 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.2.2" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.258" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.259" />
     <!-- Testing & Specifications -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.1" />
@@ -125,12 +125,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
-    <PackageVersion Include="protobuf-net.Reflection" Version="3.4.21" />
+    <PackageVersion Include="protobuf-net.Reflection" Version="3.4.30" />
     <!-- Declared so the compatibility checker can use ProtoBuf.Serializer, which protobuf-net.Reflection does not
          bring (it depends on protobuf-net.Core). It also pins the version: without an entry here, transitive
          resolution settles on protobuf-net 2.4.x for some projects and its attributes then collide with
          protobuf-net.Core 3.x. -->
-    <PackageVersion Include="protobuf-net" Version="3.4.21" />
+    <PackageVersion Include="protobuf-net" Version="3.4.30" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.14" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.83.0" />
