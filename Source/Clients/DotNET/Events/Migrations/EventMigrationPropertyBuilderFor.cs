@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Events.Migrations;
 
@@ -87,6 +86,6 @@ public class EventMigrationPropertyBuilderFor<TTarget, TSource>(IEventMigrationP
         return this;
     }
 
-    static PropertyName GetPropertyName<T, TProp>(Expression<Func<T, TProp>> expression) =>
-        new(expression.GetPropertyPath());
+    PropertyName GetPropertyName<T, TProp>(Expression<Func<T, TProp>> expression) =>
+        MigrationPropertyNames.Resolve(inner, expression);
 }

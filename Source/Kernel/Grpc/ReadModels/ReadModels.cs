@@ -122,7 +122,7 @@ internal sealed class ReadModels(
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
         var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
@@ -159,7 +159,7 @@ internal sealed class ReadModels(
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
         // A materialized read model — projection or reducer alike — already has its state written to the sink by
         // its observer, so read it from there rather than re-projecting or round-tripping to a connected reducer
@@ -266,7 +266,7 @@ internal sealed class ReadModels(
     public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
         // Every instance of a materialized read model is already in the sink, so read them from there. An
         // explicit event count is a request to re-apply exactly that many events from the beginning, which
@@ -480,7 +480,7 @@ internal sealed class ReadModels(
     public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {

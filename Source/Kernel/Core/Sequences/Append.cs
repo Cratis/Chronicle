@@ -73,10 +73,10 @@ public record Append(
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         return eventSequence.Append(
-            EventSourceType,
+            string.IsNullOrEmpty(EventSourceType?.Value) ? Concepts.Events.EventSourceType.Default : EventSourceType,
             EventSourceId,
-            EventStreamType,
-            EventStreamId,
+            string.IsNullOrEmpty(EventStreamType?.Value) ? Concepts.Events.EventStreamType.All : EventStreamType,
+            string.IsNullOrEmpty(EventStreamId?.Value) ? (EventStreamId)Concepts.Events.EventStreamId.Default : EventStreamId,
             EventType.ToChronicle(),
             JsonNode.Parse(Content)!.AsObject(),
             CorrelationId ?? Guid.NewGuid(),

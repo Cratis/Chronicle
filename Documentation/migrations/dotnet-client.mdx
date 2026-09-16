@@ -65,7 +65,11 @@ An event's payload is rarely flat — a value object groups related values, and 
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/nested-property" />
 
-The expression becomes the path `Price.Description`, and Chronicle resolves it segment by segment: reading walks into the object, writing creates the objects along the way when the stored payload does not carry them yet. That also lets a migration restructure a payload — `RenamedFrom(m => m.Price.Amount, e => e.Amount)` moves a value that used to sit at the top level into the object it now belongs to.
+A typed expression such as `e => e.Price.Description` identifies CLR members. Chronicle resolves each member to its JSON name: `[JsonPropertyName]` takes precedence, otherwise the client's JSON naming policy applies. Without explicit names, a camelCase policy produces `price.description`. Chronicle resolves that payload path segment by segment: reading walks into the object, writing creates the objects along the way when the stored payload does not carry them yet. That also lets a migration restructure a payload — `RenamedFrom(m => m.Price.Amount, e => e.Amount)` moves a value that used to sit at the top level into the object it now belongs to.
+
+This resolution applies to typed source and target expressions for every operation, including bidirectional value maps. Raw string paths on `IEventMigrationPropertyBuilder` are already JSON paths and remain **exactly as supplied**. For example, a raw path `price.description` is not converted again, even with a custom naming policy. Use the exact names in the serialized payload, including explicit `[JsonPropertyName]` names. Existing raw-string migrations need no naming-policy upgrade workaround.
+
+Separators, default values, and mapped values are literals and are not renamed. These builders describe property paths, not arbitrary custom-converter transformations.
 
 A path that goes nowhere is rejected at registration with `InvalidMigrationPropertyForEventType`, naming the path so you can see which segment is wrong.
 
