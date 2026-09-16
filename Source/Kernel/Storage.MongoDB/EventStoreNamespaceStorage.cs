@@ -16,7 +16,6 @@ using Cratis.Chronicle.Storage.MongoDB.Changes;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
-using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Patterns;
@@ -66,7 +65,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinks"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-    /// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
     /// <param name="options"><see cref="ChronicleOptions"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStoreNamespaceStorage(
@@ -78,7 +76,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ISinks sinks,
-        IJobTypes jobTypes,
+        Cratis.Orleans.Storage.IJobsStorage jobsStorage,
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
@@ -94,8 +92,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
                         new ChangesetStorage(eventStoreNamespaceDatabase) :
                         new NullChangesetStorage();
         Identities = new IdentityStorage(eventStoreNamespaceDatabase, loggerFactory.CreateLogger<IdentityStorage>());
-        Jobs = new JobStorage(eventStoreNamespaceDatabase, jobTypes);
-        JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
+        Jobs = jobsStorage.GetFor(eventStore, @namespace).Jobs;
+        JobSteps = jobsStorage.GetFor(eventStore, @namespace).JobSteps;
         Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);

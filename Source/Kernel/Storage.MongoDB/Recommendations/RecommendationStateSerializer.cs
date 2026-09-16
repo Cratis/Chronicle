@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Recommendations;
-using Cratis.Chronicle.Storage.MongoDB.Serialization;
+using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Strings;
 using MongoDB.Bson;

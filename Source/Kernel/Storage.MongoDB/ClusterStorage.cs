@@ -26,7 +26,7 @@ public class ClusterStorage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IJobTypes jobTypes,
+    Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IClusterStorage
 {
@@ -54,7 +54,7 @@ public class ClusterStorage(
         expandoObjectConverter,
         jsonSerializerOptions,
         sinksFactory,
-        jobTypes,
+        jobsStorage,
         options,
         loggerFactory);
 

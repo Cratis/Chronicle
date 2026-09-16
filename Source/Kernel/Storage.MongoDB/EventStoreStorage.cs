@@ -59,7 +59,7 @@ public class EventStoreStorage(
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     SinksFactory sinksFactory,
-    IJobTypes jobTypes,
+    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
@@ -127,7 +127,7 @@ public class EventStoreStorage(
             expandoObjectConverter,
             jsonSerializerOptions,
             sinksFactory(@namespace),
-            jobTypes,
+            jobsStorage,
             options,
             loggerFactory);
 

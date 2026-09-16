@@ -31,7 +31,7 @@ public class Storage(
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     IInstancesOf<ISinkFactory> sinkFactories,
-    IJobTypes jobTypes,
+    Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IStorage
 {
@@ -91,7 +91,7 @@ public class Storage(
             expandoObjectConverter,
             jsonSerializerOptions,
             @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories),
-            jobTypes,
+            jobsStorage,
             options,
             loggerFactory);
 

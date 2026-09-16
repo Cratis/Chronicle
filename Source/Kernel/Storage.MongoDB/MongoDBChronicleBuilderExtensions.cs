@@ -5,13 +5,16 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Serialization;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage;
+using Cratis.Orleans.Storage.MongoDB;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Driver;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Providers.MongoDB.Utils;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -72,13 +75,25 @@ public static class MongoDBChronicleBuilderExtensions
 
         builder.ConfigureServices(services =>
         {
-            services.AddSingleton<ICustomSerializers, CustomSerializers>();
             services.AddSingleton<IDatabase, Database>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<EncryptionKeyStorage>();
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
+
+            // The Cratis.Orleans job system storage: the same MongoDB client, databases named exactly where
+            // the kernel has always kept its job state, resolved per event store and namespace.
+            services.AddSingleton(sp => new MongoDBJobsStorage(
+                sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings),
+                sp.GetRequiredService<IJobTypes>(),
+                sp.GetRequiredService<ICustomSerializers>(),
+                Options.Create(new MongoDBJobsStorageOptions
+                {
+                    DatabaseNameResolver = (scope, @namespace) => DatabaseNames.ForEventStoreNamespace(scope, @namespace)
+                })));
+            services.AddSingleton<ICustomSerializers, CustomSerializers>();
+            services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
 
             services.AddHealthChecks().AddMongoDb(
