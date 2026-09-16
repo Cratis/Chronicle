@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Numerics;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
@@ -26,11 +27,12 @@ public static class PropertyMappers
     {
         return (@event, target, arrayIndexers) =>
         {
-            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-            var property = targetProperty.LastSegment.Value;
+            var resolvedProperty = ResolveDynamicPropertyPath(targetProperty, @event);
+            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
+            var property = resolvedProperty.LastSegment.Value;
             var originalValue = actualTarget.TryGetValue(property, out var value) ? value : null;
             var newValue = actualTarget[property] = eventValueProvider(@event);
-            return new(targetProperty, originalValue, newValue, arrayIndexers);
+            return new(resolvedProperty, originalValue, newValue, arrayIndexers);
         };
     }
 
@@ -48,8 +50,9 @@ public static class PropertyMappers
 
         return (@event, target, arrayIndexers) =>
         {
-            var lastSegment = targetProperty.LastSegment;
-            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            var resolvedProperty = ResolveDynamicPropertyPath(targetProperty, @event);
+            var lastSegment = resolvedProperty.LastSegment;
+            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
@@ -59,7 +62,7 @@ public static class PropertyMappers
             var eventValueObject = eventValueProvider(@event);
             var result = PerformAdd(targetType, valueAsObject, eventValueObject);
             actualTarget[lastSegment.Value] = result;
-            return new(targetProperty, valueAsObject, result, arrayIndexers);
+            return new(resolvedProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -77,8 +80,9 @@ public static class PropertyMappers
 
         return (@event, target, arrayIndexers) =>
         {
-            var lastSegment = targetProperty.LastSegment;
-            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            var resolvedProperty = ResolveDynamicPropertyPath(targetProperty, @event);
+            var lastSegment = resolvedProperty.LastSegment;
+            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
@@ -88,7 +92,7 @@ public static class PropertyMappers
             var eventValueObject = eventValueProvider(@event);
             var result = PerformSubtract(targetType, valueAsObject, eventValueObject);
             actualTarget[lastSegment.Value] = result;
-            return new(targetProperty, valueAsObject, result, arrayIndexers);
+            return new(resolvedProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -105,8 +109,9 @@ public static class PropertyMappers
 
         return (@event, target, arrayIndexers) =>
         {
-            var lastSegment = targetProperty.LastSegment;
-            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            var resolvedProperty = ResolveDynamicPropertyPath(targetProperty, @event);
+            var lastSegment = resolvedProperty.LastSegment;
+            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
@@ -115,7 +120,7 @@ public static class PropertyMappers
 
             var result = PerformAdd(targetType, valueAsObject, 1);
             actualTarget[lastSegment.Value] = result;
-            return new(targetProperty, valueAsObject, result, arrayIndexers);
+            return new(resolvedProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -132,8 +137,9 @@ public static class PropertyMappers
 
         return (@event, target, arrayIndexers) =>
         {
-            var lastSegment = targetProperty.LastSegment;
-            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            var resolvedProperty = ResolveDynamicPropertyPath(targetProperty, @event);
+            var lastSegment = resolvedProperty.LastSegment;
+            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
@@ -142,7 +148,7 @@ public static class PropertyMappers
 
             var result = PerformAdd(targetType, valueAsObject, 1);
             actualTarget[lastSegment.Value] = result;
-            return new(targetProperty, valueAsObject, result, arrayIndexers);
+            return new(resolvedProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -159,8 +165,9 @@ public static class PropertyMappers
 
         return (@event, target, arrayIndexers) =>
         {
-            var lastSegment = targetProperty.LastSegment;
-            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            var resolvedProperty = ResolveDynamicPropertyPath(targetProperty, @event);
+            var lastSegment = resolvedProperty.LastSegment;
+            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget.TryGetValue(lastSegment.Value, out var valueAsObject))
             {
                 valueAsObject = TypeConversion.Convert(targetType, 0);
@@ -169,7 +176,7 @@ public static class PropertyMappers
 
             var result = PerformSubtract(targetType, valueAsObject, 1);
             actualTarget[lastSegment.Value] = result;
-            return new(targetProperty, valueAsObject, result, arrayIndexers);
+            return new(resolvedProperty, valueAsObject, result, arrayIndexers);
         };
     }
 
@@ -210,4 +217,48 @@ public static class PropertyMappers
 
     static T Subtract<T>(T left, T right)
         where T : INumber<T> => left - right;
+
+    /// <summary>
+    /// Resolve a property path that may contain a dynamic, expression-based segment (e.g. eventCountByType.$eventContext.eventType.id)
+    /// into a concrete <see cref="PropertyPath"/> for the current <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="propertyPath">The property path that may contain a .$eventContext.&lt;path&gt; segment.</param>
+    /// <param name="event">The event to evaluate the dynamic segment against.</param>
+    /// <returns>The resolved property path, with the dynamic segment replaced by its runtime value. Returns <paramref name="propertyPath"/> unchanged when it has no dynamic segment.</returns>
+    /// <exception cref="UnsupportedDynamicPropertyPathExpression">Thrown when the dynamic segment does not reference a well-known expression this method knows how to resolve.</exception>
+    static PropertyPath ResolveDynamicPropertyPath(PropertyPath propertyPath, AppendedEvent @event)
+    {
+        var pathString = propertyPath.Path;
+        var eventContextMarker = $".{WellKnownExpressions.EventContext}.";
+        var markerIndex = pathString.IndexOf(eventContextMarker, StringComparison.Ordinal);
+        if (markerIndex < 0)
+        {
+            return propertyPath;
+        }
+
+        var staticPrefix = pathString[..markerIndex];
+        var contextPath = pathString[(markerIndex + eventContextMarker.Length)..];
+        if (contextPath.Length == 0)
+        {
+            throw new UnsupportedDynamicPropertyPathExpression(propertyPath);
+        }
+
+        var contextPropertyPath = new PropertyPath(contextPath);
+        var resolvedValue = EventValueProviders.EventContext(contextPropertyPath)(@event);
+
+        return new PropertyPath($"{staticPrefix}.{FormatDynamicKeyValue(resolvedValue)}");
+    }
+
+    /// <summary>
+    /// Format a resolved dynamic-key value as the <see cref="string"/> to use for a dictionary key, unwrapping
+    /// any <see cref="ConceptAs{T}"/> value generically rather than special-casing individual concept types.
+    /// </summary>
+    /// <param name="value">The value to format.</param>
+    /// <returns>The formatted key.</returns>
+    static string FormatDynamicKeyValue(object? value) => value switch
+    {
+        null => string.Empty,
+        _ when value.IsConcept() => FormatDynamicKeyValue(value.GetConceptValue()),
+        _ => value.ToString() ?? string.Empty
+    };
 }

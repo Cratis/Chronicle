@@ -99,4 +99,37 @@ public class a_projection_to_generate : Specification
             new FromEveryDefinition(new Dictionary<PropertyPath, string>(), true),
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>());
+
+    /// <summary>
+    /// Creates a <see cref="ProjectionDefinition"/> with an explicit <see cref="FromEveryDefinition"/> (the `all`/`every`
+    /// block mappings) and, optionally, <see cref="ProjectionDefinition.SubscribesToAllEvents"/> set.
+    /// </summary>
+    /// <param name="projectionName">Name of the projection.</param>
+    /// <param name="readModel">Identifier of the target read model.</param>
+    /// <param name="from">The per-event-type <see cref="FromDefinition"/> mappings.</param>
+    /// <param name="fromEvery">The `all`/`every` block mappings.</param>
+    /// <param name="subscribesToAllEvents">Whether the projection subscribes to all event types in the system.</param>
+    /// <returns>A new <see cref="ProjectionDefinition"/>.</returns>
+    protected static ProjectionDefinition CreateProjectionDefinitionWithFromEvery(
+        string projectionName,
+        ReadModelIdentifier readModel,
+        IDictionary<EventType, FromDefinition> from,
+        FromEveryDefinition fromEvery,
+        bool subscribesToAllEvents = false) =>
+        new(
+            ProjectionOwner.Client,
+            EventSequenceId.Log,
+            new ProjectionId(projectionName),
+            readModel,
+            true,
+            true,
+            new JsonObject(),
+            from,
+            new Dictionary<EventType, JoinDefinition>(),
+            new Dictionary<PropertyPath, ChildrenDefinition>(),
+            [],
+            fromEvery,
+            new Dictionary<EventType, RemovedWithDefinition>(),
+            new Dictionary<EventType, RemovedWithJoinDefinition>(),
+            SubscribesToAllEvents: subscribesToAllEvents);
 }

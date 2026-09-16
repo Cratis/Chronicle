@@ -104,11 +104,12 @@ public class Generator : IGenerator
 
     static string EscapePropertyPath(string path)
     {
+        // The Screenplay projection grammar only recognizes a single leading '@' escape on the whole target -
+        // a '.$eventContext.eventType.id'-style dynamic dictionary-key segment is not itself a keyword position
+        // and must not be escaped mid-path, or the generated declaration fails to re-parse. Only the first
+        // segment can collide with a reserved keyword in a way that needs escaping.
         var segments = path.Split('.');
-        for (var i = 0; i < segments.Length; i++)
-        {
-            segments[i] = EscapeIfKeyword(segments[i]);
-        }
+        segments[0] = EscapeIfKeyword(segments[0]);
         return string.Join('.', segments);
     }
 
