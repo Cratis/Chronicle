@@ -9,7 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
@@ -31,7 +31,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForObserver(
-    [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
     IStorage storage,

@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver.when_preparing_steps;
 

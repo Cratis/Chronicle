@@ -15,7 +15,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Schemas;
@@ -28,6 +28,7 @@ using Cratis.Monads;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Cratis.Orleans.Jobs;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;

@@ -41,11 +41,11 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </summary>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage is for.</param>
 /// <param name="sinksFactory">Factory delegate that creates <see cref="ISinks"/> for a namespace.</param>
-/// <param name="jobTypes">The <see cref="IJobTypes"/> for resolving job state types.</param>
+/// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 public sealed class EventStoreStorage(
     EventStoreName eventStore,
     SinksFactory sinksFactory,
-    IJobTypes jobTypes) : IEventStoreStorage
+    Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
 
@@ -102,7 +102,7 @@ public sealed class EventStoreStorage(
             return existing;
         }
 
-        var created = new EventStoreNamespaceStorage(EventStore, @namespace, jobTypes, sinksFactory(@namespace));
+        var created = new EventStoreNamespaceStorage(EventStore, @namespace, jobsStorage, sinksFactory(@namespace));
         return _namespaces.GetOrAdd(@namespace, created);
     }
 }

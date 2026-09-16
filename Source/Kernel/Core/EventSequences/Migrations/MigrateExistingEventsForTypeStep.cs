@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.EventSequences.Migrations;
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="logger">The <see cref="ILogger{MigrateExistingEventsForTypeStep}"/> for logging.</param>
 public class MigrateExistingEventsForTypeStep(
-    [PersistentState(nameof(MigrateExistingEventsForTypeStepState), WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(MigrateExistingEventsForTypeStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<MigrateExistingEventsForTypeStepState> state,
     IJobStepThrottle throttle,
     IStorage storage,
@@ -81,7 +81,7 @@ public class MigrateExistingEventsForTypeStep(
                     var contentAsJson = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
 
                     var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(
-                        jobStepKey.EventStore,
+                        jobStepKey.Scope,
                         @event.Context.EventType,
                         contentAsJson,
                         @event.Content);
@@ -102,7 +102,7 @@ public class MigrateExistingEventsForTypeStep(
 
     IEventSequenceStorage GetEventSequenceStorage(JobStepKey jobStepKey) =>
         _eventSequenceStorage ??= storage
-            .GetEventStore(jobStepKey.EventStore)
+            .GetEventStore(jobStepKey.Scope)
             .GetNamespace(jobStepKey.Namespace)
             .GetEventSequence(WellKnownEventSequences.EventLog);
 }

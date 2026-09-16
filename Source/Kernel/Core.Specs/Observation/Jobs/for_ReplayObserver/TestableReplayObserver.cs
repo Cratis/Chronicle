@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 

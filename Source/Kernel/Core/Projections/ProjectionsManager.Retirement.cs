@@ -7,7 +7,7 @@ using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Jobs;

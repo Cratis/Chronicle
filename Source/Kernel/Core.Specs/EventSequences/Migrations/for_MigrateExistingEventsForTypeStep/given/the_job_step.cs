@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
@@ -47,7 +47,7 @@ public class the_job_step : Specification
 
         _stateStorage = _silo.AddPersistentStateStorage<MigrateExistingEventsForTypeStepState>(
             nameof(MigrateExistingEventsForTypeStepState),
-            WellKnownGrainStorageProviders.JobSteps);
+            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
 
         _jobStep = await _silo.CreateGrainAsync<MigrateExistingEventsForTypeStep>(_jobStepId, _jobStepKey);
     }

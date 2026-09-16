@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.Extensions.Logging;
 

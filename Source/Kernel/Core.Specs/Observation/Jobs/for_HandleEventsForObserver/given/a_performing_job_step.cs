@@ -9,7 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Orleans.Jobs;
@@ -129,7 +129,7 @@ public class a_performing_job_step : Specification
 
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
             nameof(JobStepState),
-            WellKnownGrainStorageProviders.JobSteps);
+            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
 
         _performState = new HandleEventsForObserverState
         {

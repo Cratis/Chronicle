@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
@@ -49,7 +49,7 @@ public class the_job_step : Specification
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
-        _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForPartitionState>(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps);
+        _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForPartitionState>(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
         _jobStep = await _silo.CreateGrainAsync<HandleEventsForPartition>(_jobStepId, _jobStepKey);
     }
 }

@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
@@ -54,7 +54,7 @@ public class ReplayObserver(
             ];
         }
 
-        var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
+        var observerKeyIndexes = storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
 
         var keys = index.GetKeys(EventSequenceNumber.First);

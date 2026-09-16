@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;

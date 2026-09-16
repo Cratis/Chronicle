@@ -4,11 +4,12 @@
 using System.Reflection;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 
@@ -25,7 +26,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 public class TestableHandleEventsForObserver(
-    [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
     IStorage storage,

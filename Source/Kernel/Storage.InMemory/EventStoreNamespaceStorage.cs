@@ -12,7 +12,6 @@ using Cratis.Chronicle.Storage.InMemory.Changes;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Identities;
-using Cratis.Chronicle.Storage.InMemory.Jobs;
 using Cratis.Chronicle.Storage.InMemory.Keys;
 using Cratis.Chronicle.Storage.InMemory.Observation;
 using Cratis.Chronicle.Storage.InMemory.Patterns;
@@ -28,6 +27,7 @@ using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage;
 using Cratis.Orleans.Storage.Jobs;
 using InMemoryReadModels = Cratis.Chronicle.Storage.InMemory.ReadModels;
 
@@ -38,14 +38,17 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </summary>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage serves.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
-/// <param name="jobTypes">The <see cref="IJobTypes"/> for resolving job state types.</param>
+/// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 /// <param name="sinks">The <see cref="ISinks"/> for the namespace.</param>
 public sealed class EventStoreNamespaceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
-    IJobTypes jobTypes,
+    IJobsStorage jobsStorage,
     ISinks sinks) : IEventStoreNamespaceStorage
 {
+    readonly IJobsStorage _jobsStorage = jobsStorage;
+    readonly EventStoreName EventStore = eventStore;
+    readonly EventStoreNamespaceName Namespace = @namespace;
     readonly ConcurrentDictionary<EventSequenceId, EventSequenceStorage> _eventSequences = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
@@ -58,10 +61,10 @@ public sealed class EventStoreNamespaceStorage(
     public IIdentityStorage Identities { get; } = new IdentityStorage();
 
     /// <inheritdoc/>
-    public IJobStorage Jobs { get; } = new JobStorage(jobTypes);
+    public IJobStorage Jobs => _jobsStorage.GetFor(EventStore, Namespace).Jobs;
 
     /// <inheritdoc/>
-    public IJobStepStorage JobSteps { get; } = new JobStepStorage();
+    public IJobStepStorage JobSteps => _jobsStorage.GetFor(EventStore, Namespace).JobSteps;
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; } = new ObserverStateStorage();

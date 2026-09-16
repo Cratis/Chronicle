@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.EventSequences.Migrations.for_EventTypeGenerationMigrationReactor.given;
 

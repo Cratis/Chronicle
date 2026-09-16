@@ -33,15 +33,7 @@ public static class WellKnownGrainStorageProviders
     /// </summary>
     public const string FailedPartitions = "failed-partitions";
 
-    /// <summary>
-    /// THe name of the storage provider used for jobs.
-    /// </summary>
-    public const string Jobs = "jobs";
 
-    /// <summary>
-    /// THe name of the storage provider used for job steps.
-    /// </summary>
-    public const string JobSteps = "job-steps";
 
     /// <summary>
     /// The name of the storage provider used for recommendations.

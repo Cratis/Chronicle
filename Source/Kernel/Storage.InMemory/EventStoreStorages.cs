@@ -27,8 +27,8 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </para>
 /// </remarks>
 /// <param name="sinkFactories">All discovered <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobTypes">The <see cref="IJobTypes"/> for resolving job state types.</param>
-public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes) : IDisposable
+/// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
 
@@ -88,7 +88,7 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
             return existing;
         }
 
-        var created = new EventStoreStorage(eventStore, sinksFactory ?? CreateDefaultSinksFactory(eventStore), jobTypes);
+        var created = new EventStoreStorage(eventStore, sinksFactory ?? CreateDefaultSinksFactory(eventStore), jobsStorage);
         var storage = _eventStores.GetOrAdd(eventStore, created);
 
         if (ReferenceEquals(storage, created))

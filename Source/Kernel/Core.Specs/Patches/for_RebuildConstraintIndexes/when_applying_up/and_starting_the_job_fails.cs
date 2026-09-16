@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Events.Constraints;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Catch = Cratis.Specifications.Catch;

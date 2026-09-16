@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
