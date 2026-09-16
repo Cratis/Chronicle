@@ -39,7 +39,7 @@ public class and_a_routed_batch_is_traced : given.all_dependencies
             return _defaultConcurrencyScope;
         });
         _sequences.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), Arg.Any<CallContext>())
-            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.Empty, new() { SequenceNumbers = [42] }));
+            .Returns(call => CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.Empty, given.append_receipts.Complete(new() { SequenceNumbers = [42] }, call.Arg<Contracts.Sequences.AppendManyForEventSourcesRequest>())));
         _eventSequence = new(
             "store",
             "namespace",

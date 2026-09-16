@@ -91,9 +91,9 @@ public class UnitOfWork(
 
         _currentLegacyEvents.Add(new EventForEventSourceId(eventSourceId, @event, causation)
         {
-            EventStreamType = eventStreamType ?? EventStreamType.All,
-            EventStreamId = eventStreamId ?? EventStreamId.Default,
-            EventSourceType = eventSourceType ?? EventSourceType.Default,
+            RequestedEventStreamType = eventStreamType,
+            RequestedEventStreamId = eventStreamId,
+            RequestedEventSourceType = eventSourceType,
             Tags = tags ?? [],
             Occurred = occurred,
             Subject = subject

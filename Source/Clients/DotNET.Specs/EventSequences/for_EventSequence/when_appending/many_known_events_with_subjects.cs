@@ -62,7 +62,7 @@ public class many_known_events_with_subjects : given.an_event_sequence
             ConcurrencyViolations = []
         };
         _sequences.AppendMany(Arg.Any<Contracts.Sequences.AppendManyRequest>(), CallContext.Default)
-            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
+            .Returns(call => CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), given.append_receipts.Complete(_response, call.Arg<Contracts.Sequences.AppendManyRequest>())));
     }
 
     async Task Because() => await _eventSequence.AppendMany(_eventSourceId, _events);

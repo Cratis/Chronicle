@@ -28,12 +28,12 @@ public class an_event_sequence_with_metadata : an_event_sequence
         _sequences.Append(Arg.Any<Contracts.Sequences.AppendRequest>(), Arg.Any<CallContext>()).Returns(call =>
         {
             _request = call.Arg<Contracts.Sequences.AppendRequest>();
-            return CommandResult<Contracts.Sequences.AppendResponse>.Success(_correlationId, new() { CorrelationId = _correlationId, SequenceNumber = 42, ConstraintViolations = [], Errors = [] });
+            return CommandResult<Contracts.Sequences.AppendResponse>.Success(_correlationId, append_receipts.Complete(new() { CorrelationId = _correlationId, SequenceNumber = 42, ConstraintViolations = [], Errors = [] }, _request));
         });
         _sequences.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), Arg.Any<CallContext>()).Returns(call =>
         {
             _batchRequest = call.Arg<Contracts.Sequences.AppendManyForEventSourcesRequest>();
-            return CommandResult<Contracts.Sequences.AppendManyResponse>.Success(_correlationId, new() { CorrelationId = _correlationId, SequenceNumbers = [42, 43], ConstraintViolations = [], ConcurrencyViolations = [], Errors = [] });
+            return CommandResult<Contracts.Sequences.AppendManyResponse>.Success(_correlationId, append_receipts.Complete(new() { CorrelationId = _correlationId, SequenceNumbers = _batchRequest.Events.Select((_, index) => 42UL + (ulong)index).ToArray(), ConstraintViolations = [], ConcurrencyViolations = [], Errors = [] }, _batchRequest));
         });
         _subscription = _eventSequence.AppendOperations.Subscribe(events => _notifications = events.ToArray());
     }

@@ -21,19 +21,22 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     public Subject? Subject { get; init; }
 
     /// <summary>
-    /// Gets or inits the <see cref="EventStreamType"/> for the event. Defaults to <see cref="EventStreamType.All"/>.
+    /// Gets or inits the <see cref="EventStreamType"/> for the event. The getter defaults to <see cref="EventStreamType.All"/>;
+    /// leaving the property unset lets the kernel resolve its configured append default.
     /// </summary>
-    public EventStreamType EventStreamType { get; init; } = EventStreamType.All;
+    public EventStreamType EventStreamType { get => RequestedEventStreamType ?? EventStreamType.All; init => RequestedEventStreamType = value; }
 
     /// <summary>
-    /// Gets or inits the <see cref="EventStreamId"/> for the event. Defaults to <see cref="EventStreamId.Default"/>.
+    /// Gets or inits the <see cref="EventStreamId"/> for the event. The getter defaults to <see cref="EventStreamId.Default"/>;
+    /// leaving the property unset lets the kernel resolve its configured append default.
     /// </summary>
-    public EventStreamId EventStreamId { get; init; } = EventStreamId.Default;
+    public EventStreamId EventStreamId { get => RequestedEventStreamId ?? EventStreamId.Default; init => RequestedEventStreamId = value; }
 
     /// <summary>
-    /// Gets or inits the <see cref="EventSourceType"/> for the event. Defaults to <see cref="EventSourceType.Default"/>.
+    /// Gets or inits the <see cref="EventSourceType"/> for the event. The getter defaults to <see cref="EventSourceType.Default"/>;
+    /// leaving the property unset lets the kernel resolve its configured append default.
     /// </summary>
-    public EventSourceType EventSourceType { get; init; } = EventSourceType.Default;
+    public EventSourceType EventSourceType { get => RequestedEventSourceType ?? EventSourceType.Default; init => RequestedEventSourceType = value; }
 
     /// <summary>
     /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.
@@ -45,4 +48,19 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// event type and any tags supplied at append time.
     /// </summary>
     public IEnumerable<string> Tags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the explicit stream type, preserving omission for kernel routing despite the public getter's legacy default.
+    /// </summary>
+    internal EventStreamType? RequestedEventStreamType { get; init; }
+
+    /// <summary>
+    /// Gets the explicit stream id, preserving omission for kernel routing despite the public getter's legacy default.
+    /// </summary>
+    internal EventStreamId? RequestedEventStreamId { get; init; }
+
+    /// <summary>
+    /// Gets the explicit source type, preserving omission for kernel routing despite the public getter's legacy default.
+    /// </summary>
+    internal EventSourceType? RequestedEventSourceType { get; init; }
 }
