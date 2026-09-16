@@ -6,6 +6,17 @@ message AllEventSequencesRequest {
    string EventStore = 1;
    string Namespace = 2;
 }
+message AppendCausation {
+   SerializableDateTimeOffset Occurred = 1;
+   string Type = 2;
+   map<string,string> Properties = 3;
+}
+message AppendIdentity {
+   string Subject = 1;
+   string Name = 2;
+   string UserName = 3;
+   AppendIdentity OnBehalfOf = 4;
+}
 message AppendManyForEventSourcesRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -16,6 +27,7 @@ message AppendManyForEventSourcesRequest {
    repeated Causation Causation = 7;
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+   bool IncludeReceipts = 10;
 }
 message AppendManyRequest {
    string EventStore = 1;
@@ -29,6 +41,7 @@ message AppendManyRequest {
    Identity CausedBy = 9;
    ConcurrencyScope ConcurrencyScope = 10;
    SerializableDateTimeOffset Occurred = 11;
+   bool IncludeReceipts = 12;
 }
 message AppendManyResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -41,6 +54,27 @@ message AppendManyResponse {
    repeated ConstraintViolation ConstraintViolations = 8;
    repeated string Errors = 9;
    repeated ConcurrencyViolation ConcurrencyViolations = 10;
+   repeated AppendReceipt Receipts = 11;
+}
+message AppendReceipt {
+   string EventStore = 1;
+   string Namespace = 2;
+   uint64 SequenceNumber = 3;
+   string EventTypeId = 4;
+   uint32 Generation = 5;
+   bool Tombstone = 6;
+   string EventSourceType = 7;
+   string EventSourceId = 8;
+   string EventStreamType = 9;
+   string EventStreamId = 10;
+   SerializableDateTimeOffset Occurred = 11;
+   .bcl.Guid CorrelationId = 12; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string Subject = 13;
+   repeated string Tags = 14;
+   string Hash = 15;
+   repeated AppendCausation Causation = 16;
+   AppendIdentity CausedBy = 17;
+   EventObservationState ObservationState = 18;
 }
 message AppendRequest {
    string EventStore = 1;
@@ -59,6 +93,7 @@ message AppendRequest {
    repeated Causation Causation = 14;
    Identity CausedBy = 15;
    ConcurrencyScope ConcurrencyScope = 16;
+   bool IncludeReceipt = 17;
 }
 message AppendResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -71,6 +106,7 @@ message AppendResponse {
    repeated ConstraintViolation ConstraintViolations = 8;
    repeated string Errors = 9;
    ConcurrencyViolation ConcurrencyViolation = 10;
+   AppendReceipt Receipt = 11;
 }
 message AppendedEventResponse {
    string Id = 1;
@@ -93,7 +129,7 @@ message Causation {
 }
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -101,7 +137,7 @@ message CommandResult {
 }
 message CommandResult_AppendManyResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -110,7 +146,7 @@ message CommandResult_AppendManyResponse {
 }
 message CommandResult_AppendResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -119,7 +155,7 @@ message CommandResult_AppendResponse {
 }
 message CommandResult_CompleteStreamResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -321,7 +357,7 @@ message QueryEventsRequest {
 }
 message QueryResult_EventSequenceTailResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -329,7 +365,7 @@ message QueryResult_EventSequenceTailResponse {
 }
 message QueryResult_EventSourceEventsResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -337,7 +373,7 @@ message QueryResult_EventSourceEventsResponse {
 }
 message QueryResult_HistogramResolution {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -345,7 +381,7 @@ message QueryResult_HistogramResolution {
 }
 message QueryResult_IEnumerable_AppendedEventResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -353,7 +389,7 @@ message QueryResult_IEnumerable_AppendedEventResponse {
 }
 message QueryResult_IEnumerable_EventSequenceNamesResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -361,7 +397,7 @@ message QueryResult_IEnumerable_EventSequenceNamesResponse {
 }
 message QueryResult_IEnumerable_ExportedEventResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -369,7 +405,7 @@ message QueryResult_IEnumerable_ExportedEventResponse {
 }
 message QueryResult_IEnumerable_SequenceHistogramBucketResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -377,7 +413,7 @@ message QueryResult_IEnumerable_SequenceHistogramBucketResponse {
 }
 message QueryResult_SerializableDateTimeOffset {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;

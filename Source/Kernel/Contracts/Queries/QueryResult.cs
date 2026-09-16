@@ -23,7 +23,7 @@ public class QueryResult<TData>
     /// <summary>
     /// Gets or sets whether the query was authorized to execute.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(2, IsRequired = true)]
     [DefaultValue(true)]
     public bool IsAuthorized { get; set; } = true;
 

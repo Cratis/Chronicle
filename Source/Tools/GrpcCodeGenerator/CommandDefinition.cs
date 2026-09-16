@@ -22,6 +22,21 @@ public class CommandDefinition(Type type)
         Type.GetConstructors().FirstOrDefault()?.GetParameters() ?? [];
 
     /// <summary>
+    /// Gets public instance properties that can be read and assigned but are not supplied by the selected constructor.
+    /// </summary>
+    public IReadOnlyList<PropertyInfo> AdditionalProperties
+    {
+        get
+        {
+            var parameterNames = Parameters.Select(parameter => parameter.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return Type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(property => property.GetMethod?.IsPublic == true && property.SetMethod?.IsPublic == true &&
+                    property.GetIndexParameters().Length == 0 && !parameterNames.Contains(property.Name))
+                .ToArray();
+        }
+    }
+
+    /// <summary>
     /// Gets the command's Handle method, or null when it has none the generator can see.
     /// </summary>
     public MethodInfo? Handle => ResolveHandle();

@@ -266,6 +266,12 @@ public class AppendRequest
     /// </summary>
     [ProtoMember(16)]
     public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IncludeReceipt.
+    /// </summary>
+    [ProtoMember(17)]
+    public bool IncludeReceipt { get; set; }
 }
 
 /// <summary>
@@ -285,6 +291,12 @@ public class AppendResponse
     /// </summary>
     [ProtoMember(2)]
     public global::System.UInt64 SequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Receipt.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.EventSequences.AppendReceipt? Receipt { get; set; }
 
     /// <summary>
     /// Gets or sets the IsSuccess.
@@ -406,6 +418,12 @@ public class AppendManyRequest
     /// </summary>
     [ProtoMember(10)]
     public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IncludeReceipts.
+    /// </summary>
+    [ProtoMember(12)]
+    public bool IncludeReceipts { get; set; }
 }
 
 /// <summary>
@@ -425,6 +443,12 @@ public class AppendManyResponse
     /// </summary>
     [ProtoMember(2)]
     public IEnumerable<global::System.UInt64> SequenceNumbers { get; set; } = new List<global::System.UInt64>();
+
+    /// <summary>
+    /// Gets or sets the Receipts.
+    /// </summary>
+    [ProtoMember(11)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.EventSequences.AppendReceipt> Receipts { get; set; } = new List<global::Cratis.Chronicle.Contracts.EventSequences.AppendReceipt>();
 
     /// <summary>
     /// Gets or sets the IsSuccess.
@@ -534,6 +558,12 @@ public class AppendManyForEventSourcesRequest
     /// </summary>
     [ProtoMember(9)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope>? ConcurrencyScopes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IncludeReceipts.
+    /// </summary>
+    [ProtoMember(10)]
+    public bool IncludeReceipts { get; set; }
 }
 
 /// <summary>

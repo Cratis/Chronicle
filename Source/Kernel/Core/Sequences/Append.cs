@@ -56,6 +56,12 @@ public record Append(
     ConcurrencyScope? ConcurrencyScope = default)
 {
     /// <summary>
+    /// Gets whether the successful acknowledgment should include the persisted event metadata.
+    /// Omitted by older callers so their response size stays unchanged.
+    /// </summary>
+    public bool IncludeReceipt { get; init; }
+
+    /// <summary>
     /// Handles the command by appending the event.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append through.</param>
@@ -72,19 +78,19 @@ public record Append(
         ICurrentPrincipalAccessor principalAccessor)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
-        return eventSequence.Append(
-            string.IsNullOrEmpty(EventSourceType?.Value) ? Concepts.Events.EventSourceType.Default : EventSourceType,
-            EventSourceId,
-            string.IsNullOrEmpty(EventStreamType?.Value) ? Concepts.Events.EventStreamType.All : EventStreamType,
-            string.IsNullOrEmpty(EventStreamId?.Value) ? (EventStreamId)Concepts.Events.EventStreamId.Default : EventStreamId,
-            EventType.ToChronicle(),
-            JsonNode.Parse(Content)!.AsObject(),
-            CorrelationId ?? Guid.NewGuid(),
-            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
-            (Tags ?? []).Select(tag => (Tag)tag),
-            ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None,
-            Occurred,
-            string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject));
+        var route = AppendRoute.Resolve(EventSourceType?.Value, EventStreamType?.Value, EventStreamId?.Value);
+
+        var eventType = EventType.ToChronicle();
+        var content = JsonNode.Parse(Content)!.AsObject();
+        var correlationId = CorrelationId ?? Guid.NewGuid();
+        var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
+        var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
+        var tags = (Tags ?? []).Select(tag => (Tag)tag);
+        var scope = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
+        var subject = string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject);
+
+        return IncludeReceipt
+            ? eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, includeReceipt: true)
+            : eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
     }
 }

@@ -37,6 +37,12 @@ public record AppendManyForEventSources(
     IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
 {
     /// <summary>
+    /// Gets whether the acknowledgment should include ordered persisted metadata for every appended event.
+    /// Omitted by older callers so their response size stays unchanged.
+    /// </summary>
+    public bool IncludeReceipts { get; init; }
+
+    /// <summary>
     /// Handles the command by appending every event in one transaction.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append through.</param>
@@ -55,22 +61,29 @@ public record AppendManyForEventSources(
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
         var eventsList = Events.ToList();
-        var events = eventsList.Select(@event => new EventSequences.EventToAppend(
-            string.IsNullOrEmpty(@event.EventSourceType) ? EventSourceType.Default : (EventSourceType)@event.EventSourceType,
-            @event.EventSourceId,
-            string.IsNullOrEmpty(@event.EventStreamType) ? EventStreamType.All : (EventStreamType)@event.EventStreamType,
-            string.IsNullOrEmpty(@event.EventStreamId) ? (EventStreamId)EventStreamId.Default : (EventStreamId)@event.EventStreamId,
-            @event.EventType.ToChronicle(),
-            (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
-            JsonNode.Parse(@event.Content)!.AsObject(),
-            @event.Occurred,
-            Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject)));
+        var events = eventsList.Select(@event =>
+        {
+            var route = AppendRoute.Resolve(@event.EventSourceType, @event.EventStreamType, @event.EventStreamId);
 
-        return eventSequence.AppendMany(
-            events,
-            CorrelationId ?? Guid.NewGuid(),
-            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
-            (ConcurrencyScopes ?? []).ToChronicle());
+            return new EventSequences.EventToAppend(
+                route.SourceType,
+                @event.EventSourceId,
+                route.StreamType,
+                route.StreamId,
+                @event.EventType.ToChronicle(),
+                (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
+                JsonNode.Parse(@event.Content)!.AsObject(),
+                @event.Occurred,
+                Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject));
+        });
+
+        var correlationId = CorrelationId ?? Guid.NewGuid();
+        var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
+        var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
+        var scopes = (ConcurrencyScopes ?? []).ToChronicle();
+
+        return IncludeReceipts
+            ? eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes, includeReceipts: true)
+            : eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes);
     }
 }

@@ -24,6 +24,12 @@ public class AppendManyResult
     public IEnumerable<EventSequenceNumber> SequenceNumbers { get; init; } = [];
 
     /// <summary>
+    /// Gets the persisted metadata for each successful append, in the same order as the input events.
+    /// Failed batches carry no receipts.
+    /// </summary>
+    public IEnumerable<AppendReceipt> Receipts { get; init; } = [];
+
+    /// <summary>
     /// Gets a value indicating whether the operation was successful.
     /// </summary>
     public bool IsSuccess => !HasConstraintViolations && !HasConcurrencyViolations && !HasErrors;
@@ -106,6 +112,19 @@ public class AppendManyResult
     };
 
     /// <summary>
+    /// Creates a successful batch result from the events acknowledged by storage.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier for the operation.</param>
+    /// <param name="appendedEvents">The persisted events in input order.</param>
+    /// <returns>The successful result with ordered authoritative receipts.</returns>
+    internal static AppendManyResult FromAppendedEvents(CorrelationId correlationId, IReadOnlyList<AppendedEvent> appendedEvents) => new()
+    {
+        CorrelationId = correlationId,
+        SequenceNumbers = appendedEvents.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
+        Receipts = appendedEvents.Select(@event => AppendReceipt.From(@event.Context)).ToImmutableList()
+    };
+
+    /// <summary>
     /// Create a copy of this result that reports whether the concurrency check was performed.
     /// </summary>
     /// <param name="performed">Whether the concurrency check was performed for every scope.</param>
@@ -117,6 +136,7 @@ public class AppendManyResult
         ConstraintViolations = ConstraintViolations,
         Errors = Errors,
         ConcurrencyViolations = ConcurrencyViolations,
-        ConcurrencyCheckPerformed = performed
+        ConcurrencyCheckPerformed = performed,
+        Receipts = Receipts
     };
 }

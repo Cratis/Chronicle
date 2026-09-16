@@ -640,7 +640,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         List<(string TypeName, List<(string PropName, string PropType, bool Initialize)> Properties)> requestResponseTypes)
     {
         var parameters = command.Parameters;
-        if (parameters.Count == 0)
+        var additionalProperties = command.AdditionalProperties;
+        if (parameters.Count == 0 && additionalProperties.Count == 0)
         {
             return null;
         }
@@ -648,6 +649,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         var requestTypeName = $"{command.Name}Request";
         var properties = parameters
             .Select(p => BuildDtoPropertyDefinition(p, targetNamespace))
+            .Concat(additionalProperties.Select(property => BuildDtoPropertyDefinition(property, targetNamespace)))
             .ToList();
 
         requestResponseTypes.Add((requestTypeName, properties));

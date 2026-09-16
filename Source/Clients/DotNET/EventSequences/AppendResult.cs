@@ -20,6 +20,11 @@ public record AppendResult : IAppendResult, IAppendResultForObserverCompletion
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; init; } = EventSequenceNumber.Unavailable;
 
+    /// <summary>
+    /// Gets the kernel-acknowledged persisted context, or null for an unsuccessful attempt or a locally constructed result.
+    /// </summary>
+    public EventContext? Receipt { get; init; }
+
     /// <inheritdoc />
     public EventStoreName EventStore { get; internal init; } = EventStoreName.NotSet;
 
