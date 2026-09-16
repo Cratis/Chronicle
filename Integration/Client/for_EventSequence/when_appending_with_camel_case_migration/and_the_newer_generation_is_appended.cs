@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_with_cam
 [Collection(ChronicleCollection.Name)]
 public class and_the_newer_generation_is_appended(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture fixture) : given.a_camel_case_client(fixture)
+    public class context(ChronicleFixture fixture) : given.a_camel_case_client(fixture, "camel-downcast")
     {
         async Task Because()
         {

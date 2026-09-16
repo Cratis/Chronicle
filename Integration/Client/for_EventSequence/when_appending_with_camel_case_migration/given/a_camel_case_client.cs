@@ -9,7 +9,7 @@ using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_with_camel_case_migration.given;
 
-public class a_camel_case_client(ChronicleFixture fixture) : Specification(fixture)
+public class a_camel_case_client(ChronicleFixture fixture, string eventStoreName) : Specification(fixture)
 {
 #pragma warning disable CA2213 // The specification lifecycle invokes Destroy(), which disposes this client.
     ChronicleClient _client;
@@ -31,7 +31,7 @@ public class a_camel_case_client(ChronicleFixture fixture) : Specification(fixtu
             new ChronicleOptions { EnableEventTypeGenerationValidation = true },
             artifactsProvider: this,
             namingPolicy: new CamelCaseNamingPolicy());
-        _store = await _client.GetEventStore($"camel-case-migrations-{GetType().DeclaringType!.Name}", EventStore.Namespace);
+        _store = await _client.GetEventStore(eventStoreName, EventStore.Namespace);
 
         // The borrowed connection is already connected, so it need not emit another OnConnected event.
         await _store.RegisterAll();
