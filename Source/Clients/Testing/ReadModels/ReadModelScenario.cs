@@ -461,8 +461,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         // Try model-bound projection directly on TReadModel
         if (readModelType.HasModelBoundProjectionAttributes())
         {
-            var builder = new ModelBoundProjectionBuilder(_namingPolicy, _eventTypes);
-            return builder.Build(readModelType);
+            return BuildModelBoundDefinition(readModelType);
         }
 
         // Try model-bound projection for a type in clientArtifacts that matches
@@ -471,11 +470,49 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
         if (modelBoundType is not null)
         {
-            var builder = new ModelBoundProjectionBuilder(_namingPolicy, _eventTypes);
-            return builder.Build(modelBoundType);
+            return BuildModelBoundDefinition(modelBoundType);
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Builds a model-bound <see cref="Contracts.Projections.ProjectionDefinition"/>, routing a
+    /// <c language="csharp">[VariantOf&lt;T&gt;]</c> type through the same variant-aware build the real discovery
+    /// pipeline uses.
+    /// </summary>
+    /// <remarks>
+    /// A plain <c language="csharp">Build(modelType)</c> only reclassifies what a single type declares — it
+    /// does not know a variant's siblings, so it would neither move non-entering handlers to an update-only
+    /// join nor wire the mutual-exclusion <c language="csharp">RemovedWith</c> entries. Without this, a scenario
+    /// for a variant read model would silently prove nothing about variant behavior: it would look like an
+    /// ordinary upsert projection. Siblings and shared handlers are discovered the same way
+    /// <see cref="Cratis.Chronicle.Projections.ModelBound.ModelBoundProjections"/> does, from every model-bound
+    /// type the client artifacts provider knows about — which includes every type in this test assembly, not
+    /// just <typeparamref name="TReadModel"/>.
+    /// </remarks>
+    /// <param name="modelType">The model-bound read model type to build a definition for.</param>
+    /// <returns>The built <see cref="Contracts.Projections.ProjectionDefinition"/>.</returns>
+    Contracts.Projections.ProjectionDefinition BuildModelBoundDefinition(Type modelType)
+    {
+        var builder = new ModelBoundProjectionBuilder(_namingPolicy, _eventTypes);
+
+        if (!modelType.TryGetVariantIdentity(out var identity))
+        {
+            return builder.Build(modelType);
+        }
+
+        var siblingVariantTypes = ClientArtifactsProvider.ModelBoundProjections
+            .Where(candidate => candidate != modelType &&
+                                candidate.TryGetVariantIdentity(out var candidateIdentity) &&
+                                candidateIdentity == identity)
+            .ToList();
+
+        var globalHandlerTypes = ClientArtifactsProvider.ModelBoundProjections
+            .Where(candidate => candidate.TryGetGlobalForIdentity(out var candidateIdentity) && candidateIdentity == identity)
+            .ToList();
+
+        return builder.BuildVariant(modelType, siblingVariantTypes, globalHandlerTypes);
     }
 
     Contracts.Projections.ProjectionDefinition? BuildFluentProjectionDefinition(Type projectionType, Type readModelType)
