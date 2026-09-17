@@ -302,12 +302,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/screenplay-language@npm:^4.6.0":
-  version: 4.6.0
-  resolution: "@cratis/screenplay-language@npm:4.6.0"
+"@cratis/screenplay-language@npm:^4.14.0":
+  version: 4.14.0
+  resolution: "@cratis/screenplay-language@npm:4.14.0"
   peerDependencies:
     monaco-editor: ">=0.44.0"
-  checksum: 10/76a035ef62bf2d8607cad1a47524be651902c1991cce461f70a651cf0ec57f133161efe1c5655c9fc3fd02a9407b75b9ea7c16b3b7a481a31c64496fbf97ec9a
+  checksum: 10/89280091c71e02ca8fc394e2b188793f155219b8ef4545cc961744a0b4a337c84634e47a61ff6e10b2880047571bad5dab76cf1cb4294017b888afa690255abd
   languageName: node
   linkType: hard
 
@@ -8684,7 +8684,7 @@ __metadata:
     "@cratis/arc.vite": "npm:^22.6.0"
     "@cratis/components": "npm:^4.1.1"
     "@cratis/fundamentals": "npm:^7.18.1"
-    "@cratis/screenplay-language": "npm:^4.6.0"
+    "@cratis/screenplay-language": "npm:^4.14.0"
     "@eslint/eslintrc": "npm:3.3.6"
     "@eslint/js": "npm:10.0.1"
     "@monaco-editor/react": "npm:^4.7.0"
