@@ -24,8 +24,13 @@ the version you are moving to before planning work.
 
 ## Guides
 
+Start with [Every major version](major-versions.md). It has one entry per major boundary —
+what broke and what you do — so you can read only the rows between the version you are on and
+the one you are going to, including when that spans several majors at once.
+
 | From → to | What it means for you |
 |---|---|
+| [Every major version](major-versions.md) | The whole history, 6 → 19, including which two releases to step over rather than onto. |
 | [18 → 19](18-to-19.md) | Nothing, for almost everyone. One .NET method signature changed; rebuild and move on. |
 
 ## How to read a Chronicle version
