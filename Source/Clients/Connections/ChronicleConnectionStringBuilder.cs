@@ -28,6 +28,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string AuthKey = "auth";
     const string NoAuthenticationValue = "none";
     const string SkipTlsValidationKey = "skipTlsValidation";
+    const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
@@ -268,6 +269,26 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets whether to skip the server compatibility check on connect.
+    /// </summary>
+    /// <remarks>
+    /// The client asks the server, on every connect, whether it still serves the contract this client was
+    /// built against, and refuses to connect when the server says no (see
+    /// <c language="csharp">Source/Kernel/Compatibility</c>). That comparison runs on the server, so it is
+    /// only as current as the kernel build answering it — a kernel that has not been redeployed since a
+    /// wire-compatibility defect was fixed still computes the old, incorrect verdict, and no client-side
+    /// change can make it compute a different one. Set <c language="csharp">skipCompatibilityCheck=true</c>
+    /// as a deliberate, connection-string-visible escape hatch for exactly that situation — a known-safe
+    /// skew against a kernel that cannot be redeployed to fix the check itself. It is not a general-purpose
+    /// override: turning it on hides every other incompatibility too, including a genuine one.
+    /// </remarks>
+    public bool SkipCompatibilityCheck
+    {
+        get => ContainsKey(SkipCompatibilityCheckKey) && Convert.ToBoolean(this[SkipCompatibilityCheckKey]);
+        set => this[SkipCompatibilityCheckKey] = value;
+    }
+
+    /// <summary>
     /// Gets or sets the name of the load balancer strategy to use when multiple servers are available.
     /// </summary>
     public string? LoadBalancer
@@ -384,6 +405,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add("skipTlsValidation=false");
         }
 
+        if (SkipCompatibilityCheck)
+        {
+            queryParams.Add("skipCompatibilityCheck=true");
+        }
+
         if (ContainsKey(LoadBalancerKey))
         {
             queryParams.Add($"loadBalancer={Uri.EscapeDataString((string)this[LoadBalancerKey])}");
@@ -417,6 +443,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 keyStr != SchemeKey &&
                 keyStr != ApiKeyKey &&
                 keyStr != SkipTlsValidationKey &&
+                keyStr != SkipCompatibilityCheckKey &&
                 keyStr != LoadBalancerKey &&
                 keyStr != SrvNameServerKey &&
                 keyStr != CertificatePathKey &&
