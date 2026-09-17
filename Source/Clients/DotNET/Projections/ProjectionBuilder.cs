@@ -214,7 +214,11 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         return (this as TBuilder)!;
     }
 
-    void CollectEventStore(Type eventType)
+    /// <summary>
+    /// Records the event store an observed event type belongs to, so the event sequence can be inferred.
+    /// </summary>
+    /// <param name="eventType">The event type being observed.</param>
+    protected void CollectEventStore(Type eventType)
     {
         var eventStoreName = eventType.GetEventStoreName();
         if (eventStoreName is not null && !_observedEventStores.Contains(eventStoreName))
