@@ -29,9 +29,15 @@ try {
 # the retry wrapper deliberately does not retry it and the matrix has to be rerun by hand - and the
 # log has never said what was holding the port. Name the holder before the bind, and again if a
 # supervised process dies. See #4048.
-source /app/report-port-holder.sh
-chronicle_port="$(resolve_chronicle_port)"
-report_port_before_binding "$chronicle_port" "the Chronicle server"
+# Guarded because this entrypoint runs under set -e: a diagnostic that cannot be sourced must degrade
+# to silence, never abort the container it exists to explain.
+if [ -r /app/report-port-holder.sh ]; then
+  source /app/report-port-holder.sh
+  report_port_before_binding "$(resolve_chronicle_port)" "the Chronicle server"
+else
+  echo "Port diagnostics unavailable: /app/report-port-holder.sh is missing."
+  report_all_listening_sockets() { echo "  (port diagnostics unavailable)"; }
+fi
 
 ./Cratis.Chronicle.Server &
 
