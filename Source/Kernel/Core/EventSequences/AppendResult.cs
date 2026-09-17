@@ -5,8 +5,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 
-using PersistedContexts = Cratis.Chronicle.Sequences.EventContextConverters;
-
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
@@ -23,11 +21,6 @@ public class AppendResult
     /// Gets the sequence number of the event that was appended, if successful.
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; init; } = EventSequenceNumber.Unavailable;
-
-    /// <summary>
-    /// Gets the metadata acknowledged by storage for a successful append, or null when no event was appended.
-    /// </summary>
-    public Sequences.EventContext? Receipt { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
@@ -124,19 +117,6 @@ public class AppendResult
     };
 
     /// <summary>
-    /// Creates a successful result with the metadata of the event acknowledged by storage.
-    /// </summary>
-    /// <param name="correlationId">The correlation identifier for the operation.</param>
-    /// <param name="appendedEvent">The persisted event.</param>
-    /// <returns>The successful result with its authoritative receipt.</returns>
-    internal static AppendResult FromAppendedEvent(CorrelationId correlationId, AppendedEvent appendedEvent) => new()
-    {
-        CorrelationId = correlationId,
-        SequenceNumber = appendedEvent.Context.SequenceNumber,
-        Receipt = PersistedContexts.ToApi(appendedEvent.Context)
-    };
-
-    /// <summary>
     /// Create a copy of this result that reports whether the concurrency check was performed.
     /// </summary>
     /// <param name="performed">Whether the concurrency check was performed.</param>
@@ -148,7 +128,6 @@ public class AppendResult
         ConstraintViolations = ConstraintViolations,
         Errors = Errors,
         ConcurrencyViolation = ConcurrencyViolation,
-        ConcurrencyCheckPerformed = performed,
-        Receipt = Receipt
+        ConcurrencyCheckPerformed = performed
     };
 }

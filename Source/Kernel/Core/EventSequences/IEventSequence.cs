@@ -149,58 +149,6 @@ public interface IEventSequence : IGrainWithStringKey
         ConcurrencyScopes concurrencyScopes);
 
     /// <summary>
-    /// Appends an event, optionally returning its persisted metadata.
-    /// </summary>
-    /// <param name="eventSourceType">The event source type.</param>
-    /// <param name="eventSourceId">The event source identifier.</param>
-    /// <param name="eventStreamType">The event stream type.</param>
-    /// <param name="eventStreamId">The event stream identifier.</param>
-    /// <param name="eventType">The event type.</param>
-    /// <param name="content">The event content.</param>
-    /// <param name="correlationId">The operation correlation.</param>
-    /// <param name="causation">The operation causation.</param>
-    /// <param name="causedBy">The responsible identity.</param>
-    /// <param name="tags">The event tags.</param>
-    /// <param name="concurrencyScope">The concurrency expectation.</param>
-    /// <param name="occurred">The requested occurrence time.</param>
-    /// <param name="subject">The event subject.</param>
-    /// <param name="includeReceipt">Whether a successful result should include a persisted receipt.</param>
-    /// <returns>The append result.</returns>
-    Task<AppendResult> Append(
-        EventSourceType eventSourceType,
-        EventSourceId eventSourceId,
-        EventStreamType eventStreamType,
-        EventStreamId eventStreamId,
-        EventType eventType,
-        JsonObject content,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        Identity causedBy,
-        IEnumerable<Tag> tags,
-        ConcurrencyScope concurrencyScope,
-        DateTimeOffset? occurred,
-        Subject? subject,
-        bool includeReceipt);
-
-    /// <summary>
-    /// Appends a batch, optionally returning ordered persisted metadata.
-    /// </summary>
-    /// <param name="events">The events to append.</param>
-    /// <param name="correlationId">The operation correlation.</param>
-    /// <param name="causation">The operation causation.</param>
-    /// <param name="causedBy">The responsible identity.</param>
-    /// <param name="concurrencyScopes">The concurrency expectations.</param>
-    /// <param name="includeReceipts">Whether a successful result should include persisted receipts.</param>
-    /// <returns>The append result.</returns>
-    Task<AppendManyResult> AppendMany(
-        IEnumerable<EventToAppend> events,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        Identity causedBy,
-        ConcurrencyScopes concurrencyScopes,
-        bool includeReceipts);
-
-    /// <summary>
     /// Revise a specific event in the event store.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to revise.</param>

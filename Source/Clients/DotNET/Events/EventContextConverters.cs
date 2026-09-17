@@ -67,9 +67,8 @@ internal static class EventContextConverters
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the context is for.</param>
     /// <returns>Converted <see cref="EventContext"/>.</returns>
     /// <remarks>
-    /// The supplied event store and namespace are a fallback for a server that predates carrying them on the
-    /// context. What the server sends wins, so a context says which store and namespace the event actually
-    /// belongs to rather than which one the caller believed it queried.
+    /// The event store and namespace are not carried on <see cref="Contracts.Sequences.EventContext"/> - the
+    /// caller already knows which event sequence it queried, so they are supplied rather than round-tripped.
     /// </remarks>
     internal static EventContext ToClient(this Contracts.Sequences.EventContext context, EventStoreName eventStore, EventStoreNamespaceName @namespace) => new(
         context.EventType.ToClient(),
@@ -79,8 +78,8 @@ internal static class EventContextConverters
         context.EventStreamId,
         context.SequenceNumber,
         context.Occurred,
-        string.IsNullOrEmpty(context.EventStore) ? eventStore : context.EventStore,
-        string.IsNullOrEmpty(context.Namespace) ? @namespace : context.Namespace,
+        eventStore,
+        @namespace,
         context.CorrelationId,
         context.Causation.ToClient(),
         context.CausedBy.ToClient(),

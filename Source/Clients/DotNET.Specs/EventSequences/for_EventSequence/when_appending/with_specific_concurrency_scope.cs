@@ -50,7 +50,7 @@ public class with_specific_concurrency_scope : given.an_event_sequence
             .When(_ => _.Append(Arg.Any<Contracts.Sequences.AppendRequest>(), CallContext.Default))
             .Do(callInfo => _command = callInfo.Arg<Contracts.Sequences.AppendRequest>());
         _sequences.Append(Arg.Any<Contracts.Sequences.AppendRequest>(), CallContext.Default)
-            .Returns(call => CommandResult<Contracts.Sequences.AppendResponse>.Success(Guid.NewGuid(), given.append_receipts.Complete(_response, call.Arg<Contracts.Sequences.AppendRequest>())));
+            .Returns(CommandResult<Contracts.Sequences.AppendResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => await _eventSequence.Append(_eventSourceId, _event, concurrencyScope: _scope);

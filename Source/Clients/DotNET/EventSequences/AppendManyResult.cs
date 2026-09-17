@@ -21,11 +21,6 @@ public record AppendManyResult : IAppendResult, IAppendResultForObserverCompleti
     /// </summary>
     public IEnumerable<EventSequenceNumber> SequenceNumbers { get; init; } = [];
 
-    /// <summary>
-    /// Gets the kernel-acknowledged persisted contexts in input order. Empty for an unsuccessful attempt or a locally constructed result.
-    /// </summary>
-    public IReadOnlyList<EventContext> Receipts { get; init; } = [];
-
     /// <inheritdoc />
     public EventStoreName EventStore { get; internal init; } = EventStoreName.NotSet;
 

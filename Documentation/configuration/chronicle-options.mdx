@@ -94,17 +94,6 @@ Controls whether Chronicle automatically discovers event types, projections, rea
 
 Set to `false` when using a custom `IClientArtifactsProvider` or when you want full manual control over what gets registered.
 
-### IncludeAppendReceipts
-
-Controls whether appends ask the kernel for the persisted context of every event they store.
-
-| | |
-|---|---|
-| Type | `bool` |
-| Default | `true` |
-
-A receipt is roughly 400 bytes per event and mostly repeats what the append sent, so a large batch pays for it on every response. Set this to `false` when batches are big enough for that to matter and the application reads neither `AppendResult.Receipt`, `AppendManyResult.Receipts`, nor `AppendOperations`. Appended events and their sequence numbers are identical either way; append notifications then describe the request instead of the stored event.
-
 ### DefaultSinkTypeId
 
 Controls which sink type is used when registering projections and reducers with the Kernel. Chronicle supports two built-in sink types:

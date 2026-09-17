@@ -21,22 +21,19 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     public Subject? Subject { get; init; }
 
     /// <summary>
-    /// Gets or inits the <see cref="EventStreamType"/> for the event. The getter defaults to <see cref="EventStreamType.All"/>;
-    /// leaving the property unset lets the kernel resolve its configured append default.
+    /// Gets or inits the <see cref="EventStreamType"/> for the event. Defaults to <see cref="EventStreamType.All"/>.
     /// </summary>
-    public EventStreamType EventStreamType { get => RequestedEventStreamType ?? EventStreamType.All; init => RequestedEventStreamType = value; }
+    public EventStreamType EventStreamType { get; init; } = EventStreamType.All;
 
     /// <summary>
-    /// Gets or inits the <see cref="EventStreamId"/> for the event. The getter defaults to <see cref="EventStreamId.Default"/>;
-    /// leaving the property unset lets the kernel resolve its configured append default.
+    /// Gets or inits the <see cref="EventStreamId"/> for the event. Defaults to <see cref="EventStreamId.Default"/>.
     /// </summary>
-    public EventStreamId EventStreamId { get => RequestedEventStreamId ?? EventStreamId.Default; init => RequestedEventStreamId = value; }
+    public EventStreamId EventStreamId { get; init; } = EventStreamId.Default;
 
     /// <summary>
-    /// Gets or inits the <see cref="EventSourceType"/> for the event. The getter defaults to <see cref="EventSourceType.Default"/>;
-    /// leaving the property unset lets the kernel resolve its configured append default.
+    /// Gets or inits the <see cref="EventSourceType"/> for the event. Defaults to <see cref="EventSourceType.Default"/>.
     /// </summary>
-    public EventSourceType EventSourceType { get => RequestedEventSourceType ?? EventSourceType.Default; init => RequestedEventSourceType = value; }
+    public EventSourceType EventSourceType { get; init; } = EventSourceType.Default;
 
     /// <summary>
     /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.
@@ -48,55 +45,4 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// event type and any tags supplied at append time.
     /// </summary>
     public IEnumerable<string> Tags { get; init; } = [];
-
-    /// <summary>
-    /// Gets the explicit stream type, preserving omission for kernel routing despite the public getter's legacy default.
-    /// </summary>
-    internal EventStreamType? RequestedEventStreamType { get; init; }
-
-    /// <summary>
-    /// Gets the explicit stream id, preserving omission for kernel routing despite the public getter's legacy default.
-    /// </summary>
-    internal EventStreamId? RequestedEventStreamId { get; init; }
-
-    /// <summary>
-    /// Gets the explicit source type, preserving omission for kernel routing despite the public getter's legacy default.
-    /// </summary>
-    internal EventSourceType? RequestedEventSourceType { get; init; }
-
-    /// <summary>
-    /// Compares the public event values without treating omitted routing as a different value from its legacy default.
-    /// </summary>
-    /// <param name="other">The event to compare with.</param>
-    /// <returns>Whether both events have the same record type and public values.</returns>
-    public virtual bool Equals(EventForEventSourceId? other) =>
-        other is not null &&
-        EqualityContract == other.EqualityContract &&
-        EventSourceId == other.EventSourceId &&
-        Equals(Event, other.Event) &&
-        Equals(Causation, other.Causation) &&
-        Subject == other.Subject &&
-        EventStreamType == other.EventStreamType &&
-        EventStreamId == other.EventStreamId &&
-        EventSourceType == other.EventSourceType &&
-        Occurred == other.Occurred &&
-        EqualityComparer<IEnumerable<string>>.Default.Equals(Tags, other.Tags);
-
-    /// <inheritdoc/>
-    public override int GetHashCode()
-    {
-        var hashCode = default(HashCode);
-        hashCode.Add(EqualityContract);
-        hashCode.Add(EventSourceId);
-        hashCode.Add(Event);
-        hashCode.Add(Causation);
-        hashCode.Add(Subject);
-        hashCode.Add(EventStreamType);
-        hashCode.Add(EventStreamId);
-        hashCode.Add(EventSourceType);
-        hashCode.Add(Occurred);
-        hashCode.Add(Tags);
-
-        return hashCode.ToHashCode();
-    }
 }

@@ -127,18 +127,6 @@ public class ChronicleOptions(
     public bool SkipKeepAlive { get; set; }
 
     /// <summary>
-    /// Gets or sets whether appends ask the kernel for persisted receipts. Defaults to true.
-    /// </summary>
-    /// <remarks>
-    /// A receipt is roughly 400 bytes per event and mostly repeats what the append sent, so a large batch pays for
-    /// it on every response. Set this to false when batches are big enough for that to matter and the application
-    /// reads neither <see cref="EventSequences.AppendResult.Receipt"/>, <see cref="EventSequences.AppendManyResult.Receipts"/>,
-    /// nor <see cref="EventSequences.IEventSequence.AppendOperations"/>. Appends and their sequence numbers are
-    /// unaffected; notifications then describe the request rather than the persisted event.
-    /// </remarks>
-    public bool IncludeAppendReceipts { get; set; } = true;
-
-    /// <summary>
     /// Gets or sets the maximum receive message size in bytes for gRPC messages. Defaults to 100 MB.
     /// </summary>
     public int? MaxReceiveMessageSize { get; set; } = 100 * 1024 * 1024;

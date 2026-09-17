@@ -49,11 +49,14 @@ env:
   # A withdrawal excludes one named release rather than everything before it, which is what a floor cannot do for the
   # newest release of a major.
   #
-  # 18.4.0 introduced append receipts carrying AppendReceipt, AppendCausation and AppendIdentity - three new messages
-  # where two of them are field-for-field copies of the Causation and Identity already in the same package, and the
-  # third duplicates the EventContext a read returns. That contract is withdrawn: receipts now use EventContext, so
-  # a read and a receipt describe an event the same way. Every other 18.x release is still compared in full, and the
-  # published 18.4.0 packages remain immutable - what is withdrawn is the claim that this gate must keep serving them.
+  # 18.4.0 put an append receipt - the full stored context of every appended event - into the append response, behind
+  # IncludeReceipt/IncludeReceipts. It answered a narrow problem, an append notification that invented an occurrence
+  # time and a hash it did not have, by adding a second way to read an event through the write path, at roughly 400
+  # bytes per event. Chronicle already has two ways to learn what was stored: read the event, or observe it. The
+  # notification now reports what the caller asked for and the sequence number it got, and claims nothing else.
+  #
+  # That whole contract is withdrawn. Every other 18.x release is still compared in full, and the published 18.4.0
+  # packages remain immutable - what is withdrawn is the claim that this gate must keep serving them.
   WIRE_WITHDRAWN_BASELINES: "18.4.0"
 
 jobs:

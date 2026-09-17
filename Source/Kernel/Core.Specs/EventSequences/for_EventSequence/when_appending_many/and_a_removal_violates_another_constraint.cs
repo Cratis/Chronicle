@@ -29,5 +29,4 @@ public class and_a_removal_violates_another_constraint : given.an_event_sequence
     [Fact] void should_not_release_the_cycle_for_the_subsequent_event() => _result.ConstraintViolations.Count().ShouldEqual(2);
     [Fact] void should_reject_the_entire_batch() => _eventSequenceStorage.DidNotReceive().AppendMany(Arg.Any<IEnumerable<EventToAppendToStorage>>());
     [Fact] void should_not_update_any_constraint_indexes() => _constraintIndexSequenceNumbers.ShouldBeEmpty();
-    [Fact] void should_not_return_persisted_receipts() => _result.Receipts.ShouldBeEmpty();
 }

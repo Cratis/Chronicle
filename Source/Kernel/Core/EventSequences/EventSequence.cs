@@ -268,25 +268,7 @@ public class EventSequence(
         IEnumerable<Tag> tags,
         ConcurrencyScope concurrencyScope,
         DateTimeOffset? occurred = null,
-        Subject? subject = null) =>
-        await Append(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, includeReceipt: false);
-
-    /// <inheritdoc/>
-    public async Task<AppendResult> Append(
-        EventSourceType eventSourceType,
-        EventSourceId eventSourceId,
-        EventStreamType eventStreamType,
-        EventStreamId eventStreamId,
-        EventType eventType,
-        JsonObject content,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        Identity causedBy,
-        IEnumerable<Tag> tags,
-        ConcurrencyScope concurrencyScope,
-        DateTimeOffset? occurred,
-        Subject? subject,
-        bool includeReceipt)
+        Subject? subject = null)
     {
         try
         {
@@ -319,8 +301,7 @@ public class EventSequence(
                 compliantContent,
                 constraintContext,
                 occurred,
-                subject,
-                includeReceipt);
+                subject);
 
             return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
@@ -336,17 +317,7 @@ public class EventSequence(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy,
-        ConcurrencyScopes concurrencyScopes) =>
-        await AppendMany(events, correlationId, causation, causedBy, concurrencyScopes, includeReceipts: false);
-
-    /// <inheritdoc/>
-    public async Task<AppendManyResult> AppendMany(
-        IEnumerable<EventToAppend> events,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        Identity causedBy,
-        ConcurrencyScopes concurrencyScopes,
-        bool includeReceipts)
+        ConcurrencyScopes concurrencyScopes)
     {
         using var span = activitySource.AppendMany();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -394,7 +365,7 @@ public class EventSequence(
                 return (eventAndResult.Event, CompliantEvent: compliantEvent, ConstraintContext: constraintContext);
             });
 
-            var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity, includeReceipts);
+            var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity);
             return appendManyResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
         catch (Exception ex)
@@ -541,7 +512,6 @@ public class EventSequence(
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the append.</param>
     /// <param name="causation">The <see cref="Causation"/> chain for the append.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> that caused the append.</param>
-    /// <param name="includeReceipts">Whether to include persisted metadata in the result.</param>
     /// <returns>The <see cref="AppendManyResult"/> describing the outcome.</returns>
     /// <exception cref="InvalidAppendAcknowledgment">Storage did not acknowledge every submitted event.</exception>
     /// <remarks>
@@ -557,8 +527,7 @@ public class EventSequence(
         IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintContext)> validatedEvents,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain,
-        bool includeReceipts = false)
+        IEnumerable<IdentityId> causedByChain)
     {
         var eventsToAppend = new List<EventToAppendToStorage>();
         var constraintContexts = new List<ConstraintValidationContext>();
@@ -633,9 +602,7 @@ public class EventSequence(
             appendedEventsList,
             constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
 
-        return includeReceipts
-            ? AppendManyResult.FromAppendedEvents(correlationId, appendedEventsList)
-            : AppendManyResult.Success(correlationId, appendedEventsList.Select(@event => @event.Context.SequenceNumber));
+        return AppendManyResult.Success(correlationId, appendedEventsList.Select(@event => @event.Context.SequenceNumber));
     }
 
     async Task<AppendResult> AppendValidAndCompliantEvent(
@@ -652,8 +619,7 @@ public class EventSequence(
         JsonObject compliantContent,
         ConstraintValidationContext constraintContext,
         DateTimeOffset? occurred,
-        Subject? subject,
-        bool includeReceipt)
+        Subject? subject)
     {
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -713,9 +679,7 @@ public class EventSequence(
             var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
             await CompleteDurableAppend(appendedEvents, [(constraintContext, appendedSequenceNumber)]);
 
-            return includeReceipt
-                ? AppendResult.FromAppendedEvent(correlationId, appendedEvents[0])
-                : AppendResult.Success(correlationId, appendedSequenceNumber);
+            return AppendResult.Success(correlationId, appendedSequenceNumber);
         }
         catch (Exception ex)
         {

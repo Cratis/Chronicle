@@ -57,7 +57,6 @@ public class EventStore : IEventStore
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
-    readonly bool _includeAppendReceipts;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
     readonly RegistrationRetryOptions _registrationRetry;
@@ -111,7 +110,6 @@ public class EventStore : IEventStore
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
         _registrationRetry = options.Value.RegistrationRetry;
-        _includeAppendReceipts = options.Value.IncludeAppendReceipts;
         _registrationBackoff = new RegistrationBackoff(_registrationRetry.InitialDelay, _registrationRetry.MaximumDelay);
         _eventStoreName = eventStoreName;
         _causationManager = causationManager;
@@ -399,10 +397,7 @@ public class EventStore : IEventStore
                 state.UnitOfWorkManager,
                 state._identityProvider,
                 state._jsonSerializerOptions,
-                state._activitySource)
-            {
-                IncludeAppendReceipts = state._includeAppendReceipts
-            },
+                state._activitySource),
             this);
 
     /// <inheritdoc/>

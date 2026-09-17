@@ -44,31 +44,9 @@ Omitted or empty append metadata is stored using these canonical values:
 | Event stream type | `All` |
 | Event stream ID | `Default` |
 
-Single appends and batches use the same kernel-owned policy. Nonempty values you supply are preserved exactly. SDKs can send omitted routing values without reproducing that policy. Concurrency filters are separate: an omitted filter means that dimension does not narrow the check, not that it should be filled from the append route.
+Single appends and batches use the same defaults. Nonempty values you supply are preserved exactly. In the .NET client, the resolved values also describe the append notification and the inputs to the concurrency strategy.
 
 Earlier 18.x kernels could store empty metadata for single appends. Upgrading corrects new writes; it does not rewrite historical events or normalize their read-back metadata. If you compare historical routes, account for those legacy empty values only where your application intended the default route. Explicit metadata filters can still distinguish those older events from events carrying canonical defaults.
-
-## Append receipts
-
-Receipt-aware clients request `IncludeReceipt` for a single append or `IncludeReceipts` for a batch. Successful acknowledgments then carry the event context storage returned, which is the same context a read of that event returns: the assigned sequence number, event identity, source and stream routing, actual occurrence time, subject, tags, content hash, causation, responsible identity, and the event store and namespace it belongs to. Omitting the option keeps the compact acknowledgment used by older clients, so a server upgrade does not unexpectedly enlarge their batch responses. Clients can use that receipt instead of reconstructing persisted metadata from their inputs or local clocks.
-
-A successful batch carries one receipt per input event, in the same order as the sequence numbers and input events. A rejected append has no persisted receipt. An SDK that reports a failed append attempt must not present that attempt as a stored event.
-
-Receipt-aware clients require a kernel that exposes the receipt contract. Upgrade every kernel node before those clients; compatibility must be checked before sending an append, not discovered after the event has already been stored.
-
-### Cost of a receipt
-
-A receipt is roughly 400 bytes per event and largely repeats what the append sent, so a batch response grows by about that much per event. At Chronicle's default 100 MB message limit this is comfortable, but a large import that reads neither the receipt nor the append notification is paying for data it discards. The .NET client exposes `ChronicleOptions.IncludeAppendReceipts` to turn the request off; appended events and their sequence numbers are unchanged, and notifications then describe the request rather than the persisted event.
-
-:::note[A receipt is an event context]
-A receipt is the same event context a read of that event returns, including the event store and namespace it belongs to. An application that already handles a read context needs nothing new to handle a receipt, and the two cannot drift apart.
-:::
-
-## Upgrading client routing defaults
-
-Older Kotlin/Java and TypeScript/JavaScript clients supplied a stream type of `Default` and used the event-source ID as the stream ID when the caller supplied neither. Those are explicit wire values, so the kernel preserves them. They are different from the kernel defaults `All` and `Default`.
-
-When upgrading to an SDK release that delegates omitted routing to the kernel, explicitly supply the former stream type and ID if your application must continue appending to those existing routes. The SDK release must document this behavioral change; a server upgrade alone does not rewrite the routes older clients explicitly send. Existing events are never rerouted automatically.
 
 ## Specifying when an event occurred
 

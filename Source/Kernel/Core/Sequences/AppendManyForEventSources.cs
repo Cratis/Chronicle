@@ -37,12 +37,6 @@ public record AppendManyForEventSources(
     IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
 {
     /// <summary>
-    /// Gets whether the acknowledgment should include ordered persisted metadata for every appended event.
-    /// Omitted by older callers so their response size stays unchanged.
-    /// </summary>
-    public bool IncludeReceipts { get; init; }
-
-    /// <summary>
     /// Handles the command by appending every event in one transaction.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append through.</param>
@@ -82,8 +76,6 @@ public record AppendManyForEventSources(
         var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
         var scopes = (ConcurrencyScopes ?? []).ToChronicle();
 
-        return IncludeReceipts
-            ? eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes, includeReceipts: true)
-            : eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes);
+        return eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes);
     }
 }

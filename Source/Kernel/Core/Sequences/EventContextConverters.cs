@@ -28,9 +28,7 @@ internal static class EventContextConverters
         Tags = context.Tags.ToList(),
         Hash = context.Hash,
         ObservationState = context.ObservationState.ToContract(),
-        Subject = context.Subject,
-        EventStore = context.EventStore,
-        Namespace = context.Namespace
+        Subject = context.Subject
     };
 
     /// <summary>
@@ -53,9 +51,7 @@ internal static class EventContextConverters
         context.Hash,
         context.ObservationState)
     {
-        Subject = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value,
-        EventStore = context.EventStore,
-        Namespace = context.Namespace
+        Subject = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value
     };
 
     static Contracts.Events.EventObservationState ToContract(this Concepts.Events.EventObservationState state) => state switch

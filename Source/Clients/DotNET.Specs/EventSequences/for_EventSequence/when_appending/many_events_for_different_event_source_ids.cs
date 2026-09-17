@@ -77,7 +77,7 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
         };
 
         _sequences.AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), CallContext.Default)
-            .Returns(call => CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), given.append_receipts.Complete(_response, call.Arg<Contracts.Sequences.AppendManyForEventSourcesRequest>())));
+            .Returns(CommandResult<Contracts.Sequences.AppendManyResponse>.Success(Guid.NewGuid(), _response));
     }
 
     async Task Because() => _result = await _eventSequence.AppendMany(_events);

@@ -25,21 +25,21 @@ internal sealed class EventSequences(
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>> Append(global::Cratis.Chronicle.Contracts.Sequences.AppendRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.EventSequences.AppendResult, global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>(
             commandPipeline,
-            new global::Cratis.Chronicle.Sequences.Append((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceType)request.EventSourceType, (global::Cratis.Chronicle.Concepts.Events.EventStreamType)request.EventStreamType, (global::Cratis.Chronicle.Concepts.Events.EventStreamId)request.EventStreamId, request.EventType.ToApi(), request.Content, request.CorrelationId, request.Tags, request.Occurred, request.Subject, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScope?.ToApi()) { IncludeReceipt = request.IncludeReceipt },
+            new global::Cratis.Chronicle.Sequences.Append((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceType)request.EventSourceType, (global::Cratis.Chronicle.Concepts.Events.EventStreamType)request.EventStreamType, (global::Cratis.Chronicle.Concepts.Events.EventStreamId)request.EventStreamId, request.EventType.ToApi(), request.Content, request.CorrelationId, request.Tags, request.Occurred, request.Subject, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScope?.ToApi()),
             response => ToAppendResponse(response));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>> AppendMany(global::Cratis.Chronicle.Contracts.Sequences.AppendManyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.EventSequences.AppendManyResult, global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>(
             commandPipeline,
-            new global::Cratis.Chronicle.Sequences.AppendMany((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Occurred, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScope?.ToApi()) { IncludeReceipts = request.IncludeReceipts },
+            new global::Cratis.Chronicle.Sequences.AppendMany((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Occurred, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScope?.ToApi()),
             response => ToAppendManyResponse(response));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>> AppendManyForEventSources(global::Cratis.Chronicle.Contracts.Sequences.AppendManyForEventSourcesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.EventSequences.AppendManyResult, global::Cratis.Chronicle.Contracts.Sequences.AppendManyResponse>(
             commandPipeline,
-            new global::Cratis.Chronicle.Sequences.AppendManyForEventSources((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScopes?.Select(x => x.ToApi())) { IncludeReceipts = request.IncludeReceipts },
+            new global::Cratis.Chronicle.Sequences.AppendManyForEventSources((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.Events.Select(x => x.ToApi()), request.CorrelationId, request.Tags, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi(), request.ConcurrencyScopes?.Select(x => x.ToApi())),
             response => ToAppendManyResponse(response));
 
     /// <inheritdoc/>
@@ -182,7 +182,6 @@ internal sealed class EventSequences(
         {
             CorrelationId = (global::System.Guid)source.CorrelationId,
             SequenceNumber = (ulong)source.SequenceNumber,
-            Receipt = source.Receipt is null ? null : source.Receipt.ToContract(),
             IsSuccess = source.IsSuccess,
             HasConstraintViolations = source.HasConstraintViolations,
             HasConcurrencyViolations = source.HasConcurrencyViolations,
@@ -198,7 +197,6 @@ internal sealed class EventSequences(
         {
             CorrelationId = (global::System.Guid)source.CorrelationId,
             SequenceNumbers = source.SequenceNumbers.Select(element0 => (ulong)element0).ToList(),
-            Receipts = source.Receipts.Select(element0 => element0.ToContract()).ToList(),
             IsSuccess = source.IsSuccess,
             HasConstraintViolations = source.HasConstraintViolations,
             HasConcurrencyViolations = source.HasConcurrencyViolations,

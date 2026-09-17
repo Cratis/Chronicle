@@ -58,9 +58,9 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
             {
                 events.AddRange(appendOperations.Select(op => new EventForEventSourceId(eventSourceId, op.Event, op.Causation ?? _causation ?? Causation.Unknown())
                 {
-                    RequestedEventStreamType = op.EventStreamType,
-                    RequestedEventStreamId = op.EventStreamId,
-                    RequestedEventSourceType = op.EventSourceType,
+                    EventStreamType = op.EventStreamType ?? EventStreamType.All,
+                    EventStreamId = op.EventStreamId ?? EventStreamId.Default,
+                    EventSourceType = op.EventSourceType ?? EventSourceType.Default,
                     Tags = op.Tags ?? [],
                     Occurred = op.Occurred,
                     Subject = op.Subject
