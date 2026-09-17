@@ -5,16 +5,17 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage;
-using Cratis.Orleans.Storage.MongoDB;
 using Cratis.Compliance.MongoDB;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.MongoDB;
+using Cratis.Orleans.Storage.MongoDB.Jobs;
+using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Providers.MongoDB.Utils;
-using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -90,7 +91,7 @@ public static class MongoDBChronicleBuilderExtensions
                 sp.GetRequiredService<ICustomSerializers>(),
                 Options.Create(new MongoDBJobsStorageOptions
                 {
-                    DatabaseNameResolver = (scope, @namespace) => DatabaseNames.ForEventStoreNamespace(scope, @namespace)
+                    DatabaseNameResolver = (scope, @namespace) => Cratis.Chronicle.Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace)
                 })));
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
             services.AddSingleton<JobStateSerializer>();

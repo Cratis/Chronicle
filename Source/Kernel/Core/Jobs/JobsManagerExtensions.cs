@@ -19,5 +19,5 @@ public static class JobsManagerExtensions
     /// <param name="namespaceName">The event store namespace name.</param>
     /// <returns>The <see cref="IJobsManager"/> grain.</returns>
     public static IJobsManager GetJobsManager(this IGrainFactory factory, EventStoreName eventStoreName, EventStoreNamespaceName namespaceName) =>
-        factory.GetJobsManager(eventStoreName.Value, namespaceName.Value);
+        Cratis.Orleans.Jobs.JobsManagerExtensions.GetJobsManager(factory, eventStoreName.Value, namespaceName.Value);
 }

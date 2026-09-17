@@ -7,7 +7,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Jobs;
 using Cratis.Reactive;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -23,7 +22,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage"/> the job system resolves through.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(

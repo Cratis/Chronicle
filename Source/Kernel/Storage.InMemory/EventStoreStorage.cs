@@ -32,7 +32,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Storage.InMemory;
 
@@ -41,7 +40,7 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </summary>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage is for.</param>
 /// <param name="sinksFactory">Factory delegate that creates <see cref="ISinks"/> for a namespace.</param>
-/// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 public sealed class EventStoreStorage(
     EventStoreName eventStore,
     SinksFactory sinksFactory,

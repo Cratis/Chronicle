@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.MongoDB.Specs;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -26,7 +26,7 @@ public class a_storage : Specification
             Substitute.For<Chronicle.Json.IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
             new KnownInstancesOf<ISinkFactory>([]),
-            Substitute.For<IJobTypes>(),
+            JobsStorageForSpecs.Create(new MongoClient("mongodb://localhost:27017")),
             Options.Create(new ChronicleOptions()),
             NullLoggerFactory.Instance);
     }

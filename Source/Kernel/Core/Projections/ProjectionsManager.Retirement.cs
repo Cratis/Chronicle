@@ -7,13 +7,13 @@ using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Projections;
 

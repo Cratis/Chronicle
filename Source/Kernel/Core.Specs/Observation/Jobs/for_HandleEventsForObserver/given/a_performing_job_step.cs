@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
-using Cratis.Orleans.Jobs;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Orleans.Jobs;
@@ -123,8 +122,12 @@ public class a_performing_job_step : Specification
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
-        var options = Substitute.For<IOptions<ChronicleOptions>>();
-        options.Value.Returns(new ChronicleOptions { Jobs = CreateJobsConfig() });
+        var jobsConfig = CreateJobsConfig();
+        var options = Options.Create(new JobsOptions
+        {
+            StepCheckpointBatchInterval = jobsConfig.StepCheckpointBatchInterval,
+            StepCheckpointFlushInterval = jobsConfig.StepCheckpointFlushInterval
+        });
         _silo.AddService(options);
 
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(

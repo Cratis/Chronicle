@@ -11,11 +11,11 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Json;
+using Cratis.Orleans.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 using Orleans.Serialization.Cloning;
 using Orleans.Serialization.Serializers;
-using Cratis.Orleans;
 
 namespace Cratis.Chronicle.Setup.Serialization;
 
@@ -76,8 +76,50 @@ public static class SerializationConfigurationExtensions
         {
             builder.Services
                 .AddCompleteSerializer<AppendedEventSerializer>()
-                .AddCompleteSerializer<ConcurrencyScopesSerializer>();
+                .AddCompleteSerializer<OneOfSerializer>()
+                .AddCompleteSerializer<ConcurrencyScopesSerializer>()
+                .AddCompleteSerializer<ExpandoObjectSerializer>()
+                .AddLinqCollectionCopier();
+            builder.Services.AddSingleton<ITypeFilter, CratisTypesFilter>();
         });
+        return services;
+    }
+
+    /// <summary>
+    /// Adds a copier for LINQ internal collection types.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddLinqCollectionCopier(this IServiceCollection services)
+    {
+        services.AddSingleton<LinqCollectionCopier>();
+        services.AddSingleton<IGeneralizedCopier, LinqCollectionCopier>();
+        services.AddSingleton<ITypeFilter, LinqCollectionCopier>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Add a complete serializer, convenience method when a serializer implements all the interfaces.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <typeparam name="TSerializer">Type of serializer.</typeparam>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    /// <remarks>
+    /// Each registration is its own singleton descriptor, so <typeparamref name="TSerializer"/> is instantiated
+    /// once per interface it is registered for rather than once in total. State a serializer keeps in instance
+    /// fields is therefore only shared between members of the same interface - anything written from
+    /// <see cref="IGeneralizedCopier"/> and read from <see cref="IGeneralizedCodec"/> lands in different
+    /// objects. Put state that must be shared in its own singleton and inject it.
+    /// </remarks>
+    public static IServiceCollection AddCompleteSerializer<TSerializer>(this IServiceCollection services)
+        where TSerializer : class, IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
+    {
+        services.AddSingleton<TSerializer>();
+        services.AddSingleton<IGeneralizedCodec, TSerializer>();
+        services.AddSingleton<IGeneralizedCopier, TSerializer>();
+        services.AddSingleton<ITypeFilter, TSerializer>();
+
         return services;
     }
 
@@ -98,7 +140,7 @@ public static class SerializationConfigurationExtensions
         };
         ApplyConverters(options);
         services.AddSingleton(options);
-        services.AddCratisOrleansSerializers();
+        services.AddConceptSerializer();
         services.AddCustomSerializers();
         services.AddSerializer(
             serializerBuilder => serializerBuilder.AddJsonSerializer(

@@ -4,10 +4,11 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.MongoDB.Specs;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.for_EventStoreStorage.given;
 
@@ -26,7 +27,7 @@ public class an_event_store_storage : Specification
             Substitute.For<Chronicle.Json.IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
             @namespace => new Chronicle.Storage.Sinks.Sinks(_eventStore, @namespace, new KnownInstancesOf<ISinkFactory>([])),
-            Substitute.For<IJobTypes>(),
+            JobsStorageForSpecs.Create(new MongoClient("mongodb://localhost:27017")),
             Options.Create(new ChronicleOptions()),
             NullLoggerFactory.Instance);
     }

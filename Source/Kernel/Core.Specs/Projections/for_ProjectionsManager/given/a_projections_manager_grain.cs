@@ -31,7 +31,7 @@ public class a_projections_manager_grain : Specification
     protected IProjectionDefinitionComparer _definitionComparer;
     protected IProjection _projectionGrain;
     protected Observation.IObserver _observerGrain;
-    protected Jobs.IJobsManager _jobsManager;
+    protected Cratis.Orleans.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
     protected ProjectionsManagerState _state;
@@ -92,7 +92,7 @@ public class a_projections_manager_grain : Specification
         _observerGrain = Substitute.For<Observation.IObserver>();
         _silo.AddProbe(_ => _observerGrain);
 
-        _jobsManager = Substitute.For<Jobs.IJobsManager>();
+        _jobsManager = Substitute.For<Cratis.Orleans.Jobs.IJobsManager>();
         _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Cratis.Orleans.Storage.Jobs.JobState>.Empty);
         _silo.AddProbe(_ => _jobsManager);
 

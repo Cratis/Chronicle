@@ -6,6 +6,7 @@ using Cratis.Arc.Commands;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 

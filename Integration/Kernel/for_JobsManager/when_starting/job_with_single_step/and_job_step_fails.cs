@@ -4,7 +4,10 @@
 using Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using context = Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_starting.job_with_single_step.and_job_step_fails.context;
+using JobStatus = Cratis.Chronicle.Jobs.JobStatus;
+using JobStepStatus = Cratis.Chronicle.Jobs.JobStepStatus;
 
 namespace Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_starting.job_with_single_step;
 

@@ -3,7 +3,6 @@
 
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.EventSequences.Migrations.for_EventTypeGenerationMigrationReactor.given;
 

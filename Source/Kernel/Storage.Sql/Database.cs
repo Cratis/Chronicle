@@ -76,6 +76,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ClusterDbContext>> _clusterOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ReadModelDbContext>> _readModelOptions = new();
@@ -135,6 +136,17 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 #pragma warning restore CA2000
         await EnsureMigratedOnce(key, connectionString, dbContext);
         return new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
+    }
+
+    /// <inheritdoc/>
+    public DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
+    {
+        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+        var key = $"jobs:{eventStore}:{@namespace}:{connectionString}";
+        return _jobsOptions.GetOrAdd(
+            key,
+            static (_, args) => BuildOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>(args.serviceProvider, args.connectionString),
+            (serviceProvider, connectionString));
     }
 
     /// <inheritdoc/>

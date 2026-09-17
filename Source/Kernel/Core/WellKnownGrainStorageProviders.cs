@@ -33,8 +33,6 @@ public static class WellKnownGrainStorageProviders
     /// </summary>
     public const string FailedPartitions = "failed-partitions";
 
-
-
     /// <summary>
     /// The name of the storage provider used for recommendations.
     /// </summary>

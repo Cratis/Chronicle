@@ -26,7 +26,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage;
 using Cratis.Orleans.Storage.Jobs;
 using InMemoryReadModels = Cratis.Chronicle.Storage.InMemory.ReadModels;
@@ -38,7 +37,7 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </summary>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage serves.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
-/// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 /// <param name="sinks">The <see cref="ISinks"/> for the namespace.</param>
 public sealed class EventStoreNamespaceStorage(
     EventStoreName eventStore,
@@ -47,8 +46,6 @@ public sealed class EventStoreNamespaceStorage(
     ISinks sinks) : IEventStoreNamespaceStorage
 {
     readonly IJobsStorage _jobsStorage = jobsStorage;
-    readonly EventStoreName EventStore = eventStore;
-    readonly EventStoreNamespaceName Namespace = @namespace;
     readonly ConcurrentDictionary<EventSequenceId, EventSequenceStorage> _eventSequences = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
@@ -61,10 +58,10 @@ public sealed class EventStoreNamespaceStorage(
     public IIdentityStorage Identities { get; } = new IdentityStorage();
 
     /// <inheritdoc/>
-    public IJobStorage Jobs => _jobsStorage.GetFor(EventStore, Namespace).Jobs;
+    public IJobStorage Jobs => _jobsStorage.GetFor(eventStore, @namespace).Jobs;
 
     /// <inheritdoc/>
-    public IJobStepStorage JobSteps => _jobsStorage.GetFor(EventStore, Namespace).JobSteps;
+    public IJobStepStorage JobSteps => _jobsStorage.GetFor(eventStore, @namespace).JobSteps;
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; } = new ObserverStateStorage();

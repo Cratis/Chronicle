@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
+using Cratis.Orleans.Storage.MongoDB.Jobs;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using NSubstitute;
@@ -38,7 +38,7 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.give
         BsonSerializer.RegisterSerializationProvider(
             new JobStateSerializationProvider(jobStateSerializer));
 
-        _storage = new JobStorage(_database, jobTypes);
+        _storage = new JobStorage(_database.Client.GetDatabase(_database.GetType().Name), jobTypes);
 
         await Task.CompletedTask;
     }

@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Events.Constraints;

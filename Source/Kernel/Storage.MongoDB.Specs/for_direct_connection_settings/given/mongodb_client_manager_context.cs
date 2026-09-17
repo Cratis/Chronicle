@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.MongoDB;
+using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 

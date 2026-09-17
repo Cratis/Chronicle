@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// It is put on that path by <see cref="ConstraintDefinitionSerializationProvider"/>. Registering it as a bare
 /// <see cref="IBsonSerializer"/> does not work: the driver resolves every interface to a
 /// <c language="csharp">DiscriminatedInterfaceSerializer</c> of its own, so the auto-registration in
-/// <see cref="Serialization.CustomSerializers"/> finds one already there and skips this one.
+/// <see cref="Cratis.Orleans.Storage.MongoDB.Serialization.CustomSerializers"/> finds one already there and skips this one.
 /// </para>
 /// </remarks>
 public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefinition>, IBsonDocumentSerializer
