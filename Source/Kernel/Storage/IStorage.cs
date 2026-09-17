@@ -11,7 +11,6 @@ namespace Cratis.Chronicle.Storage;
 /// </summary>
 public interface IStorage
 {
-
     /// <summary>
     /// Gets the system storage.
     /// </summary>
