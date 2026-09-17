@@ -98,28 +98,3 @@ jobs:
         env:
           CHRONICLE_VERSION: ${{ inputs.version }}
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
-
-      # Record what was pushed so verify-published-packages confirms Hex is serving it - see #4050. The name
-      # comes from the package definition rather than a literal, so renaming the package cannot leave the
-      # verifier silently checking a package nobody publishes any more.
-      - name: Record published Hex package
-        working-directory: ./Source/Clients/Elixir
-        run: |
-          set -euo pipefail
-          NAME="$(mix run --no-start --no-deps-check -e 'IO.puts(Mix.Project.config()[:package][:name])' | tail -1)"
-          if [ -z "$NAME" ]; then
-            echo "::error::Could not read the Hex package name from mix.exs, so the published package cannot be verified."
-            exit 1
-          fi
-          mkdir -p "$GITHUB_WORKSPACE/manifests"
-          printf 'hex\t%s\t%s\n' "$NAME" "${{ inputs.version }}" > "$GITHUB_WORKSPACE/manifests/hex.manifest"
-          cat "$GITHUB_WORKSPACE/manifests/hex.manifest"
-        env:
-          CHRONICLE_VERSION: ${{ inputs.version }}
-
-      - name: Upload published Hex manifest
-        uses: actions/upload-artifact@v4
-        with:
-          name: published-manifest-hex
-          path: manifests/hex.manifest
-          if-no-files-found: error

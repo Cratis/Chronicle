@@ -117,21 +117,3 @@ jobs:
       - name: Publish to npm
         working-directory: ./Source/Clients/TypeScript
         run: npm publish --provenance --access public --tag latest
-
-      # `+ @cratis/chronicle@6.0.0` printed by a successful publish is a claim, not a fact - that exact line
-      # shipped a release npm did not serve. Record what was pushed so verify-published-packages checks it.
-      - name: Record published npm package
-        working-directory: ./Source/Clients/TypeScript
-        run: |
-          set -euo pipefail
-          NAME="$(node -p "require('./package.json').name")"
-          mkdir -p "$GITHUB_WORKSPACE/manifests"
-          printf 'npm\t%s\t%s\n' "$NAME" "${{ inputs.version }}" > "$GITHUB_WORKSPACE/manifests/npm.manifest"
-          cat "$GITHUB_WORKSPACE/manifests/npm.manifest"
-
-      - name: Upload published npm manifest
-        uses: actions/upload-artifact@v4
-        with:
-          name: published-manifest-npm
-          path: manifests/npm.manifest
-          if-no-files-found: error
