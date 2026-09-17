@@ -60,8 +60,9 @@ internal class ModelBoundProjections(
         var definitions = new Dictionary<Type, ProjectionDefinition>();
 
         var variantTypes = rootProjectionTypes.Where(_ => _.TryGetVariantIdentity(out _)).ToList();
+        var globalHandlerTypes = rootProjectionTypes.Where(_ => _.TryGetGlobalForIdentity(out _)).ToList();
 
-        foreach (var rootProjectionType in rootProjectionTypes.Except(variantTypes).ToList())
+        foreach (var rootProjectionType in rootProjectionTypes.Except(variantTypes).Except(globalHandlerTypes).ToList())
         {
             try
             {
@@ -76,6 +77,15 @@ internal class ModelBoundProjections(
             }
         }
 
+        var globalHandlersByIdentity = globalHandlerTypes
+            .Select(type =>
+            {
+                type.TryGetGlobalForIdentity(out var identity);
+                return (Type: type, Identity: identity);
+            })
+            .GroupBy(_ => _.Identity, _ => _.Type)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
         var variantGroups = variantTypes
             .Select(type =>
             {
@@ -87,12 +97,14 @@ internal class ModelBoundProjections(
         foreach (var group in variantGroups)
         {
             var groupTypes = group.ToList();
+            var globalsForGroup = globalHandlersByIdentity.TryGetValue(group.Key, out var globals) ? globals : [];
+
             foreach (var variantType in groupTypes)
             {
                 try
                 {
                     var siblingVariantTypes = groupTypes.Where(_ => _ != variantType);
-                    definitions.Add(variantType, builder.BuildVariant(variantType, siblingVariantTypes));
+                    definitions.Add(variantType, builder.BuildVariant(variantType, siblingVariantTypes, globalsForGroup));
                 }
 #pragma warning disable CA1031 // One unbuildable read model must not be able to take the rest of the read side with it.
                 catch (Exception ex)

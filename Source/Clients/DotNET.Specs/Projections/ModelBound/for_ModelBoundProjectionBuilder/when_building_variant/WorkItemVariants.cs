@@ -26,6 +26,14 @@ public record DevelopmentItem([property: Key] Guid Id);
 [EntersOn<PullRequestCreated>]
 public record PullRequestItem([property: Key] Guid Id, [property: SetFrom<PullRequestCreated>] string PullRequestUrl, [property: SetFrom<BuildCompleted>] string BuildStatus);
 
+/// <summary>
+/// Declares a mapping every variant of <see cref="WorkItem"/> shares. <see cref="DevelopmentItem"/> has no
+/// <c language="csharp">Title</c>, so merging this into that variant is a declaration error.
+/// </summary>
+/// <param name="Title">The title every variant carrying one keeps up to date.</param>
+[GlobalFor<WorkItem>]
+public record WorkItemSharedHandlers([property: SetFrom<TitleChanged>] string Title);
+
 [VariantOf<WorkItem>]
 public record MissingEntersOnVariant([property: Key] Guid Id);
 

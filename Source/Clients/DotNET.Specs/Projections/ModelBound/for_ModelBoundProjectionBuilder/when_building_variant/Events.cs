@@ -19,3 +19,6 @@ public record PullRequestCreated(string PullRequestUrl);
 
 [EventType]
 public record BuildCompleted(string BuildStatus);
+
+[EventType]
+public record TitleChanged(string Title);

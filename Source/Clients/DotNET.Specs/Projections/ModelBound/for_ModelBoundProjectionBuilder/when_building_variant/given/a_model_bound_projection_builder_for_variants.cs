@@ -18,6 +18,7 @@ public class a_model_bound_projection_builder_for_variants : Specification
             typeof(IssueCreated),
             typeof(IssueStarted),
             typeof(PullRequestCreated),
+            typeof(TitleChanged),
             typeof(BuildCompleted)
         ]);
 

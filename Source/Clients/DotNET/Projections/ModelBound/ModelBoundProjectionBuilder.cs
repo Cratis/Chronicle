@@ -113,6 +113,7 @@ internal class ModelBoundProjectionBuilder(
     /// </summary>
     /// <param name="modelType">The type of the variant read model.</param>
     /// <param name="siblingVariantTypes">The other variant types in the same group.</param>
+    /// <param name="globalHandlerTypes">The <see cref="GlobalForAttribute{TIdentity}"/> types declaring handlers shared by every variant in the group.</param>
     /// <returns>The <see cref="ProjectionDefinition"/>, an ordinary and independent definition for this variant alone.</returns>
     /// <remarks>
     /// The variant is built exactly as an ordinary read model, then reclassified: only its declared
@@ -123,12 +124,53 @@ internal class ModelBoundProjectionBuilder(
     /// resurrect one. Mutual exclusion is expressed by adding a <c language="csharp">RemovedWith</c> entry for
     /// every sibling variant's entering event(s).
     /// </remarks>
-    public ProjectionDefinition BuildVariant(Type modelType, IEnumerable<Type> siblingVariantTypes)
+    public ProjectionDefinition BuildVariant(Type modelType, IEnumerable<Type> siblingVariantTypes, IEnumerable<Type>? globalHandlerTypes = null)
     {
         var definition = Build(modelType);
+        MergeGlobalHandlers(modelType, definition, globalHandlerTypes ?? []);
         ReclassifyForVariant(modelType, definition);
         AddMutualExclusion(definition, siblingVariantTypes);
         return definition;
+    }
+
+    /// <summary>
+    /// Merges the mappings declared by shared handlers into this variant's definition, before reclassification
+    /// turns everything that is not an entering event into an update-only join.
+    /// </summary>
+    /// <param name="modelType">The variant being built.</param>
+    /// <param name="definition">The variant's definition so far.</param>
+    /// <param name="globalHandlerTypes">The shared handler types for the variant's identity.</param>
+    /// <exception cref="GlobalHandlerPropertyNotOnVariant">Thrown when a shared mapping targets a member the variant does not have.</exception>
+    void MergeGlobalHandlers(Type modelType, ProjectionDefinition definition, IEnumerable<Type> globalHandlerTypes)
+    {
+        var memberNames = GetMemberNames(modelType);
+
+        foreach (var globalHandlerType in globalHandlerTypes)
+        {
+            var globalDefinition = Build(globalHandlerType);
+
+            foreach (var (eventType, globalFrom) in globalDefinition.From)
+            {
+                foreach (var (propertyName, expression) in globalFrom.Properties)
+                {
+                    if (!memberNames.Contains(propertyName))
+                    {
+                        throw new GlobalHandlerPropertyNotOnVariant(globalHandlerType, modelType, propertyName);
+                    }
+
+                    var fromDefinition = definition.From.GetOrCreateFromDefinition(eventType);
+                    fromDefinition.Properties[propertyName] = expression;
+                }
+            }
+        }
+    }
+
+    HashSet<string> GetMemberNames(Type modelType)
+    {
+        var names = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(property => _namingPolicy.GetPropertyName(new PropertyPath(property.Name)));
+
+        return new HashSet<string>(names, StringComparer.Ordinal);
     }
 
     void ReclassifyForVariant(Type modelType, ProjectionDefinition definition)
