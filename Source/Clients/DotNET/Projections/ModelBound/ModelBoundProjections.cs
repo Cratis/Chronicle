@@ -59,7 +59,9 @@ internal class ModelBoundProjections(
         var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes, currentEventStoreName);
         var definitions = new Dictionary<Type, ProjectionDefinition>();
 
-        foreach (var rootProjectionType in rootProjectionTypes)
+        var variantTypes = rootProjectionTypes.Where(_ => _.TryGetVariantIdentity(out _)).ToList();
+
+        foreach (var rootProjectionType in rootProjectionTypes.Except(variantTypes).ToList())
         {
             try
             {
@@ -71,6 +73,34 @@ internal class ModelBoundProjections(
             {
                 logger.FailedToCreateModelBoundProjectionDefinition(rootProjectionType, ex);
                 _failures[rootProjectionType] = ex;
+            }
+        }
+
+        var variantGroups = variantTypes
+            .Select(type =>
+            {
+                type.TryGetVariantIdentity(out var identity);
+                return (Type: type, Identity: identity);
+            })
+            .GroupBy(_ => _.Identity, _ => _.Type);
+
+        foreach (var group in variantGroups)
+        {
+            var groupTypes = group.ToList();
+            foreach (var variantType in groupTypes)
+            {
+                try
+                {
+                    var siblingVariantTypes = groupTypes.Where(_ => _ != variantType);
+                    definitions.Add(variantType, builder.BuildVariant(variantType, siblingVariantTypes));
+                }
+#pragma warning disable CA1031 // One unbuildable read model must not be able to take the rest of the read side with it.
+                catch (Exception ex)
+#pragma warning restore CA1031
+                {
+                    logger.FailedToCreateModelBoundProjectionDefinition(variantType, ex);
+                    _failures[variantType] = ex;
+                }
             }
         }
 
