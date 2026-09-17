@@ -24,9 +24,7 @@ public interface IEventSequence
     /// <remarks>
     /// Both <see cref="Append"/> and <see cref="AppendMany(EventSourceId, IEnumerable{object}, EventStreamType?, EventStreamId?, EventSourceType?, CorrelationId?, IEnumerable{string}?, ConcurrencyScope?, DateTimeOffset?, Subject?)"/>
     /// emit through this observable. A single-event append emits a collection of one element;
-    /// a batch append emits the full batch. Successful notifications carry persisted receipt contexts;
-    /// rejected attempts carry request metadata and their failure result, without a receipt.
-    /// An invalid acknowledgment throws <see cref="InvalidAppendReceipt"/> without emitting a success notification.
+    /// a batch append emits the full batch. Subscribers receive the notification after the operation has completed, whether it succeeded or failed.
     /// This observable does not fire for transactional appends through <see cref="ITransactionalEventSequence"/>.
     /// </remarks>
     IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations { get; }
@@ -105,20 +103,15 @@ public interface IEventSequence
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="event">The event.</param>
-    /// <param name="eventStreamType">Optional stream type. Omitted or empty values use the kernel's configured default.</param>
-    /// <param name="eventStreamId">Optional stream id. Omitted or empty values use the kernel's configured default.</param>
-    /// <param name="eventSourceType">Optional source type. Omitted or empty values use the kernel's configured default.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
     /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the event occurred. If not set, the server will set it to approximately the time of append.</param>
     /// <param name="subject">Optional <see cref="Subject"/> identifying the target the event is about. Used as the identity for compliance concerns such as PII encryption keys. When omitted, the <paramref name="eventSourceId"/> is used as the subject.</param>
-    /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and its persisted <see cref="AppendResult.Receipt"/>.</returns>
-    /// <remarks>
-    /// Omitted or empty routing values are resolved by the kernel, not the client. Successful notifications use
-    /// the kernel receipt. This requires a receipt-capable kernel; deploy the kernel before upgrading clients.
-    /// </remarks>
-    /// <exception cref="InvalidAppendReceipt">The append was acknowledged but its receipt is missing or malformed. It may already be persisted; reconcile before retrying.</exception>
+    /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
         EventSourceId eventSourceId,
         object @event,
@@ -136,9 +129,9 @@ public interface IEventSequence
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of events to append.</param>
-    /// <param name="eventStreamType">Optional stream type. Omitted or empty values use the kernel's configured default.</param>
-    /// <param name="eventStreamId">Optional stream id. Omitted or empty values use the kernel's configured default.</param>
-    /// <param name="eventSourceType">Optional source type. Omitted or empty values use the kernel's configured default.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
     /// <param name="tags">Optional collection of tags to associate with all events. Will be combined with any static tags from the event types.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
@@ -147,9 +140,7 @@ public interface IEventSequence
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
-    /// Successful results expose persisted contexts in input order through <see cref="AppendManyResult.Receipts"/>.
     /// </remarks>
-    /// <exception cref="InvalidAppendReceipt">The append was acknowledged but its receipts are missing or malformed. It may already be persisted; reconcile before retrying.</exception>
     Task<AppendManyResult> AppendMany(
         EventSourceId eventSourceId,
         IEnumerable<object> events,
@@ -172,10 +163,7 @@ public interface IEventSequence
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
-    /// Successful results expose persisted contexts in input order through <see cref="AppendManyResult.Receipts"/>.
-    /// Omitted or empty routing values use the kernel's configured defaults.
     /// </remarks>
-    /// <exception cref="InvalidAppendReceipt">The append was acknowledged but its receipts are missing or malformed. It may already be persisted; reconcile before retrying.</exception>
     Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,

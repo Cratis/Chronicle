@@ -56,12 +56,6 @@ public record Append(
     ConcurrencyScope? ConcurrencyScope = default)
 {
     /// <summary>
-    /// Gets whether the successful acknowledgment should include the persisted event metadata.
-    /// Omitted by older callers so their response size stays unchanged.
-    /// </summary>
-    public bool IncludeReceipt { get; init; }
-
-    /// <summary>
     /// Handles the command by appending the event.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append through.</param>
@@ -89,8 +83,6 @@ public record Append(
         var scope = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
         var subject = string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject);
 
-        return IncludeReceipt
-            ? eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, includeReceipt: true)
-            : eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
+        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
     }
 }

@@ -56,13 +56,15 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
             foreach (var job in replayJobs)
             {
                 var completedJob = await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job.Id);
-                if (completedJob is not null && completedJob.Status != JobStatus.CompletedSuccessfully)
+                if (completedJob is null || completedJob.Status == JobStatus.CompletedSuccessfully)
                 {
-                    var steps = await completedJob.GetJobSteps();
-                    var failures = steps.SelectMany(step => step.StatusChanges.SelectMany(change => change.ExceptionMessages));
-                    Assert.True(completedJob.Status == JobStatus.CompletedSuccessfully, $"Replay {job.Id} completed as {completedJob.Status}: {string.Join("; ", failures)}");
+                    continue;
                 }
-                completedJob?.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
+
+                // The status alone does not say why a replay failed, and the job is gone by the time the spec reports.
+                var failures = (await completedJob.GetJobSteps())
+                    .SelectMany(step => step.StatusChanges.SelectMany(change => change.ExceptionMessages));
+                Assert.Fail($"Replay {job.Id} completed as {completedJob.Status}: {string.Join("; ", failures)}");
             }
             await Projection.WaitTillSubscribed();
 

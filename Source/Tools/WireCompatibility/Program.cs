@@ -30,8 +30,19 @@ try
 
     var current = WireContractReader.Read(DescriptorSetFor(options.Current, options.ImportPath));
     var all = await Baselines(nuget, options);
-    var baselines = options.Since is { } floor ? all.Where(_ => ReleaseVersion.IsAtOrAfter(_, floor)).ToArray() : all;
-    var excluded = all.Count - baselines.Count;
+    var afterFloor = options.Since is { } floor ? all.Where(_ => ReleaseVersion.IsAtOrAfter(_, floor)).ToArray() : all;
+    var excluded = all.Count - afterFloor.Count;
+
+    // A withdrawn release is one whose published contract is not the one that major is meant to carry. Excluding it
+    // by name keeps every other release of the major compared, which a floor cannot do for the newest one.
+    var missingWithdrawals = options.Withdrawn.Where(withdrawn => !all.Contains(withdrawn)).ToArray();
+    if (missingWithdrawals.Length > 0)
+    {
+        await Console.Error.WriteLineAsync($"Withdrawn release(s) {string.Join(", ", missingWithdrawals)} are not released baselines of major {options.Major}, so they exclude nothing.");
+        return 2;
+    }
+
+    var baselines = afterFloor.Where(_ => !options.Withdrawn.Contains(_)).ToArray();
     var results = new List<BaselineResult>();
 
     await Console.Out.WriteLineAsync($"Current:  {options.Current}");
@@ -41,16 +52,28 @@ try
         await Console.Out.WriteLineAsync($"Floor:    {options.Since} ({excluded} earlier release(s) not compared against)");
     }
 
+    if (options.Withdrawn.Count > 0)
+    {
+        await Console.Out.WriteLineAsync($"Withdrawn: {string.Join(", ", options.Withdrawn)} (not compared against)");
+    }
+
     await Console.Out.WriteLineAsync();
 
-    // A floor that excludes everything is not the same as a clean run, and a gate that reports them the same way
-    // is a gate nobody can tell is switched off. Say it out loud, in the log and in the pull request.
-    if (baselines.Count == 0 && options.Since is not null)
+    // Narrowing the gate is a decision, not a detail: a run that compared fewer releases than the major has must
+    // say so where the decision is reviewed, not only in the log nobody opens on a green check.
+    if (options.GitHub && options.Withdrawn.Count > 0)
     {
-        await Console.Out.WriteLineAsync($"No release at or after the declared floor {options.Since}, so nothing was compared.");
+        await Console.Out.WriteLineAsync($"::notice title=Wire compatibility narrowed::{string.Join(", ", options.Withdrawn)} withdrawn, so this run did not compare against it.");
+    }
+
+    // A floor or a withdrawal that excludes everything is not the same as a clean run, and a gate that reports them
+    // the same way is a gate nobody can tell is switched off. Say it out loud, in the log and in the pull request.
+    if (baselines.Length == 0 && (options.Since is not null || options.Withdrawn.Count > 0))
+    {
+        await Console.Out.WriteLineAsync("Every released baseline is excluded, so nothing was compared.");
         if (options.GitHub)
         {
-            await Console.Out.WriteLineAsync($"::warning title=Wire compatibility not compared::The declared floor {options.Since} excludes every released baseline, so this run checked nothing.");
+            await Console.Out.WriteLineAsync("::warning title=Wire compatibility not compared::Every released baseline is excluded by the declared floor or withdrawals, so this run checked nothing.");
         }
 
         return 0;

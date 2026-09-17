@@ -129,14 +129,13 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.Append(new()
         {
-            IncludeReceipt = true,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            EventSourceType = eventSourceType?.Value ?? string.Empty,
+            EventSourceType = resolvedEventSourceType,
             EventSourceId = eventSourceId,
-            EventStreamType = eventStreamType?.Value ?? string.Empty,
-            EventStreamId = eventStreamId?.Value ?? string.Empty,
+            EventStreamType = resolvedEventStreamType,
+            EventStreamId = resolvedEventStreamId,
             CorrelationId = correlationId,
             EventType = eventType.ToSequencesContract(),
             Content = content,
@@ -155,29 +154,22 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             Observers = GetObservers()
         };
-        if (result.IsSuccess)
-        {
-            var receipt = AppendReceipts.Convert(response.Receipt, result.SequenceNumber, eventSourceId, eventType, eventStoreName, @namespace);
-            result = result with { Receipt = receipt, EventStore = receipt.EventStore, EventStoreNamespace = receipt.Namespace };
-        }
         if (_appendedEventsRaised is not null)
         {
-            var context = result.Receipt ?? EventContext.From(
+            var context = EventContext.From(
                 eventStoreName,
                 @namespace,
                 eventType,
-                eventSourceType ?? EventSourceType.Unspecified,
+                resolvedEventSourceType,
                 eventSourceId,
-                eventStreamType ?? new EventStreamType(string.Empty),
-                eventStreamId ?? EventStreamId.NotSet,
-                EventSequenceNumber.Unavailable,
+                resolvedEventStreamType,
+                resolvedEventStreamId,
+                result.SequenceNumber,
                 correlationId,
-                occurred ?? DateTimeOffset.MinValue) with
+                occurred) with
             {
                 Causation = causation,
-                CausedBy = identity,
-                Subject = subject ?? Subject.NotSet,
-                Tags = allTags.Select(_ => (Tag)_).ToArray()
+                CausedBy = identity
             };
             _appendedEventsRaised([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
         }
@@ -220,14 +212,14 @@ public class EventSequence(
 
         // The legacy single-source batch contract cannot carry routing metadata. Use the existing
         // multi-source contract for explicit routes, retaining the batch-wide union of tags and scope.
-        if (eventSourceType is not null || eventStreamType is not null || eventStreamId is not null)
+        if (resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
         {
             return await AppendManyForEventSources(
                 eventsList.Select(@event => new EventForEventSourceId(eventSourceId, @event)
                 {
-                    RequestedEventSourceType = eventSourceType,
-                    RequestedEventStreamType = eventStreamType,
-                    RequestedEventStreamId = eventStreamId,
+                    EventSourceType = resolvedEventSourceType,
+                    EventStreamType = resolvedEventStreamType,
+                    EventStreamId = resolvedEventStreamId,
                     Occurred = occurred,
                     Subject = subject
                 }),
@@ -258,7 +250,6 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.AppendMany(new()
         {
-            IncludeReceipts = true,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
@@ -279,24 +270,17 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             Observers = GetObservers()
         };
-        if (result.IsSuccess)
-        {
-            var receipts = AppendReceipts.ConvertMany(response.Receipts, result.SequenceNumbers, eventsList.ConvertAll(@event => new EventForEventSourceId(eventSourceId, @event)), eventTypes, eventStoreName, @namespace);
-            result = WithReceipts(result, receipts);
-        }
         NotifyAppendMany(
             eventsList,
             resolvedCorrelationId,
             eventSourceId,
-            eventSourceType ?? EventSourceType.Unspecified,
-            eventStreamType ?? new EventStreamType(string.Empty),
-            eventStreamId ?? EventStreamId.NotSet,
+            resolvedEventSourceType,
+            resolvedEventStreamType,
+            resolvedEventStreamId,
             causation,
             identity,
             result,
-            occurred,
-            allTags,
-            eventsToAppend);
+            occurred);
         return result;
     }
 
@@ -480,11 +464,6 @@ public class EventSequence(
         };
     }
 
-    /// <summary>
-    /// Resolves query sentinels for concurrency strategies, never append routing policy.
-    /// </summary>
-    /// <param name="value">The optional source filter.</param>
-    /// <returns>The query filter.</returns>
     static EventSourceType ResolveEventSourceType(EventSourceType? value) =>
         string.IsNullOrEmpty(value?.Value) ? EventSourceType.Default : value;
 
@@ -521,23 +500,15 @@ public class EventSequence(
     static Contracts.Primitives.SerializableDateTimeOffset ToWireOccurred(DateTimeOffset? occurred) =>
         (Contracts.Primitives.SerializableDateTimeOffset?)occurred ?? new Contracts.Primitives.SerializableDateTimeOffset();
 
-    static AppendManyResult WithReceipts(AppendManyResult result, IReadOnlyList<EventContext> receipts) => result with
-    {
-        Receipts = receipts,
-        EventStore = receipts.Count > 0 ? receipts[0].EventStore : result.EventStore,
-        EventStoreNamespace = receipts.Count > 0 ? receipts[0].Namespace : result.EventStoreNamespace
-    };
-
-    AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult, EventContext? receipt)
+    AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult)
     {
         if (batchResult.IsSuccess)
         {
             return AppendResult.Success(correlationId, sequenceNumber) with
             {
-                EventStore = batchResult.EventStore,
-                EventStoreNamespace = batchResult.EventStoreNamespace,
+                EventStore = eventStoreName,
+                EventStoreNamespace = @namespace,
                 EventSequenceId = eventSequenceId,
-                Receipt = receipt,
                 ConcurrencyCheckPerformed = batchResult.ConcurrencyCheckPerformed,
                 Observers = GetObservers()
             };
@@ -588,7 +559,12 @@ public class EventSequence(
         IEnumerable<string>? tags,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes)
     {
-        var eventsList = events.ToList();
+        var eventsList = events.Select(@event => @event with
+        {
+            EventSourceType = ResolveEventSourceType(@event.EventSourceType),
+            EventStreamType = ResolveEventStreamType(@event.EventStreamType),
+            EventStreamId = ResolveEventStreamId(@event.EventStreamId)
+        }).ToList();
         var eventsToAppend = new List<Contracts.Sequences.EventForEventSourceId>(eventsList.Count);
         IImmutableList<Causation>? causation = null;
 
@@ -610,9 +586,9 @@ public class EventSequence(
             eventsToAppend.Add(new Contracts.Sequences.EventForEventSourceId
             {
                 EventSourceId = @event.EventSourceId,
-                EventSourceType = @event.RequestedEventSourceType?.Value ?? string.Empty,
-                EventStreamType = @event.RequestedEventStreamType?.Value ?? string.Empty,
-                EventStreamId = @event.RequestedEventStreamId?.Value ?? string.Empty,
+                EventSourceType = @event.EventSourceType,
+                EventStreamType = @event.EventStreamType,
+                EventStreamId = @event.EventStreamId,
                 EventType = eventType.ToSequencesContract(),
                 Content = (await eventSerializer.Serialize(@event.Event)).ToJsonString(),
                 Tags = allTags,
@@ -629,7 +605,6 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.AppendManyForEventSources(new()
         {
-            IncludeReceipts = true,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
@@ -654,12 +629,6 @@ public class EventSequence(
             Observers = GetObservers()
         };
 
-        if (result.IsSuccess)
-        {
-            var receipts = AppendReceipts.ConvertMany(response.Receipts, result.SequenceNumbers, eventsList, eventTypes, eventStoreName, @namespace);
-            result = WithReceipts(result, receipts);
-        }
-
         if (_appendedEventsRaised is not null)
         {
             var sequenceNumbers = result.SequenceNumbers.ToList();
@@ -674,25 +643,23 @@ public class EventSequence(
                     ? sequenceNumbers[i]
                     : EventSequenceNumber.Unavailable;
 
-                var context = result.IsSuccess ? result.Receipts[i] : EventContext.From(
+                var context = EventContext.From(
                     eventStoreName,
                     @namespace,
                     evtType,
-                    evt.RequestedEventSourceType ?? EventSourceType.Unspecified,
+                    evt.EventSourceType,
                     evt.EventSourceId,
-                    evt.RequestedEventStreamType ?? new EventStreamType(string.Empty),
-                    evt.RequestedEventStreamId ?? EventStreamId.NotSet,
+                    evt.EventStreamType,
+                    evt.EventStreamId,
                     sequenceNumber,
                     resolvedCorrelationId,
-                    evt.Occurred ?? DateTimeOffset.MinValue) with
+                    evt.Occurred) with
                 {
                     Causation = causation,
-                    CausedBy = identity,
-                    Subject = eventsToAppend[i].Subject is { } requestedSubject ? new Subject(requestedSubject) : Subject.NotSet,
-                    Tags = eventsToAppend[i].Tags!.Select(_ => (Tag)_).ToArray()
+                    CausedBy = identity
                 };
 
-                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(context.CorrelationId, sequenceNumber, result, result.IsSuccess ? context : null)));
+                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result)));
             }
 
             _appendedEventsRaised(allResults);
@@ -719,9 +686,9 @@ public class EventSequence(
             var firstEvent = eventsForEventSource.First();
             resolvedConcurrencyScopes[eventsForEventSource.Key] = await strategy.GetScope(
                 firstEvent.EventSourceId,
-                ResolveEventStreamType(firstEvent.EventStreamType),
-                ResolveEventStreamId(firstEvent.EventStreamId),
-                ResolveEventSourceType(firstEvent.EventSourceType));
+                firstEvent.EventStreamType,
+                firstEvent.EventStreamId,
+                firstEvent.EventSourceType);
         }
 
         return resolvedConcurrencyScopes;
@@ -741,9 +708,7 @@ public class EventSequence(
         IImmutableList<Causation> causation,
         Identity identity,
         AppendManyResult result,
-        DateTimeOffset? occurred,
-        IEnumerable<string> tags,
-        List<Contracts.Sequences.EventToAppend> requestedEvents)
+        DateTimeOffset? occurred)
     {
         var sequenceNumbers = result.SequenceNumbers.ToList();
         var results = new List<AppendedEventWithResult>(events.Count);
@@ -758,7 +723,7 @@ public class EventSequence(
                 ? sequenceNumbers[i]
                 : EventSequenceNumber.Unavailable;
 
-            var context = result.IsSuccess ? result.Receipts[i] : EventContext.From(
+            var context = EventContext.From(
                 eventStoreName,
                 @namespace,
                 evtType,
@@ -768,15 +733,13 @@ public class EventSequence(
                 eventStreamId,
                 sequenceNumber,
                 correlationId,
-                occurred ?? DateTimeOffset.MinValue) with
+                occurred) with
             {
                 Causation = causation,
-                CausedBy = identity,
-                Subject = requestedEvents[i].Subject is { } requestedSubject ? new Subject(requestedSubject) : Subject.NotSet,
-                Tags = tags.Select(_ => (Tag)_).ToArray()
+                CausedBy = identity
             };
 
-            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(context.CorrelationId, sequenceNumber, result, result.IsSuccess ? context : null)));
+            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result)));
         }
 
         _appendedEventsRaised(results);

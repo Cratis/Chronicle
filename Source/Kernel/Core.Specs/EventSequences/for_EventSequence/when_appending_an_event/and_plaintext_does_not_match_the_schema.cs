@@ -24,13 +24,9 @@ public class and_plaintext_does_not_match_the_schema : given.an_event_sequence_w
         [],
         Identity.System,
         [],
-        ConcurrencyScope.None,
-        occurred: null,
-        subject: null,
-        includeReceipt: true);
+        ConcurrencyScope.None);
 
     [Fact] void should_reject_the_event() => _result.IsSuccess.ShouldBeFalse();
-    [Fact] void should_not_return_a_persisted_receipt() => _result.Receipt.ShouldBeNull();
     [Fact] void should_not_apply_compliance_to_invalid_plaintext() =>
         _complianceManager.DidNotReceive().Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Cratis.Chronicle.Schemas.JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
 }

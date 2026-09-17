@@ -56,13 +56,11 @@ public class when_appending_many_and_storage_reports_duplicate_sequence_numbers 
         [ValidatedEvent(), ValidatedEvent()],
         Cratis.Execution.CorrelationId.New(),
         [],
-        [],
-        includeReceipts: true);
+        []);
 
     [Fact] void should_terminate_before_the_safety_cap() => _safetyCapReached.ShouldBeFalse();
     [Fact] void should_resubmit_with_non_colliding_sequence_numbers() => _lastSubmittedSequenceNumbers.Any(_usedSequenceNumbers.Contains).ShouldBeFalse();
     [Fact] void should_have_succeeded() => _result.IsSuccess.ShouldBeTrue();
-    [Fact] void should_return_receipts_with_the_reassigned_sequence_numbers() => _result.Receipts.Select(_ => _.SequenceNumber.Value).ShouldEqual([10UL, 11UL]);
     [Fact] async Task should_advance_next_sequence_number_past_the_renumbered_batch() =>
         (await _eventSequence.GetNextSequenceNumber()).ShouldEqual((EventSequenceNumber)12UL);
 }
