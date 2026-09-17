@@ -97,4 +97,16 @@ public class EventContext
     /// </summary>
     [ProtoMember(14)]
     public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(15)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(16)]
+    public string Namespace { get; set; } = string.Empty;
 }

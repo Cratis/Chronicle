@@ -227,6 +227,8 @@ message EventContext {
    string Hash = 12;
    EventObservationState ObservationState = 13;
    string Subject = 14;
+   string EventStore = 15;
+   string Namespace = 16;
 }
 message EventForEventSourceId {
    string EventSourceId = 1;

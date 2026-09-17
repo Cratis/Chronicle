@@ -11,6 +11,11 @@ public class an_event_sequence : all_dependencies
     protected readonly EventStoreNamespaceName _namespace = Guid.NewGuid().ToString();
     protected EventSequence _eventSequence;
 
+    /// <summary>
+    /// Gets whether the sequence under specification asks the kernel for receipts.
+    /// </summary>
+    protected virtual bool IncludeReceipts => true;
+
     void Establish()
     {
         _eventSequence = new(
@@ -26,6 +31,9 @@ public class an_event_sequence : all_dependencies
             _causationManager,
             _unitOfWorkManager,
             _identityProvider,
-            JsonSerializerOptions.Default);
+            JsonSerializerOptions.Default)
+        {
+            IncludeAppendReceipts = IncludeReceipts
+        };
     }
 }

@@ -56,6 +56,14 @@ A successful batch carries one receipt per input event, in the same order as the
 
 Receipt-aware clients require a kernel that exposes the receipt contract. Upgrade every kernel node before those clients; compatibility must be checked before sending an append, not discovered after the event has already been stored.
 
+### Cost of a receipt
+
+A receipt is roughly 400 bytes per event and largely repeats what the append sent, so a batch response grows by about that much per event. At Chronicle's default 100 MB message limit this is comfortable, but a large import that reads neither the receipt nor the append notification is paying for data it discards. The .NET client exposes `ChronicleOptions.IncludeAppendReceipts` to turn the request off; appended events and their sequence numbers are unchanged, and notifications then describe the request rather than the persisted event.
+
+:::note[Receipt and read-back contexts are separate shapes]
+A receipt is its own message rather than the event context returned by reads. Both now report the same information, including the event store and namespace an event belongs to, but the two carry different field numbers and a receipt flattens the event type. Consolidating them would change field types on a published contract, so they stay distinct until a major release.
+:::
+
 ## Upgrading client routing defaults
 
 Older Kotlin/Java and TypeScript/JavaScript clients supplied a stream type of `Default` and used the event-source ID as the stream ID when the caller supplied neither. Those are explicit wire values, so the kernel preserves them. They are different from the kernel defaults `All` and `Default`.

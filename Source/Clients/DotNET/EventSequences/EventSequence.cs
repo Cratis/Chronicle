@@ -70,6 +70,16 @@ public class EventSequence(
     IObservable<IEnumerable<AppendedEventWithResult>>? _appendOperations;
     event Action<IEnumerable<AppendedEventWithResult>>? _appendedEventsRaised;
 
+    /// <summary>
+    /// Gets whether appends ask the kernel for persisted receipts. Defaults to true.
+    /// </summary>
+    /// <remarks>
+    /// Set from <see cref="ChronicleOptions.IncludeAppendReceipts"/>. When false, results carry no receipt and
+    /// notifications describe the request instead of the persisted event. Appended events and their sequence
+    /// numbers are identical either way.
+    /// </remarks>
+    public bool IncludeAppendReceipts { get; init; } = true;
+
     /// <inheritdoc/>
     public EventSequenceId Id => eventSequenceId;
 
@@ -129,7 +139,7 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.Append(new()
         {
-            IncludeReceipt = true,
+            IncludeReceipt = IncludeAppendReceipts,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
@@ -155,7 +165,7 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             Observers = GetObservers()
         };
-        if (result.IsSuccess)
+        if (result.IsSuccess && IncludeAppendReceipts)
         {
             var receipt = AppendReceipts.Convert(response.Receipt, result.SequenceNumber, eventSourceId, eventType, eventStoreName, @namespace);
             result = result with { Receipt = receipt, EventStore = receipt.EventStore, EventStoreNamespace = receipt.Namespace };
@@ -258,7 +268,7 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.AppendMany(new()
         {
-            IncludeReceipts = true,
+            IncludeReceipts = IncludeAppendReceipts,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
@@ -279,7 +289,7 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             Observers = GetObservers()
         };
-        if (result.IsSuccess)
+        if (result.IsSuccess && IncludeAppendReceipts)
         {
             var receipts = AppendReceipts.ConvertMany(response.Receipts, result.SequenceNumbers, eventsList.ConvertAll(@event => new EventForEventSourceId(eventSourceId, @event)), eventTypes, eventStoreName, @namespace);
             result = WithReceipts(result, receipts);
@@ -629,7 +639,7 @@ public class EventSequence(
 
         var response = await _servicesAccessor.Services.Sequences.AppendManyForEventSources(new()
         {
-            IncludeReceipts = true,
+            IncludeReceipts = IncludeAppendReceipts,
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
@@ -654,7 +664,7 @@ public class EventSequence(
             Observers = GetObservers()
         };
 
-        if (result.IsSuccess)
+        if (result.IsSuccess && IncludeAppendReceipts)
         {
             var receipts = AppendReceipts.ConvertMany(response.Receipts, result.SequenceNumbers, eventsList, eventTypes, eventStoreName, @namespace);
             result = WithReceipts(result, receipts);
@@ -674,7 +684,7 @@ public class EventSequence(
                     ? sequenceNumbers[i]
                     : EventSequenceNumber.Unavailable;
 
-                var context = result.IsSuccess ? result.Receipts[i] : EventContext.From(
+                var context = i < result.Receipts.Count ? result.Receipts[i] : EventContext.From(
                     eventStoreName,
                     @namespace,
                     evtType,
@@ -692,7 +702,7 @@ public class EventSequence(
                     Tags = eventsToAppend[i].Tags!.Select(_ => (Tag)_).ToArray()
                 };
 
-                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(context.CorrelationId, sequenceNumber, result, result.IsSuccess ? context : null)));
+                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(context.CorrelationId, sequenceNumber, result, i < result.Receipts.Count ? context : null)));
             }
 
             _appendedEventsRaised(allResults);
@@ -758,7 +768,7 @@ public class EventSequence(
                 ? sequenceNumbers[i]
                 : EventSequenceNumber.Unavailable;
 
-            var context = result.IsSuccess ? result.Receipts[i] : EventContext.From(
+            var context = i < result.Receipts.Count ? result.Receipts[i] : EventContext.From(
                 eventStoreName,
                 @namespace,
                 evtType,
@@ -776,7 +786,7 @@ public class EventSequence(
                 Tags = tags.Select(_ => (Tag)_).ToArray()
             };
 
-            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(context.CorrelationId, sequenceNumber, result, result.IsSuccess ? context : null)));
+            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(context.CorrelationId, sequenceNumber, result, i < result.Receipts.Count ? context : null)));
         }
 
         _appendedEventsRaised(results);

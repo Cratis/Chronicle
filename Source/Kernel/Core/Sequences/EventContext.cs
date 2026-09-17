@@ -45,4 +45,22 @@ public record EventContext(
     /// shape stay exactly as they were.
     /// </remarks>
     public string Subject { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the event store the event was appended to.
+    /// </summary>
+    /// <remarks>
+    /// Declared in the body for the same reason as <see cref="Subject"/>, and populated so a read carries the same
+    /// destination an append receipt reports.
+    /// </remarks>
+    public string EventStore { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the namespace the event was appended to.
+    /// </summary>
+    /// <remarks>
+    /// Declared in the body for the same reason as <see cref="Subject"/>, and populated so a read carries the same
+    /// destination an append receipt reports.
+    /// </remarks>
+    public string Namespace { get; init; } = string.Empty;
 }
