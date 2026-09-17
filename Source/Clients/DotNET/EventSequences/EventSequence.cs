@@ -341,7 +341,8 @@ public class EventSequence(
             EventSourceId = eventSourceId,
             EventTypeIds = JoinEventTypeIds(filterEventTypes),
             EventStreamType = eventStreamType?.Value,
-            EventStreamId = eventStreamId?.Value
+            EventStreamId = eventStreamId?.Value,
+            EventSourceType = eventSourceType?.Value
         }).EnsureSuccess();
 
         return result.ToClient(eventStoreName, @namespace, eventTypes, jsonSerializerOptions);

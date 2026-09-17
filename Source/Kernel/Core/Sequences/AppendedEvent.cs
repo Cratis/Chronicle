@@ -171,6 +171,7 @@ public record AppendedEvent(
     /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
     /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
     /// <param name="eventStreamId">Optional event stream to narrow to.</param>
+    /// <param name="eventSourceType">Optional event source type to narrow to.</param>
     /// <returns>Every matching event, unpaged.</returns>
     internal static Task<IEnumerable<AppendedEvent>> ForEventSourceIdAndEventTypes(
         IStorage storage,
@@ -182,7 +183,8 @@ public record AppendedEvent(
         string eventSourceId,
         string? eventTypeIds = default,
         string? eventStreamType = default,
-        string? eventStreamId = default) =>
+        string? eventStreamId = default,
+        string? eventSourceType = default) =>
         EventSequenceQuerying.ReadFromSequenceNumber(
             storage,
             eventCompliance,
@@ -194,7 +196,8 @@ public record AppendedEvent(
             eventSourceId,
             eventTypeIds,
             eventStreamType,
-            eventStreamId);
+            eventStreamId,
+            eventSourceType);
 
     /// <summary>
     /// Gets every event from a specific sequence number onward, optionally narrowed to an event source and event
