@@ -31,6 +31,9 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Debug, "Registering {Count} changed projection definitions")]
     internal static partial void RegisteringChangedDefinitions(this ILogger<ProjectionsManager> logger, int count);
 
+    [LoggerMessage(LogLevel.Information, "Subscribing {Count} registered projection(s) this activation has not managed to subscribe yet - their definitions were already stored, so nothing else would have looked again")]
+    internal static partial void ResubscribingProjectionsThatAreNotSubscribed(this ILogger<ProjectionsManager> logger, int count);
+
     [LoggerMessage(LogLevel.Error, "The projection engine rejected the definition for projection '{Identifier}' - its previously registered definition remains in effect and registration will be retried on the next registration")]
     internal static partial void FailedRegisteringProjectionWithEngine(this ILogger<ProjectionsManager> logger, Exception ex, ProjectionId identifier);
 
