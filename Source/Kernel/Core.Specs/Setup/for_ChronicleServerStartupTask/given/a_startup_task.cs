@@ -109,7 +109,8 @@ public class a_startup_task : Specification
             _projectionsServiceClient,
             _grainFactory,
             _authenticationService,
-            NullLogger<ChronicleServerStartupTask>.Instance);
+            NullLogger<ChronicleServerStartupTask>.Instance,
+            new an_immediate_time_provider());
 
         _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([_eventStore]));
         _storage.GetEventStore(_eventStore).Returns(_eventStoreStorage);
