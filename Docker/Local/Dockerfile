@@ -10,6 +10,8 @@ WORKDIR /app
 
 # Create entrypoint that runs both MongoDB and Runtime
 COPY Docker/local-entrypoint.sh ./entrypoint.sh
+# Sourced by the entrypoint to name whatever already holds the server's port when a bind fails - see #4048.
+COPY Docker/report-port-holder.sh ./report-port-holder.sh
 RUN chmod +x ./entrypoint.sh
 
 COPY /Source/Kernel/Server/out /app

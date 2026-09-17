@@ -62,6 +62,19 @@ public partial class ProjectionsManager(
 
     readonly SemaphoreSlim _subscriptionThrottle = new(MaxConcurrentSubscriptions, MaxConcurrentSubscriptions);
 
+    /// <summary>
+    /// The projection/namespace pairs this activation has successfully subscribed.
+    /// </summary>
+    /// <remarks>
+    /// Activation-scoped on purpose: it answers "has this manager subscribed this projection", which
+    /// is the question <see cref="ResubscribeProjectionsThatAreNotSubscribed"/> needs and the one
+    /// stored definitions cannot answer. A fresh activation starts empty and subscribes everything
+    /// through its timer, which is exactly the recovery a lost subscription needs.
+    /// </remarks>
+    readonly ConcurrentDictionary<(ProjectionId Projection, EventStoreNamespaceName Namespace), byte> _subscribed = new();
+
+    int _subscribePassInFlight;
+
     EventStoreName _eventStoreName = EventStoreName.NotSet;
     IGrainTimer? _subscribeTimer;
 
@@ -127,6 +140,8 @@ public partial class ProjectionsManager(
             MergeIntoState(changedDefinitions.Where(definition => !failures.ContainsKey(definition.Identifier)));
             await WriteStateAsync();
         }
+
+        await ResubscribeProjectionsThatAreNotSubscribed(failures);
 
         if (fullSetOwner is not null)
         {
@@ -233,7 +248,71 @@ public partial class ProjectionsManager(
 
     async Task SetDefinitionAndSubscribeForAllProjections()
     {
-        await SetDefinitionAndSubscribeForProjections(State.Projections);
+        if (Interlocked.CompareExchange(ref _subscribePassInFlight, 1, 0) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await SetDefinitionAndSubscribeForProjections(State.Projections);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _subscribePassInFlight, 0);
+        }
+    }
+
+    /// <summary>
+    /// Subscribes every registered projection this activation has not managed to subscribe yet.
+    /// </summary>
+    /// <param name="failures">The failures collected by the registration this runs as part of.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A definition can be stored and yet have no live subscription: the activation-time resubscribe
+    /// can fail for one projection while succeeding for the rest, and its failure is only logged.
+    /// Registration alone could not repair that, because it decides what to do by comparing incoming
+    /// definitions against stored ones - and a projection that is registered but dark compares equal.
+    /// Every later registration therefore took the unchanged path and did nothing, including the
+    /// client's own background retry, which reported success while the read model stayed frozen for
+    /// as long as the activation lived.
+    /// <para>
+    /// Subscribing is not cheap enough to simply redo for everything on every registration - that is
+    /// what the unchanged-definitions fast path above exists to avoid - so what this reconciles
+    /// against is what this activation actually managed to subscribe, not what is stored.
+    /// </para>
+    /// </remarks>
+    async Task ResubscribeProjectionsThatAreNotSubscribed(Dictionary<ProjectionId, Exception> failures)
+    {
+        // A pass already running covers whatever this one would find, and stacked registrations must not
+        // each start their own fan-out - collapsing them is what keeps the request queue draining.
+        if (Interlocked.CompareExchange(ref _subscribePassInFlight, 1, 0) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            var notSubscribed = State.Projections
+                .Where(definition => definition.IsActive && namespaces.Any(namespaceName => !_subscribed.ContainsKey((definition.Identifier, namespaceName))))
+                .ToArray();
+
+            if (notSubscribed.Length == 0)
+            {
+                return;
+            }
+
+            logger.ResubscribingProjectionsThatAreNotSubscribed(notSubscribed.Length);
+            foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(notSubscribed))
+            {
+                failures[identifier] = exception;
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _subscribePassInFlight, 0);
+        }
     }
 
     async Task<IReadOnlyDictionary<ProjectionId, Exception>> SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions)
@@ -367,6 +446,10 @@ public partial class ProjectionsManager(
             await (projection.IsEventSourceKeyed
                 ? SubscribeAs<IProjectionObserverSubscriber>()
                 : SubscribeAs<ICollapsingProjectionObserverSubscriber>());
+
+            // Only on success - a pair left out here is one the next registration reconciles. Concurrent
+            // because the fan-out subscribes definitions and namespaces in parallel.
+            _subscribed.TryAdd((definition.Identifier, namespaceName), default);
         }
         finally
         {
@@ -386,6 +469,14 @@ public partial class ProjectionsManager(
                 _subscribeTimer = null;
                 await SetDefinitionAndSubscribeForAllProjections();
             },
-            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+
+            // Interleaved on purpose. A grain timer defaults to running like a grain call, which on a
+            // non-reentrant grain means holding the activation's turn for the callback's whole duration -
+            // and this callback subscribes every projection to every namespace, throttled, with each
+            // subscribe also recovering that observer's failed partitions. On a large artifact set that
+            // outlasts a caller's response timeout, so every client's Register queued behind it timed out
+            // while the work it was waiting for was already being done. Nothing here needs the turn: the
+            // fan-out has its own throttle and the subscribe path is idempotent.
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan, Interleave = true });
     }
 }

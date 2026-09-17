@@ -82,7 +82,7 @@ internal sealed class EventSequences(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.ForEventSourceIdAndEventTypes(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventTypeIds, request.EventStreamType, request.EventStreamId);
+                var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.ForEventSourceIdAndEventTypes(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventTypeIds, request.EventStreamType, request.EventStreamId, request.EventSourceType);
                 return result.Select(ToAppendedEventResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventSequences", "ForEventSourceIdAndEventTypes"));

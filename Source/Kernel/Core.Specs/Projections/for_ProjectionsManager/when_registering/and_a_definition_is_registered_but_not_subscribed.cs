@@ -8,14 +8,15 @@ using Cratis.Chronicle.Projections.Engine;
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_registering;
 
 /// <summary>
-/// Nothing about the definitions has changed, so there is no engine registration and no state write.
-/// Subscription is a separate question - see
-/// <see cref="and_registering_identical_definitions_a_second_time"/> for the case where this
-/// activation has already subscribed them, and
-/// <see cref="and_a_definition_is_registered_but_not_subscribed"/> for why an unchanged definition
-/// is still subscribed when it has not been.
+/// A projection can be registered and stored and yet have no live subscription - the activation-time
+/// resubscribe fails for one of them and only logs it. Registration used to decide what to do purely
+/// by comparing incoming definitions against stored ones, and a projection that is registered but
+/// dark compares equal, so every later registration took the unchanged path and did nothing. The
+/// client's own background retry did the same and reported success, while the read model stayed
+/// frozen for as long as the activation lived: events kept appending, commands kept returning
+/// success, and the observer had no failed partitions because it was observing nothing.
 /// </summary>
-public class and_all_definitions_are_unchanged : given.a_projections_manager_grain
+public class and_a_definition_is_registered_but_not_subscribed : given.a_projections_manager_grain
 {
     ProjectionDefinition _existing;
     ProjectionDefinition _incoming;
@@ -34,6 +35,7 @@ public class and_all_definitions_are_unchanged : given.a_projections_manager_gra
 
     async Task Because() => await _grain.Register([_incoming]);
 
+    [Fact] void should_subscribe_the_projection_that_is_not_subscribed() => _observerGrain.ReceivedCalls().ShouldNotBeEmpty();
     [Fact] void should_not_register_with_the_engine() => _projectionsServiceClient.DidNotReceiveWithAnyArgs().Register(default!, default!);
     [Fact] void should_leave_the_registered_definitions_untouched() => _state.Projections.ShouldContainOnly(_existing);
 }

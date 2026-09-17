@@ -47,4 +47,5 @@ public class with_optional_parameters : given.an_event_sequence
     [Fact] void should_pass_event_stream_type() => _request.EventStreamType.ShouldEqual(_eventStreamType.Value);
     [Fact] void should_pass_event_stream_id() => _request.EventStreamId.ShouldEqual(_eventStreamId.Value);
     [Fact] void should_pass_event_types() => _request.EventTypeIds.ShouldEqual(string.Join(',', _eventTypes.Select(_ => _.Id.Value)));
+    [Fact] void should_pass_event_source_type() => _request.EventSourceType.ShouldEqual(_eventSourceType.Value);
 }

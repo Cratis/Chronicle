@@ -51,6 +51,7 @@ public record CapturedEvent(string Id, Contracts.Events.EventContext Context, st
         using var cursor = await sequence.GetFromSequenceNumber(
             EventSequenceNumber.First,
             null,
+            null,
             EventStreamType.All,
             EventStreamId.Default,
             [],

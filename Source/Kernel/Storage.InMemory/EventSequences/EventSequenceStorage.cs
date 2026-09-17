@@ -432,13 +432,14 @@ public class EventSequenceStorage(
     public Task<IEventCursor> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
         IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
-        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes, tags)
+        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags)
             .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
             .OrderBy(_ => _.Context.SequenceNumber)
             .ToList();
