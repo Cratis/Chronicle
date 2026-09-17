@@ -55,8 +55,13 @@ env:
   # bytes per event. Chronicle already has two ways to learn what was stored: read the event, or observe it. The
   # notification now reports what the caller asked for and the sequence number it got, and claims nothing else.
   #
-  # That whole contract is withdrawn. Every other 18.x release is still compared in full, and the published 18.4.0
-  # packages remain immutable - what is withdrawn is the claim that this gate must keep serving them.
+  # That whole contract is withdrawn, and the published 18.4.0 packages remain immutable - what is withdrawn is the
+  # claim that this gate must keep serving them.
+  #
+  # Inert since the 19.0.0 release: only baselines of the major under comparison are passed to the tool, so with a
+  # 19.x baseline this entry is filtered out and no 18.x release is compared at all. It is kept as the record of why
+  # 18.4.0 was withdrawn, and becomes load-bearing again only if a 18.x line is ever compared here. Do not read it as
+  # currently excluding anything.
   WIRE_WITHDRAWN_BASELINES: "18.4.0"
 
 jobs:
