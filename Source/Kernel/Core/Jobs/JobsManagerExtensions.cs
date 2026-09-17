@@ -18,8 +18,10 @@ public static class JobsManagerExtensions
     /// <param name="eventStoreName">The event store name.</param>
     /// <param name="namespaceName">The event store namespace name.</param>
     /// <returns>The <see cref="IJobsManager"/> grain.</returns>
-    public static IJobsManager GetJobsManager(this IGrainFactory factory, EventStoreName eventStoreName, EventStoreNamespaceName namespaceName) =>
+    public static IJobsManager GetJobsManager(this IGrainFactory factory, EventStoreName eventStoreName, EventStoreNamespaceName namespaceName)
+    {
         // Dispatch as a static call: extension-method lookup stops at the innermost enclosing namespace -
         // this class - whose concept-typed overload then converts the strings back and recurses into itself.
-        Cratis.Orleans.Jobs.JobsManagerExtensions.GetJobsManager(factory, eventStoreName.Value, namespaceName.Value);
+        return Cratis.Orleans.Jobs.JobsManagerExtensions.GetJobsManager(factory, eventStoreName.Value, namespaceName.Value);
+    }
 }
