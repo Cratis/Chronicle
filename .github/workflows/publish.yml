@@ -321,6 +321,32 @@ jobs:
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{steps.login.outputs.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
 
+      # A push that returns 0 is not evidence that anything is served - see #4050. Record exactly what went
+      # out, derived from the artifacts themselves rather than a hand-kept list, so verify-published-packages
+      # confirms the real set and cannot drift as projects are added or removed.
+      - name: Record published NuGet packages
+        run: |
+          set -euo pipefail
+          mkdir -p manifests
+          : > manifests/nuget.manifest
+          while IFS= read -r -d '' package; do
+            printf 'nuget\t%s\t%s\n' \
+              "$(basename "$package" ".${{ needs.release.outputs.version }}.nupkg")" \
+              "${{ needs.release.outputs.version }}" >> manifests/nuget.manifest
+          done < <(find '${{ env.NUGET_OUTPUT }}' -name '*.nupkg' ! -name '*.snupkg' -print0)
+          if [ ! -s manifests/nuget.manifest ]; then
+            echo "::error::No .nupkg files found in ${{ env.NUGET_OUTPUT }} after a successful push, so there is nothing to verify."
+            exit 1
+          fi
+          cat manifests/nuget.manifest
+
+      - name: Upload published NuGet manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-manifest-nuget
+          path: manifests/nuget.manifest
+          if-no-files-found: error
+
   notify-arc:
     if: needs.release.outputs.publish == 'true' && needs.release.outputs.prerelease != 'true'
     runs-on: ubuntu-latest
@@ -775,6 +801,48 @@ jobs:
           python3 .github/scripts/verify-published-docker-tags.py \
             --version "$RELEASE_VERSION" \
             --prerelease "$RELEASE_PRERELEASE"
+
+  # A publish step's exit code says the upload call returned, not that the registry accepted it. Chronicle.TypeScript
+  # v6.0.0 printed `+ @cratis/chronicle@6.0.0` with a provenance statement and was absent from npm for hours, and the
+  # release shipped green because nothing checked. Each publish job now records exactly what it pushed, and this job
+  # confirms every one of those packages is both listed and downloadable before the release is believed. See #4050.
+  #
+  # Both halves matter. While that npm version was recovering it was listed by the packument with its tarball still
+  # returning 404 - resolvable and uninstallable at once - so a listing-only check would have called it published.
+  verify-published-packages:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    needs:
+      - release
+      - dotnet-pack-and-publish
+      - publish-typescript-client
+      - publish-kotlin-client
+      - publish-elixir-client
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download published package manifests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: published-manifest-*
+          merge-multiple: true
+          path: manifests
+
+      # The required registries are named explicitly so a publish job that runs but never writes its manifest
+      # fails here instead of leaving the verifier with nothing to check and reporting that as success.
+      - name: Verify published packages are served
+        run: |
+          python3 .github/scripts/verify-published-packages.py \
+            --manifest-directory manifests \
+            --require-registry nuget \
+            --require-registry npm \
+            --require-registry maven \
+            --require-registry hex
 
   verify-published:
     # A merged pull request that publishes nothing is the failure mode that silently costs a release: the release

@@ -81,6 +81,12 @@ jobs:
       - name: Spec the published Docker tag verifier
         run: python3 .github/scripts/test-verify-published-docker-tags.py
 
+      # Same reasoning for the package verifier: it only ever runs on a release, so a pull request is the
+      # only place its manifest parsing, per-registry URLs and refusal to pass on an absent manifest are
+      # exercised. A verifier that quietly stopped checking would otherwise look exactly like a clean release.
+      - name: Spec the published package verifier
+        run: python3 .github/scripts/test-verify-published-packages.py
+
       - name: Spec prerelease artifact handoff without caches
         run: |
           python3 -m pip install PyYAML==6.0.3

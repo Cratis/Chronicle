@@ -84,3 +84,25 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
+      # Maven Central takes minutes to sync after the release call returns, so the push succeeding says even
+      # less here than elsewhere. Record the coordinates for verify-published-packages - see #4050.
+      - name: Record published Maven package
+        working-directory: ./Source/Clients/Kotlin
+        run: |
+          set -euo pipefail
+          COORDINATES="$(sed -nE 's/.*coordinates\("([^"]+)", *"([^"]+)".*/\1:\2/p' build.gradle.kts | head -1)"
+          if [ -z "$COORDINATES" ]; then
+            echo "::error::Could not read the Maven coordinates from build.gradle.kts, so the published package cannot be verified."
+            exit 1
+          fi
+          mkdir -p "$GITHUB_WORKSPACE/manifests"
+          printf 'maven\t%s\t%s\n' "$COORDINATES" "${{ inputs.version }}" > "$GITHUB_WORKSPACE/manifests/maven.manifest"
+          cat "$GITHUB_WORKSPACE/manifests/maven.manifest"
+
+      - name: Upload published Maven manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-manifest-maven
+          path: manifests/maven.manifest
+          if-no-files-found: error
