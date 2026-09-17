@@ -19,14 +19,14 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.19.2" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.19.2" />
-    <PackageVersion Include="Cratis.Arc" Version="22.16.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.16.0" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.16.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.16.0" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.16.0" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.16.0" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.16.0" />
-    <PackageVersion Include="Cratis.Screenplay" Version="4.12.1" />
+    <PackageVersion Include="Cratis.Arc" Version="22.16.1" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.16.1" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.16.1" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.16.1" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.16.1" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.16.1" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.16.1" />
+    <PackageVersion Include="Cratis.Screenplay" Version="4.13.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
