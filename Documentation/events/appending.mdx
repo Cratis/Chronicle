@@ -50,7 +50,7 @@ Earlier 18.x kernels could store empty metadata for single appends. Upgrading co
 
 ## Append receipts
 
-Receipt-aware clients request `IncludeReceipt` for a single append or `IncludeReceipts` for a batch. Successful acknowledgments then carry receipts derived from the metadata returned by storage. Omitting the option keeps the compact acknowledgment used by older clients, so a server upgrade does not unexpectedly enlarge their batch responses. It includes the assigned sequence number, event identity, source and stream routing, actual occurrence time, subject, tags, content hash, causation, and responsible identity. Clients can use that receipt instead of reconstructing persisted metadata from their inputs or local clocks.
+Receipt-aware clients request `IncludeReceipt` for a single append or `IncludeReceipts` for a batch. Successful acknowledgments then carry the event context storage returned, which is the same context a read of that event returns: the assigned sequence number, event identity, source and stream routing, actual occurrence time, subject, tags, content hash, causation, responsible identity, and the event store and namespace it belongs to. Omitting the option keeps the compact acknowledgment used by older clients, so a server upgrade does not unexpectedly enlarge their batch responses. Clients can use that receipt instead of reconstructing persisted metadata from their inputs or local clocks.
 
 A successful batch carries one receipt per input event, in the same order as the sequence numbers and input events. A rejected append has no persisted receipt. An SDK that reports a failed append attempt must not present that attempt as a stored event.
 
@@ -60,8 +60,8 @@ Receipt-aware clients require a kernel that exposes the receipt contract. Upgrad
 
 A receipt is roughly 400 bytes per event and largely repeats what the append sent, so a batch response grows by about that much per event. At Chronicle's default 100 MB message limit this is comfortable, but a large import that reads neither the receipt nor the append notification is paying for data it discards. The .NET client exposes `ChronicleOptions.IncludeAppendReceipts` to turn the request off; appended events and their sequence numbers are unchanged, and notifications then describe the request rather than the persisted event.
 
-:::note[Receipt and read-back contexts are separate shapes]
-A receipt is its own message rather than the event context returned by reads. Both now report the same information, including the event store and namespace an event belongs to, but the two carry different field numbers and a receipt flattens the event type. Consolidating them would change field types on a published contract, so they stay distinct until a major release.
+:::note[A receipt is an event context]
+A receipt is the same event context a read of that event returns, including the event store and namespace it belongs to. An application that already handles a read context needs nothing new to handle a receipt, and the two cannot drift apart.
 :::
 
 ## Upgrading client routing defaults

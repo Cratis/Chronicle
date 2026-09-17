@@ -18,7 +18,7 @@ public class and_a_batch_has_mixed_routes(context context) : Given<context>(cont
     public class context(ChronicleFixture fixture) : Specification<ChronicleFixture>(fixture)
     {
         public Contracts.Sequences.AppendManyResponse Response;
-        public Contracts.EventSequences.AppendReceipt[] Receipts;
+        public Contracts.Sequences.EventContext[] Receipts;
         public IImmutableList<AppendedEvent> Stored;
         public override IEnumerable<Type> EventTypes => [typeof(ReceiptEvent)];
 

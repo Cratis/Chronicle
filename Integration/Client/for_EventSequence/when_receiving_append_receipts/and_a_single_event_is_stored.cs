@@ -57,5 +57,6 @@ public class and_a_single_event_is_stored(context context) : Given<context>(cont
     [Fact] void should_report_the_persisted_hash() => Context.Response.Receipt!.Hash.ShouldEqual(Context.Stored.Context.Hash.Value);
     [Fact] void should_report_the_persisted_causation() => Context.Response.Receipt!.Causation.Select(_ => _.Type).ShouldEqual(Context.Stored.Context.Causation.Select(_ => _.Type.Value));
     [Fact] void should_report_the_persisted_identity() => Context.Response.Receipt!.CausedBy.Subject.ShouldEqual(Context.Stored.Context.CausedBy.Subject);
+    [Fact] void should_report_the_persisted_event_type() => Context.Response.Receipt!.EventType.Id.ShouldEqual(Context.Stored.Context.EventType.Id.Value);
     [Fact] void should_report_the_persisted_causation_timestamps() => Context.Response.Receipt!.Causation.Select(_ => DateTimeOffset.Parse(_.Occurred.Value, CultureInfo.InvariantCulture)).ShouldEqual(Context.Stored.Context.Causation.Select(_ => _.Occurred));
 }

@@ -24,8 +24,8 @@ public class and_storage_acknowledges_event_metadata : given.appending_many_even
 
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_include_a_receipt_for_each_event() => _result.Receipts.Count().ShouldEqual(3);
-    [Fact] void should_preserve_input_order() => _result.Receipts.Select(_ => _.EventSourceId).ShouldEqual(_events.Select(_ => _.EventSourceId));
-    [Fact] void should_match_the_returned_sequence_numbers() => _result.Receipts.Select(_ => _.SequenceNumber).ShouldEqual(_result.SequenceNumbers);
+    [Fact] void should_preserve_input_order() => _result.Receipts.Select(_ => _.EventSourceId).ShouldEqual(_events.Select(_ => _.EventSourceId.Value));
+    [Fact] void should_match_the_returned_sequence_numbers() => _result.Receipts.Select(_ => _.SequenceNumber).ShouldEqual(_result.SequenceNumbers.Select(_ => _.Value));
     [Fact] void should_use_the_persisted_occurrence_times() => _result.Receipts.Select(_ => _.Occurred).ShouldEqual(_storedEvents.Select(_ => _.Context.Occurred));
     [Fact] void should_preserve_receipts_while_reporting_concurrency() => _result.ReportingConcurrencyCheck(true).Receipts.ShouldEqual(_result.Receipts);
 }

@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
 public class with_a_receipt_for_another_event_type : given.an_acknowledged_append
 {
-    void Establish() => _response.Receipt.EventTypeId = "another-type";
+    void Establish() => _response.Receipt.EventType.Id = "another-type";
 
     async Task Because() => _error = await Catch.Exception(() => _eventSequence.Append(_source, "event"));
 

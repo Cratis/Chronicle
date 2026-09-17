@@ -296,7 +296,7 @@ public class AppendResponse
     /// Gets or sets the Receipt.
     /// </summary>
     [ProtoMember(11)]
-    public global::Cratis.Chronicle.Contracts.EventSequences.AppendReceipt? Receipt { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventContext? Receipt { get; set; }
 
     /// <summary>
     /// Gets or sets the IsSuccess.
@@ -448,7 +448,7 @@ public class AppendManyResponse
     /// Gets or sets the Receipts.
     /// </summary>
     [ProtoMember(11)]
-    public IEnumerable<global::Cratis.Chronicle.Contracts.EventSequences.AppendReceipt> Receipts { get; set; } = new List<global::Cratis.Chronicle.Contracts.EventSequences.AppendReceipt>();
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventContext> Receipts { get; set; } = new List<global::Cratis.Chronicle.Contracts.Sequences.EventContext>();
 
     /// <summary>
     /// Gets or sets the IsSuccess.

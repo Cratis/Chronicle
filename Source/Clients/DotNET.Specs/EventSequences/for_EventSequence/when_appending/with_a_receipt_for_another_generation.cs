@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
 public class with_a_receipt_for_another_generation : given.an_acknowledged_append
 {
-    void Establish() => _response.Receipt.Generation = 2;
+    void Establish() => _response.Receipt.EventType.Generation = 2;
 
     async Task Because() => _error = await Catch.Exception(() => _eventSequence.Append(_source, "event"));
 

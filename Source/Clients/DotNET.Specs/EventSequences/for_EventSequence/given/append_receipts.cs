@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Sequences;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
@@ -26,13 +25,11 @@ public static class append_receipts
         return response;
     }
 
-    public static AppendReceipt Create(ulong number, string source, Contracts.Sequences.EventType type, string store, string @namespace, string sourceType = "", string streamType = "", string streamId = "") => new()
+    public static EventContext Create(ulong number, string source, Contracts.Sequences.EventType type, string store, string @namespace, string sourceType = "", string streamType = "", string streamId = "") => new()
     {
         SequenceNumber = number,
         EventSourceId = source,
-        EventTypeId = type.Id,
-        Generation = type.Generation,
-        Tombstone = type.Tombstone,
+        EventType = type,
         EventStore = store,
         Namespace = @namespace,
         EventSourceType = string.IsNullOrEmpty(sourceType) ? "Default" : sourceType,

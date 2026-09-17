@@ -46,6 +46,16 @@ env:
   # release against the contract that is actually meant to be the major's baseline instead of one that never was.
   WIRE_BASELINE_FLOOR: "17.0.1"
 
+  # A withdrawal excludes one named release rather than everything before it, which is what a floor cannot do for the
+  # newest release of a major.
+  #
+  # 18.4.0 introduced append receipts carrying AppendReceipt, AppendCausation and AppendIdentity - three new messages
+  # where two of them are field-for-field copies of the Causation and Identity already in the same package, and the
+  # third duplicates the EventContext a read returns. That contract is withdrawn: receipts now use EventContext, so
+  # a read and a receipt describe an event the same way. Every other 18.x release is still compared in full, and the
+  # published 18.4.0 packages remain immutable - what is withdrawn is the claim that this gate must keep serving them.
+  WIRE_WITHDRAWN_BASELINES: "18.4.0"
+
 jobs:
   wire-compatibility:
     runs-on: ubuntu-latest
@@ -150,9 +160,19 @@ jobs:
             FLOOR=(--since "$SINCE")
           fi
 
+          # Only withdrawals belonging to the major under comparison are passed; the tool refuses the rest rather
+          # than excluding nothing while looking configured.
+          WITHDRAWN=()
+          for VERSION in ${WIRE_WITHDRAWN_BASELINES//,/ }; do
+            if [ "${VERSION%%.*}" = "${{ steps.baseline.outputs.major }}" ]; then
+              WITHDRAWN+=(--withdrawn "$VERSION")
+            fi
+          done
+
           dotnet run --project Source/Tools/WireCompatibility/WireCompatibility.csproj -- \
             --major "${{ steps.baseline.outputs.major }}" \
             ${FLOOR[@]+"${FLOOR[@]}"} \
+            ${WITHDRAWN[@]+"${WITHDRAWN[@]}"} \
             --current "${{ env.PROTOBUF_DIRECTORY }}/chronicle.desc" \
             --allow-missing-baseline \
             --github | tee wire-compatibility.txt

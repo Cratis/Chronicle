@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
 public class with_an_inconsistent_receipt_tombstone : given.an_acknowledged_append
 {
-    void Establish() => _response.Receipt.Tombstone = true;
+    void Establish() => _response.Receipt.EventType.Tombstone = true;
 
     async Task Because() => _error = await Catch.Exception(() => _eventSequence.Append(_source, "event"));
 

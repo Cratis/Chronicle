@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 
+using PersistedContexts = Cratis.Chronicle.Sequences.EventContextConverters;
+
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
@@ -27,7 +29,7 @@ public class AppendManyResult
     /// Gets the persisted metadata for each successful append, in the same order as the input events.
     /// Failed batches carry no receipts.
     /// </summary>
-    public IEnumerable<AppendReceipt> Receipts { get; init; } = [];
+    public IEnumerable<Sequences.EventContext> Receipts { get; init; } = [];
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
@@ -121,7 +123,7 @@ public class AppendManyResult
     {
         CorrelationId = correlationId,
         SequenceNumbers = appendedEvents.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
-        Receipts = appendedEvents.Select(@event => AppendReceipt.From(@event.Context)).ToImmutableList()
+        Receipts = appendedEvents.Select(@event => PersistedContexts.ToApi(@event.Context)).ToImmutableList()
     };
 
     /// <summary>

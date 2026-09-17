@@ -5,6 +5,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 
+using PersistedContexts = Cratis.Chronicle.Sequences.EventContextConverters;
+
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
@@ -25,7 +27,7 @@ public class AppendResult
     /// <summary>
     /// Gets the metadata acknowledged by storage for a successful append, or null when no event was appended.
     /// </summary>
-    public AppendReceipt? Receipt { get; init; }
+    public Sequences.EventContext? Receipt { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
@@ -131,7 +133,7 @@ public class AppendResult
     {
         CorrelationId = correlationId,
         SequenceNumber = appendedEvent.Context.SequenceNumber,
-        Receipt = AppendReceipt.From(appendedEvent.Context)
+        Receipt = PersistedContexts.ToApi(appendedEvent.Context)
     };
 
     /// <summary>

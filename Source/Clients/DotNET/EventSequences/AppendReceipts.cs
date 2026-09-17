@@ -2,15 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
 /// Validates persisted append metadata before exposing any successful local notification.
 /// </summary>
+/// <remarks>
+/// A receipt is the same <see cref="Contracts.Sequences.EventContext"/> a read of the event returns, so an append
+/// and a read describe an event identically rather than through two shapes that have to be kept in step.
+/// </remarks>
 internal static class AppendReceipts
 {
     /// <summary>
@@ -25,7 +27,7 @@ internal static class AppendReceipts
     /// <returns>The persisted context.</returns>
     /// <exception cref="InvalidAppendReceipt">The receipt is missing or inconsistent.</exception>
     internal static EventContext Convert(
-        Contracts.EventSequences.AppendReceipt? receipt,
+        Contracts.Sequences.EventContext? receipt,
         EventSequenceNumber sequenceNumber,
         EventSourceId source,
         EventType eventType,
@@ -38,8 +40,8 @@ internal static class AppendReceipts
         }
 
         if (sequenceNumber.IsUnavailable || receipt.SequenceNumber != sequenceNumber.Value ||
-            receipt.EventSourceId != source.Value || receipt.EventTypeId != eventType.Id.Value ||
-            receipt.Generation != eventType.Generation.Value || receipt.Tombstone != eventType.Tombstone)
+            receipt.EventSourceId != source.Value || receipt.EventType?.Id != eventType.Id.Value ||
+            receipt.EventType.Generation != eventType.Generation.Value || receipt.EventType.Tombstone != eventType.Tombstone)
         {
             throw new InvalidAppendReceipt("sequence, source, or event type does not match the acknowledged input");
         }
@@ -52,29 +54,28 @@ internal static class AppendReceipts
         // Empty values can be valid concept sentinels, including EventHash.NotSet.
         if (receipt.EventSourceType is null || receipt.EventStreamType is null ||
             receipt.EventStreamId is null || receipt.Subject is null || receipt.Hash is null ||
-            receipt.Tags?.Any(_ => _ is null) != false || receipt.Causation is null ||
-            !DateTimeOffset.TryParse(receipt.Occurred?.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var occurred))
+            receipt.Tags?.Any(_ => _ is null) != false || receipt.Causation is null || receipt.CausedBy is null ||
+            !DateTimeOffset.TryParse(receipt.Occurred?.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _))
         {
             throw new InvalidAppendReceipt("persisted context is incomplete or malformed");
         }
 
-        return new(
-            new(receipt.EventTypeId, receipt.Generation, receipt.Tombstone),
-            receipt.EventSourceType,
-            receipt.EventSourceId,
-            receipt.EventStreamType,
-            receipt.EventStreamId,
-            receipt.SequenceNumber,
-            occurred,
-            receipt.EventStore,
-            receipt.Namespace,
-            receipt.CorrelationId,
-            receipt.Causation.Select(ConvertCausation).ToArray(),
-            ConvertIdentity(receipt.CausedBy),
-            receipt.Tags.Select(_ => (Tag)_).ToArray(),
-            receipt.Hash,
-            (EventObservationState)receipt.ObservationState,
-            receipt.Subject);
+        foreach (var causation in receipt.Causation)
+        {
+            if (causation is null || causation.Type is null ||
+                causation.Properties?.Any(_ => _.Value is null) != false ||
+                !DateTimeOffset.TryParse(causation.Occurred?.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _))
+            {
+                throw new InvalidAppendReceipt("persisted causation is incomplete or malformed");
+            }
+        }
+
+        if (receipt.CausedBy.Subject is null || receipt.CausedBy.Name is null || receipt.CausedBy.UserName is null)
+        {
+            throw new InvalidAppendReceipt("persisted identity is incomplete or malformed");
+        }
+
+        return receipt.ToClient(eventStore, @namespace);
     }
 
     /// <summary>
@@ -89,7 +90,7 @@ internal static class AppendReceipts
     /// <returns>The persisted contexts in input order.</returns>
     /// <exception cref="InvalidAppendReceipt">The receipts are missing or inconsistent.</exception>
     internal static IReadOnlyList<EventContext> ConvertMany(
-        IEnumerable<Contracts.EventSequences.AppendReceipt> receipts,
+        IEnumerable<Contracts.Sequences.EventContext> receipts,
         IEnumerable<EventSequenceNumber> sequenceNumbers,
         IReadOnlyList<EventForEventSourceId> events,
         IEventTypes eventTypes,
@@ -116,27 +117,5 @@ internal static class AppendReceipts
         }
 
         return contexts.AsReadOnly();
-    }
-
-    static Causation ConvertCausation(Contracts.EventSequences.AppendCausation causation)
-    {
-        if (causation is null || causation.Type is null ||
-            causation.Properties?.Any(_ => _.Value is null) != false ||
-            !DateTimeOffset.TryParse(causation.Occurred?.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var occurred))
-        {
-            throw new InvalidAppendReceipt("persisted causation is incomplete or malformed");
-        }
-
-        return new(occurred, causation.Type, new Dictionary<string, string>(causation.Properties));
-    }
-
-    static Identity ConvertIdentity(Contracts.EventSequences.AppendIdentity identity)
-    {
-        if (identity is null || identity.Subject is null || identity.Name is null || identity.UserName is null)
-        {
-            throw new InvalidAppendReceipt("persisted identity is incomplete or malformed");
-        }
-
-        return new(identity.Subject, identity.Name, identity.UserName, identity.OnBehalfOf is null ? null : ConvertIdentity(identity.OnBehalfOf));
     }
 }

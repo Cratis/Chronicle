@@ -43,13 +43,13 @@ public class and_storage_acknowledges_event_metadata : given.an_event_sequence
 
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_include_a_receipt() => _result.Receipt.ShouldNotBeNull();
-    [Fact] void should_report_the_stored_source_type() => _result.Receipt!.EventSourceType.ShouldEqual(_storedContext.EventSourceType);
-    [Fact] void should_report_the_stored_stream_type() => _result.Receipt!.EventStreamType.ShouldEqual(_storedContext.EventStreamType);
-    [Fact] void should_report_the_stored_stream_id() => _result.Receipt!.EventStreamId.ShouldEqual(_storedContext.EventStreamId);
+    [Fact] void should_report_the_stored_source_type() => _result.Receipt!.EventSourceType.ShouldEqual(_storedContext.EventSourceType.Value);
+    [Fact] void should_report_the_stored_stream_type() => _result.Receipt!.EventStreamType.ShouldEqual(_storedContext.EventStreamType.Value);
+    [Fact] void should_report_the_stored_stream_id() => _result.Receipt!.EventStreamId.ShouldEqual(_storedContext.EventStreamId.Value);
     [Fact] void should_report_the_stored_occurrence() => _result.Receipt!.Occurred.ShouldEqual(_storedContext.Occurred);
-    [Fact] void should_report_the_stored_subject() => _result.Receipt!.Subject.ShouldEqual(_storedContext.Subject);
-    [Fact] void should_report_the_stored_tags() => _result.Receipt!.Tags.ShouldEqual(_storedContext.Tags);
-    [Fact] void should_pair_the_receipt_with_the_sequence_number() => _result.Receipt!.SequenceNumber.ShouldEqual(_result.SequenceNumber);
+    [Fact] void should_report_the_stored_subject() => _result.Receipt!.Subject.ShouldEqual(_storedContext.Subject.Value);
+    [Fact] void should_report_the_stored_tags() => _result.Receipt!.Tags.ShouldEqual(_storedContext.Tags.Select(_ => _.Value));
+    [Fact] void should_pair_the_receipt_with_the_sequence_number() => _result.Receipt!.SequenceNumber.ShouldEqual(_result.SequenceNumber.Value);
     [Fact] void should_report_the_stored_causation() => _result.Receipt!.Causation.Single().Type.ShouldEqual("stored-cause");
     [Fact] void should_report_the_stored_identity_chain() => _result.Receipt!.CausedBy.OnBehalfOf!.Subject.ShouldEqual("upstream");
     [Fact] void should_report_the_stored_observation_state() => _result.Receipt!.ObservationState.ShouldEqual(_storedContext.ObservationState);
