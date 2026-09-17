@@ -951,6 +951,12 @@ public class ForEventSourceIdAndEventTypesRequest
     /// </summary>
     [ProtoMember(8)]
     public string? EventStreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceType.
+    /// </summary>
+    [ProtoMember(9)]
+    public string? EventSourceType { get; set; }
 }
 
 /// <summary>

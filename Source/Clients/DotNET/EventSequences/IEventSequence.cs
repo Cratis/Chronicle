@@ -44,9 +44,9 @@ public interface IEventSequence
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
     /// <param name="filterEventTypes">Collection of <see cref="EventType"/> to get for.</param>
-    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
-    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
-    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
+    /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to narrow to. Omit, or pass <see cref="EventStreamType.All"/>, to not narrow.</param>
+    /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to narrow to. Omit, or pass <see cref="EventStreamId.Default"/>, to not narrow.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to narrow to. Omit, or pass <see cref="EventSourceType.Default"/> or <see cref="EventSourceType.Unspecified"/>, to not narrow.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> filterEventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSourceType? eventSourceType = default);
 

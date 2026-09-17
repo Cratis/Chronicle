@@ -654,7 +654,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default)
+    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default)
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
@@ -664,6 +664,12 @@ public class EventSequenceStorage(
         if (eventSourceId?.IsSpecified == true)
         {
             query = query.Where(e => e.EventSourceId == eventSourceId);
+        }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
+        {
+            var resolvedEventSourceType = eventSourceType.Value;
+            query = query.Where(e => e.EventSourceType == resolvedEventSourceType);
         }
 
         if (eventStreamType?.IsAll == false)

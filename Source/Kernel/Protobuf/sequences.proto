@@ -271,6 +271,7 @@ message ForEventSourceIdAndEventTypesRequest {
    string EventTypeIds = 6;
    string EventStreamType = 7;
    string EventStreamId = 8;
+   string EventSourceType = 9;
 }
 message FromSequenceNumberRequest {
    string EventStore = 2;

@@ -69,6 +69,7 @@ internal static class EventSequenceQuerying
     /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
     /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
     /// <param name="eventStreamId">Optional event stream to narrow to.</param>
+    /// <param name="eventSourceType">Optional event source type to narrow to.</param>
     /// <returns>Every matching event, unpaged.</returns>
     internal static async Task<IEnumerable<AppendedEvent>> ReadFromSequenceNumber(
         IStorage storage,
@@ -81,7 +82,8 @@ internal static class EventSequenceQuerying
         string? eventSourceId = default,
         string? eventTypeIds = default,
         string? eventStreamType = default,
-        string? eventStreamId = default)
+        string? eventStreamId = default,
+        string? eventSourceType = default)
     {
         var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
@@ -89,6 +91,12 @@ internal static class EventSequenceQuerying
         if (EventSequenceQueryCriteriaFactory.Trimmed(eventSourceId) is { } trimmedEventSourceId)
         {
             resolvedEventSourceId = trimmedEventSourceId;
+        }
+
+        Concepts.Events.EventSourceType? resolvedEventSourceType = null;
+        if (EventSequenceQueryCriteriaFactory.Trimmed(eventSourceType) is { } trimmedEventSourceType)
+        {
+            resolvedEventSourceType = trimmedEventSourceType;
         }
 
         Concepts.Events.EventStreamType? resolvedEventStreamType = null;
@@ -107,6 +115,7 @@ internal static class EventSequenceQuerying
         using (var cursor = await eventSequence.GetFromSequenceNumber(
             fromEventSequenceNumber,
             resolvedEventSourceId,
+            resolvedEventSourceType,
             resolvedEventStreamType,
             resolvedEventStreamId,
             EventSequenceQueryCriteriaFactory.SplitEventTypes(eventTypeIds)))

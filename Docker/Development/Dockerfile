@@ -70,6 +70,8 @@ VOLUME /data/db /data/configdb
 WORKDIR /app
 
 COPY Docker/${ENTRYPOINT} ./entrypoint.sh
+# Sourced by the entrypoint to name whatever already holds the server's port when a bind fails - see #4048.
+COPY Docker/report-port-holder.sh ./report-port-holder.sh
 RUN chmod +x ./entrypoint.sh
 
 # Copy prepared application files — the large out/ directory stays in the prep

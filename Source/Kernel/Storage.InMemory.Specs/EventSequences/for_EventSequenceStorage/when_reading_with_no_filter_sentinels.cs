@@ -7,9 +7,9 @@ namespace Cratis.Chronicle.Storage.InMemory.for_EventSequenceStorage;
 
 /// <summary>
 /// The kernel asks for "everything" by passing each criterion's sentinel — an unspecified
-/// <see cref="EventSourceId"/>, <see cref="EventStreamType.All"/>, the default <see cref="EventStreamId"/>
-/// and an empty event type set — never <see langword="null"/>. Treating a sentinel as a value to match on
-/// narrows every event away and makes reads silently return nothing.
+/// <see cref="EventSourceId"/>, an unspecified <see cref="EventSourceType"/>, <see cref="EventStreamType.All"/>,
+/// the default <see cref="EventStreamId"/> and an empty event type set — never <see langword="null"/>. Treating a
+/// sentinel as a value to match on narrows every event away and makes reads silently return nothing.
 /// </summary>
 public class when_reading_with_no_filter_sentinels : given.a_storage_with_appended_events
 {
@@ -22,6 +22,7 @@ public class when_reading_with_no_filter_sentinels : given.a_storage_with_append
         using var cursor = await _storage.GetFromSequenceNumber(
             EventSequenceNumber.First,
             EventSourceId.Unspecified,
+            EventSourceType.Unspecified,
             EventStreamType.All,
             EventStreamId.Default,
             []);
