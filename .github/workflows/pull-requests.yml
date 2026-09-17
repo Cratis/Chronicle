@@ -1,7 +1,13 @@
 name: PR Prerelase
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Keyed on the pull request, not github.ref. Under pull_request_target github.ref is the *base*
+  # branch, so every pull request targeting main shared one group and cancel-in-progress made each new
+  # one cancel whichever other pull request was mid-run. The victim is left with a cancelled prerelease
+  # and no superseding run, which reads as a failed required check that no rerun of its own will fix -
+  # and a check that silently did not run looks exactly like one that passed. Every sibling workflow
+  # already keys on the pull request number; this one did not.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
