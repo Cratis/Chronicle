@@ -12,7 +12,38 @@ name: Wire Compatibility
 #      floor, where one applies to that major - reporting each one, so a break says which releases it breaks rather
 #      than only that something broke.
 
+concurrency:
+  # Scoped by this workflow's own name rather than `github.workflow`. In a called reusable workflow that
+  # expression resolves to the *caller*, which would put a publish's gate run in the publish group and let a
+  # later pull request cancel it. Cancelling is for pull request pushes only - a publish must never have its
+  # gate cancelled out from under it, because nothing downstream of it may ship unchecked.
+  group: wire-compatibility-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
+  # Two triggers, because there are two moments this can still stop something: the pull request, where the
+  # break can be fixed, and the publish, where the version being released is known.
+  #
+  # Until now there was only the second. `workflow_call` was the sole trigger and `publish.yml` its only
+  # caller, so the gate could block a release but never a merge - a contract break landed in main and the
+  # first person to meet it was whoever cut the next release. Two things in the file had been written for a
+  # pull request run that was never wired up: the `major` label below is read from
+  # `github.event.pull_request.labels.*.name`, which is always null under `workflow_call`, and `version` is
+  # optional precisely so that a run with no release version can fall back to the latest tag. On 2026-09-17
+  # that gap let a client-breaking contract change reach production (#4058).
+  pull_request:
+    branches:
+      - "**"
+    # `paths-ignore`, never `paths`. An include list fails closed: a change on a path nobody thought to list
+    # is simply not checked, and the gate reports success having looked at nothing. That is how a
+    # `Directory.Packages.props` bump once merged with no build at all - see
+    # `.github/build-affecting-paths.txt`, which exists to keep that lesson. This list names only things that
+    # cannot change the wire contract, so anything unforeseen still runs the gate. The run costs about a
+    # minute.
+    paths-ignore:
+      - "Documentation/**"
+      - "**/*.md"
+
   workflow_call:
     inputs:
       version:
@@ -62,6 +93,10 @@ env:
 jobs:
   wire-compatibility:
     runs-on: ubuntu-latest
+    # Downloading a contracts package per released minor and building Contracts takes about a minute. The
+    # default is six hours, and one hung run holds a slot in the organization's shared concurrency pool for
+    # all of it.
+    timeout-minutes: 30
     permissions:
       contents: read
     outputs:
