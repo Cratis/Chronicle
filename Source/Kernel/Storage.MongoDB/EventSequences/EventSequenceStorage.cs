@@ -809,6 +809,7 @@ public class EventSequenceStorage(
     public async Task<IEventCursor> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = null,
+        EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = null,
@@ -826,6 +827,11 @@ public class EventSequenceStorage(
         if (eventSourceId?.IsSpecified == true)
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceType, eventSourceType));
         }
 
         if (eventStreamType?.IsAll == false)
