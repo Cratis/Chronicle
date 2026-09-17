@@ -127,6 +127,28 @@ public class ChronicleOptions(
     public bool SkipKeepAlive { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to skip the server compatibility check on connect.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The client asks the server, on every connect, whether it still serves the contract this client was
+    /// built against, and refuses to connect when the server says no (see
+    /// <c language="csharp">Source/Kernel/Compatibility</c>). That comparison runs on the server, so it is
+    /// only as current as the kernel build answering it — a kernel that has not been redeployed since a
+    /// wire-compatibility defect was fixed still computes the old, incorrect verdict, and no client-side
+    /// change can make it compute a different one.
+    /// </para>
+    /// <para>
+    /// Set this to <see langword="true"/> as a deliberate escape hatch for exactly that situation — a known-safe
+    /// skew against a kernel that cannot be redeployed to fix the check itself. It is not a general-purpose
+    /// override: turning it on hides every other incompatibility too, including a genuine one. The
+    /// connection string's <c language="csharp">skipCompatibilityCheck=true</c> option asks for the same
+    /// thing; either input is enough, see <see cref="CompatibilityCheckPolicy"/>.
+    /// </para>
+    /// </remarks>
+    public bool SkipCompatibilityCheck { get; set; }
+
+    /// <summary>
     /// Gets or sets the maximum receive message size in bytes for gRPC messages. Defaults to 100 MB.
     /// </summary>
     public int? MaxReceiveMessageSize { get; set; } = 100 * 1024 * 1024;

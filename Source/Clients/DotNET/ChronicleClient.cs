@@ -144,6 +144,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         // any certificate setup. Opt into full validation with skipTlsValidation=false (or
         // Tls.SkipCertificateValidation = false) against a server whose certificate is verifiable.
         var skipTlsValidation = TlsCertificateValidationPolicy.ShouldSkip(options.Tls, options.ConnectionString);
+        var skipCompatibilityCheck = CompatibilityCheckPolicy.ShouldSkip(options, options.ConnectionString);
 
         var tokenProvider = CreateTokenProvider(options, skipTlsValidation);
         _ownedConnectionCancellation = new();
@@ -163,6 +164,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             certificatePath,
             certificatePassword,
             tokenProvider,
+            skipCompatibilityCheck: skipCompatibilityCheck,
             skipKeepAlive: options.SkipKeepAlive,
             loadBalancerStrategy: options.LoadBalancerStrategy);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
