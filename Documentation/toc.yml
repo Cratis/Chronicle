@@ -36,6 +36,8 @@
   href: closing-streams/toc.yml
 - name: Migrations
   href: migrations/toc.yml
+- name: Upgrading
+  href: upgrading/toc.yml
 - name: Compliance
   href: compliance/toc.yml
 - name: Read Models
