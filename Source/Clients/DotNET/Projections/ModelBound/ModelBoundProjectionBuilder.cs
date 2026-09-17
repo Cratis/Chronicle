@@ -5,6 +5,7 @@ using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
@@ -106,7 +107,112 @@ internal class ModelBoundProjectionBuilder(
         return definition;
     }
 
-    static string ConvertValueToInvariantString(object value) => FromDefinitionExtensions.ConvertValueToInvariantString(value);
+    /// <summary>
+    /// Builds a projection definition for one variant of a mutually exclusive group of read models (see
+    /// <see cref="VariantOfAttribute{TIdentity}"/>).
+    /// </summary>
+    /// <param name="modelType">The type of the variant read model.</param>
+    /// <param name="siblingVariantTypes">The other variant types in the same group.</param>
+    /// <returns>The <see cref="ProjectionDefinition"/>, an ordinary and independent definition for this variant alone.</returns>
+    /// <remarks>
+    /// The variant is built exactly as an ordinary read model, then reclassified: only its declared
+    /// <see cref="EntersOnAttribute{TEvent}"/> event(s) remain create-or-update <c language="csharp">From</c>
+    /// handlers. Every other event handler the variant declares is moved to an update-only, self-referential
+    /// <c language="csharp">Join</c> - keyed by the variant's own <see cref="KeyAttribute"/> property matched
+    /// against the event source id - so it can update an already-active instance but can never create or
+    /// resurrect one. Mutual exclusion is expressed by adding a <c language="csharp">RemovedWith</c> entry for
+    /// every sibling variant's entering event(s).
+    /// </remarks>
+    public ProjectionDefinition BuildVariant(Type modelType, IEnumerable<Type> siblingVariantTypes)
+    {
+        var definition = Build(modelType);
+        ReclassifyForVariant(modelType, definition);
+        AddMutualExclusion(definition, siblingVariantTypes);
+        return definition;
+    }
+
+    void ReclassifyForVariant(Type modelType, ProjectionDefinition definition)
+    {
+        var entersOnAttributes = modelType.GetAttributesOfGenericType<EntersOnAttribute<object>>().ToList();
+        if (entersOnAttributes.Count == 0)
+        {
+            throw new VariantMustDeclareEntersOnEvent(modelType);
+        }
+
+        var entersOnEventTypeIds = new HashSet<EventType>();
+        foreach (var (attr, eventType) in entersOnAttributes)
+        {
+            var eventTypeId = GetOrCreateEventType(eventType);
+            entersOnEventTypeIds.Add(eventTypeId);
+
+            var keyProperty = attr.GetType().GetProperty(nameof(EntersOnAttribute<object>.Key));
+            var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
+            var convertedKey = key.StartsWith('$') ? key : _namingPolicy.GetPropertyName(new PropertyPath(key));
+
+            if (!definition.From.TryGetValue(eventTypeId, out var fromDefinition))
+            {
+                fromDefinition = new FromDefinition { Properties = new Dictionary<string, string>() };
+                definition.From[eventTypeId] = fromDefinition;
+            }
+
+            fromDefinition.Key = convertedKey;
+        }
+
+        var keyPropertyName = GetOwnKeyPropertyName(modelType);
+
+        foreach (var eventTypeId in definition.From.Keys.Where(id => !entersOnEventTypeIds.Contains(id)).ToList())
+        {
+            var fromDefinition = definition.From[eventTypeId];
+            definition.From.Remove(eventTypeId);
+            definition.Join[eventTypeId] = new JoinDefinition
+            {
+                On = keyPropertyName,
+                Key = fromDefinition.Key ?? WellKnownExpressions.EventSourceId,
+                Properties = fromDefinition.Properties
+            };
+        }
+    }
+
+    void AddMutualExclusion(ProjectionDefinition definition, IEnumerable<Type> siblingVariantTypes)
+    {
+        foreach (var siblingType in siblingVariantTypes)
+        {
+            foreach (var (_, siblingEventType) in siblingType.GetAttributesOfGenericType<EntersOnAttribute<object>>())
+            {
+                var siblingEventTypeId = GetOrCreateEventType(siblingEventType);
+                if (!definition.RemovedWith.ContainsKey(siblingEventTypeId))
+                {
+                    definition.RemovedWith[siblingEventTypeId] = new RemovedWithDefinition
+                    {
+                        Key = WellKnownExpressions.EventSourceId,
+                        ParentKey = WellKnownExpressions.EventSourceId
+                    };
+                }
+            }
+        }
+    }
+
+    string ConvertValueToInvariantString(object value) => FromDefinitionExtensions.ConvertValueToInvariantString(value);
+
+    string GetOwnKeyPropertyName(Type modelType)
+    {
+        var constructors = modelType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+        var primaryConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+        var keyParameter = primaryConstructor?.GetParameters().FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>(true) is not null);
+        if (keyParameter is not null)
+        {
+            return _namingPolicy.GetPropertyName(new PropertyPath(keyParameter.Name!));
+        }
+
+        var keyProperty = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(p => Attribute.IsDefined(p, typeof(KeyAttribute), true));
+        if (keyProperty is not null)
+        {
+            return _namingPolicy.GetPropertyName(new PropertyPath(keyProperty.Name));
+        }
+
+        throw new VariantMustDeclareKeyProperty(modelType);
+    }
 
     EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
     {
