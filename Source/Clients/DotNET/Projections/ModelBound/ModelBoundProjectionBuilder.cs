@@ -200,38 +200,16 @@ internal class ModelBoundProjectionBuilder(
             fromDefinition.Key = convertedKey;
         }
 
-        var keyPropertyName = GetOwnKeyPropertyName(modelType);
-
-        foreach (var eventTypeId in definition.From.Keys.Where(id => !entersOnEventTypeIds.Contains(id)).ToList())
-        {
-            var fromDefinition = definition.From[eventTypeId];
-            definition.From.Remove(eventTypeId);
-            definition.Join[eventTypeId] = new JoinDefinition
-            {
-                On = keyPropertyName,
-                Key = fromDefinition.Key ?? WellKnownExpressions.EventSourceId,
-                Properties = fromDefinition.Properties
-            };
-        }
+        VariantReclassifier.Reclassify(definition.From, definition.Join, entersOnEventTypeIds, GetOwnKeyPropertyName(modelType));
     }
 
     void AddMutualExclusion(ProjectionDefinition definition, IEnumerable<Type> siblingVariantTypes)
     {
-        foreach (var siblingType in siblingVariantTypes)
-        {
-            foreach (var (_, siblingEventType) in siblingType.GetAttributesOfGenericType<EntersOnAttribute<object>>())
-            {
-                var siblingEventTypeId = GetOrCreateEventType(siblingEventType);
-                if (!definition.RemovedWith.ContainsKey(siblingEventTypeId))
-                {
-                    definition.RemovedWith[siblingEventTypeId] = new RemovedWithDefinition
-                    {
-                        Key = WellKnownExpressions.EventSourceId,
-                        ParentKey = WellKnownExpressions.EventSourceId
-                    };
-                }
-            }
-        }
+        var siblingEnteringEventTypes = siblingVariantTypes
+            .SelectMany(siblingType => siblingType.GetAttributesOfGenericType<EntersOnAttribute<object>>())
+            .Select(sibling => GetOrCreateEventType(sibling.EventType));
+
+        VariantReclassifier.AddMutualExclusion(definition.RemovedWith, siblingEnteringEventTypes);
     }
 
     string ConvertValueToInvariantString(object value) => FromDefinitionExtensions.ConvertValueToInvariantString(value);
