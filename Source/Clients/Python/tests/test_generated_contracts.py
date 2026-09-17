@@ -55,8 +55,8 @@ def test_persisted_metadata_survives_a_receipt_roundtrip() -> None:
     receipt.EventStore = "store"
     receipt.Namespace = "tenant"
     receipt.SequenceNumber = 42
-    receipt.EventTypeId = "event"
-    receipt.Generation = 1
+    receipt.EventType.Id = "event"
+    receipt.EventType.Generation = 1
     receipt.EventSourceId = "source"
     receipt.EventSourceType = "Account"
     receipt.EventStreamType = "Payments"
@@ -73,6 +73,7 @@ def test_persisted_metadata_survives_a_receipt_roundtrip() -> None:
     assert restored.HasField("Receipt")
     assert restored.Receipt == receipt
     assert restored.Receipt.EventStreamId == "period"
+    assert restored.Receipt.EventType.Id == "event"
     assert restored.Receipt.Causation[0].Properties["source"] == "test"
 
 
