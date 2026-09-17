@@ -62,6 +62,11 @@ env:
 jobs:
   wire-compatibility:
     runs-on: ubuntu-latest
+    # Downloading a contracts package per released minor and building Contracts takes about a minute. The
+    # default is six hours, and this job gates every build and every publish - so a run that hangs holds a
+    # slot in the organization's shared concurrency pool for all of it, with everything downstream of it
+    # queued behind a check that is never going to answer.
+    timeout-minutes: 30
     permissions:
       contents: read
     outputs:
