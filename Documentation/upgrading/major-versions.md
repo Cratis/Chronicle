@@ -206,7 +206,7 @@ Two kinds of change behave differently when you skip:
 
 - **Compile-time changes accumulate but do not interact.** Renamed namespaces, moved types and
   changed signatures pile up without interacting; you fix them once against the version you
-land on.
+  land on.
 - **Stored-state changes are ordered.** 6 → 7 (observer keys), 10 → 11 (job state) and
   13 → 14 (read-model and event-type layout) each concern data already written. Skipping past
   one does not skip its consequence.
