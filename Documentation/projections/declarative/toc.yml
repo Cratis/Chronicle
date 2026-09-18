@@ -34,3 +34,5 @@
   href: from-event-sequence.mdx
 - name: NotRewindable
   href: not-rewindable.mdx
+- name: Variants
+  href: variants.mdx
