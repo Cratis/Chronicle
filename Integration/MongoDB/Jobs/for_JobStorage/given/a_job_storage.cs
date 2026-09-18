@@ -1,21 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Cratis.Orleans.Storage.MongoDB.Jobs;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using NSubstitute;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Jobs.for_JobStorage.given;
 
 public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.given.a_mongo_client(fixture)
 {
     protected JobStorage _storage = default!;
-    protected IEventStoreNamespaceDatabase _database = default!;
     protected IMongoDatabase _mongoDatabase = default!;
     protected string _databaseName = default!;
 
@@ -23,10 +20,6 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.give
     {
         _databaseName = $"chronicle_job_storage_specs_{Guid.NewGuid():N}";
         _mongoDatabase = _client.GetDatabase(_databaseName);
-
-        _database = Substitute.For<IEventStoreNamespaceDatabase>();
-        _database.GetCollection<JobState>(WellKnownCollectionNames.Jobs)
-            .Returns(_mongoDatabase.GetCollection<JobState>(WellKnownCollectionNames.Jobs));
 
         if (!BsonClassMap.IsClassMapRegistered(typeof(JobState)))
         {
@@ -38,7 +31,7 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.give
         BsonSerializer.RegisterSerializationProvider(
             new JobStateSerializationProvider(jobStateSerializer));
 
-        _storage = new JobStorage(_database.Client.GetDatabase(_database.GetType().Name), jobTypes);
+        _storage = new JobStorage(_mongoDatabase, jobTypes);
 
         await Task.CompletedTask;
     }
