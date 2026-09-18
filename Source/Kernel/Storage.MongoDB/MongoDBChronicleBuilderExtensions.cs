@@ -84,8 +84,10 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<ISystemStorage, SystemStorage>();
 
             // The Cratis.Orleans job system storage: the same MongoDB client, databases named exactly where
-            // the kernel has always kept its job state, resolved per event store and namespace.
-            services.AddSingleton(sp => new MongoDBJobsStorage(
+            // the kernel has always kept its job state, resolved per event store and namespace. Registered
+            // as IJobsStorage - that is the type the package's JobsManager grain and the kernel's storage
+            // trees inject; a registration keyed only on the concrete type leaves IJobsStorage unresolved.
+            services.AddSingleton<Cratis.Orleans.Storage.IJobsStorage>(sp => new MongoDBJobsStorage(
                 sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings),
                 sp.GetRequiredService<IJobTypes>(),
                 sp.GetRequiredService<ICustomSerializers>(),
