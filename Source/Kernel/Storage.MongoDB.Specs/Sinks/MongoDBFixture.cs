@@ -23,7 +23,8 @@ public sealed class MongoDBFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        _container = new ContainerBuilder("mongo")
+        // Allow an explicit test image when the default image cannot run on the local Docker kernel.
+        _container = new ContainerBuilder(Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo")
             .WithPortBinding(MongoDBPort, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(MongoDBPort)
