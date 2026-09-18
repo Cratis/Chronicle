@@ -61,7 +61,7 @@ restart from their default position.
 
 ### 7 to 8
 
-**Namespaces, transport and several apis** — released 2023-01-23.
+**Namespaces, transport and several APIs** — released 2023-01-23.
 
 The largest boundary in this list. The client stopped using an Orleans client to reach the
 kernel and moved to a REST-based approach. Namespaces were renamed wholesale
@@ -107,7 +107,7 @@ upgrading if their completion matters.
 
 ### 11 to 12
 
-**Internalized apis and a renamed package** — released 2025-06-04.
+**Internalized APIs and a renamed package** — released 2025-06-04.
 
 Kernel APIs that were reachable through dependencies were internalized. The
 `Cratis.Chronicle.Orleans.InProcess` package became `Cratis.Chronicle.InProcess`. The
@@ -142,7 +142,7 @@ and go to **14.0.1**, not 14.0.0.
 
 ### 14 to 15
 
-**Rules retired, tls, content type** — released 2026-02-03.
+**Rules retired, TLS, content type** — released 2026-02-03.
 
 **Rules** were removed as a building block in favor of FluentValidation and standard ASP.NET
 Core mechanisms. `AppendedEvent.Content` in the .NET client became `object` — the actual
@@ -155,7 +155,7 @@ TLS for production; rename the testing package reference.
 
 ### 15 to 16
 
-**One port, always tls** — released 2026-07-09.
+**One port, always TLS** — released 2026-07-09.
 
 The server consolidated all traffic onto port `35000` and that port always uses TLS, with a
 self-signed certificate generated automatically in development. The `managementPort` server
@@ -190,7 +190,7 @@ directly against the raw gRPC contracts must send and receive `Content` as a str
 
 ### 18 to 19
 
-**A .net signature** — released 2026-09-17.
+**A .NET signature** — released 2026-09-17.
 
 One public .NET method parameter moved from `bool` to `bool?`. Nothing changed on the wire.
 See [Upgrading from 18 to 19](18-to-19.md).
