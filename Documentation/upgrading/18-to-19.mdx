@@ -9,9 +9,9 @@ not already passing the one argument described below.
 
 ## What actually changed
 
-One parameter, on one public .NET extension method. On `AddCratisChronicleConnection`,
-`skipCompatibilityCheck` went from `bool skipCompatibilityCheck = false` to
-`bool? skipCompatibilityCheck = null`.
+One parameter, on one public .NET extension method:
+
+<ChronicleClientTabs snippet="upgrading/18-to-19/skip-compatibility-check" />
 
 `bool` became `bool?` so that leaving it unspecified can fall back to the connection
 string's `skipCompatibilityCheck` option, exactly as `skipTlsValidation` already did.
