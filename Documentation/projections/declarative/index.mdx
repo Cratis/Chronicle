@@ -26,6 +26,7 @@ Projection types are discovered by implementing `IProjectionFor<TReadModel>`. Ev
 - **Event context** access for timestamps, sequence numbers, and IDs
 - **Event sequence selection** for sourcing from non-default sequences
 - **Passive and not rewindable projections** for specialized observation behavior
+- **Variants** for mutually exclusive read model shapes of the same logical entity
 
 ## When to Use
 
@@ -60,6 +61,7 @@ Use model-bound projections when:
 | [RemoveWithJoin](remove-with-join) | Cross-stream child removal |
 | [FromEventSequence](from-event-sequence) | Sourcing events from specific event sequences |
 | [NotRewindable](not-rewindable) | Forward-only projections that cannot be replayed |
+| [Variants](variants) | Mutually exclusive read model shapes for the same logical entity |
 
 ## Reading Your Declarative Projections
 
