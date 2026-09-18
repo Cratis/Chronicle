@@ -11,6 +11,8 @@ on:
       - "**"
     paths:
       - ".github/workflows/markdown-verification.yml"
+      - ".github/scripts/assert-upgrade-guides-complete.py"
+      - ".github/scripts/test-assert-upgrade-guides-complete.py"
       - ".markdownlint.json"
       - "Documentation/**"
 
@@ -28,6 +30,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Tags are what say which majors were released, and the upgrade-guide check needs them.
+          # It falls back to the GitHub API and reports could-not-run rather than passing when it
+          # can read neither, but fetching them here keeps the common path offline and fast.
+          fetch-depth: 0
 
       - name: Lint Markdown and MDX files
         uses: DavidAnson/markdownlint-cli2-action@v18
@@ -41,3 +48,13 @@ jobs:
 
       - name: Validate Starlight authoring
         run: node ./Documentation/verify-authoring.mjs
+
+      # The checker only ever runs here, so this is the only place its own behavior is exercised -
+      # including that it refuses to pass when it could not determine the released majors.
+      - name: Spec the upgrade guide checker
+        run: python3 .github/scripts/test-assert-upgrade-guides-complete.py
+
+      # A page listing major boundaries looks complete while silently falling a version behind;
+      # the gap surfaces only when someone upgrading goes looking for the row nobody wrote.
+      - name: Assert every released major boundary has an upgrade guide
+        run: python3 .github/scripts/assert-upgrade-guides-complete.py
