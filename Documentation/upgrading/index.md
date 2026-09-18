@@ -31,7 +31,7 @@ the one you are going to, including when that spans several majors at once.
 | From → to | What it means for you |
 |---|---|
 | [Every major version](major-versions.md) | The whole history, 6 → 19, including which two releases to step over rather than onto. |
-| [18 → 19](18-to-19.md) | Nothing, for almost everyone. One .NET method signature changed; rebuild and move on. |
+| [18 → 19](18-to-19.mdx) | Nothing, for almost everyone. One .NET method signature changed; rebuild and move on. |
 
 ## How to read a Chronicle version
 

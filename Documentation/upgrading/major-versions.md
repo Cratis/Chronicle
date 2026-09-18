@@ -193,7 +193,7 @@ directly against the raw gRPC contracts must send and receive `Content` as a str
 **A .net signature** — released 2026-09-17.
 
 One public .NET method parameter moved from `bool` to `bool?`. Nothing changed on the wire.
-See [Upgrading from 18 to 19](18-to-19.md).
+See [Upgrading from 18 to 19](18-to-19.mdx).
 
 **You do:** rebuild.
 
