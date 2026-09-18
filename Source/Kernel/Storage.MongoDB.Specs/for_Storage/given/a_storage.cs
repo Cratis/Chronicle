@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.MongoDB.Specs;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -26,7 +26,7 @@ public class a_storage : Specification
             Substitute.For<Chronicle.Json.IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
             new KnownInstancesOf<ISinkFactory>([]),
-            Substitute.For<IJobTypes>(),
+            JobsStorageForSpecs.Create(new MongoClient("mongodb://localhost:27017")),
             Options.Create(new ChronicleOptions()),
             NullLoggerFactory.Instance);
     }

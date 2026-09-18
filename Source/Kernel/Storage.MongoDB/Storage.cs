@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Reactive;
@@ -23,7 +22,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage"/> the job system resolves through.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
@@ -31,7 +30,7 @@ public class Storage(
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     IInstancesOf<ISinkFactory> sinkFactories,
-    IJobTypes jobTypes,
+    Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IStorage
 {
@@ -91,7 +90,7 @@ public class Storage(
             expandoObjectConverter,
             jsonSerializerOptions,
             @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories),
-            jobTypes,
+            jobsStorage,
             options,
             loggerFactory);
 

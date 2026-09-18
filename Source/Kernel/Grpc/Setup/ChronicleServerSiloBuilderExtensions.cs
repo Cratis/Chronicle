@@ -6,14 +6,12 @@ using Cratis.Arc;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
@@ -28,6 +26,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -59,6 +58,25 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
+
+        // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Orleans.Jobs.JobsOptions,
+        // not ChronicleOptions - this host never calls AddCratisOrleans (it wires the pieces individually), so
+        // nothing maps one to the other unless it happens here. MaxParallelSteps preserves the pre-rip-out cap:
+        // the old JobStepThrottle capped at min(Jobs.GetEffectiveMaxParallelSteps(), Observers.MaxConcurrentPartitions);
+        // the package's throttle only applies GetEffectiveMaxParallelSteps() to whatever MaxParallelSteps carries,
+        // so the cap has to be folded in here to keep the effective limit unchanged.
+        builder.Services.TryAddSingleton<IOptions<Cratis.Orleans.Jobs.JobsOptions>>(sp =>
+        {
+            var chronicleOptions = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
+            return Options.Create(new Cratis.Orleans.Jobs.JobsOptions
+            {
+                MaxParallelSteps = Math.Min(chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(), chronicleOptions.Observers.MaxConcurrentPartitions),
+                DeadJobThreshold = chronicleOptions.Jobs.DeadJobThreshold,
+                CleanupCadence = chronicleOptions.Jobs.CleanupCadence,
+                StepCheckpointBatchInterval = chronicleOptions.Jobs.StepCheckpointBatchInterval,
+                StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
+            });
+        });
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();

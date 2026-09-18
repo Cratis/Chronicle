@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Seeding;
-
 using ContractSeedingEntry = Cratis.Chronicle.Contracts.Seeding.SeedingEntry;
 using SeededEntry = Cratis.Chronicle.Seeding.SeedingEntry;
 using SeedingGrain = Cratis.Chronicle.Seeding.IResultAwareEventSeeding;

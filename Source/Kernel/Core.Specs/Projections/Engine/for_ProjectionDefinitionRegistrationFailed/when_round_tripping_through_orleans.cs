@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Setup.Serialization;
+using Cratis.Orleans;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 
@@ -21,7 +21,7 @@ public class when_round_tripping_through_orleans : Specification
     {
         var services = new ServiceCollection();
         services.AddSingleton(new JsonSerializerOptions());
-        services.AddConceptSerializer();
+        services.AddCratisOrleansSerializers();
         var serializer = services.BuildServiceProvider().GetRequiredService<Serializer>();
         _result = serializer.Deserialize<Engine.ProjectionDefinitionRegistrationFailed>(serializer.SerializeToArray(_original));
     }

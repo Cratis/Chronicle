@@ -17,4 +17,3 @@ public record FromEveryDefinition(IDictionary<PropertyPath, string> Properties, 
     /// </summary>
     public AutoMap AutoMap { get; set; } = AutoMap.Inherit;
 }
-

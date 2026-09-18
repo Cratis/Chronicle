@@ -4,7 +4,6 @@
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
@@ -19,14 +18,14 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="database">The <see cref="IDatabase"/> instance.</param>
 /// <param name="expandoObjectConverter">The <see cref="Json.IExpandoObjectConverter"/> instance.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> instance.</param>
-/// <param name="jobTypes">The <see cref="IJobTypes"/> instance.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage"/> the job system resolves through.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> instance.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> instance.</param>
 public class ClusterStorage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IJobTypes jobTypes,
+    Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IClusterStorage
 {
@@ -54,7 +53,7 @@ public class ClusterStorage(
         expandoObjectConverter,
         jsonSerializerOptions,
         sinksFactory,
-        jobTypes,
+        jobsStorage,
         options,
         loggerFactory);
 

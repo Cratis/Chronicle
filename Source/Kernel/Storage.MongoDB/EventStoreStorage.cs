@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -50,7 +49,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinksFactory"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class EventStoreStorage(
@@ -59,7 +58,7 @@ public class EventStoreStorage(
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     SinksFactory sinksFactory,
-    IJobTypes jobTypes,
+    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
@@ -127,7 +126,7 @@ public class EventStoreStorage(
             expandoObjectConverter,
             jsonSerializerOptions,
             sinksFactory(@namespace),
-            jobTypes,
+            jobsStorage,
             options,
             loggerFactory);
 

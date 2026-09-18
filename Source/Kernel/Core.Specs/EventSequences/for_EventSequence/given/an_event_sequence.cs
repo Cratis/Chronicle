@@ -15,7 +15,6 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Schemas;
@@ -25,6 +24,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Metrics;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -45,7 +45,7 @@ public class an_event_sequence : Specification
 
     protected List<EventSequenceNumber> _constraintIndexSequenceNumbers;
     protected EventSequenceNumber _appendedSequenceNumber;
-    protected Orleans.Core.IStorage<EventSequenceState> _stateStorage;
+    protected global::Orleans.Core.IStorage<EventSequenceState> _stateStorage;
 
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;

@@ -34,4 +34,3 @@ public record HandleEventsForObserverArguments(
     /// </remarks>
     public bool SkipFailedPartitions { get; init; }
 }
-

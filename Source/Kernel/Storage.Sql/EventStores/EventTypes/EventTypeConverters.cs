@@ -157,4 +157,3 @@ public static class EventTypeConverters
             migrations);
     }
 }
-

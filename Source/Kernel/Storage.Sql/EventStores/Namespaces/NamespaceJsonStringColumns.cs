@@ -18,8 +18,6 @@ internal static class NamespaceJsonStringColumns
     /// </summary>
     public static readonly (Type EntityType, string PropertyName)[] All =
     [
-        (typeof(Jobs.Job), "StateJson"),
-        (typeof(JobSteps.JobStep), "StateJson"),
         (typeof(FailedPartitions.FailedPartition), "StateJson"),
         (typeof(Recommendations.Recommendation), "RequestJson"),
         (typeof(Patterns.BehaviorPattern), "FacetsJson"),

@@ -104,4 +104,3 @@ public record NestedSimulationDashboard(
 
     [ChildrenFrom<NestedConfigurationAdded>(key: nameof(NestedConfigurationAdded.Id), identifiedBy: nameof(NestedSimulationConfiguration.Id))]
     IEnumerable<NestedSimulationConfiguration> Configurations);
-

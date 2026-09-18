@@ -94,4 +94,3 @@ internal static class InProcessCommandPipeline
         return services.BuildServiceProvider().GetRequiredService<ICommandPipeline>();
     }
 }
-
