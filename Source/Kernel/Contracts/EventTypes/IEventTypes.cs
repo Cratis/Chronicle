@@ -95,19 +95,19 @@ public class CreateEventTypeRequest
 public class RegisterEventTypesRequest
 {
     /// <summary>
-    /// Gets or sets the EventStore.
+    /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
     public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the Types.
+    /// Gets or sets the types.
     /// </summary>
     [ProtoMember(2)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration> Types { get; set; } = new List<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration>();
 
     /// <summary>
-    /// Gets or sets the DisableValidation.
+    /// Gets or sets the disableValidation.
     /// </summary>
     [ProtoMember(3)]
     public bool DisableValidation { get; set; }
