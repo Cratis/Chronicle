@@ -12,16 +12,46 @@ namespace Cratis.Chronicle.EventTypes;
 /// <summary>
 /// Represents the command for registering every event type a client knows about.
 /// </summary>
-/// <param name="EventStore">The event store to register into.</param>
-/// <param name="Types">The event types to register.</param>
-/// <param name="DisableValidation">Whether to skip the migration and schema checks, honored in development builds only.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventTypes)]
-public record RegisterEventTypes(
-    EventStoreName EventStore,
-    IEnumerable<Contracts.Events.EventTypeRegistration> Types,
-    bool DisableValidation)
+public record RegisterEventTypes
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RegisterEventTypes"/> command.
+    /// </summary>
+    /// <param name="eventStore">The event store to register into.</param>
+    /// <param name="types">The event types to register.</param>
+    /// <param name="disableValidation">Whether to skip the migration and schema checks, honored in development builds only.</param>
+    public RegisterEventTypes(
+        EventStoreName eventStore,
+        IEnumerable<Contracts.Events.EventTypeRegistration> types,
+        bool disableValidation)
+    {
+        EventStore = eventStore;
+        Types = types?.ToList()!;
+        DisableValidation = disableValidation;
+    }
+
+    /// <summary>
+    /// The event store to register into.
+    /// </summary>
+    public EventStoreName EventStore { get; }
+
+    /// <summary>
+    /// The event types to register.
+    /// </summary>
+    /// <remarks>
+    /// A repeated gRPC field may expose a single-use sequence. The command pipeline validates this
+    /// property before <see cref="Handle"/> reaches the registrar, so preserving the registrations
+    /// here is required for the registrar to see the same values after validation.
+    /// </remarks>
+    public IEnumerable<Contracts.Events.EventTypeRegistration> Types { get; }
+
+    /// <summary>
+    /// Whether to skip the migration and schema checks, honored in development builds only.
+    /// </summary>
+    public bool DisableValidation { get; }
+
     /// <summary>
     /// Handles the command by validating the registrations and writing the ones that changed.
     /// </summary>
