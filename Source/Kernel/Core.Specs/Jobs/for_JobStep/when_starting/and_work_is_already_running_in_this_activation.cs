@@ -18,7 +18,10 @@ public class and_work_is_already_running_in_this_activation : given.a_job_step_l
     {
         _jobStep.HoldPerformOpen = true;
         _first = await _jobStep.Start(GrainId.Create("job", _jobId.ToString()));
-        await Task.WhenAny(_jobStep.Performed.Task, Task.Delay(TimeSpan.FromSeconds(5), TimeProvider.System));
+
+        // Await the fact that the work is genuinely in flight before the second start - the gate keeps
+        // it in flight until the spec releases it.
+        await _jobStep.Performed.Task;
         _second = await _jobStep.Start(GrainId.Create("job", _jobId.ToString()));
         _jobStep.Gate.TrySetResult();
     }

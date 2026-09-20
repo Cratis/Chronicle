@@ -15,14 +15,20 @@ public class and_the_persisted_state_says_scheduled_from_a_dead_process : given.
 {
     Result<StartJobStepError> _result;
 
-    async Task Because() => _result = await _jobStep.Start(GrainId.Create("job", _jobId.ToString()));
+    async Task Because()
+    {
+        _result = await _jobStep.Start(GrainId.Create("job", _jobId.ToString()));
+
+        // Await the fact itself: the step performing again is the entire point. A regression back to
+        // answering AlreadyStarted never performs, which parks this await until the test host's own
+        // timeout reports the hang.
+        if (_result.IsSuccess)
+        {
+            await _jobStep.Performed.Task;
+        }
+    }
 
     [Fact] void should_start_rather_than_answer_already_started() => _result.IsSuccess.ShouldBeTrue();
 
-    [Fact]
-    async Task should_perform_the_step_again()
-    {
-        var performed = await Task.WhenAny(_jobStep.Performed.Task, Task.Delay(TimeSpan.FromSeconds(5), TimeProvider.System));
-        performed.ShouldEqual(_jobStep.Performed.Task);
-    }
+    [Fact] void should_perform_the_step_again() => _jobStep.Performed.Task.IsCompletedSuccessfully.ShouldBeTrue();
 }
