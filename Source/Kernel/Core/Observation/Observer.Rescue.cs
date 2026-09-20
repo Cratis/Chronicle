@@ -111,4 +111,24 @@ public partial class Observer
         await TransitionTo<Routing>();
         return true;
     }
+
+    /// <summary>
+    /// Brings a quarantined observer back to life. A fresh subscription or an explicit clear is the
+    /// changed world quarantine was waiting for - the client reconnected (typically a redeploy or a
+    /// restart, the very action an operator takes to fix things) or an operator asked directly.
+    /// Leaving the observer quarantined on re-subscription made quarantine terminal in practice:
+    /// nothing on the client's side could ever revive it, and it stayed dead across every subsequent
+    /// deploy. The strand counter resets along with it - the attempts belonged to the world the old
+    /// subscription lived in, and without the reset a single further stranded catch-up preparation
+    /// puts the observer straight back into quarantine because the counter is already past the bound.
+    /// If catch-up keeps stranding under the new subscription, the bound quarantines the observer
+    /// again. Routing is the only transition quarantine allows, and it re-evaluates the gap and
+    /// drives catch-up or observing from there.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task ReviveFromQuarantine()
+    {
+        _catchupRecoveryAttempts = 0;
+        await TransitionTo<Routing>();
+    }
 }

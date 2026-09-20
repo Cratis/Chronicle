@@ -149,7 +149,7 @@ public partial class Observer(
     {
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
-            await TransitionTo<Routing>();
+            await ReviveFromQuarantine();
         }
     }
 
@@ -259,6 +259,7 @@ public partial class Observer(
 
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
+            await ReviveFromQuarantine();
             return;
         }
 
@@ -309,6 +310,7 @@ public partial class Observer(
 
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
+            await ReviveFromQuarantine();
             return;
         }
 
