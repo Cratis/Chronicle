@@ -115,7 +115,8 @@ public class ProjectionObserverSubscriber(
         State = definition;
         await WriteStateAsync();
 
-        // Rebuild the pipeline with the updated definition
+        // Pipeline caches are silo-local; a definition notification must evict this subscriber's cache too.
+        projectionPipelineManager.EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
         await HandlePipeline();
     }
 
