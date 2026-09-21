@@ -167,7 +167,7 @@ public class HandleEventsForPartition(
             var requestedEventTypes = currentState.EventTypes.ToArray();
             var eventTypesToRead = requestedEventTypes.Length != 0
                 ? requestedEventTypes
-                : subscription.EventTypes.ToArray();
+                : await ResolveFallbackEventTypesToRead(subscription.EventTypes);
             var nonRedactionEventTypeIds = eventTypesToRead
                 .Where(et => et.Id != GlobalEventTypes.Redaction)
                 .Select(et => et.Id)
@@ -402,4 +402,17 @@ public class HandleEventsForPartition(
 
     Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
         eventCompliance.Release(events, _eventTypeSchemas);
+
+    /// <summary>
+    /// Resolve the event types to read when the observer's subscription itself carries none - an observer
+    /// subscribed to all events has no fixed list, since new event types can be registered after it subscribed,
+    /// so its full, current set is resolved from the observer rather than trusted from the subscription snapshot.
+    /// </summary>
+    /// <param name="subscriptionEventTypes">The event types recorded on the current subscription.</param>
+    /// <returns>The event types to read.</returns>
+    async Task<EventType[]> ResolveFallbackEventTypesToRead(IEnumerable<EventType> subscriptionEventTypes)
+    {
+        var eventTypes = subscriptionEventTypes.ToArray();
+        return eventTypes.Length != 0 ? eventTypes : (await _observer.GetEventTypes()).ToArray();
+    }
 }

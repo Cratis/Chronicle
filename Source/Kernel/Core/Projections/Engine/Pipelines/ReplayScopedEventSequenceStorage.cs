@@ -181,8 +181,8 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber) => inner.GetEventAt(sequenceNumber);
 
     /// <inheritdoc/>
-    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
-        inner.GetFromSequenceNumber(sequenceNumber, eventSourceId, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
+    public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        inner.GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
 
     /// <inheritdoc/>
     public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>

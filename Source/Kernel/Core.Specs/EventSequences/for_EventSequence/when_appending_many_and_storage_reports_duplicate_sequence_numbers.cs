@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
@@ -42,9 +43,12 @@ public class when_appending_many_and_storage_reports_duplicate_sequence_numbers 
                     return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
                 }
 
+                var events = callInfo.Arg<IEnumerable<EventToAppendToStorage>>();
                 return _lastSubmittedSequenceNumbers.Any(_usedSequenceNumbers.Contains)
                     ? (Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>)new DuplicateEventSequenceNumber(_nextAvailableSequenceNumber)
-                    : Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
+                    : Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(events.Select(@event => new AppendedEvent(
+                        EventContext.From(EventStore, EventStoreNamespace, @event.EventType, @event.EventSourceType, @event.EventSourceId, @event.EventStreamType, @event.EventStreamId, @event.SequenceNumber, @event.CorrelationId),
+                        new ExpandoObject())).ToArray());
             });
     }
 

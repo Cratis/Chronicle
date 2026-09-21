@@ -38,7 +38,7 @@ message ChangeUserPasswordRequest {
 }
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -46,7 +46,7 @@ message CommandResult {
 }
 message QueryResult_AdminPasswordStatusResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -54,7 +54,7 @@ message QueryResult_AdminPasswordStatusResponse {
 }
 message QueryResult_IEnumerable_ApplicationResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
@@ -62,7 +62,7 @@ message QueryResult_IEnumerable_ApplicationResponse {
 }
 message QueryResult_IEnumerable_UserResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;

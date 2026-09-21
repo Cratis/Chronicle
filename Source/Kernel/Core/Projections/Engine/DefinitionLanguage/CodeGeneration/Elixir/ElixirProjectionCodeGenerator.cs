@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Text;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -100,6 +101,9 @@ public class ElixirProjectionCodeGenerator : IProjectionCodeGenerator
 
     static void AppendFromMacros(ProjectionDefinition definition, StringBuilder builder)
     {
+        // Append from_every first if present
+        AppendFromEveryMacro(definition.FromEvery, definition.SubscribesToAllEvents, builder);
+
         foreach (var (eventType, from) in definition.From)
         {
             var eventTypeName = LastSegment(eventType.Id.Value);
@@ -193,6 +197,73 @@ public class ElixirProjectionCodeGenerator : IProjectionCodeGenerator
     {
         var index = value.LastIndexOf('.');
         return index < 0 ? value : value[(index + 1)..];
+    }
+
+    static void AppendFromEveryMacro(FromEveryDefinition fromEvery, bool subscribesToAllEvents, StringBuilder builder)
+    {
+        if (!subscribesToAllEvents || fromEvery.Properties.Count == 0)
+        {
+            return;
+        }
+
+        var options = new List<string>();
+        var sets = new List<string>();
+        var counts = new List<string>();
+
+        foreach (var (property, expression) in fromEvery.Properties)
+        {
+            var mapping = ProjectionExpressions.ReadMapping(property, expression);
+
+            // Skip dynamic dictionary keys for now - Elixir client doesn't have that API yet
+            if (property.Path.Contains($".{WellKnownExpressions.EventContext}."))
+            {
+                continue;
+            }
+
+            var field = ToSnakeCase(mapping.Property);
+
+            switch (mapping.Operation)
+            {
+                case ProjectionOperation.Count:
+                    counts.Add(field);
+                    break;
+                case ProjectionOperation.Increment:
+                    options.Add($"increment: :{field}");
+                    break;
+                case ProjectionOperation.Decrement:
+                    options.Add($"decrement: :{field}");
+                    break;
+                case ProjectionOperation.Add:
+                    options.Add($"add: [{field}: {KeywordValue(mapping.Source!)}]");
+                    break;
+                case ProjectionOperation.Subtract:
+                    options.Add($"subtract: [{field}: {KeywordValue(mapping.Source!)}]");
+                    break;
+                case ProjectionOperation.Clear:
+                    options.Add($"clear: :{field}");
+                    break;
+                default:
+                    sets.Add($"{field}: {KeywordValue(mapping.Source!)}");
+                    break;
+            }
+        }
+
+        if (sets.Count > 0)
+        {
+            options.Insert(0, $"set: [{string.Join(", ", sets)}]");
+        }
+
+        foreach (var field in counts)
+        {
+            options.Add($"count: :{field}");
+        }
+
+        if (options.Count > 0)
+        {
+            builder
+                .AppendLine($"  from_every {string.Join(", ", options)}")
+                .AppendLine();
+        }
     }
 
     static string ToSnakeCase(string value)

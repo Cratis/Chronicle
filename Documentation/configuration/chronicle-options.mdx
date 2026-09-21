@@ -94,6 +94,17 @@ Controls whether Chronicle automatically discovers event types, projections, rea
 
 Set to `false` when using a custom `IClientArtifactsProvider` or when you want full manual control over what gets registered.
 
+### SkipCompatibilityCheck
+
+Skips the connect-time wire-compatibility check against the server.
+
+| | |
+|---|---|
+| Type | `bool` |
+| Default | `false` |
+
+Use this only as a deliberate, temporary escape hatch — for example, when a client that has only *gained* capabilities since the server's release is incorrectly refused by a server that cannot be redeployed to pick up a wire-compatibility fix. It does not make an incompatibility disappear; it silences every incompatibility the check would have caught, including a genuine one. The connection string's `skipCompatibilityCheck=true` option asks for the same thing; either input is enough. See [Server support: Compatibility check](../connection-strings/server#compatibility-check) for the full explanation.
+
 ### DefaultSinkTypeId
 
 Controls which sink type is used when registering projections and reducers with the Kernel. Chronicle supports two built-in sink types:

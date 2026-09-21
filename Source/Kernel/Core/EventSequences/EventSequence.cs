@@ -513,6 +513,7 @@ public class EventSequence(
     /// <param name="causation">The <see cref="Causation"/> chain for the append.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> that caused the append.</param>
     /// <returns>The <see cref="AppendManyResult"/> describing the outcome.</returns>
+    /// <exception cref="InvalidAppendAcknowledgment">Storage did not acknowledge every submitted event.</exception>
     /// <remarks>
     /// The sequence numbers are computed against a local running value and only committed to
     /// <see cref="EventSequenceState.SequenceNumber"/> after a successful storage append — mirroring the
@@ -586,7 +587,10 @@ public class EventSequence(
         logger.AppendManyReceived(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedCount);
 
         appendedEventsList ??= [];
-        var sequenceNumbers = appendedEventsList.Select(e => e.Context.SequenceNumber).ToImmutableList();
+        if (appendedEventsList.Count != eventsToAppend.Count)
+        {
+            throw new InvalidAppendAcknowledgment(eventsToAppend.Count, appendedEventsList.Count);
+        }
 
         foreach (var appendedEvent in appendedEventsList)
         {
@@ -598,7 +602,7 @@ public class EventSequence(
             appendedEventsList,
             constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
 
-        return AppendManyResult.Success(correlationId, sequenceNumbers);
+        return AppendManyResult.Success(correlationId, appendedEventsList.Select(@event => @event.Context.SequenceNumber));
     }
 
     async Task<AppendResult> AppendValidAndCompliantEvent(
@@ -614,8 +618,8 @@ public class EventSequence(
         ExpandoObject compliantEvent,
         JsonObject compliantContent,
         ConstraintValidationContext constraintContext,
-        DateTimeOffset? occurred = null,
-        Subject? subject = null)
+        DateTimeOffset? occurred,
+        Subject? subject)
     {
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);

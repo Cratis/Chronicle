@@ -55,13 +55,13 @@ public class EnsureNamespaceRequest
     /// Gets or sets the EventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Namespace.
     /// </summary>
     [ProtoMember(2)]
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -74,13 +74,13 @@ public class NamespaceNamesResponse
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(2)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(1)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -93,7 +93,7 @@ public class AllNamespacesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -106,5 +106,5 @@ public class ObserveNamespacesRequest
     /// Gets or sets the eventStore.
     /// </summary>
     [ProtoMember(1)]
-    public string EventStore { get; set; }
+    public string EventStore { get; set; } = string.Empty;
 }

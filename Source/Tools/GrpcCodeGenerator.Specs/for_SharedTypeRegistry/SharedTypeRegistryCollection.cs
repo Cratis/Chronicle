@@ -7,9 +7,10 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_SharedTypeRegistry;
 /// Forces every <see cref="SharedTypeRegistry"/> spec to run sequentially rather than in xUnit's default parallel
 /// classes. The registry is deliberately static, global, mutable state - correct for the single-shot CLI process
 /// it actually runs in, but two spec classes mutating and enumerating it at the same time is a data race the real
-/// generator never has, not a defect the specs should be papering over.
+/// generator never has, not a defect the specs should be papering over. Other generator specs also read the
+/// registry, so this collection must not overlap those readers either.
 /// </summary>
-[CollectionDefinition(Name)]
+[CollectionDefinition(Name, DisableParallelization = true)]
 public static class SharedTypeRegistryCollection
 {
     /// <summary>

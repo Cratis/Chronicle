@@ -85,9 +85,3 @@ paths:
   four unintended releases on 2026-08-25.
 - Every repository's release-intent gate must accept `no-release`; a gate that only
   accepts `major`/`minor`/`patch` forces exactly that mistake.
-
-## In this repository specifically
-
-- Keep one workflow that runs `Source/Verification`, checks harness adapters, and
-  uses `cratis/release-action` for semantic versioning and release decisions.
-- Do not add evidence, provenance, inventory, or generated-catalog gates.

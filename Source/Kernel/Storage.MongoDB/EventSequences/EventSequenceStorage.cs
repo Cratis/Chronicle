@@ -207,6 +207,9 @@ public class EventSequenceStorage(
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
         Subject? subject = null)
     {
+        occurred = StoredTimestamps.Normalize(occurred);
+        causation = causation.Select(StoredTimestamps.Normalize).ToArray();
+
         try
         {
             var generationalContent = new Dictionary<string, BsonDocument>();
@@ -292,7 +295,11 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
     {
-        var eventsArray = events.ToArray();
+        var eventsArray = events.Select(@event => @event with
+        {
+            Occurred = StoredTimestamps.Normalize(@event.Occurred),
+            Causation = @event.Causation.Select(StoredTimestamps.Normalize).ToArray()
+        }).ToArray();
         if (eventsArray.Length == 0)
         {
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
@@ -802,6 +809,7 @@ public class EventSequenceStorage(
     public async Task<IEventCursor> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = null,
+        EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = null,
@@ -819,6 +827,11 @@ public class EventSequenceStorage(
         if (eventSourceId?.IsSpecified == true)
         {
             filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        if (eventSourceType?.IsDefaultOrUnspecified == false)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceType, eventSourceType));
         }
 
         if (eventStreamType?.IsAll == false)

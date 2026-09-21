@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -35,11 +36,12 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
 
         _silo.AddService(Options.Create(new ChronicleOptions
         {
-            Observers = new Observers { ReplayOnDefinitionChange = true }
+            Observers = new Observers { DefinitionEvolution = DefinitionEvolutionPolicy.Automatic }
         }));
+        _silo.AddService(Substitute.For<Storage.IStorage>());
 
         var namespacesGrain = Substitute.For<INamespaces>();
-        namespacesGrain.GetAll().Returns([]);
+        namespacesGrain.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespacesGrain);
         _silo.AddProbe(_ => Substitute.For<IConnectedClients>());
 
@@ -62,5 +64,6 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
         EventSequenceId.Log,
         [],
         readModel,
-        false);
+        false,
+        []);
 }

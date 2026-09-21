@@ -210,13 +210,14 @@ public interface IEventSequenceStorage
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> to get from.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
+    /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to filter for.</param>
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to filter for.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to filter for.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
     /// <param name="tags">Optional collection of <see cref="Tag">tags</see> to filter for - an event matches when it carries any of them.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
-    Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
+    Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get events within a specific sequence number range.

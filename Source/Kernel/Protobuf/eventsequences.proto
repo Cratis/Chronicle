@@ -11,7 +11,7 @@ message IsStreamCompletedRequest {
 }
 message QueryResult_Boolean {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   bool IsAuthorized = 2; // default value could not be applied: True
+   bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;

@@ -22,10 +22,8 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
 
         RuleFor(_ => _.Events).NotEmpty().WithMessage("At least one event is required.");
 
-        // Each event's stream metadata is deliberately not required. `EventSourceType.Unspecified`,
-        // `EventStreamType` and `EventStreamId` all carry the empty string as a first-class sentinel
-        // meaning "not narrowed - use the default", and the .NET client sends exactly that on every
-        // append. Requiring them would reject every append the client SDK makes.
+        // Omitted or empty routing metadata is accepted per event. The handler resolves it to
+        // canonical append defaults before validating constraints or persisting the batch.
         RuleForEach(_ => _.Events).ChildRules(@event =>
         {
             @event.RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");

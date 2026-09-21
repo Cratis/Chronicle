@@ -299,6 +299,7 @@ public class Projections(
     {
         var result = new Dictionary<Type, ProjectionDefinition>();
         var failures = new Dictionary<Type, Exception>();
+        var variantDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
         foreach (var projectionType in clientArtifacts.Projections)
         {
             var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
@@ -311,7 +312,8 @@ public class Projections(
                     namingPolicy,
                     eventTypes,
                     artifactsActivator,
-                    jsonSerializerOptions
+                    jsonSerializerOptions,
+                    variantDeclarations
                 ]) as Catch<ProjectionDefinition>)!;
             if (createProjectionDefinitionResult.TryGetException(out var exception))
             {
@@ -321,6 +323,8 @@ public class Projections(
             }
             result.Add(projectionType, createProjectionDefinitionResult.AsT0);
         }
+
+        VariantReclassifier.CrossWireGroups(result, variantDeclarations);
 
         return (result, failures);
     }
@@ -333,7 +337,8 @@ public class Projections(
             INamingPolicy namingPolicy,
             IEventTypes eventTypes,
             IClientArtifactsActivator artifactsActivator,
-            JsonSerializerOptions jsonSerializerOptions)
+            JsonSerializerOptions jsonSerializerOptions,
+            IDictionary<Type, FluentVariantDeclaration> variantDeclarations)
         {
             try
             {
@@ -345,7 +350,14 @@ public class Projections(
 
                 var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
                 activateArtifactResult.AsT0.Define(builder);
-                return builder.Build();
+                var definition = builder.Build();
+
+                if (builder.VariantDeclaration is not null)
+                {
+                    variantDeclarations[type] = builder.VariantDeclaration;
+                }
+
+                return definition;
             }
             catch (Exception ex)
             {

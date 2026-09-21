@@ -1,0 +1,84 @@
+# Variants
+
+Some entities do not have one shape for their whole lifetime — a work item is a backlog entry until a
+pull request exists for it, then it is a pull request until it merges, then it is closed. Modeling that
+as a single read model with a `Status` property and an ever-growing set of nullable columns makes every
+query filter on state before it can trust a field, and a shape meant for one stage leaks properties that
+only make sense in another.
+
+Variants let you declare several mutually exclusive read models for the same logical entity instead. Each
+variant is an ordinary model-bound projection with its own shape — only the properties that stage of the
+entity's life actually has. Entering one variant automatically removes the entity from every other variant
+in the group, so at any point in time an entity exists in exactly one of them.
+
+## Declaring a group of variants
+
+Use `[VariantOf<TIdentity>]` on every read model that represents one stage, and `[EntersOn<TEvent>]` to say
+which event activates that stage. `TIdentity` anchors the group — every variant marked with the same
+identity type is mutually exclusive with every other:
+
+<ChronicleClientTabs snippet="projections/model-bound/variants/basic" />
+
+`WorkItem` does not have to be a read model itself, and it does not need a common CLR base type with any of
+the variants — its only job is to be a shared type every variant in the group points at.
+
+When an `IssueCreated` event is processed, a `BacklogItem` is created — `Title` maps by convention, exactly
+as it would on an ordinary `[FromEvent<T>]` projection. When a `PullRequestCreated` event is processed for
+the same entity, a `PullRequestItem` is created **and the `BacklogItem` for that entity is removed** — no
+`RemovedWith` attribute needed, the group takes care of it. If `PullRequestCreated` arrives for an entity
+that was never a `BacklogItem` at all, `PullRequestItem` is still created; variants are not required to be
+entered in any particular order, only to be mutually exclusive once entered.
+
+## Only the entering event can create a variant
+
+Everything a variant maps from besides its entering event is still declared exactly like an ordinary
+projection — `[SetFrom<TEvent>]`, `[Key]`, and the rest all work the same way. The only difference is what
+that mapping is allowed to do: it can update an already-active instance of the variant, but it can never
+create one.
+
+<ChronicleClientTabs snippet="projections/model-bound/variants/updating-a-variant" />
+
+`BuildStatus` is mapped from `BuildCompleted`. Because `BuildCompleted` is not the event named with
+`[EntersOn<T>]`, Chronicle reclassifies that mapping into an update-only join on the variant's own key
+before it ever reaches the projection engine — the entering event stays the only door into the variant.
+
+:::caution[Why this matters]
+Without that reclassification, an out-of-order or replayed `BuildCompleted` event could **resurrect** a
+`PullRequestItem` for an entity that has since moved on to another variant, or even one that was never a
+pull request at all — the exact bug this feature exists to make structurally impossible. You do not have
+to reason about event ordering to get this guarantee; declaring `[EntersOn<T>]` is what gives it to you.
+:::
+
+## Sharing handlers across variants
+
+A mapping that every variant needs — a title every stage keeps up to date, for example — does not have to
+be repeated on each variant type. Declare it once on a type marked `[GlobalFor<TIdentity>]` instead:
+
+<ChronicleClientTabs snippet="projections/model-bound/variants/shared-handler" />
+
+Every mapping declared on the shared handler is merged into every variant of `WorkItem`. Like any other
+non-entering event, a shared mapping can only update an already-active variant — it can never create or
+resurrect one, so it is safe to share across a group whose members enter at different times.
+
+Every variant must have the member a shared mapping targets. A variant that does not is a declaration
+error, not a silently skipped mapping — this is caught when the projection is discovered, not at some
+unpredictable point at runtime once a shared event happens to arrive for that variant.
+
+## Complete example
+
+<ChronicleClientTabs snippet="projections/model-bound/variants/full-example" />
+
+## Best practices
+
+1. **Pick an identity type that means something on its own** — `WorkItem` in the examples above, not a
+   marker interface with no purpose beyond grouping. It is the type every variant, and every shared
+   handler, points back to.
+2. **Give every variant only the properties that stage of the entity actually has.** A shared property
+   that every stage needs belongs on a `[GlobalFor<T>]` handler instead of being copy-pasted onto each
+   variant.
+3. **Reach for variants when the shapes genuinely diverge.** A single read model with a `Status` property
+   is still the right choice when every stage shares almost all of its properties and differs only in a
+   flag or two — see [Choosing a read-model style](../choosing-a-read-model-style).
+4. **Remember each variant is its own collection.** There is no built-in query that spans a whole group —
+   a caller that needs "this entity, whichever stage it's currently in" queries each variant explicitly
+   (or by its shared key) rather than assuming a single combined collection.

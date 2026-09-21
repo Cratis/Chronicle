@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Tools.WireCompatibility;
 /// </summary>
 /// <param name="Major">The major version whose every released minor is a baseline.</param>
 /// <param name="Since">The oldest release still treated as a baseline, when a floor has been declared.</param>
+/// <param name="Withdrawn">Releases whose contract has been withdrawn, so they are not baselines.</param>
 /// <param name="BaselineVersion">An explicit baseline version, overriding <paramref name="Major"/>.</param>
 /// <param name="BaselineAssembly">A local contracts assembly to use as the baseline instead of downloading one.</param>
 /// <param name="Current">The current descriptor set, or the contracts assembly to generate one from.</param>
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Tools.WireCompatibility;
 public record Options(
     int? Major,
     string? Since,
+    IReadOnlyList<string> Withdrawn,
     string? BaselineVersion,
     string? BaselineAssembly,
     string Current,
@@ -35,6 +37,7 @@ public record Options(
         string.Empty,
         "  --major <n>              Compare against every released minor of major version n.",
         "  --since <version>        The oldest release to compare against. Must be in the same major as --major.",
+        "  --withdrawn <version>    A released version whose contract was withdrawn. Repeatable.",
         "  --baseline <version>     Compare against an explicit released version.",
         "  --baseline-assembly <p>  Compare against a local contracts assembly.",
         "  --current <path>         The descriptor set, or contracts assembly, to check. Required.",
@@ -55,6 +58,7 @@ public record Options(
     {
         int? major = null;
         string? since = null;
+        var withdrawn = new List<string>();
         string? baselineVersion = null;
         string? baselineAssembly = null;
         string? current = null;
@@ -71,6 +75,9 @@ public record Options(
                     break;
                 case "--since":
                     since = Next(args, ref index, "--since");
+                    break;
+                case "--withdrawn":
+                    withdrawn.Add(Next(args, ref index, "--withdrawn"));
                     break;
                 case "--baseline":
                     baselineVersion = Next(args, ref index, "--baseline");
@@ -119,9 +126,22 @@ public record Options(
             throw new InvalidArguments($"--since {since} is not in major {major}, so it says nothing about which of that major's releases are baselines.");
         }
 
+        // Withdrawing a release the tool would never have compared against reads exactly like a working exclusion,
+        // so it is refused here rather than quietly excluding nothing.
+        if (withdrawn.Count > 0 && major is null)
+        {
+            throw new InvalidArguments("--withdrawn only means something alongside --major, which is what decides the set of baselines it narrows.");
+        }
+
+        foreach (var version in withdrawn.Where(_ => !string.Equals(_.Split('.')[0], major?.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)))
+        {
+            throw new InvalidArguments($"--withdrawn {version} is not in major {major}, so it excludes none of that major's releases.");
+        }
+
         return new(
             major,
             since,
+            withdrawn,
             baselineVersion,
             baselineAssembly,
             current,

@@ -23,8 +23,16 @@ public static class GeneratedSourceCompiler
     /// Compiles the given sources alongside the executor stubs.
     /// </summary>
     /// <param name="sources">The generated sources to compile.</param>
-    /// <returns>The errors, and the assembly when there were none.</returns>
-    public static (IReadOnlyList<Diagnostic> Errors, Assembly? Assembly) Compile(params string[] sources)
+    /// <returns>The errors, and the assembly when emission succeeded.</returns>
+    public static (IReadOnlyList<Diagnostic> Errors, Assembly? Assembly) Compile(params string[] sources) => Compile(false, sources);
+
+    /// <summary>
+    /// Compiles sources with optional warning checks as well as error checks.
+    /// </summary>
+    /// <param name="includeWarnings">Whether to include compilation warnings in the diagnostics.</param>
+    /// <param name="sources">The generated sources to compile.</param>
+    /// <returns>The diagnostics, and the assembly when emission succeeded.</returns>
+    public static (IReadOnlyList<Diagnostic> Errors, Assembly? Assembly) Compile(bool includeWarnings, params string[] sources)
     {
         var parseOptions = new CSharpParseOptions(LanguageVersion.Latest);
 
@@ -40,14 +48,14 @@ public static class GeneratedSourceCompiler
             "GeneratedImplementationTest",
             trees,
             References(),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
 
         using var stream = new MemoryStream();
         var result = compilation.Emit(stream);
 
         var errors = compilation.GetDiagnostics()
             .Concat(result.Diagnostics)
-            .Where(_ => _.Severity == DiagnosticSeverity.Error)
+            .Where(_ => _.Severity == DiagnosticSeverity.Error || (includeWarnings && _.Severity == DiagnosticSeverity.Warning))
             .DistinctBy(_ => $"{_.Id}:{_.GetMessage()}")
             .ToList();
 

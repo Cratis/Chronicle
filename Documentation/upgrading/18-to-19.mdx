@@ -1,0 +1,65 @@
+---
+title: Upgrading from 18 to 19
+description: What changed in Chronicle 19, and why almost nobody has to do anything about it.
+---
+
+**For almost everyone this is a version bump and a rebuild.** No wire contract changed, no
+event is affected, no read model is affected, and no behavior changed for code that was
+not already passing the one argument described below.
+
+## What actually changed
+
+One parameter, on one public .NET extension method:
+
+<ChronicleClientTabs snippet="upgrading/18-to-19/skip-compatibility-check" />
+
+`bool` became `bool?` so that leaving it unspecified can fall back to the connection
+string's `skipCompatibilityCheck` option, exactly as `skipTlsValidation` already did.
+`bool` had no way to express "I did not say" — only `true` or `false` — so an unspecified
+argument silently meant "perform the check" and overrode what the connection string asked
+for.
+
+This is a **binary** break, not a source break. Passing `true`, `false`, a `bool`
+variable, or omitting the argument all still compile unchanged, because `bool` converts
+implicitly to `bool?`. An assembly compiled against 18.x that calls this method will not
+bind against 19.x until it is rebuilt.
+
+## What you need to do
+
+1. Take the 19.x packages.
+2. Rebuild. That is the whole upgrade for the overwhelming majority of applications.
+
+You need to do more only if you have an assembly you cannot rebuild that calls
+`AddCratisChronicleConnection`. Rebuilding it against 19.x is the fix; there is no
+runtime shim.
+
+## If you use a language client
+
+Nothing changed on the wire, so the Kotlin, TypeScript and Elixir clients are unaffected
+by the break itself. Take the client release that targets 19.x contracts as you normally
+would.
+
+## What else shipped in 19
+
+`skipCompatibilityCheck` became reachable at all. It already existed as a
+`ChronicleConnection` constructor parameter, but nothing surfaced it: not the connection
+string, not `ChronicleOptions`, and the standalone `ChronicleClient` construction path
+ignored it entirely. In 19 it is available as a connection-string option and as
+`ChronicleOptions.SkipCompatibilityCheck`, and the direct construction path honors it.
+
+:::caution[This is not a general-purpose override]
+Skipping the compatibility check hides every incompatibility the server would have
+reported, including a genuine one. It exists for one situation: a known-safe version skew
+against a kernel whose own fix cannot be redeployed. Leave it off unless you are in
+exactly that position.
+:::
+
+## Why a major for a change this small
+
+Because it is a breaking change to a published API, and the alternative was worse. The
+usual way to avoid a break is to add an overload and keep the old one — but every
+parameter on this method is optional, so a `bool` overload and a `bool?` overload
+differing only in that type would make `AddCratisChronicleConnection()` an ambiguous call
+for everyone. The feature genuinely needs three states, `bool` offers two, and overloading
+was not available. Raising the major was the honest option rather than judging that the
+blast radius was probably small.

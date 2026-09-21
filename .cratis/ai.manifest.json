@@ -1,5 +1,5 @@
 {
-  "SourceRevision": "4c6cd1228d1306512d1c9c367783f296a4e402b3",
+  "SourceRevision": "f43680de02c01dbc8a0a32b410591bd6fc742ee5",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
@@ -89,12 +89,12 @@
     {
       "Source": "harnesses/pi/extensions/subagent/index.ts",
       "Destination": "harnesses/pi/extensions/subagent/index.ts",
-      "Hash": "FBFBBB0AB7916E9D1993B64E574E1A01181EB84C5E3012F057668D299308D8FC"
+      "Hash": "04476E00DD4ED2578ED11C2B58C1BC98553E9D907710C890609BCC296202456E"
     },
     {
       "Source": "hooks/README.md",
       "Destination": "hooks/README.md",
-      "Hash": "47F5CDF1100339B311DA6CBC3F6ACD68E34E3ABC2A00CEB559CFA6B23B1D0AA0"
+      "Hash": "EBAF95735A53A08005B4C394115468E86AD20E1DF27C6DF109433A4068ECFA54"
     },
     {
       "Source": "hooks/agent-stop.md",
@@ -239,7 +239,7 @@
     {
       "Source": "prompts/ship-changes.prompt.md",
       "Destination": "prompts/ship-changes.prompt.md",
-      "Hash": "935BD17D10AB376E747A65BCF6465CE05B0310EEA9065891C34490712DA87259"
+      "Hash": "70FD2ADC8EC907AAD84A8B165A0A08486E2A7995FD0025ECD95CC82A28DC6E7A"
     },
     {
       "Source": "prompts/verify-ai-setup.prompt.md",
@@ -259,7 +259,7 @@
     {
       "Source": "rules/capability-is-not-authority.md",
       "Destination": "rules/capability-is-not-authority.md",
-      "Hash": "76B56889D8D4F2A2004892FBEFDAC3EF9A64C5F458E34B28458BC853E542EB1B"
+      "Hash": "0423F32BD4EFBF111B0F64EE73C5ECD5FA82C23E7643E328D0F33A8A5E0E6132"
     },
     {
       "Source": "rules/code-quality.csharp.md",
@@ -344,7 +344,7 @@
     {
       "Source": "rules/general.md",
       "Destination": "rules/general.md",
-      "Hash": "5E3672CD42B96995004526648099608431CD87B3BEA75A418530FD56EDBF65E1"
+      "Hash": "C5DF184CD4BC1034CA6EC88A9E5198F4ED6994E640B9CBDF380AE1DF6F7B1F17"
     },
     {
       "Source": "rules/git-commits.md",
@@ -354,7 +354,7 @@
     {
       "Source": "rules/github-actions.md",
       "Destination": "rules/github-actions.md",
-      "Hash": "2A34ADC657B3C37D54608BC2D1E7767AF97D3CD721309236D4E5F6FADF5BE4C1"
+      "Hash": "34C1CDEEDB310445D46DB745391EB860F6AD793158F56BABB60ED217A7071478"
     },
     {
       "Source": "rules/glossary.md",
@@ -364,17 +364,12 @@
     {
       "Source": "rules/guards-and-fuses.md",
       "Destination": "rules/guards-and-fuses.md",
-      "Hash": "26B46A398A986B94A9276FE24123DAE38245E7E4EF1771F82F62456783ED3A33"
+      "Hash": "9ED019EBBFCBB08361C434E196BBCBB8B27528AA64F868A759545B7CE64DE211"
     },
     {
       "Source": "rules/local-work-artifacts.md",
       "Destination": "rules/local-work-artifacts.md",
       "Hash": "8CB6E077B85230F91BE8A5427F4453AB23D2EEEEE7718243B58BF3C842BC8BF2"
-    },
-    {
-      "Source": "rules/managing-ai-rules.md",
-      "Destination": "rules/managing-ai-rules.md",
-      "Hash": "BBB1895CA88C64305957A4DD03716E218FFE310DF03261EC96611D3DEF7620E9"
     },
     {
       "Source": "rules/orleans.md",
@@ -384,7 +379,7 @@
     {
       "Source": "rules/pull-requests.md",
       "Destination": "rules/pull-requests.md",
-      "Hash": "E90CA37257ED59DBBBBEB36867814D8BC1CCC4C24C5535826F0A2D96EA48532E"
+      "Hash": "EFD19541ABF07197B817E3D4178E6FFAC104CE9C85AF200C6FCBD231B0CC3392"
     },
     {
       "Source": "rules/react.md",
@@ -439,7 +434,7 @@
     {
       "Source": "rules/verification-discipline.md",
       "Destination": "rules/verification-discipline.md",
-      "Hash": "08345C0EC8806EED827669E04F2A7CE8882C297FFCA20D12D10FA7ED8A4FFD19"
+      "Hash": "73B96865CC6175851D37981F0A257349C41205CA763E75023D8C6080EC2B8A5B"
     },
     {
       "Source": "rules/vertical-slices.md",

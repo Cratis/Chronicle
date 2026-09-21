@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Events.Migrations;
 
@@ -30,8 +29,8 @@ public class EventValueMapBuilder<TUpgrade, TPrevious> : IEventValueMapBuilder<T
         map(mapBuilder);
 
         _maps.Add(new PropertyValueMap(
-            new PropertyName(upgradeProperty.GetPropertyPath()),
-            new PropertyName(previousProperty.GetPropertyPath()),
+            upgradeProperty,
+            previousProperty,
             [.. mapBuilder.Mappings]));
 
         return this;
@@ -42,14 +41,14 @@ public class EventValueMapBuilder<TUpgrade, TPrevious> : IEventValueMapBuilder<T
     /// </summary>
     /// <param name="builder">The <see cref="IEventMigrationPropertyBuilder"/> to apply to.</param>
     public void ApplyUpcast(IEventMigrationPropertyBuilder builder) =>
-        _maps.ForEach(map => builder.MapValues(map.UpgradeProperty, map.PreviousProperty, map.Mappings));
+        _maps.ForEach(map => builder.MapValues(MigrationPropertyNames.Resolve(builder, map.UpgradeProperty), MigrationPropertyNames.Resolve(builder, map.PreviousProperty), map.Mappings));
 
     /// <summary>
     /// Apply every declared map to the downcast of the migration, translating upgraded values back into previous ones.
     /// </summary>
     /// <param name="builder">The <see cref="IEventMigrationPropertyBuilder"/> to apply to.</param>
     public void ApplyDowncast(IEventMigrationPropertyBuilder builder) =>
-        _maps.ForEach(map => builder.MapValues(map.PreviousProperty, map.UpgradeProperty, Invert(map.Mappings)));
+        _maps.ForEach(map => builder.MapValues(MigrationPropertyNames.Resolve(builder, map.PreviousProperty), MigrationPropertyNames.Resolve(builder, map.UpgradeProperty), Invert(map.Mappings)));
 
     /// <summary>
     /// Inverts a map so it translates the other way.
@@ -72,5 +71,5 @@ public class EventValueMapBuilder<TUpgrade, TPrevious> : IEventValueMapBuilder<T
     /// <param name="UpgradeProperty">The property on the upgraded generation.</param>
     /// <param name="PreviousProperty">The property on the previous generation.</param>
     /// <param name="Mappings">The values that change meaning, expressed from previous to upgraded.</param>
-    sealed record PropertyValueMap(PropertyName UpgradeProperty, PropertyName PreviousProperty, ValueMapping[] Mappings);
+    sealed record PropertyValueMap(LambdaExpression UpgradeProperty, LambdaExpression PreviousProperty, ValueMapping[] Mappings);
 }

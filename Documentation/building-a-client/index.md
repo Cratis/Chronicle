@@ -38,6 +38,8 @@ flowchart TB
 - **[Layering an idiomatic client](./layering-an-idiomatic-client)** — why the generated
   contracts are deliberately not the client developers use, and how a raw client and optional
   convenience packages sit on top of them.
+- **[Empty results and query failures](./empty-results.md)** — why collection results are never
+  null, and why initialized payloads do not replace checking query success.
 - **[Authentication and bearer tokens](./authentication-and-bearer-tokens.md)** — how a client
   turns connection-string credentials into a bearer token on every call, and keeps it fresh.
 - **[Clustering and the connection lifecycle](./clustering-and-connection-lifecycle.md)** — what

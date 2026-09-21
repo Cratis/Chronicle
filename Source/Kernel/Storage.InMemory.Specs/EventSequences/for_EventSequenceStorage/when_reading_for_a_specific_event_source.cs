@@ -15,6 +15,7 @@ public class when_reading_for_a_specific_event_source : given.a_storage_with_app
         using var cursor = await _storage.GetFromSequenceNumber(
             EventSequenceNumber.First,
             _firstEventSourceId,
+            EventSourceType.Unspecified,
             EventStreamType.All,
             EventStreamId.Default,
             []);

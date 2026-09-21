@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events;
 
@@ -23,6 +24,7 @@ public class EventTypes : IEventTypes
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly bool _enableEventTypeGenerationValidation;
+    readonly INamingPolicy _namingPolicy;
     FrozenDictionary<EventType, Type> _typesByEventType = FrozenDictionary<EventType, Type>.Empty;
     FrozenDictionary<EventType, JsonSchema> _schemasByEventType = FrozenDictionary<EventType, JsonSchema>.Empty;
 
@@ -40,6 +42,26 @@ public class EventTypes : IEventTypes
         IClientArtifactsProvider clientArtifacts,
         IEventTypeMigrators eventTypeMigrators,
         bool enableEventTypeGenerationValidation = false)
+        : this(eventStore, jsonSchemaGenerator, clientArtifacts, eventTypeMigrators, enableEventTypeGenerationValidation, new DefaultNamingPolicy())
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="EventTypes"/> with the naming policy used for event payloads.
+    /// </summary>
+    /// <param name="eventStore">The event store the event types belong to.</param>
+    /// <param name="jsonSchemaGenerator">The generator for event schemas.</param>
+    /// <param name="clientArtifacts">The provider of client artifacts.</param>
+    /// <param name="eventTypeMigrators">The migrator discovery service.</param>
+    /// <param name="enableEventTypeGenerationValidation">Whether to validate the generation chain on the server.</param>
+    /// <param name="namingPolicy">The naming policy, or null to preserve declared property names.</param>
+    public EventTypes(
+        IEventStore eventStore,
+        IJsonSchemaGenerator jsonSchemaGenerator,
+        IClientArtifactsProvider clientArtifacts,
+        IEventTypeMigrators eventTypeMigrators,
+        bool enableEventTypeGenerationValidation,
+        INamingPolicy? namingPolicy)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -47,6 +69,7 @@ public class EventTypes : IEventTypes
         _clientArtifacts = clientArtifacts;
         _eventTypeMigrators = eventTypeMigrators;
         _enableEventTypeGenerationValidation = enableEventTypeGenerationValidation;
+        _namingPolicy = namingPolicy ?? new DefaultNamingPolicy();
     }
 
     /// <inheritdoc/>
@@ -130,10 +153,10 @@ public class EventTypes : IEventTypes
             {
                 foreach (var migrator in _eventTypeMigrators.GetMigratorsFor(clrType))
                 {
-                    var upcastBuilder = new EventMigrationBuilder();
+                    var upcastBuilder = new EventMigrationBuilder(_namingPolicy);
                     migrator.Upcast(upcastBuilder);
 
-                    var downcastBuilder = new EventMigrationBuilder();
+                    var downcastBuilder = new EventMigrationBuilder(_namingPolicy);
                     migrator.Downcast(downcastBuilder);
 
                     registration.Migrations.Add(new EventTypeMigrationDefinition

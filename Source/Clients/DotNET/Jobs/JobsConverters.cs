@@ -18,12 +18,12 @@ internal static class JobsConverters
         new(eventStore)
         {
             Id = job.Id,
-            Details = job.Details ?? string.Empty,
-            Type = job.Type ?? string.Empty,
+            Details = job.Details,
+            Type = job.Type,
             Status = (JobStatus)(int)job.Status,
             Created = job.Created,
-            StatusChanges = job.StatusChanges?.ToClient() ?? [],
-            Progress = job.Progress?.ToClient() ?? new()
+            StatusChanges = job.StatusChanges.ToClient(),
+            Progress = job.Progress.ToClient()
         };
 
     /// <summary>
