@@ -206,6 +206,12 @@ hostBuilder
             _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
         }
 
+        // Applies to both clustering types, and to calls a silo makes to itself as well as to a
+        // sibling. Startup work that fans out across everything the server holds grows with the
+        // deployment while Orleans' 30 second default does not, so this is the knob that lets an
+        // operator get a server that has outgrown it to start again.
+        _.Configure<Orleans.Configuration.SiloMessagingOptions>(options => options.ResponseTimeout = clustering.ResponseTimeout);
+
         _.AddChronicleToSilo(chronicleBuilder =>
         {
             if (isInMemoryStorage)
