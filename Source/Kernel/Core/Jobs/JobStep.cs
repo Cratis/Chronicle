@@ -149,15 +149,23 @@ public abstract class JobStep<TRequest, TResult, TState>(
 
             switch (State.Status)
             {
-                case JobStepStatus.Scheduled or JobStepStatus.Running:
+                // The persisted status alone cannot answer "is this step running?": a step that was
+                // Scheduled or Running when its silo died is persisted exactly like one running right
+                // now, but the background task doing the work died with the process. Only when this
+                // activation actually holds in-flight work is a second Start a double start - otherwise
+                // the step must start over, or it stays Scheduled forever: the job it belongs to looks
+                // alive without ever running, an observer waiting on that job as its catch-up strands
+                // on every retry, and the strand bound eventually quarantines it. Performing a step
+                // twice is part of its contract; never performing it is not.
+                case JobStepStatus.Scheduled or JobStepStatus.Running when _currentlyRunning:
                     return StartJobStepError.AlreadyStarted;
                 case JobStepStatus.CompletedSuccessfully or JobStepStatus.CompletedWithFailure:
                     return StartJobStepError.Completed;
                 case JobStepStatus.Failed:
                     return StartJobStepError.UnrecoverableFailedState;
             }
-            _thisJobStep = this.AsReference<IJobStep<TRequest, TResult, TState>>();
-            _job = GrainFactory.GetGrain<IJob>(jobGrainId);
+            _thisJobStep = GetReferenceToSelf();
+            _job = GetJob(jobGrainId);
             var scheduledWork = await Start(_cancellationTokenSource!.Token);
             if (scheduledWork)
             {
@@ -338,6 +346,21 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <param name="request">The request object for the step.</param>
     /// <returns>Awaitable task.</returns>
     protected abstract Task<Result<PrepareJobStepError>> PrepareStep(TRequest request);
+
+    /// <summary>
+    /// Resolves the grain reference this step reports its own status changes through. Virtual so a
+    /// specification host without grain-reference plumbing can substitute the grain itself.
+    /// </summary>
+    /// <returns>The grain reference to this step.</returns>
+    protected virtual IJobStep<TRequest, TResult, TState> GetReferenceToSelf() => this.AsReference<IJobStep<TRequest, TResult, TState>>();
+
+    /// <summary>
+    /// Resolves the job grain this step reports its outcome to. Virtual for the same reason as
+    /// <see cref="GetReferenceToSelf"/>.
+    /// </summary>
+    /// <param name="jobGrainId">The identity of the owning job grain.</param>
+    /// <returns>The job grain.</returns>
+    protected virtual IJob GetJob(GrainId jobGrainId) => GrainFactory.GetGrain<IJob>(jobGrainId);
 
     /// <summary>
     /// The method that gets called when the step should do its work.

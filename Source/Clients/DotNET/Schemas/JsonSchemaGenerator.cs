@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -23,6 +24,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 {
     static FieldInfo? _paramDefaultValueField;
 
+    readonly ConcurrentDictionary<Type, JsonSchema> _schemasByType = new();
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
@@ -63,11 +65,34 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     }
 
     /// <inheritdoc/>
-    public JsonSchema Generate(Type type)
-    {
-        var node = _serializerOptions.GetJsonSchemaAsNode(type, _exporterOptions);
-        return new JsonSchema(node.AsObject());
-    }
+    /// <remarks>
+    /// The schema for a type is generated once and then handed out for every subsequent request. Generating one walks
+    /// the whole type graph reflectively - every property, its nullability, its compliance metadata and any derived
+    /// types - which is work that cannot change while the process is running, because the answer is a function of the
+    /// CLR type alone.
+    /// <para>
+    /// Without the memo this is recomputed per call, and the callers that matter call it per *instance* rather than per
+    /// type: the read model compliance release pass asks for the schema once for every instance it releases, so serving
+    /// a collection of a thousand read models generated the same schema a thousand times - measured at roughly a
+    /// quarter of a second of pure waste for a read model of moderate size, on every emission of an observable query,
+    /// for every subscriber.
+    /// </para>
+    /// <para>
+    /// Sharing one instance is consistent with how a <see cref="JsonSchema"/> is already treated everywhere else: the
+    /// client's event-type schemas are cached and read concurrently on the same assumption, that a schema is
+    /// effectively immutable once built. Its own derived answers are memoized internally with release semantics, so
+    /// concurrent readers of a shared instance are safe.
+    /// </para>
+    /// </remarks>
+    public JsonSchema Generate(Type type) =>
+        _schemasByType.GetOrAdd(
+            type,
+            static (typeToGenerate, generator) =>
+            {
+                var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._exporterOptions);
+                return new JsonSchema(node.AsObject());
+            },
+            this);
 
     static FieldInfo GetParameterDefaultValueField(JsonParameterInfo paramInfo)
     {

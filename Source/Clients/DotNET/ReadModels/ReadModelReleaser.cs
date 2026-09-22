@@ -43,14 +43,7 @@ internal class ReadModelReleaser(
             return instance;
         }
 
-        var subject = ReadModelSubjectResolver.ResolveFrom(instance);
-        if (subject is null)
-        {
-            logger.NoSubjectForRelease(typeof(TReadModel).Name);
-            return instance;
-        }
-
-        return await ReleaseWhole(subject, instance, schema);
+        return await ReleaseAgainst(schema, instance);
     }
 
     /// <summary>
@@ -59,15 +52,46 @@ internal class ReadModelReleaser(
     /// <typeparam name="TReadModel">Type of read model to release.</typeparam>
     /// <param name="instances">The instances to release.</param>
     /// <returns>The released instances.</returns>
+    /// <remarks>
+    /// Whether a read model has anything to release is a property of its type, not of any one instance, so the schema
+    /// is resolved and asked once for the whole sequence. The overwhelmingly common case - a read model that carries no
+    /// compliance metadata at all - then costs one lookup rather than one per instance, and the sequence is handed back
+    /// untouched instead of being copied into a new list only to hold the same references.
+    /// </remarks>
     public async Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances)
     {
+        var schema = schemaGenerator.Generate(typeof(TReadModel));
+        if (!schema.HasComplianceMetadata())
+        {
+            return instances;
+        }
+
         var result = new List<TReadModel>();
         foreach (var instance in instances)
         {
-            result.Add(await Release(instance));
+            result.Add(instance is null ? instance : await ReleaseAgainst(schema, instance));
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Release a single instance against a schema already known to carry compliance metadata.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model to release.</typeparam>
+    /// <param name="schema">The schema describing the instance.</param>
+    /// <param name="instance">The instance to release.</param>
+    /// <returns>The released instance, or the original when it names no subject to release against.</returns>
+    async Task<TReadModel> ReleaseAgainst<TReadModel>(JsonSchema schema, TReadModel instance)
+    {
+        var subject = ReadModelSubjectResolver.ResolveFrom(instance);
+        if (subject is null)
+        {
+            logger.NoSubjectForRelease(typeof(TReadModel).Name);
+            return instance;
+        }
+
+        return await ReleaseWhole(subject, instance, schema);
     }
 
     async Task<TReadModel> ReleaseWhole<TReadModel>(Subject subject, TReadModel instance, JsonSchema schema)

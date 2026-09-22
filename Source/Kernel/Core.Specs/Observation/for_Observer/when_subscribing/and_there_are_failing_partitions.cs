@@ -24,7 +24,14 @@ public class and_there_are_failing_partitions : given.an_observer
         _stateStorage.State = _stateStorage.State with { FailedPartitionCount = 2 };
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _observer.Subscribe<NullObserverSubscriber>(_type, [EventType.Unknown], SiloAddress.Zero));
+    async Task Because()
+    {
+        _error = await Catch.Exception(() => _observer.Subscribe<NullObserverSubscriber>(_type, [EventType.Unknown], SiloAddress.Zero));
+
+        // Recovery of the failed partitions is owed after the subscription, in a turn of its own - see
+        // and_recovery_has_not_run_yet for what the subscribe call itself must not wait for.
+        await _silo.TimerRegistry.FireAllAsync();
+    }
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();
     [Fact] void should_write_state_at_least_once() => _storageStats.Writes.ShouldBeGreaterThanOrEqual(1);
