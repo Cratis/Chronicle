@@ -115,7 +115,7 @@ internal sealed class ChronicleServerStartupTask(
             await Step("EnsureCaptures", capturesManager.Ensure);
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
-            await RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions);
+            await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
@@ -183,6 +183,22 @@ internal sealed class ChronicleServerStartupTask(
         }
     }
 
+    /// <summary>
+    /// Registers the persisted projection definitions for an event store with the local silo.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the definitions belong to.</param>
+    /// <param name="projectionDefinitions">The persisted <see cref="ProjectionDefinition"/> instances to register.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This call is the most expensive one in <see cref="Execute"/>, because registering fans out a
+    /// subscribe across every observer in the store rather than doing the work of a single grain -
+    /// a production store was observed fanning out to 782 of them inside one call. Since the whole
+    /// fan-out has to answer within Orleans' one response timeout, the budget effectively shrinks as
+    /// a store grows, and the call is therefore the likeliest in the task to exceed it. It must go
+    /// through <see cref="Step"/> for the same reason every other call here does: an unhandled
+    /// timeout terminates the host, and a host that cannot start cannot start on the next attempt
+    /// either, so the store stays down until someone intervenes.
+    /// </remarks>
     async Task RegisterPersistedProjectionDefinitions(EventStoreName eventStore, IEnumerable<ProjectionDefinition> projectionDefinitions)
     {
         var result = await projectionsServiceClient.Register(eventStore, projectionDefinitions);

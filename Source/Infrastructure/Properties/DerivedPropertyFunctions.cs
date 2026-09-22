@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Properties;
 /// <summary>
 /// Holds the well-known <see cref="DerivedPropertyFunction"/> instances Chronicle recognizes when parsing and
 /// evaluating a projection composite-key, event-context or event-content property accessor expression whose
-/// terminal segment is a computed property rather than a plain member access — for example
-/// <c language="csharp">c => c.Occurred.Week</c>.
+/// terminal segment is a computed value rather than a plain member access — for example
+/// <c language="csharp">c => c.Occurred.Week()</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -22,16 +22,17 @@ namespace Cratis.Chronicle.Properties;
 /// </para>
 /// <para>This is the extension point for adding a new derived accessor beyond the well-known set:</para>
 /// <list type="number">
-/// <item><description>Add an extension type property using C# 12 extension types — see
-/// <see cref="CalendarPropertyExtensions"/> for the pattern. It reads like a property:
-/// `.Occurred.Week` (not a method call).</description></item>
+/// <item><description>Add a zero-argument extension method — see <see cref="CalendarPropertyExtensions"/>
+/// for the pattern. It must be an extension method rather than an extension property, because these
+/// accessors are written inside expression trees and the language does not permit an extension property
+/// there (compiler error CS9296).</description></item>
 /// <item><description>Register a <see cref="DerivedPropertyFunction"/> under that same name in <see cref="All"/>,
 /// with <see cref="DerivedPropertyFunction.Evaluate"/> delegating to the computation so the two can
 /// never drift apart.</description></item>
 /// </list>
 /// <para>
-/// Extension types appear as property access in expression trees. String paths use this registry
-/// to recognize them as valid derived properties.
+/// Such a call appears as a <see cref="System.Linq.Expressions.MethodCallExpression"/> in an expression
+/// tree. String paths use this registry to recognize the same names as valid derived properties.
 /// </para>
 /// </remarks>
 public static class DerivedPropertyFunctions

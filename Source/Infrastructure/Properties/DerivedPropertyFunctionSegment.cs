@@ -14,5 +14,11 @@ public record DerivedPropertyFunctionSegment(DerivedPropertyFunction Function) :
     public string Value => Function.Name;
 
     /// <inheritdoc/>
-    public override string ToString() => $"{Value}()";
+    /// <remarks>
+    /// Rendered as the bare function name, without a trailing <c language="csharp">()</c>. A rendered path is what
+    /// travels to the kernel and is parsed back, and the registry is keyed by that bare name, so rendering it
+    /// without parens keeps the round trip identical to the name it was resolved from. Parsing still accepts the
+    /// parenthesized form, so a path written by hand as <c language="csharp">Occurred.Week()</c> resolves the same.
+    /// </remarks>
+    public override string ToString() => Value;
 }
