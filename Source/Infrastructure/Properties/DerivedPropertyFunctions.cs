@@ -22,9 +22,9 @@ namespace Cratis.Chronicle.Properties;
 /// </para>
 /// <para>This is the extension point for adding a new derived accessor beyond the well-known set:</para>
 /// <list type="number">
-/// <item><description>Add a public, zero-argument extension method for it — see
-/// <see cref="CalendarPropertyExtensions.Week(DateTimeOffset)"/> for the pattern to follow. It should read
-/// like a property access inside accessor expressions (e.g., `.Week` not `.GetWeek()`).</description></item>
+/// <item><description>Add an extension type property using C# 12 extension types — see
+/// <see cref="CalendarPropertyExtensions"/> for the pattern. It reads like a property:
+/// `.Occurred.Week` (not a method call).</description></item>
 /// <item><description>Register a <see cref="DerivedPropertyFunction"/> under that same name in <see cref="All"/>,
 /// with <see cref="DerivedPropertyFunction.Evaluate"/> delegating straight to the extension method so the two can
 /// never drift apart.</description></item>
@@ -43,9 +43,9 @@ public static class DerivedPropertyFunctions
     /// </summary>
     public static readonly IReadOnlyDictionary<string, DerivedPropertyFunction> All = new Dictionary<string, DerivedPropertyFunction>
     {
-        [nameof(CalendarPropertyExtensions.Week)] = new(
-            nameof(CalendarPropertyExtensions.Week),
-            value => ToDateTimeOffset(value).Week())
+        ["Week"] = new(
+            "Week",
+            value => System.Globalization.ISOWeek.GetWeekOfYear(ToDateTimeOffset(value).DateTime))
     };
 
     /// <summary>
