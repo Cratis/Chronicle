@@ -210,7 +210,14 @@ hostBuilder
         // sibling. Startup work that fans out across everything the server holds grows with the
         // deployment while Orleans' 30 second default does not, so this is the knob that lets an
         // operator get a server that has outgrown it to start again.
+        //
+        // Both option sets have to be set. A silo hosts a client of its own, and the calls the
+        // startup task makes through a grain service client originate from that hosted client
+        // rather than from the silo - they show up as `sys.client/hosted-...` - so they are bound
+        // by the client's timeout. Setting only the silo's leaves exactly the startup path that
+        // needs the larger budget still running on the 30 second default.
         _.Configure<Orleans.Configuration.SiloMessagingOptions>(options => options.ResponseTimeout = clustering.ResponseTimeout);
+        _.Configure<Orleans.Configuration.ClientMessagingOptions>(options => options.ResponseTimeout = clustering.ResponseTimeout);
 
         _.AddChronicleToSilo(chronicleBuilder =>
         {
