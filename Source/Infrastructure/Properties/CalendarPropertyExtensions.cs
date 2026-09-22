@@ -4,34 +4,28 @@
 namespace Cratis.Chronicle.Properties;
 
 /// <summary>
-/// Extension properties for deriving calendar values from a <see cref="DateTimeOffset"/> — the well-known derived
-/// accessors usable inside a projection composite-key, event-context or event-content property accessor
-/// expression (for example <c language="csharp">c => c.Occurred.Week</c>).
+/// Extension properties for deriving calendar values from a <see cref="DateTimeOffset"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// See <see cref="DerivedPropertyFunctions"/> for how these are recognized inside an accessor expression,
-/// and for the pattern to follow when adding another derived accessor.
-/// </para>
-/// <para>
-/// These are implemented as extension methods that read like properties in composite-key expressions.
-/// To callers, they appear as property accessors on <see cref="DateTimeOffset"/> even though the type
-/// itself doesn't carry them natively.
+/// Implemented using C# 12 extension types, these properties are directly accessible on
+/// <see cref="DateTimeOffset"/> values in composite-key expressions without requiring
+/// translator reactors or new event types.
 /// </para>
 /// </remarks>
 public static class CalendarPropertyExtensions
 {
     /// <summary>
-    /// Gets the ISO 8601 week-of-year number for a <see cref="DateTimeOffset"/>.
+    /// Extension type providing calendar accessors on <see cref="DateTimeOffset"/>.
     /// </summary>
-    /// <param name="dateTimeOffset">The value to get the ISO week number for.</param>
-    /// <returns>The ISO 8601 week number, from 1 through 53.</returns>
-    /// <remarks>
-    /// <para>
-    /// This extension method exposes the ISO week number (1–53) as a computed property accessor usable in
-    /// projection composite-key expressions (for example <c language="csharp">c => c.Occurred.Week</c>) without
-    /// requiring a separate event property or translator reactor.
-    /// </para>
-    /// </remarks>
-    public static int Week(this DateTimeOffset dateTimeOffset) => System.Globalization.ISOWeek.GetWeekOfYear(dateTimeOffset.DateTime);
+    /// <param name="dateTimeOffset">The <see cref="DateTimeOffset"/> value to extend.</param>
+#pragma warning disable CA1034
+    extension(DateTimeOffset dateTimeOffset)
+#pragma warning restore CA1034
+    {
+        /// <summary>
+        /// Gets the ISO 8601 week-of-year number (1–53).
+        /// </summary>
+        public int Week => System.Globalization.ISOWeek.GetWeekOfYear(dateTimeOffset.DateTime);
+    }
 }
