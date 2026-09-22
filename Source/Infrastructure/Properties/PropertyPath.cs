@@ -227,6 +227,11 @@ public partial class PropertyPath
     /// <returns>Value, if any.</returns>
     public bool HasValue(object target, ArrayIndexers arrayIndexers)
     {
+        if (LastSegment is DerivedPropertyFunctionSegment)
+        {
+            return GetValue(target, arrayIndexers) != null;
+        }
+
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
@@ -244,8 +249,23 @@ public partial class PropertyPath
     /// <param name="target">Object to get from.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>Value, if any.</returns>
+    /// <remarks>
+    /// When the path's terminal segment is a <see cref="DerivedPropertyFunctionSegment"/> (for example the
+    /// <c language="csharp">ISOWeek()</c> in <c language="csharp">Occurred.ISOWeek()</c>), the value of the path
+    /// without that terminal segment is resolved first - through this same method, so it works identically whether
+    /// the receiver is a real reflectable property or dynamic event content - and the function is then evaluated
+    /// against it.
+    /// </remarks>
     public object? GetValue(object target, ArrayIndexers arrayIndexers)
     {
+        if (LastSegment is DerivedPropertyFunctionSegment functionSegment)
+        {
+            var receiverValue = _segments.Length > 1
+                ? new PropertyPath(_segments[..^1], Render(_segments[..^1])).GetValue(target, arrayIndexers)
+                : target;
+            return receiverValue is null ? null : functionSegment.Function.Evaluate(receiverValue);
+        }
+
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
@@ -354,6 +374,15 @@ public partial class PropertyPath
         if (segment == ThisAccessorValue)
         {
             return new ThisAccessor();
+        }
+        var functionName = segment.EndsWith("()", StringComparison.Ordinal) ? segment[..^2] : segment;
+        if (DerivedPropertyFunctions.TryGet(functionName, out var function))
+        {
+            return new DerivedPropertyFunctionSegment(function);
+        }
+        if (segment.EndsWith("()", StringComparison.Ordinal))
+        {
+            throw new UnknownDerivedPropertyFunction(functionName);
         }
         return new PropertyName(segment);
     }

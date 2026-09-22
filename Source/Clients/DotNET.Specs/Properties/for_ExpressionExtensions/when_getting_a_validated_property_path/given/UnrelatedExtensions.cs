@@ -3,9 +3,7 @@
 
 namespace Cratis.Chronicle.Properties.for_ExpressionExtensions.when_getting_a_validated_property_path.given;
 
-public class an_event : Specification
+public static class UnrelatedExtensions
 {
-    public record Owner(string Name);
-
-    public record SomeEvent(string Name, Owner Owner, int Age, bool Active, string Fallback, DateTimeOffset Occurred);
+    public static int NotADerivedFunction(this DateTimeOffset dateTimeOffset) => dateTimeOffset.Year;
 }
