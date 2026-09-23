@@ -41,6 +41,12 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
     public IEnumerable<Type> ComplianceForPropertiesProviders => _current.ComplianceForPropertiesProviders;
 
     /// <inheritdoc/>
+    public IEnumerable<Type> SecurityForTypesProviders => _current.SecurityForTypesProviders;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> SecurityForPropertiesProviders => _current.SecurityForPropertiesProviders;
+
+    /// <inheritdoc/>
     public IEnumerable<Type> AdditionalEventInformationProviders => _current.AdditionalEventInformationProviders;
 
     /// <inheritdoc/>

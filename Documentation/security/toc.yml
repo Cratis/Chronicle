@@ -1,0 +1,4 @@
+- name: Overview
+  href: index.md
+- name: Encrypting operational secrets
+  href: encrypted-values.mdx

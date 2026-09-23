@@ -24,8 +24,8 @@ internal static class SubstitutedLayers
     /// </summary>
     /// <param name="readModelType">The read model CLR type under test.</param>
     /// <param name="projectionDefinition">The projection definition backing it, or <see langword="null"/> when it is reduced rather than projected.</param>
-    /// <param name="readModelSchema">The read model's generated <see cref="JsonSchema"/> — the same schema a deployed Chronicle gates compliance on.</param>
-    /// <param name="compliancePipelineIsRun">Whether the pipeline that materializes the read model runs Chronicle's compliance stack.</param>
+    /// <param name="readModelSchema">The read model's generated <see cref="JsonSchema"/> — the same schema a deployed Chronicle gates compliance and security protection on.</param>
+    /// <param name="compliancePipelineIsRun">Whether the pipeline that materializes the read model runs Chronicle's compliance and security stack.</param>
     /// <returns>The substitutions the read model depends on, empty when it depends on none.</returns>
     public static IReadOnlyList<ReadModelSubstitution> DetectFor(
         Type readModelType,
@@ -71,30 +71,31 @@ internal static class SubstitutedLayers
     }
 
     /// <summary>
-    /// Reports the compliance layer when the read model carries compliance metadata that nothing in this tier
-    /// acts on.
+    /// Reports the compliance/security layer when the read model carries <c language="csharp">[PII]</c> or <c language="csharp">[Encrypted]</c> schema
+    /// metadata that nothing in this tier acts on.
     /// </summary>
     /// <param name="readModelSchema">The read model's generated <see cref="JsonSchema"/>.</param>
-    /// <param name="compliancePipelineIsRun">Whether the materializing pipeline runs Chronicle's compliance stack.</param>
+    /// <param name="compliancePipelineIsRun">Whether the materializing pipeline runs Chronicle's compliance and security stack.</param>
     /// <param name="substitutions">The substitutions collected so far.</param>
     /// <remarks>
-    /// <c language="csharp">HasComplianceMetadata()</c> on the read model schema is the exact gate the live projection pipeline
-    /// applies before encrypting a changeset and before releasing what it read, so a read model this answers
-    /// yes for is one whose values a running system stores as ciphertext. When the pipeline that materializes
-    /// it here does the same, there is nothing being stood in for and nothing is reported — the detection
-    /// stays so that a pipeline which stops applying compliance surfaces instead of going quiet.
+    /// <c language="csharp">HasSchemaMetadata()</c> on the read model schema is the exact gate the live projection pipeline
+    /// applies before encrypting a changeset and before releasing what it read - for both <c language="csharp">[PII]</c> and
+    /// <c language="csharp">[Encrypted]</c> members alike - so a read model this answers yes for is one whose values a running
+    /// system stores as ciphertext. When the pipeline that materializes it here does the same, there is nothing being
+    /// stood in for and nothing is reported — the detection stays so that a pipeline which stops applying protection
+    /// surfaces instead of going quiet.
     /// </remarks>
     static void AddCompliance(JsonSchema readModelSchema, bool compliancePipelineIsRun, List<ReadModelSubstitution> substitutions)
     {
-        if (compliancePipelineIsRun || !readModelSchema.HasComplianceMetadata())
+        if (compliancePipelineIsRun || !readModelSchema.HasSchemaMetadata())
         {
             return;
         }
 
         substitutions.Add(new(
             ReadModelSubstitutedLayer.Compliance,
-            "compliance metadata on the read model",
-            "the values a deployed Chronicle encrypts into the sink and releases on read are projected and read as plaintext here, so neither the encryption, the subject they are keyed by, nor what an erased subject reads back as is exercised"));
+            "compliance or security metadata on the read model",
+            "the values a deployed Chronicle encrypts into the sink and releases on read are projected and read as plaintext here, so neither the encryption, the subject or scope they are keyed by, nor what an erased PII subject reads back as, is exercised"));
     }
 
     static void AddRootRemoval(ProjectionDefinition definition, List<ReadModelSubstitution> substitutions)

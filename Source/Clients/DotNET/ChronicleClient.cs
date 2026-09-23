@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Queries;
@@ -318,7 +319,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var complianceMetadataResolver = new ComplianceMetadataResolver(
             new InstancesOf<ICanProvideComplianceMetadataForType>(types, _serviceProvider),
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(types, _serviceProvider));
-        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, _namingPolicy);
+        var securityMetadataResolver = new SecurityMetadataResolver(
+            new InstancesOf<ICanProvideSecurityMetadataForType>(types, _serviceProvider),
+            new InstancesOf<ICanProvideSecurityMetadataForProperty>(types, _serviceProvider));
+        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, securityMetadataResolver, _namingPolicy);
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider);
         var artifactActivator = new ClientArtifactsActivator(_serviceProvider, _loggerFactory);
 

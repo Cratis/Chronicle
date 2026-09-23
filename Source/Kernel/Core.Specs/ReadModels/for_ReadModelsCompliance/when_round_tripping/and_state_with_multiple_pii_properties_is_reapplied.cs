@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -65,7 +66,7 @@ public class and_state_with_multiple_pii_properties_is_reapplied : Specification
         }
         """);
 
-    JsonComplianceManager _complianceManager;
+    JsonSchemaMetadataManager _complianceManager;
     ExpandoObjectConverter _converter;
     ReadModelsCompliance _compliance;
     ExpandoObject _encryptedInitialState;
@@ -76,8 +77,9 @@ public class and_state_with_multiple_pii_properties_is_reapplied : Specification
     {
         var encryption = new Encryption();
         var keyStorage = new InMemoryEncryptionKeyStorage();
-        var piiHandler = new PIICompliancePropertyValueHandler(keyStorage, encryption);
-        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler), NullLogger<JsonComplianceManager>.Instance);
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+        var piiHandler = new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption);
+        _complianceManager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(piiHandler), NullLogger<JsonSchemaMetadataManager>.Instance);
         _converter = new(new TypeFormats());
         _compliance = new ReadModelsCompliance(_complianceManager, _converter);
 

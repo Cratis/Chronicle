@@ -1,0 +1,114 @@
+---
+title: Encrypting operational secrets
+description: Mark a value [Encrypted] to protect it at rest without enrolling it in GDPR right-to-erasure.
+---
+
+Marking a value `[Encrypted]` tells Chronicle to encrypt it at rest — the same way `[PII]` does — but as a security measure with no data subject and no lawful basis for erasure, rather than a GDPR compliance mechanism. See [Security](index) for when to reach for this instead of `[PII]`.
+
+## The marker
+
+```csharp
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
+public sealed class EncryptedAttribute(EncryptionScope scope = EncryptionScope.Subject, string details = "") : Attribute
+```
+
+`EncryptedAttribute` lives in `Cratis.Chronicle.ProtectedValues` — a namespace of its own, deliberately not nested under `Compliance`. The optional `details` parameter records why the value needs encryption, exactly like `[PII]`'s `details` parameter.
+
+## Applying to a concept
+
+The preferred approach, exactly as with `[PII]`: mark the `ConceptAs<T>` type itself. Every event using this type is then automatically encrypted.
+
+```csharp
+[Encrypted]
+public record PartnerApiKey(string Value) : ConceptAs<string>(Value);
+
+public record PartnerIntegrationConfigured(PartnerApiKey ApiKey);
+```
+
+## Applying to an event property
+
+You can mark a single property directly when the value has no dedicated concept type:
+
+```csharp
+public record PartnerIntegrationConfigured(
+    [Encrypted] string ApiKey,
+    string PartnerName);
+```
+
+When this event is written, `ApiKey` is encrypted. `PartnerName` is stored as plaintext.
+
+## `[PII]` and `[Encrypted]` never mix
+
+A property cannot resolve both `[PII]` and `[Encrypted]` metadata. Chronicle applies every matching compliance handler for a property in sequence, so a value marked both ways would be encrypted first under the PII key and then again under the `[Encrypted]` key — releasing it would decrypt with the wrong key against ciphertext, which fails loudly rather than returning a wrong value.
+
+```csharp
+// Throws PIIAndEncryptedCombinedNotSupported at schema-generation time,
+// and is flagged at compile time by CHR0053.
+public record CustomerRegistered(
+    [PII] [Encrypted] string SomeValue);
+```
+
+Choose exactly one: `[PII]` for personal data with a lawful basis for erasure, `[Encrypted]` for an operational secret with none. [CHR0053](/chronicle/code-analysis/CHR0053/) catches the two directly-visible combinations at compile time; `PIIAndEncryptedCombinedNotSupported` is the backstop at schema-generation time.
+
+## Why the two keys are never the same
+
+A subject can carry both a `[PII]` value and an `[Encrypted]` value — a customer record with a `[PII]` email address and an `[Encrypted]` API key issued to that customer, for example. The two are provisioned under deliberately disjoint key identities, even though they resolve to the same compliance identity (the subject, or the event source id when none is set). Erasing the subject's PII — a lawful, routine GDPR right-to-erasure request — destroys only the PII key. The `[Encrypted]` key, and the value it protects, is untouched and remains fully readable.
+
+This is enforced two ways:
+
+- The key identities are disjoint by construction — nothing on the PII path ever constructs an identifier that could collide with an `[Encrypted]` value's key identity.
+- `DeleteEncryptionKeyFor` and `AllowNewEncryptionKeyFor` — the two operations behind GDPR erasure — refuse an identifier that belongs to an `[Encrypted]` value, as defense in depth for the one entry point (the compliance gRPC surface) that accepts a caller-supplied identifier directly.
+
+There is no operation anywhere that deletes an `[Encrypted]` value's key. A key protecting a secret with no data subject has no lawful basis to be destroyed on request.
+
+## Scope
+
+`EncryptionScope` controls the identity a value's key is provisioned under:
+
+```csharp
+public enum EncryptionScope
+{
+    Subject,    // per compliance identity - the default
+    Namespace,  // one key shared by every value marked this way in the event store namespace
+    Global      // one key shared by every value marked this way across the whole installation
+}
+```
+
+`EncryptionScope.Subject` (the default) provisions a key per compliance identity, the same way `[PII]` resolves its identity (the subject, or the event source id when none is set) — but always under a disjoint key from any `[PII]` value on the same subject.
+
+`EncryptionScope.Namespace` provisions one key shared by every `[Encrypted(EncryptionScope.Namespace)]` value in a given event store namespace, regardless of which document it came from — useful for a secret that belongs to the deployment rather than to any one entity, such as a webhook signing secret shared across every partner integration.
+
+`EncryptionScope.Global` provisions one key shared by every `[Encrypted(EncryptionScope.Global)]` value across the whole installation — every event store, every namespace.
+
+Widening the scope is safe for `[Encrypted]` in a way it is never safe for `[PII]`: an operational secret has no data subject, so there is no erasure request a shared key could ever need to honor separately for one subject and not another. `[PII]` always resolves to a compliance identity and never gains a wider scope — see [Compliance](/chronicle/compliance/).
+
+```csharp
+public record PartnerApiKey(string Value) : ConceptAs<string>(Value);       // one key per partner (EncryptionScope.Subject)
+
+[Encrypted(EncryptionScope.Namespace)]
+public record PartnerWebhookSecret(string Value) : ConceptAs<string>(Value); // one key for every partner in the namespace
+
+[Encrypted(EncryptionScope.Global)]
+public record LicenseToken(string Value) : ConceptAs<string>(Value);        // one key for the whole installation
+```
+
+## Constraints
+
+### EventSourceId is not supported
+
+Applying `[Encrypted]` to a type that inherits from `EventSourceId` or `EventSourceId<T>` throws `EncryptedNotSupportedOnEventSourceId` at runtime, and is flagged at compile time by [CHR0052](/chronicle/code-analysis/CHR0052/):
+
+```csharp
+public record PartnerId(Guid Value) : EventSourceId<Guid>(Value);
+
+// Throws EncryptedNotSupportedOnEventSourceId
+public record PartnerIntegrationConfigured(
+    [Encrypted] PartnerId PartnerId,
+    string ApiKey);
+```
+
+Event source identifiers are used to correlate events. If the identifier itself is a secret, use a non-sensitive surrogate as the event source id and store the secret in a separate `[Encrypted]` property.
+
+## Client coverage
+
+`[Encrypted]` is available in the .NET client today. Parity across Chronicle's other clients (Kotlin/Java, TypeScript, Elixir) is tracked separately.

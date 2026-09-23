@@ -25,13 +25,14 @@ public sealed class MongoDBFixture : IAsyncLifetime
     {
         var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
         _container = new ContainerBuilder(image)
+            .WithMongoDBKernelCompatibility()
             .WithPortBinding(MongoDBPort, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(MongoDBPort)
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok' | grep -q 1"))
             .Build();
 
-        await _container.StartAsync();
+        await _container.StartMongoDBWithDiagnostics();
     }
 
     /// <inheritdoc/>

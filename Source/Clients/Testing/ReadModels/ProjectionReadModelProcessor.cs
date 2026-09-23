@@ -84,13 +84,13 @@ internal static class ProjectionReadModelProcessor
     }
 
     /// <summary>
-    /// Gets a value indicating whether this processor runs Chronicle's compliance stack.
+    /// Gets a value indicating whether this processor runs Chronicle's compliance and security stack.
     /// </summary>
     /// <remarks>
     /// The live projection pipeline runs <c language="csharp">EncryptChangeset</c> before the sink and releases what it reads
-    /// back; the pipeline below runs neither, so a <c language="csharp">[PII]</c> member is projected and read as plaintext.
-    /// Wire compliance in and flip this, and <see cref="SubstitutedLayers"/> stops reporting
-    /// <see cref="ReadModelSubstitutedLayer.Compliance"/>.
+    /// back; the pipeline below runs neither, so a <c language="csharp">[PII]</c> or <c language="csharp">[Encrypted]</c> member is
+    /// projected and read as plaintext. Wire compliance and security in and flip this, and <see cref="SubstitutedLayers"/>
+    /// stops reporting <see cref="ReadModelSubstitutedLayer.Compliance"/>.
     /// </remarks>
     public static bool AppliesCompliance => false;
 

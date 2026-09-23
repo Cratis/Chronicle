@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
@@ -75,10 +76,13 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
             var typeFormats = new TypeFormats();
             var sinkConverter = new ExpandoObjectConverter(typeFormats);
             var complianceConverter = new Cratis.Chronicle.Json.ExpandoObjectConverter(typeFormats);
-            var complianceManager = new JsonComplianceManager(
-                new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                    new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
-                NullLogger<JsonComplianceManager>.Instance);
+            var keyStorage = new InMemoryEncryptionKeyStorage();
+            var encryption = new Encryption();
+            var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+            var complianceManager = new JsonSchemaMetadataManager(
+                new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
+                    new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
+                NullLogger<JsonSchemaMetadataManager>.Instance);
             var compliance = new ReadModelsCompliance(complianceManager, complianceConverter);
             var objectComparer = new ObjectComparer();
 

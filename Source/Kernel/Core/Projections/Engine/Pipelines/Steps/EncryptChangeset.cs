@@ -14,9 +14,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that encrypts
-/// PII fields in the current state and writes the compliance subject into the document before saving.
+/// compliance (<c language="csharp">[PII]</c>) and security (<c language="csharp">[Encrypted]</c>) fields in the current state and
+/// writes the resolved subject into the document before saving.
 /// </summary>
-/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting PII fields.</param>
+/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting the fields.</param>
 /// <param name="objectComparer">The <see cref="IObjectComparer"/> for computing property differences.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this step belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this step belongs to.</param>
@@ -37,14 +38,14 @@ public class EncryptChangeset(
         var schema = projection.TargetReadModelSchema;
         var identifier = context.Event.Context.ResolveComplianceIdentifier(context.Key);
 
-        // A read model whose schema graph declares no compliance metadata has no PII to encrypt.
-        // Applying compliance would return the state unchanged, so the whole-document self-compare and
-        // per-member re-encryption below would walk the entire document — children included — only to
-        // find nothing. Skip that work entirely and write the compliance subject directly. This mirrors
-        // the gate DecryptInitialState already applies on the read path, keeping write and read symmetric.
-        if (!schema.HasComplianceMetadata())
+        // A read model whose schema graph declares no schema metadata at all - neither [PII] nor [Encrypted] -
+        // has nothing to encrypt. Applying protection would return the state unchanged, so the whole-document
+        // self-compare and per-member re-encryption below would walk the entire document — children included —
+        // only to find nothing. Skip that work entirely and write the subject directly. This mirrors the gate
+        // DecryptInitialState already applies on the read path, keeping write and read symmetric.
+        if (!schema.HasSchemaMetadata())
         {
-            SetSubjectWithoutCompliance(context, identifier);
+            SetSubjectWithoutProtection(context, identifier);
             return context;
         }
 
@@ -90,11 +91,11 @@ public class EncryptChangeset(
             ? differences.Collapse(currentState, encrypted).ToList()
             : [];
 
-        var joinedComplianceProperties = GetJoinedComplianceProperties(schema, context.Changeset.Changes).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var joinedProtectedProperties = GetJoinedProtectedProperties(schema, context.Changeset.Changes).ToHashSet(StringComparer.OrdinalIgnoreCase);
         propertyDifferences.RemoveAll(_ =>
             _.PropertyPath.Segments.FirstOrDefault()?.Value is string rootProperty &&
-            joinedComplianceProperties.Contains(rootProperty));
-        await EncryptJoinedComplianceValues(schema, eventSubject, context.Changeset.Changes);
+            joinedProtectedProperties.Contains(rootProperty));
+        await EncryptJoinedProtectedValues(schema, eventSubject, context.Changeset.Changes);
 
         if (subjectsChanged)
         {
@@ -132,9 +133,9 @@ public class EncryptChangeset(
         // Child-collection changes (ChildAdded, and children carried through Joined/ResolvedJoin) hold the
         // materialized child built from the decrypted event and bypass the root-snapshot encryption above.
         // The read path descends into arrays and decrypts per element, so these child payloads must be
-        // encrypted symmetrically on write — otherwise child-element PII is persisted in the clear and then
-        // fails to release on read.
-        await EncryptComplianceForChildren(schema, identifier, context.Changeset.Changes);
+        // encrypted symmetrically on write — otherwise a protected child-element value is persisted in the
+        // clear and then fails to release on read.
+        await EncryptProtectedValuesForChildren(schema, identifier, context.Changeset.Changes);
 
         return context;
     }
@@ -189,7 +190,7 @@ public class EncryptChangeset(
         var rootProperty = propertyPath.Segments.FirstOrDefault()?.Value;
         if (rootProperty is null ||
             !schema.Properties.TryGetValue(rootProperty, out var propertySchema) ||
-            !propertySchema.HasComplianceMetadata())
+            !propertySchema.HasSchemaMetadata())
         {
             return;
         }
@@ -212,7 +213,7 @@ public class EncryptChangeset(
     static bool SubjectsEqual(Dictionary<string, string> left, Dictionary<string, string> right) =>
         left.Count == right.Count && left.All(entry => right.TryGetValue(entry.Key, out var value) && value == entry.Value);
 
-    static IEnumerable<string> GetJoinedComplianceProperties(JsonSchema schema, IEnumerable<Change> changes)
+    static IEnumerable<string> GetJoinedProtectedProperties(JsonSchema schema, IEnumerable<Change> changes)
     {
         foreach (var change in changes)
         {
@@ -228,14 +229,14 @@ public class EncryptChangeset(
                 _ => []
             };
 
-            foreach (var property in GetComplianceProperties(schema, nestedChanges))
+            foreach (var property in GetProtectedProperties(schema, nestedChanges))
             {
                 yield return property;
             }
         }
     }
 
-    static IEnumerable<string> GetComplianceProperties(JsonSchema schema, IEnumerable<Change> changes)
+    static IEnumerable<string> GetProtectedProperties(JsonSchema schema, IEnumerable<Change> changes)
     {
         foreach (var change in changes)
         {
@@ -243,7 +244,7 @@ public class EncryptChangeset(
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
                     foreach (var rootProperty in propertiesChanged.Differences
-                                 .Where(_ => IsComplianceProperty(schema, _.PropertyPath))
+                                 .Where(_ => IsProtectedProperty(schema, _.PropertyPath))
                                  .Select(_ => _.PropertyPath.Segments.First().Value))
                     {
                         yield return rootProperty;
@@ -251,14 +252,14 @@ public class EncryptChangeset(
                     break;
 
                 case Joined joined:
-                    foreach (var property in GetComplianceProperties(schema, joined.Changes))
+                    foreach (var property in GetProtectedProperties(schema, joined.Changes))
                     {
                         yield return property;
                     }
                     break;
 
                 case ResolvedJoin resolvedJoin:
-                    foreach (var property in GetComplianceProperties(schema, resolvedJoin.Changes))
+                    foreach (var property in GetProtectedProperties(schema, resolvedJoin.Changes))
                     {
                         yield return property;
                     }
@@ -267,23 +268,24 @@ public class EncryptChangeset(
         }
     }
 
-    static bool IsComplianceProperty(JsonSchema schema, PropertyPath propertyPath)
+    static bool IsProtectedProperty(JsonSchema schema, PropertyPath propertyPath)
     {
         var rootProperty = propertyPath.Segments.FirstOrDefault()?.Value;
         return rootProperty is not null &&
                schema.Properties.TryGetValue(rootProperty, out var propertySchema) &&
-               propertySchema.HasComplianceMetadata();
+               propertySchema.HasSchemaMetadata();
     }
 
-    static void SetSubjectWithoutCompliance(ProjectionEventContext context, string identifier)
+    static void SetSubjectWithoutProtection(ProjectionEventContext context, string identifier)
     {
         var currentState = context.Changeset.CurrentState;
         var currentStateAsDictionary = (IDictionary<string, object?>)currentState;
         currentStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var currentSubjectValue);
         var subjectWasAbsent = currentSubjectValue is not string;
 
-        // Write the subject onto the state exactly as the compliance path would, so any consumer reading
-        // the current state after this step sees the same value regardless of whether the model has PII.
+        // Write the subject onto the state exactly as the protection path would, so any consumer reading
+        // the current state after this step sees the same value regardless of whether the model has any
+        // [PII] or [Encrypted] properties.
         currentStateAsDictionary[WellKnownProperties.Subject] = identifier;
 
         // Record the subject as a change only when it was previously absent — a whole-collection removal
@@ -296,7 +298,7 @@ public class EncryptChangeset(
         }
     }
 
-    async Task EncryptJoinedComplianceValues(JsonSchema schema, string subject, IEnumerable<Change> changes)
+    async Task EncryptJoinedProtectedValues(JsonSchema schema, string subject, IEnumerable<Change> changes)
     {
         if (changes is not IList<Change> mutableChanges || mutableChanges.IsReadOnly)
         {
@@ -307,10 +309,10 @@ public class EncryptChangeset(
         {
             mutableChanges[index] = mutableChanges[index] switch
             {
-                Joined joined => joined with { Changes = await EncryptComplianceValues(schema, subject, joined.Changes) },
+                Joined joined => joined with { Changes = await EncryptProtectedValues(schema, subject, joined.Changes) },
                 ResolvedJoin resolvedJoin => resolvedJoin with
                 {
-                    Changes = await EncryptComplianceValues(
+                    Changes = await EncryptProtectedValues(
                         schema,
                         resolvedJoin.Source is AppendedEvent resolvedEvent ? SubjectFor(resolvedEvent) : subject,
                         resolvedJoin.Changes)
@@ -320,18 +322,18 @@ public class EncryptChangeset(
         }
     }
 
-    async Task<Change[]> EncryptComplianceValues(JsonSchema schema, string subject, IEnumerable<Change> changes)
+    async Task<Change[]> EncryptProtectedValues(JsonSchema schema, string subject, IEnumerable<Change> changes)
     {
         var result = new List<Change>();
         foreach (var change in changes)
         {
             result.Add(change switch
             {
-                PropertiesChanged<ExpandoObject> propertiesChanged => await EncryptComplianceValues(schema, subject, propertiesChanged),
-                Joined joined => joined with { Changes = await EncryptComplianceValues(schema, subject, joined.Changes) },
+                PropertiesChanged<ExpandoObject> propertiesChanged => await EncryptProtectedValues(schema, subject, propertiesChanged),
+                Joined joined => joined with { Changes = await EncryptProtectedValues(schema, subject, joined.Changes) },
                 ResolvedJoin resolvedJoin => resolvedJoin with
                 {
-                    Changes = await EncryptComplianceValues(
+                    Changes = await EncryptProtectedValues(
                         schema,
                         resolvedJoin.Source is AppendedEvent resolvedEvent ? SubjectFor(resolvedEvent) : subject,
                         resolvedJoin.Changes)
@@ -343,21 +345,21 @@ public class EncryptChangeset(
         return [.. result];
     }
 
-    async Task<PropertiesChanged<ExpandoObject>> EncryptComplianceValues(
+    async Task<PropertiesChanged<ExpandoObject>> EncryptProtectedValues(
         JsonSchema schema,
         string subject,
         PropertiesChanged<ExpandoObject> propertiesChanged)
     {
-        var complianceDifferences = propertiesChanged.Differences
-            .Where(_ => IsComplianceProperty(schema, _.PropertyPath))
+        var protectedDifferences = propertiesChanged.Differences
+            .Where(_ => IsProtectedProperty(schema, _.PropertyPath))
             .ToArray();
-        if (complianceDifferences.Length == 0)
+        if (protectedDifferences.Length == 0)
         {
             return propertiesChanged;
         }
 
         var state = new ExpandoObject();
-        foreach (var difference in complianceDifferences)
+        foreach (var difference in protectedDifferences)
         {
             difference.PropertyPath.SetValue(state, difference.Changed!, ArrayIndexers.NoIndexers);
         }
@@ -371,7 +373,7 @@ public class EncryptChangeset(
         return propertiesChanged with
         {
             Differences = propertiesChanged.Differences
-                .Select(difference => IsComplianceProperty(schema, difference.PropertyPath)
+                .Select(difference => IsProtectedProperty(schema, difference.PropertyPath)
                     ? new PropertyDifference(
                         difference.PropertyPath,
                         difference.Original,
@@ -382,38 +384,38 @@ public class EncryptChangeset(
         };
     }
 
-    async Task EncryptComplianceForChildren(JsonSchema schema, string identifier, IEnumerable<Change> changes)
+    async Task EncryptProtectedValuesForChildren(JsonSchema schema, string identifier, IEnumerable<Change> changes)
     {
         foreach (var change in changes)
         {
             switch (change)
             {
                 case ChildAdded { Child: ExpandoObject child } childAdded:
-                    await EncryptComplianceForChild(schema, childAdded.ChildrenProperty, identifier, child);
+                    await EncryptProtectedValuesForChild(schema, childAdded.ChildrenProperty, identifier, child);
                     break;
 
                 case Joined joined:
-                    await EncryptComplianceForChildren(schema, identifier, joined.Changes);
+                    await EncryptProtectedValuesForChildren(schema, identifier, joined.Changes);
                     break;
 
                 case ResolvedJoin resolvedJoin:
-                    await EncryptComplianceForChildren(schema, identifier, resolvedJoin.Changes);
+                    await EncryptProtectedValuesForChildren(schema, identifier, resolvedJoin.Changes);
                     break;
             }
         }
     }
 
-    async Task EncryptComplianceForChild(JsonSchema schema, PropertyPath childrenProperty, string identifier, ExpandoObject child)
+    async Task EncryptProtectedValuesForChild(JsonSchema schema, PropertyPath childrenProperty, string identifier, ExpandoObject child)
     {
         var childSchema = schema.GetSchemaForPropertyPath(childrenProperty);
-        if (childSchema?.HasComplianceMetadata() != true)
+        if (childSchema?.HasSchemaMetadata() != true)
         {
             return;
         }
 
         var encryptedChild = await readModelsCompliance.Apply(eventStore, eventStoreNamespace, childSchema, identifier, child);
 
-        // Apply writes the document compliance subject (__subject) into the result; a child element lives
+        // Apply writes the document's resolved subject (__subject) into the result; a child element lives
         // under the root document's subject and must not carry its own, so strip it before merging back.
         var encryptedValues = (IDictionary<string, object?>)encryptedChild;
         encryptedValues.Remove(WellKnownProperties.Subject);

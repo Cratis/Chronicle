@@ -1,40 +1,39 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
-using System.Text;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
 
 /// <summary>
-/// Represents a <see cref="IJsonCompliancePropertyValueHandler"/> for handling PII.
+/// Represents a <see cref="IJsonSchemaMetadataValueHandler"/> for handling PII.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/>.
 /// </remarks>
+/// <param name="provisioner"><see cref="IManagedEncryptionKeyProvisioner"/> used to provision the subject's key.</param>
 /// <param name="encryptionKeyStore"><see cref="IEncryptionKeyStorage"/> to use for keys.</param>
 /// <param name="encryption"><see cref="IEncryption"/> for performing encryption/decryption.</param>
-public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionKeyStore, IEncryption encryption) : IJsonCompliancePropertyValueHandler
+public class PIICompliancePropertyValueHandler(
+    IManagedEncryptionKeyProvisioner provisioner,
+    IEncryptionKeyStorage encryptionKeyStore,
+    IEncryption encryption) : IJsonSchemaMetadataValueHandler
 {
-    static readonly ConcurrentDictionary<string, SemaphoreSlim> _keyCreationGates = new();
-
-    readonly IEncryptionKeyStorage _encryptionKeyStore = encryptionKeyStore;
-    readonly IEncryption _encryption = encryption;
+    /// <inheritdoc/>
+    public SchemaMetadataCategory Category => SchemaMetadataCategory.Compliance;
 
     /// <inheritdoc/>
-    public ComplianceMetadataType Type => ComplianceMetadataType.PII;
+    public SchemaMetadataTypeName Type => ComplianceMetadataType.PII.Value;
 
     /// <inheritdoc/>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        var key = await EnsureKeyFor(eventStore, eventStoreNamespace, identifier);
-        var valueAsString = value.ToString();
-        var encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key);
-        var encryptedAsBase64 = Convert.ToBase64String(encrypted);
-        return JsonValue.Create(encryptedAsBase64);
+        var key = await provisioner.EnsureKeyFor(eventStore, eventStoreNamespace, identifier);
+        return ProtectedValueCodec.Encrypt(encryption, key, value);
     }
 
     /// <inheritdoc/>
@@ -52,12 +51,12 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
         // has none — and its display-only values were being emptied on every read. Erasure is unaffected:
         // IsEncrypted takes no key, so a genuinely encrypted value whose key has been shredded still answers yes
         // here, still falls through to the key lookup, and still blanks.
-        if (!TryDecodeEncryptedValue(value.ToString(), out var encrypted))
+        if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
         {
             return value;
         }
 
-        var key = await _encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
 
         // When the encryption key has been deleted (GDPR right-to-erasure / crypto-shredding),
         // the PII is permanently unreadable. Surface it as empty rather than throwing so that
@@ -67,60 +66,6 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
             return JsonValue.Create(string.Empty);
         }
 
-        var decrypted = _encryption.Decrypt(encrypted, key);
-        var decryptedAsString = Encoding.UTF8.GetString(decrypted);
-        return JsonValue.Create(decryptedAsString);
-    }
-
-    bool TryDecodeEncryptedValue(string value, out byte[] encrypted)
-    {
-        encrypted = [];
-
-        // Base64 encodes four characters per three bytes, so anything else cannot be a value Apply produced.
-        if (value.Length == 0 || value.Length % 4 != 0)
-        {
-            return false;
-        }
-
-        var buffer = new byte[value.Length / 4 * 3];
-        if (!Convert.TryFromBase64String(value, buffer, out var bytesWritten))
-        {
-            return false;
-        }
-
-        var decoded = buffer[..bytesWritten];
-        if (!_encryption.IsEncrypted(decoded))
-        {
-            return false;
-        }
-
-        encrypted = decoded;
-        return true;
-    }
-
-    async Task<EncryptionKey> EnsureKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        if (await _encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
-        {
-            return existing;
-        }
-
-        // A subject's key must be provisioned exactly once: a batch append and the sibling projections that
-        // observe it all encrypt PII under the same subject concurrently (Task.WhenAll), and the same subject
-        // may be provisioned from more than one silo. If two provisioners each generate and save a key, the
-        // store mints a second revision and the value encrypted under the first key can no longer be decrypted
-        // ("padding check failed"). The in-process gate serializes provisioning within this process to avoid
-        // generating throwaway keys; GetOrAddFor is the atomic get-or-create that makes every provisioner
-        // converge on a single persisted key pair even across processes / stale reads.
-        var gate = _keyCreationGates.GetOrAdd($"{eventStore.Value}+{eventStoreNamespace.Value}+{identifier.Value}", _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync();
-        try
-        {
-            return await _encryptionKeyStore.GetOrAddFor(eventStore, eventStoreNamespace, identifier, _encryption.GenerateKey());
-        }
-        finally
-        {
-            gate.Release();
-        }
+        return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
     }
 }

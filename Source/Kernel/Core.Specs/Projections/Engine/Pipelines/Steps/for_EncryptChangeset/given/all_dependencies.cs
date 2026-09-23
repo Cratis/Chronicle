@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -22,7 +21,7 @@ public class all_dependencies : Specification
     protected const string EventSourceIdValue = "event-source-id";
     protected const string SubjectValue = "explicit-subject";
 
-    protected IJsonComplianceManager _complianceManager;
+    protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected IObjectComparer _objectComparer;
     protected IProjection _projection;
@@ -31,7 +30,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _objectComparer = Substitute.For<IObjectComparer>();
         _projection = Substitute.For<IProjection>();
