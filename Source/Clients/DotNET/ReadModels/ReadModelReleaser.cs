@@ -83,13 +83,34 @@ internal class ReadModelReleaser(
     /// <param name="schema">The schema describing the instance.</param>
     /// <param name="instance">The instance to release.</param>
     /// <returns>The released instance, or the original when it names no subject to release against.</returns>
+    /// <remarks>
+    /// A subject-scoped value - <c language="csharp">[PII]</c>, or <c language="csharp">[Encrypted]</c> with the default
+    /// <c language="csharp">EncryptionScope.Subject</c> - is keyed by a resolved subject, so when no subject resolves
+    /// there is nothing for it to have been encrypted under, and skipping the call is correct (this is also the
+    /// shape of a computed <c language="csharp">[PII]</c> value that was never round-tripped through encryption at
+    /// all). A namespace- or global-scoped <c language="csharp">[Encrypted]</c> value is keyed independently of any
+    /// subject, so it needs releasing regardless - and the read model carrying only that kind of value ordinarily
+    /// has no <c language="csharp">Id</c> or <c language="csharp">[Subject]</c> at all, since there is no per-document
+    /// identity for it to be scoped by. <see cref="SecurityJsonSchemaExtensions.HasSubjectIndependentSecurityMetadata"/>
+    /// is what tells those two cases apart: only when the schema carries subject-independent security metadata does a
+    /// failed subject resolution still fall back to <see cref="Subject.NotSet"/> rather than skip. The kernel already
+    /// degrades a subject-scoped property it cannot resolve a key for to an empty value rather than failing the whole
+    /// release (see <c language="csharp">JsonSchemaMetadataManager</c>), so <see cref="Subject.NotSet"/> is safe there
+    /// even when the schema also carries subject-scoped metadata the instance genuinely has no subject for.
+    /// </remarks>
     async Task<TReadModel> ReleaseAgainst<TReadModel>(JsonSchema schema, TReadModel instance)
     {
         var subject = ReadModelSubjectResolver.ResolveFrom(instance);
         if (subject is null)
         {
-            logger.NoSubjectForRelease(typeof(TReadModel).Name);
-            return instance;
+            if (!schema.HasSubjectIndependentSecurityMetadata())
+            {
+                logger.NoSubjectForRelease(typeof(TReadModel).Name);
+                return instance;
+            }
+
+            logger.NoResolvableSubjectFallingBackToNotSet(typeof(TReadModel).Name);
+            subject = Subject.NotSet;
         }
 
         return await ReleaseWhole(subject, instance, schema);
