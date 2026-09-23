@@ -321,6 +321,19 @@ public class ProjectionFactory(
         return schemaProperty;
     }
 
+    /// <summary>
+    /// Answers whether a key expression is a constant rather than something read off the event.
+    /// </summary>
+    /// <param name="key">The <see cref="PropertyExpression"/> to consider.</param>
+    /// <returns>True when the expression is a constant.</returns>
+    /// <remarks>
+    /// Asked of a parent key, because a constant names the parent document outright and therefore has no
+    /// parent event behind it. Uses the same recognition that resolves the expression, so the two cannot
+    /// drift apart.
+    /// </remarks>
+    static bool IsConstantExpression(PropertyExpression? key) =>
+        key is not null && key.Value.Length != 0 && new ValueExpressionResolver().CanResolve(key.Value);
+
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
             CreateInitialState(readModelSchema) :
@@ -999,7 +1012,7 @@ public class ProjectionFactory(
         var parentProjection = projection.HasParent ? projection.Parent! : projection;
         var parentIdentifiedByProperty = projection.HasParent ? projection.Parent!.IdentifiedByProperty : actualIdentifiedByProperty;
         var parentKeyResolver = GetParentKeyResolverFor(parentProjection, effectiveParentKey, parentIdentifiedByProperty);
-        keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
+        keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty, IsConstantExpression(effectiveParentKey));
 
         // A parent-hierarchy resolver routes the child event to its parent document, collapsing distinct event
         // sources onto one document, so it is never purely event-source-keyed.

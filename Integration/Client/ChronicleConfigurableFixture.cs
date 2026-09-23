@@ -273,7 +273,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <param name="network">The network to attach the container to.</param>
     /// <returns>The built container.</returns>
     IContainer BuildInProcessMongoContainer(INetwork network) =>
-        new ContainerBuilder("mongo")
+        new ContainerBuilder(ChronicleInProcessFixture.ImageName)
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27017, assignRandomHostPort: true)
@@ -379,8 +379,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // hands over to the next before Docker has released the previous binding, and
         // lets multiple test processes run side-by-side. The host port is discovered
         // dynamically through MongoDBContainer.GetMappedPublicPort by every caller.
-        _outOfProcessMongoContainer = new ContainerBuilder("mongo")
-            .WithImage("mongo")
+        _outOfProcessMongoContainer = new ContainerBuilder(ChronicleInProcessFixture.ImageName)
+            .WithImage(ChronicleInProcessFixture.ImageName)
             .WithCommand("/bin/sh", "-c", replicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27017, assignRandomHostPort: true)
