@@ -16,9 +16,9 @@ namespace Cratis.Chronicle.Services.Compliance;
 /// Represents an implementation of <see cref="ICompliance"/>.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving the kernel <see cref="IPIIManager"/> grain.</param>
-/// <param name="jsonComplianceManager">The <see cref="IJsonSchemaMetadataManager"/> for handling compliance on JSON.</param>
+/// <param name="schemaMetadataManager">The <see cref="IJsonSchemaMetadataManager"/> for handling both compliance and security metadata on JSON.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
-internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaMetadataManager jsonComplianceManager, ILogger<ComplianceService> logger) : ICompliance
+internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaMetadataManager schemaMetadataManager, ILogger<ComplianceService> logger) : ICompliance
 {
     /// <inheritdoc/>
     public async Task<ReleaseResponse> Release(ReleaseRequest request, CallContext context = default)
@@ -33,7 +33,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
                 return new ReleaseResponse { HasError = true, Error = "Invalid JSON payload." };
             }
 
-            var released = await jsonComplianceManager.Release(
+            var released = await schemaMetadataManager.Release(
                 (EventStoreName)request.EventStore,
                 (EventStoreNamespaceName)request.Namespace,
                 schema,

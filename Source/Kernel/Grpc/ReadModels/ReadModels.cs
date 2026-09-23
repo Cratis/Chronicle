@@ -35,7 +35,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="reducerMediator">The reducer mediator.</param>
 /// <param name="changesetMediator">The <see cref="IProjectionChangesetMediator"/> for forwarding watched changesets to client streams.</param>
 /// <param name="localSiloDetails">The <see cref="ILocalSiloDetails"/> for pinning the watch subscriber grain to this silo.</param>
-/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting compliance and security fields.</param>
 /// <param name="materializedReadModels">The <see cref="IMaterializedReadModelStore"/> for reading instances that are already materialized.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
@@ -712,18 +712,18 @@ internal sealed class ReadModels(
         JsonObject readModel,
         string? preferredSubject = null)
     {
-        // A read model projected directly from stored (encrypted) events still holds its PII fields encrypted under
-        // the compliance subject. The subject is resolved identically for one-shot and observable queries — an
-        // explicit subject when the caller supplies one, otherwise inferred from the document (__subject -> _id ->
-        // id) — stamped so the compliance manager can decrypt, then stripped again so the internal marker never
-        // leaves the kernel. Sharing this between the one-shot query path and the observable (Watch) path keeps them
-        // from diverging: observable queries used to skip the inference entirely and streamed a __subject-less
-        // document back as ciphertext.
+        // A read model projected directly from stored (encrypted) events still holds its [PII] and [Encrypted]
+        // fields encrypted under the resolved subject. The subject is resolved identically for one-shot and
+        // observable queries — an explicit subject when the caller supplies one, otherwise inferred from the
+        // document (__subject -> _id -> id) — stamped so the schema metadata manager can decrypt, then stripped
+        // again so the internal marker never leaves the kernel. Sharing this between the one-shot query path and
+        // the observable (Watch) path keeps them from diverging: observable queries used to skip the inference
+        // entirely and streamed a __subject-less document back as ciphertext.
         //
         // The document handed in is never modified. On the observable path it belongs to the changeset the notifier
         // pushed, not to this call, so stamping bookkeeping onto it would leave an internal marker on an object
         // this method does not own.
-        if (!schema.HasComplianceMetadata())
+        if (!schema.HasSchemaMetadata())
         {
             return readModel;
         }

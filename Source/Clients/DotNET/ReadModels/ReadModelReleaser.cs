@@ -10,7 +10,8 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Runs the compliance release pass over read model instances.
+/// Runs the release pass over read model instances - decrypting both compliance (<c language="csharp">[PII]</c>) and
+/// security (<c language="csharp">[Encrypted]</c>) fields, via the kernel's generalized schema metadata handling.
 /// </summary>
 /// <param name="eventStore">The <see cref="IEventStore"/> the read models belong to.</param>
 /// <param name="schemaGenerator">The <see cref="IJsonSchemaGenerator"/> for describing the payload.</param>
@@ -25,7 +26,7 @@ internal class ReadModelReleaser(
     ILogger logger)
 {
     /// <summary>
-    /// Release the compliance-annotated values on a read model instance.
+    /// Release the compliance- and security-annotated values on a read model instance.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model to release.</typeparam>
     /// <param name="instance">The instance to release.</param>
@@ -38,7 +39,7 @@ internal class ReadModelReleaser(
         }
 
         var schema = schemaGenerator.Generate(typeof(TReadModel));
-        if (!schema.HasComplianceMetadata())
+        if (!schema.HasSchemaMetadata())
         {
             return instance;
         }
@@ -47,7 +48,7 @@ internal class ReadModelReleaser(
     }
 
     /// <summary>
-    /// Release the compliance-annotated values on a sequence of read model instances.
+    /// Release the compliance- and security-annotated values on a sequence of read model instances.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model to release.</typeparam>
     /// <param name="instances">The instances to release.</param>
@@ -55,13 +56,13 @@ internal class ReadModelReleaser(
     /// <remarks>
     /// Whether a read model has anything to release is a property of its type, not of any one instance, so the schema
     /// is resolved and asked once for the whole sequence. The overwhelmingly common case - a read model that carries no
-    /// compliance metadata at all - then costs one lookup rather than one per instance, and the sequence is handed back
+    /// schema metadata at all - then costs one lookup rather than one per instance, and the sequence is handed back
     /// untouched instead of being copied into a new list only to hold the same references.
     /// </remarks>
     public async Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances)
     {
         var schema = schemaGenerator.Generate(typeof(TReadModel));
-        if (!schema.HasComplianceMetadata())
+        if (!schema.HasSchemaMetadata())
         {
             return instances;
         }
@@ -76,7 +77,7 @@ internal class ReadModelReleaser(
     }
 
     /// <summary>
-    /// Release a single instance against a schema already known to carry compliance metadata.
+    /// Release a single instance against a schema already known to carry schema metadata.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model to release.</typeparam>
     /// <param name="schema">The schema describing the instance.</param>

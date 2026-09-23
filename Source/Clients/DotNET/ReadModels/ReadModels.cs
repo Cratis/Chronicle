@@ -179,8 +179,8 @@ public class ReadModels(
         var result = await GetInstanceById(readModelType, key, sessionId);
         var instance = (TReadModel)result;
 
-        // Only an in-process reduce leaves PII encrypted — the Kernel releases whatever it serves from the
-        // materialized store.
+        // Only an in-process reduce leaves compliance- and security-protected values encrypted — the Kernel
+        // releases whatever it serves from the materialized store.
         if (IsReducedInProcess(readModelType))
         {
             return await Release(instance);
@@ -412,8 +412,8 @@ public class ReadModels(
     /// <returns>True when the read model is reducer-backed and passive, false otherwise.</returns>
     /// <remarks>
     /// A reducer-backed read model that is not passive is observed, so the Kernel already holds its state in a
-    /// sink and serves it with PII released. A passive one has no observer and therefore no sink to read from,
-    /// so its state only exists once this client has folded the events for it.
+    /// sink and serves it with compliance and security fields released. A passive one has no observer and
+    /// therefore no sink to read from, so its state only exists once this client has folded the events for it.
     /// </remarks>
     bool IsReducedInProcess(Type readModelType) => reducers.HasFor(readModelType) && readModelType.IsPassive();
 

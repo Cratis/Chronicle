@@ -11,10 +11,11 @@ using Cratis.Chronicle.Storage;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Represents an implementation of <see cref="IReadModelsCompliance"/> that applies and releases
-/// PII compliance for read model instances via the <see cref="IJsonSchemaMetadataManager"/>.
+/// Represents an implementation of <see cref="IReadModelsCompliance"/> that applies and releases both
+/// compliance (<c language="csharp">[PII]</c>) and security (<c language="csharp">[Encrypted]</c>) protection for read model instances
+/// via the <see cref="IJsonSchemaMetadataManager"/>.
 /// </summary>
-/// <param name="complianceManager">The <see cref="IJsonSchemaMetadataManager"/> for encrypting and decrypting PII fields.</param>
+/// <param name="complianceManager">The <see cref="IJsonSchemaMetadataManager"/> for encrypting and decrypting the protected fields.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 public class ReadModelsCompliance(
     IJsonSchemaMetadataManager complianceManager,

@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <see cref="ISink"/> a read model's observer writes to.
 /// </summary>
 /// <param name="storage">The <see cref="IStorage"/> to resolve sinks through.</param>
-/// <param name="compliance">The <see cref="IReadModelsCompliance"/> for releasing PII before instances leave the kernel.</param>
+/// <param name="compliance">The <see cref="IReadModelsCompliance"/> for releasing compliance and security fields before instances leave the kernel.</param>
 public class MaterializedReadModelStore(
     IStorage storage,
     IReadModelsCompliance compliance) : IMaterializedReadModelStore

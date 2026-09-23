@@ -35,9 +35,11 @@ public enum ReadModelSubstitutedLayer
     DeferredKeyHandling = 2,
 
     /// <summary>
-    /// Compliance. A deployed Chronicle encrypts the <c language="csharp">[PII]</c> members of a read model on the way into the
-    /// sink and releases them on the way out; the harness projects and reads plaintext, so a value that is
-    /// unreadable, erased or wrongly-subjected in a running system still looks correct here.
+    /// Compliance and security. A deployed Chronicle encrypts the <c language="csharp">[PII]</c> and <c language="csharp">[Encrypted]</c> members
+    /// of a read model on the way into the sink and releases them on the way out; the harness projects and reads
+    /// plaintext, so a value that is unreadable, erased (for <c language="csharp">[PII]</c>) or wrongly-subjected in a running
+    /// system still looks correct here. Named for its original, compliance-only scope; retained rather than
+    /// renamed because this is a shipped public member.
     /// </summary>
     Compliance = 3
 }
