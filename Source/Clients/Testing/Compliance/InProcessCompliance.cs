@@ -8,6 +8,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Types;
 using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
+using KernelProtectedValues = KernelCore::Cratis.Chronicle.ProtectedValues;
 using KernelEvents = KernelCore::Cratis.Chronicle.Events;
 using KernelGDPR = KernelCore::Cratis.Chronicle.Compliance.GDPR;
 using KernelReadModels = KernelCore::Cratis.Chronicle.ReadModels;
@@ -20,11 +21,13 @@ namespace Cratis.Chronicle.Testing.Compliance;
 /// <remarks>
 /// <para>
 /// The kernel's <see cref="KernelCompliance::JsonComplianceManager"/> builds its dispatch table from the
-/// property value handlers it is given, so constructing it with none makes every <c language="csharp">[PII]</c> value pass
-/// through in plaintext — silently, because a missing handler is indistinguishable from a value that
-/// carries no compliance metadata. The real <see cref="KernelGDPR::PIICompliancePropertyValueHandler"/>
-/// is registered here so an in-process scenario encrypts at rest and releases on read exactly the way a
-/// deployed Chronicle does.
+/// property value handlers it is given, so constructing it with none makes every <c language="csharp">[PII]</c> or
+/// <c language="csharp">[Encrypted]</c> value pass through in plaintext — silently, because a missing handler is
+/// indistinguishable from a value that carries no compliance metadata. The real
+/// <see cref="KernelGDPR::PIICompliancePropertyValueHandler"/> and <see cref="KernelProtectedValues::EncryptedValueHandler"/>
+/// are both registered here, sharing one <see cref="KernelProtectedValues::ManagedEncryptionKeyProvisioner"/> exactly as
+/// production wiring does, so an in-process scenario encrypts at rest and releases on read exactly the way a
+/// deployed Chronicle does — including the two features never landing on the same stored key for the same subject.
 /// </para>
 /// <para>
 /// Every collaborator that needs compliance in one scenario shares this instance, because they have to
@@ -50,10 +53,13 @@ internal sealed class InProcessCompliance
     public InProcessCompliance()
     {
         KeyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new KernelCompliance::Encryption();
+        var provisioner = new KernelProtectedValues::ManagedEncryptionKeyProvisioner(KeyStorage, encryption);
         Manager = new KernelCompliance::JsonComplianceManager(
             new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>(
             [
-                new KernelGDPR::PIICompliancePropertyValueHandler(KeyStorage, new KernelCompliance::Encryption())
+                new KernelGDPR::PIICompliancePropertyValueHandler(provisioner, KeyStorage, encryption),
+                new KernelProtectedValues::EncryptedValueHandler(provisioner, KeyStorage, encryption)
             ]),
             NullLogger<KernelCompliance::JsonComplianceManager>.Instance);
     }

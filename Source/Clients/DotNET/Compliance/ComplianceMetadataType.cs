@@ -15,6 +15,14 @@ public record ComplianceMetadataType(string Value) : ConceptAs<string>(Value)
     public static readonly ComplianceMetadataType PII = new("PII");
 
     /// <summary>
+    /// A value that is subject-scoped, plain-confidentiality encryption - a security measure, not a compliance one.
+    /// Marked with <c language="csharp">[Encrypted]</c> on the client rather than <c language="csharp">[PII]</c>; the encryption
+    /// key it is provisioned under is never erasable and is never the same key a <c language="csharp">[PII]</c> value for the
+    /// same subject uses.
+    /// </summary>
+    public static readonly ComplianceMetadataType EncryptedSubject = new("EncryptedSubject");
+
+    /// <summary>
     /// Convert from a <see cref="string"/> to <see cref="ComplianceMetadataType"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> to convert from.</param>
