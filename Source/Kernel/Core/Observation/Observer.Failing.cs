@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    /// <summary>
+    /// The shortest period Orleans accepts for a reminder by default.
+    /// </summary>
+    static readonly TimeSpan _minimumRetryReminderPeriod = TimeSpan.FromMinutes(1);
+
     /// <inheritdoc/>
     public async Task PartitionFailed(
         Key partition,
@@ -51,7 +56,8 @@ public partial class Observer
 
         if (config.MaxRetryAttempts == 0 || attemptCount <= config.MaxRetryAttempts)
         {
-            await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure, config), TimeSpan.FromHours(48));
+            var retryDelay = GetNextRetryDelay(failure, config);
+            await this.RegisterOrUpdateReminder(partition.ToString(), retryDelay, GetRetryReminderPeriod(retryDelay));
         }
         else
         {
@@ -186,6 +192,20 @@ public partial class Observer
 
         return time;
     }
+
+    /// <summary>
+    /// Get the period for the reminder that retries a failed partition.
+    /// </summary>
+    /// <param name="retryDelay">The delay before the next retry attempt.</param>
+    /// <returns>The reminder period.</returns>
+    /// <remarks>
+    /// The reminder is removed as soon as it is received, so the period only matters if its first tick is never
+    /// delivered. That happens when persisting the reminder takes longer than the retry delay - the reminder service
+    /// then schedules the next tick one full period after the intended one. Keeping the period at the retry delay
+    /// (never below the smallest period the reminder service accepts) bounds how late such a retry can be.
+    /// </remarks>
+    static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
+        retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
     async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
     {
