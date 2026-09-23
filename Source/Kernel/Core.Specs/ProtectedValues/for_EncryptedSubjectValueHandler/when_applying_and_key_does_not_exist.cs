@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Chronicle.ProtectedValues.for_EncryptedValueHandler;
+namespace Cratis.Chronicle.ProtectedValues.for_EncryptedSubjectValueHandler;
 
 public class when_applying_and_key_does_not_exist : given.a_property_handler
 {

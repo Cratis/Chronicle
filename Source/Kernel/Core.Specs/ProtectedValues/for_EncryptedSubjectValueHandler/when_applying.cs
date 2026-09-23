@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 
-namespace Cratis.Chronicle.ProtectedValues.for_EncryptedValueHandler;
+namespace Cratis.Chronicle.ProtectedValues.for_EncryptedSubjectValueHandler;
 
 public class when_applying : given.a_property_handler
 {

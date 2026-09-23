@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.ProtectedValues;
@@ -39,12 +40,51 @@ public static class EncryptedValueKeyIdentifiers
     public const string Marker = "$chronicle-encrypted-value$";
 
     /// <summary>
+    /// The fixed <see cref="EventStoreName"/> every <c language="csharp">EncryptionScope.Global</c> key is stored
+    /// under, regardless of which real event store the protected value's event actually belongs to.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Storage.Compliance.IEncryptionKeyStorage"/> keys every operation by <c language="csharp">(eventStore, eventStoreNamespace, identifier)</c>
+    /// and that shape is not changed for this feature - see <see cref="EncryptedValueKeyIdentifiers"/>'s own
+    /// remarks. A single key shared across every real event store and namespace is achieved by routing every
+    /// <c language="csharp">EncryptionScope.Global</c> value's storage calls through this one fixed pair instead of the
+    /// caller's actual <see cref="EventStoreName"/>/<see cref="EventStoreNamespaceName"/>, which is exactly as legitimate
+    /// to the storage backend as any other event store name - it is namespaced string keys all the way down, with no
+    /// pre-provisioning requirement.
+    /// </remarks>
+    public static readonly EventStoreName GlobalEventStore = $"{Marker}global-scope$";
+
+    /// <summary>
+    /// The fixed <see cref="EventStoreNamespaceName"/> every <c language="csharp">EncryptionScope.Global</c> key is
+    /// stored under - see <see cref="GlobalEventStore"/>.
+    /// </summary>
+    public static readonly EventStoreNamespaceName GlobalNamespace = $"{Marker}global-scope$";
+
+    /// <summary>
     /// Build the <see cref="EncryptionKeyIdentifier"/> a subject-scoped <c language="csharp">[Encrypted]</c> value is
     /// provisioned and looked up under.
     /// </summary>
     /// <param name="subjectIdentifier">The bare compliance identifier - the same value the PII path is given for the document.</param>
     /// <returns>The disjoint <see cref="EncryptionKeyIdentifier"/> for the subject's encryption-purpose key.</returns>
     public static EncryptionKeyIdentifier ForSubject(string subjectIdentifier) => new($"{Marker}subject${subjectIdentifier}");
+
+    /// <summary>
+    /// Build the <see cref="EncryptionKeyIdentifier"/> a namespace-scoped <c language="csharp">[Encrypted]</c> value is
+    /// provisioned and looked up under. The identifier itself carries no variable component - the caller's real
+    /// <see cref="EventStoreName"/>/<see cref="EventStoreNamespaceName"/> is what scopes it to one namespace, exactly
+    /// as it already scopes every other <see cref="Storage.Compliance.IEncryptionKeyStorage"/> operation.
+    /// </summary>
+    /// <returns>The disjoint <see cref="EncryptionKeyIdentifier"/> for the namespace's encryption-purpose key.</returns>
+    public static EncryptionKeyIdentifier ForNamespace() => new($"{Marker}namespace$");
+
+    /// <summary>
+    /// Build the <see cref="EncryptionKeyIdentifier"/> a globally-scoped <c language="csharp">[Encrypted]</c> value is
+    /// provisioned and looked up under. Pair with <see cref="GlobalEventStore"/>/<see cref="GlobalNamespace"/> rather
+    /// than the caller's real event store/namespace so every <c language="csharp">EncryptionScope.Global</c> value across the
+    /// whole installation converges on the same stored key.
+    /// </summary>
+    /// <returns>The disjoint <see cref="EncryptionKeyIdentifier"/> for the installation-wide encryption-purpose key.</returns>
+    public static EncryptionKeyIdentifier ForGlobal() => new($"{Marker}global$");
 
     /// <summary>
     /// Check whether an <see cref="EncryptionKeyIdentifier"/> is one this type builds.

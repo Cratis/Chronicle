@@ -73,6 +73,8 @@ public class EncryptedMetadataProvider : ICanProvideComplianceMetadataForType, I
     static ComplianceMetadataType MetadataTypeFor(EncryptionScope scope) => scope switch
     {
         EncryptionScope.Subject => ComplianceMetadataType.EncryptedSubject,
+        EncryptionScope.Namespace => ComplianceMetadataType.EncryptedNamespace,
+        EncryptionScope.Global => ComplianceMetadataType.EncryptedGlobal,
         _ => throw new EncryptionScopeNotYetSupported(scope)
     };
 

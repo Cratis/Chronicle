@@ -56,7 +56,7 @@ public class and_pii_and_encrypted_values_protect_the_same_subject : Specificati
         var manager = new JsonComplianceManager(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, _keyStorage, encryption),
-                new EncryptedValueHandler(provisioner, _keyStorage, encryption)),
+                new EncryptedSubjectValueHandler(provisioner, _keyStorage, encryption)),
             NullLogger<JsonComplianceManager>.Instance);
         _compliance = new ReadModelsCompliance(manager, new ExpandoObjectConverter(new TypeFormats()));
     }

@@ -1,16 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance.GDPR;
+
 namespace Cratis.Chronicle.ProtectedValues;
 
 /// <summary>
 /// Defines the identity a <see cref="EncryptedAttribute"/> value's encryption key is provisioned under.
 /// </summary>
 /// <remarks>
-/// Only <see cref="Subject"/> is implemented today - see the remarks on <see cref="EncryptedAttribute"/>.
-/// <see cref="Namespace"/> and <see cref="Global"/> are reserved so that code written against them compiles
-/// once and keeps working when they are implemented, rather than requiring every caller of this API to be
-/// revisited a second time.
+/// <see cref="PIIAttribute"/> never gains any scope beyond <see cref="Subject"/> - GDPR compliance is always resolved
+/// against a compliance identity, and widening that would make the compliance subject boundary itself scope-
+/// dependent. <see cref="EncryptionScope"/> exists precisely because <c language="csharp">[Encrypted]</c> values have no
+/// data subject and no erasure obligation, so a wider key boundary is safe for them in a way it is not for PII.
 /// </remarks>
 public enum EncryptionScope
 {
@@ -22,14 +24,15 @@ public enum EncryptionScope
     Subject = 0,
 
     /// <summary>
-    /// The key is provisioned once per event store namespace, independent of any document's subject. Reserved -
-    /// not yet implemented.
+    /// The key is provisioned once per event store namespace, independent of any document's subject or compliance
+    /// identity. Every <c language="csharp">[Encrypted(EncryptionScope.Namespace)]</c> value in a namespace shares one key.
     /// </summary>
     Namespace = 1,
 
     /// <summary>
-    /// The key is provisioned once for the whole Chronicle installation, independent of event store or
-    /// namespace. Reserved - not yet implemented.
+    /// The key is provisioned once for the whole Chronicle installation, independent of event store, namespace, or
+    /// compliance identity. Every <c language="csharp">[Encrypted(EncryptionScope.Global)]</c> value across every event store
+    /// and namespace shares one key.
     /// </summary>
     Global = 2
 }

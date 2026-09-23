@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Chronicle.ProtectedValues.for_EncryptedValueHandler.when_releasing_a_value_that_was_never_encrypted;
+namespace Cratis.Chronicle.ProtectedValues.for_EncryptedSubjectValueHandler.when_releasing_a_value_that_was_never_encrypted;
 
 public class and_it_does_not_carry_the_encryption_format : given.a_property_handler
 {

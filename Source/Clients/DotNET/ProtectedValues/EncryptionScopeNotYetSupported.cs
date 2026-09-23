@@ -8,12 +8,12 @@ namespace Cratis.Chronicle.ProtectedValues;
 /// the kernel does not yet honor.
 /// </summary>
 /// <remarks>
-/// Thrown at metadata-provision time - schema generation, which normally happens once at startup when event
-/// types are registered - rather than left to fail silently or fall back to a scope that was not asked for.
-/// <see cref="EncryptionScope.Namespace"/> and <see cref="EncryptionScope.Global"/> are reserved for a
-/// deliberately separate piece of work: they need a key identity that does not depend on a document carrying a
-/// subject at all, which <see cref="EncryptionScope.Subject"/> does not need.
+/// Every current <see cref="EncryptionScope"/> member (<see cref="EncryptionScope.Subject"/>, <see cref="EncryptionScope.Namespace"/>,
+/// <see cref="EncryptionScope.Global"/>) is honored. This is the backstop for a future scope added to the enum before
+/// the kernel is taught to provision a key identity for it - thrown at metadata-provision time (schema generation,
+/// which normally happens once at startup when event types are registered) rather than left to fail silently or
+/// fall back to a scope that was not asked for.
 /// </remarks>
 /// <param name="scope">The unsupported <see cref="EncryptionScope"/>.</param>
 public class EncryptionScopeNotYetSupported(EncryptionScope scope)
-    : Exception($"EncryptionScope.{scope} is not yet supported by [Encrypted]. Only EncryptionScope.Subject is implemented today; namespace- and installation-scoped keys are tracked as a separate, deliberately unbundled piece of work.");
+    : Exception($"EncryptionScope.{scope} is not supported by [Encrypted]. This scope value has no corresponding kernel handler yet.");

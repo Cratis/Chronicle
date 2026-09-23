@@ -14,7 +14,8 @@ namespace Cratis.Chronicle.ProtectedValues;
 /// <remarks>
 /// This is the shared "get-or-create, exactly once" primitive behind every value-protection feature built on
 /// <see cref="IEncryptionKeyStorage"/> - GDPR compliance (<see cref="Compliance.GDPR.PIICompliancePropertyValueHandler"/>)
-/// and plain-confidentiality encryption (<see cref="EncryptedValueHandler"/>) alike. It is deliberately neutral:
+/// and plain-confidentiality encryption (<see cref="EncryptedSubjectValueHandler"/>, <see cref="EncryptedNamespaceValueHandler"/>,
+/// <see cref="EncryptedGlobalValueHandler"/>) alike. It is deliberately neutral:
 /// it knows nothing about subjects, erasure, or any other policy a particular feature layers on top - it only
 /// guarantees that a given <see cref="EncryptionKeyIdentifier"/> converges on one persisted key no matter how many
 /// callers ask for it at once. What makes it worth sharing rather than re-deriving per feature is that

@@ -19,12 +19,13 @@ namespace Cratis.Chronicle.ProtectedValues;
 /// subject uses - see <c language="csharp">EncryptedValueKeyIdentifiers</c> on the kernel side for why.
 /// </para>
 /// <para>
-/// Today only <see cref="EncryptionScope.Subject"/> is honored by the kernel. A property marked with
-/// <see cref="EncryptionScope.Namespace"/> or <see cref="EncryptionScope.Global"/> is accepted here - the
-/// attribute compiles and the schema is generated - but is rejected at metadata-provision time with a clear
-/// exception rather than silently falling back to a scope that was not asked for. This is deliberate: the two
-/// wider scopes need a key identity that does not depend on a document carrying a subject at all, which is a
-/// separate, larger change than establishing the disjoint key identity this attribute delivers today.
+/// All three <see cref="EncryptionScope"/> members are honored by the kernel: <see cref="EncryptionScope.Subject"/>
+/// (the default) provisions a key per compliance identity, exactly matching how a <c language="csharp">[PII]</c> value on the
+/// same document is resolved; <see cref="EncryptionScope.Namespace"/> provisions one key shared by every value marked
+/// with it in a given event store namespace; <see cref="EncryptionScope.Global"/> provisions one key shared across the
+/// whole installation. Choosing a wider scope is safe for <c language="csharp">[Encrypted]</c> in a way it is not for
+/// <c language="csharp">[PII]</c>, precisely because an operational secret has no data subject whose erasure request the
+/// wider key could ever need to honor separately from another subject's.
 /// </para>
 /// </remarks>
 /// <remarks>

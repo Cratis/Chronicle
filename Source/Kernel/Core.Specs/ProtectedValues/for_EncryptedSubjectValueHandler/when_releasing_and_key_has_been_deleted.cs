@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Chronicle.ProtectedValues.for_EncryptedValueHandler;
+namespace Cratis.Chronicle.ProtectedValues.for_EncryptedSubjectValueHandler;
 
 /// <summary>
 /// Unlike PII, nothing ever deletes an [Encrypted] key through this codebase - see

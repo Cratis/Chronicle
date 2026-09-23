@@ -6,14 +6,14 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Chronicle.ProtectedValues.for_EncryptedValueHandler.given;
+namespace Cratis.Chronicle.ProtectedValues.for_EncryptedSubjectValueHandler.given;
 
 public class a_property_handler : Specification
 {
     protected const string Identifier = "39b34712-ad8e-4cde-b879-2719c995aa49";
     protected static readonly EncryptionKeyIdentifier KeyIdentifier = EncryptedValueKeyIdentifiers.ForSubject(Identifier);
 
-    protected EncryptedValueHandler _handler;
+    protected EncryptedSubjectValueHandler _handler;
 
     protected IManagedEncryptionKeyProvisioner _provisioner;
     protected IEncryptionKeyStorage _keyStore;

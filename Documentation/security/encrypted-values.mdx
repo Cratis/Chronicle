@@ -68,13 +68,29 @@ There is no operation anywhere that deletes an `[Encrypted]` value's key. A key 
 ```csharp
 public enum EncryptionScope
 {
-    Subject,    // per compliance identity - the default, and the only scope implemented today
-    Namespace,  // reserved - not yet implemented
-    Global      // reserved - not yet implemented
+    Subject,    // per compliance identity - the default
+    Namespace,  // one key shared by every value marked this way in the event store namespace
+    Global      // one key shared by every value marked this way across the whole installation
 }
 ```
 
-Only `EncryptionScope.Subject` is honored today — a key per compliance identity, provisioned and released the same way `[PII]` resolves its identity (the subject, or the event source id when none is set). `EncryptionScope.Namespace` and `EncryptionScope.Global` are reserved so that code written against them compiles once and keeps working when they are implemented; requesting either today throws `EncryptionScopeNotYetSupported` at schema-generation time rather than silently falling back to `Subject`.
+`EncryptionScope.Subject` (the default) provisions a key per compliance identity, the same way `[PII]` resolves its identity (the subject, or the event source id when none is set) — but always under a disjoint key from any `[PII]` value on the same subject.
+
+`EncryptionScope.Namespace` provisions one key shared by every `[Encrypted(EncryptionScope.Namespace)]` value in a given event store namespace, regardless of which document it came from — useful for a secret that belongs to the deployment rather than to any one entity, such as a webhook signing secret shared across every partner integration.
+
+`EncryptionScope.Global` provisions one key shared by every `[Encrypted(EncryptionScope.Global)]` value across the whole installation — every event store, every namespace.
+
+Widening the scope is safe for `[Encrypted]` in a way it is never safe for `[PII]`: an operational secret has no data subject, so there is no erasure request a shared key could ever need to honor separately for one subject and not another. `[PII]` always resolves to a compliance identity and never gains a wider scope — see [Compliance](/chronicle/compliance/).
+
+```csharp
+public record PartnerApiKey(string Value) : ConceptAs<string>(Value);       // one key per partner (EncryptionScope.Subject)
+
+[Encrypted(EncryptionScope.Namespace)]
+public record PartnerWebhookSecret(string Value) : ConceptAs<string>(Value); // one key for every partner in the namespace
+
+[Encrypted(EncryptionScope.Global)]
+public record LicenseToken(string Value) : ConceptAs<string>(Value);        // one key for the whole installation
+```
 
 ## Constraints
 

@@ -5,17 +5,13 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Chronicle.ProtectedValues.for_EncryptedValueHandler.when_releasing_a_value_that_was_never_encrypted;
+namespace Cratis.Chronicle.ProtectedValues.for_EncryptedSubjectValueHandler.when_releasing_a_value_that_was_never_encrypted;
 
-public class and_the_subject_has_no_key : given.a_property_handler
+public class and_it_is_not_base64 : given.a_property_handler
 {
-    const string Plaintext = "Not actually a secret";
+    const string Plaintext = "webhook-secret-placeholder";
 
     JsonNode _result;
-
-    void Establish() => _keyStore
-        .TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier)
-        .Returns(Task.FromResult<EncryptionKey?>(null));
 
     async Task Because() => _result = await _handler.Release(
         EventStoreName.NotSet,

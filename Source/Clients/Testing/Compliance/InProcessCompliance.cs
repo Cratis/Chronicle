@@ -24,8 +24,8 @@ namespace Cratis.Chronicle.Testing.Compliance;
 /// property value handlers it is given, so constructing it with none makes every <c language="csharp">[PII]</c> or
 /// <c language="csharp">[Encrypted]</c> value pass through in plaintext — silently, because a missing handler is
 /// indistinguishable from a value that carries no compliance metadata. The real
-/// <see cref="KernelGDPR::PIICompliancePropertyValueHandler"/> and <see cref="KernelProtectedValues::EncryptedValueHandler"/>
-/// are both registered here, sharing one <see cref="KernelProtectedValues::ManagedEncryptionKeyProvisioner"/> exactly as
+/// <see cref="KernelGDPR::PIICompliancePropertyValueHandler"/> and the three <see cref="KernelProtectedValues::ProtectedValueCodec"/>-based
+/// <c language="csharp">Encrypted*ValueHandler</c> scopes are all registered here, sharing one <see cref="KernelProtectedValues::ManagedEncryptionKeyProvisioner"/> exactly as
 /// production wiring does, so an in-process scenario encrypts at rest and releases on read exactly the way a
 /// deployed Chronicle does — including the two features never landing on the same stored key for the same subject.
 /// </para>
@@ -59,7 +59,9 @@ internal sealed class InProcessCompliance
             new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>(
             [
                 new KernelGDPR::PIICompliancePropertyValueHandler(provisioner, KeyStorage, encryption),
-                new KernelProtectedValues::EncryptedValueHandler(provisioner, KeyStorage, encryption)
+                new KernelProtectedValues::EncryptedSubjectValueHandler(provisioner, KeyStorage, encryption),
+                new KernelProtectedValues::EncryptedNamespaceValueHandler(provisioner, KeyStorage, encryption),
+                new KernelProtectedValues::EncryptedGlobalValueHandler(provisioner, KeyStorage, encryption)
             ]),
             NullLogger<KernelCompliance::JsonComplianceManager>.Instance);
     }
