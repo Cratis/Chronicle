@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -42,9 +43,12 @@ public class an_event_sequence_with_a_compliant_enum : an_event_sequence
         _eventTypesStorage.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>())
             .Returns(new EventTypeSchema(_eventType, EventTypeOwner.Server, EventTypeSource.Code, _compliantEnumSchema));
 
+        var keyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         _realComplianceManager = new(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+                new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
             NullLogger<JsonComplianceManager>.Instance);
         _complianceManager.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), _compliantEnumSchema, Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(callInfo => _realComplianceManager.Apply(

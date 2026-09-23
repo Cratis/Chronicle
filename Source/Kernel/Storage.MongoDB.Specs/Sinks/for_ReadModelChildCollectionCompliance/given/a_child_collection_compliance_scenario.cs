@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
@@ -75,9 +76,12 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
         var typeFormats = new TypeFormats();
         var sinkConverter = new ExpandoObjectConverter(typeFormats);
         var complianceConverter = new Cratis.Chronicle.Json.ExpandoObjectConverter(typeFormats);
+        var keyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         ComplianceManager = new JsonComplianceManager(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+                new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
             NullLogger<JsonComplianceManager>.Instance);
         Compliance = new ReadModelsCompliance(ComplianceManager, complianceConverter);
 

@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
@@ -56,13 +57,18 @@ public class when_a_reducer_round_trips_pii_through_both_sinks(MongoDBFixture fi
             }
             """);
 
-    protected override IReadModelsCompliance CreateCompliance() =>
-        new ReadModelsCompliance(
+    protected override IReadModelsCompliance CreateCompliance()
+    {
+        var keyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+        return new ReadModelsCompliance(
             new JsonComplianceManager(
                 new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                    new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+                    new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
                 NullLogger<JsonComplianceManager>.Instance),
             new Cratis.Chronicle.Json.ExpandoObjectConverter(new TypeFormats()));
+    }
 
     [Fact] void should_round_trip_identically_across_sinks() => ParityReport.ShouldEqual(string.Empty);
 

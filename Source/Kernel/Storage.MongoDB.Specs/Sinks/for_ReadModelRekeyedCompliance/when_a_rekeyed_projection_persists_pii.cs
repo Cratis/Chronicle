@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
@@ -72,9 +73,12 @@ public class when_a_rekeyed_projection_persists_pii(MongoDBFixture fixture) : Sp
         var typeFormats = new TypeFormats();
         var sinkConverter = new ExpandoObjectConverter(typeFormats);
         var complianceConverter = new Cratis.Chronicle.Json.ExpandoObjectConverter(typeFormats);
+        var keyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         _complianceManager = new JsonComplianceManager(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
+                new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
             NullLogger<JsonComplianceManager>.Instance);
         _compliance = new ReadModelsCompliance(_complianceManager, complianceConverter);
 

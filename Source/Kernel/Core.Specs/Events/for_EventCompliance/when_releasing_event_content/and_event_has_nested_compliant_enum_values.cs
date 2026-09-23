@@ -7,6 +7,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -68,9 +69,11 @@ public class and_event_has_nested_compliant_enum_values : Specification
     async Task Because()
     {
         var keyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         var manager = new JsonComplianceManager(
             new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(keyStorage, new Encryption())),
+                new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
             NullLogger<JsonComplianceManager>.Instance);
         var converter = new ExpandoObjectConverter(new TypeFormats());
         var plaintext = new JsonObject
