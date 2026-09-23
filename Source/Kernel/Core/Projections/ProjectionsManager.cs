@@ -77,6 +77,7 @@ public partial class ProjectionsManager(
 
     EventStoreName _eventStoreName = EventStoreName.NotSet;
     IGrainTimer? _subscribeTimer;
+    IGrainTimer? _resubscribeTimer;
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
@@ -100,6 +101,7 @@ public partial class ProjectionsManager(
     public void Dispose()
     {
         _subscribeTimer?.Dispose();
+        _resubscribeTimer?.Dispose();
         _subscriptionThrottle.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -141,7 +143,17 @@ public partial class ProjectionsManager(
             await WriteStateAsync();
         }
 
-        await ResubscribeProjectionsThatAreNotSubscribed(failures);
+        // Deliberately scheduled rather than awaited. This pass reconciles every projection this activation never
+        // managed to subscribe, so its cost scales with projections x namespaces and each subscribe also recovers
+        // that observer's failed partitions - all of it funnelled through MaxConcurrentSubscriptions. That is
+        // repair work with no bound a caller's response timeout can rely on, and awaiting it here made the caller
+        // pay for it: whichever of this method and the activation-time timer won the in-flight guard did the whole
+        // fan-out, and when it was this one the registration timed out on a large artifact set. The timer callback
+        // was already moved off the activation turn for the same reason - see ScheduleSetDefinitionAndSubscribe.
+        // Registration's own obligation is the changed definitions it just subscribed above; a projection left dark
+        // by an earlier activation is not this registration's failure to report, which is why the scheduled pass
+        // only logs, exactly as the timer-driven one does.
+        ScheduleResubscribeProjectionsThatAreNotSubscribed();
 
         if (fullSetOwner is not null)
         {
@@ -458,6 +470,28 @@ public partial class ProjectionsManager(
     }
 
     Task OnError(Exception exception) => Task.CompletedTask;
+
+    void ScheduleResubscribeProjectionsThatAreNotSubscribed()
+    {
+        _resubscribeTimer?.Dispose();
+        _resubscribeTimer = this.RegisterGrainTimer(
+            async _ =>
+            {
+                _resubscribeTimer?.Dispose();
+                _resubscribeTimer = null;
+
+                // Failures are logged by the fan-out itself. Nothing can surface them to the registration that
+                // scheduled this - it has already returned - and a dark projection from an earlier activation is
+                // not that registration's failure to report.
+                await ResubscribeProjectionsThatAreNotSubscribed(new Dictionary<ProjectionId, Exception>());
+            },
+
+            // Interleaved for the same reason the activation-time pass is: this grain is non-reentrant, so a timer
+            // running like a grain call would hold the activation's turn for the whole throttled fan-out and every
+            // queued Register would time out behind it. Nothing here needs the turn - the fan-out has its own
+            // throttle, the subscribe path is idempotent, and the in-flight guard collapses overlapping passes.
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan, Interleave = true });
+    }
 
     void ScheduleSetDefinitionAndSubscribe()
     {
