@@ -31,8 +31,11 @@ public class but_not_third_time(context context) : Given<context>(context)
         async Task Because()
         {
             // The retry backoff uses exponential delay: 2s for the first retry, 4s for the second.
-            // The default 5s timeout is too tight for the second cycle, so use a longer timeout.
-            var retryTimeout = TimeSpan.FromSeconds(10);
+            // ChronicleConfigurableFixture already raises the default polling timeout to 20s for
+            // non-MongoDB backends (CHRONICLE_TEST_TIMEOUT_SECONDS), so every wait here - not just
+            // the ones that wait for the event to be handled - needs a timeout at least that large,
+            // plus headroom for the job-scheduling step that follows each retry cycle.
+            var retryTimeout = TimeSpan.FromSeconds(30);
 
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorThatCanFail>();
             await reactor.WaitTillSubscribed();
@@ -44,14 +47,14 @@ public class but_not_third_time(context context) : Given<context>(context)
             // Wait for the first event to have been handled
             await Tcs[0].Task.WaitAsync(retryTimeout);
 
-            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition");
+            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions(retryTimeout);
+            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition", retryTimeout);
 
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(retryTimeout);
 
-            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition");
+            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions(retryTimeout);
+            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition", retryTimeout);
 
             // Wait for the third event to have been handled
             await Tcs[2].Task.WaitAsync(retryTimeout);
