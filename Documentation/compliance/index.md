@@ -9,6 +9,10 @@ Modern applications collect and store personal data. Regulations such as the Gen
 
 Event-sourced systems have a structural challenge: the event log is append-only and immutable. Once an event is written, it cannot be changed. This property is what makes event sourcing reliable for audit trails and replays — but it conflicts directly with regulations that grant individuals the right to have their personal data erased.
 
+:::note[Not every secret is PII]
+A value can need encryption at rest without being personal data — an API key, a webhook signing secret. Marking it `[PII]` enrolls it in GDPR right-to-erasure, which is the wrong lifecycle for a secret with no data subject. See [Security](/chronicle/security/) for `[Encrypted]`, the deliberately separate mechanism for that case.
+:::
+
 Chronicle solves this by separating the *structure* of the event log (which remains immutable) from the *content* of values that must be protectable. Two mechanisms work together:
 
 - **Encryption at rest** — Values marked as personally identifiable information (PII) are encrypted when written to the event log. The encryption key is tied to the identity of the person the data belongs to. Revoking the key — which happens during erasure — makes the data permanently unreadable without altering the event log itself.
