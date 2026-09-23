@@ -25,6 +25,7 @@ public sealed class MongoDBFixture : IAsyncLifetime
     {
         var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
         _container = new ContainerBuilder(image)
+            .WithMongoDBKernelCompatibility()
             .WithPortBinding(MongoDBPort, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(MongoDBPort)
