@@ -59,6 +59,14 @@ public interface IKeyResolvers
     /// <param name="keyResolver">see cref=KeyResolver"/> to use for resolving the key for the incoming event.</param>
     /// <param name="parentKeyResolver">The property that represents the parent key.</param>
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
+    /// <param name="parentKeyIsConstant">
+    /// Whether the parent key is a constant rather than a value derived from the event.
+    /// </param>
+    /// <remarks>
+    /// A constant parent key names the parent document outright, so there is no parent event to look up -
+    /// no event's source is the constant. Searching the event sequence for one can only fail, which is why
+    /// the constant case resolves the placement directly instead.
+    /// </remarks>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty);
+    KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty, bool parentKeyIsConstant = false);
 }
