@@ -17,6 +17,17 @@ public static class ReminderEntryConverters
     public static string GetRowKey(GrainId grainId, string reminderName) => $"{grainId}-{reminderName}";
 
     /// <summary>
+    /// Gets the hash a reminder is stored under, which is what the reminder service reads ranges of reminders by.
+    /// </summary>
+    /// <param name="grainId">The grain identifier.</param>
+    /// <returns>The grain hash.</returns>
+    /// <remarks>
+    /// This has to be <see cref="GrainId.GetUniformHashCode"/>: it is stable across processes and is the hash the
+    /// reminder service divides its ring by. <see cref="GrainId.GetHashCode"/> is randomized per process.
+    /// </remarks>
+    public static uint GetGrainHash(GrainId grainId) => grainId.GetUniformHashCode();
+
+    /// <summary>
     /// Converts a SQL reminder entity to an Orleans reminder entry.
     /// </summary>
     /// <param name="entity">The SQL reminder entity.</param>
@@ -43,7 +54,7 @@ public static class ReminderEntryConverters
         {
             Id = GetRowKey(entry.GrainId, entry.ReminderName),
             GrainId = entry.GrainId.ToString(),
-            GrainHash = (uint)entry.GrainId.GetHashCode(),
+            GrainHash = GetGrainHash(entry.GrainId),
             ReminderName = entry.ReminderName,
             ETag = string.IsNullOrEmpty(entry.ETag) ? Guid.NewGuid().ToString("N") : entry.ETag,
             StartAt = entry.StartAt.ToBinary(),
