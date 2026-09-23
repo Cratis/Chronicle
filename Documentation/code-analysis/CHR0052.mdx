@@ -14,23 +14,11 @@ Error
 
 ### Violation
 
-```csharp
-public record PartnerId(Guid Value) : EventSourceId<Guid>(Value);
-
-public record PartnerIntegrationConfigured(
-    [Encrypted] PartnerId PartnerId,
-    string ApiKey);
-```
+<ChronicleClientTabs snippet="code-analysis/chr0052/violation" />
 
 ### Fix
 
-```csharp
-public record PartnerId(Guid Value) : EventSourceId<Guid>(Value);
-
-public record PartnerIntegrationConfigured(
-    PartnerId PartnerId,
-    [Encrypted] string ApiKey);
-```
+<ChronicleClientTabs snippet="code-analysis/chr0052/fix" />
 
 ## Why This Rule Exists
 

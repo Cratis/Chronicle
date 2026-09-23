@@ -16,12 +16,7 @@ Without a dedicated mechanism, a team reaches for one of two wrong tools:
 
 `[Encrypted]` is a security measure, not a compliance one. It encrypts a value at rest exactly like `[PII]` does — same shared key-provisioning and value-encoding machinery under the hood — but it is provisioned under a **deliberately disjoint key identity**, and there is no erasure path for it at all: nothing reachable from `[Encrypted]`'s key can delete it. A subject that carries both a `[PII]` value and an `[Encrypted]` value has the two protected under genuinely different keys, and erasing the subject's PII leaves the `[Encrypted]` value fully readable.
 
-```csharp
-[Encrypted]
-public record PartnerApiKey(string Value) : ConceptAs<string>(Value);
-
-public record PartnerIntegrationConfigured(PartnerApiKey ApiKey);
-```
+<ChronicleClientTabs snippet="confidentiality/encrypted/with-encrypted-overview" />
 
 ## Choosing between `[PII]` and `[Encrypted]`
 
