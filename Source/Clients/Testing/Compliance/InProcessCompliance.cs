@@ -8,9 +8,9 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Types;
 using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
-using KernelProtectedValues = KernelCore::Cratis.Chronicle.ProtectedValues;
 using KernelEvents = KernelCore::Cratis.Chronicle.Events;
 using KernelGDPR = KernelCore::Cratis.Chronicle.Compliance.GDPR;
+using KernelProtectedValues = KernelCore::Cratis.Chronicle.ProtectedValues;
 using KernelReadModels = KernelCore::Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Testing.Compliance;
