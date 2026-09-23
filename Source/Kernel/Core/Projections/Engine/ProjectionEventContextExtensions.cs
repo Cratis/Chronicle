@@ -62,7 +62,7 @@ public static class ProjectionEventContextExtensions
     /// <param name="joinEventType">Type of event to be joined.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="eventCompliance">Optional compliance handler for releasing a stored join event before projecting it.</param>
+    /// <param name="eventCompliance">Optional handler for releasing a stored join event's compliance and security fields before projecting it.</param>
     /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
@@ -106,7 +106,7 @@ public static class ProjectionEventContextExtensions
                             if (!maybeLastEvent.HasValue) return;
                             var lastEvent = (AppendedEvent)maybeLastEvent;
                             if (eventCompliance is not null &&
-                                joinEventSchema?.HasComplianceMetadata() == true &&
+                                joinEventSchema?.HasSchemaMetadata() == true &&
                                 lastEvent.Context.Subject?.IsSet == true)
                             {
 #pragma warning disable CA2007

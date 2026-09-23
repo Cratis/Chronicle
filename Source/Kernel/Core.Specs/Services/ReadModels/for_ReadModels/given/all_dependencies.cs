@@ -5,7 +5,6 @@ using System.Dynamic;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -34,7 +33,7 @@ public class all_dependencies : Specification
     protected IReadModel _readModel;
     protected ReadModelDefinition _readModelDefinition;
     protected IExpandoObjectConverter _expandoObjectConverter;
-    protected IJsonComplianceManager _complianceManager;
+    protected IJsonSchemaMetadataManager _complianceManager;
     protected IReadModelsCompliance _complianceHelper;
     protected IMaterializedReadModelStore _materializedReadModels;
     protected IEventCompliance _eventCompliance;
@@ -75,7 +74,7 @@ public class all_dependencies : Specification
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
 
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _reducerMediator = Substitute.For<IReducerMediator>();
         _changesetMediator = Substitute.For<IProjectionChangesetMediator>();
         _eventCompliance = Substitute.For<IEventCompliance>();

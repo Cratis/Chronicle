@@ -40,6 +40,8 @@
   href: upgrading/toc.yml
 - name: Compliance
   href: compliance/toc.yml
+- name: Security
+  href: security/toc.yml
 - name: Read Models
   href: read-models/toc.yml
 - name: Sinks

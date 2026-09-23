@@ -26,6 +26,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
     {
         var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
         _container = new ContainerBuilder(image)
+            .WithMongoDBKernelCompatibility()
             .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
             .WithPortBinding(MongoDBPort, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer()
@@ -33,7 +34,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
 
-        await _container.StartAsync();
+        await _container.StartMongoDBWithDiagnostics();
     }
 
     /// <inheritdoc/>

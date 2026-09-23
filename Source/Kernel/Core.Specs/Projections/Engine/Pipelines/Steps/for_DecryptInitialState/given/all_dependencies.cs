@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -21,7 +20,7 @@ public class all_dependencies : Specification
     protected static readonly EventStoreNamespaceName EventStoreNamespace = "test-namespace";
     protected const string EventSourceIdValue = "event-source-id";
 
-    protected IJsonComplianceManager _complianceManager;
+    protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected IProjection _projection;
     protected DecryptInitialState _step;
@@ -31,7 +30,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _projection = Substitute.For<IProjection>();
         _objectComparer = Substitute.For<IObjectComparer>();

@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -44,10 +45,12 @@ public class and_properties_belong_to_different_subjects : Specification
     void Establish()
     {
         _keyStorage = new InMemoryEncryptionKeyStorage();
-        var manager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(_keyStorage, new Encryption())),
-            NullLogger<JsonComplianceManager>.Instance);
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(_keyStorage, encryption);
+        var manager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
+                new PIICompliancePropertyValueHandler(provisioner, _keyStorage, encryption)),
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         _compliance = new ReadModelsCompliance(manager, new ExpandoObjectConverter(new TypeFormats()));
     }
 
