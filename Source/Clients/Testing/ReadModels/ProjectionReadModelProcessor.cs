@@ -9,7 +9,6 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
@@ -219,7 +218,7 @@ internal static class ProjectionReadModelProcessor
         // second event source starts from an empty model rather than inheriting the first one's values —
         // which is what a shared, threaded state silently did, carrying one root's children onto the next.
         ExpandoObject CreateSeedState() => initialState is not null
-            ? initialState.AsExpandoObject(true)
+            ? CreateSeedStateFromInitialState(initialState, schema)
             : CreateInitialStateFromSchema(schema, engineProjection);
 
         var statesByKey = new Dictionary<object, ExpandoObject>();
@@ -361,6 +360,28 @@ internal static class ProjectionReadModelProcessor
         }
 
         stateDict[propertyName] = key.Value;
+    }
+
+    /// <summary>
+    /// Converts an explicit initial read model state into the state the projection starts from.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type being projected.</typeparam>
+    /// <param name="initialState">The initial read model state supplied to the scenario.</param>
+    /// <param name="schema">The read model <see cref="JsonSchema"/>.</param>
+    /// <returns>A fresh state holding the initial read model's values.</returns>
+    /// <remarks>
+    /// The conversion is driven by the serialized JSON and the read model schema, the same way seeded event input
+    /// is converted, and is the inverse of the serialization the materialized state is read back through. A
+    /// reflection walk of the CLR object follows every property, including the parent links inside a
+    /// <see cref="JsonNode"/>, and never terminates on a nonempty <see cref="JsonObject"/>. Serializing on every
+    /// call also gives each instance its own copy, so no two keys share nested state.
+    /// </remarks>
+    static ExpandoObject CreateSeedStateFromInitialState<TReadModel>(TReadModel initialState, JsonSchema schema)
+        where TReadModel : class
+    {
+        var stateJson = JsonSerializer.Serialize(initialState, Globals.JsonSerializerOptions);
+        var stateObject = JsonNode.Parse(stateJson, new JsonNodeOptions { PropertyNameCaseInsensitive = false })!.AsObject();
+        return _expandoObjectConverter.ToExpandoObject(stateObject, schema);
     }
 
     /// <summary>
