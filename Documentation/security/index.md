@@ -39,4 +39,5 @@ The two attributes cannot both apply to the same value — see [Encrypting opera
 | Topic | Description |
 |---|---|
 | [Encrypting operational secrets](encrypted-values) | The `[Encrypted]` attribute — rules, usage, and constraints |
+| [Releasing PII and encrypted values](/chronicle/read-models/releasing-pii/) | How an `[Encrypted]` value is decrypted for you automatically, and how to release one manually |
 | [Compliance](/chronicle/compliance/) | `[PII]` and GDPR right-to-erasure — the mechanism `[Encrypted]` deliberately does not share |
