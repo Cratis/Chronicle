@@ -7,10 +7,7 @@ Marking a value `[Encrypted]` tells Chronicle to encrypt it at rest — the same
 
 ## The marker
 
-```csharp
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
-public sealed class EncryptedAttribute(EncryptionScope scope = EncryptionScope.Subject, string details = "") : Attribute
-```
+<ChronicleClientTabs snippet="confidentiality/encrypted/marker" />
 
 `EncryptedAttribute` lives in `Cratis.Chronicle.ProtectedValues` — a namespace of its own, deliberately not nested under `Compliance`. The optional `details` parameter records why the value needs encryption, exactly like `[PII]`'s `details` parameter.
 
@@ -51,14 +48,7 @@ There is no operation anywhere that deletes an `[Encrypted]` value's key. A key 
 
 `EncryptionScope` controls the identity a value's key is provisioned under:
 
-```csharp
-public enum EncryptionScope
-{
-    Subject,    // per compliance identity - the default
-    Namespace,  // one key shared by every value marked this way in the event store namespace
-    Global      // one key shared by every value marked this way across the whole installation
-}
-```
+<ChronicleClientTabs snippet="confidentiality/encrypted/scope-enum" />
 
 `EncryptionScope.Subject` (the default) provisions a key per compliance identity, the same way `[PII]` resolves its identity (the subject, or the event source id when none is set) — but always under a disjoint key from any `[PII]` value on the same subject.
 

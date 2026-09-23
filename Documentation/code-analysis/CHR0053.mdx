@@ -14,20 +14,11 @@ Error
 
 ### Violation
 
-```csharp
-public record CustomerRegistered(
-    [PII] [Encrypted] string SomeValue);
-```
+<ChronicleClientTabs snippet="code-analysis/chr0053/violation" />
 
 ### Fix
 
-```csharp
-// Personal data with a lawful basis for erasure:
-public record CustomerRegistered([PII] string SomeValue);
-
-// An operational secret with no data subject:
-public record CustomerRegistered([Encrypted] string SomeValue);
-```
+<ChronicleClientTabs snippet="code-analysis/chr0053/fix" />
 
 ## Why This Rule Exists
 
