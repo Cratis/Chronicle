@@ -33,7 +33,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
 
-        await _container.StartAsync();
+        await _container.StartMongoDBWithDiagnostics();
     }
 
     /// <inheritdoc/>

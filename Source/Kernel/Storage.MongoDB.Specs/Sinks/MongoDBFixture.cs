@@ -31,7 +31,7 @@ public sealed class MongoDBFixture : IAsyncLifetime
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok' | grep -q 1"))
             .Build();
 
-        await _container.StartAsync();
+        await _container.StartMongoDBWithDiagnostics();
     }
 
     /// <inheritdoc/>
