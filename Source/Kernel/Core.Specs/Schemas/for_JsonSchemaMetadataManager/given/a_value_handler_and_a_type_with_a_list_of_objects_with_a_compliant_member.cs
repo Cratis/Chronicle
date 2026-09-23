@@ -35,7 +35,7 @@ public class a_value_handler_and_a_type_with_a_list_of_objects_with_a_compliant_
             """);
 
         _valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
-        _valueHandler.Type.Returns(_metadataType);
+        _valueHandler.Type.Returns((SchemaMetadataTypeName)_metadataType);
         _valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(_valueHandler), NullLogger<JsonSchemaMetadataManager>.Instance);
     }

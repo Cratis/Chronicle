@@ -17,5 +17,5 @@ public class and_there_is_metadata_and_details : given.a_provider
     void Because() => _result = provider.Provide(typeof(MyConceptValue));
 
     [Fact] void should_return_encrypted_subject_metadata() => _result.MetadataType.ShouldEqual(SecurityMetadataType.EncryptedSubject);
-    [Fact] void should_return_metadata_with_details() => _result.Details.ShouldEqual(Details);
+    [Fact] void should_return_metadata_with_details() => _result.Details.Value.ShouldEqual(Details);
 }

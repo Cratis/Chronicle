@@ -71,13 +71,19 @@ public class EncryptedMetadataProvider : ICanProvideSecurityMetadataForType, ICa
         return new SecurityMetadata(MetadataTypeFor(attribute.Scope), attribute.Details);
     }
 
+    // EncryptionScope has exactly three members and all three are handled below - there is no fourth case to
+    // guard against, so there is no dedicated exception for one. CS8524 fires anyway because the enum's
+    // underlying type admits values with no named member (e.g. an explicit (EncryptionScope)99 cast); the
+    // runtime's own SwitchExpressionException is the correct, unwritten answer for that, exactly as it would be
+    // for any other closed switch over a non-flags enum.
+#pragma warning disable CS8524
     static SecurityMetadataType MetadataTypeFor(EncryptionScope scope) => scope switch
     {
         EncryptionScope.Subject => SecurityMetadataType.EncryptedSubject,
         EncryptionScope.Namespace => SecurityMetadataType.EncryptedNamespace,
-        EncryptionScope.Global => SecurityMetadataType.EncryptedGlobal,
-        _ => throw new EncryptionScopeNotYetSupported(scope)
+        EncryptionScope.Global => SecurityMetadataType.EncryptedGlobal
     };
+#pragma warning restore CS8524
 
     static EncryptedAttribute? ResolveAttribute(PropertyInfo property) =>
         property.GetCustomAttribute<EncryptedAttribute>() ??

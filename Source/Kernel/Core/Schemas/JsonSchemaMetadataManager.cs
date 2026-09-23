@@ -22,7 +22,7 @@ public class JsonSchemaMetadataManager(
     IInstancesOf<IJsonSchemaMetadataValueHandler> propertyValueHandlers,
     ILogger<JsonSchemaMetadataManager> logger) : IJsonSchemaMetadataManager
 {
-    readonly Dictionary<(SchemaMetadataCategory Category, string Type), IJsonSchemaMetadataValueHandler> _propertyValueHandlers =
+    readonly Dictionary<(SchemaMetadataCategory Category, SchemaMetadataTypeName Type), IJsonSchemaMetadataValueHandler> _propertyValueHandlers =
         propertyValueHandlers.ToDictionary(_ => (_.Category, _.Type), _ => _);
     readonly IReadOnlyCollection<SchemaMetadataCategory> _categories = propertyValueHandlers.Select(_ => _.Category).Distinct().ToArray();
 

@@ -39,7 +39,7 @@ public class EncryptedGlobalValueHandler(
     public SchemaMetadataCategory Category => SchemaMetadataCategory.Security;
 
     /// <inheritdoc/>
-    public string Type => SecurityMetadataType.EncryptedGlobal;
+    public SchemaMetadataTypeName Type => SecurityMetadataType.EncryptedGlobal.Value;
 
     /// <inheritdoc/>
     public Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>

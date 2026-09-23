@@ -41,7 +41,7 @@ public class a_value_handler_and_a_type_with_a_compliant_value_object : Specific
             """);
 
         _valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
-        _valueHandler.Type.Returns(_metadataType);
+        _valueHandler.Type.Returns((SchemaMetadataTypeName)_metadataType);
         _valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         _valueHandler.Apply(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
             .Returns(callInfo => Task.FromResult<JsonNode>(JsonValue.Create(Convert.ToBase64String(Encoding.UTF8.GetBytes(callInfo.ArgAt<JsonNode>(3).ToJsonString())))));

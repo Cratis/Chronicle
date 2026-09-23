@@ -27,7 +27,7 @@ public interface IJsonSchemaMetadataValueHandler
     /// <summary>
     /// Gets the metadata type it supports, within <see cref="Category"/>.
     /// </summary>
-    string Type { get; }
+    SchemaMetadataTypeName Type { get; }
 
     /// <summary>
     /// Apply to the given value.

@@ -46,7 +46,7 @@ public class when_applying_to_a_marked_geospatial_value : Specification
         };
 
         _valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
-        _valueHandler.Type.Returns(_metadataType);
+        _valueHandler.Type.Returns((SchemaMetadataTypeName)_metadataType);
         _valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         _valueHandler.Apply(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>()).Returns(_ => Task.FromResult<JsonNode>(JsonValue.Create(EncryptedValue)));
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(_valueHandler), NullLogger<JsonSchemaMetadataManager>.Instance);

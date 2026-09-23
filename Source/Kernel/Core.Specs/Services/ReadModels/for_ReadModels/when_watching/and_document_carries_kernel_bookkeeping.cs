@@ -61,7 +61,7 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
         _notifier.Unsubscribe(Arg.Any<IReadModelChangesetSubscriber>()).Returns(Task.CompletedTask);
 
         var valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
-        valueHandler.Type.Returns("PII");
+        valueHandler.Type.Returns((SchemaMetadataTypeName)"PII");
         valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         valueHandler.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Key, Arg.Any<JsonNode>())
             .Returns(Task.FromResult<JsonNode>(JsonValue.Create(DecryptedName)));

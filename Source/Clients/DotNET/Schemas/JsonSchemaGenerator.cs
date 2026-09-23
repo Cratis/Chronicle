@@ -14,6 +14,7 @@ using Cratis.Geospatial;
 using Cratis.Json;
 using Cratis.Reflection;
 using Cratis.Serialization;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -29,7 +30,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
-    readonly ISecurityMetadataResolver? _securityMetadataResolver;
+    readonly ISecurityMetadataResolver _securityMetadataResolver;
     readonly IDerivedTypes _derivedTypes;
     readonly TypeFormats _typeFormats;
 
@@ -40,12 +41,12 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="derivedTypes"><see cref="IDerivedTypes"/> used to recognize polymorphic base types adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the derived types of the current type universe.</param>
     /// <remarks>
-    /// Generates schemas with compliance metadata only - no security (<c language="csharp">[Encrypted]</c>) metadata is
-    /// resolved or written by an instance constructed this way. Use the overload taking an
-    /// <see cref="ISecurityMetadataResolver"/> for a generator that resolves both.
+    /// Preserves the pre-<c language="csharp">[Encrypted]</c> construction shape exactly - an instance built this way never
+    /// resolves or writes security metadata, because it has no provider to resolve it from. Use the overload
+    /// taking an <see cref="ISecurityMetadataResolver"/> for a generator that resolves both.
     /// </remarks>
     public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy, IDerivedTypes? derivedTypes = null)
-        : this(metadataResolver, null, namingPolicy, derivedTypes)
+        : this(metadataResolver, new SecurityMetadataResolver(new KnownInstancesOf<ICanProvideSecurityMetadataForType>(), new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>()), namingPolicy, derivedTypes)
     {
     }
 
@@ -53,10 +54,10 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// Initializes a new instance of the <see cref="JsonSchemaGenerator"/> class.
     /// </summary>
     /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
-    /// <param name="securityMetadataResolver"><see cref="ISecurityMetadataResolver"/> for resolving security metadata, or <see langword="null"/> to skip security metadata entirely.</param>
+    /// <param name="securityMetadataResolver"><see cref="ISecurityMetadataResolver"/> for resolving security metadata - required. Security metadata is never optional: a schema that carries an <c language="csharp">[Encrypted]</c> value is resolved through this exactly as unconditionally as a <c language="csharp">[PII]</c> value is resolved through <paramref name="metadataResolver"/>.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="derivedTypes"><see cref="IDerivedTypes"/> used to recognize polymorphic base types adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the derived types of the current type universe.</param>
-    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, ISecurityMetadataResolver? securityMetadataResolver, INamingPolicy namingPolicy, IDerivedTypes? derivedTypes = null)
+    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, ISecurityMetadataResolver securityMetadataResolver, INamingPolicy namingPolicy, IDerivedTypes? derivedTypes = null)
     {
         _metadataResolver = metadataResolver;
         _securityMetadataResolver = securityMetadataResolver;
@@ -165,7 +166,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="schema">The schema node to add to.</param>
     /// <param name="metadata">The <see cref="SecurityMetadata"/> to add.</param>
     static void AddSecurityMetadata(JsonObject schema, IEnumerable<SecurityMetadata> metadata) =>
-        AddSchemaMetadata(schema, SchemaMetadataCategory.Security, metadata.Select(item => (item.MetadataType.Value, item.Details)));
+        AddSchemaMetadata(schema, SchemaMetadataCategory.Security, metadata.Select(item => (item.MetadataType.Value, item.Details.Value)));
 
     /// <summary>
     /// Adds schema metadata for a given <see cref="SchemaMetadataCategory"/> to a schema node, descending into an
@@ -313,7 +314,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                         AddComplianceMetadata(itemSchemaObject, _metadataResolver.GetMetadataFor(elementType));
                     }
 
-                    if (_securityMetadataResolver?.HasMetadataFor(elementType) == true)
+                    if (_securityMetadataResolver.HasMetadataFor(elementType))
                     {
                         AddSecurityMetadata(itemSchemaObject, _securityMetadataResolver.GetMetadataFor(elementType));
                     }
@@ -395,7 +396,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         // Add security metadata for the type
-        if (_securityMetadataResolver?.HasMetadataFor(type) == true)
+        if (_securityMetadataResolver.HasMetadataFor(type))
         {
             AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(type));
         }
@@ -408,7 +409,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                 AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
             }
 
-            if (_securityMetadataResolver?.HasMetadataFor(propInfo) == true)
+            if (_securityMetadataResolver.HasMetadataFor(propInfo))
             {
                 AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(propInfo));
             }
@@ -426,7 +427,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                     AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(recordProp));
                 }
 
-                if (_securityMetadataResolver?.HasMetadataFor(recordProp) == true)
+                if (_securityMetadataResolver.HasMetadataFor(recordProp))
                 {
                     AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(recordProp));
                 }
@@ -481,7 +482,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             AddComplianceMetadata(representedSchemaObject, _metadataResolver.GetMetadataFor(declaredType));
         }
 
-        if (_securityMetadataResolver?.HasMetadataFor(declaredType) == true)
+        if (_securityMetadataResolver.HasMetadataFor(declaredType))
         {
             AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
         }

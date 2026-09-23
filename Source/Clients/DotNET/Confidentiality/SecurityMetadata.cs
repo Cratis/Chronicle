@@ -12,4 +12,4 @@ namespace Cratis.Chronicle.Confidentiality;
 /// This is the security counterpart to <see cref="Compliance.ComplianceMetadata"/> - a deliberately separate type
 /// rather than a shared one. See <see cref="Schemas.SchemaMetadataCategory"/> for why.
 /// </remarks>
-public record SecurityMetadata(SecurityMetadataType MetadataType, string Details);
+public record SecurityMetadata(SecurityMetadataType MetadataType, SecurityMetadataDetails Details);

@@ -44,7 +44,7 @@ public class EncryptedSubjectValueHandler(
     public SchemaMetadataCategory Category => SchemaMetadataCategory.Security;
 
     /// <inheritdoc/>
-    public string Type => SecurityMetadataType.EncryptedSubject;
+    public SchemaMetadataTypeName Type => SecurityMetadataType.EncryptedSubject.Value;
 
     /// <inheritdoc/>
     public Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>

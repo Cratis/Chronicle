@@ -27,7 +27,7 @@ public class PIICompliancePropertyValueHandler(
     public SchemaMetadataCategory Category => SchemaMetadataCategory.Compliance;
 
     /// <inheritdoc/>
-    public string Type => ComplianceMetadataType.PII;
+    public SchemaMetadataTypeName Type => ComplianceMetadataType.PII.Value;
 
     /// <inheritdoc/>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)

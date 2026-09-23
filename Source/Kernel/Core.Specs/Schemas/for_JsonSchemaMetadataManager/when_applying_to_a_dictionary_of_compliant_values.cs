@@ -46,7 +46,7 @@ public class when_applying_to_a_dictionary_of_compliant_values : Specification
         };
 
         var valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
-        valueHandler.Type.Returns(_metadataType);
+        valueHandler.Type.Returns((SchemaMetadataTypeName)_metadataType);
         valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         valueHandler.Apply(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>()).Returns(_ => Task.FromResult<JsonNode>(JsonValue.Create("encrypted")));
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(valueHandler), NullLogger<JsonSchemaMetadataManager>.Instance);

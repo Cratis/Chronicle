@@ -58,7 +58,7 @@ public class and_read_model_is_passive_with_a_pii_property : given.all_dependenc
         _grainFactory.GetGrain<IImmediateProjection>(Arg.Any<string>()).Returns(immediateProjection);
 
         var valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
-        valueHandler.Type.Returns("PII");
+        valueHandler.Type.Returns((SchemaMetadataTypeName)"PII");
         valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         valueHandler.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Key, Arg.Any<JsonNode>())
             .Returns(Task.FromResult<JsonNode>(JsonValue.Create(DecryptedName)));

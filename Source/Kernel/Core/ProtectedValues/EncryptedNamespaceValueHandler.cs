@@ -41,7 +41,7 @@ public class EncryptedNamespaceValueHandler(
     public SchemaMetadataCategory Category => SchemaMetadataCategory.Security;
 
     /// <inheritdoc/>
-    public string Type => SecurityMetadataType.EncryptedNamespace;
+    public SchemaMetadataTypeName Type => SecurityMetadataType.EncryptedNamespace.Value;
 
     /// <inheritdoc/>
     public Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
