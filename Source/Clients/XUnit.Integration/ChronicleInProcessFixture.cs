@@ -18,13 +18,24 @@ public class ChronicleInProcessFixture : ChronicleFixture
     /// </summary>
     public const string HostName = "mongo";
 
+    /// <summary>
+    /// Gets the MongoDB image the fixture starts.
+    /// </summary>
+    /// <remarks>
+    /// Overridable through the CHRONICLE_MONGODB_IMAGE environment variable because MongoDB refuses to start at all on
+    /// some host kernels - a developer machine whose container runtime ships a kernel current MongoDB
+    /// rejects cannot otherwise run any integration scenario, and the failure arrives as a container
+    /// start timeout that says nothing about why.
+    /// </remarks>
+    public static string ImageName => Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_IMAGE") ?? "mongo";
+
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
         // Start mongod as a single-node replica set and initialize it so tests can use transactions.
         // We run a small shell command that starts mongod with replSet enabled, waits for it
         // to be available and then runs rs.initiate(). The container is kept running afterwards.
-        var builder = new ContainerBuilder("mongo")
+        var builder = new ContainerBuilder(ImageName)
             .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27017, assignRandomHostPort: true)
