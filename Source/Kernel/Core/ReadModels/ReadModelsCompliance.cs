@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
@@ -13,12 +12,12 @@ namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReadModelsCompliance"/> that applies and releases
-/// PII compliance for read model instances via the <see cref="IJsonComplianceManager"/>.
+/// PII compliance for read model instances via the <see cref="IJsonSchemaMetadataManager"/>.
 /// </summary>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for encrypting and decrypting PII fields.</param>
+/// <param name="complianceManager">The <see cref="IJsonSchemaMetadataManager"/> for encrypting and decrypting PII fields.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 public class ReadModelsCompliance(
-    IJsonComplianceManager complianceManager,
+    IJsonSchemaMetadataManager complianceManager,
     IExpandoObjectConverter expandoObjectConverter) : IReadModelsCompliance
 {
     /// <inheritdoc/>
@@ -29,7 +28,7 @@ public class ReadModelsCompliance(
         string identifier,
         ExpandoObject instance)
     {
-        if (!schema.HasComplianceMetadata())
+        if (!schema.HasSchemaMetadata())
         {
             ((IDictionary<string, object?>)instance)[WellKnownProperties.Subject] = identifier;
             return instance;
@@ -78,7 +77,7 @@ public class ReadModelsCompliance(
         JsonSchema schema,
         JsonObject instance)
     {
-        if (!schema.HasComplianceMetadata())
+        if (!schema.HasSchemaMetadata())
         {
             return instance;
         }
@@ -124,7 +123,7 @@ public class ReadModelsCompliance(
         JsonSchema schema,
         ExpandoObject instance)
     {
-        if (!schema.HasComplianceMetadata())
+        if (!schema.HasSchemaMetadata())
         {
             return instance;
         }

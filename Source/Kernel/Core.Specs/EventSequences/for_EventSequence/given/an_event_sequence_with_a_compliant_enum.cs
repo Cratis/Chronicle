@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 public class an_event_sequence_with_a_compliant_enum : an_event_sequence
 {
     protected JsonSchema _compliantEnumSchema;
-    protected JsonComplianceManager _realComplianceManager;
+    protected JsonSchemaMetadataManager _realComplianceManager;
     protected ExpandoObjectConverter _realConverter;
 
     void Establish()
@@ -47,9 +47,9 @@ public class an_event_sequence_with_a_compliant_enum : an_event_sequence
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         _realComplianceManager = new(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
-            NullLogger<JsonComplianceManager>.Instance);
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         _complianceManager.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), _compliantEnumSchema, Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(callInfo => _realComplianceManager.Apply(
                 callInfo.ArgAt<EventStoreName>(0),

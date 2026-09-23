@@ -42,7 +42,7 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
     protected ObjectComparer ObjectComparer { get; } = new();
 
     /// <summary>Gets the compliance manager performing the actual encryption and release.</summary>
-    protected JsonComplianceManager ComplianceManager { get; private set; } = default!;
+    protected JsonSchemaMetadataManager ComplianceManager { get; private set; } = default!;
 
     /// <summary>Gets the read-model compliance facade over <see cref="ComplianceManager"/>.</summary>
     protected ReadModelsCompliance Compliance { get; private set; } = default!;
@@ -79,10 +79,10 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
-        ComplianceManager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+        ComplianceManager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
-            NullLogger<JsonComplianceManager>.Instance);
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         Compliance = new ReadModelsCompliance(ComplianceManager, complianceConverter);
 
         _databaseName = $"chronicle_child_collection_pii_{Guid.NewGuid():N}";

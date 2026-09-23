@@ -4,12 +4,13 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.ProtectedValues;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
 
 /// <summary>
-/// Represents a <see cref="IJsonCompliancePropertyValueHandler"/> for handling PII.
+/// Represents a <see cref="IJsonSchemaMetadataValueHandler"/> for handling PII.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/>.
@@ -20,10 +21,13 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 public class PIICompliancePropertyValueHandler(
     IManagedEncryptionKeyProvisioner provisioner,
     IEncryptionKeyStorage encryptionKeyStore,
-    IEncryption encryption) : IJsonCompliancePropertyValueHandler
+    IEncryption encryption) : IJsonSchemaMetadataValueHandler
 {
     /// <inheritdoc/>
-    public ComplianceMetadataType Type => ComplianceMetadataType.PII;
+    public SchemaMetadataCategory Category => SchemaMetadataCategory.Compliance;
+
+    /// <inheritdoc/>
+    public string Type => ComplianceMetadataType.PII;
 
     /// <inheritdoc/>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)

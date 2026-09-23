@@ -47,10 +47,10 @@ public class and_properties_belong_to_different_subjects : Specification
         _keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(_keyStorage, encryption);
-        var manager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+        var manager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, _keyStorage, encryption)),
-            NullLogger<JsonComplianceManager>.Instance);
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         _compliance = new ReadModelsCompliance(manager, new ExpandoObjectConverter(new TypeFormats()));
     }
 

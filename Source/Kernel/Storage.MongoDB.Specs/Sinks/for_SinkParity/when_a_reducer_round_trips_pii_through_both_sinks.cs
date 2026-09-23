@@ -63,10 +63,10 @@ public class when_a_reducer_round_trips_pii_through_both_sinks(MongoDBFixture fi
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         return new ReadModelsCompliance(
-            new JsonComplianceManager(
-                new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+            new JsonSchemaMetadataManager(
+                new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                     new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
-                NullLogger<JsonComplianceManager>.Instance),
+                NullLogger<JsonSchemaMetadataManager>.Instance),
             new Cratis.Chronicle.Json.ExpandoObjectConverter(new TypeFormats()));
     }
 

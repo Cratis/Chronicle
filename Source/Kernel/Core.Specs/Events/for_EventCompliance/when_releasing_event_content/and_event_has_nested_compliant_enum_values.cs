@@ -71,10 +71,10 @@ public class and_event_has_nested_compliant_enum_values : Specification
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
-        var manager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+        var manager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
-            NullLogger<JsonComplianceManager>.Instance);
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         var converter = new ExpandoObjectConverter(new TypeFormats());
         var plaintext = new JsonObject
         {

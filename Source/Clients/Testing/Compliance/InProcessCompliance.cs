@@ -12,6 +12,7 @@ using KernelEvents = KernelCore::Cratis.Chronicle.Events;
 using KernelGDPR = KernelCore::Cratis.Chronicle.Compliance.GDPR;
 using KernelProtectedValues = KernelCore::Cratis.Chronicle.ProtectedValues;
 using KernelReadModels = KernelCore::Cratis.Chronicle.ReadModels;
+using KernelSchemas = KernelCore::Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Testing.Compliance;
 
@@ -20,7 +21,7 @@ namespace Cratis.Chronicle.Testing.Compliance;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The kernel's <see cref="KernelCompliance::JsonComplianceManager"/> builds its dispatch table from the
+/// The kernel's <see cref="KernelSchemas::JsonSchemaMetadataManager"/> builds its dispatch table from the
 /// property value handlers it is given, so constructing it with none makes every <c language="csharp">[PII]</c> or
 /// <c language="csharp">[Encrypted]</c> value pass through in plaintext — silently, because a missing handler is
 /// indistinguishable from a value that carries no compliance metadata. The real
@@ -55,21 +56,21 @@ internal sealed class InProcessCompliance
         KeyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new KernelCompliance::Encryption();
         var provisioner = new KernelProtectedValues::ManagedEncryptionKeyProvisioner(KeyStorage, encryption);
-        Manager = new KernelCompliance::JsonComplianceManager(
-            new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>(
+        Manager = new KernelSchemas::JsonSchemaMetadataManager(
+            new KnownInstancesOf<KernelSchemas::IJsonSchemaMetadataValueHandler>(
             [
                 new KernelGDPR::PIICompliancePropertyValueHandler(provisioner, KeyStorage, encryption),
                 new KernelProtectedValues::EncryptedSubjectValueHandler(provisioner, KeyStorage, encryption),
                 new KernelProtectedValues::EncryptedNamespaceValueHandler(provisioner, KeyStorage, encryption),
                 new KernelProtectedValues::EncryptedGlobalValueHandler(provisioner, KeyStorage, encryption)
             ]),
-            NullLogger<KernelCompliance::JsonComplianceManager>.Instance);
+            NullLogger<KernelSchemas::JsonSchemaMetadataManager>.Instance);
     }
 
     /// <summary>
-    /// Gets the <see cref="KernelCompliance::JsonComplianceManager"/> every collaborator in the scenario shares.
+    /// Gets the <see cref="KernelSchemas::JsonSchemaMetadataManager"/> every collaborator in the scenario shares.
     /// </summary>
-    public KernelCompliance::JsonComplianceManager Manager { get; }
+    public KernelSchemas::JsonSchemaMetadataManager Manager { get; }
 
     /// <summary>
     /// Gets the <see cref="IEncryptionKeyStorage"/> holding the per-subject keys for the scenario.

@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Compliance;
@@ -17,9 +16,9 @@ namespace Cratis.Chronicle.Services.Compliance;
 /// Represents an implementation of <see cref="ICompliance"/>.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving the kernel <see cref="IPIIManager"/> grain.</param>
-/// <param name="jsonComplianceManager">The <see cref="IJsonComplianceManager"/> for handling compliance on JSON.</param>
+/// <param name="jsonComplianceManager">The <see cref="IJsonSchemaMetadataManager"/> for handling compliance on JSON.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
-internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonComplianceManager jsonComplianceManager, ILogger<ComplianceService> logger) : ICompliance
+internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaMetadataManager jsonComplianceManager, ILogger<ComplianceService> logger) : ICompliance
 {
     /// <inheritdoc/>
     public async Task<ReleaseResponse> Release(ReleaseRequest request, CallContext context = default)

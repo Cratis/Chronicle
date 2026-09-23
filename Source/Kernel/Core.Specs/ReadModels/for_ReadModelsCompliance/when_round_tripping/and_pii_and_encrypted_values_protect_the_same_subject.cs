@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_round_trippi
 /// <summary>
 /// The headline guarantee this feature exists to deliver: a subject that owns both a [PII] value and an
 /// [Encrypted] value has the two protected under genuinely different keys, end to end through the real
-/// JsonComplianceManager walk and a real InMemoryEncryptionKeyStorage - not merely asserted at the identifier
+/// JsonSchemaMetadataManager walk and a real InMemoryEncryptionKeyStorage - not merely asserted at the identifier
 /// level (see for_EncryptedValueKeyIdentifiers). Erasing the subject's PII key must not touch the [Encrypted]
 /// key at all.
 /// </summary>
@@ -36,7 +36,7 @@ public class and_pii_and_encrypted_values_protect_the_same_subject : Specificati
             },
             "apiKey": {
               "type": "string",
-              "compliance": [{ "metadataType": "EncryptedSubject", "details": "" }]
+              "security": [{ "metadataType": "EncryptedSubject", "details": "" }]
             }
           }
         }
@@ -53,11 +53,11 @@ public class and_pii_and_encrypted_values_protect_the_same_subject : Specificati
         _keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(_keyStorage, encryption);
-        var manager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+        var manager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, _keyStorage, encryption),
                 new EncryptedSubjectValueHandler(provisioner, _keyStorage, encryption)),
-            NullLogger<JsonComplianceManager>.Instance);
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         _compliance = new ReadModelsCompliance(manager, new ExpandoObjectConverter(new TypeFormats()));
     }
 

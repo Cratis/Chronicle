@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario.when_appendi
 
 /// <summary>
 /// Proves EncryptionScope.Global end to end through the public EventScenario surface: the schema-driven metadata
-/// resolution and JsonComplianceManager dispatch route a globally-scoped value to its own handler rather than
+/// resolution and JsonSchemaMetadataManager dispatch route a globally-scoped value to its own handler rather than
 /// accidentally falling back to the subject- or namespace-scoped one, which would still happen to round-trip
 /// correctly for a single document and hide the wiring defect.
 /// </summary>

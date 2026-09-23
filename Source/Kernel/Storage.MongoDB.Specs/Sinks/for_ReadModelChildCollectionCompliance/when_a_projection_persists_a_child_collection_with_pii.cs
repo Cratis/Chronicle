@@ -79,10 +79,10 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
             var keyStorage = new InMemoryEncryptionKeyStorage();
             var encryption = new Encryption();
             var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
-            var complianceManager = new JsonComplianceManager(
-                new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+            var complianceManager = new JsonSchemaMetadataManager(
+                new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                     new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
-                NullLogger<JsonComplianceManager>.Instance);
+                NullLogger<JsonSchemaMetadataManager>.Instance);
             var compliance = new ReadModelsCompliance(complianceManager, complianceConverter);
             var objectComparer = new ObjectComparer();
 

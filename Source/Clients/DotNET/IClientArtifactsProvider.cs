@@ -56,6 +56,29 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> ComplianceForPropertiesProviders { get; }
 
     /// <summary>
+    /// Gets all the available providers of security metadata for types.
+    /// </summary>
+    /// <remarks>
+    /// This is the deliberately separate, security counterpart to <see cref="ComplianceForTypesProviders"/> - see
+    /// <see cref="Schemas.SchemaMetadataCategory"/> for why compliance and security providers are never discovered
+    /// through the same pool. Defaults to an empty set so an existing <see cref="IClientArtifactsProvider"/>
+    /// implementation compiles and behaves unchanged without knowing this member exists.
+    /// </remarks>
+    IEnumerable<Type> SecurityForTypesProviders => [];
+
+    /// <summary>
+    /// Gets all the available providers of security metadata for properties.
+    /// </summary>
+    /// <remarks>
+    /// This is the deliberately separate, security counterpart to <see cref="ComplianceForPropertiesProviders"/> -
+    /// see <see cref="Schemas.SchemaMetadataCategory"/> for why compliance and security providers are never
+    /// discovered through the same pool. Defaults to an empty set so an existing
+    /// <see cref="IClientArtifactsProvider"/> implementation compiles and behaves unchanged without knowing this
+    /// member exists.
+    /// </remarks>
+    IEnumerable<Type> SecurityForPropertiesProviders => [];
+
+    /// <summary>
     /// Gets all the available event information provider types.
     /// </summary>
     IEnumerable<Type> AdditionalEventInformationProviders { get; }

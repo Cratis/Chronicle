@@ -52,10 +52,10 @@ public class and_read_model_has_a_child_collection_with_pii : Specification
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
-        var complianceManager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+        var complianceManager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
-            NullLogger<JsonComplianceManager>.Instance);
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         var compliance = new ReadModelsCompliance(complianceManager, new ExpandoObjectConverter(typeFormats));
         var objectComparer = new ObjectComparer();
         _step = new EncryptChangeset(compliance, objectComparer, "test-store", "test-namespace");

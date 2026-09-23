@@ -4,12 +4,14 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Confidentiality;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.ProtectedValues;
 
 /// <summary>
-/// Represents a <see cref="IJsonCompliancePropertyValueHandler"/> for a namespace-scoped, plain-confidentiality
+/// Represents a <see cref="IJsonSchemaMetadataValueHandler"/> for a namespace-scoped, plain-confidentiality
 /// <c language="csharp">[Encrypted]</c> value - <c language="csharp">EncryptionScope.Namespace</c>.
 /// </summary>
 /// <remarks>
@@ -33,10 +35,13 @@ namespace Cratis.Chronicle.ProtectedValues;
 public class EncryptedNamespaceValueHandler(
     IManagedEncryptionKeyProvisioner provisioner,
     IEncryptionKeyStorage encryptionKeyStore,
-    IEncryption encryption) : IJsonCompliancePropertyValueHandler
+    IEncryption encryption) : IJsonSchemaMetadataValueHandler
 {
     /// <inheritdoc/>
-    public ComplianceMetadataType Type => ComplianceMetadataType.EncryptedNamespace;
+    public SchemaMetadataCategory Category => SchemaMetadataCategory.Security;
+
+    /// <inheritdoc/>
+    public string Type => SecurityMetadataType.EncryptedNamespace;
 
     /// <inheritdoc/>
     public Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>

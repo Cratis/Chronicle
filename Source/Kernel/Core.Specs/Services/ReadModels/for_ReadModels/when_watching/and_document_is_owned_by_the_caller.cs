@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
@@ -59,8 +58,9 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
         _notifier.Subscribe(Arg.Any<IReadModelChangesetSubscriber>()).Returns(Task.CompletedTask);
         _notifier.Unsubscribe(Arg.Any<IReadModelChangesetSubscriber>()).Returns(Task.CompletedTask);
 
-        var valueHandler = Substitute.For<IJsonCompliancePropertyValueHandler>();
-        valueHandler.Type.Returns((ComplianceMetadataType)"PII");
+        var valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
+        valueHandler.Type.Returns("PII");
+        valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         valueHandler.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Key, Arg.Any<JsonNode>())
             .Returns(Task.FromResult<JsonNode>(JsonValue.Create(DecryptedName)));
 
@@ -72,9 +72,9 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
             _changesetMediator,
             _localSiloDetails,
             new ReadModelsCompliance(
-                new JsonComplianceManager(
-                    new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(valueHandler),
-                    NullLogger<JsonComplianceManager>.Instance),
+                new JsonSchemaMetadataManager(
+                    new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(valueHandler),
+                    NullLogger<JsonSchemaMetadataManager>.Instance),
                 _expandoObjectConverter),
             _materializedReadModels,
             new JsonSerializerOptions());

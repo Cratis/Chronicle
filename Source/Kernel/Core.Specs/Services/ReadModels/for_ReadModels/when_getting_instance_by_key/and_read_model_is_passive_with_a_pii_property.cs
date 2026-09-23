@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -58,8 +57,9 @@ public class and_read_model_is_passive_with_a_pii_property : given.all_dependenc
             (EventSequenceNumber)42));
         _grainFactory.GetGrain<IImmediateProjection>(Arg.Any<string>()).Returns(immediateProjection);
 
-        var valueHandler = Substitute.For<IJsonCompliancePropertyValueHandler>();
-        valueHandler.Type.Returns((ComplianceMetadataType)"PII");
+        var valueHandler = Substitute.For<IJsonSchemaMetadataValueHandler>();
+        valueHandler.Type.Returns("PII");
+        valueHandler.Category.Returns(SchemaMetadataCategory.Compliance);
         valueHandler.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Key, Arg.Any<JsonNode>())
             .Returns(Task.FromResult<JsonNode>(JsonValue.Create(DecryptedName)));
 
@@ -71,9 +71,9 @@ public class and_read_model_is_passive_with_a_pii_property : given.all_dependenc
             _changesetMediator,
             _localSiloDetails,
             new ReadModelsCompliance(
-                new JsonComplianceManager(
-                    new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(valueHandler),
-                    NullLogger<JsonComplianceManager>.Instance),
+                new JsonSchemaMetadataManager(
+                    new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(valueHandler),
+                    NullLogger<JsonSchemaMetadataManager>.Instance),
                 _expandoObjectConverter),
             _materializedReadModels,
             new JsonSerializerOptions());

@@ -44,7 +44,7 @@ public class and_event_has_multiple_pii_properties : Specification
         }
         """);
 
-    JsonComplianceManager _complianceManager;
+    JsonSchemaMetadataManager _complianceManager;
     ExpandoObjectConverter _converter;
     AppendedEvent _released;
 
@@ -54,7 +54,7 @@ public class and_event_has_multiple_pii_properties : Specification
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         var piiHandler = new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption);
-        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler), NullLogger<JsonComplianceManager>.Instance);
+        _complianceManager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(piiHandler), NullLogger<JsonSchemaMetadataManager>.Instance);
         _converter = new(new TypeFormats());
     }
 

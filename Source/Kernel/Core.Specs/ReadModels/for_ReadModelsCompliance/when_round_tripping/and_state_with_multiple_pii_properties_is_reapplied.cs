@@ -66,7 +66,7 @@ public class and_state_with_multiple_pii_properties_is_reapplied : Specification
         }
         """);
 
-    JsonComplianceManager _complianceManager;
+    JsonSchemaMetadataManager _complianceManager;
     ExpandoObjectConverter _converter;
     ReadModelsCompliance _compliance;
     ExpandoObject _encryptedInitialState;
@@ -79,7 +79,7 @@ public class and_state_with_multiple_pii_properties_is_reapplied : Specification
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
         var piiHandler = new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption);
-        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler), NullLogger<JsonComplianceManager>.Instance);
+        _complianceManager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(piiHandler), NullLogger<JsonSchemaMetadataManager>.Instance);
         _converter = new(new TypeFormats());
         _compliance = new ReadModelsCompliance(_complianceManager, _converter);
 

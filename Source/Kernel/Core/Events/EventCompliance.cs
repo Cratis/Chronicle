@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Json;
@@ -12,10 +11,10 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents an implementation of <see cref="IEventCompliance"/> for applying compliance release to event content.
 /// </summary>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> to use for releasing compliance.</param>
+/// <param name="complianceManager">The <see cref="IJsonSchemaMetadataManager"/> to use for releasing compliance.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting event content.</param>
 public class EventCompliance(
-    IJsonComplianceManager complianceManager,
+    IJsonSchemaMetadataManager complianceManager,
     IExpandoObjectConverter expandoObjectConverter) : IEventCompliance
 {
     /// <inheritdoc/>
@@ -43,7 +42,7 @@ public class EventCompliance(
         {
             if (!eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) ||
                 @event.Context.Subject is null ||
-                !schema.Schema.HasComplianceMetadata())
+                !schema.Schema.HasSchemaMetadata())
             {
                 releasedEvents.Add(@event);
                 continue;

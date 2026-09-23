@@ -12,6 +12,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
+using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
@@ -121,6 +122,9 @@ public class EventStoreForTesting : IEventStore
             new ComplianceMetadataResolver(
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Activate<ICanProvideComplianceMetadataForType>(ClientArtifactsProvider.ComplianceForTypesProviders)),
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(Activate<ICanProvideComplianceMetadataForProperty>(ClientArtifactsProvider.ComplianceForPropertiesProviders))),
+            new SecurityMetadataResolver(
+                new KnownInstancesOf<ICanProvideSecurityMetadataForType>(Activate<ICanProvideSecurityMetadataForType>(ClientArtifactsProvider.SecurityForTypesProviders)),
+                new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>(Activate<ICanProvideSecurityMetadataForProperty>(ClientArtifactsProvider.SecurityForPropertiesProviders))),
             _namingPolicy);
 
         var topLevelGrainFactory = new TestingGrainFactory();

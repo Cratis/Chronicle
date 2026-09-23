@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -28,7 +27,7 @@ public class all_dependencies : Specification
 
     protected ISink _sink;
     protected IObjectComparer _objectComparer;
-    protected IJsonComplianceManager _complianceManager;
+    protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ReadModelDefinition _readModelDefinition;
     protected ReducerPipeline _pipeline;
@@ -38,7 +37,7 @@ public class all_dependencies : Specification
     {
         _sink = Substitute.For<ISink>();
         _objectComparer = Substitute.For<IObjectComparer>();
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
 
         _schema = new JsonSchema();

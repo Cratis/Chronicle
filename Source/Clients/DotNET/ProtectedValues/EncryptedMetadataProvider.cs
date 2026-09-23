@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
+using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.ProtectedValues;
@@ -12,17 +12,18 @@ namespace Cratis.Chronicle.ProtectedValues;
 /// Represents a metadata provider for plain-confidentiality <see cref="EncryptedAttribute"/> values.
 /// </summary>
 /// <remarks>
-/// Mirrors <see cref="PIIMetadataProvider"/>'s shape - discovered the same way
-/// (<see cref="ICanProvideComplianceMetadataForType"/> / <see cref="ICanProvideComplianceMetadataForProperty"/>),
-/// rejecting an <see cref="EventSourceId"/>/<see cref="EventSourceId{T}"/> target for the same reason PII does -
-/// but produces a different <see cref="ComplianceMetadataType"/> per <see cref="EncryptionScope"/>, so the
-/// kernel dispatches a value marked <c language="csharp">[Encrypted]</c> to a handler that provisions a key under a
-/// disjoint identity rather than the one PII uses for the same subject. Also refuses, at schema-generation time,
-/// a property that resolves both <see cref="PIIAttribute"/> and <see cref="EncryptedAttribute"/> metadata - see
-/// <see cref="PIIAndEncryptedCombinedNotSupported"/> for why that combination corrupts the value rather than
-/// merely being redundant.
+/// Mirrors <see cref="PIIMetadataProvider"/>'s shape - discovered the same way in spirit, but through the entirely
+/// separate <see cref="ICanProvideSecurityMetadataForType"/> / <see cref="ICanProvideSecurityMetadataForProperty"/>
+/// interfaces rather than PII's compliance ones, so this provider is never swept into a compliance metadata
+/// resolver's provider pool - and rejecting an <see cref="EventSourceId"/>/<see cref="EventSourceId{T}"/> target
+/// for the same reason PII does. It produces a different <see cref="SecurityMetadataType"/> per
+/// <see cref="EncryptionScope"/>, so the kernel dispatches a value marked <c language="csharp">[Encrypted]</c> to a
+/// handler that provisions a key under a disjoint identity rather than the one PII uses for the same subject.
+/// Also refuses, at schema-generation time, a property that resolves both <see cref="PIIAttribute"/> and
+/// <see cref="EncryptedAttribute"/> metadata - see <see cref="PIIAndEncryptedCombinedNotSupported"/> for why that
+/// combination corrupts the value rather than merely being redundant.
 /// </remarks>
-public class EncryptedMetadataProvider : ICanProvideComplianceMetadataForType, ICanProvideComplianceMetadataForProperty
+public class EncryptedMetadataProvider : ICanProvideSecurityMetadataForType, ICanProvideSecurityMetadataForProperty
 {
     /// <inheritdoc/>
     public bool CanProvide(Type type)
@@ -45,36 +46,36 @@ public class EncryptedMetadataProvider : ICanProvideComplianceMetadataForType, I
          HasAttributeOnConstructorParameter<EncryptedAttribute>(property);
 
     /// <inheritdoc/>
-    public ComplianceMetadata Provide(Type type)
+    public SecurityMetadata Provide(Type type)
     {
         if (!CanProvide(type))
         {
-            throw new NoComplianceMetadataForType(type);
+            throw new NoSecurityMetadataForType(type);
         }
 
-        var attribute = type.GetCustomAttribute<EncryptedAttribute>() ?? throw new NoComplianceMetadataForType(type);
-        return new ComplianceMetadata(MetadataTypeFor(attribute.Scope), type.GetComplianceMetadataDetails());
+        var attribute = type.GetCustomAttribute<EncryptedAttribute>() ?? throw new NoSecurityMetadataForType(type);
+        return new SecurityMetadata(MetadataTypeFor(attribute.Scope), attribute.Details);
     }
 
     /// <inheritdoc/>
-    public ComplianceMetadata Provide(PropertyInfo property)
+    public SecurityMetadata Provide(PropertyInfo property)
     {
         if (!CanProvide(property))
         {
-            throw new NoComplianceMetadataForProperty(property);
+            throw new NoSecurityMetadataForProperty(property);
         }
 
         ThrowIfAlsoPII(property);
 
-        var attribute = ResolveAttribute(property) ?? throw new NoComplianceMetadataForProperty(property);
-        return new ComplianceMetadata(MetadataTypeFor(attribute.Scope), property.GetComplianceMetadataDetails());
+        var attribute = ResolveAttribute(property) ?? throw new NoSecurityMetadataForProperty(property);
+        return new SecurityMetadata(MetadataTypeFor(attribute.Scope), attribute.Details);
     }
 
-    static ComplianceMetadataType MetadataTypeFor(EncryptionScope scope) => scope switch
+    static SecurityMetadataType MetadataTypeFor(EncryptionScope scope) => scope switch
     {
-        EncryptionScope.Subject => ComplianceMetadataType.EncryptedSubject,
-        EncryptionScope.Namespace => ComplianceMetadataType.EncryptedNamespace,
-        EncryptionScope.Global => ComplianceMetadataType.EncryptedGlobal,
+        EncryptionScope.Subject => SecurityMetadataType.EncryptedSubject,
+        EncryptionScope.Namespace => SecurityMetadataType.EncryptedNamespace,
+        EncryptionScope.Global => SecurityMetadataType.EncryptedGlobal,
         _ => throw new EncryptionScopeNotYetSupported(scope)
     };
 

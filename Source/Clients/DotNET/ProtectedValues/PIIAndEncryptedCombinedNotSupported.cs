@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.ProtectedValues;
 /// <see cref="Compliance.GDPR.PIIAttribute"/> and <see cref="EncryptedAttribute"/>.
 /// </summary>
 /// <remarks>
-/// This is not merely redundant - it corrupts the value. <c language="csharp">JsonComplianceManager</c> applies every
+/// This is not merely redundant - it corrupts the value. <c language="csharp">JsonSchemaMetadataManager</c> applies every
 /// matching handler for a property in sequence, so a value marked both ways is encrypted first under the PII key
 /// and then again under the Encrypted key; releasing it decrypts with the wrong key against ciphertext, which
 /// fails loudly (a padding/authentication error) rather than returning a wrong value. A value needs exactly one

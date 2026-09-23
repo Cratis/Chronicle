@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario.when_appendi
 /// <summary>
 /// Proves EncryptionScope.Namespace end to end through the public EventScenario surface, not just against the
 /// kernel handler directly: two different event sources, each carrying its own namespace-scoped secret, both
-/// still release to their own plaintext on read - the schema-driven metadata resolution and JsonComplianceManager
+/// still release to their own plaintext on read - the schema-driven metadata resolution and JsonSchemaMetadataManager
 /// dispatch route a namespace-scoped value to the namespace handler rather than accidentally falling back to the
 /// subject-scoped one, which would still happen to round-trip correctly and hide the wiring defect.
 /// </summary>

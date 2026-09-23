@@ -4,13 +4,14 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.ProtectedValues;
 
 /// <summary>
 /// Encodes and decodes the at-rest shape a managed <see cref="EncryptionKey"/> produces for a JSON value - the
-/// base64 ciphertext string every <see cref="IJsonCompliancePropertyValueHandler"/> built on
+/// base64 ciphertext string every <see cref="IJsonSchemaMetadataValueHandler"/> built on
 /// <see cref="IEncryption"/> stores in place of the original value.
 /// </summary>
 /// <remarks>

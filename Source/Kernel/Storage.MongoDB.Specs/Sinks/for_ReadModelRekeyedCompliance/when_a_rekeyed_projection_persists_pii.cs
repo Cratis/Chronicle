@@ -45,7 +45,7 @@ public class when_a_rekeyed_projection_persists_pii(MongoDBFixture fixture) : Sp
     string _databaseName = default!;
     SinkCollections _collections = default!;
     Sink _sink = default!;
-    JsonComplianceManager _complianceManager = default!;
+    JsonSchemaMetadataManager _complianceManager = default!;
     ReadModelsCompliance _compliance = default!;
     JsonSchema _schema = default!;
     Key _key = default!;
@@ -76,10 +76,10 @@ public class when_a_rekeyed_projection_persists_pii(MongoDBFixture fixture) : Sp
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
-        _complianceManager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
+        _complianceManager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
                 new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
-            NullLogger<JsonComplianceManager>.Instance);
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         _compliance = new ReadModelsCompliance(_complianceManager, complianceConverter);
 
         _databaseName = $"chronicle_rekeyed_pii_{Guid.NewGuid():N}";

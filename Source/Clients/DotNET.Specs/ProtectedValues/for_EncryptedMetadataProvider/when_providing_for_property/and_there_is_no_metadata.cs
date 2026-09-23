@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Confidentiality;
 
 namespace Cratis.Chronicle.ProtectedValues.for_EncryptedMetadataProvider.when_providing_for_property;
 
@@ -19,5 +19,5 @@ public class and_there_is_no_metadata : given.a_provider
 
     void Because() => _result = Catch.Exception(() => provider.Provide(MyClass.SomethingProperty));
 
-    [Fact] void should_throw_no_compliance_metadata_for_property() => _result.ShouldBeOfExactType<NoComplianceMetadataForProperty>();
+    [Fact] void should_throw_no_security_metadata_for_property() => _result.ShouldBeOfExactType<NoSecurityMetadataForProperty>();
 }
