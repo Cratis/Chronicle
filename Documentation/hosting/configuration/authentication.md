@@ -99,6 +99,7 @@ Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin=
 ### `requirePasswordChangeOnFirstLogin`
 
 When this option is `true`:
+
 - The admin user is created with the configured password
 - On first login, Chronicle redirects the admin to the password change screen
 - The admin must set a new password before accessing the Workbench
@@ -108,6 +109,7 @@ When this option is `true`:
 The `password` value should be sourced from a secrets management solution such as Azure Key Vault, Kubernetes Secrets, or Docker Secrets rather than stored directly in `chronicle.json`.
 
 **Key security properties of admin user bootstrap:**
+
 - Credentials are hashed before being appended or persisted. Plaintext configuration values can remain in the process configuration; protect that configuration and never log it.
 - Bootstrap never replaces existing credentials. It may finish initialization of an existing administrator that still has no password.
 
