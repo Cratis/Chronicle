@@ -1,0 +1,29 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Text;
+using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
+
+namespace Cratis.Chronicle.ProtectedValues.for_EncryptedValueHandler;
+
+public class when_applying : given.a_property_handler
+{
+    JsonNode _input;
+    JsonNode _result;
+    string _encryptedString = "Hello";
+    byte[] _encryptedBytes;
+
+    void Establish()
+    {
+        _input = JsonValue.Create(42);
+        _encryptedBytes = Encoding.UTF8.GetBytes(_encryptedString);
+        _encryption.Encrypt(Arg.Any<byte[]>(), _key).Returns(_encryptedBytes);
+    }
+
+    async Task Because() => _result = await _handler.Apply(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _input);
+
+    [Fact] void should_return_encrypted_string() => _result.ToString().ShouldEqual(Convert.ToBase64String(_encryptedBytes));
+    [Fact] async Task should_have_looked_up_the_key_under_the_disjoint_identity() =>
+        await _keyStore.Received(1).TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier);
+}
