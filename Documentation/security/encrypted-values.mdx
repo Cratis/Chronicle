@@ -14,41 +14,27 @@ public sealed class EncryptedAttribute(EncryptionScope scope = EncryptionScope.S
 
 `EncryptedAttribute` lives in `Cratis.Chronicle.ProtectedValues` — a namespace of its own, deliberately not nested under `Compliance`. The optional `details` parameter records why the value needs encryption, exactly like `[PII]`'s `details` parameter.
 
+<ChronicleClientTabs snippet="confidentiality/encrypted/import" />
+
 ## Applying to a concept
 
-The preferred approach, exactly as with `[PII]`: mark the `ConceptAs<T>` type itself. Every event using this type is then automatically encrypted.
+The preferred approach, exactly as with `[PII]`: mark the concept type itself. Every event using this type is then automatically encrypted.
 
-```csharp
-[Encrypted]
-public record PartnerApiKey(string Value) : ConceptAs<string>(Value);
-
-public record PartnerIntegrationConfigured(PartnerApiKey ApiKey);
-```
+<ChronicleClientTabs snippet="confidentiality/encrypted/concept-level" />
 
 ## Applying to an event property
 
 You can mark a single property directly when the value has no dedicated concept type:
 
-```csharp
-public record PartnerIntegrationConfigured(
-    [Encrypted] string ApiKey,
-    string PartnerName);
-```
-
-When this event is written, `ApiKey` is encrypted. `PartnerName` is stored as plaintext.
+<ChronicleClientTabs snippet="confidentiality/encrypted/property-level" />
 
 ## `[PII]` and `[Encrypted]` never mix
 
 A property cannot resolve both `[PII]` and `[Encrypted]` metadata. Chronicle applies every matching compliance handler for a property in sequence, so a value marked both ways would be encrypted first under the PII key and then again under the `[Encrypted]` key — releasing it would decrypt with the wrong key against ciphertext, which fails loudly rather than returning a wrong value.
 
-```csharp
-// Throws PIIAndEncryptedCombinedNotSupported at schema-generation time,
-// and is flagged at compile time by CHR0053.
-public record CustomerRegistered(
-    [PII] [Encrypted] string SomeValue);
-```
+<ChronicleClientTabs snippet="confidentiality/encrypted/pii-and-encrypted-restriction" />
 
-Choose exactly one: `[PII]` for personal data with a lawful basis for erasure, `[Encrypted]` for an operational secret with none. [CHR0053](/chronicle/code-analysis/CHR0053/) catches the two directly-visible combinations at compile time; `PIIAndEncryptedCombinedNotSupported` is the backstop at schema-generation time.
+Choose exactly one: `[PII]` for personal data with a lawful basis for erasure, `[Encrypted]` for an operational secret with none. In .NET, [CHR0053](/chronicle/code-analysis/CHR0053/) catches the two directly-visible combinations at compile time; the check shown above is the backstop every client applies at schema-generation time.
 
 ## Why the two keys are never the same
 
@@ -76,39 +62,24 @@ public enum EncryptionScope
 
 `EncryptionScope.Subject` (the default) provisions a key per compliance identity, the same way `[PII]` resolves its identity (the subject, or the event source id when none is set) — but always under a disjoint key from any `[PII]` value on the same subject.
 
-`EncryptionScope.Namespace` provisions one key shared by every `[Encrypted(EncryptionScope.Namespace)]` value in a given event store namespace, regardless of which document it came from — useful for a secret that belongs to the deployment rather than to any one entity, such as a webhook signing secret shared across every partner integration.
+`EncryptionScope.Namespace` provisions one key shared by every value marked that way in a given event store namespace, regardless of which document it came from — useful for a secret that belongs to the deployment rather than to any one entity, such as a webhook signing secret shared across every partner integration.
 
-`EncryptionScope.Global` provisions one key shared by every `[Encrypted(EncryptionScope.Global)]` value across the whole installation — every event store, every namespace.
+`EncryptionScope.Global` provisions one key shared by every value marked that way across the whole installation — every event store, every namespace.
 
 Widening the scope is safe for `[Encrypted]` in a way it is never safe for `[PII]`: an operational secret has no data subject, so there is no erasure request a shared key could ever need to honor separately for one subject and not another. `[PII]` always resolves to a compliance identity and never gains a wider scope — see [Compliance](/chronicle/compliance/).
 
-```csharp
-public record PartnerApiKey(string Value) : ConceptAs<string>(Value);       // one key per partner (EncryptionScope.Subject)
-
-[Encrypted(EncryptionScope.Namespace)]
-public record PartnerWebhookSecret(string Value) : ConceptAs<string>(Value); // one key for every partner in the namespace
-
-[Encrypted(EncryptionScope.Global)]
-public record LicenseToken(string Value) : ConceptAs<string>(Value);        // one key for the whole installation
-```
+<ChronicleClientTabs snippet="confidentiality/encrypted/scope-examples" />
 
 ## Constraints
 
 ### EventSourceId is not supported
 
-Applying `[Encrypted]` to a type that inherits from `EventSourceId` or `EventSourceId<T>` throws `EncryptedNotSupportedOnEventSourceId` at runtime, and is flagged at compile time by [CHR0052](/chronicle/code-analysis/CHR0052/):
+Applying `[Encrypted]` to an event source identifier throws `EncryptedNotSupportedOnEventSourceId` at runtime, and in .NET is flagged at compile time by [CHR0052](/chronicle/code-analysis/CHR0052/):
 
-```csharp
-public record PartnerId(Guid Value) : EventSourceId<Guid>(Value);
-
-// Throws EncryptedNotSupportedOnEventSourceId
-public record PartnerIntegrationConfigured(
-    [Encrypted] PartnerId PartnerId,
-    string ApiKey);
-```
+<ChronicleClientTabs snippet="confidentiality/encrypted/event-source-id-restriction" />
 
 Event source identifiers are used to correlate events. If the identifier itself is a secret, use a non-sensitive surrogate as the event source id and store the secret in a separate `[Encrypted]` property.
 
 ## Client coverage
 
-`[Encrypted]` is available in the .NET client today. Parity across Chronicle's other clients (Kotlin/Java, TypeScript, Elixir) is tracked separately.
+`[Encrypted]` is available in the .NET, TypeScript, Kotlin/Java, and Elixir clients.
