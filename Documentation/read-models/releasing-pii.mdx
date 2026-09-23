@@ -39,7 +39,13 @@ Every other read on `IReadModels` releases before returning to you. `Watch` is t
 
 The first match **with a value** wins. If an attributed property is `null`, empty or `Subject.NotSet`, `Release` continues to the `Id` fallback. This lets older rows and partially populated instances remain releasable while a newly projected `[Subject]` property is introduced.
 
-If none of the three resolve to a value, `Release` returns the instance unchanged and logs a warning when the model has `[PII]` or `[Encrypted]` metadata. If the read model has neither, it returns the instance unchanged without a warning because there is nothing to release.
+A subject is what a subject-scoped value is keyed by — `[PII]`, and `[Encrypted]` with the default `EncryptionScope.Subject`. A namespace- or global-scoped `[Encrypted]` value (see [Scope](../security/encrypted-values#scope)) needs no subject at all, so what happens when none of the three resolve depends on what the read model actually carries:
+
+- If the read model carries no `[PII]`/`[Encrypted]` metadata at all, `Release` returns the instance unchanged — there is nothing to release, so it doesn't call the kernel.
+- If it carries only subject-scoped values, `Release` returns the instance unchanged and logs a warning — there is no key identity to release them under, the same as a computed `[PII]` value that was never round-tripped through encryption.
+- If it carries a namespace- or global-scoped `[Encrypted]` value — with or without subject-scoped values alongside it — `Release` still calls the kernel, because that value's key doesn't depend on a subject. Any subject-scoped value alongside it, with no subject to release against, degrades exactly as described below in "When release can't recover a value".
+
+This is also why a read model carrying only a namespace- or global-scoped secret is ordinarily written with no `Id` or `[Subject]` property at all — there is no per-document identity for that kind of value to be scoped by in the first place.
 
 Add `[Subject]` when the identity that manual `Release` should use differs from the read model's own key, exactly as you would on a command or event property to control which identity an append is encrypted under. When the two already match — a person's own profile, keyed by their own identity — the `Id` fallback handles it and no attribute is needed.
 

@@ -119,6 +119,24 @@ public static class SchemaMetadataExtensions
         HasSchemaMetadata((JsonSchema)property, category);
 
     /// <summary>
+    /// Check recursively whether the schema carries metadata for a category that also matches a predicate over
+    /// each entry's <see cref="ComplianceSchemaMetadata.metadataType"/>.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
+    /// <param name="category">The <see cref="SchemaMetadataCategory"/> to check for.</param>
+    /// <param name="predicate">Predicate over each candidate entry's metadata type.</param>
+    /// <returns>True if a matching entry exists anywhere in the schema, false if not.</returns>
+    /// <remarks>
+    /// Unlike <see cref="HasSchemaMetadata(JsonSchema, SchemaMetadataCategory)"/>, this reads and tests every
+    /// entry rather than stopping at "the extension key exists", and is not memoized - it exists for a caller
+    /// that needs to distinguish between different metadata types within one category (for example, a
+    /// namespace-/global-scoped security entry from a subject-scoped one), not merely whether the category is
+    /// present at all.
+    /// </remarks>
+    public static bool HasSchemaMetadata(this JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate) =>
+        HasMatchingSchemaMetadata(schema, category, predicate, [], 0);
+
+    /// <summary>
     /// Check recursively whether the schema has metadata for any known category.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
@@ -138,6 +156,36 @@ public static class SchemaMetadataExtensions
     /// <returns>The extension data key.</returns>
     internal static string KeyFor(SchemaMetadataCategory category) =>
         category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
+
+    static bool HasMatchingSchemaMetadata(JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate, HashSet<JsonSchema> visited, int depth)
+    {
+        // Same traversal shape and termination guards as HasSchemaMetadata(JsonSchema, string, HashSet, int)
+        // below - see its remarks - but this walk has to read and test each entry's metadata type rather than
+        // stop at "the key exists", so it cannot share that method's cheap ContainsKey check or its cache.
+        var actual = schema.ActualSchema;
+        if (depth > MaxSchemaMetadataTraversalDepth || !visited.Add(actual))
+        {
+            return false;
+        }
+
+        var hasMatch = actual.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType));
+
+        if (!hasMatch && actual.Properties.Count > 0)
+        {
+            foreach (var property in actual.GetFlattenedProperties())
+            {
+                hasMatch = HasMatchingSchemaMetadata(property, category, predicate, visited, depth + 1);
+                if (hasMatch) break;
+            }
+        }
+
+        if (!hasMatch && actual.Item is not null)
+        {
+            hasMatch = HasMatchingSchemaMetadata(actual.Item, category, predicate, visited, depth + 1);
+        }
+
+        return hasMatch;
+    }
 
     static bool HasSchemaMetadata(JsonSchema schema, string key, HashSet<JsonSchema> visited, int depth)
     {

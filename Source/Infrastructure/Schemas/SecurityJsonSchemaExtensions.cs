@@ -21,6 +21,15 @@ public static class SecurityJsonSchemaExtensions
     public const string SecurityKey = "security";
 
     /// <summary>
+    /// The security metadata type written for a subject-scoped <c language="csharp">[Encrypted]</c> value - the
+    /// one <see cref="HasSubjectIndependentSecurityMetadata(JsonSchema)"/> excludes. A raw string rather than the
+    /// client's or kernel's own <c language="csharp">SecurityMetadataType</c> concept, because this project is
+    /// shared by both and neither one's types are referenced from here - schema metadata is written and read as
+    /// the wire strings both sides agree on.
+    /// </summary>
+    const string EncryptedSubjectMetadataType = "EncryptedSubject";
+
+    /// <summary>
     /// Ensure the security metadata on the schema node itself is typed rather than raw JSON.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to ensure.</param>
@@ -53,4 +62,20 @@ public static class SecurityJsonSchemaExtensions
     /// <param name="property"><see cref="JsonSchemaProperty"/> to check.</param>
     /// <returns>True if it has, false if not.</returns>
     public static bool HasSecurityMetadata(this JsonSchemaProperty property) => property.HasSchemaMetadata(SchemaMetadataCategory.Security);
+
+    /// <summary>
+    /// Check recursively whether the schema carries security metadata whose key does not depend on a subject at
+    /// all - a namespace- or global-scoped <c language="csharp">[Encrypted]</c> value.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
+    /// <returns>True if it has, false if not.</returns>
+    /// <remarks>
+    /// A subject-scoped <c language="csharp">[Encrypted]</c> value is keyed the same way <c language="csharp">[PII]</c>
+    /// is - by a resolved subject - so, like PII, there is nothing to release when no subject resolves. A
+    /// namespace- or global-scoped value is keyed independently of any subject, so it still needs releasing even
+    /// then. This is false for a schema that carries only subject-scoped security metadata (or none at all),
+    /// unlike <see cref="HasSecurityMetadata(JsonSchema)"/>, which is true for any of the three.
+    /// </remarks>
+    public static bool HasSubjectIndependentSecurityMetadata(this JsonSchema schema) =>
+        schema.HasSchemaMetadata(SchemaMetadataCategory.Security, metadataType => metadataType != EncryptedSubjectMetadataType);
 }
