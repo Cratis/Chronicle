@@ -581,7 +581,10 @@
                     "owner": "Owner",
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number",
-                    "handledEventCount": "Handled events"
+                    "handledEventCount": "Handled events",
+                    "quarantined": "Q.",
+                    "quarantinedTooltip": "Quarantined",
+                    "failedPartitions": "Failed"
                 },
                 "types": {
                     "unknown": "Unknown",
@@ -671,7 +674,9 @@
                     "messages": "Messages",
                     "stackTrace": "Stack trace",
                     "noStackTrace": "No stack trace available"
-                }
+                },
+                "filteredByObserver": "Showing failed partitions for observer {observerId}.",
+                "clearObserverFilter": "Show all"
             },
             "identities": {
                 "title": "Identities",
