@@ -520,7 +520,8 @@ public class ProjectionFactory(
             noAutoMapProperties,
             childProjections,
             projectionDefinition.SubscribesToAllEvents,
-            projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null);
+            projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null,
+            projectionDefinition.Scope);
 
         // Set parent relationships immediately after creation
         // This ensures children have their Parent set before any event resolution

@@ -131,6 +131,8 @@ enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;
    PROJECTION_OWNER_Client = 1;
    PROJECTION_OWNER_Server = 2;
+   Parent = 3;
+   Kernel = 4;
 }
 message ProjectionPreview {
    repeated string ReadModelEntries = 1;

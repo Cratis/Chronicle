@@ -15,7 +15,7 @@ public class and_nothing_is_configured : Specification
 
     void Establish() => _builder = new(WellKnownKernelProjections.IdentifierFor("stats"), "stats");
 
-    void Because() => _result = _builder.Build();
+    void Because() => _result = _builder.Build().Single();
 
     [Fact] void should_be_owned_by_the_kernel() => _result.Owner.ShouldEqual(ProjectionOwner.Kernel);
     [Fact] void should_be_recognized_as_kernel_owned() => _result.IsKernelOwned.ShouldBeTrue();

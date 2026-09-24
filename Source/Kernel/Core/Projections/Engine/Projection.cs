@@ -42,6 +42,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     /// <param name="subscribesToAllEvents">Whether the projection subscribes to every event type in the system, including ones not yet known when it was created.</param>
     /// <param name="allEventsKeyResolver">The <see cref="KeyResolver"/> to fall back to for an event type that has no explicit key resolver, used only when <paramref name="subscribesToAllEvents"/> is <see langword="true"/>.</param>
+    /// <param name="scope">The <see cref="ProjectionScope"/> the projection materializes its read model in.</param>
     public Projection(
         EventSequenceId eventSequenceId,
         ProjectionId identifier,
@@ -56,8 +57,10 @@ public class Projection : IProjection, IDisposable
         IReadOnlySet<string> noAutoMapProperties,
         IEnumerable<IProjection> childProjections,
         bool subscribesToAllEvents = false,
-        KeyResolver? allEventsKeyResolver = null)
+        KeyResolver? allEventsKeyResolver = null,
+        ProjectionScope scope = ProjectionScope.Namespaced)
     {
+        Scope = scope;
         EventSequenceId = eventSequenceId;
         Identifier = identifier;
         InitialModelState = initialModelState;
@@ -104,6 +107,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public bool IsRewindable { get; }
+
+    /// <inheritdoc/>
+    public ProjectionScope Scope { get; }
 
     /// <inheritdoc/>
     public AutoMap AutoMap { get; }

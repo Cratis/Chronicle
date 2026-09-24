@@ -92,6 +92,16 @@ public interface IProjection
     bool IsRewindable { get; }
 
     /// <summary>
+    /// Gets the <see cref="ProjectionScope"/> the projection materializes its read model in.
+    /// </summary>
+    /// <remarks>
+    /// A projection is observed per namespace regardless of scope. What the scope decides is which namespace's
+    /// sink the pipeline writes to - a globally scoped projection resolves its sink at event store level, so
+    /// every namespace's observer accumulates into one instance.
+    /// </remarks>
+    ProjectionScope Scope { get; }
+
+    /// <summary>
     /// Gets whether properties should be auto-mapped from events at the projection level.
     /// </summary>
     AutoMap AutoMap { get; }

@@ -32,6 +32,12 @@ public class KernelProjectionBuilder<TReadModel>(ProjectionId identifier, ReadMo
     : IKernelProjectionBuilder<TReadModel>
     where TReadModel : class
 {
+    /// <summary>
+    /// The identifier suffix distinguishing the globally scoped half of a <see cref="ProjectionScope.Both"/>
+    /// declaration from its namespaced half.
+    /// </summary>
+    public const string GlobalIdentifierSuffix = ".global";
+
     readonly Dictionary<EventType, FromDefinition> _from = [];
     readonly Dictionary<PropertyPath, string> _fromEvery = [];
     readonly JsonObject _initialState = [];
@@ -103,19 +109,37 @@ public class KernelProjectionBuilder<TReadModel>(ProjectionId identifier, ReadMo
     }
 
     /// <summary>
-    /// Build the <see cref="ProjectionDefinition"/> the declaration lowers to.
+    /// Build the <see cref="ProjectionDefinition"/> definitions the declaration lowers to.
     /// </summary>
-    /// <returns>The built <see cref="ProjectionDefinition"/>.</returns>
+    /// <returns>The built definitions - one, or two for <see cref="ProjectionScope.Both"/>.</returns>
     /// <remarks>
-    /// The owner, the rewindability and the key carried into <see cref="FromEveryDefinition"/> are decided here
-    /// rather than left to the declaration. A system projection that could be declared replayable would be a
-    /// system projection someone can replay.
+    /// <para>
+    /// The owner and the rewindability are decided here rather than left to the declaration. A kernel projection
+    /// that could be declared replayable would be a kernel projection someone can replay.
+    /// </para>
+    /// <para>
+    /// <see cref="ProjectionScope.Both"/> lowers to two single-scope definitions rather than one definition the
+    /// engine has to materialize twice. A projection is observed and materialized per namespace, so "both" is two
+    /// observers by nature; making that explicit at declaration time keeps the engine unaware there is such a
+    /// thing as a dual scope, and leaves each half an ordinary projection that can be inspected, reasoned about
+    /// and diagnosed on its own.
+    /// </para>
     /// </remarks>
-    public ProjectionDefinition Build() =>
+    public IReadOnlyCollection<ProjectionDefinition> Build() => _scope switch
+    {
+        ProjectionScope.Both =>
+        [
+            BuildFor(identifier, ProjectionScope.Namespaced),
+            BuildFor(new ProjectionId($"{identifier.Value}{GlobalIdentifierSuffix}"), ProjectionScope.Global)
+        ],
+        _ => [BuildFor(identifier, _scope)]
+    };
+
+    ProjectionDefinition BuildFor(ProjectionId projectionId, ProjectionScope scope) =>
         new(
             ProjectionOwner.Kernel,
             _eventSequenceId,
-            identifier,
+            projectionId,
             readModel,
             IsActive: true,
             IsRewindable: false,
@@ -129,5 +153,5 @@ public class KernelProjectionBuilder<TReadModel>(ProjectionId identifier, ReadMo
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
             LastUpdated: DateTimeOffset.UtcNow,
             SubscribesToAllEvents: _subscribesToAllEvents,
-            Scope: _scope);
+            Scope: scope);
 }

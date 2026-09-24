@@ -25,7 +25,7 @@ public class with_a_composite_key : Specification
             .From(_eventType, from => from.Count(model => model.Count));
     }
 
-    void Because() => _result = _builder.Build();
+    void Because() => _result = _builder.Build().Single();
 
     [Fact] void should_build_a_composite_key_expression() =>
         _result.From[_eventType].Key.Value.ShouldEqual("$composite(EventType=$eventContext.eventType,Namespace=$eventContext.@namespace)");
