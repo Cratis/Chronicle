@@ -55,7 +55,7 @@ public class CatchUpObserverPartition(
                     request.Key,
                     request.FromSequenceNumber,
                     EventSequenceNumber.Max,
-                    EventObservationState.Initial | EventObservationState.CatchUp,
+                    EventObservationState.Initial,
                     request.EventTypes))
         }.ToImmutableList();
 
