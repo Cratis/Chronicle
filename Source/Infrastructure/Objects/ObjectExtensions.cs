@@ -126,6 +126,7 @@ public static class ObjectExtensions
     /// <param name="propertyPath"><see cref="PropertyPath"/> to resolve.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>The instance at the path, or <see langword="null"/> when any part of the path is absent.</returns>
+    /// <exception cref="UnableToResolvePropertyPathOnType">Thrown if a segment does not exist on the type being traversed.</exception>
     /// <remarks>
     /// The read-only counterpart of <see cref="EnsurePath"/>. A read must not write: resolving a path through
     /// EnsurePath materialized every missing intermediate and assigned it back to its parent, so merely asking

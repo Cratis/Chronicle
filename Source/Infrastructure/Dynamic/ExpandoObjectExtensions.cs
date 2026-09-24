@@ -287,7 +287,7 @@ public static class ExpandoObjectExtensions
                             return null;
                         }
 
-                        currentTarget = nestedExpando;
+                        currentTarget = nestedExpando!;
                     }
                     break;
 
@@ -331,7 +331,7 @@ public static class ExpandoObjectExtensions
                                 return null;
                             }
 
-                            currentTarget = element;
+                            currentTarget = element!;
                         }
                     }
                     break;
