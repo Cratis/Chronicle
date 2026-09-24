@@ -18,14 +18,14 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="database">The <see cref="IDatabase"/> instance.</param>
 /// <param name="expandoObjectConverter">The <see cref="Json.IExpandoObjectConverter"/> instance.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> instance.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage"/> the job system resolves through.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> instance.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> instance.</param>
 public class ClusterStorage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    Cratis.Orleans.Storage.MongoDB.MongoDBJobsStorage jobsStorage,
+    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IClusterStorage
 {
