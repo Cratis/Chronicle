@@ -382,8 +382,7 @@
                 "empty": "No recommendations found",
                 "actions": {
                     "perform": "Perform",
-                    "ignore": "Ignore",
-                    "selectAll": "Select All"
+                    "ignore": "Ignore"
                 },
                 "columns": {
                     "name": "Name",
@@ -394,12 +393,19 @@
                 "dialogs": {
                     "ignoreRecommendation": {
                         "title": "Ignore Recommendation",
-                        "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                        "message": "Are you sure you want to ignore the recommendation '{name}'? It will stay hidden until the situation behind it changes."
                     },
                     "ignoreRecommendations": {
                         "title": "Ignore Recommendations",
-                        "message": "Are you sure you want to ignore {count} recommendations? This action cannot be undone."
+                        "message": "Are you sure you want to ignore {count} recommendations? They will stay hidden until the situation behind them changes."
                     }
+                },
+                "notifications": {
+                    "ignored": "Recommendations ignored",
+                    "ignoreFailed": "Could not ignore every recommendation",
+                    "performed": "Recommendations performed",
+                    "performFailed": "Could not perform every recommendation",
+                    "partialFailure": "{failed} of {total} failed."
                 }
             },
             "jobs": {
