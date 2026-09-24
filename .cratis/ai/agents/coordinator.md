@@ -8,12 +8,12 @@ description: >
   Use this agent when a request spans multiple concerns (backend + frontend,
   multiple slices, mixed C#/TypeScript work, or requires both implementation
   and review).
-model: claude-sonnet-4-5
 tools:
-  - githubRepo
-  - codeSearch
-  - usages
-  - terminalLastCommand
+  - Read
+  - Grep
+  - Glob
+  - Bash
+  - Agent
 ---
 <!-- cratis-ai-managed: agents/coordinator.md -->
 

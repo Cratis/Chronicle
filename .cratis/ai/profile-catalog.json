@@ -1,0 +1,924 @@
+{
+  "schemaVersion": "1.0",
+  "publicProfiles": [
+    {
+      "id": "cratis",
+      "composes": [
+        "cratis/application",
+        "cratis/application/arc-chronicle",
+        "cratis/application/arc-only",
+        "cratis/application/chronicle-dotnet",
+        "cratis/application/csharp",
+        "cratis/application/elixir",
+        "cratis/application/java",
+        "cratis/application/kotlin",
+        "cratis/application/react",
+        "cratis/application/typescript",
+        "cratis/arc",
+        "cratis/arc/client-kotlin",
+        "cratis/arc/core",
+        "cratis/arc/csharp",
+        "cratis/arc/ef-core",
+        "cratis/arc/identity",
+        "cratis/arc/java",
+        "cratis/arc/kotlin",
+        "cratis/arc/react",
+        "cratis/chronicle",
+        "cratis/chronicle/client-dotnet",
+        "cratis/chronicle/client-elixir",
+        "cratis/chronicle/client-java",
+        "cratis/chronicle/client-kotlin",
+        "cratis/chronicle/client-python",
+        "cratis/chronicle/client-typescript",
+        "cratis/chronicle/compliance",
+        "cratis/chronicle/core",
+        "cratis/chronicle/csharp",
+        "cratis/chronicle/elixir",
+        "cratis/chronicle/java",
+        "cratis/chronicle/kotlin",
+        "cratis/chronicle/mcp",
+        "cratis/chronicle/multi-tenancy",
+        "cratis/chronicle/typescript",
+        "cratis/chronicle/web-workbench",
+        "cratis/cli",
+        "cratis/cli/terminal-workbench",
+        "cratis/components",
+        "cratis/content",
+        "cratis/documentation",
+        "cratis/full",
+        "cratis/full/csharp",
+        "cratis/full/elixir",
+        "cratis/full/java",
+        "cratis/full/kotlin",
+        "cratis/full/typescript",
+        "cratis/fundamentals",
+        "cratis/fundamentals/type-discovery",
+        "cratis/language/csharp",
+        "cratis/language/elixir",
+        "cratis/language/java",
+        "cratis/language/kotlin",
+        "cratis/language/typescript",
+        "cratis/lens",
+        "cratis/methodology/governed-releases",
+        "cratis/modeling/screenplay-stage",
+        "cratis/review",
+        "cratis/screenplay",
+        "cratis/specifications",
+        "cratis/specifications/dotnet",
+        "cratis/specifications/typescript",
+        "cratis/stage",
+        "cratis/studio"
+      ],
+      "languages": [
+        "csharp",
+        "elixir",
+        "java",
+        "kotlin",
+        "language-agnostic",
+        "python",
+        "react",
+        "shell",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/application",
+      "composes": [
+        "cratis/application/csharp",
+        "cratis/application/elixir",
+        "cratis/application/java",
+        "cratis/application/kotlin",
+        "cratis/application/typescript",
+        "cratis/arc/core",
+        "cratis/arc/react",
+        "cratis/chronicle/core",
+        "cratis/components",
+        "cratis/fundamentals",
+        "cratis/specifications/dotnet",
+        "cratis/specifications/typescript"
+      ],
+      "languages": [
+        "csharp",
+        "elixir",
+        "java",
+        "kotlin",
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/application/arc-chronicle",
+      "composes": [
+        "cratis/arc/core",
+        "cratis/chronicle/core",
+        "cratis/fundamentals",
+        "cratis/specifications/dotnet"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/application/arc-only",
+      "composes": [
+        "cratis/arc/core",
+        "cratis/fundamentals",
+        "cratis/specifications/dotnet"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/application/chronicle-dotnet",
+      "composes": [
+        "cratis/chronicle/client-dotnet",
+        "cratis/chronicle/core",
+        "cratis/fundamentals",
+        "cratis/specifications/dotnet"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/application/csharp",
+      "composes": [
+        "cratis/arc",
+        "cratis/arc/react",
+        "cratis/chronicle",
+        "cratis/components",
+        "cratis/fundamentals",
+        "cratis/language/csharp",
+        "cratis/specifications/dotnet",
+        "cratis/specifications/typescript"
+      ],
+      "languages": [
+        "csharp",
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/application/elixir",
+      "composes": [
+        "cratis/chronicle/client-elixir",
+        "cratis/language/elixir"
+      ],
+      "languages": [
+        "elixir"
+      ]
+    },
+    {
+      "id": "cratis/application/java",
+      "composes": [
+        "cratis/arc/client-kotlin",
+        "cratis/chronicle/client-java",
+        "cratis/language/java"
+      ],
+      "languages": [
+        "java"
+      ]
+    },
+    {
+      "id": "cratis/application/kotlin",
+      "composes": [
+        "cratis/arc/client-kotlin",
+        "cratis/chronicle/client-kotlin",
+        "cratis/language/kotlin"
+      ],
+      "languages": [
+        "kotlin"
+      ]
+    },
+    {
+      "id": "cratis/application/react",
+      "composes": [
+        "cratis/arc/core",
+        "cratis/arc/react",
+        "cratis/components",
+        "cratis/fundamentals",
+        "cratis/specifications/dotnet",
+        "cratis/specifications/typescript"
+      ],
+      "languages": [
+        "csharp",
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/application/typescript",
+      "composes": [
+        "cratis/chronicle/client-typescript",
+        "cratis/language/typescript",
+        "cratis/specifications/typescript"
+      ],
+      "languages": [
+        "typescript",
+        "react"
+      ]
+    },
+    {
+      "id": "cratis/arc",
+      "composes": [
+        "cratis/arc/csharp",
+        "cratis/arc/java",
+        "cratis/arc/kotlin"
+      ],
+      "languages": [
+        "csharp",
+        "java",
+        "kotlin",
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/arc/client-kotlin",
+      "availableTargets": [
+        "cratis-arc-command-kotlin",
+        "cratis-arc-query-kotlin",
+        "cratis-arc-validation-kotlin"
+      ],
+      "languages": [
+        "java",
+        "kotlin"
+      ]
+    },
+    {
+      "id": "cratis/arc/core",
+      "availableTargets": [
+        "cratis-arc-command",
+        "cratis-arc-command-execution",
+        "cratis-arc-command-validation",
+        "cratis-arc-observable-query-http",
+        "cratis-arc-query-paging"
+      ],
+      "languages": [
+        "csharp",
+        "typescript",
+        "shell"
+      ]
+    },
+    {
+      "id": "cratis/arc/csharp",
+      "composes": [
+        "cratis/application/arc-only",
+        "cratis/arc/ef-core",
+        "cratis/arc/identity",
+        "cratis/language/csharp"
+      ],
+      "languages": [
+        "csharp",
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/arc/ef-core",
+      "composes": [
+        "cratis/arc/core"
+      ],
+      "availableTargets": [
+        "cratis-arc-ef-core-migration"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/arc/identity",
+      "composes": [
+        "cratis/arc/core"
+      ],
+      "availableTargets": [
+        "cratis-arc-authentication-authorization-and-identity"
+      ],
+      "languages": [
+        "csharp",
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/arc/java",
+      "composes": [
+        "cratis/arc/client-kotlin",
+        "cratis/language/java"
+      ],
+      "languages": [
+        "java"
+      ]
+    },
+    {
+      "id": "cratis/arc/kotlin",
+      "composes": [
+        "cratis/arc/client-kotlin",
+        "cratis/language/kotlin"
+      ],
+      "languages": [
+        "kotlin"
+      ]
+    },
+    {
+      "id": "cratis/arc/react",
+      "composes": [
+        "cratis/arc/core"
+      ],
+      "availableTargets": [
+        "cratis-application-react-specifications",
+        "cratis-arc-react-page"
+      ],
+      "languages": [
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/chronicle",
+      "composes": [
+        "cratis/chronicle/compliance",
+        "cratis/chronicle/csharp",
+        "cratis/chronicle/elixir",
+        "cratis/chronicle/java",
+        "cratis/chronicle/kotlin",
+        "cratis/chronicle/multi-tenancy",
+        "cratis/chronicle/typescript",
+        "cratis/chronicle/web-workbench"
+      ],
+      "languages": [
+        "csharp",
+        "elixir",
+        "java",
+        "kotlin",
+        "language-agnostic",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/client-dotnet",
+      "availableTargets": [
+        "cratis-chronicle-client-dotnet"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/client-elixir",
+      "availableTargets": [
+        "cratis-chronicle-client-elixir"
+      ],
+      "languages": [
+        "elixir"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/client-java",
+      "composes": [
+        "cratis/chronicle/client-kotlin"
+      ],
+      "languages": [
+        "java"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/client-kotlin",
+      "availableTargets": [
+        "cratis-chronicle-client-kotlin"
+      ],
+      "languages": [
+        "java",
+        "kotlin"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/client-python",
+      "languages": [
+        "python"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/client-typescript",
+      "availableTargets": [
+        "cratis-chronicle-client-typescript"
+      ],
+      "languages": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/compliance",
+      "composes": [
+        "cratis/chronicle/core"
+      ],
+      "availableTargets": [
+        "cratis-chronicle-compliance"
+      ],
+      "languages": [
+        "csharp",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/core",
+      "availableTargets": [
+        "cratis-chronicle-event-constraints",
+        "cratis-chronicle-event-modeling",
+        "cratis-chronicle-event-type-migration",
+        "cratis-chronicle-projection",
+        "cratis-chronicle-reactor",
+        "cratis-chronicle-read-model",
+        "cratis-chronicle-reducer",
+        "cratis-event-model-diagram"
+      ],
+      "languages": [
+        "csharp",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/csharp",
+      "composes": [
+        "cratis/application/chronicle-dotnet",
+        "cratis/chronicle/compliance",
+        "cratis/chronicle/multi-tenancy",
+        "cratis/language/csharp"
+      ],
+      "languages": [
+        "csharp",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/elixir",
+      "composes": [
+        "cratis/chronicle/client-elixir",
+        "cratis/language/elixir"
+      ],
+      "languages": [
+        "elixir"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/java",
+      "composes": [
+        "cratis/chronicle/client-java",
+        "cratis/language/java"
+      ],
+      "languages": [
+        "java"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/kotlin",
+      "composes": [
+        "cratis/chronicle/client-kotlin",
+        "cratis/language/kotlin"
+      ],
+      "languages": [
+        "kotlin"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/mcp",
+      "availableTargets": [
+        "cratis-chronicle-mcp-inspection"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/multi-tenancy",
+      "composes": [
+        "cratis/chronicle/core"
+      ],
+      "availableTargets": [
+        "cratis-chronicle-multi-tenancy"
+      ],
+      "languages": [
+        "csharp",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/typescript",
+      "composes": [
+        "cratis/chronicle/client-typescript",
+        "cratis/language/typescript"
+      ],
+      "languages": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/chronicle/web-workbench",
+      "composes": [
+        "cratis/chronicle/core"
+      ],
+      "availableTargets": [
+        "cratis-chronicle-web-workbench"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/cli",
+      "availableTargets": [
+        "cratis-chronicle-cli-operations"
+      ],
+      "languages": [
+        "shell"
+      ]
+    },
+    {
+      "id": "cratis/cli/terminal-workbench",
+      "composes": [
+        "cratis/cli"
+      ],
+      "availableTargets": [
+        "cratis-cli-terminal-workbench"
+      ],
+      "languages": [
+        "shell"
+      ]
+    },
+    {
+      "id": "cratis/components",
+      "availableTargets": [
+        "cratis-components-accessibility",
+        "cratis-components-schema-editor",
+        "cratis-components-stepper-command-dialog",
+        "cratis-components-styling",
+        "cratis-components-toolbar"
+      ],
+      "languages": [
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/content",
+      "availableTargets": [
+        "cratis-release-notes",
+        "cratis-social-feed-post",
+        "cratis-technical-examples",
+        "cratis-writing-voice-and-cadence"
+      ],
+      "languages": [
+        "markdown",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/documentation",
+      "availableTargets": [
+        "cratis-documentation-writing",
+        "cratis-engineering-docs-authoring",
+        "cratis-llm-friendly-documentation",
+        "cratis-release-notes",
+        "cratis-technical-examples",
+        "cratis-writing-voice-and-cadence"
+      ],
+      "languages": [
+        "markdown",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/full",
+      "composes": [
+        "cratis/full/csharp",
+        "cratis/full/elixir",
+        "cratis/full/java",
+        "cratis/full/kotlin",
+        "cratis/full/typescript"
+      ],
+      "languages": [
+        "csharp",
+        "elixir",
+        "java",
+        "kotlin",
+        "language-agnostic",
+        "react",
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/full/csharp",
+      "composes": [
+        "cratis/application/csharp",
+        "cratis/arc/csharp",
+        "cratis/chronicle/csharp",
+        "cratis/modeling/screenplay-stage"
+      ],
+      "languages": [
+        "csharp",
+        "react",
+        "typescript",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/full/elixir",
+      "composes": [
+        "cratis/application/elixir",
+        "cratis/chronicle/elixir",
+        "cratis/modeling/screenplay-stage"
+      ],
+      "languages": [
+        "elixir",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/full/java",
+      "composes": [
+        "cratis/application/java",
+        "cratis/arc/java",
+        "cratis/chronicle/java",
+        "cratis/modeling/screenplay-stage"
+      ],
+      "languages": [
+        "java",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/full/kotlin",
+      "composes": [
+        "cratis/application/kotlin",
+        "cratis/arc/kotlin",
+        "cratis/chronicle/kotlin",
+        "cratis/modeling/screenplay-stage"
+      ],
+      "languages": [
+        "kotlin",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/full/typescript",
+      "composes": [
+        "cratis/application/typescript",
+        "cratis/chronicle/typescript",
+        "cratis/modeling/screenplay-stage"
+      ],
+      "languages": [
+        "typescript",
+        "react",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/fundamentals",
+      "availableTargets": [
+        "cratis-fundamentals-concept"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/fundamentals/type-discovery",
+      "composes": [
+        "cratis/fundamentals"
+      ],
+      "availableTargets": [
+        "cratis-fundamentals-type-discovery"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/language/csharp",
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/language/elixir",
+      "languages": [
+        "elixir"
+      ]
+    },
+    {
+      "id": "cratis/language/java",
+      "languages": [
+        "java"
+      ]
+    },
+    {
+      "id": "cratis/language/kotlin",
+      "languages": [
+        "kotlin"
+      ]
+    },
+    {
+      "id": "cratis/language/typescript",
+      "languages": [
+        "typescript"
+      ]
+    },
+    {
+      "id": "cratis/lens",
+      "availableTargets": [
+        "cratis-lens-browser-extension"
+      ],
+      "languages": [
+        "csharp",
+        "typescript",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/methodology/governed-releases",
+      "availableTargets": [
+        "cratis-governed-release-methodology"
+      ],
+      "languages": []
+    },
+    {
+      "id": "cratis/modeling/screenplay-stage",
+      "composes": [
+        "cratis/screenplay",
+        "cratis/stage"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/review",
+      "availableTargets": [
+        "cratis-code-review",
+        "cratis-performance-review",
+        "cratis-security-review"
+      ],
+      "languages": [
+        "csharp",
+        "typescript",
+        "react"
+      ]
+    },
+    {
+      "id": "cratis/screenplay",
+      "availableTargets": [
+        "cratis-screenplay-captures-and-reactions",
+        "cratis-screenplay-command-surface",
+        "cratis-screenplay-event-modeling",
+        "cratis-screenplay-model-authoring",
+        "cratis-screenplay-projections",
+        "cratis-screenplay-read-surface",
+        "cratis-screenplay-specifications",
+        "cratis-screenplay-ui-composition"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/specifications",
+      "availableTargets": [
+        "cratis-specification-by-example"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/specifications/dotnet",
+      "composes": [
+        "cratis/specifications"
+      ],
+      "availableTargets": [
+        "cratis-application-slice-specifications",
+        "cratis-chronicle-event-specifications",
+        "cratis-chronicle-read-model-specifications",
+        "cratis-specifications-csharp"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/specifications/typescript",
+      "composes": [
+        "cratis/specifications"
+      ],
+      "availableTargets": [
+        "cratis-specifications-typescript"
+      ],
+      "languages": [
+        "typescript",
+        "react"
+      ]
+    },
+    {
+      "id": "cratis/stage",
+      "availableTargets": [
+        "cratis-stage-rendering-and-sandbox"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/studio",
+      "availableTargets": [
+        "cratis-studio-mcp-safety-guidance"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    }
+  ],
+  "engineeringProfiles": [
+    {
+      "id": "cratis/engineering",
+      "composes": [
+        "cratis/engineering/core",
+        "cratis/engineering/csharp",
+        "cratis/engineering/elixir",
+        "cratis/engineering/kotlin",
+        "cratis/engineering/react",
+        "cratis/engineering/typescript"
+      ],
+      "languages": [
+        "csharp",
+        "typescript",
+        "kotlin",
+        "elixir",
+        "react",
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/engineering/core",
+      "availableTargets": [
+        "cratis-documentation-writing",
+        "cratis-engineering-decision-record",
+        "cratis-engineering-docs-authoring",
+        "cratis-engineering-effect-boundaries",
+        "cratis-release-notes",
+        "cratis-technical-examples"
+      ],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
+      "id": "cratis/engineering/csharp",
+      "composes": [
+        "cratis/engineering/core"
+      ],
+      "availableTargets": [
+        "cratis-engineering-csharp-conventions"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/elixir",
+      "composes": [
+        "cratis/engineering/core"
+      ],
+      "languages": [
+        "elixir"
+      ]
+    },
+    {
+      "id": "cratis/engineering/kotlin",
+      "composes": [
+        "cratis/engineering/core"
+      ],
+      "languages": [
+        "kotlin"
+      ]
+    },
+    {
+      "id": "cratis/engineering/react",
+      "composes": [
+        "cratis/engineering/core"
+      ],
+      "languages": [
+        "react"
+      ]
+    },
+    {
+      "id": "cratis/engineering/typescript",
+      "composes": [
+        "cratis/engineering/core"
+      ],
+      "languages": [
+        "typescript"
+      ]
+    }
+  ],
+  "$cratisAiManaged": "profile-catalog.json"
+}

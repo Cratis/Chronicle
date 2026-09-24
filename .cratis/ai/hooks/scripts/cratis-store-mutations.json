@@ -1,0 +1,238 @@
+{
+  "$comment": [
+    "Command classification for the Cratis PreToolUse Bash guard (cratis-guard-store-mutations.sh).",
+    "Data, not code: a consuming repository extends or replaces this without touching the script.",
+    "  - drop a cratis-store-mutations.local.json next to this file to ADD entries (merged, never replaces)",
+    "  - or point CRATIS_HOOKS_STORE_MUTATIONS at a replacement file",
+    "A command listed in \u0022mutating\u0022 is blocked even when a local file also lists it in \u0022readOnly\u0022, so a",
+    "local file can tighten the shipped lists but only a replacement file can loosen them.",
+    "",
+    "Scope: only the \u0022group\u0022 command group is guarded. Every other cratis group (ai, arc, context, llm,",
+    "screenplay, prologue, completions) and every top-level command (init, new, render, run, update,",
+    "version, get-started, llm-context) is out of scope and always allowed.",
+    "",
+    "Fields:",
+    "  verifiedAgainst  the cratis CLI version whose \u0060cratis llm-context\u0060 these lists were derived from",
+    "  group            the guarded command group",
+    "  helpOptions      options that print help instead of running; allowed wherever they appear",
+    "  versionOptions   options that print the version instead of running a command; allowed wherever they appear",
+    "  flagOptions      global/group options that take no value, skipped while reading the command path",
+    "  valueOptions     global/group options that take a value, skipped with that value",
+    "  readOnly         the allowlist: command paths below the group that only read state",
+    "                     command  the command path, space-separated, e.g. \u0022observers list\u0022",
+    "                     reason   why it is safe to run without a human\u0027s authorization",
+    "  mutating         known command paths that change server, client or external state",
+    "                     command  the command path",
+    "                     effect   what it changes; shown to the agent in the block message",
+    "",
+    "Anything under the group that is on neither list is blocked as unknown: the guard fails closed, so a",
+    "command added by a newer CLI is refused until someone classifies it here."
+  ],
+  "verifiedAgainst": "cratis 3.13.1",
+  "group": "chronicle",
+  "helpOptions": [
+    "-h",
+    "--help"
+  ],
+  "versionOptions": [
+    "-v",
+    "--version"
+  ],
+  "flagOptions": [
+    "-q",
+    "--quiet",
+    "-y",
+    "--yes",
+    "--debug"
+  ],
+  "valueOptions": [
+    "--server",
+    "-o",
+    "--output",
+    "-e",
+    "--event-store",
+    "-n",
+    "--namespace"
+  ],
+  "readOnly": [
+    {
+      "command": "diagnose",
+      "reason": "runs a health check and returns a diagnostic report"
+    },
+    {
+      "command": "auth status",
+      "reason": "shows the cached token\u0027s expiry and identity"
+    },
+    {
+      "command": "applications list",
+      "reason": "lists registered applications"
+    },
+    {
+      "command": "event-stores list",
+      "reason": "lists event stores"
+    },
+    {
+      "command": "event-types list",
+      "reason": "lists registered event types"
+    },
+    {
+      "command": "event-types show",
+      "reason": "shows one event type registration and its schema"
+    },
+    {
+      "command": "events get",
+      "reason": "reads events from an event sequence"
+    },
+    {
+      "command": "events tail",
+      "reason": "returns the highest used sequence number"
+    },
+    {
+      "command": "failed-partitions list",
+      "reason": "lists failed observer partitions"
+    },
+    {
+      "command": "failed-partitions show",
+      "reason": "shows one failed partition and its error"
+    },
+    {
+      "command": "identities list",
+      "reason": "lists known identities"
+    },
+    {
+      "command": "jobs get",
+      "reason": "shows one background job"
+    },
+    {
+      "command": "jobs list",
+      "reason": "lists background jobs"
+    },
+    {
+      "command": "namespaces list",
+      "reason": "lists namespaces in an event store"
+    },
+    {
+      "command": "observers list",
+      "reason": "lists observers"
+    },
+    {
+      "command": "observers show",
+      "reason": "shows one observer\u0027s state"
+    },
+    {
+      "command": "projections list",
+      "reason": "lists projection definitions"
+    },
+    {
+      "command": "projections show",
+      "reason": "shows one projection definition"
+    },
+    {
+      "command": "read-models get",
+      "reason": "reads one read model instance"
+    },
+    {
+      "command": "read-models instances",
+      "reason": "lists read model instances"
+    },
+    {
+      "command": "read-models list",
+      "reason": "lists read model definitions"
+    },
+    {
+      "command": "read-models occurrences",
+      "reason": "lists a read model\u0027s replay history"
+    },
+    {
+      "command": "read-models snapshots",
+      "reason": "reads snapshots of one read model instance"
+    },
+    {
+      "command": "recommendations list",
+      "reason": "lists active recommendations"
+    },
+    {
+      "command": "subscriptions list",
+      "reason": "lists event store subscriptions"
+    },
+    {
+      "command": "users list",
+      "reason": "lists registered users"
+    }
+  ],
+  "mutating": [
+    {
+      "command": "observers replay",
+      "effect": "replays an observer from the beginning of the event log, resetting all state it has built"
+    },
+    {
+      "command": "observers replay-partition",
+      "effect": "replays one partition of an observer from the beginning, resetting that partition\u0027s state"
+    },
+    {
+      "command": "observers retry-partition",
+      "effect": "retries a failed partition from the sequence number where it failed"
+    },
+    {
+      "command": "observers clear-quarantine",
+      "effect": "clears an observer\u0027s quarantine so it resumes processing"
+    },
+    {
+      "command": "jobs stop",
+      "effect": "stops a running background job"
+    },
+    {
+      "command": "jobs resume",
+      "effect": "resumes a stopped or failed background job"
+    },
+    {
+      "command": "recommendations perform",
+      "effect": "executes a server recommendation, such as a schema or replay maintenance action"
+    },
+    {
+      "command": "recommendations ignore",
+      "effect": "marks a recommendation as ignored so it no longer appears"
+    },
+    {
+      "command": "subscriptions add",
+      "effect": "adds an event store subscription to a target event store"
+    },
+    {
+      "command": "subscriptions remove",
+      "effect": "removes an event store subscription from a target event store"
+    },
+    {
+      "command": "users add",
+      "effect": "adds a user to the server\u0027s user store"
+    },
+    {
+      "command": "users remove",
+      "effect": "removes a user from the server"
+    },
+    {
+      "command": "applications add",
+      "effect": "registers an application with the server"
+    },
+    {
+      "command": "applications remove",
+      "effect": "removes an application registration from the server"
+    },
+    {
+      "command": "login",
+      "effect": "authenticates with a username and password and caches a token that later commands use"
+    },
+    {
+      "command": "logout",
+      "effect": "clears the cached authentication token"
+    },
+    {
+      "command": "report-error",
+      "effect": "opens a pre-filled GitHub issue in the browser"
+    },
+    {
+      "command": "workbench",
+      "effect": "opens the interactive terminal Workbench, whose keys replay observers and retry or replay failed partitions; only a human at a terminal can drive it"
+    }
+  ],
+  "$cratisAiManaged": "hooks/scripts/cratis-store-mutations.json"
+}

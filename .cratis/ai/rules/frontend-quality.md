@@ -30,7 +30,7 @@ Stop-and-fix signals during implementation and review:
 |---|---|---|
 | New component added without checking the shared component surface and `@cratis/components` | Duplicates fragment the design system | Reuse an existing primitive/wrapper, or document the missing one |
 | Slice-local helper promoted to the shared component folder after one use | Freezes a one-off as a shared API | Keep it beside the slice until a second real consumer appears |
-| Raw `primereact/*` import where a Cratis wrapper exists | Bypasses Arc behavior, overlay fixes, validation | Use the `@cratis/components` subpath wrapper |
+| A vendor UI control (any `primereact/*`, `@mui/*`, … import) where a Cratis component exists | Bypasses Arc binding, the overlay environment and validation; adds a second focus owner | Use the `@cratis/components` subpath component |
 | Import from the `@cratis/components` root barrel in new code | Pulls optional-peer-heavy exports, hides intent | Import from subpaths (`CommandDialog`, `DataPage`, `DataTables`, `Dialogs`, `Dropdown`, `Toolbar`, `Common`) |
 | Component API has many boolean visual flags (`primary`, `selected`, `muted`, …) | State combinations become undefined | One typed `variant`/`tone` union, or split components |
 | A reusable component reaches into domain strings, generated proxies, identity, query, command, or navigation | It is no longer a primitive | Move it to the slice, or make it explicitly Cratis-aware and test/story it as such |

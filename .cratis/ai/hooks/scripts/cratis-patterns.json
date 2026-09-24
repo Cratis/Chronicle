@@ -122,7 +122,7 @@
         "**/obj/**",
         "**/bin/**"
       ],
-      "message": "Never import \u0060Dialog\u0060 from \u0060primereact/dialog\u0060 \u2014 use \u0060CommandDialog\u0060 / \u0060Dialog\u0060 from \u0060@cratis/components\u0060."
+      "message": "Cratis Components 4 has no PrimeReact underneath \u2014 a \u0060primereact/dialog\u0060 import is a leftover from Components 3. Use \u0060CommandDialog\u0060 from \u0060@cratis/components/CommandDialog\u0060 or \u0060Dialog\u0060 from \u0060@cratis/components/Dialogs\u0060."
     }
   ],
   "$cratisAiManaged": "hooks/scripts/cratis-patterns.json"

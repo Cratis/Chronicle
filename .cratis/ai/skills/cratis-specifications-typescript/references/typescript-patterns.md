@@ -79,13 +79,30 @@ afterEach(() => sinon.restore());
 ```
 
 `sinon.restore()` matters only for stubs installed on shared objects such as
-`globalThis`. A `createStubInstance` built inside a context class is recreated
-per specification by `given()` and needs no restore.
+`globalThis`. A `createStubInstance` built inside a context class lives for the
+whole `describe` (see below), so a stub whose call count you assert must be
+exercised by exactly one action — the one in `beforeEach` — or reset there.
 
 ## The `given()` helper
 
-`given()` instantiates the context class, hands it to the suite, and keeps
-setup isolated per specification.
+`given()` constructs the context class **once, when the `describe` body is
+registered**, and hands that single instance to the suite callback:
+
+```ts
+export function given<TContext extends object>(contextType: Constructor<TContext>, callback: ContextForSuite<TContext>) {
+    return function (this: Suite) {
+        const context = new contextType(this);   // once per describe, not per it()
+        callback.call(this, context);
+    };
+}
+```
+
+There is no `beforeEach` inside `given()`. Every `it()` under one `describe`
+sees the same context and the same stubs, so isolation comes from the shape of
+the spec, not from the helper: one `describe` = one behavior, one action in
+`beforeEach`, and `it()` blocks that only *assert*. A spec that needs a fresh
+collaborator per `it()` creates it in its own `beforeEach`. (The constructor is
+handed the Mocha `Suite`; a context class may ignore it.)
 
 ```ts
 import { given } from '../../given';

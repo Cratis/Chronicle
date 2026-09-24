@@ -14,10 +14,12 @@ the query string — you choose a **return shape** that the framework can narrow
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.10.4` | `QueryableQueryRenderer`, `Paging`, `Sorting`, `PagingInfo` |
-| `Cratis.Arc.MongoDB` | `22.10.4` | `Observe` helpers that page at the source |
-| `Cratis.Arc.EntityFrameworkCore` | `22.10.4` | `DbSet<T>` observe helpers that page at the source |
-| `@cratis/arc.react` | `22.10.4` | `useWithPaging`, `useSuspenseWithPaging` |
+| `Cratis.Arc.Core` | `22.16.0` | `QueryableQueryRenderer`, `Paging`, `Sorting`, `PagingInfo` |
+| `Cratis.Arc.MongoDB` | `22.16.0` | `Observe` helpers that page at the source |
+| `Cratis.Arc.EntityFrameworkCore` | `22.16.0` | `DbSet<T>` observe helpers that page at the source |
+| `@cratis/arc.react` | `22.16.0` | `useWithPaging`, `useSuspenseWithPaging` |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify before claiming support for another version. A small, bounded result
 set does not need any of this — `IEnumerable<T>` is fine.
@@ -26,7 +28,7 @@ set does not need any of this — `IEnumerable<T>` is fine.
 
 | Query-string key | Effect |
 | --- | --- |
-| `pageSize` | **Required to page at all.** Must be greater than 0 |
+| `pageSize` | **Required to page at all** on the query string; any parseable integer is accepted (`0` yields an empty page, negatives are clamped by `Skip`) — the JSON body reader, by contrast, treats `pageSize <= 0` as not paged |
 | `page` | Zero-based. Defaults to `0` when `pageSize` is present |
 | `sortby` | Field name; PascalCased before use, so `?sortby=name` sorts on `Name` |
 | `sortDirection` | `desc` (case-insensitive) sorts descending; **anything else, including a missing value, is ascending** |
@@ -37,9 +39,12 @@ Two consequences that surprise people:
 - **Sorting needs both keys.** `sortby` without `sortDirection` is ignored
   entirely.
 
-Paging is validated before the query runs: `page` must be `>= 0` and `pageSize`
-must be `> 0`, and a violation comes back as a validation failure rather than a
-crash.
+Paging is **not** validated on the request path at 22.16.0: `PageNumber`/`PageSize`
+concept validators exist (`page >= 0`, `pageSize > 0`) but nothing feeds the
+query-string paging into them, so an out-of-range value produces an empty or
+clamped page rather than a validation failure. Validate paging arguments in the
+frontend, or expose them as explicit query arguments if the rule must be
+enforced.
 
 ## Which return shapes page
 

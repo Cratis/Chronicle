@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "servers": [
+    {
+      "id": "screenplay",
+      "profiles": [
+        "cratis/screenplay"
+      ],
+      "transport": "stdio",
+      "command": "cratis",
+      "args": [
+        "screenplay",
+        "mcp"
+      ],
+      "defaultRoot": ".cratis/screenplay",
+      "description": "Understand and safely author one Screenplay application through typed AST operations, reviewed proposals, durable identities, and explicit recovery."
+    }
+  ],
+  "$cratisAiManaged": "mcp-servers.json"
+}

@@ -24,8 +24,8 @@ This skill is verified against this exact source:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `16.45.2` | `EventStoreNamespaceName`, `IEventStoreNamespaceResolver`, `IChronicleClient.GetEventStore` |
-| `Cratis.Chronicle.AspNetCore` | `16.45.2` | the header and subdomain namespace resolvers |
+| `Cratis.Chronicle` | `18.3.0` | `EventStoreNamespaceName`, `IEventStoreNamespaceResolver`, `IChronicleClient.GetEventStore` |
+| `Cratis.Chronicle.AspNetCore` | `18.3.0` | the header and subdomain namespace resolvers |
 
 Reverify product sources before claiming support for another version.
 

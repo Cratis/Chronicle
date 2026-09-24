@@ -9,7 +9,7 @@ paths:
 
 # React + Arc + Cratis Components
 
-The frontend is React + TypeScript in MVVM style, composed from **Cratis Components** on top of **Arc-generated proxies**. Cratis Components is PrimeReact-based; you reach PrimeReact almost exclusively through the Cratis wrappers. For component structure, styling, and icons see [components.md](./components.md); for dialogs see [dialogs.md](./dialogs.md). This rule covers MVVM, queries, and commands.
+The frontend is React + TypeScript in MVVM style, composed from **Cratis Components** on top of **Arc-generated proxies**. Cratis Components (4.x) owns its markup, styling contract and behavior — there is no vendor component library underneath to reach for; React Aria is an internal detail you never import. For component structure, styling, and icons see [components.md](./components.md); for dialogs see [dialogs.md](./dialogs.md). This rule covers MVVM, queries, and commands.
 
 ## The proxy boundary
 
@@ -82,7 +82,7 @@ Extract as soon as a component has **any** of: 3+ `useState`, any `useCallback` 
 
 These are registered automatically by `withViewModel` and injected via the primary constructor. Concrete usage:
 
-- **`IMessenger`** — messages are plain classes; `_messenger.publish(new <Entity>Selected(id))` and `messenger.subscribe(<Entity>Selected, ({ id }) => ...)`. For scoped delivery, the messenger from `@cratis/arc/messaging` (distinct from `…mvvm/messaging`) resolves the nearest scope and falls back to root: `publish()` trickles **down** into nested scopes; bubbling **up** is opt-in with `{ bubble: true }`. Use the default `IMessenger` unless you genuinely need scoping.
+- **`IMessenger`** — messages are plain classes; `_messenger.publish(new <Entity>Selected(id))` and `messenger.subscribe(<Entity>Selected, ({ id }) => ...)`. For scoped delivery, the messenger from `@cratis/arc/messaging` (distinct from `…mvvm/messaging`) resolves the nearest scope and falls back to root: a `<MessengerScope>` trickles `publish()` **down** into nested scopes by default (`trickleDownToChildren`, default `true`) and bubbles **up** only when `bubbleToParent` is set (default `false`) — both are props on `MessengerScope` / properties on the messenger, not options on `publish()`. Use the default `IMessenger` unless you genuinely need scoping.
 - **`IDialogs`** — `await _dialogs.showConfirmation(title, message, DialogButtons.YesNo)` returns a `DialogResult`. For user-triggered dialogs that open React command dialogs, use `useDialog` in the component, not `IDialogs`.
 - **`IIdentityProvider`** — `await _identityProvider.getCurrent<TDetails>()`. Use the `useIdentity()` hook only in functional components without a view model.
 - **`ILocalStorage`** — `setItem(key, value)` / `getItem(key)`; **`IViewModelDetached.detached()`** runs on unmount (`detached() { this._subscription?.unsubscribe(); }`).
@@ -95,7 +95,7 @@ A typed proxy class is generated per query. Pick the hook:
 
 | Hook | When |
 |---|---|
-| `<Query>.use(args?, sorting?)` | standard — returns `[result]`, re-renders on change |
+| `<Query>.use(args?, sorting?)` | standard — returns `[result, perform, setSorting]`, re-renders on change |
 | `<Query>.useSuspense(...)` | suspense-aware — throws while loading; wrap in `<QueryBoundary>` |
 | `<Query>.when(condition).use(args)` | conditional — only fires when `condition` is true (don't wrap a hook in `if`) |
 | `<Query>.useWithPaging(pageSize, args?, sorting?)` | server-side paging (backend returns `IQueryable<T>`) |
@@ -107,12 +107,12 @@ A typed proxy class is generated per query. Pick the hook:
 
 | Hook | Returns |
 |---|---|
-| `<Query>.use(args?, sorting?)` | `[result, perform]` |
+| `<Query>.use(args?, sorting?)` | `[result, perform, setSorting]` |
 | `<Query>.useSuspense(...)` | `[result, perform, setSorting]` |
 | `<Query>.useWithPaging(pageSize, args?, sorting?)` | `[result, perform, setSorting, setPage, setPageSize]` |
 | `<Query>.useSuspenseWithPaging(pageSize, ...)` | `[result, perform, setSorting, setPage, setPageSize]` |
-| `<ObservableQuery>.use(...)` | `[result, setSorting]` — **no `perform`** |
-| `<ObservableQuery>.useChangeStream(args?, getKey?, sorting?, isEnabled?)` | `ChangeSet<T> { added, replaced, removed }` |
+| `<ObservableQuery>.use(...)` | `[result, setSorting]` for an enumerable query; `[result]` for a single-instance one — **no `perform`** |
+| `<ObservableQuery>.useChangeStream(args?, getKey?, sorting?)` | `ChangeSet<T> { added, replaced, removed }` |
 
 `result.paging` = `{ page, size, totalItems, totalPages }` (zero-based `page`). Read models returning `IQueryable<TReadModel>` get automatic server-side paging/sorting — use it whenever a list can grow.
 
@@ -142,7 +142,7 @@ Inside dialogs, use `CommandDialog` + CommandForm fields rather than driving the
 | `isValid` | validation failed — `validationResults` has per-field messages | render inline field errors |
 | `hasExceptions` | `Provide()`/`Handle()` threw — `exceptionMessages` carry diagnostics | generic error toast + log; never show stack traces |
 
-`CommandDialog` handles all of this automatically; the flags matter most when executing a command **outside** a dialog. `validate()` returns the same shape with `response == null` (handler did not run). `result.validationResults` is a `ValidationResult[]` of `{ property, message }` — render per-field UI from it, but **never branch on raw `.message` text**. `exceptionMessages`/`exceptionStackTrace` are for logging, never for users.
+`CommandDialog` handles all of this automatically; the flags matter most when executing a command **outside** a dialog. `validate()` returns the same shape with `response == null` (handler did not run). `result.validationResults` is a `ValidationResult[]` of `{ severity, message, members: string[], state, reason, reasonDetail? }` — `members` names the affected properties — render per-field UI from it, but **never branch on raw `.message` text**. `exceptionMessages`/`exceptionStackTrace` are for logging, never for users.
 
 Out-of-dialog execution branches in this order:
 
@@ -158,11 +158,11 @@ if (result.hasExceptions) { toast.error('Something went wrong'); console.error(r
 
 ### Command helpers
 
-- **`useCommandInstance(Command)`** — read the live reactive command instance for dependent fields (read it; never mutate — mutations go through field bindings).
+- **`useCommandInstance<TCommand>()`** — inside a `CommandForm`/`CommandDialog`, read the live reactive command instance from context for dependent fields (no argument; the type parameter is the command type) (read it; never mutate — mutations go through field bindings).
 - **`onBeforeExecute`** is a **transformer**: it receives the current values and **must return them** (mutated or not). It runs only on submit — never use it to seed required values (use `initialValues`).
 - **`initialValues`** = synchronous baseline (also drives change tracking); **`currentValues`** = reactive overlay for async/late-loading values (e.g. from a query).
 - **`asCommandFormField<P>(Component, opts)`** — wrap a custom input (rich text, address picker) so it participates in `CommandForm` with validation/error wiring.
-- **`CommandScope`** + `useCommandScope()` (`@cratis/arc.react/commands`) — aggregate state across multiple commands (and queries) on one screen; members tracked automatically (no `addCommand`); scopes nest (a child reports up to its parent); injectable as `ICommandScope` (nearest enclosing scope). Props: `setHasChanges`, `setIsPerforming`, `onBeforeExecute`, `onSuccess(cmd, result)`, `onFailed`, `onException`, `onUnauthorized`. `ICommandScope` members: `hasChanges`, `isPerforming`, `hasValidationFailures`, `hasExceptions`, `validationFailures`/`exceptions` (this scope), `aggregatedValidationFailures`/`aggregatedExceptions` (scope + children), `execute()` (runs only commands with changes), `revertChanges()`, `parent`.
+- **`CommandScope`** + `useCommandScope()` (`@cratis/arc.react/commands`) — aggregate state across multiple commands (and queries) on one screen; commands and queries rendered inside the scope register themselves (the `ICommandScope` API also exposes `addCommand`/`addQuery`/`addChildScope` for manual registration); scopes nest (a child reports up to its parent); injectable as `ICommandScope` (nearest enclosing scope). Props: `setHasChanges`, `setIsPerforming`, `onBeforeExecute`, `onSuccess(cmd, result)`, `onFailed`, `onException`, `onUnauthorized`. `ICommandScope` members: `hasChanges`, `isPerforming`, `hasValidationFailures`, `hasExceptions`, `validationFailures`/`exceptions` (this scope), `aggregatedValidationFailures`/`aggregatedExceptions` (scope + children), `execute()` (runs only commands with changes), `revertChanges()`, `parent`.
 
 ### `<Arc>` global configuration
 
@@ -176,7 +176,7 @@ Top-level provider for microservice name and API base path. Config props (with d
 | `queryConnectionCount` | `1` | hub connection slots |
 | `queryDirectMode` | `false` | direct per-query connection — dev use only |
 
-`QueryTransportMethod`/`ObservableQueryTransferMode` import from `@cratis/arc`; `Arc` from `@cratis/arc.react`. Reach `arc.reconnectQueries()` via `useContext(ArcContext)` and call it after login/logout to re-establish observable connections.
+`QueryTransportMethod` imports from `@cratis/arc/queries` and `ObservableQueryTransferMode` from `@cratis/arc`; `Arc` from `@cratis/arc.react`. Reach `arc.reconnectQueries()` via `useContext(ArcContext)` and call it after login/logout to re-establish observable connections.
 
 ## Composition
 
@@ -186,11 +186,11 @@ Top-level provider for microservice name and API base path. Config props (with d
 
 ## Styling default
 
-Default to **Cratis Components on PrimeReact theming/tokens** (`var(--surface-*)`, `var(--primary-color)`, `var(--text-color)`, `pt`/unstyled where needed) — see [components.md](./components.md). Tailwind is **not** the Cratis default (it's one supported unstyled path). Never hard-code hex/`rgb()` for chrome.
+Default to **Cratis Components with the `--cratis-*` tokens** (`var(--cratis-surface-*)`, `var(--cratis-primary-color)`, `var(--cratis-text-color)`; `pt`/`data-cratis-part` when you must reach a part) — see [components.md](./components.md). Tailwind is **not** the Cratis default: it is one supported way to *write* the CSS that maps a product's design onto those tokens. Never hard-code hex/`rgb()` for chrome.
 
 ## See also
 
-- [components.md](./components.md) — component structure, CSS, PrimeReact tokens, icons, Storybook.
+- [components.md](./components.md) — component structure, CSS, `--cratis-*` tokens and parts, icons, Storybook.
 - [dialogs.md](./dialogs.md) — `CommandDialog` / `Dialog` / `StepperCommandDialog` rules.
 - [frontend-quality.md](./frontend-quality.md) — engineering bar; [frontend-testing.md](./frontend-testing.md) — BDD specs.
 - [typescript.md](./typescript.md) — TS style.

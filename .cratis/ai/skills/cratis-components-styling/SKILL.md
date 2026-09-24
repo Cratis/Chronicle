@@ -1,222 +1,256 @@
 ---
 name: cratis-components-styling
-description: Style and theme an application built on Cratis Components — the stylesheet imports an app must make, the --cratis-* design-token layer and the PrimeReact token chain behind it, choosing between the baseline theme, a styled preset, a custom palette, and fully unstyled, dark mode, the PrimeReact pass-through prop, and where Tailwind actually fits. Use when setting up a new Cratis frontend, changing colors or theming, fixing components that render unstyled, or reaching into a component's internal DOM. Do not use for component API or page composition questions.
+description: Style and theme an application built on Cratis Components 4 — the three stylesheet entries an app must import, the --cratis-* design-token seam, choosing between the baseline theme, a product theme and fully owned styling, dark mode, the typed pt parts and data-cratis-part selectors, the optional renderer adapters, and where Tailwind actually fits. Use when setting up a new Cratis frontend, changing colors or theming, fixing components that render unstyled, or styling one part of a component. Do not use for component API or page composition questions.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-styling/SKILL.md -->
 
 # Styling Cratis Components
 
-Cratis Components builds on PrimeReact 11, which is **unstyled-first**: it ships
-no CSS and renders no class names of its own. Everything a Cratis application
-looks like comes from the layers below. Getting the setup wrong shows up as
+Cratis Components 4 owns its markup and its styling contract. There is no
+third-party theme engine, preset or provider underneath it: what a Cratis
+application looks like is decided by three Cratis-owned stylesheet entries and
+the `--cratis-*` custom properties they read. Getting the setup wrong shows up as
 components rendering completely unstyled, which is the single most common
-first-run problem.
+first-run problem — and it is fixed with two `import` lines.
 
 ## Verified product sources
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `3.0.0` | its package manifest, `Styled/`, and the CSS sources |
-| `primereact` | `^11.0.0` | peer of `@cratis/components@3.0.0` |
-| `@primereact/core`, `@primereact/headless`, `@primereact/hooks` | `^11.0.0` | peers of `@cratis/components@3.0.0` |
-| `@primereact/styles`, `@primereact/types`, `@primeuix/themes` | optional peers | `@primereact/styles`/`types` `^11.0.0`, `@primeuix/themes` `^3.0.0` |
-| `primeicons` | `^8.0.0` | peer of `@cratis/components@3.0.0` |
+| `@cratis/components` | `4.6.0` | its package manifest (`exports`, no vendor UI dependency or peer), `Source/tokens.css`, `Source/MIGRATION.md`, `Documentation/Styling/*`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/*` |
 
-PrimeReact is a **peer dependency** — install it in the application yourself.
-Two copies mean two provider contexts, which breaks overlays and pass-through
-silently. Remove any `resolutions` or `overrides` pin that used to work around
-this.
+Components declares **no** PrimeReact, PrimeIcons or PrimeUI dependency or peer.
+React Aria supplies focus, overlay, collection and date behavior *internally* —
+you never import it, never style its class names, and it never appears in an
+application's manifest. Remove any leftover Prime packages that only Components
+used to need (`Source/MIGRATION.md` lists them); keep one only if the application
+itself still imports it directly, and then that island's provider, theme and
+license are the application's.
 
 ## Step 1 — What an app must do
 
 Two things, or the components render unstyled:
 
-1. **Mount `CratisComponentsProvider`** (from `@cratis/components/Common`)
-   above every Cratis component. It wraps the PrimeReact provider and merges
-   your configuration over the Cratis defaults, so anything you pass wins.
-2. **Import the stylesheets explicitly**, in this order — components no longer
-   import their own CSS:
+1. **Import the stylesheets, in this order**, once, at the entry point:
 
    ```ts
-   import '@cratis/components/tokens';   // the --cratis-* layer every component reads
-   import '@cratis/components/styles';   // every component stylesheet, in one file
-   import '@cratis/components/theme';    // optional: the license-free baseline look
+   import '@cratis/components/tokens';   // the semantic --cratis-* seam, with conservative light defaults on :root
+   import '@cratis/components/styles';   // structural rules for every component, in low-priority Cratis layers
+   import '@cratis/components/theme';    // optional: the maintained baseline look, dark mode, forced colors
    ```
 
-Order matters: both `styles` and `theme` consume the tokens. The `styles` entry
-also vendors the split-pane CSS the `DataPage` details pane needs, so importing
-it is not optional even in a fully custom-styled app.
+   `tokens` first — `styles` and `theme` both read it. `styles` also carries the
+   split-pane CSS the `DataPage` details pane needs, so it is not optional even
+   in a fully custom-styled app. `styles` contains **no** Tailwind Preflight, no
+   global reset and no copy of the token values.
 
-## Step 2 — Pick one of four setups
+2. **Mount `CratisComponentsProvider`** (from the package root,
+   `@cratis/components`) above every Cratis component. It carries `locale` and
+   the Components-owned `messages`, and mounts the toast region with `toaster`;
+   it carries **no** styling. The Components 3 renderer keys — `license`, `theme`,
+   `defaults`, global `pt`, `ptOptions`, `ripple`, `unstyled`, z-index — are a
+   type error on purpose, so a migrated app cannot compile a provider whose
+   visual configuration silently does nothing.
 
-| Setup | What you do | When |
+   ```tsx
+   import { CratisComponentsProvider } from '@cratis/components';
+
+   <CratisComponentsProvider value={{ locale: 'en-US' }} toaster>
+       <App />
+   </CratisComponentsProvider>
+   ```
+
+## Step 2 — Pick one of three setups
+
+| Setup | Imports | You own |
 | --- | --- | --- |
-| **Baseline theme** | import `tokens` + `styles` + `theme`, add the theme class to a root element | you want a working look with no license and little effort |
-| **Styled mode** | import `tokens` + `styles`, pass the Cratis styled-mode configuration to the provider | you want a full PrimeReact-preset look |
-| **Custom palette** | styled mode with your own preset | you have brand colors |
-| **Fully unstyled** | import `tokens` + `styles`, supply your own pass-through or CSS | you have your own design system |
+| **Baseline theme** | `tokens` + `styles` + `theme` | choosing `cratis-dark` / `cratis-light` / system preference; overriding only the brand values you mean to |
+| **Product theme** | `tokens` + `styles` + *your* CSS, imported after them | mapping your complete palette onto `--cratis-*`; typography, spacing, motion, contrast; component treatment through parts |
+| **Fully owned** | `tokens` + `styles` + your CSS | the same, plus every `--cratis-*` value — omit `theme` entirely |
 
-A preset **alone** is not one of these. Passing `theme: { preset }` to the
-provider emits the PrimeReact token variables but styles nothing that Cratis
-Components renders, because those are PrimeReact *primitives* — they render
-data attributes rather than class names, so a preset has nothing to attach to.
-That is exactly what the styled-mode helper fixes.
+A theme is **CSS**. No JavaScript preset, provider option or wrapper class is
+required for the normal whole-application setup. The product's CSS is written
+*outside* a cascade layer, so it wins over all three Components layers
+(`cratis-theme`, `cratis-components`, `cratis-utilities`) without specificity
+tricks; if the product uses its own layers, declare their order explicitly after
+the Components imports.
 
-### Styled mode
+### Baseline theme and dark mode
 
-`@cratis/components/styled` exports the pieces:
+`theme` adds document foreground/background, system dark-mode values, the
+explicit scheme classes, forced-colors tuning and `.cratis-theme` subtree
+defaults. It stays visually familiar to Components 2/3 — Lara-adjacent blue
+actions, neutral surfaces, 6px radii — implemented entirely with Cratis tokens.
 
-- `CratisPreset` — a PrimeReact preset derived from Lara with the Cratis blue
-  primary ramp and a deliberate one-step surface shift so dark mode matches the
-  previous Cratis look.
-- `primeReactStyles` — the component-defaults map that glues the PrimeReact
-  primitive styles onto the primitives Cratis Components renders. This is the
-  part a bare preset is missing.
-- `styledMode(options?)` — returns `{ theme, defaults }` ready to hand to the
-  provider.
-
-```tsx
-import { CratisComponentsProvider } from '@cratis/components/Common';
-import { styledMode } from '@cratis/components/styled';
-
-<CratisComponentsProvider value={styledMode()}>
-    <App />
-</CratisComponentsProvider>
+```ts
+document.documentElement.classList.toggle('cratis-dark', darkMode);
 ```
 
-`styledMode` accepts `preset` (yours instead of `CratisPreset`),
-`darkModeSelector`, and `cssLayer`. Its defaults are the dark-mode selector
-`.cratis-dark` and a CSS layer named `primereact` ordered
-`theme, base, primereact, components, utilities`. That order is deliberate: the
-theme sits above Tailwind's `base` so preflight cannot strip table and input
-padding, and below `components` and `utilities` so a utility class still wins.
+- Without a class, the baseline follows `prefers-color-scheme`.
+- `cratis-light` keeps light values when the OS prefers dark; an explicit light
+  wins over an ambient root `cratis-dark`.
+- An independently themed island puts `cratis-theme` on the subtree and adds
+  `cratis-dark` or `cratis-light` there (on the same element, or on an ancestor).
+- Override any `--cratis-*` variable *after* the theme import to adapt it.
 
-### Dark mode
+### Product theme
 
-Toggle the `cratis-dark` class on the root element. The baseline theme scopes
-its dark palette to that class, and styled mode uses it as the preset's dark
-selector by default.
+```css
+:root {
+    --cratis-primary-color: var(--brand-accent-700);
+    --cratis-primary-color-text: var(--brand-text-inverse);
+    --cratis-action-background: var(--brand-action);
+    --cratis-action-background-hover: var(--brand-action-hover);
+    --cratis-action-background-active: var(--brand-action-active);
+    --cratis-action-text: var(--brand-on-action);
+    --cratis-surface-ground: var(--brand-canvas);
+    --cratis-surface-card: var(--brand-surface);
+    --cratis-surface-overlay: var(--brand-surface);
+    --cratis-surface-border: var(--brand-border);
+    --cratis-control-background: var(--brand-control);
+    --cratis-control-border: var(--brand-control-border);
+    --cratis-text-color: var(--brand-text-primary);
+    --cratis-text-color-secondary: var(--brand-text-secondary);
+    --cratis-focus-ring: var(--brand-focus-ring);
+}
 
-## Step 3 — Colors: use the token layer
+[data-theme='dark'] {
+    --brand-canvas: #171717;   /* switch schemes by redefining the *product* values under the product's own selector */
+}
+```
+
+Nothing sits between the product tokens and the rendered component — no
+renderer preset, no internal selector, no commercial theme package.
+
+## Step 3 — Colors: use the token seam
 
 Never hard-code a hex or `rgb()` value for UI chrome — it breaks the moment the
-theme changes. Read a `--cratis-*` custom property instead.
-
-The chain is: **preset (JavaScript) → `--p-*` (runtime) → `--cratis-*` (the
-tokens stylesheet) → component CSS.** Each `--cratis-*` token resolves a
-PrimeReact 11 token with a PrimeReact 10 name as fallback, so both eras work.
-The tokens are intentionally fallback-free at the end of the chain: if nothing
-resolves, the rule no-ops rather than painting a wrong color.
-
-The full vocabulary:
+theme changes. Read a `--cratis-*` custom property instead. The full vocabulary
+(from `tokens.css`):
 
 | Group | Tokens |
 | --- | --- |
-| Surfaces | `--cratis-surface-0`, `--cratis-surface-100`, `--cratis-surface-ground`, `--cratis-surface-section`, `--cratis-surface-card`, `--cratis-surface-overlay`, `--cratis-surface-hover`, `--cratis-surface-border` |
-| Text | `--cratis-text-color`, `--cratis-text-color-secondary` |
-| Primary | `--cratis-primary-color`, `--cratis-primary-color-text`, `--cratis-primary-300`, `--cratis-primary-400`, `--cratis-primary-500`, `--cratis-primary-600` |
-| Highlight | `--cratis-highlight-bg`, `--cratis-highlight-text-color` |
-| Semantic | `--cratis-green-500`, `--cratis-orange-500`, `--cratis-red-500` |
-| Geometry | `--cratis-border-radius` |
-| Effects | `--cratis-focus-ring`, `--cratis-maskbg` |
+| Accent | `--cratis-primary-color`, `--cratis-primary-color-text`, `--cratis-primary-300` … `-600`, `--cratis-primary-600-text` |
+| Primary action | `--cratis-action-background` / `-hover` / `-active`, `--cratis-action-text` |
+| Status pairs | `--cratis-info-background` / `-text`, `--cratis-success-*`, `--cratis-warning-*`, `--cratis-danger-*`; single indicators `--cratis-green-500`, `--cratis-orange-500`, `--cratis-red-500` |
+| Surfaces | `--cratis-surface-ground` (page), `-section`, `-card`, `-overlay` (dialogs, popovers, toasts), `-hover`, `-border`, `-0`, `-100` |
+| Controls | `--cratis-control-background`, `--cratis-control-border`, `--cratis-control-height` / `-small` / `-large` |
+| Text & highlight | `--cratis-text-color`, `--cratis-text-color-secondary`, `--cratis-highlight-bg`, `--cratis-highlight-text-color` |
+| Effects | `--cratis-focus-ring`, `--cratis-maskbg`, `--cratis-border-radius`, `--cratis-disabled-opacity`, `--cratis-shadow-subtle` / `-overlay` / `-dialog` / `-toast` |
+| Layering | `--cratis-z-index-dialog` (1100), `-overlay` (1200), `-filter` (1250), `-tooltip` (1300), `-toast` (1400) |
 
 Only hard-code a color that is intentionally theme-independent — a brand accent
 dot, a traffic-light indicator.
 
-A back-compatibility stylesheet
-(`@cratis/components/primereact-v10-palette`) republishes the PrimeReact 10
-names (`--surface-ground`, `--text-color`, `--primary-color`, and the numbered
-ramps) for code that has not migrated. Import it to keep an old application
-running; **write nothing new against those names.**
-
 ## Step 4 — Writing styles
 
-- Put static styles in a **co-located `.css` file** and reference it from the
-  application's stylesheet manifest. Never write `import './Foo.css'` inside a
-  `.tsx` — a CSS file in the JavaScript module graph is what made the published
-  Cratis Components package unloadable in Node, and the library's own build now
-  fails if a component stylesheet is only reachable that way.
-- One CSS file per component. A composition root's CSS carries layout and
-  positioning for its children, not the children's own styling.
-- Use inline `style` **only** for runtime-dynamic values such as computed
-  pixel positions. A `style` object full of static token names bypasses theming
-  and review — move it to a class.
+- Put static styles in a **co-located `.css` file**, one per component. A
+  composition root's CSS carries layout and positioning for its children, not the
+  children's own styling.
+- Use inline `style` **only** for runtime-dynamic values such as computed pixel
+  positions. A `style` object full of static token names bypasses theming and
+  review — move it to a class.
 - Name classes with a prefix matching the component.
+- Import product CSS *after* the Components entries so it wins the cascade.
 
-## Step 5 — Pass-through: reaching a component's internals
+## Step 5 — Parts: reaching inside a component
 
-PrimeReact's pass-through (`pt`) prop targets the internal parts of a rendered
-component; `ptOptions` controls how your values merge with existing ones, and
-`unstyled` opts a component out of the theme entirely. Cratis Components
-forwards all three, typed against the underlying primitive, on roughly thirty
-components — every command-form field, the buttons, dialogs, dropdowns, data
-tables, the toaster, and more.
+Every meaningful element a component renders carries **`data-cratis-part`**, and
+most components accept a **`pt`** prop typed by their own `*Parts` type. They
+are documented separately because they are not always the same names: for most
+components the typed `pt` key is the camelCase spelling of the kebab-case DOM
+value (`headerRow` ↔ `header-row`), but the Toolbar family prefixes its DOM
+values (`ToolbarButtonParts.root` ↔ `data-cratis-part='button'`,
+`ToolbarFolderParts.root` ↔ `'toolbar-folder'`, `ToolbarFanOutParts.trigger` ↔
+`'fanout-trigger'`). Read the DOM value off the rendered element (or the parts
+manifest in `@cratis/components/types`) before writing a selector. Both spellings
+are stable across internal foundation changes; React Aria class names and
+undocumented DOM structure are not.
 
-Three shapes to expect:
+- **One instance:** `pt` — plain HTML attributes per part.
 
-1. **A single `pt`** on most components.
-2. **Named pass-throughs** where a component wraps two primitives —
-   `DataPage` takes `tablePt` / `tablePtOptions` / `tableUnstyled` and
-   `menubarPt` / `menubarPtOptions` / `menubarUnstyled`;
-   `StepperCommandDialog` uses plain `pt` for the inner stepper and `dialogPt`
-   for the outer dialog. Applying `pt` and expecting it to reach the other
-   element is the usual cause of a pass-through that seems to do nothing.
-3. **Composite pass-throughs**, such as the toaster's `{ region, toast }`.
+  ```tsx
+  <Dropdown aria-label='Role' options={roles}
+      pt={{ trigger: { className: 'product-select-trigger' }, popover: { className: 'product-select-popover' }, option: { className: 'product-select-option' } }} />
+  ```
 
-There is **no global Cratis pass-through preset shipped** — the library's
-defaults are deliberately empty so an application's configuration always wins.
-Supply your own through the provider's value when you want an app-wide preset:
+- **Product-wide:** a CSS rule on the part and its state attributes.
 
-```tsx
-<CratisComponentsProvider value={{ pt: myAppPreset }}>
-```
+  ```css
+  [data-cratis-part='header-cell'] { text-transform: uppercase; }
+  [data-cratis-part='row'][data-selected='true'] { background: var(--product-selected-row); }
+  .product-dialog[data-cratis-part='root'] { border-radius: 1rem; }
+  ```
 
-A few components expose `className` only and have no pass-through of their own —
-`SchemaEditor`, `ObjectContentEditor`, and `ObjectNavigationalBar`. Restyle
-those through the global preset. `BusyIndicatorDialog` is also global-preset
-only, because its request type is owned by the Arc React package.
+The typed part families: `ButtonParts`/`IconButtonParts` (`root`, `icon`,
+`label`, `spinner`); `DialogParts` (`backdrop`, `positioner`, `root`, `header`,
+`title`, `close`, `content`, `footer`, `confirm`, `cancel`); `DropdownParts`
+(`root`, `trigger`, `value`, `clear`, `indicator`, `popover`, `listbox`, `option`,
+`filter`, `multiple`); `DataTableParts` (`root`, `search`, `searchInput`,
+`tableContainer`, `table`, `head`, `headerRow`, `headerCell`, `body`, `row`,
+`cell`, `emptyRow`, `emptyCell`); `TablePaginatorParts` (`root`, `range`, `info`,
+`first`, `previous`, `next`, `last`); `StepperParts` (`root`, `list`, `step`,
+`header`, `number`, `title`, `separator`, `panels`, `panel`);
+`ToasterPassThrough` (`region`, `toast`, `icon`, `content`, `title`,
+`description`, `action`, `close`); the `Toolbar*Parts` family; and per-field
+parts for every CommandForm field. The Components `Styling/pass-through`
+reference is the exhaustive table.
 
-### Pass-through as attribute removal
+**Named parts where a component wraps two surfaces** — the usual cause of a
+`pt` that "does nothing" is applying it to the wrong one:
 
-Setting a pass-through value to `undefined` **removes** that attribute. Cratis
-Components uses this deliberately to strip invalid ARIA that PrimeReact 11 emits
-— for example clearing `role` and `aria-controls` off stepper headers whose
-target ids are never rendered. It is a legitimate tool when you need to delete
-an attribute rather than add one.
+- `DataPage`: `tablePt: DataTableParts`, `paginatorPt: TablePaginatorParts`, `menubarPt: ButtonParts`.
+- `StepperCommandDialog`: `pt` is the inner **stepper**, `dialogPt` the outer **dialog**.
+- `Column`: `filterPt: ColumnFilterMenuParts` for the filter popup.
 
-### The compatibility contract
+**State attributes** are component-specific: `data-active`, `data-selected`,
+`data-invalid`, `data-disabled`, `data-readonly`, `data-loading`, `data-position`,
+`data-orientation`, `data-size`, `data-severity`. Do not assume one exists on
+every component — read the component's parts reference.
 
-`@cratis/components/compatibility` exports a machine-checkable description of
-which pass-through keys and slots this major version supports against which
-PrimeReact major, plus an assertion helper. Use it in a specification when your
-application depends on reaching a specific internal part, so a PrimeReact
-upgrade that moves the part fails loudly instead of silently.
+`ptOptions` and `unstyled` are accepted for Components 3 source compatibility and
+do **nothing**: part attributes always merge, and styling is always CSS-owned.
+There is no global provider `pt`.
+
+## Renderer adapters — when a vendor look is wanted
+
+The default renderer is built in; omit `library` on the provider. Three optional
+adapter packages exist — `@cratis/components.mui` (MUI 9),
+`@cratis/components.primereact` (PrimeReact 11), `@cratis/components.primereact10`
+— and each adapts exactly **nine primitive slots**: button, icon-button, text
+input, text area, checkbox, radio, switch, progress bar, surface. Pass the
+adapter's manifest to the provider's `library` prop. Dialogs, dropdowns, tables,
+date pickers, tooltips, paginators, toasts and steppers stay Components-owned
+regardless; an adapter never restores a vendor's public API, and the vendor's
+own provider, theme and license remain the application's, outside Components.
+Reach for an adapter only when the product genuinely wants that vendor's look on
+those nine controls — mapping tokens is almost always the smaller change.
 
 ## Where Tailwind fits
 
-Tailwind is **one supported path, not the Cratis default.** Cratis Components
-compiles Tailwind utilities with **preflight deliberately excluded**, so
-Tailwind's base resets never strip the component styling. If your application
-enables preflight, keep the CSS layer order from styled mode so the theme still
-sits above `base`.
-
-Do not reach for Tailwind utilities as the primary styling mechanism for Cratis
-components; reach for the token layer and pass-through first.
+Tailwind is **one supported way to write the CSS above, not the Cratis default.**
+It is a fine tool for authoring the token mapping and part rules; it is not a
+substitute for them. Components' own internal utilities are prefixed (`cratis:*`)
+and are not public styling hooks. `styles` ships no Preflight and no reset of its
+own; if the application uses Tailwind's Preflight or its own cascade layers,
+declare the layer order explicitly after the Components imports (Components says
+nothing more specific than that — verify the result in the running app).
 
 ## Verify
 
-- PrimeReact and its `@primereact/*` peers are installed in the application, at
-  one version each.
-- `CratisComponentsProvider` wraps the tree.
+- No PrimeReact / PrimeIcons / PrimeUI package remains in the manifest unless the
+  application itself imports it directly — and then it has its own provider.
+- `CratisComponentsProvider` (root import) wraps the tree and carries only
+  `locale`, `messages` and `toaster`.
 - `@cratis/components/tokens` and `@cratis/components/styles` are imported once
-  at the entry point, tokens first.
-- Exactly one of the four setups is chosen — a bare preset with no styled-mode
-  defaults is not one of them.
+  at the entry point, tokens first; `theme` is imported or deliberately omitted;
+  product CSS comes after.
 - No hex or `rgb()` value is hard-coded for UI chrome; colors read `--cratis-*`.
-- No new code is written against the PrimeReact 10 palette names.
-- No `.tsx` imports a `.css` file.
+- No CSS targets a React Aria class name or undocumented DOM; parts are reached
+  through `pt` or `[data-cratis-part=…]`.
 - Inline `style` carries only runtime-dynamic values.
-- Pass-through props target the intended element, especially on `DataPage` and
-  `StepperCommandDialog`.
-- Dark mode is toggled with the `cratis-dark` class on the root element.
+- Named parts land on the intended surface (`tablePt` vs `menubarPt`; `pt` vs
+  `dialogPt`).
+- Dark mode is toggled with `cratis-dark` / `cratis-light` on the root element
+  (or a `cratis-theme` subtree), not through a provider option.

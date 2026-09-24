@@ -24,10 +24,12 @@ rejection on it.)
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.10.4` | `CommandValidator<T>`, `ConceptValidator<T>`, `ValidationResult`, `CommandResult`, the command pipeline, `ARC0004`–`ARC0013` |
-| `Cratis.Fundamentals` | `7.18.2` | `Cratis.Monads.Result<TResult, TError>` |
-| `Cratis.Chronicle` | `16.45.2` | Read-model resolution for command-side injection |
+| `Cratis.Arc.Core` | `22.16.0` | `CommandValidator<T>`, `ConceptValidator<T>`, `ValidationResult`, `CommandResult`, the command pipeline, `ARC0004`–`ARC0013` |
+| `Cratis.Fundamentals` | `7.19.2` | `Cratis.Monads.Result<TResult, TError>` |
+| `Cratis.Chronicle` | `18.3.0` | Read-model resolution for command-side injection |
 | `FluentValidation` | `12.1.1` | `RuleFor(...)`, `.WithMessage(...)` |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify against the owning product repository before claiming support for
 another version.

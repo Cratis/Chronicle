@@ -17,9 +17,9 @@ This skill is verified against these exact public releases:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Specifications` | `4.1.0` | `Specification` base, `Catch.Exception`, `ShouldXxx` assertions |
-| `Cratis.Arc.Testing` | `22.10.4` | `CommandScenario<TCommand>` and `CommandResult` assertions |
-| `Cratis.Chronicle.Testing` | `17.0.0` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
+| `Cratis.Specifications` | `4.1.1` | `Specification` base, `Catch.Exception`, `ShouldXxx` assertions |
+| `Cratis.Arc.Testing` | `22.16.0` | `CommandScenario<TCommand>` and `CommandResult` assertions |
+| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
 
 Reverify against the owning product repository before claiming support for
 another version. Never translate an assertion or helper name from memory.

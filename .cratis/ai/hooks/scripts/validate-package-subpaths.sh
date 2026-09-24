@@ -114,8 +114,7 @@ done
 
 # Tier 2 over the same roots: a subpath that resolves says nothing about the *names* imported
 # through it. Kept in its own script — a different question, a different corpus extraction and a
-# different report variable — and invoked from here so the single call site in validate-ai-setup.sh
-# gets both. Tested with -f, not -x, and run through `bash`: a checkout that lost the exec bit must
+# different report variable — and invoked from here so one call to this script gets both. Tested with -f, not -x, and run through `bash`: a checkout that lost the exec bit must
 # not silently drop the guard.
 imports="$(dirname "${BASH_SOURCE[0]}")/validate-package-imports.sh"
 if [[ -f "$imports" ]]; then bash "$imports" "$@" || true; fi

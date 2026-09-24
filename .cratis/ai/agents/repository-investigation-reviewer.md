@@ -4,11 +4,11 @@ description: >
   Independent, read-only reviewer for typed Cratis repository investigations.
   Reviews evidence and repository-mode reasoning without applying application
   conventions to framework or client-library repositories.
-model: claude-opus-5
 tools:
   - Read
-  - Glob
   - Grep
+  - Glob
+readonly: true
 ---
 <!-- cratis-ai-managed: agents/repository-investigation-reviewer.md -->
 

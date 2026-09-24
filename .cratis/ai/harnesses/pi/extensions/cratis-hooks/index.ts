@@ -8,13 +8,18 @@
  * events and drives the SAME scripts, synthesizing the Claude hook JSON they read on stdin:
  *
  *   Claude PreToolUse  (Write|Edit)  →  Pi `tool_call`      →  cratis-guard-writes.sh  (exit 2 = block)
+ *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-store-mutations.sh  (exit 2 = block)
  *   Claude PostToolUse (Write|Edit)  →  Pi `tool_result`    →  cratis-pattern-scan.sh  (advisory context)
  *   Claude Stop                       →  Pi `agent_settled`  →  cratis-quality-gate.sh  (exit 2 = keep going)
  *
  * Nothing here duplicates corpus content: it is adapter machinery, the Pi peer of the Claude
  * `hooks` block in `.claude/settings.json`. Every environment escape hatch the scripts honor
- * (CRATIS_HOOKS_ALLOW_PROTECTED_WRITES, CRATIS_HOOKS_SKIP_SCAN, CRATIS_HOOKS_SKIP_GATE, …) still
- * works because the scripts are executed unchanged.
+ * (CRATIS_HOOKS_ALLOW_PROTECTED_WRITES, CRATIS_HOOKS_ALLOW_STORE_MUTATIONS, CRATIS_HOOKS_SKIP_SCAN,
+ * CRATIS_HOOKS_SKIP_GATE, …) still works because the scripts are executed unchanged, in the environment
+ * Pi was started from.
+ *
+ * Only Pi's `bash` tool is bridged to the store-mutation guard. A command the user types directly (`!cmd`,
+ * the `user_bash` event) is the person's own action and is deliberately not guarded.
  */
 
 import { spawn } from "node:child_process";
@@ -86,6 +91,37 @@ function writeTarget(toolName: string, input: any): { filePath?: string; content
 	return { filePath };
 }
 
+type ToolCallContext = { cwd: string; signal?: AbortSignal };
+
+/**
+ * Run a blocking PreToolUse guard and translate its verdict into Pi's `tool_call` result.
+ *
+ * Exit 2 blocks with the script's stderr as the reason. A guard that is installed but could not run blocks too:
+ * allowing there would let the one case the guard exists to catch pass silently precisely because the guard
+ * is broken, so a broken guard is loud rather than permissive.
+ */
+async function runBlockingGuard(
+	script: string,
+	name: string,
+	subject: string,
+	payload: object,
+	ctx: ToolCallContext,
+	fixTarget = "this guard",
+): Promise<{ block: true; reason: string } | undefined> {
+	const run = await runScript(script, JSON.stringify(payload), ctx.cwd, ctx.signal);
+	if (run.failed) {
+		return {
+			block: true,
+			reason:
+				`${name} is installed at ${script} but could not be run, so this ${subject} cannot be checked.` +
+				`${run.stderr.trim() ? `\n\n${run.stderr.trim()}` : ""}` +
+				`\n\nFix the script (or remove it if this repository is not meant to enforce ${fixTarget}) and retry.`,
+		};
+	}
+	if (run.code === 2) return { block: true, reason: run.stderr.trim() || `Blocked by ${name}.` };
+	return undefined;
+}
+
 /**
  * Whether a hook script is installed at all.
  *
@@ -110,6 +146,7 @@ export default function (pi: ExtensionAPI) {
 	const managedScriptsDir = path.join(process.cwd(), ".cratis", "ai", "hooks", "scripts");
 	const scriptsDir = fs.existsSync(managedScriptsDir) ? managedScriptsDir : path.join(bundledCorpusRoot, "hooks", "scripts");
 	const guardWrites = path.join(scriptsDir, "cratis-guard-writes.sh");
+	const guardStoreMutations = path.join(scriptsDir, "cratis-guard-store-mutations.sh");
 	const patternScan = path.join(scriptsDir, "cratis-pattern-scan.sh");
 	const qualityGate = path.join(scriptsDir, "cratis-quality-gate.sh");
 
@@ -120,28 +157,21 @@ export default function (pi: ExtensionAPI) {
 		if (event.source !== "extension") gateActive = false; // a fresh user turn resets the guard
 	});
 
-	// ── PreToolUse → guard writes (blocking) ──
+	// ── PreToolUse → guard writes and store-mutating cratis commands (blocking) ──
 	pi.on("tool_call", async (event, ctx) => {
+		if (event.toolName === "bash") {
+			const command = (event as any).input?.command;
+			if (typeof command !== "string" || !command.trim()) return;
+			if (!isInstalled(guardStoreMutations)) return; // no guard installed in this repository - nothing to enforce
+			const payload = { cwd: ctx.cwd, tool_name: "Bash", tool_input: { command } };
+			return runBlockingGuard(guardStoreMutations, "cratis-guard-store-mutations", "command", payload, ctx);
+		}
 		if (event.toolName !== "write" && event.toolName !== "edit") return;
 		const { filePath, content, newString } = writeTarget(event.toolName, (event as any).input);
 		if (!filePath) return;
 		if (!isInstalled(guardWrites)) return; // no guard installed in this repository - nothing to enforce
-		const payload = JSON.stringify({ cwd: ctx.cwd, tool_input: { file_path: filePath, content, new_string: newString } });
-		const run = await runScript(guardWrites, payload, ctx.cwd, ctx.signal);
-
-		// The guard is installed but could not run. Allowing here would mean the one case the guard
-		// exists to catch - a protected write - passes silently precisely because the guard is broken.
-		// Block instead, and say why, so a broken guard is loud rather than permissive.
-		if (run.failed) {
-			return {
-				block: true,
-				reason:
-					`cratis-guard-writes is installed at ${guardWrites} but could not be run, so this write cannot be checked.` +
-					`${run.stderr.trim() ? `\n\n${run.stderr.trim()}` : ""}` +
-					"\n\nFix the script (or remove it if this repository is not meant to enforce write guards) and retry.",
-			};
-		}
-		if (run.code === 2) return { block: true, reason: run.stderr.trim() || "Blocked by cratis-guard-writes." };
+		const payload = { cwd: ctx.cwd, tool_input: { file_path: filePath, content, new_string: newString } };
+		return runBlockingGuard(guardWrites, "cratis-guard-writes", "write", payload, ctx, "write guards");
 	});
 
 	// ── PostToolUse → deterministic pattern scan (advisory; injects reminders the model sees) ──

@@ -4,8 +4,13 @@ description: >
   Implements a Cratis vertical slice end-to-end — all backend artifacts in one slice file, BDD specs
   in when_*/ folders, and the React surface (page and/or command dialog). Use for new slices and for
   non-trivial slice changes spanning backend and frontend.
-model: claude-opus-4-8
-tools: [githubRepo, codeSearch, usages, rename, terminalLastCommand]
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
+  - Edit
+  - Write
 ---
 <!-- cratis-ai-managed: agents/slice-implementer.md -->
 
@@ -53,7 +58,7 @@ Proxies now exist. Build React components from the generated proxies (`react.md`
 - Events: no arguments on `[EventType]`, non-nullable, past tense, `<summary>`, never carry the event-source id.
 - `[OnceOnly]` on non-idempotent reactor side effects; reactors return side-effect events or use `ICommandPipeline` (never `IEventLog`).
 - Specs `#if DEBUG`, command aliased, per-test unique values.
-- Frontend via `withViewModel` + Arc proxy hooks + Cratis Components; never edit generated proxies; never import `Dialog` from `primereact/dialog`.
+- Frontend via `withViewModel` + Arc proxy hooks + Cratis Components; never edit generated proxies; never use a vendor or hand-rolled modal (dialogs come from `@cratis/components/CommandDialog` and `/Dialogs`).
 
 ## Output
 

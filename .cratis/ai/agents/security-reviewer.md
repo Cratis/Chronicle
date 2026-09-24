@@ -5,12 +5,12 @@ description: >
   security review of all changed files before merge, covering input validation,
   auth/authz, data exposure, secrets, event sourcing specifics, and frontend
   attack surface.
-model: claude-sonnet-4-5
 tools:
-  - githubRepo
-  - codeSearch
-  - usages
-  - terminalLastCommand
+  - Read
+  - Grep
+  - Glob
+  - Bash
+readonly: true
 ---
 <!-- cratis-ai-managed: agents/security-reviewer.md -->
 

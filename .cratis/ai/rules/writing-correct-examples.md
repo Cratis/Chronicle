@@ -17,13 +17,34 @@ For each framework type, attribute, method, prop, hook, or import in an example,
 - **C# / backend** — grep real usage in a reference application (e.g. Cratis **Studio**) and the product `Source/` trees of the Cratis repos checked out alongside this one (`Arc/Source`, `Chronicle/Source`). For extension methods, find the `public static … (this <Type> …)` signature and note **which type it extends**.
 - **React / Components** — the authoritative prop names are in the compiled type defs of the installed package (`node_modules/@cratis/components/dist/esm/**/*.d.ts`) or the `Components` source `dist`. Real usage: a reference app's `*.tsx`.
 - **Invented *domain* names are fine** (event/concept/command names like `AuthorRegistered`, `BookId`). Only **framework APIs** must be real. Never invent a framework interface, attribute, prop, method, or import path.
+- **Read the source at the version the reader runs, never at a checkout's `HEAD`.** A sibling clone's working tree is whatever someone last checked out; the package the reader installed is a tag. Read with `git show <tag>:<path>` and `git grep <pattern> <tag> -- <path>` — both work without touching the checkout, so a dirty or shared worktree is never a reason to skip the check. Name the repository and the tag in the claim ("`Arc v22.16.0`, `ParameterDependencyResolver.cs:44-62`") so the next reader can re-run it. Where the corpus states a version in a skill's *Verified product sources* table, that tag is the one to read; when a consumer's pin is newer, re-read at theirs. A release note is a reason to look, not evidence that a behavior changed or that a workaround can be retired — retire a workaround only after the original reproduction passes at the new tag.
+
+## Choose a maintained source for the example
+
+For a long example or threaded tutorial, derive displayed snippets from a
+compiling, tested sample or spec when tooling supports extraction; otherwise
+compare each block to that source and check both together. For a short,
+illustrative excerpt, write purpose-built code but verify its framework APIs
+against the product source at the supported version. Do not forbid copying
+from a runnable sample: copying *without a check that prevents drift* is the
+problem. Multi-client pages use their client-owned snippet sources and checks;
+never hand-translate an unsupported SDK. See the **cratis-technical-examples**
+skill for the workflow.
 
 ## Complete and correct
 
 - No pseudo-code, no `// ...` elisions that leave the reader guessing, no props/members that don't exist.
-- A snippet a reader pastes should compile (modulo the invented domain types they'd supply).
+- A standalone snippet should compile with its stated prerequisites. Label an excerpt as an excerpt and supply or link the domain types it assumes.
+- Show the run command and an observable result for a substantial sample; a passing site build does not prove behavior.
 
-## Verified gotchas (the real APIs — these are the ones docs kept getting wrong)
+## Historical API pitfalls to recheck
+
+These reminders are not versioned API evidence and must not be copied as an
+unchecked contract. Before using one in a new example, resolve the reader's
+package version and verify the exact receiver, signature and source path at
+that tag. Recheck affected examples on product version changes; remove a
+workaround only after its reproduction passes. The source check above, not
+this list, establishes which shape the target version supports.
 
 - Commands/queries are **model-bound**: a `[Command]` record with `Handle()` **on the record**, and `[ReadModel]` records with **static** query methods. The marker/handler interfaces `ICommand`, `ICommandHandler<T>`, `IQuery<T>`, `IQueryHandler<T,R>` **do not exist** — never use them.
 - Bootstrap: `ArcApplication.CreateBuilder(args)` (not `ArcApplicationBuilder.CreateBuilder`). `builder.AddCratisArc()` on the builder (`WebApplicationBuilder`/`IHostBuilder`); `app.UseCratisArc()` on the built app and it takes **no args** (the listen URL comes from `ArcOptions.Hosting.ApplicationUrl`).
