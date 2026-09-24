@@ -141,7 +141,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Sequences.EventSequences>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventTypes.EventTypes>(sp),
                 new Constraints(grainFactory),
-                new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
+                ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Observers>(sp),
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(
                     grainFactory,

@@ -53,6 +53,7 @@ using KernelIdentitiesService = KernelGrpc::Cratis.Chronicle.Services.Identities
 using KernelJobsService = KernelGrpc::Cratis.Chronicle.Services.Jobs.Jobs;
 using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels.MaterializedReadModelStore;
 using KernelNamespacesService = KernelGrpc::Cratis.Chronicle.Services.Namespaces.Namespaces;
+using KernelObserverRemover = KernelCore::Cratis.Chronicle.Observation.ObserverRemover;
 using KernelObserversService = KernelGrpc::Cratis.Chronicle.Services.Observation.Observers;
 using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
 using KernelPatternsService = KernelGrpc::Cratis.Chronicle.Services.Patterns.Patterns;
@@ -164,7 +165,10 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(Defaults.Instance.EventTypes);
                 }));
 
-        _observers = new(() => new KernelObserversService(grainFactory, storage));
+        _observers = new(() => new KernelObserversService(
+            grainFactory,
+            storage,
+            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance)));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
