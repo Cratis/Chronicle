@@ -8,7 +8,7 @@ A reactor sees an event in one of three situations, and only two of them used to
 | Situation | What it means | Observation state |
 |---|---|---|
 | Live | The event just happened and the observer is keeping up | `Initial` |
-| Catch-up | The event happened some time ago and the observer is working through a backlog | `Initial \| CatchUp` |
+| Catch-up | The event happened some time ago and the observer is working through a backlog | `CatchUp` |
 | Replay | The observer has seen this event before and is being rebuilt | `Replay` |
 
 The distinction that matters for a side effect is not the one that was on offer. *This just happened* and
@@ -35,6 +35,10 @@ public class OrderNotifications(INotificationService notifications) : IReactor
 
 The observer still advances past the event. Skipping without advancing would leave the backlog undrained,
 which is worse than the problem being solved.
+
+`CatchUp` arrives on its own rather than alongside `Initial`, and implies it — a catch-up event has not been
+observed before. A handler that tests `HasFlag(EventObservationState.Initial)` to mean "first time" should
+test for `CatchUp` as well.
 
 ## Which marker to reach for
 

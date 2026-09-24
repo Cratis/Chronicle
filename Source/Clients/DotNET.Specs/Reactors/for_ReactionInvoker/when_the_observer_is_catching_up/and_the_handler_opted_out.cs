@@ -28,7 +28,7 @@ public class and_the_handler_opted_out : Specification
 
     async Task Because()
     {
-        var catchUp = EventContext.Empty with { ObservationState = EventObservationState.Initial | EventObservationState.CatchUp };
+        var catchUp = EventContext.Empty with { ObservationState = EventObservationState.CatchUp };
         await _invoker.Invoke(new MyEvent(), catchUp);
         await _invoker.Invoke(new MyOtherEvent(), catchUp);
     }
