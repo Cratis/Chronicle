@@ -255,6 +255,93 @@ public static class ExpandoObjectExtensions
     }
 
     /// <summary>
+    /// Resolve the <see cref="ExpandoObject"/> holding the last segment of a <see cref="PropertyPath"/> without creating anything.
+    /// </summary>
+    /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
+    /// <param name="property"><see cref="PropertyPath"/> to resolve.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <returns>The <see cref="ExpandoObject"/> at the path, or <see langword="null"/> when any part of it is absent.</returns>
+    /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be a collection.</exception>
+    /// <remarks>
+    /// The read-only counterpart of <see cref="EnsurePath(ExpandoObject, PropertyPath, ArrayIndexers)"/>. A read
+    /// must not write: resolving through EnsurePath added every missing intermediate to the object being read,
+    /// so asking whether a value was there created it (#4128).
+    /// </remarks>
+    public static ExpandoObject? TryResolvePath(this ExpandoObject target, PropertyPath property, ArrayIndexers arrayIndexers)
+    {
+        var currentTarget = target as IDictionary<string, object>;
+        var segments = property.Segments.ToArray();
+        var currentPath = PropertyPath.Root;
+
+        for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
+        {
+            var segment = segments[propertyIndex];
+            currentPath += segment;
+
+            switch (segment)
+            {
+                case PropertyName propertyName:
+                    {
+                        if (!currentTarget.TryGetValue(propertyName.Value, out var nested) || nested is not ExpandoObject nestedExpando)
+                        {
+                            return null;
+                        }
+
+                        currentTarget = nestedExpando;
+                    }
+                    break;
+
+                case ArrayProperty arrayProperty:
+                    {
+                        var matchingIndexers = arrayIndexers.All
+                            .Where(indexer => indexer.ArrayProperty == currentPath)
+                            .ToArray();
+
+                        if (matchingIndexers.Length == 0)
+                        {
+                            matchingIndexers = [arrayIndexers.GetFor(currentPath)];
+                        }
+
+                        foreach (var indexer in matchingIndexers)
+                        {
+                            if (!currentTarget.TryGetValue(arrayProperty.Value, out var value))
+                            {
+                                return null;
+                            }
+
+                            if (value is not IEnumerable enumerable)
+                            {
+                                throw new SegmentValueIsNotCollection(property, segment);
+                            }
+
+                            var collection = enumerable.OfType<ExpandoObject>().ToList();
+                            var element =
+                                !indexer.IdentifierProperty.IsSet &&
+                                indexer.Identifier is int index &&
+                                collection.Count > index
+                                    ? collection[index]
+                                    : collection
+                                        .Cast<IDictionary<string, object>>()
+                                        .SingleOrDefault(item =>
+                                            item.TryGetValue(indexer.IdentifierProperty.Path, out var identifierValue) &&
+                                            identifierValue.IsEqualTo(indexer.Identifier)) as ExpandoObject;
+
+                            if (element is null)
+                            {
+                                return null;
+                            }
+
+                            currentTarget = element;
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return currentTarget as ExpandoObject;
+    }
+
+    /// <summary>
     /// Ensures that a collection exists for a specific <see cref="PropertyPath"/>.
     /// </summary>
     /// <typeparam name="TChild">Type of child for the collection.</typeparam>
