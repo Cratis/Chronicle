@@ -21,7 +21,8 @@ namespace Cratis.Chronicle.Projections.Engine;
 public class Projection : IProjection, IDisposable
 {
     readonly Subject<ProjectionEventContext> _subject = new();
-    readonly KeyResolver? _allEventsKeyResolver;
+    KeyResolver? _allEventsKeyResolver;
+    bool _allEventsResolvesToEventSourceId = true;
     Dictionary<EventTypeId, KeyResolver> _keyResolverByEventTypeId = [];
     Dictionary<EventTypeId, ProjectionOperationType> _operationTypeByEventTypeId = [];
 
@@ -207,6 +208,13 @@ public class Projection : IProjection, IDisposable
     }
 
     /// <inheritdoc/>
+    public void SetAllEventsKeyResolver(KeyResolver keyResolver, bool resolvesToEventSourceId)
+    {
+        _allEventsKeyResolver = keyResolver;
+        _allEventsResolvesToEventSourceId = resolvesToEventSourceId;
+    }
+
+    /// <inheritdoc/>
     public void SetEventTypesWithKeyResolvers(
         IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
         IEnumerable<EventType> ownEventTypes,
@@ -232,12 +240,15 @@ public class Projection : IProjection, IDisposable
 
         // A child collection routes events to a parent document, so a projection with any child projection can
         // collapse distinct event sources and must keep the coarse lock regardless of its own resolvers.
-        // A projection that subscribes to all events falls back to the event-source-id key resolver for any
-        // event type it has no explicit registration for (see GetKeyResolverFor), so it counts as event-source-
-        // keyed on its own even with zero explicitly-registered event types.
+        // A projection that subscribes to all events falls back to a single resolver for any event type it has no
+        // explicit registration for (see GetKeyResolverFor), so it counts as event-source-keyed on its own even
+        // with zero explicitly-registered event types - but only while that fallback really is the event source id.
+        // A from-every clause that declares its own key folds many event sources onto one document, which is the
+        // same reason a join or a parent hierarchy is never event-source-keyed, and it must keep the coarse lock.
         IsEventSourceKeyed =
             (eventTypes.Length > 0 || SubscribesToAllEvents) &&
             !ChildProjections.Any() &&
+            (!SubscribesToAllEvents || _allEventsResolvesToEventSourceId) &&
             eventTypes.All(_ => _.ResolvesToEventSourceId);
 
         OwnEventTypes = ownEventTypes;

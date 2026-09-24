@@ -148,7 +148,7 @@ public class KernelProjectionBuilder<TReadModel>(ProjectionId identifier, ReadMo
             new Dictionary<EventType, JoinDefinition>(),
             new Dictionary<PropertyPath, ChildrenDefinition>(),
             [],
-            new FromEveryDefinition(_fromEvery, false),
+            new FromEveryDefinition(_fromEvery, false) { Key = _key },
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>(),
             LastUpdated: DateTimeOffset.UtcNow,

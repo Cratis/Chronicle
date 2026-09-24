@@ -190,6 +190,17 @@ public interface IProjection
     ProjectionOperationType GetOperationTypeFor(EventType eventType);
 
     /// <summary>
+    /// Sets the <see cref="KeyResolver"/> used for events reached by subscribing to every event type.
+    /// </summary>
+    /// <param name="keyResolver">The <see cref="KeyResolver"/> to use.</param>
+    /// <remarks>
+    /// Set after construction rather than through it, because resolving a key expression needs the projection the
+    /// key belongs to - which does not exist yet while that projection is being constructed.
+    /// </remarks>
+    /// <param name="resolvesToEventSourceId">Whether that resolver resolves to the event source id.</param>
+    void SetAllEventsKeyResolver(KeyResolver keyResolver, bool resolvesToEventSourceId);
+
+    /// <summary>
     /// Set event types with key resolvers for the projection.
     /// </summary>
     /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver"/>.</param>

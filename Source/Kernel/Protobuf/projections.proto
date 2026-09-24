@@ -49,6 +49,7 @@ message FromEveryDefinition {
    map<string,string> Properties = 1;
    bool IncludeChildren = 2;
    AutoMap AutoMap = 3;
+   string Key = 4;
 }
 message GetAllDeclarationsRequest {
    string EventStore = 1;
