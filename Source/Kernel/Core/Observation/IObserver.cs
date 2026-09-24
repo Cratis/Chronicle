@@ -25,6 +25,14 @@ public interface IObserver : IGrainWithStringKey
     /// Ensure the observer existence.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Interleaved because it does nothing - its whole purpose is to force activation, so there is no
+    /// state for non-reentrancy to protect. Without this it queued behind whatever the observer was
+    /// already doing, and the startup task fans one of these out across every reducer and reactor at
+    /// once: a single slow Subscribe put the whole fan-out past Orleans' response timeout and took the
+    /// silo down with it.
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>
