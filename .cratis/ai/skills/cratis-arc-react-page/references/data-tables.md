@@ -41,7 +41,8 @@ Both components take the same prop names:
 | `globalFilterFields` | `string[] \| undefined` | enables the search box |
 | `defaultFilters` | `DataTableFilterMeta` | initial filter state |
 | `className` | `string` | |
-| `pt` / `ptOptions` / `unstyled` | PrimeReact pass-through | |
+| `pt` | `DataTableParts` | per-part attributes (`ptOptions`/`unstyled` are accepted no-ops) |
+| `paginatorPt` | `TablePaginatorParts` | per-part attributes on the paginator |
 | `paginatorClassName` | `string` | |
 | `paginatorAriaLabels` | paginator label overrides | localize the paginator |
 | `clientFiltering` | `boolean` | **deprecated and a no-op** |
@@ -59,7 +60,13 @@ Both components take the same prop names:
 </DataTableForQuery>
 ```
 
-## Paging
+## Paging, sorting and filtering scope
+
+Column sorting and filtering — and the search box — apply to the **currently
+loaded page**, not the complete result. Complete-result filtering and sorting
+belong in the query's arguments and in the server-side query, before paging;
+`clientFiltering` does not change this and is a deprecated no-op. Server totals
+remain authoritative for the paginator.
 
 Both tables page server-side through the Arc paging hooks with a fixed page
 size of 20 rows starting at page 0. The paginator renders only when the result

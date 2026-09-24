@@ -23,8 +23,8 @@ This skill is verified against these exact sources:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `16.45.2` | `Cratis.Chronicle.Events` and `Cratis.Chronicle.Events.Migrations` |
-| `Cratis.Chronicle.CodeAnalysis` | `16.45.2` | `CHR0012`, `CHR0037`, `CHR0049`, `CHR0050` |
+| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Events` and `Cratis.Chronicle.Events.Migrations` |
+| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | `CHR0012`, `CHR0037`, `CHR0049`, `CHR0050` |
 
 Reverify product sources before claiming support for another version.
 

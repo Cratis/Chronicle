@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command/references/proxy-generation.md -->
 # Proxy generation
 
-Verified against `Cratis.Arc.ProxyGenerator.Build` `22.10.4`.
+Verified against `Cratis.Arc.ProxyGenerator.Build` `22.16.0`.
 
 ## Wiring
 
@@ -9,7 +9,7 @@ Reference the build package from the project that contains the commands,
 queries and read models, and set an output path:
 
 ```xml
-<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.10.4" />
+<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.16.0" />
 
 <PropertyGroup>
   <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../<Web>/src/api</CratisProxiesOutputPath>
@@ -28,7 +28,7 @@ Output folders mirror the C# **namespace**, not the file path. A command in
 
 ## MSBuild properties
 
-Every property below is declared by the package with the default shown.
+The first nine properties below are declared with the default shown in the package's `.props`; the last three are read by the `.targets` only when set to `true` (absent means off).
 
 | Property | Default | Effect |
 | --- | --- | --- |
@@ -41,6 +41,9 @@ Every property below is declared by the package with the default shown.
 | `CratisProxiesSkipQueryNameInRoute` | `false` | Leaves the query name out of the generated route |
 | `CratisProxiesApiPrefix` | `api` | Route prefix |
 | `CratisProxiesSkipFileIndexTracking` | `false` | Disables tracking which files the generator owns |
+| `CratisProxiesSkipIndexGeneration` | `false` | Does not write the per-folder `index.ts` barrels |
+| `CratisProxiesUseSourceFileAsOutputFile` | `false` | Names the generated file after the C# source file rather than the type |
+| `CratisProxiesEmitInterfaces` | off | **Arc ≥ 22.15.0** (the underlying `--emit-interfaces` flag exists from 22.14.0; the MSBuild property from 22.15.0). Emits plain TypeScript `interface`s instead of `@field`-decorated classes — no `@cratis/fundamentals` import in the output. Only for consumers that never reconstruct instances from JSON; command and query proxies need the classes |
 
 ⚠️ `CratisProxiesSkipOutputDeletion` defaults to `true`. Guidance that tells you
 to set it to `true` "so the generator does not delete your hand-written files"

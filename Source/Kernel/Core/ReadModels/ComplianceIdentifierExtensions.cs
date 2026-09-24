@@ -17,11 +17,11 @@ public static class ComplianceIdentifierExtensions
     /// </summary>
     /// <param name="context">The <see cref="EventContext"/> of the event being projected or reduced.</param>
     /// <param name="key">The resolved <see cref="Key"/> the read-model document is stored under.</param>
-    /// <returns>The identifier to encrypt PII under and to stamp as the document's compliance subject.</returns>
+    /// <returns>The identifier to encrypt <c language="csharp">[PII]</c> and subject-scoped <c language="csharp">[Encrypted]</c> values under, and to stamp as the document's subject.</returns>
     /// <remarks>
-    /// A read-model document must encrypt and release its PII under a single, stable subject for its whole
-    /// lifetime; otherwise the stored subject and the identity the PII was encrypted under diverge and the
-    /// PII no longer decrypts on read. For a re-keyed projection or reducer the document key differs from the
+    /// A read-model document must encrypt and release its protected values under a single, stable subject for
+    /// its whole lifetime; otherwise the stored subject and the identity a value was encrypted under diverge
+    /// and it no longer decrypts on read. For a re-keyed projection or reducer the document key differs from the
     /// source event's event source id, and a single document can be fed by events from several source
     /// streams — so the per-event event source id is not a stable document identity. The resolved document
     /// key is, so it is used whenever the event's subject is simply its event source id. An explicit

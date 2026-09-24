@@ -39,9 +39,9 @@ case-insensitive CLR member matching cannot collapse distinct dictionary keys. T
 spelling; it is not a verification of the network marshaller or wire compatibility.
 
 This fidelity applies to **event input** for fluent and model-bound projections. Reducers still receive typed
-events directly. The optional initial read model state follows a separate conversion path; do not pass an
-initial state containing nonempty `JsonObject` values, because that path still reflects over their parent
-links.
+events directly. The optional initial read model state goes through the same schema-aware conversion: it is
+serialized, re-read as case-sensitive JSON data, and converted against the read model's schema, so an initial
+state may contain nonempty `JsonObject` values. Reducers receive the initial state as the typed instance.
 
 ## Optional initial state
 

@@ -15,9 +15,11 @@ The owning repository remains authoritative when it defines a stricter format.
 ## Code and commands
 
 - Tag every code fence with its language.
-- Dedent copied snippets to their natural source indentation.
-- Use complete, runnable examples without ellipses.
-- Verify examples against first-party product source.
+- Dedent extracted snippets to their natural source indentation.
+- Use the **cratis-technical-examples** workflow: substantial examples come
+  from compiled sample or spec source; short illustrations are verified against
+  first-party product source. State any omitted setup rather than implying an
+  excerpt is a standalone runnable program.
 - Use the client-owned multi-language snippet mechanism when shared product docs
   support more than one client; do not hand-translate unsupported clients.
 

@@ -5,7 +5,8 @@
  * The agent definitions are the SINGLE-SOURCE corpus files under `.cratis/ai/agents/*.md`,
  * surfaced to Pi through symlink adapters in `.pi/agents/*.md`. Those files are written
  * in the Claude/Copilot shape (Title-Case `name`, a YAML-list `tools:` using Claude tool
- * names such as `Read`/`Glob`/`Bash`, and a `model:` id). Pi's built-in tools are the
+ * names such as `Read`/`Glob`/`Bash`). Agents without a `model:` inherit the dispatching
+ * session's model. Pi's built-in tools are the
  * lowercase set `read, write, edit, bash, grep, find, ls`, so this module NORMALIZES the
  * shared shape to Pi semantics — the adapter layer absorbs the tool difference, exactly
  * like every other adapter in this corpus, so `.pi/agents/*.md` can stay pure symlinks.
@@ -24,6 +25,13 @@ export interface AgentConfig {
 	name: string;
 	description: string;
 	tools?: string[];
+	/**
+	 * Set when the agent declared a non-empty `tools` list of which nothing maps to a Pi tool. Such an
+	 * agent must not launch: dropping the whole list would hand a deliberately restricted agent (a
+	 * read-only reviewer) Pi's full default toolset. Mirrors Claude Code, which refuses to launch a
+	 * subagent whose `tools` list resolves to no tool.
+	 */
+	toolsError?: string;
 	model?: string;
 	systemPrompt: string;
 	source: "package" | "user" | "project";
@@ -72,21 +80,58 @@ const TOOL_NAME_MAP: Record<string, string | null> = {
 };
 
 /**
+ * The outcome of normalizing a frontmatter `tools` value.
+ *
+ * `tools` is the de-duplicated Pi allowlist, or `undefined` when the agent declared no tools at
+ * all (it then inherits Pi's full default toolset, exactly like an omitted `tools:` in Claude Code).
+ * `unresolved` lists every declared name that is neither a Pi built-in nor a known orchestration
+ * tool, so a caller can tell "nothing declared" apart from "declared, but nothing resolved".
+ */
+export interface NormalizedTools {
+	tools?: string[];
+	unresolved: string[];
+}
+
+/**
  * Normalize a frontmatter `tools` value to a de-duplicated list of Pi tool names.
  * Accepts both YAML spellings in use (`tools: [Read, Bash]` and `tools: Read, Bash`).
- * Returns `undefined` when nothing maps, so the subagent inherits Pi's full default
- * toolset rather than being launched with an empty allowlist.
  */
-export function normalizeTools(value: unknown): string[] | undefined {
+export function normalizeToolsDetailed(value: unknown): NormalizedTools {
 	const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
-	const mapped = raw
+	const declared = raw
 		.filter((t): t is string => typeof t === "string")
-		.map((t) => t.trim().toLowerCase())
-		.filter(Boolean)
+		.map((t) => t.trim())
+		.filter(Boolean);
+	const mapped = declared
+		.map((t) => t.toLowerCase())
 		.map((t) => (t in TOOL_NAME_MAP ? TOOL_NAME_MAP[t] : null))
 		.filter((t): t is string => typeof t === "string");
+	const unresolved = declared.filter((t) => !(t.toLowerCase() in TOOL_NAME_MAP));
 	const deduped = Array.from(new Set(mapped));
-	return deduped.length > 0 ? deduped : undefined;
+	return { tools: deduped.length > 0 ? deduped : undefined, unresolved };
+}
+
+/**
+ * Normalize a frontmatter `tools` value to a de-duplicated list of Pi tool names, or `undefined`
+ * when nothing maps. Prefer {@link normalizeToolsDetailed} where the difference between an omitted
+ * list and an unresolvable one matters — it always does when the result gates a launch.
+ */
+export function normalizeTools(value: unknown): string[] | undefined {
+	return normalizeToolsDetailed(value).tools;
+}
+
+/**
+ * The launch error for an agent whose declared tools resolve to nothing, or `undefined` when the
+ * agent either declared no tools or at least one of them resolved.
+ */
+export function toolsErrorFor(name: string, value: unknown): string | undefined {
+	const { tools, unresolved } = normalizeToolsDetailed(value);
+	if (tools !== undefined || unresolved.length === 0) return undefined;
+	return (
+		`Agent "${name}" declares tools that resolve to no Pi tool: ${unresolved.join(", ")}. ` +
+		`It would launch with every tool instead of the restriction it declares, so it is not launched. ` +
+		`Declare Pi-resolvable names (Read, Write, Edit, Bash, Grep, Glob, ls) in its frontmatter.`
+	);
 }
 
 function loadAgentsFromDir(dir: string, source: "package" | "user" | "project"): AgentConfig[] {
@@ -120,6 +165,7 @@ function loadAgentsFromDir(dir: string, source: "package" | "user" | "project"):
 			name: frontmatter.name,
 			description: frontmatter.description,
 			tools: normalizeTools(frontmatter.tools),
+			toolsError: toolsErrorFor(frontmatter.name, frontmatter.tools),
 			model: typeof frontmatter.model === "string" ? frontmatter.model.trim() : undefined,
 			systemPrompt: body,
 			source,

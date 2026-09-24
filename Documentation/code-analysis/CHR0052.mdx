@@ -1,0 +1,30 @@
+# CHR0052: [Encrypted] cannot be applied to an EventSourceId&lt;T&gt;
+
+## Rule Description
+
+A property or record parameter whose type derives from `EventSourceId<T>` is marked with `[Encrypted]`. The event source id is used to correlate events, so it cannot itself be encrypted. Applying `[Encrypted]` to it throws `EncryptedNotSupportedOnEventSourceId` at runtime.
+
+Remove the `[Encrypted]` attribute.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0052/violation" variants="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0052/fix" variants="csharp" />
+
+## Why This Rule Exists
+
+This rule mirrors [CHR0034](CHR0034) for `[Encrypted]` values. If the identifier itself is a secret, do not try to encrypt the id — use a non-sensitive surrogate as the event source id and store the secret in a separate `[Encrypted]` property.
+
+## Related Rules
+
+- [CHR0034](CHR0034): `[PII]` cannot be applied to an `EventSourceId<T>` — the same restriction for compliance values.
+- [CHR0053](CHR0053): `[PII]` and `[Encrypted]` cannot both apply to the same value.

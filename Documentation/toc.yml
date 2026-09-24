@@ -36,8 +36,12 @@
   href: closing-streams/toc.yml
 - name: Migrations
   href: migrations/toc.yml
+- name: Upgrading
+  href: upgrading/toc.yml
 - name: Compliance
   href: compliance/toc.yml
+- name: Security
+  href: security/toc.yml
 - name: Read Models
   href: read-models/toc.yml
 - name: Sinks
@@ -70,6 +74,8 @@
   href: workbench/toc.yml
 - name: Hosting
   href: hosting/toc.yml
+- name: Client differences
+  href: clients/where-the-clients-differ.md
 - name: Building a Client
   href: building-a-client/toc.yml
 - name: Contributing

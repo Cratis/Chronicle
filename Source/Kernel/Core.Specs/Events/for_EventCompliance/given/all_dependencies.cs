@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
@@ -17,7 +16,7 @@ public class all_dependencies : Specification
     protected static readonly EventType SomeEventType = new(new EventTypeId(Guid.NewGuid().ToString()), EventTypeGeneration.First);
     protected static readonly EventType OtherEventType = new(new EventTypeId(Guid.NewGuid().ToString()), EventTypeGeneration.First);
 
-    protected IJsonComplianceManager _complianceManager;
+    protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected EventCompliance _compliance;
 
@@ -25,7 +24,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
 
         _schemaWithPii = new JsonSchema();

@@ -1,0 +1,12 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Events;
+
+namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_projecting_children_with_a_constant_parent_key.given;
+
+/// <summary>
+/// A thing left the set entirely.
+/// </summary>
+[EventType]
+public record CountedThingRemoved;

@@ -101,10 +101,12 @@ Read the reference that covers the decision at hand rather than all three.
 
 ## The two rules most often got wrong
 
-**`[Singleton]` is a narrow choice, not the default.** A singleton may not
-depend on anything that belongs to a tenant, a user, or a request. Capturing a
-scoped collaborator does not throw — it silently binds to the root scope's
-default namespace forever and returns empty results. See
+**Anything taking a scoped dependency is scoped or transient, never a
+singleton.** A singleton may not depend on anything that belongs to a tenant, a
+user, or a request. Capturing a scoped collaborator does not throw — it silently
+binds to the root scope's default namespace forever and returns empty results.
+The fix is almost always to drop `[Singleton]`, not to reach for
+`IServiceScopeFactory`. See
 [exceptions-logging-and-di.md](references/exceptions-logging-and-di.md).
 
 **Use `IInstancesOf<T>`, never `IEnumerable<T>`, to enumerate implementations of
@@ -124,7 +126,9 @@ hand-registered, which defeats convention-based discovery.
   non-nullable annotation.
 - Every public type, method, property, and operator carries multiline XML
   documentation with `<param>` and `<returns>` where applicable.
-- No `[Singleton]` holds tenant-, user-, or request-bound state.
+- No `[Singleton]` takes a scoped dependency or holds tenant-, user-, or
+  request-bound state, and the host sets `ValidateScopes` and `ValidateOnBuild`
+  in every environment.
 - No `services.Add*<TInterface, TImplementation>()` registers a type that exists
   to be discovered by convention.
 - Text is American English.

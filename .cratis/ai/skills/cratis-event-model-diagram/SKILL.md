@@ -21,7 +21,7 @@ file and Mermaid disagree. Confirm the Mermaid version available to the renderer
 before relying on a construct.
 
 The Cratis artifacts a diagram refers to are verified against `Cratis.Chronicle`
-`16.45.2` and the Arc query and command surface it is used with.
+`18.3.0` and the Arc query and command surface it is used with.
 
 ## What an event model is
 
@@ -141,3 +141,10 @@ language. Include commands that emit no event.
 - The command-rules table covers every command, including those that emit
   nothing.
 - Cross-module flows are reflected in all three places.
+
+## Route near misses
+
+- Deciding the model rather than drawing one: `cratis-chronicle-event-modeling`
+  for a hand-written Chronicle implementation, or
+  `cratis-screenplay-event-modeling` when the model is authored as a Screenplay
+  `.play` document.

@@ -16,8 +16,8 @@ This skill is verified against these exact public releases:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Fundamentals` | `7.18.1` | `Cratis.Concepts.ConceptAs<T>` |
-| `Cratis.Chronicle` | `16.38.1` | `Cratis.Chronicle.Events.EventSourceId` and `EventSourceId<T>` |
+| `Cratis.Fundamentals` | `7.19.2` | `Cratis.Concepts.ConceptAs<T>` |
+| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Events.EventSourceId` and `EventSourceId<T>` |
 
 Reverify product sources before claiming support for another version.
 

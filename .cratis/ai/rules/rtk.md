@@ -1,6 +1,6 @@
 ---
 applyTo: "**/*"
-description: "Use when running any shell command, reading files, or searching code. Route every command rtk supports through rtk (a hook auto-rewrites Bash commands); call rtk read/grep/find directly because the built-in Read/Grep/Glob tools bypass that hook."
+description: "Use when running any shell command, reading files, or searching code. Route commands through rtk for human-readable output (a hook auto-rewrites Bash commands; prefix rtk yourself where it does not); use raw output when the result is parsed, compared exactly, or drives another operation."
 ---
 <!-- cratis-ai-managed: rules/rtk.md -->
 
@@ -10,10 +10,20 @@ description: "Use when running any shell command, reading files, or searching co
 
 ## How it works — let the hook do its job
 
-A `PreToolUse` hook **auto-rewrites Bash commands** to their `rtk` equivalent transparently and at zero token overhead (`git status` → `rtk git status`). For any supported command you do **nothing special** — run it normally and the hook wraps it.
+A `PreToolUse` hook **auto-rewrites Bash commands** to their `rtk` equivalent transparently and at zero token overhead (`git status` → `rtk git status`). For any supported command you do **nothing special** — run it normally and the hook wraps it. Where no hook is configured, prefix the command yourself — including each command in an `&&` chain: `rtk git add . && rtk git commit -m "msg"`.
 
-- **Never bypass it.** Don't disable the hook, and reserve `rtk proxy <cmd>` for the rare case where you genuinely need the raw, unfiltered output (e.g. debugging what a filter dropped).
 - **Audit coverage** with `rtk gain` (savings so far) and `rtk discover` (commands that slipped past rtk — missed opportunities to close).
+
+## When to use raw output instead
+
+rtk output is a summary for a reader. It is never evidence of exact file contents, paths, Git state, or command semantics, and a filter can drop the line you needed. Use the raw command — `rtk proxy <cmd>`, or the plain command where nothing rewrites it — whenever:
+
+- the output is parsed by a script, compared exactly, or fed to another command;
+- the output is the evidence for a claim about content, paths, or Git state;
+- the command's exit code or exact diagnostics decide what happens next (security checks, structured JSON, machine-readable diagnostics);
+- a wrapped command failed. Read the actual error and retry through `rtk proxy` before concluding the tool, path, or repository is missing.
+
+Do not add `rtk` to scripts, hooks, or CI steps that deliberately use native commands; their raw output is the point. Exit codes are never traded for token savings — see [`exit-codes-and-wrappers.md`](./exit-codes-and-wrappers.md).
 
 ## What rtk supports (route these through rtk)
 

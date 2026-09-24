@@ -73,12 +73,13 @@ public static class ProjectedColumns
             IsArray: false,
             IsNullable: true));
 
-        // Sink-owned compliance column. A read model with PII encrypts under a per-subject key and stamps
-        // the resolved compliance subject into the document. The subject must be persisted so that PII
-        // releases on read, and so that a subsequent event's initial state is decrypted before being
-        // re-encrypted — without it the initial state stays encrypted and the next write double-encrypts it.
-        // MongoDB keeps __subject as a free document field; the SQL table needs an explicit column.
-        if (schema.HasComplianceMetadata())
+        // Sink-owned subject column. A read model with a [PII] property, or an [Encrypted] property using
+        // the default subject scope, encrypts under a per-subject key and stamps the resolved subject into
+        // the document. The subject must be persisted so that a protected value releases on read, and so
+        // that a subsequent event's initial state is decrypted before being re-encrypted — without it the
+        // initial state stays encrypted and the next write double-encrypts it. MongoDB keeps __subject as a
+        // free document field; the SQL table needs an explicit column.
+        if (schema.HasSchemaMetadata())
         {
             columns.Add(new ProjectedColumn(
                 WellKnownProperties.Subject,

@@ -27,7 +27,5 @@
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
     </ItemGroup>
     <ItemGroup>
-        <!-- Direct pin: Cratis.Arc.MongoDB floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies. -->
-        <PackageReference Include="Castle.Core" />
     </ItemGroup>
 </Project>

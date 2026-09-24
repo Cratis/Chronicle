@@ -18,16 +18,18 @@ There is no host requirement and no application architecture imposed.
 ## Verified product sources
 
 This skill is verified against the `Cratis/Chronicle` repository at tag
-`v17.0.1`, whose client sources are byte-identical to `16.45.2` for every public
-type cited here except the compatibility check noted below.
+`v18.3.0`. Its client sources are unchanged in public shape since `v17.0.1`
+(the 17→18 client diff is converters, options and doc comments), and `v17.0.1`
+was byte-identical to `16.45.2` for every public type cited here except the
+compatibility check noted below.
 
 | Package | Line | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `17.x` | `ChronicleClient`, `IEventStore`, `[EventType]`, observers |
-| `Cratis.Chronicle.Connections` | `17.x` | `ChronicleConnectionString`, connection lifecycle |
-| `Cratis.Chronicle.AspNetCore` | `17.x` | ASP.NET Core wiring, header/subdomain namespace resolvers |
-| `Cratis.Chronicle.Testing` | `17.x` | in-process scenarios |
-| `Cratis.Chronicle.CodeAnalysis` | `17.x` | the analyzers, a **separate opt-in** package |
+| `Cratis.Chronicle` | `18.3.0` | `ChronicleClient`, `IEventStore`, `[EventType]`, observers |
+| `Cratis.Chronicle.Connections` | `18.3.0` | `ChronicleConnectionString`, connection lifecycle |
+| `Cratis.Chronicle.AspNetCore` | `18.3.0` | ASP.NET Core wiring, header/subdomain namespace resolvers |
+| `Cratis.Chronicle.Testing` | `18.3.0` | in-process scenarios |
+| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | the analyzers, a **separate opt-in** package |
 
 Take the exact version from nuget.org. The version in source is a `1.0.0`
 placeholder injected at pack time (`Source/Directory.Build.props`), so the
@@ -183,23 +185,23 @@ and an optional `EventStoreNamespaceResolverType`.
 Since Chronicle 17 the compatibility check is a server-side RPC, and **the client
 runs it automatically inside `Connect()`** —
 `Source/Clients/Connections/ChronicleConnection.cs:310` calls
-`CheckCompatibility` (`:405`), sending the client type, client version, protocol
-version, and the descriptor set its contracts package was built with (`:411-417`).
-The rationale is at `:400-404`: Chronicle has clients in four languages and only
+`CheckCompatibility` (`:414`), sending the client type, client version, protocol
+version, and the descriptor set its contracts package was built with (`:420-426`).
+The rationale is at `:409-413`: Chronicle has clients in four languages and only
 some can build a descriptor set at runtime, so each ships the one it was built
 with and the server does the single comparison.
 
 Behavior you can rely on:
 
 - A server too old to have the RPC answers `Unimplemented`, and the client falls
-  back to the previous client-side exchange (`:419-425`) — upgrading the client
+  back to the previous client-side exchange (`:428-434`) — upgrading the client
   does not silently drop the check.
-- Any other transport error is **logged and ignored** (`:426-432`), on the stated
+- Any other transport error is **logged and ignored** (`:435-441`), on the stated
   reasoning that failing to ask says nothing about whether the two sides agree.
 - A genuine mismatch throws `IncompatibleServerException`
   (`Source/Clients/Connections/IncompatibleServerException.cs:10`) whose message
   names the server address, its version, its protocol version, and the specific
-  incompatibilities (`:436-443`).
+  incompatibilities (`:443-449`).
 
 The client identifies itself as `".NET"`
 (`Source/Clients/Connections/ChronicleClientIdentity.cs:22`) with its assembly
@@ -334,8 +336,8 @@ Read models are queried through `eventStore.ReadModels`
 Artifacts are found by **assembly scanning**, with no registration call and no DI
 container required. `DefaultClientArtifactsProvider.Default` composes the
 project-referenced and package-referenced assemblies
-(`Source/Clients/DotNET/DefaultClientArtifactsProvider.cs:35`), and the
-predicates are exactly (`:230-238`):
+(`Source/Clients/DotNET/DefaultClientArtifactsProvider.cs:37`), and the
+predicates are exactly (`:242-251`):
 
 | Kind | Predicate |
 | --- | --- |

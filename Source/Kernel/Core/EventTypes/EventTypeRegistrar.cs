@@ -49,6 +49,12 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
     {
         var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
 
+        // The gRPC-deserialized sequence backing a repeated field is not guaranteed to support more than
+        // one enumeration - and this method enumerates it twice, once to validate and once to build what
+        // gets stored. Materializing it once up front is what makes the second pass see anything at all;
+        // without this, a client's registration silently persisted nothing while still reporting success (#86).
+        var typesList = types.ToList();
+
         // A client registers every event type it knows about in one call, and every check below - does the event
         // type exist, does this generation exist, has its schema changed - is answered by what is already stored.
         // Reading all of it once keeps registration at a couple of round trips instead of a handful per event type.
@@ -56,7 +62,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         if (!skipValidation)
         {
-            foreach (var eventType in types)
+            foreach (var eventType in typesList)
             {
                 ValidateMigrationChain(eventType.Type.Id, eventType.Type.Generation, eventType.Migrations);
                 await ValidateSchemaNotChanged(eventType, StoredFor(stored, eventType));
@@ -66,7 +72,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         var eventTypesToRegister = new List<EventTypeToRegister>();
         var newGenerationsPerEventType = new List<NewGenerations>();
 
-        foreach (var eventType in types)
+        foreach (var eventType in typesList)
         {
             newGenerationsPerEventType.Add(GetNewGenerations(eventType, StoredFor(stored, eventType)));
             eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation));

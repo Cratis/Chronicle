@@ -41,7 +41,7 @@ for_EventsCommandResponseValueHandler/
 
 ## BDD Pattern with `given()` Helper
 
-The `given()` function is the TypeScript equivalent of the C# `Specification` base class. It instantiates a context class (the "given"), passes it to the test suite, and ensures setup runs before assertions. This keeps the Establish/Because/should pattern consistent across both stacks.
+The `given()` function is the TypeScript counterpart of the C# `Specification` base class. It instantiates a context class (the "given") **once when the `describe` is registered**, passes that instance to the suite callback, and leaves the per-behavior action to a `beforeEach` you write. Because the context is shared by every `it()` in the `describe`, keep one action per `describe` and let `it()` blocks only assert — that is what keeps Establish/Because/should consistent across both stacks.
 
 ```typescript
 import { an_events_command_response_value_handler } from '../given/an_events_command_response_value_handler';

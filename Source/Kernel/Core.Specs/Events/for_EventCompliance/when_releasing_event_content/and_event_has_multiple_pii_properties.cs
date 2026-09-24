@@ -6,6 +6,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -43,7 +44,7 @@ public class and_event_has_multiple_pii_properties : Specification
         }
         """);
 
-    JsonComplianceManager _complianceManager;
+    JsonSchemaMetadataManager _complianceManager;
     ExpandoObjectConverter _converter;
     AppendedEvent _released;
 
@@ -51,8 +52,9 @@ public class and_event_has_multiple_pii_properties : Specification
     {
         var encryption = new Encryption();
         var keyStorage = new InMemoryEncryptionKeyStorage();
-        var piiHandler = new PIICompliancePropertyValueHandler(keyStorage, encryption);
-        _complianceManager = new(new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(piiHandler), NullLogger<JsonComplianceManager>.Instance);
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+        var piiHandler = new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption);
+        _complianceManager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(piiHandler), NullLogger<JsonSchemaMetadataManager>.Instance);
         _converter = new(new TypeFormats());
     }
 

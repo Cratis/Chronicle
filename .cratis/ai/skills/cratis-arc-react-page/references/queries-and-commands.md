@@ -49,6 +49,30 @@ Guard rendering with `hasData` rather than checking `data.length` — a
 conditional query that has not fired returns an empty result with
 `hasData: false`.
 
+### Command success is not projection convergence
+
+A successful `CommandResult` means the events were **appended**. The read model a
+query reads is built by an observer that runs *after* that, so for a moment the
+command has succeeded and the query still answers from before it. Model the
+states separately instead of collapsing them into "loaded or not":
+
+| State | Signal | Render |
+| --- | --- | --- |
+| Not asked yet | `.when(false)` / `!isReady` | nothing, or the previous content |
+| Pending | `isPerforming`, or `hasData: false` **right after a command you just issued succeeded** | a skeleton — **never** "not found" |
+| Converged, empty | `hasData` with an empty `data` and no recent command | the designed empty state |
+| Converged, populated | `hasData` with items | the content |
+| Failed | `!isSuccess` / `hasExceptions` / `!isAuthorized` | the matching error affordance |
+| Stale refresh | `isPerforming` while `data` still holds the previous result | keep the old content, indicate refresh |
+
+Two consequences. After a create command, take the **window action on the
+command's success** (close the dialog, navigate to the new id) and let the list
+catch up — do not wait for the query to show the row before closing. And for a
+detail page opened on an id you just created, `hasData: false` is *pending*, not
+*missing*: an observable query (`ISubject<T>` on the backend, `.use()` here)
+resolves it the moment the projection lands, which is why observable reads are
+the default for anything a user changes and then looks at.
+
 ### Paging
 
 ```ts
@@ -197,5 +221,5 @@ query transport. Its props include `microservice`, `origin`, `basePath`,
 `apiBasePath`, `httpHeadersCallback` (merged into every request — bearer and
 tenant headers), `detailsType`, `queryTransportMethod`, `queryConnectionCount`,
 `queryDirectMode`, `observableQueryTransferMode`, and `queryCacheRetentionMs`.
-`QueryTransportMethod` and `ObservableQueryTransferMode` import from
-`@cratis/arc`; `Arc` imports from `@cratis/arc.react`.
+`QueryTransportMethod` imports from `@cratis/arc/queries`,
+`ObservableQueryTransferMode` from `@cratis/arc`; `Arc` imports from `@cratis/arc.react`.

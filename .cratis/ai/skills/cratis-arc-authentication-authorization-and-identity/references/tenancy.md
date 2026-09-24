@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/tenancy.md -->
 # Tenancy
 
-Verified against `Cratis.Arc.Core` `22.10.4`. Types are in `Cratis.Arc.Tenancy`.
+Verified against `Cratis.Arc.Core` `22.16.0`. Types are in `Cratis.Arc.Tenancy`.
 
 Arc tenancy is **request-scoped tenant resolution**. It answers "which tenant is
 this request for". It is not Chronicle's tenant namespace isolation, and it does
@@ -62,9 +62,12 @@ the configured value.
 
 `ITenantIdAccessor.Current` gives the current `TenantId`, cached into an
 `AsyncLocal`. An empty resolution is `TenantId.NotSet`, whose value is the
-literal string `"[NotSet]"`. `TenantId.Default` is `"Default"` and `IsDefault`
-tests for it. `CurrentTenantIdIsNotSet.ThrowIfNotSet(...)` is the guard for code
-that requires a tenant.
+literal string `"[NotSet]"`. `TenantId.Default` is `"Default"`. ⚠️ `IsDefault`
+is `this == NotSet || this == Default` — it is true for an **unresolved** tenant
+as well, so it cannot tell "single-tenant default" from "nothing resolved".
+Compare against `TenantId.NotSet` explicitly, or use
+`CurrentTenantIdIsNotSet.ThrowIfNotSet(...)`, wherever an unresolved tenant must
+be refused.
 
 ⚠️ `NotSet` is a real string, not `null`. A check like
 `string.IsNullOrEmpty(tenantId)` never fires for an unresolved tenant. Compare

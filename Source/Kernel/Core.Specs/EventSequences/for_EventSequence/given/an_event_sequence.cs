@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -57,7 +56,7 @@ public class an_event_sequence : Specification
     protected IConstraintValidation _constraintValidation;
     protected IConstraintValidation _currentValidation;
     protected IEventTypeMigrations _eventTypeMigrations;
-    protected IJsonComplianceManager _complianceManager;
+    protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected RecordingConstraintValidator _recordingValidator;
     protected INamespaces _namespaces;
@@ -92,7 +91,7 @@ public class an_event_sequence : Specification
         _constraintValidationFactory = Substitute.For<IConstraintValidationFactory>();
         _constraintValidation = Substitute.For<IConstraintValidation>();
         _eventTypeMigrations = Substitute.For<IEventTypeMigrations>();
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);

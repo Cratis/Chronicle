@@ -120,6 +120,7 @@ that enforces authentication, every call fails as unauthenticated.
 | `auth` | string | Set to `none` to connect without presenting credentials | `?auth=none` |
 | `apiKey` | string | API key for API key authentication | `?apiKey=your-api-key` |
 | `skipTlsValidation` | boolean | Connects over TLS without validating the server certificate | `?skipTlsValidation=true` |
+| `skipCompatibilityCheck` | boolean | Skips the connect-time wire-compatibility check against the server | `?skipCompatibilityCheck=true` |
 | `loadBalancer` | string | Load balancer strategy when multiple servers are configured | `?loadBalancer=round-robin` |
 | `srvNameServer` | string | DNS name server (host[:port], port defaults to 53) for `chronicle+srv` lookups; defaults to the system's name servers | `?srvNameServer=10.0.0.53` |
 
@@ -128,3 +129,9 @@ that enforces authentication, every call fails as unauthenticated.
 The client always connects over TLS, but by default it does **not** validate the server certificate — any certificate, including a self-signed one, is accepted. Chronicle Server generates a self-signed certificate on every start when none is configured, so this default is what lets a development client connect with no certificate setup. Set `skipTlsValidation=false` to require full certificate chain validation against a server whose certificate is verifiable — do this for anything beyond a trusted network, as the default removes protection against man-in-the-middle attacks. In the .NET client this option and `Tls.SkipCertificateValidation` combine so that whichever one asks for validation wins, so either setting alone is enough and an omitted second setting can never silently turn validation back off.
 
 See [TLS configuration (client)](../configuration/tls) for certificate setup.
+
+## Compatibility check
+
+Before treating a connection as usable, the client checks that its wire contract and the server's are still compatible — see [Clustering and the connection lifecycle: the wire-compatibility handshake](../building-a-client/clustering-and-connection-lifecycle#the-wire-compatibility-handshake) for how the check itself works. This is a real safety check, not a formality: it exists to catch a genuine mismatch, such as a client sent to a server that no longer has fields or methods the client depends on.
+
+Set `skipCompatibilityCheck=true` only as a deliberate, temporary escape hatch — for example when a client that has only *gained* capabilities since the server's release is (incorrectly) refused by a server that cannot be redeployed immediately. Skipping the check does not make an incompatibility disappear; it trades a clear, immediate connect-time failure for whatever less obvious failure the actual incompatibility causes later. Remove the setting once the server is upgraded or the client's assumption about compatibility is otherwise confirmed.

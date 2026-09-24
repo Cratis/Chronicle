@@ -6,6 +6,10 @@ uid: Chronicle.Compliance.ReadModels
 
 Chronicle stores PII fields encrypted at rest in both the event log and managed read models (projections and reducers). The encryption and decryption is handled automatically by the kernel — your application code works with plaintext values at all times.
 
+:::note[The same mechanism also protects `[Encrypted]` values]
+Everything on this page about *how* a read model is encrypted and released — the projection pipeline, `IReadModels.Release`, the automatic decryption on every query — applies identically to `[Encrypted]` values, not only `[PII]` ones. A read model can mix both on the same document; each resolves under its own, disjoint key. What is specific to `[PII]` on this page is the GDPR mechanics: the `[Subject]`/erasure behavior below has no equivalent for `[Encrypted]`, because an operational secret has no data subject and nothing about it is ever erasable. See [Security](../security/) for `[Encrypted]` and its wider key scopes.
+:::
+
 :::note[Client coverage]
 The C# examples on this page combine several mechanisms already covered elsewhere for their per-client support ([PII property annotation](./pii), [projections](../projections/), [reducers](../reducers/)) — this page's specific focus (automatic PII lineage through model-bound AutoMap, and the `_subject`/GDPR-erasure mechanics) hasn't been individually re-verified per client yet.
 :::

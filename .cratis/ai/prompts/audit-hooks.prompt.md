@@ -6,9 +6,9 @@ description: Audit hook files for correctness, portability, and enforcement cove
 
 # Audit Hooks
 
-Review `.cratis/ai/hooks/` and report whether hooks are:
+Review `.cratis/ai/hooks/` — the write guard, store-mutation guard, pattern scan, and quality gate — and report whether hooks are:
 
-- enforcing the intended policy
+- enforcing the intended policy (including the `cratis chronicle` read-only allowlist and its fail-closed behavior)
 - portable across environments
 - aligned with canonical source rules
 - using bash-first commands for script execution

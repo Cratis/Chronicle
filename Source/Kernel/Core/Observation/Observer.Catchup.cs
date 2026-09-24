@@ -45,6 +45,18 @@ public partial class Observer
             {
                 logger.StartCatchUpJob(State.NextEventSequenceNumber);
                 return Task.CompletedTask;
+            },
+
+            // A stopped job that refuses to resume is nobody's: it will not run, will not finalize, and will never
+            // report back, so nothing is ever going to lower the flag again. Leaving it raised makes Handle drop
+            // every live event and makes Observing skip its missed-events check, and the watchdog then quarantines
+            // the observer for a strand that was only ever a job nobody took. A job that fails to *start* is a
+            // different situation and keeps its existing retry-then-quarantine handling.
+            () =>
+            {
+                logger.NoCatchUpJobTookOwnership();
+                _isPreparingCatchup = false;
+                return Task.CompletedTask;
             });
     }
 
@@ -68,11 +80,26 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Catch-up is over however it got here, so the preparing flag comes down with it. Lowering it only in
+    /// <see cref="RegisterCatchingUpPartitions"/> covers just the path where a brand-new job prepared steps.
+    /// A job that was already running, one that was resumed, and one found with every step already completed
+    /// and finalized rather than resumed all reach completion without preparing steps a second time, and each
+    /// of them left the flag raised for the lifetime of the activation - which makes <c language="csharp">Handle</c> drop every
+    /// live event and makes <see cref="States.Observing"/> skip its missed-events check, so the observer never
+    /// observes anything again. The watchdog then clears the flag, routes, and catch-up concludes the same way
+    /// on the next tick, five times over, until the observer is quarantined for a strand that was never its
+    /// own fault.
+    /// </remarks>
     public async Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
+
+        _isPreparingCatchup = false;
+        _catchupRecoveryAttempts = 0;
+
         await TransitionTo<Routing>();
     }
 

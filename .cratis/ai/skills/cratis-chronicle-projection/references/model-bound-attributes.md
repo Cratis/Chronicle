@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/references/model-bound-attributes.md -->
 # Model-bound projection attributes
 
-Verified against `Cratis.Chronicle` `16.45.2`.
+Verified against `Cratis.Chronicle` `18.3.0`.
 
 Unless noted, every attribute below lives in
 `Cratis.Chronicle.Projections.ModelBound`. Generic arity is stated exactly:
@@ -28,7 +28,7 @@ attribute takes no generic parameter at all.
 | --- | --- | --- | --- |
 | `[FromEvent<T>]` | `<T>` | `(string? key = default, string? parentKey = default)`, plus `ConstantKey { get; init; }` | class, struct; repeatable |
 | `[RemovedWith<T>]` | `<T>` | `(string? key = default, string? parentKey = default)` | class, struct, property, parameter; repeatable |
-| `[RemovedWithJoin<T>]` | `<T>` | `(string? key = default)` | property, parameter; repeatable |
+| `[RemovedWithJoin<T>]` | `<T>` | `(string? key = default)` | class, struct, property, parameter; repeatable |
 | `[Nested]` | non-generic | none | property, parameter; single |
 | `[FromAll]` | non-generic | `(string? contextProperty = default, string? property = default)` | **property only**; single |
 | `[FromEvery]` | non-generic | `(string? property = default, string? contextProperty = default)` | property, parameter; single |
@@ -70,6 +70,19 @@ argument:
 Setting it routes every matching event into a single aggregating document at
 that key. That is a different mechanism from the fluent builder's
 `UsingConstantKey("<key>")`, even though the effect is similar.
+
+## Variants
+
+| Attribute | Arity | Parameters | Targets |
+| --- | --- | --- | --- |
+| `[VariantOf<TIdentity>]` | `<TIdentity>` | none | class, struct; single |
+| `[EntersOn<T>]` | `<T>` | `(string? key = default)` | class, struct; repeatable |
+| `[GlobalFor<TIdentity>]` | `<TIdentity>` | none | class, struct; single |
+
+Requires `Cratis.Chronicle` `19.1.0` or later. See
+[variants.md](variants.md) for the full mechanics, the update-only
+reclassification of non-entering events, and the `VariantMustDeclareEntersOnEvent`
+startup trap.
 
 ## Relationships
 

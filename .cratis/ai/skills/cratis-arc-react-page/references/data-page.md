@@ -6,19 +6,21 @@ optional details pane in one component. Import from
 `@cratis/components/DataPage`.
 
 ```tsx
+import { FaPlus } from 'react-icons/fa6';
 import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import type { IDetailsComponentProps } from '@cratis/components/DataPage';
 ```
 
 ## Compound members
 
-Exactly two static members exist:
+Three static members exist:
 
 - `DataPage.Columns` — wraps the `Column` elements.
 - `DataPage.MenuItems` — wraps the `MenuItem` elements.
+- `DataPage.MenuItem` — the same component as the named `MenuItem` export.
 
 `Column` and `MenuItem` are named exports of the same subpath. There is no
-`DataPage.Column` and no `DataPage.MenuItem`.
+`DataPage.Column`.
 
 ## `DataPageProps`
 
@@ -38,9 +40,10 @@ Exactly two static members exist:
 | `onRefresh` | `() => void` | invoked to re-fetch a snapshot query |
 | `actionsAriaLabel` | `string` | accessible name of the actions menubar, default `'Actions'` |
 | `tableClassName` | `string` | class on the inner table |
-| `tablePt` / `tablePtOptions` / `tableUnstyled` | PrimeReact pass-through | target the inner data table |
+| `tablePt` | `DataTableParts` | per-part attributes on the inner data table (`tablePtOptions`/`tableUnstyled` are accepted no-ops) |
 | `menubarClassName` | `string` | class on the action menubar |
-| `menubarPt` / `menubarPtOptions` / `menubarUnstyled` | PrimeReact pass-through | target the action buttons |
+| `menubarPt` | `ButtonParts` | per-part attributes on the action buttons (`menubarPtOptions`/`menubarUnstyled` are accepted no-ops) |
+| `paginatorPt` | `TablePaginatorParts` | per-part attributes on the paginator |
 | `clientFiltering` | `boolean` | **deprecated and a no-op** — do not use in new code |
 
 ## Snapshot versus observable
@@ -65,7 +68,7 @@ after a command succeeds.
 reads. Icons are usually a small inline component:
 
 ```tsx
-<MenuItem label='Add account' icon={() => <i className='pi pi-plus' />} command={() => showCreate()} />
+<MenuItem label='Add account' icon={FaPlus} command={() => showCreate()} />
 ```
 
 ## `IDetailsComponentProps<TDataType>`
@@ -100,7 +103,8 @@ declaration the table reads.
 | `showFilterMatchModes` | `boolean` |
 | `filterElement` | `(options: ColumnFilterElementOptions) => ReactNode` |
 | `filterLabels` | `Partial<ColumnFilterMenuLabels>` |
-| `selectionMode` | `'single' \| 'multiple'` |
+| `filterPt` | `ColumnFilterMenuParts` — parts of the filter popup |
+| `selectionMode` | `'single'` — the only implemented value; there is no checkbox multi-selection |
 | `style` / `className` | `React.CSSProperties` / `string` |
 | `headerStyle` / `headerClassName` | `React.CSSProperties` / `string` |
 | `bodyStyle` / `bodyClassName` | `React.CSSProperties` / `string` |
@@ -113,11 +117,11 @@ Use `body` for a computed or formatted cell:
 
 ## Type name caution
 
-`@cratis/components/DataPage` exports two different things called
-`ColumnProps` — the props of the `DataPage.Columns` wrapper and the re-exported
-column declaration props. Import `ColumnProps` from
-`@cratis/components/DataTables` when you need the column type, so the reference
-is unambiguous.
+`ColumnProps` from `@cratis/components/DataPage` is the **column declaration**
+type re-exported from `DataTables` (the explicit named re-export shadows the
+`DataPage.Columns` wrapper's own `ColumnProps`, which is not reachable from the
+subpath). Import it from `@cratis/components/DataTables` when you want the
+reference to say so.
 
 ## Layout
 

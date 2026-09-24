@@ -8,7 +8,11 @@ what changed, so a re-registration from an unchanged client is near-free.
 
 A changed definition — including one that *removes* a child collection — is stored and pushed to the
 engine on every silo. Chronicle then inspects the change and the namespace's event history before it
-decides what to rebuild:
+decides what to rebuild. Active projection subscribers discard their silo-local cached pipeline
+before rebuilding from the changed definition. Newly consumed events therefore use the updated key
+resolvers without requiring a kernel restart.
+
+The rebuild decision is:
 
 - **No action** when the only change adds event types and no events of those types exist yet.
 - **Partial replay** when only new event types were added, their explicit property mappings do not overlap

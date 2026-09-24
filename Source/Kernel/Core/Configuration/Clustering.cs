@@ -64,4 +64,24 @@ public class Clustering
     /// to join quickly.
     /// </summary>
     public TimeSpan DefunctSiloExpiration { get; set; } = TimeSpan.FromHours(3);
+
+    /// <summary>
+    /// Gets how long a grain call waits for its response before timing out.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Orleans defaults this to 30 seconds, which is chosen for ordinary request/response traffic
+    /// rather than for startup. Some startup work is proportional to how much the server holds -
+    /// registering the projections for an event store fans out across every namespace it has - so
+    /// the time that work needs grows with the deployment while the 30 seconds does not. A server
+    /// that has grown past that point cannot complete startup, and because it cannot, it cannot
+    /// start on the next attempt either.
+    /// </para>
+    /// <para>
+    /// Raising this is the operator's way out of that, so it is deliberately configurable rather
+    /// than fixed. The default stays at Orleans' own 30 seconds: a call that hangs should still
+    /// fail rather than tie a caller up indefinitely.
+    /// </para>
+    /// </remarks>
+    public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(30);
 }

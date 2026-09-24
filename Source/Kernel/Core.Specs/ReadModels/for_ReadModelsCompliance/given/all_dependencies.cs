@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
@@ -16,7 +15,7 @@ public class all_dependencies : Specification
     protected static readonly EventStoreNamespaceName EventStoreNamespace = "test-namespace";
     protected const string Identifier = "subject-identifier";
 
-    protected IJsonComplianceManager _complianceManager;
+    protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _converter;
     protected ReadModelsCompliance _compliance;
     protected JsonSchema _schemaWithPii;
@@ -25,7 +24,7 @@ public class all_dependencies : Specification
 
     void Establish()
     {
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();
         _converter = Substitute.For<IExpandoObjectConverter>();
         _compliance = new ReadModelsCompliance(_complianceManager, _converter);
 

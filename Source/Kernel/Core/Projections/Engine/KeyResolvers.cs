@@ -121,8 +121,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="keyResolver"><see cref="KeyResolver"/> to use for resolving the key for the incoming event.</param>
     /// <param name="parentKeyResolver">The property that represents the parent key.</param>
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
+    /// <param name="parentKeyIsConstant">Whether the parent key is a constant rather than a value derived from the event.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty) =>
+    public KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty, bool parentKeyIsConstant = false) =>
         CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, sink, @event) =>
     {
         logger.FromParentHierarchyEntry(@event.Context.EventType.Id.ToString(), @event.Context.EventSourceId.ToString(), @event.Context.SequenceNumber.Value);
@@ -209,7 +210,19 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
         logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
 
-        if (parentEventTypeIds.Length == 0)
+        // Two situations leave nothing to look up in the event sequence, and both resolve the placement
+        // straight from the parent key.
+        //
+        // The parent carries no event types of its own: there is no parent event by construction.
+        //
+        // The parent key is a constant: it names the document outright, so no event's source will ever
+        // equal it. Before this was accounted for, a parent that did carry its own event types sent the
+        // constant into the parent-event search, where it could only miss - and the miss did not surface
+        // as an error. Creation events still landed, because they create the child wherever they resolve,
+        // while every later event for an existing child silently went nowhere. A counting read model with
+        // a root total alongside a membership set kept its total accurate and quietly stopped applying
+        // updates and removals to its children.
+        if (parentEventTypeIds.Length == 0 || parentKeyIsConstant)
         {
             return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, key.Value)]) });
         }

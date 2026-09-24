@@ -10,9 +10,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that decrypts
-/// PII fields in the initial state using the stored <see cref="WellKnownProperties.Subject"/> field.
+/// compliance (<c language="csharp">[PII]</c>) and security (<c language="csharp">[Encrypted]</c>) fields in the initial state using
+/// the stored <see cref="WellKnownProperties.Subject"/> field.
 /// </summary>
-/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
+/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for decrypting the fields.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this step belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this step belongs to.</param>
 public class DecryptInitialState(
@@ -29,7 +30,7 @@ public class DecryptInitialState(
         }
 
         var schema = projection.TargetReadModelSchema;
-        if (!schema.HasComplianceMetadata())
+        if (!schema.HasSchemaMetadata())
         {
             return context;
         }

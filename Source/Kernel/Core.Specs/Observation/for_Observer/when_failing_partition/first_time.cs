@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Moq;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_failing_partition;
 
@@ -21,4 +22,5 @@ public class first_time : given.an_observer
     [Fact] void should_have_the_correct_tail() => _failedPartitionsState.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_have_the_correct_message() => _failedPartitionsState.Partitions.First().Attempts.First().Messages.First().ShouldEqual(Message);
     [Fact] void should_have_the_correct_stack_trace() => _failedPartitionsState.Partitions.First().Attempts.First().StackTrace.ShouldEqual(StackTrace);
+    [Fact] void should_register_a_retry_reminder_due_after_the_backoff_delay_that_repeats_every_minute() => _silo.ReminderRegistry.Mock.Verify(_ => _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), EventSourceId, TimeSpan.FromSeconds(2), TimeSpan.FromMinutes(1)), Times.Once);
 }

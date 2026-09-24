@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
@@ -23,7 +22,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
 /// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for storage access.</param>
-/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for releasing (decrypting) PII before hashing.</param>
+/// <param name="complianceManager"><see cref="IJsonSchemaMetadataManager"/> for releasing (decrypting) PII before hashing.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 /// <param name="logger">The logger.</param>
 public class ReindexConstraintsStep(
@@ -31,7 +30,7 @@ public class ReindexConstraintsStep(
     IPersistentState<ReindexConstraintsStepState> state,
     IJobStepThrottle throttle,
     IStorage storage,
-    IJsonComplianceManager complianceManager,
+    IJsonSchemaMetadataManager complianceManager,
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<ReindexConstraintsStep> logger) : JobStep<ReindexConstraintsRequest, object, ReindexConstraintsStepState>(state, throttle, logger), IReindexConstraintsStep
 {
@@ -181,7 +180,7 @@ public class ReindexConstraintsStep(
     /// <returns>The released (decrypted) content, or the original content when the event carries no compliance metadata.</returns>
     async Task<ExpandoObject> ReleaseContent(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, AppendedEvent @event, EventTypeSchema eventSchema)
     {
-        if (!eventSchema.Schema.HasComplianceMetadata())
+        if (!eventSchema.Schema.HasSchemaMetadata())
         {
             return @event.Content;
         }

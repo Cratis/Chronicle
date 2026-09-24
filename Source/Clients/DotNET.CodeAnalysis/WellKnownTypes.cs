@@ -148,6 +148,11 @@ public static class WellKnownTypes
     public const string PiiAttributeName = "Cratis.Chronicle.Compliance.GDPR.PIIAttribute";
 
     /// <summary>
+    /// The full name of the Encrypted attribute.
+    /// </summary>
+    public const string EncryptedAttributeName = "Cratis.Chronicle.ProtectedValues.EncryptedAttribute";
+
+    /// <summary>
     /// The full name of the Arc model-bound ReadModel attribute.
     /// </summary>
     /// <remarks>

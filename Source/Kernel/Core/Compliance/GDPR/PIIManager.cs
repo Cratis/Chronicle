@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
@@ -37,6 +38,7 @@ public class PIIManager(
     /// <inheritdoc/>
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
     {
+        ThrowIfEncryptedValueIdentifier(identifier);
         var key = GetKey();
         List<Exception> failures = [];
         var eventStores = await EventStoresToReach(key, failures);
@@ -66,6 +68,7 @@ public class PIIManager(
     /// <inheritdoc/>
     public async Task AllowNewEncryptionKeyFor(EncryptionKeyIdentifier identifier)
     {
+        ThrowIfEncryptedValueIdentifier(identifier);
         var key = GetKey();
         List<Exception> failures = [];
         var eventStores = await EventStoresToReach(key, failures);
@@ -83,6 +86,18 @@ public class PIIManager(
         }
 
         logger.AllowedNewEncryptionKey(BindingFor(identifier), key.Namespace, eventStores.Count, Names(eventStores));
+    }
+
+    static void ThrowIfEncryptedValueIdentifier(EncryptionKeyIdentifier identifier)
+    {
+        // Defense in depth: the PII path never constructs an identifier carrying the reserved marker (see
+        // EncryptedValueKeyIdentifiers), so this can only be reached when a caller on the compliance gRPC surface
+        // - the one entry point that accepts an arbitrary caller-supplied identifier - addresses an erasure or
+        // authorization at one directly.
+        if (EncryptedValueKeyIdentifiers.IsEncryptedValueIdentifier(identifier))
+        {
+            throw new EncryptionKeyIsNotErasable(identifier);
+        }
     }
 
     static string Names(IEnumerable<EventStoreName> eventStores) => string.Join(", ", eventStores.Select(_ => _.Value));

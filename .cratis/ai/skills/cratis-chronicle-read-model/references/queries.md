@@ -2,7 +2,7 @@
 # Read-model queries
 
 Verified against `Cratis.Arc.Core` and `Cratis.Arc.MongoDB` as checked out
-alongside `Cratis.Chronicle` `16.45.2`. Confirm the exact Arc package version in
+alongside `Cratis.Chronicle` `18.3.0`. Confirm the exact Arc package version in
 the consuming project before citing one.
 
 ## Where the pieces live

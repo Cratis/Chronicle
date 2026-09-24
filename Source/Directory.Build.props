@@ -77,6 +77,12 @@
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="NSubstitute" />
+        <!-- NSubstitute reaches Castle.Core transitively, and a PackageVersion only binds a direct PackageReference -
+             so the Castle.Core pin in Directory.Packages.props is inert without this line and NuGet floats to whatever
+             the graph offers. Castle.Core 5.2.1 cannot proxy an interface carrying a default implementation: mapping
+             the member yields a null declaring type and the substitute throws on first access. Chronicle's client
+             artifact interfaces use default interface members, so the difference is not theoretical. -->
+        <PackageReference Include="Castle.Core" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />

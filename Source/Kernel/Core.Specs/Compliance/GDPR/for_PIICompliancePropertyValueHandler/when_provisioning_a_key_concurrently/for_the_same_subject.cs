@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler.when_provisioning_a_key_concurrently;
@@ -29,7 +30,8 @@ public class for_the_same_subject : Specification
     void Establish()
     {
         _keyStore = new InMemoryEncryptionKeyStorage();
-        _handler = new(_keyStore, new Encryption());
+        var encryption = new Encryption();
+        _handler = new(new ManagedEncryptionKeyProvisioner(_keyStore, encryption), _keyStore, encryption);
         _plaintexts = Enumerable.Range(0, Count).Select(i => $"secret-{i}").ToArray();
     }
 

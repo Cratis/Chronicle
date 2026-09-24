@@ -26,8 +26,8 @@ This skill is verified against these exact sources:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `16.45.2` | event types, event-source identities, subjects, `[PII]` |
-| `Cratis.Chronicle.CodeAnalysis` | `16.45.2` | `CHR0012`, `CHR0026`, `CHR0034`, `CHR0035` |
+| `Cratis.Chronicle` | `18.3.0` | event types, event-source identities, subjects, `[PII]` |
+| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | `CHR0012`, `CHR0026`, `CHR0034`, `CHR0035` |
 
 Reverify product sources before claiming support for another version.
 
@@ -156,3 +156,11 @@ remain separately authorized; a ready model authorizes none of them.
 - Personal data has a decided subject, and the subject is person-level or the
   trade-off is surfaced.
 - The specification outline names the failures, not only the happy path.
+
+## Route near misses
+
+- Modeling the same system as a **Screenplay `.play` document** rather than as a
+  brief for hand-written C#: `cratis-screenplay-event-modeling`. The method is the
+  same; the artifact is a file that compiles, and the four behavior types above
+  map onto its `StateChange`, `StateView`, `Automation` and `Translate` slices.
+- Drawing a decided model as a diagram: `cratis-event-model-diagram`.

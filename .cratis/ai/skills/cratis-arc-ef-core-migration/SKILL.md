@@ -16,9 +16,11 @@ Everything else is ordinary EF Core.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.EntityFrameworkCore` | `22.10.4` | `BaseDbContext`, `ReadOnlyDbContext`, `WithEntityFrameworkCore`, column helpers, `EntityFrameworkReadModelForCommandResolver` |
-| `Cratis.Arc.Core` | `22.10.4` | `Cratis.Arc.Queries.ModelBound.ReadModelAttribute`, `ICanResolveReadModelForCommand` |
+| `Cratis.Arc.EntityFrameworkCore` | `22.16.0` | `BaseDbContext`, `ReadOnlyDbContext`, `WithEntityFrameworkCore`, column helpers, `EntityFrameworkReadModelForCommandResolver` |
+| `Cratis.Arc.Core` | `22.16.0` | `Cratis.Arc.Queries.ModelBound.ReadModelAttribute`, `ICanResolveReadModelForCommand` |
 | `Microsoft.EntityFrameworkCore` | `10.0.11` | EF Core itself, including all migration tooling |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify before claiming support for another version.
 
@@ -149,8 +151,9 @@ migrationBuilder.CreateTable(
 `StringColumn`, `NumberColumn<T>`, `BoolColumn`, `AutoIncrementColumn`,
 `GuidColumn` and `DateTimeOffsetColumn` all take the `MigrationBuilder` as their
 first argument — that is how they learn which database they are generating for.
-All of them default `nullable` to **`true`**, so a required column has to say
-`nullable: false` explicitly.
+All of them except `AutoIncrementColumn` default `nullable` to **`true`**, so a
+required column has to say `nullable: false` explicitly; `AutoIncrementColumn`
+has no `nullable` parameter and is always `NOT NULL`.
 
 On `MigrationBuilder`, for an existing table:
 

@@ -75,6 +75,15 @@ This is precisely why the contracts package matters so much: your client's copy 
 *is* the thing being checked. A hand-generated or stale set of bindings doesn't just risk subtly
 wrong types — it risks a hard rejection at connect time, which is the system working as intended.
 
+The comparison itself runs on the server, so it is only as current as the kernel build answering it.
+A kernel that has not been redeployed since a wire-compatibility defect was fixed in the check still
+computes the old, incorrect verdict — no client-side logic can make it compute a different one. For
+that situation specifically, give your client a deliberate, opt-in escape hatch (a connection-string
+option and a matching client option, following the same shape as your TLS-validation skip) that lets
+a caller bypass the check as a known, temporary trade-off, not a default. Document it as hiding *every*
+incompatibility the check would have caught, not just the one motivating the override — see the .NET
+client's `skipCompatibilityCheck` for the reference shape.
+
 ## Staying connected
 
 A gRPC channel doesn't tell you when the server it's pointed at goes away — TCP can stay

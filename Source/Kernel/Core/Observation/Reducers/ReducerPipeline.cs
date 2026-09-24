@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
 /// <param name="sink"><see cref="ISink"/> to use in pipeline.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
-/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting PII fields.</param>
+/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this pipeline belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this pipeline belongs to.</param>
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>

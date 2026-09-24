@@ -49,7 +49,7 @@ Restart the dev server after setting it — Vite reads the environment at startu
 | [`primeUiLicense.ts`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/primeUiLicense.ts) | The single accessor; resolves an empty value to `undefined` |
 | [`index.tsx`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/index.tsx) | Passes it to `CratisComponentsProvider` |
 | [`.storybook/preview.tsx`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/.storybook/preview.tsx) | The same, so Storybook renders unbannered too |
-| [`vite-env.d.ts`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.frontend/vite-env.d.ts) | Types it, so it is discoverable rather than a magic string |
+| [`.env.example`](https://github.com/Cratis/Chronicle/blob/main/Source/Workbench/.env.example) | Documents `PRIMEUI_LICENSE` and how to supply it locally or in CI without committing a key |
 
 ## Continuous integration
 

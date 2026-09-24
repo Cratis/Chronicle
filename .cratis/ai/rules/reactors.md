@@ -160,6 +160,23 @@ public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventCont
 
 > **Chronicle version note:** reactor side-effect handling of `EventForEventSourceId` wrappers has shipped since Chronicle 15.35.
 
+### Return a command (Arc + Chronicle)
+
+When the follow-up belongs to **another slice**, return its `[Command]` instead of an event — the same idiom as returning events, applied to intent. Arc's Chronicle integration executes a returned command through the full pipeline (validation, authorization, `Handle()`) in its own service scope; a collection is executed in order when **every** element is a command (events and commands do not mix in one return). An unauthorized, invalid or throwing result is a **side-effect failure** — it fails the partition like a failed append, so it is never silently dropped.
+
+```csharp
+public class StockKeeping : IReactor
+{
+    [OnceOnly]
+    public Task<DecreaseStock> BookReserved(BookReserved @event, EventContext context) =>
+        Task.FromResult(new DecreaseStock(@event.Isbn, @event.Quantity));
+}
+```
+
+- **A reactor runs with no principal.** It is not an HTTP request, so a returned command gated by `[Roles]`/`[Authorize]` is denied. Opt in on the reactor **class** with `[ExecuteCommandsAsSystem("<role>", …)]` (`Cratis.Arc.Chronicle.Reactors`), naming only the roles its returned commands need. The attribute covers **returned** commands only.
+- Mark the handler `[OnceOnly]` — a replay would otherwise execute the command again. Replay exclusion is not exactly-once: recovery re-delivers, so the command itself must be safe to repeat.
+- The imperative alternative — inject `ICommandPipeline` and call `Execute(command)` — remains supported (see the **cratis-arc-command-execution** skill). It needs `[OnceOnly]` (`ARCCHR0006` warns otherwise), its `CommandResult` must be inspected (a denied or invalid result is otherwise discarded), and it needs its own execution context: `[ExecuteCommandsAsSystem]` does not apply to it.
+
 ## External event stores (outbox / inbox)
 
 Cross-service events route through Chronicle's outbox/inbox rather than a shared log:
@@ -177,11 +194,12 @@ The default is fire-and-forget. When a caller's correctness depends on all obser
 
 1. **Idempotent** — Reactors may be called more than once for the same event (e.g. during replay or recovery). Design accordingly. For a side effect that must **not** repeat on replay (emails, payments, external writes), mark the handler method `[OnceOnly]` — Chronicle then skips that handler for every event arriving as part of a **replay** (observer rewind, redaction, revision). That is the whole of it: `[OnceOnly]` is replay-exclusion, **not** exactly-once and **not** a per-event-source counter. Recovering a failed partition re-delivers the event as an ordinary observation, so the handler runs again — which is the point of a retry. When the side effect must survive that retry too, take a `ReactorDelivery` parameter alongside the attribute and keep a receipt under its identity, which is stable across the failure and the recovery.
 2. **Use event data directly** — Never query the read model back inside a reactor. The event contains all the information you need.
-3. **Return events instead of injecting IEventLog** — If the reactor needs to produce new events, return them directly as `Task<TEvent>`, `Task<EventForEventSourceId>`, or a collection thereof. For commands in other slices, inject `ICommandPipeline` and execute a command. Avoid injecting `IEventLog` directly into a reactor.
+3. **Return events and commands instead of injecting the plumbing** — If the reactor needs to produce new events, return them directly as `Task<TEvent>`, `Task<EventForEventSourceId>`, or a collection thereof. For intent in another slice, return the `[Command]` (Arc executes it; a denied or invalid result fails the partition) — or inject `ICommandPipeline` and inspect the result. Either way the handler is `[OnceOnly]`. Avoid injecting `IEventLog` directly into a reactor.
 4. **Single responsibility** — Each reactor class should have a focused purpose. Multiple handler methods in one reactor are fine if they serve the same automation concern.
 5. **Failure behavior** — If a reactor throws, *or* a returned side-effect event fails to append (constraint violation, concurrency violation, or error), the failing event-source partition pauses until the issue is resolved. Repeated failures can **quarantine** the observer: once `QuarantineOnFailedPartitionCount`/`QuarantineOnFailedPartitionPercentage` (under `Observers`) is crossed, the observer enters the `Quarantined` state — reminders cancelled, retries stopped, automatic recovery suppressed. **A quarantined observer does NOT auto-resume on reconnect** — an operator must call `ClearObserverQuarantine()`. A periodic watchdog (default 60s, `WatchdogInterval`) re-routes stuck/dead observers but does not rescue quarantined ones. Design for resilience.
 6. **Don't throw to validate malformed inbound events** — reactors are not data-quality validators; invalid payloads must be rejected at the command/append site. When a malformed cross-service fact reaches a consumer, throwing just to reject it pauses the partition and can quarantine the whole observer. Instead append a clear failure/dead-letter event (e.g. `ProvisioningFailed`) or surface it via the operational failure path, and skip partial side effects.
 7. **No state** — Reactors should be stateless. Inject dependencies via primary constructor, but do not store mutable state on the class.
+8. **An unattended, irreversible pass reads the log, not the sink — and carries a fuse.** A reactor that deletes, revokes, bills or notifies *because a read model says something is absent* is trusting a materialized sink that is only as current as its observer: a paused partition, a replay in progress or a lagging projection makes "absent" true of the sink and false of the world. Decide from a **`[Passive]`** read model (computed on demand from the events at the moment the reactor runs) or from the events themselves. And the code shape cannot tell an **empty subject set** ("nothing to consider" — fail-safe) from an **empty qualifying set** ("nothing survived the filter" — fail-destructive: every subject is about to be acted on), so an unattended pass states its expected population, refuses when the count is implausible, and caps how many subjects one run may touch — the same discipline as [guards-and-fuses.md](./guards-and-fuses.md), applied to a reactor.
 
 ## Slice Types That Use Reactors
 
@@ -208,17 +226,22 @@ public class ProjectRegisteredNotifier(INotificationService notifications) : IRe
 ### Translation Example
 
 ```csharp
-public class StockKeeping(IStockKeeper stockKeeper, ICommandPipeline commandPipeline) : IReactor
+[ExecuteCommandsAsSystem("inventory")]
+public class StockKeeping : IReactor
 {
     /// <summary>
-    /// Reacts to a book reservation by decreasing stock.
+    /// Reacts to a book reservation by decreasing stock in the inventory slice.
     /// </summary>
     /// <param name="event">The event.</param>
     /// <param name="context">The event context.</param>
-    public async Task BookReserved(BookReserved @event, EventContext context) =>
-        await commandPipeline.Execute(new DecreaseStock(@event.Isbn, await stockKeeper.GetStock(@event.Isbn)));
+    /// <returns>The command Arc executes as this reactor's side effect.</returns>
+    [OnceOnly]
+    public Task<DecreaseStock> BookReserved(BookReserved @event, EventContext context) =>
+        Task.FromResult(new DecreaseStock(@event.Isbn, @event.Quantity));
 }
 ```
+
+The command is returned, not executed: Arc runs it through validation and authorization under the roles the class opts into, and a rejected command fails the partition instead of vanishing. `[OnceOnly]` keeps a replay from decreasing stock twice.
 
 ## Testing Reactors
 

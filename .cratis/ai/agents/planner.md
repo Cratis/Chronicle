@@ -5,12 +5,12 @@ description: >
   Breaks the work into ordered, parallelisable tasks, delegates each task
   to the right specialist agent, and ensures quality gates are met before
   the work is considered done.
-model: claude-sonnet-4-5
 tools:
-  - githubRepo
-  - codeSearch
-  - usages
-  - terminalLastCommand
+  - Read
+  - Grep
+  - Glob
+  - Bash
+  - Agent
 ---
 <!-- cratis-ai-managed: agents/planner.md -->
 

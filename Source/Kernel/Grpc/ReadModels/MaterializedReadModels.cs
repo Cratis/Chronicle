@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
-/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting compliance and security fields.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
