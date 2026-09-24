@@ -16,21 +16,20 @@ This skill is verified against these exact package contracts:
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `3.0.0` | its package manifest and component sources |
-| `@cratis/arc` | `>=20.3.1 <23` | peer range declared by `@cratis/components@3.0.0` |
-| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@3.0.0` |
-| `primereact` | `^11.0.0` | peer of `@cratis/components@3.0.0` |
-| `primeicons` | `^8.0.0` | peer of `@cratis/components@3.0.0` |
-| `react` | `^19.0.0` | peer of `@cratis/components@3.0.0` |
+| `@cratis/components` | `4.6.0` | its package manifest (`exports`, peers), `Source/DataPage/*`, `Source/DataTables/*`, `Source/Dialogs/*`, `Source/CommandDialog/*`, `Source/MIGRATION.md` |
+| `@cratis/arc` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.6.0` |
+| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.6.0` |
+| `react` | `^19.0.0` | peer of `@cratis/components@4.6.0` |
 
 `@cratis/arc.react.mvvm` ships with `@cratis/arc.react` and is an explicit
 application dependency. Reverify before claiming another version.
 
 ## Import from subpaths, never the root barrel
 
-The root `@cratis/components` entry exports **namespaces**, not components —
-`import { DataPage } from '@cratis/components'` yields a namespace object whose
-component is `DataPage.DataPage`. Always import from the subpath:
+The root `@cratis/components` entry is **setup-only** — `CratisComponentsProvider`
+and its configuration types. `import { DataPage } from '@cratis/components'` is a
+compile error; the Components 3 root namespaces are gone. Always import from the
+subpath:
 
 ```tsx
 import { DataPage, MenuItem, Column } from '@cratis/components/DataPage';
@@ -46,17 +45,20 @@ import { DialogProps, DialogResult, useDialog } from '@cratis/arc.react/dialogs'
   regenerated the TypeScript proxies. Generated proxies carry a
   `**DO NOT EDIT** - This file is an automatically generated file.` header —
   fix the C# source and rebuild instead of editing one.
-- The app must mount `CratisComponentsProvider` (from
-  `@cratis/components/Common`) above every Cratis component. PrimeReact 11
-  resolves its configuration from a provider, so components fail without one.
-- The app must import the stylesheets explicitly; components no longer import
+- The app must mount `CratisComponentsProvider` (from the package root,
+  `@cratis/components`) above every Cratis component — it carries the locale,
+  the Components-owned labels and the toast region (`toaster`).
+- The app must import the stylesheets explicitly; components do not import
   their own CSS:
 
   ```ts
-  import '@cratis/components/tokens';   // the --cratis-* token layer
-  import '@cratis/components/styles';   // every component stylesheet
-  import '@cratis/components/theme';    // optional license-free baseline look
+  import '@cratis/components/tokens';   // the --cratis-* token seam
+  import '@cratis/components/styles';   // structural rules for every component
+  import '@cratis/components/theme';    // optional: the maintained baseline look
   ```
+
+  Components has no vendor UI dependency — do not install PrimeReact or an icon
+  font for it. Menu icons are React component types (`react-icons` works).
 
   See the **cratis-components-styling** skill for the full theming contract.
 
@@ -82,9 +84,9 @@ export const AccountsPage = () => (
 );
 ```
 
-Only `DataPage.Columns` and `DataPage.MenuItems` exist as compound members.
-`MenuItem` and `Column` are **named exports** — there is no `DataPage.MenuItem`
-and no `DataPage.Column`. Pass `dataKey` whenever the read model has an
+`DataPage.Columns`, `DataPage.MenuItems` and `DataPage.MenuItem` are the
+compound members; `MenuItem` and `Column` are also **named exports** of the
+subpath (there is no `DataPage.Column`). Pass `dataKey` whenever the read model has an
 identity.
 
 See [data-page.md](references/data-page.md) for every prop, and
@@ -98,6 +100,7 @@ Menu items go in `<DataPage.MenuItems>`. `MenuItem` takes `command`, not
 string. `disableOnUnselected` greys the item out until a row is selected.
 
 ```tsx
+import { FaPencil, FaPlus } from 'react-icons/fa6';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import { useDialog } from '@cratis/arc.react/dialogs';
 import { CreateAccountDialog } from './CreateAccountDialog';
@@ -106,8 +109,8 @@ const [CreateAccountWrapper, showCreateAccount] = useDialog(CreateAccountDialog)
 
 <DataPage title='Accounts' query={AllAccounts} emptyMessage='No accounts yet.'>
     <DataPage.MenuItems>
-        <MenuItem label='Add account' icon={() => <i className='pi pi-plus' />} command={() => showCreateAccount()} />
-        <MenuItem label='Edit account' icon={() => <i className='pi pi-pencil' />} command={() => showEditAccount()} disableOnUnselected />
+        <MenuItem label='Add account' icon={FaPlus} command={() => showCreateAccount()} />
+        <MenuItem label='Edit account' icon={FaPencil} command={() => showEditAccount()} disableOnUnselected />
     </DataPage.MenuItems>
     <DataPage.Columns>
         <Column field='name' header='Name' />
@@ -147,9 +150,9 @@ export const CreateAccountDialog = () => {
 };
 ```
 
-Never put a raw PrimeReact control inside a command dialog for a command value —
-it bypasses the field wrapper, so validation never re-runs and the submit button
-stays disabled. Seed values that must be present for validity with
+Never put a raw control (a `Common` `TextInput`, a native `<input>`) inside a
+command dialog for a command value — it is not bound to the command, so
+validation never re-runs and the submit button stays disabled. Seed values that must be present for validity with
 `initialValues`, not `onBeforeExecute`.
 
 ## Step 5 — Confirming, and showing that work is in progress

@@ -70,7 +70,7 @@ Behavior that can regress without TypeScript catching it:
 - Command orchestration outside `CommandDialog`: handling of unauthorized / invalid / exception / success outcomes.
 - React component rendering only when markup, wrapper behavior, disabled state, or integration with a wrapped component is the point.
 
-**Do not test:** generated Cratis proxies; framework/PrimeReact internals; CSS pixel-perfection; trivial presentational pass-throughs with no branch/derived behavior.
+**Do not test:** generated Cratis proxies; framework/Cratis Components internals; CSS pixel-perfection; trivial presentational pass-throughs with no branch/derived behavior.
 
 ## View models
 
@@ -91,9 +91,9 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { vi } from 'vitest';
 
-vi.mock('primereact/dialog', () => ({
-    Dialog: (props: { footer?: React.ReactNode; children?: React.ReactNode }) =>
-        React.createElement('div', null, props.footer, props.children),
+vi.mock('@cratis/components/Dialogs', () => ({
+    Dialog: (props: { buttons?: React.ReactNode; children?: React.ReactNode }) =>
+        React.createElement('div', null, props.children, props.buttons),
 }));
 
 describe('when rendered while busy', () => {

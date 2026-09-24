@@ -10,6 +10,15 @@
             "command": "\u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-guard-writes.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-guard-store-mutations.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [

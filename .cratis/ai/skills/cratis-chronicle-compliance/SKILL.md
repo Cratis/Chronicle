@@ -18,8 +18,8 @@ This skill is verified against this exact public release:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `16.45.3` | `Cratis.Chronicle.Compliance.GDPR`, `Cratis.Chronicle.SubjectAttribute`, `IEventSequence.Redact`, `IReadModels.Release` |
-| `Cratis.Chronicle.CodeAnalysis` | `16.45.3` | `CHR0026`, `CHR0034`, `CHR0035`, `CHR0043`, `CHR0046` |
+| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Compliance.GDPR`, `Cratis.Chronicle.SubjectAttribute`, `IEventSequence.Redact`, `IReadModels.Release` |
+| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | `CHR0026`, `CHR0034`, `CHR0035`, `CHR0043`, `CHR0046` |
 
 Reverify product sources before claiming support for another version.
 
@@ -225,7 +225,18 @@ storage, configured under `Cratis:Chronicle:Compliance:Encryption`.
   noise: which person owns the resulting document?
 - Bearer tokens, magic links, and signed URLs are secrets, not durable facts.
   Store a keyed hash or an opaque reference. Chronicle has no attribute that
-  withholds a secret from the log.
+  withholds a secret from the log (Arc's `[NotAudited]` keeps a *command
+  property* out of the causation chain — see **cratis-arc-command** — but a
+  secret placed in an event payload is in the log for good).
+- **Erasure is wider than the event log.** Crypto-shredding removes readability
+  of `[PII]` values in events and read models. It does nothing for a copy that
+  left Chronicle: an exported CSV, a generated PDF, a search index, an email
+  body, a blob the command uploaded, a database backup, or a restored
+  encryption-key backup that makes shredded ciphertext readable again. Model the
+  erasure request as a flow that covers those destinations too — and decide,
+  with the product owner, what happens when a backup is restored (re-erase on
+  restore, or a fence that refuses to restore keys). Those are product and legal
+  decisions; this skill only insists they are made, not left implicit.
 - If a subject boundary cannot be made person-level without changing product
   behavior, stop and surface the trade-off before implementing.
 

@@ -25,7 +25,7 @@ sidebar:
 ```
 
 - Product pages should declare `title` and `description`. The title becomes the page H1; the description feeds metadata and AI-facing exports.
-- Preserve existing frontmatter when editing unless the task deliberately changes it. The converter preserves only `title`, `description`, `sidebar`, and `tableOfContents`; it drops DocFX keys and other Starlight keys. Features such as `template`, `hero`, `banner`, `head`, `prev`, `next`, `slug`, and `draft` work only on site-level pages authored directly in the Documentation repository.
+- Preserve existing frontmatter when editing unless the task deliberately changes it. The converter preserves only `title`, `description`, `sidebar`, and `tableOfContents` from authored frontmatter; it drops DocFX keys and other Starlight keys. It generates `editUrl` separately from the owning product source path, so the page's edit action does not point to the synchronized copy. That link is the contribution path for a reader who is not set up locally: never hand-author `editUrl`, and after moving a page confirm its generated edit link still opens the file. Features such as `template`, `hero`, `banner`, `head`, `prev`, `next`, `slug`, and `draft` work only on site-level pages authored directly in the Documentation repository.
 - Product navigation comes from `toc.yml`, not Starlight autogeneration. `sidebar.badge` works, but `sidebar.order`, `sidebar.label`, and `sidebar.hidden` do not control product navigation.
 - A frontmatter-less page falls back to its first H1, but that loses the description and relies on converter inference. Do not add new pages that way.
 
@@ -51,7 +51,7 @@ sidebar:
 Use the least powerful format that communicates the idea:
 
 - Keep `.md` for headings, prose, links, GFM tables, fenced code, Mermaid/EventModeling diagrams, images, and Starlight aside directives.
-- Use `.mdx` only when the page needs imported Astro components, expressions, props, or named slots.
+- Use `.mdx` only when the page needs imported Astro components, expressions, props, or named slots. Every component costs machine readability: the Markdown mirror that assistants and "Copy Markdown" read keeps its imports and JSX. Spend that deliberately, where the component teaches better than plain Markdown.
 - Imports and JSX in `.md` fail silently: the import can render as visible prose and the component as an inert element. Permissive Markdown HTML allowlists can hide this mistake. A page using a component must be `.mdx`.
 - Do not rename a page to `.mdx` merely for a callout or diagram. Renames require checking `toc.yml`, inbound links, generated routes, and AI-facing Markdown output.
 - Do not add raw HTML, inline styling, scripts, or one-off visual components to decorate a product page. Reuse an established component or make an explicit reusable site change in the Documentation repository.
@@ -144,6 +144,6 @@ npm run check
 
 The local gate validates the authored repository in isolation. The full site check builds and syncs every available sibling product, runs site linting and rendered-link checks, and can expose unrelated sibling failures; diagnose those separately rather than silently waiving them. Some optional local tools skip when not installed, so name what actually ran.
 
-A successful build proves syntax, not presentation. For any aside, diagram, tabs, cards, or custom component change, use the `qa-cratis-docs` skill to inspect light and dark screenshots.
+A successful build proves syntax, not presentation. For any aside, diagram, tabs, cards, or custom component change, preview the owning site and inspect light and dark screenshots using its local screenshot workflow.
 
 End every file with a single trailing newline.

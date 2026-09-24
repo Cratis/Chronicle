@@ -22,9 +22,8 @@ case where the shape itself is data.
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `3.0.0` | its package manifest and the `SchemaEditor` / `ObjectContentEditor` sources |
-| `primereact` | `^11.0.0` | peer of `@cratis/components@3.0.0` |
-| `react` | `^19.0.0` | peer of `@cratis/components@3.0.0` |
+| `@cratis/components` | `4.6.0` | its package manifest and the `SchemaEditor` / `ObjectContentEditor` sources |
+| `react` | `^19.0.0` | peer of `@cratis/components@4.6.0` |
 
 ## The schema type these editors consume
 
@@ -148,10 +147,11 @@ among its siblings. Save is disabled while any name is invalid.
 
 ### Localization
 
-`SchemaEditorLabels` has ten fields, five of them accessible names:
-`edit`, `save`, `cancel`, `addProperty`, `actions`, `navigateBack`,
-`emptyMessage`, `navigateToItemDefinition`, `navigateToProperties`,
-`deleteProperty`. Pass `labels` with the ones you want to change — they merge
+`SchemaEditorLabels` has fourteen fields, nine of them accessible names:
+menu actions `edit`, `save`, `cancel`, `addProperty`; accessible names `actions`,
+`navigateBack`, `navigateToItemDefinition`, `navigateToProperties`,
+`propertyName`, `propertyType`, `arrayItemType`, `deleteProperty`; and the
+messages `emptyMessage`, `invalidJson`. Pass `labels` with the ones you want to change — they merge
 over the English defaults. Never rely on the built-in English strings in a
 localized application.
 
@@ -219,9 +219,11 @@ name — localize it). It is click-only, like the editors' own breadcrumbs.
 
 ## Styling
 
-Both editors expose `className` only. Restyle their internals through a global
-PrimeReact pass-through preset on the provider rather than per instance — see
-the **cratis-components-styling** skill.
+Both editors expose `className` only — no `pt`. Restyle their internals with CSS
+scoped under that class, reaching the controls they render (buttons, inputs,
+the embedded `Dropdown`) through their `data-cratis-part` values and the
+`--cratis-*` tokens; there is no global provider pass-through in Components 4 —
+see the **cratis-components-styling** skill.
 
 ## Verify
 

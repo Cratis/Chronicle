@@ -122,6 +122,7 @@ All identifiers, comments, JSDoc, and string literals must use **American Englis
 
 ## Folder Structure
 
+- **Never give a `.tsx` the same basename as a `.ts` in the same folder.** The Arc proxy generator emits `<Slice>.ts` beside the slice's C#; a component named `<Slice>.tsx` next to it is **silently dropped from the program**: for one basename TypeScript keeps only the `.ts`, so the component's type errors are never reported and `tsc -b` stays green while the file is broken (reproduced on TypeScript 6.0.3 and 7.0.2 with `include: ["src/**/*"]`). Name the component for what it renders (`Listing.tsx`, `RegisterAuthor.tsx`), never for the slice, and consider a repository spec that fails on any `.tsx` with a sibling `.ts` of the same name.
 - Do not prefix a file, component, type, or symbol with the name of its containing folder or the concept it belongs to. Instead, use folder structure to provide that context.
 - Favor functional folder structure over technical folder structure.
   - Group files by the feature or concept they belong to, not by their technical role.

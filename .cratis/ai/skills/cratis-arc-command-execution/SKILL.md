@@ -16,8 +16,10 @@ dispatch.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.10.4` | `Cratis.Arc.Commands.ICommandPipeline`, `CommandResult`, `ValidationResultSeverity` |
-| `Cratis.Arc.Chronicle` | `22.10.4` | analyzer `ARCCHR0006` for reactor replay |
+| `Cratis.Arc.Core` | `22.16.0` | `Cratis.Arc.Commands.ICommandPipeline`, `CommandResult`, `ValidationResultSeverity` |
+| `Cratis.Arc.Chronicle` | `22.16.0` | analyzer `ARCCHR0006` for reactor replay |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify before claiming support for another version.
 
@@ -29,6 +31,14 @@ handler — return an `EventForEventSourceId` from `Handle()` instead, and never
 inject `IEventLog` (`ARCCHR0007`).
 
 ## Inject and execute
+
+> **Reactors have a declarative alternative.** With the Arc Chronicle integration a
+> reactor handler can **return** the `[Command]` (or a collection of commands) and
+> Arc executes it; a denied or invalid result fails the partition instead of being
+> discarded, and `[ExecuteCommandsAsSystem]` on the reactor class supplies a
+> principal for those returned commands. That attribute does **not** cover manual
+> `Execute` calls — the form below needs its own execution context. See the
+> **cratis-chronicle-reactor** skill.
 
 ```csharp
 public class <Name>Reactor(ICommandPipeline pipeline) : IReactor

@@ -2,7 +2,7 @@
 # Dialogs reference
 
 The Cratis dialog wrappers own command execution, validation timing, busy
-state, and footer buttons. Never import `Dialog` from `primereact/dialog`.
+state, and footer buttons. Never use a vendor or hand-rolled modal — dialogs are Components-owned.
 
 The **components** live in `@cratis/components`; the **hooks, enums, and
 context** live in `@cratis/arc.react/dialogs`. `@cratis/components` exports no
@@ -42,10 +42,11 @@ first two is the normal case. `showDialog(input?)` resolves to
 `[DialogResult, TResponse?]` when the dialog closes.
 
 Inside the dialog, prefer plain typed props for input and take `closeDialog`
-from `useDialogContext<TResponse>()`:
+from `useDialogContext<TRequest, TResponse>()` — the **first** type parameter is
+the request the dialog was shown with, the second the response it closes with:
 
 ```tsx
-const { request, closeDialog } = useDialogContext<AccountCreated>();
+const { request, closeDialog } = useDialogContext<object, AccountCreated>();
 closeDialog(DialogResult.Ok, response);
 ```
 
@@ -87,7 +88,7 @@ The most-used props:
 | `validateOnInit` | validate on mount so pre-filled invalid values show immediately |
 | `initialFocus` | which control receives focus when the dialog opens |
 | `dismissable` | X, Escape, and backdrop dismissal |
-| `pt` / `ptOptions` / `unstyled` | PrimeReact pass-through |
+| `pt` | `DialogParts` — per-part attributes (`backdrop`, `positioner`, `root`, `header`, `title`, `close`, `content`, `footer`, `confirm`, `cancel`); `ptOptions`/`unstyled` are accepted no-ops |
 
 `CommandDialog.Column` exists for multi-column layouts:
 
@@ -133,8 +134,8 @@ wrapper close. Do not use `onConfirm` as a result handler.
 
 Every user-entered command value must be bound through a `CommandForm` field
 from `@cratis/components/CommandForm` (also published as
-`@cratis/components/CommandForm/fields`, the same module). A raw PrimeReact
-control bypasses the field wrapper, so validation never re-runs and the submit
+`@cratis/components/CommandForm/fields`, the same module). A raw control (a
+`Common` `TextInput`, a native `<input>`) is not bound to the command, so validation never re-runs and the submit
 button stays disabled.
 
 The full catalog: `InputTextField`, `PasswordField`, `NumberField`,
@@ -174,7 +175,7 @@ property descriptors, with `exclude` for the ones you do not want:
 
 ```tsx
 export const RenameDialog = () => {
-    const { closeDialog } = useDialogContext<{ name: string }>();
+    const { closeDialog } = useDialogContext<object, { name: string }>();
     const [name, setName] = useState('');
 
     return (
@@ -198,9 +199,10 @@ when omitted, `isBusy` `false`, `okLabel` `'Ok'`, `cancelLabel` `'Cancel'`,
 Two behaviors worth knowing:
 
 - `resizable` is accepted for compatibility but has **no effect** — the
-  PrimeReact 11 headless dialog has no resize.
+  Components dialog has no resize.
 - Passing a custom node to `buttons` instead of a `DialogButtons` member
-  removes the header close control, disables Escape, and means `onClose`,
+  removes the header close control and disables Escape/backdrop dismissal
+  (unless you also pass `dismissable` explicitly), and means `onClose`,
   `onCancel`, and `onConfirm` are never invoked. Close through
   `useDialogContext().closeDialog(...)`, or set `dismissable` explicitly.
 

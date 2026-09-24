@@ -44,10 +44,13 @@ From the owning repository:
 
 The local gate validates authored content without requiring every sibling product. The full site check synchronizes every available product and can expose unrelated sibling or optional-tool failures; diagnose and report those separately. Report which checks actually ran when local prose, Markdown, or external-link tools skip because their executables are absent.
 
+The published site builds when the Documentation repository's `main` changes and when a product repository dispatches `build-docs`. Product repositories such as Chronicle, Arc, and Components dispatch from a dedicated documentation workflow when `Documentation/**` changes on `main`, and also from their publish workflows. A merge is not proof the changed page is live: confirm that a site build containing it deployed before saying so. Because correcting a page is cheap, prefer a small accurate edit now over queuing a rewrite.
+
 Restart `npm run dev` after a build/check. The build re-sync can degrade a running dev server, producing 500s or missing table rendering. If a change still appears stale, clear `web/.astro` and `web/node_modules/.astro`, restart, and recheck before blaming the source.
 
 ## Add, move, rename, or delete a page
 
+- Adding a page inside the existing structure, with its `toc.yml` entry, is part of writing it. Adding a navigation bucket, reordering a product's navigation, or moving pages between products is a separate decision about the product's information architecture: make it when the request asks for it, not as a side effect of writing one page.
 - Product navigation comes from its `toc.yml`; site-level navigation comes from `astro.config.mjs`.
 - Product navigation buckets are defined per product in `PRODUCTS[].buckets`. Read the actual names and section lists before changing them.
 - Keep exactly one landing for a route. A sibling `<folder>.md[x]` collides with `<folder>/index.md[x]`; a legacy `.md` collision can move the directory index to `/overview/`, while other duplicate landing shapes can fail the build.

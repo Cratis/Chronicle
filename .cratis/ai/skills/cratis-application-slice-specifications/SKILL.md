@@ -20,10 +20,12 @@ This skill decides **which scenario** and **what to cover**. The C# mechanics
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Testing` | `22.10.4` | `CommandScenario<TCommand>` and the `CommandResult` assertions |
-| `Cratis.Arc.Chronicle.Testing` | `22.10.4` | `Given`, `EventLog`, `AppendedEvents` and the appended-event assertions on a command scenario |
-| `Cratis.Chronicle.Testing` | `16.45.2` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
+| `Cratis.Arc.Testing` | `22.16.0` | `CommandScenario<TCommand>` and the `CommandResult` assertions |
+| `Cratis.Arc.Chronicle.Testing` | `22.16.0` | `Given`, `EventLog`, `AppendedEvents` and the appended-event assertions on a command scenario |
+| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
 | `Cratis.Specifications.XUnit` | `4.x` | The `Specification` base and the `ShouldXxx` assertions |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 `Cratis.Testing` is the meta-package that brings `Cratis.Arc.Testing` and
 `Cratis.Arc.Chronicle.Testing` together. Reverify against the owning product
@@ -110,9 +112,13 @@ public class and_name_is_unique : Specification
 #endif
 ```
 
-The scenario's own surface is `Services`, `Context`, `Execute(command)` and
-`Validate(command)` — `Validate` runs the filters without the handler.
-Everything else is an extension method.
+The scenario's own surface is `Services`, `Context`, `Execute(command[, ct])`,
+`Validate(command)` (runs the filters without the handler), `LastResult`,
+`Operations` and the three operation assertions
+(`ShouldHaveExecutedOperation<T>()`, `ShouldHaveCompensatedOperation<T>()`,
+`ShouldHaveNoOperationInvocations()`); it is `IDisposable`/`IAsyncDisposable`.
+Seeding (`Given`), the event log and the event assertions arrive as extension
+members from the Chronicle integration.
 
 ## Step 5 — Seed prior state through `Given`
 
@@ -187,8 +193,10 @@ keyed by **command and event type**. They return `Task`, so the fact is
 
 ⚠️ On a command scenario the second argument is a **predicate**
 (`Func<TEvent, bool>`), not an assertion callback. The `Action<TEvent>` validator
-overloads exist only on the `IEventSequence` extensions in
-`Cratis.Chronicle.Testing`, which is a different receiver.
+shape lives on other receivers — the `IEventSequence` extensions in
+`Cratis.Chronicle.Testing`, `AppendedEventWithResult.ShouldHaveEvent<TEvent>(Action<TEvent>?)`,
+and the `IChronicleSetupFixture` extension in `Cratis.Chronicle.XUnit.Integration`
+— never on `CommandScenario`.
 
 Sequence numbers are **zero-based**: the first event is `0`, and the tail after a
 single append is `0`, never `1`.

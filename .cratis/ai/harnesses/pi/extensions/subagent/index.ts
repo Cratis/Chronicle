@@ -13,6 +13,10 @@
  *   - single:   { agent, task }
  *   - parallel: { tasks: [{ agent, task }, ...] }   (max 8, 4 concurrent)
  *   - chain:    { chain: [{ agent, task }, ...] }    (sequential, {previous} placeholder)
+ *
+ * Stand-down: when another extension already provides a delegation tool named `Agent` (pi-subagents,
+ * which reads the same `.pi/agents/*.md`), this tool removes itself from the session's active tools at
+ * session start and says so once — see `./delegation.ts`. Without such a tool it behaves unchanged.
  */
 
 import { spawn } from "node:child_process";
@@ -24,6 +28,7 @@ import { CONFIG_DIR_NAME, type ExtensionAPI, getAgentDir } from "@earendil-works
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
+import { foreignDelegationTool, standDownNotice, SUBAGENT_TOOL_NAME } from "./delegation.ts";
 
 const extensionPath = fileURLToPath(import.meta.url);
 const isPackagedExtension = extensionPath.includes(`${path.sep}package${path.sep}corpus${path.sep}`);
@@ -93,6 +98,20 @@ async function runSingleAgent(
 			exitCode: 1,
 			finalText: "",
 			stderr: `Unknown agent: "${agentName}". Available agents: ${available}.`,
+			step,
+		};
+	}
+
+	// A restricted agent whose restriction cannot be expressed in Pi is not launched at all: launching it
+	// with the full toolset would be the opposite of what its author declared (see AgentConfig.toolsError).
+	if (agent.toolsError) {
+		return {
+			agent: agentName,
+			agentSource: agent.source,
+			task,
+			exitCode: 1,
+			finalText: "",
+			stderr: agent.toolsError,
 			step,
 		};
 	}
@@ -244,8 +263,28 @@ export default function (pi: ExtensionAPI) {
 	} catch {
 		knownAgents = "";
 	}
+	// Yield to another extension's delegation tool. This can only happen at session start: getAllTools
+	// cannot be called while extensions load, and an extension loaded after this one is not visible yet.
+	// setActiveTools rebuilds the system prompt before the first turn, so the model never sees this tool.
+	let standDownNoticeShown = false;
+	pi.on("session_start", (_event, ctx) => {
+		try {
+			const foreign = foreignDelegationTool(pi.getAllTools());
+			if (!foreign) return;
+			const active = pi.getActiveTools();
+			if (!active.includes(SUBAGENT_TOOL_NAME)) return;
+			pi.setActiveTools(active.filter((name) => name !== SUBAGENT_TOOL_NAME));
+			if (ctx.hasUI && !standDownNoticeShown) {
+				standDownNoticeShown = true;
+				ctx.ui.notify(standDownNotice(foreign), "info");
+			}
+		} catch {
+			// Some hosts cannot list or switch tools; being unable to check is no reason to fail the session.
+		}
+	});
+
 	pi.registerTool({
-		name: "subagent",
+		name: SUBAGENT_TOOL_NAME,
 		label: "Subagent",
 		description: [
 			"Delegate a task to a specialized Cratis agent in an isolated context (separate pi process).",

@@ -15,9 +15,8 @@ field across every step is valid.
 
 | Package | Version | Verified from |
 | --- | --- | --- |
-| `@cratis/components` | `3.0.0` | its package manifest and `CommandDialog` sources |
-| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@3.0.0` |
-| `primereact` | `^11.0.0` | peer of `@cratis/components@3.0.0` |
+| `@cratis/components` | `4.6.0` | its package manifest, `Source/CommandDialog/*` (`StepperCommandDialog`, `CommandStepper`, `StepperPanel`), `Documentation/StepperCommandDialog/*`, `Documentation/CommandStepper/*` |
+| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.6.0` |
 
 ## Choose it over `CommandDialog` when
 
@@ -85,7 +84,7 @@ import { useDialog } from '@cratis/arc.react/dialogs';
 
 const [CreateProjectWrapper, showCreateProject] = useDialog(CreateProjectDialog);
 
-<MenuItem label='New project' icon={() => <i className='pi pi-plus' />} command={() => showCreateProject()} />
+<MenuItem label='New project' icon={FaPlus} command={() => showCreateProject()} />   // icon is a component type, e.g. from 'react-icons/fa6'
 <CreateProjectWrapper />
 ```
 
@@ -156,8 +155,6 @@ Stepper-level props (inherited from the stepper customization surface):
 | `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` |
 | `headerPosition` | `'top' \| 'bottom'` | `'top'` |
 | `linear` | `boolean` | `true` |
-| `showNavigation` | `boolean` | `true` |
-| `showSubmit` | `boolean` | `true` |
 | `start` / `end` | `React.ReactNode` | extra content beside the step headers |
 | `onChangeStep` | `(event: { index: number }) => void` | — |
 
@@ -165,12 +162,14 @@ Command-form props (`initialValues`, `currentValues`, `validateOn`,
 `validateOnInit`, `onSuccess`, `onValidationFailure`, `onFailed`,
 `autoServerValidate`, …) all apply as well.
 
-### Two pass-through targets
+### Two part targets
 
-The inherited `pt`, `ptOptions`, and `unstyled` target the **inner stepper**.
-Use `dialogPt`, `dialogPtOptions`, `dialogUnstyled`, and `dialogClassName` to
-reach the **outer dialog**. Getting these the wrong way round is the usual cause
-of a pass-through that appears to do nothing.
+The inherited `pt` (`StepperParts`: `root`, `list`, `step`, `header`, `number`,
+`title`, `separator`, `panels`, `panel`) targets the **inner stepper**. Use
+`dialogPt` (`DialogParts`) and `dialogClassName` to reach the **outer dialog**.
+Getting these the wrong way round is the usual cause of a `pt` that appears to do
+nothing. (`ptOptions`/`unstyled` and their `dialog*` twins are accepted for
+Components 3 source compatibility and do nothing.)
 
 ## Dismissal while the command runs
 
@@ -194,7 +193,7 @@ children.
 | The same property bound on two steps | Each property appears on exactly one step |
 | A `StepperPanel` without `header` | `header` is the navigation label |
 | Several panels wrapped in one fragment | A fragment counts as **one** step — give each step its own `StepperPanel` child |
-| A raw PrimeReact control for a command value | Use a `CommandForm` field, or validation never re-runs |
+| A raw control (`TextInput`, a native `<input>`) for a command value | Use a `CommandForm` field, or the value is never bound and validation never re-runs |
 | Seeding a required value in `onBeforeExecute` | Use `initialValues` |
 | `pt` applied expecting it to reach the dialog | `pt` targets the stepper; use `dialogPt` |
 

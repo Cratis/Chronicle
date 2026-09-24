@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/references/fluent-builder.md -->
 # The fluent projection builder
 
-Verified against `Cratis.Chronicle` `16.45.2`, namespace
+Verified against `Cratis.Chronicle` `18.3.0`, namespace
 `Cratis.Chronicle.Projections`.
 
 ## The interfaces
@@ -22,14 +22,25 @@ member that Chronicle does not read. Use
 `[Projection(id: "<id>", eventSequence: "<name>")]` when the identity or source
 sequence must be explicit.
 
-## `IProjectionBuilderFor<TReadModel>` — its own four members
+## `IProjectionBuilderFor<TReadModel>` — its own members
 
 ```csharp
 IProjectionBuilderFor<TReadModel> FromEventSequence(EventSequenceId eventSequenceId);
 IProjectionBuilderFor<TReadModel> ContainerName(string containerName);
 IProjectionBuilderFor<TReadModel> NotRewindable();
 IProjectionBuilderFor<TReadModel> Passive();
+IProjectionBuilderFor<TReadModel> VariantOf<TIdentity>(Expression<Func<TReadModel, object?>> keyAccessor);
+IProjectionBuilderFor<TReadModel> EntersOn<TEvent>();
 ```
+
+`VariantOf<TIdentity>` and `EntersOn<TEvent>` require `Cratis.Chronicle`
+`19.1.0` or later — newer than this file's `18.3.0` baseline. See
+[variants.md](variants.md) for the full mechanics: the identity type anchors a
+group of mutually exclusive read models, only the event named in `EntersOn`
+can create or resurrect the variant, and every other `.From<TEvent>()` on the
+same builder is automatically reclassified into an update-only join. There is
+no fluent equivalent of the model-bound `[GlobalFor<T>]` shared handler — a
+mapping shared across variants is repeated on each variant's builder.
 
 ## Inherited from `IProjectionBuilder<TReadModel, TBuilder>`
 

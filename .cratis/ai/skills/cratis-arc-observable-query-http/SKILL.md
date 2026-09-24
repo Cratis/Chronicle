@@ -14,7 +14,9 @@ request is made. Choose the transport first, then the command.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Arc.Core` | `22.10.4` | `ObservableQueryHttp`, `ObservableQueryHandler`, the demultiplexer routes |
+| `Cratis.Arc.Core` | `22.16.0` | `ObservableQueryHttp`, `ObservableQueryHandler`, the demultiplexer routes |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify before claiming support for another version. This skill is read-only
 inspection of an endpoint the user already has; it neither implements the query
@@ -30,7 +32,12 @@ handler decides in this order:
    (case-insensitive);
 3. **plain HTTP** — everything else, answered once and closed.
 
-A plain `curl` sends neither, so it always lands on the third case.
+A plain `curl` sends neither, so it always lands on the third case — and there
+the two result shapes part ways: an **`ISubject<T>`** query answers with one
+`QueryResult` as described below, while an **`IAsyncEnumerable<T>`** query
+answers **HTTP 400** with `{ "message": "AsyncEnumerable queries require WebSocket connection" }`
+and never a `QueryResult`. Everything that follows on this page is about
+`ISubject<T>`; inspect an `IAsyncEnumerable<T>` query over WebSocket.
 
 ## Snapshot: the current value, once
 
@@ -38,7 +45,7 @@ A plain `curl` sends neither, so it always lands on the third case.
 curl "https://<host>/<api-prefix>/<route>"
 ```
 
-The response is one JSON `QueryResult`.
+The response is one JSON `QueryResult` (for an `ISubject<T>` query — see above).
 
 ⚠️ **When the observable has not produced its first value yet, this returns HTTP
 202 Accepted with a not-ready result** — no exception, no data. That is a normal

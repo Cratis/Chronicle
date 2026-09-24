@@ -25,8 +25,8 @@ This skill is verified against these exact sources:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `16.45.2` | `Cratis.Chronicle.Reactors`, `Cratis.Chronicle.Reactors.SideEffects`, `Cratis.Chronicle.EventSequences`, `Cratis.Chronicle.Events` |
-| `Cratis.Chronicle.CodeAnalysis` | `16.45.2` | `CHR0004`, `CHR0005`, `CHR0008`, `CHR0013`, `CHR0022`, `CHR0031`, `CHR0032` |
+| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Reactors`, `Cratis.Chronicle.Reactors.SideEffects`, `Cratis.Chronicle.EventSequences`, `Cratis.Chronicle.Events` |
+| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | `CHR0004`, `CHR0005`, `CHR0008`, `CHR0013`, `CHR0022`, `CHR0031`, `CHR0032` |
 
 Reverify product sources before claiming support for another version.
 
@@ -281,18 +281,32 @@ selection, a reactor or a reducer is where it happens.
 ## Translation via a command
 
 A translation that adapts one area's events into another's intent runs a command
-rather than appending directly. `ICommandPipeline` is an **Arc** type
-(`Cratis.Arc.Commands`), not a Chronicle one:
+rather than appending directly. With the Arc Chronicle integration the handler
+**returns** the command — the same shape as returning an event — and Arc executes
+it through validation and authorization; a denied, invalid or throwing result is a
+side-effect failure that fails the partition rather than being dropped:
 
 ```csharp
-using Cratis.Arc.Commands;
+using Cratis.Arc.Chronicle.Reactors;
 
-public class <ReactorName>(ICommandPipeline commandPipeline) : IReactor
+[ExecuteCommandsAsSystem("<role the command requires>")]   // only when the command is [Roles]/[Authorize]-gated
+public class <ReactorName> : IReactor
 {
-    public async Task <MethodName>(<EventName> @event, EventContext context) =>
-        await commandPipeline.Execute(new <CommandName>(@event.<Property>));
+    [OnceOnly]
+    public Task<<CommandName>> <MethodName>(<EventName> @event, EventContext context) =>
+        Task.FromResult(new <CommandName>(@event.<Property>));
 }
 ```
+
+A reactor runs with **no principal**; `[ExecuteCommandsAsSystem]` (class-level,
+`Cratis.Arc.Chronicle.Reactors`) supplies one for the **returned** commands only.
+A collection return is executed as commands when every element is a command.
+
+The imperative form — inject `ICommandPipeline` (`Cratis.Arc.Commands`) and call
+`Execute(command)` — is still supported and is the subject of the
+**cratis-arc-command-execution** skill. It needs `[OnceOnly]` as well (`ARCCHR0006`
+warns), the `CommandResult` must be inspected, and `[ExecuteCommandsAsSystem]`
+does not cover it.
 
 ## Failure behavior
 
