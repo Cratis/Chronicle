@@ -80,7 +80,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
         {
             label: strings.eventStore.namespaces.observers.actions.replay,
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
-            disabled: !viewModel.selectedObserver,
+            disabled: !viewModel.canReplay,
             command: () => viewModel.replay(params.eventStore!, params.namespace!)
         },
         {
