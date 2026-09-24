@@ -39,7 +39,19 @@ public class Recommendation<TRequest> : Grain<RecommendationState>, IRecommendat
     /// <inheritdoc/>
     public async Task Ignore()
     {
-        await ClearStateAsync();
+        // Marked, not cleared. Clearing it only removed the row - the evaluation that raised it is
+        // unchanged, so the next client reconnect raised it again and the ignore looked like it had
+        // done nothing at all.
+        State.IsIgnored = true;
+        await WriteStateAsync();
+        DeactivateOnIdle();
+    }
+
+    /// <inheritdoc/>
+    public async Task Unignore()
+    {
+        State.IsIgnored = false;
+        await WriteStateAsync();
         DeactivateOnIdle();
     }
 
