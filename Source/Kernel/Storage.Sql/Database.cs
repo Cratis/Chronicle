@@ -143,10 +143,22 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
         var key = $"jobs:{eventStore}:{@namespace}:{connectionString}";
-        return _jobsOptions.GetOrAdd(
+        var dbContextOptions = _jobsOptions.GetOrAdd(
             key,
             static (_, args) => BuildOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>(args.serviceProvider, args.connectionString),
             (serviceProvider, connectionString));
+
+        if (!_migratedKeys.ContainsKey(key))
+        {
+            // The Cratis.Orleans.Storage.Sql package ships no EF Core migrations for JobsDbContext, so its
+            // schema is created directly from the model rather than through MigrateAsync. Task.Run avoids
+            // deadlocking Orleans grain task schedulers: the resolver here is a synchronous delegate called
+            // from within a grain activation, and the async continuations below must not be posted back to
+            // the ActivationTaskScheduler, which would happen with a direct GetAwaiter().GetResult().
+            Task.Run(() => EnsureJobsSchemaCreatedOnce(key, connectionString, dbContextOptions)).GetAwaiter().GetResult();
+        }
+
+        return dbContextOptions;
     }
 
     /// <inheritdoc/>
@@ -513,6 +525,50 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         }
 
         await MigrateWithLock(context, connectionString);
+        _migratedKeys.TryAdd(key, true);
+    }
+
+    /// <summary>
+    /// Creates the <see cref="Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext"/> schema for a connection once.
+    /// </summary>
+    /// <param name="key">The cache key identifying this event store namespace's jobs schema.</param>
+    /// <param name="connectionString">The connection string used as the lock key.</param>
+    /// <param name="dbContextOptions">The <see cref="DbContextOptions{JobsDbContext}"/> to create a context from.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// The Cratis.Orleans.Storage.Sql package ships no EF Core migrations for <see cref="Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext"/>,
+    /// so its schema is created directly from the model with <c language="csharp">EnsureCreatedAsync</c> rather than through <c language="csharp">MigrateAsync</c>.
+    /// </remarks>
+    async Task EnsureJobsSchemaCreatedOnce(string key, string connectionString, DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> dbContextOptions)
+    {
+        if (_migratedKeys.ContainsKey(key))
+        {
+            return;
+        }
+
+#pragma warning disable CA2000
+        var dbContext = new Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext(dbContextOptions);
+#pragma warning restore CA2000
+        await using (dbContext)
+        {
+            await EnsureDatabaseExists(dbContext, connectionString);
+
+            var migrationLock = _migrationLocks.GetOrAdd(connectionString, _ => new SemaphoreSlim(1, 1));
+            await migrationLock.WaitAsync();
+            try
+            {
+                await dbContext.Database.EnsureCreatedAsync();
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                // A concurrent call already created the schema. Safe to ignore: the schema is in the correct final state.
+            }
+            finally
+            {
+                migrationLock.Release();
+            }
+        }
+
         _migratedKeys.TryAdd(key, true);
     }
 
