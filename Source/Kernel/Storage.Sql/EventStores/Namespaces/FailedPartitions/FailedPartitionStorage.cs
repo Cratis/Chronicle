@@ -53,6 +53,28 @@ public class FailedPartitionStorage(
     }
 
     /// <inheritdoc/>
+    public async Task RemoveAllFor(ObserverId observerId)
+    {
+        if (observerId is null || string.IsNullOrEmpty(observerId.Value))
+        {
+            return;
+        }
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observerIdValue = observerId.Value;
+        var entities = await scope.DbContext.FailedPartitions
+            .Where(failedPartition => failedPartition.ObserverId == observerIdValue)
+            .ToListAsync();
+        if (entities.Count == 0)
+        {
+            return;
+        }
+
+        scope.DbContext.FailedPartitions.RemoveRange(entities);
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task<Concepts.Observation.FailedPartitions> GetFor(ObserverId? observerId)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
