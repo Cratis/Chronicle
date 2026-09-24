@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
@@ -44,8 +45,9 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="eventSequenceMigrator">The <see cref="IEventSequenceMigrator"/> for managing event sequence table migrations.</param>
 /// <param name="uniqueConstraintMigrator">The <see cref="IUniqueConstraintMigrator"/> for managing unique constraint table migrations.</param>
 /// <param name="readModelMigrator">The <see cref="IReadModelMigrator"/> for managing read model table migrations.</param>
+/// <param name="logger">The <see cref="ILogger{TCategoryName}"/>.</param>
 [IgnoreConvention]
-public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator, IReadModelMigrator readModelMigrator) : IDatabase
+public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator, IReadModelMigrator readModelMigrator, ILogger<Database> logger) : IDatabase
 {
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
@@ -687,20 +689,28 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         return databaseType switch
         {
             DatabaseType.Sqlite => ReplaceFilename(suffix),
-            DatabaseType.PostgreSql => AppendToDatabaseName("Database", suffix),
-            DatabaseType.SqlServer => AppendToDatabaseName(GetSqlServerDatabaseKey(), suffix),
+            DatabaseType.PostgreSql => AppendToDatabaseName("Database", suffix, databaseType),
+            DatabaseType.SqlServer => AppendToDatabaseName(GetSqlServerDatabaseKey(), suffix, databaseType),
             _ => connectionString,
         };
     }
 
-    string AppendToDatabaseName(string key, string suffix)
+    string AppendToDatabaseName(string key, string suffix, DatabaseType databaseType)
     {
         var builder = new DbConnectionStringBuilder { ConnectionString = options.Value.Storage.ConnectionDetails };
         if (!builder.TryGetValue(key, out var current))
         {
             return options.Value.Storage.ConnectionDetails;
         }
-        builder[key] = $"{current}{suffix}";
+
+        var logicalName = $"{current}{suffix}";
+        var physicalName = DerivedDatabaseName.WithinBudget(logicalName, DerivedDatabaseName.MaxBytesFor(databaseType));
+        if (physicalName != logicalName)
+        {
+            logger.DerivedDatabaseNameTruncated(logicalName, physicalName);
+        }
+
+        builder[key] = physicalName;
         return builder.ConnectionString;
     }
 
