@@ -31,5 +31,5 @@ public class and_the_target_is_an_expando_object : Specification
 
     [Fact] void should_not_have_a_value() => _value.ShouldBeNull();
     [Fact] void should_report_it_has_no_value() => _hasValue.ShouldBeFalse();
-    [Fact] void should_leave_the_target_untouched() => ((IDictionary<string, object>)_target).ShouldBeEmpty();
+    [Fact] void should_leave_the_target_untouched() => _target.Any().ShouldBeFalse();
 }
