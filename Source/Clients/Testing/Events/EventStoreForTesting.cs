@@ -57,6 +57,7 @@ using InMemoryUniqueEventTypesConstraintsStorage = Cratis.Chronicle.Storage.InMe
 using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
+using ObserversImpl = Cratis.Chronicle.Observation.Observers;
 using ReactorsImpl = Cratis.Chronicle.Reactors.Reactors;
 using WebhooksImpl = Cratis.Chronicle.Webhooks.Webhooks;
 
@@ -88,6 +89,7 @@ public class EventStoreForTesting : IEventStore
     readonly Lazy<IExternalServices> _externalServices;
     readonly Lazy<IEventStoreSubscriptions> _subscriptions;
     readonly Lazy<IFailedPartitions> _failedPartitions;
+    readonly Lazy<IObservers> _observers;
     readonly Lazy<IJobs> _jobs;
     readonly Lazy<IUnitOfWorkManager> _unitOfWorkManager;
     readonly Lazy<IEventSeeding> _seeding;
@@ -242,6 +244,7 @@ public class EventStoreForTesting : IEventStore
             this,
             NullLogger<EventStoreSubscriptionsImpl>.Instance));
         _failedPartitions = new Lazy<IFailedPartitions>(() => new FailedPartitionsImpl(this));
+        _observers = new Lazy<IObservers>(() => new ObserversImpl(this));
         _jobs = new Lazy<IJobs>(() => new JobsImpl(this));
         _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this));
         _patterns = new Lazy<IPatterns>(() => new Patterns.Patterns(this));
@@ -300,6 +303,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IFailedPartitions FailedPartitions => _failedPartitions.Value;
+
+    /// <inheritdoc/>
+    public IObservers Observers => _observers.Value;
 
     /// <inheritdoc/>
     public IJobs Jobs => _jobs.Value;

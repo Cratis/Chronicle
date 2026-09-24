@@ -99,6 +99,11 @@ public interface IEventStore
     IEventStoreSubscriptions Subscriptions { get; }
 
     /// <summary>
+    /// Gets the <see cref="IObservers"/> for the event store, for operating on its observers.
+    /// </summary>
+    IObservers Observers { get; }
+
+    /// <summary>
     /// Gets the <see cref="IFailedPartitions"/> for the event store.
     /// </summary>
     IFailedPartitions FailedPartitions { get; }
