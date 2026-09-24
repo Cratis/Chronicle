@@ -169,6 +169,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Clearing {Count} failed partition(s) for observer by operator request")]
     internal static partial void ClearingFailedPartitions(this ILogger<Observer> logger, int count);
+
+    [LoggerMessage(LogLevel.Information, "Removing observer by operator request - unsubscribing, stopping its jobs and deactivating it")]
+    internal static partial void RemovingObserver(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes
