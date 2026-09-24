@@ -21,6 +21,10 @@ Reach for [OnceOnly](once-only) instead when the side effect should simply not h
 a replay needs to do something *different* rather than nothing. Neither covers the re-delivery that follows a
 failed partition being recovered — for that, see [Delivery identity](delivery-identity).
 
+Neither covers **catch-up** either: an observer working through a backlog after a restart is seeing those
+events for the first time, so this is not a replay and these markers do not apply. See
+[Catch-up](catch-up) for the handler that should only fire for something that genuinely just happened.
+
 :::note[Client coverage]
 TypeScript supports `@replay()` from `@cratis/chronicle` 6.9.0, with the same meaning as `Replay`. Elixir has no equivalent marker, so a replay always re-runs the regular handler there.
 :::

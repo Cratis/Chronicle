@@ -15,24 +15,36 @@ internal static class EventObservationStateConverters
     /// </summary>
     /// <param name="state"><see cref="EventObservationState"/> to convert.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Events.EventObservationState ToContract(this EventObservationState state) => state switch
+    /// <remarks>
+    /// Mapped flag by flag rather than by whole value: this is a [Flags] enum, so a switch on the exact value
+    /// silently answers None for any combination - which is how CatchUp, which travels alongside Initial,
+    /// would have been erased on the way to the client.
+    /// </remarks>
+    public static Contracts.Events.EventObservationState ToContract(this EventObservationState state)
     {
-        EventObservationState.None => Contracts.Events.EventObservationState.None,
-        EventObservationState.Initial => Contracts.Events.EventObservationState.Initial,
-        EventObservationState.Replay => Contracts.Events.EventObservationState.Replay,
-        _ => Contracts.Events.EventObservationState.None
-    };
+        var result = Contracts.Events.EventObservationState.None;
+        if (state.HasFlag(EventObservationState.Initial)) result |= Contracts.Events.EventObservationState.Initial;
+        if (state.HasFlag(EventObservationState.Replay)) result |= Contracts.Events.EventObservationState.Replay;
+        if (state.HasFlag(EventObservationState.CatchUp)) result |= Contracts.Events.EventObservationState.CatchUp;
+        return result;
+    }
 
     /// <summary>
     /// Convert to Chronicle version of <see cref="EventObservationState"/>.
     /// </summary>
     /// <param name="state"><see cref="Contracts.Events.EventObservationState"/> to convert.</param>
     /// <returns>Converted <see cref="EventObservationState"/>.</returns>
-    public static EventObservationState ToChronicle(this Contracts.Events.EventObservationState state) => state switch
+    /// <remarks>
+    /// Mapped flag by flag rather than by whole value: this is a [Flags] enum, so a switch on the exact value
+    /// silently answers None for any combination - which is how CatchUp, which travels alongside Initial,
+    /// would have been erased on the way to the client.
+    /// </remarks>
+    public static EventObservationState ToChronicle(this Contracts.Events.EventObservationState state)
     {
-        Contracts.Events.EventObservationState.None => EventObservationState.None,
-        Contracts.Events.EventObservationState.Initial => EventObservationState.Initial,
-        Contracts.Events.EventObservationState.Replay => EventObservationState.Replay,
-        _ => EventObservationState.None
-    };
+        var result = EventObservationState.None;
+        if (state.HasFlag(Contracts.Events.EventObservationState.Initial)) result |= EventObservationState.Initial;
+        if (state.HasFlag(Contracts.Events.EventObservationState.Replay)) result |= EventObservationState.Replay;
+        if (state.HasFlag(Contracts.Events.EventObservationState.CatchUp)) result |= EventObservationState.CatchUp;
+        return result;
+    }
 }
