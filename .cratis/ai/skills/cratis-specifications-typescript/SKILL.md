@@ -110,9 +110,12 @@ describe('when <behavior> with <condition>', given(a_<system_under_test>, contex
 }));
 ```
 
-`given()` instantiates the context class per specification so setup stays
-isolated. `beforeEach` performs the single action under specification; each
-`it()` asserts one outcome.
+`given()` constructs the context class **once per `describe`** and hands that
+instance to the suite — it does not re-create it per `it()`. Isolation therefore
+comes from the spec's shape: `beforeEach` performs the single action under
+specification, and each `it()` only asserts one outcome of it. Never put a second
+action in an `it()`; the stubs it would disturb are shared with the sibling
+`it()` blocks.
 
 ## Step 4 — Skip the context when nothing is shared
 

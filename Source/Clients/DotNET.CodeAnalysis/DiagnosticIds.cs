@@ -258,4 +258,14 @@ public static class DiagnosticIds
     /// A reducer method declares its current read model parameter as non-nullable.
     /// </summary>
     public const string ReducerCurrentReadModelMustBeNullable = "CHR0051";
+
+    /// <summary>
+    /// [Encrypted] cannot be applied to an EventSourceId&lt;T&gt;.
+    /// </summary>
+    public const string EncryptedOnEventSourceId = "CHR0052";
+
+    /// <summary>
+    /// A property or type resolves both [PII] and [Encrypted] compliance metadata.
+    /// </summary>
+    public const string PIIAndEncryptedCombined = "CHR0053";
 }

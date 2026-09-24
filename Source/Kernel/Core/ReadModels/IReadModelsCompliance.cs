@@ -9,19 +9,21 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Defines compliance apply/release operations for read model instances.
+/// Defines apply/release operations for read model instances - covering both compliance (<c language="csharp">[PII]</c>) and
+/// security (<c language="csharp">[Encrypted]</c>) schema metadata alike, via the same generalized dispatch. A read model may
+/// carry either, both, or neither; every method here handles whichever the schema actually declares.
 /// </summary>
 public interface IReadModelsCompliance
 {
     /// <summary>
-    /// Encrypts PII-annotated properties in a read model instance and writes the compliance subject.
+    /// Encrypts compliance- and security-annotated properties in a read model instance and writes the resolved subject.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the read model belongs to.</param>
     /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the read model belongs to.</param>
     /// <param name="schema">The <see cref="JsonSchema"/> describing the read model's properties.</param>
-    /// <param name="identifier">The compliance subject identifier used as the encryption key reference.</param>
+    /// <param name="identifier">The subject identifier used as the encryption key reference.</param>
     /// <param name="instance">The <see cref="ExpandoObject"/> read model instance to encrypt.</param>
-    /// <returns>A new <see cref="ExpandoObject"/> with PII fields encrypted and the subject written.</returns>
+    /// <returns>A new <see cref="ExpandoObject"/> with the protected fields encrypted and the subject written.</returns>
     Task<ExpandoObject> Apply(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
@@ -30,7 +32,7 @@ public interface IReadModelsCompliance
         ExpandoObject instance);
 
     /// <summary>
-    /// Release (decrypt) PII-annotated properties in a read model <see cref="JsonObject"/> using the stored subject.
+    /// Release (decrypt) compliance- and security-annotated properties in a read model <see cref="JsonObject"/> using the stored subject.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the read model belongs to.</param>
     /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the read model belongs to.</param>
@@ -44,7 +46,7 @@ public interface IReadModelsCompliance
         JsonObject instance);
 
     /// <summary>
-    /// Release (decrypt) PII-annotated properties in a single read model instance.
+    /// Release (decrypt) compliance- and security-annotated properties in a single read model instance.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the read model belongs to.</param>
     /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the read model belongs to.</param>
@@ -58,7 +60,7 @@ public interface IReadModelsCompliance
         ExpandoObject instance);
 
     /// <summary>
-    /// Release (decrypt) PII-annotated properties in a collection of read model instances.
+    /// Release (decrypt) compliance- and security-annotated properties in a collection of read model instances.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the read models belong to.</param>
     /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the read models belong to.</param>

@@ -18,8 +18,10 @@ separate `When`: seeding the events is what makes the projection run.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle.Testing` | `16.45.2` | `ReadModelScenario<TReadModel>` and its `Given` builder |
+| `Cratis.Chronicle.Testing` | `18.3.0` | `ReadModelScenario<TReadModel>` and its `Given` builder |
 | `Cratis.Specifications.XUnit` | `4.x` | The `Specification` base and the `ShouldXxx` assertions |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 ```bash
 dotnet add package Cratis.Chronicle.Testing

@@ -12,7 +12,9 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 /// </summary>
 public partial class EventContextPropertyExpressionResolver : IEventValueProviderExpressionResolver
 {
-    [GeneratedRegex("\\$eventContext\\((?<property>[A-Za-z.]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    // The property class allows '(' and ')' so a terminal derived-property-function call, such as
+    // Occurred.ISOWeek(), can appear inside the outer $eventContext(...) wrapper - see DerivedPropertyFunctions.
+    [GeneratedRegex("\\$eventContext\\((?<property>[A-Za-z.()]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     static partial Regex EventContextRegEx { get; }
 
     /// <inheritdoc/>

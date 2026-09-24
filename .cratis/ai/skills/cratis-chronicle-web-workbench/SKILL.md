@@ -23,7 +23,7 @@ This skill is verified against this exact source:
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` | `16.45.2` | the Workbench application, its hosting, screens, and commands |
+| `Cratis.Chronicle` | `18.3.0` | the Workbench application, its hosting, screens, and commands |
 
 Reverify before claiming a screen, route, command, or configuration key for
 another version.
@@ -73,7 +73,9 @@ Read these before putting a Workbench on any reachable network.
 - The server is designed to sit behind a proxy and trusts the immediate proxy's
   forwarded headers unconditionally. That is only safe when the proxy is the
   only route in.
-- The health endpoint and the connection-count endpoints answer anonymously.
+- The health endpoint, the antiforgery probe, the gRPC descriptor-set and
+  compatibility calls, the initial-admin-password endpoints, and the gRPC
+  `ResetKernelState` call answer anonymously (`[AllowAnonymous]`).
 
 ## The screens
 
@@ -81,16 +83,18 @@ Routes are grouped by scope. Event-store-scoped screens apply to the whole
 store; namespace-scoped screens apply to one tenant namespace.
 
 **Namespace-scoped:** Recommendations (the landing screen) · Jobs · Sequences ·
-Pivot (experimental) · Behavior patterns · Pattern heatmap · Observers · Failed
-partitions · Read Models · Identities · Seed Data.
+Pivot · Patterns · Pattern heatmap · Observers · Failed partitions · Read Models ·
+Identities · Seed Data.
 
 **Event-store-scoped:** Event Types · Read Model Types · Webhooks · External
-Services · Captures · Projections · Namespaces · Seed Data.
+Services · Captures · Projections (namespace-routed) · Namespaces · Seed Data.
 
-**System:** Users · Applications · Connected Clients · Development Tools.
+**System:** Users · Applications · Connected Clients · Servers · Development
+Tools (offered only when the server reports them available).
 
-Reducers, Reactors, and Sinks have routes but no menu entry. A Dashboard exists
-in the source but is fully disabled — it is not a shipping screen.
+Reducers, Reactors, Sinks and a store-wide Sequences view have routes but no menu
+entry (their menu lines are commented out in `EventStore.tsx`). There is no
+Dashboard screen; only a `Card`/`Chart` component pair written for one remains.
 
 ## What each screen can change
 
@@ -126,9 +130,13 @@ partition, stop/resume/delete job, and perform recommendation all fire on the
 first click. Decide before clicking, not after.
 
 **Reset kernel state is the most destructive operation in the product.** It is
-gated three ways — the endpoint exists only in development builds, the screen
-reports itself unavailable when the server says so, and a confirmation dialog
-guards the button. Never run it against a store whose data anyone still needs.
+gated three ways — the *operation* is compiled in only for development builds
+(`KernelStateResetter.IsAvailable`; in any other build the gRPC call still exists,
+answers anonymously, and is a no-op), the screen reports itself unavailable when
+the server says so, and a confirmation dialog guards the button. Never run it
+against a store whose data anyone still needs, and never assume a production
+build is protected by authentication here — it is protected by the operation
+not being there.
 
 ## Redaction and revision
 

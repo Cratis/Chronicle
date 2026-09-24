@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
@@ -41,7 +42,7 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
     protected ObjectComparer ObjectComparer { get; } = new();
 
     /// <summary>Gets the compliance manager performing the actual encryption and release.</summary>
-    protected JsonComplianceManager ComplianceManager { get; private set; } = default!;
+    protected JsonSchemaMetadataManager ComplianceManager { get; private set; } = default!;
 
     /// <summary>Gets the read-model compliance facade over <see cref="ComplianceManager"/>.</summary>
     protected ReadModelsCompliance Compliance { get; private set; } = default!;
@@ -75,10 +76,13 @@ public abstract class a_child_collection_compliance_scenario(MongoDBFixture fixt
         var typeFormats = new TypeFormats();
         var sinkConverter = new ExpandoObjectConverter(typeFormats);
         var complianceConverter = new Cratis.Chronicle.Json.ExpandoObjectConverter(typeFormats);
-        ComplianceManager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
-            NullLogger<JsonComplianceManager>.Instance);
+        var keyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+        ComplianceManager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
+                new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         Compliance = new ReadModelsCompliance(ComplianceManager, complianceConverter);
 
         _databaseName = $"chronicle_child_collection_pii_{Guid.NewGuid():N}";

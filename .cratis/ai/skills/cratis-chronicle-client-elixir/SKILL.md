@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-elixir
-description: Talk to a Chronicle server from an Elixir application with the cratis_chronicle Hex package - putting Chronicle.Client in a supervision tree, connection strings, use Chronicle.Events.EventType structs, Chronicle.append returning ok or error tuples, reactors with the @handles attribute and a handle/2 callback, model-bound read models, and the connection lifecycle phases and keepalive. Use when an OTP application appends to or observes a Chronicle event store. Do not use for the .NET, TypeScript, or Kotlin clients.
+description: Talk to a Chronicle server from an Elixir application with the cratis_chronicle Hex package - putting Chronicle.Client in a supervision tree, connection strings, use Chronicle.Events.EventType structs, Chronicle.append returning ok or error tuples, reactors with the @handles attribute and a handle/2 callback, model-bound and declarative read models/projections, variant_of/enters_on/GlobalHandler for an entity with mutually exclusive lifecycle shapes, and the connection lifecycle phases and keepalive. Use when an OTP application appends to or observes a Chronicle event store. Do not use for the .NET, TypeScript, or Kotlin clients.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-elixir/SKILL.md -->
@@ -13,33 +13,37 @@ to yours, and everything after that is ordinary OTP.
 
 ## Verified product sources
 
-This skill is verified against `Cratis/Chronicle.Elixir` at tag **`v2.2.0`**,
-which is the version actually published on Hex.
+This skill was written against `Cratis/Chronicle.Elixir` at tag **`v2.2.0`** and
+re-verified at **`v3.1.0`** (published on Hex as `3.1.0`; `3.0.0` is the
+Chronicle 17/18 wire migration — gRPC request/response shapes, no public API
+removed). Every module, function and option this skill names exists at `v3.1.0`;
+the `file:line` citations below were taken at `v2.2.0` and may have shifted.
 
 | Fact | Value | Source |
 | --- | --- | --- |
 | OTP app / Hex package | `:cratis_chronicle` | `Source/chronicle/mix.exs:14` |
-| Published version | `2.2.0` | hex.pm |
-| Elixir requirement | `~> 1.14` | `Source/chronicle/mix.exs:16` |
-| Contracts dependency | `cratis_chronicle_contracts` resolved to `16.13.4` | `Source/chronicle/mix.lock` |
+| Published versions | `3.1.0`, `3.0.0`, `2.2.0`, `2.1.x`, `2.0.0`, `1.0.x`, `0.x` — **no `2.3.0`** | hex.pm |
+| Elixir requirement | `~> 1.14` | `Source/chronicle/mix.exs` |
+| Contracts dependency | `cratis_chronicle_contracts` resolved to `18.2.0` at `v3.1.0` (`16.13.4` at `v2.2.0`) | `Source/chronicle/mix.lock` |
 
 > **The `v2.3.0` git tag was never published to Hex.** `mix deps.get` cannot
-> fetch it. Anything introduced there — notably the `Chronicle.Concept` macro,
-> which does not exist at `v2.2.0` — must not be documented as available.
+> fetch it. What it introduced — notably the `Chronicle.Concept` macro
+> (`use Chronicle.Concept, type: :string`, a single-value concept that carries its
+> `pii` classification once, mirroring `ConceptAs<T>`) — **is published from
+> `3.0.0`**. On `2.2.0` it does not exist; on `3.x` it is the preferred way to
+> classify a personal value.
 
 > **The repository's `VERSION` file says `0.0.5` and is a build-time
 > placeholder** overwritten by the publish workflow. Never quote it.
 
-> **Do not copy from the repository's root `README.md`.** At `v2.2.0` it uses
-> module names that do not exist — `use Chronicle.EventType`,
-> `use Chronicle.ReadModel`, `use Chronicle.Reactor`, `use Chronicle.Reducer`,
-> `use Chronicle.Seeder` (`README.md:9-13`, `:49`, `:54`). The real modules are
-> namespaced: `Chronicle.Events.EventType`, `Chronicle.ReadModels.ReadModel`,
-> `Chronicle.Reactors.Reactor`, `Chronicle.Reducers.Reducer`,
-> `Chronicle.Seeding.Seeder`. **Copy from `Documentation/client-snippets/`
-> instead** — those are CI-validated and correct at every version.
+> **The real modules are namespaced** — `Chronicle.Events.EventType`,
+> `Chronicle.ReadModels.ReadModel`, `Chronicle.Reactors.Reactor`,
+> `Chronicle.Reducers.Reducer`, `Chronicle.Seeding.Seeder`. The `v2.2.0` root
+> `README.md` used unnamespaced names that do not exist (`use Chronicle.EventType`,
+> …); the `3.x` README is correct. When in doubt, copy from
+> `Documentation/client-snippets/` — those are CI-validated at every version.
 
-> `Documentation/get-started.md:12` pins `{:cratis_chronicle, "~> 0.1"}`, which
+> `Documentation/get-started.md:13` pins `{:cratis_chronicle, "~> 0.1"}`, which
 > does not match the published `2.2.0`. Use a `2.x` requirement.
 
 ## Adding it
@@ -97,7 +101,7 @@ All configuration is **child-spec keyword options**. There is no
 | `:namespace` | `"Default"` — capital D | `:160` |
 | `:discover` | `true` | `:161` |
 | `:otp_app` | none; falls back to scanning loaded modules | `:168` |
-| `:event_types`, `:migrations`, `:reactors`, `:reducers`, `:read_models`, `:projections`, `:seeders`, `:webhooks`, `:event_store_subscriptions` | `[]`, merged with discovered | `:186-197` |
+| `:event_types`, `:migrations`, `:reactors`, `:reducers`, `:read_models`, `:projections`, `:seeders`, `:webhooks`, `:event_store_subscriptions`, `:global_handlers` | `[]`, merged with discovered | `:186-197` |
 | `:skip_tls_validation`, `:load_balancer`, `:grpc_options`, `:retry_attempts`, `:reconnect_base_delay`, `:reconnect_max_delay` | forwarded to the connection | — |
 
 > The moduledoc at `client.ex:81` says the namespace defaults to `"default"`.
@@ -212,7 +216,7 @@ the outcome.
 | `get_from_sequence_number/2` | | `:369` |
 | `get_tail_sequence_number/2` | | `:408` |
 
-Append options (`event_log.ex:79-94`): `:client`, `:namespace`,
+Append options (`event_log.ex:79-94`, plus `:occurred` read at `:720`): `:client`, `:namespace`,
 `:event_sequence_id` (default `"event-log"`), `:event_source_type` (default
 `"Default"`), `:event_stream_type` (default **`"All"`**), `:event_stream_id`
 (default `"Default"`), `:tags`, `:subject`, `:correlation_id`, `:identity`,
@@ -308,6 +312,78 @@ A standalone projection is `use Chronicle.Projections.Projection, model: Mod`
 `reduce(event, model_or_nil, context) :: struct()`. **Reducers run in your
 process**, so the reduction is Elixir code you own.
 
+#### Variants — mutually exclusive read models for one entity's lifecycle
+
+> Requires `cratis_chronicle` `3.4.0` or later — newer than this skill's
+> `3.1.0` baseline (`lib/chronicle/projections/variant_reclassifier.ex` and
+> siblings). Reverify before claiming support; take the version from hex.pm.
+
+Some entities do not have one shape for their whole lifetime — a work item is a
+backlog entry until a pull request exists for it, then it is a pull request
+until it merges. `variant_of/2` and `enters_on/1,2` are macros imported by
+**both** `use Chronicle.ReadModels.ReadModel` and
+`use Chronicle.Projections.Projection`, so the model-bound and declarative
+paths declare a variant identically:
+
+```elixir
+defmodule MyApp.ReadModels.WorkItem do
+end
+
+defmodule MyApp.ReadModels.BacklogItem do
+  use Chronicle.ReadModels.ReadModel
+  defstruct id: nil, title: nil
+
+  variant_of MyApp.ReadModels.WorkItem, key: :id
+  enters_on MyApp.Events.IssueCreated
+
+  from MyApp.Events.IssueCreated, set: [id: :event_source_id, title: :title]
+end
+
+defmodule MyApp.ReadModels.PullRequestItem do
+  use Chronicle.ReadModels.ReadModel
+  defstruct id: nil, pull_request_url: nil, build_status: nil
+
+  variant_of MyApp.ReadModels.WorkItem, key: :id
+  enters_on MyApp.Events.PullRequestCreated
+
+  from MyApp.Events.PullRequestCreated,
+    set: [id: :event_source_id, pull_request_url: :pull_request_url]
+
+  # not the entering event -> automatically reclassified into an update-only join
+  from MyApp.Events.BuildCompleted, set: [build_status: :build_status]
+end
+```
+
+`variant_of/2` takes `:key` — **required** — the field on this variant that
+carries the shared identity. `enters_on/1,2` is repeatable and its own `:key`
+option names an *event* property (defaults to `:event_source_id`); every
+`from`/`join` this variant declares for a non-entering event, whether declared
+locally or merged from a shared handler, is automatically reclassified into an
+update-only join keyed on `variant_of`'s `:key`.
+
+A mapping shared across every variant of an identity is a
+`Chronicle.Projections.GlobalHandler`, never registered as a projection on its
+own:
+
+```elixir
+defmodule MyApp.Projections.WorkItemTitleHandler do
+  use Chronicle.Projections.GlobalHandler, identity: MyApp.ReadModels.WorkItem
+
+  from MyApp.Events.TitleChanged, set: [title: :title]
+end
+```
+
+Register it explicitly with `global_handlers: [...]` on `Chronicle.Client`, or
+let `:otp_app` auto-discovery find it (modules exporting
+`__chronicle_global_handler__/1`). A mapping that targets a field some variant
+lacks raises `Chronicle.Projections.GlobalHandlerPropertyNotOnVariant` at
+registration, not a silently skipped mapping.
+
+**A variant with no `enters_on` raises
+`Chronicle.Projections.VariantMustDeclareEntersOnEvent`** at registration — a
+variant that could never be entered could never be written to at all, since
+every other handler on it is update-only.
+
 Querying (`lib/chronicle/read_models.ex`):
 
 ```elixir
@@ -399,9 +475,9 @@ attempt.
 
 | Pitfall | Why it bites |
 | --- | --- |
-| Copying the root `README.md` | Its module names do not exist at `v2.2.0` |
-| Using `Chronicle.Concept` | It exists only in the unpublished `v2.3.0` tag |
-| `{:cratis_chronicle, "~> 0.1"}` from the docs | Does not match the published `2.2.0` |
+| Copying the `v2.2.0` root `README.md` | Its module names do not exist; the `3.x` README is correct |
+| Using `Chronicle.Concept` on `2.2.0` | It ships from `3.0.0`; on `2.2.0` annotate fields with `pii/1,2` instead |
+| Copying the dependency line from the README | It lags the published version; take the version from hex.pm |
 | Quoting the `VERSION` file | It is a `0.0.5` build-time placeholder |
 | Putting configuration in `config.exs` | The client reads no application env; options are child-spec keywords |
 | Omitting `:otp_app` | Discovery falls back to scanning every loaded module |
@@ -413,6 +489,8 @@ attempt.
 | Appending from a `Task` and expecting the correlation id | Ambient context is per process |
 | Treating quiet observers as "no events" | Keepalive eviction silences observers while appends still succeed |
 | Shipping the default TLS behavior | `skip_tls_validation` defaults to `true` |
+| Forgetting `global_handlers:` or `:otp_app` discovery | A `GlobalHandler` module is never merged into its variants unless registered one way or the other |
+| A shared handler mapping a field one variant lacks | `GlobalHandlerPropertyNotOnVariant` at registration, not a silently skipped mapping |
 
 ## Verify
 
@@ -425,6 +503,8 @@ attempt.
 - Every `Chronicle.append/3` call site handles `{:error, _}` as well as `:ok`.
 - Every reactor's `@handles` list matches the clauses of its `handle/2`.
 - Read model module names have distinct final segments, or explicit ids.
+- Every variant group has at least one `enters_on` per variant, and every
+  `GlobalHandler` member exists on every variant it targets.
 - Every code example was copied from `Documentation/client-snippets/`, not from
   the README.
 - `mix compile --warnings-as-errors` and `mix test` are clean.

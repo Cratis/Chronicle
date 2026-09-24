@@ -120,6 +120,8 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
     internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Warning, "No catch-up job took ownership of the preparation - clearing it rather than waiting for a job that will never report")]
+    internal static partial void NoCatchUpJobTookOwnership(this ILogger logger);
     [LoggerMessage(LogLevel.Trace, "Registering partitions that are catching up")]
     internal static partial void RegisteringCatchingUpPartitions(this ILogger<Observer> logger);
 

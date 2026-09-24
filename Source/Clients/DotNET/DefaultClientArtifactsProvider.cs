@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -52,6 +53,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _reactorMiddlewares = [];
     IEnumerable<Type> _complianceForTypesProviders = [];
     IEnumerable<Type> _complianceForPropertiesProviders = [];
+    IEnumerable<Type> _securityForTypesProviders = [];
+    IEnumerable<Type> _securityForPropertiesProviders = [];
     IEnumerable<Type> _additionalEventInformationProviders = [];
     IEnumerable<Type> _constraintTypes = [];
     IEnumerable<Type> _uniqueConstraints = [];
@@ -151,6 +154,26 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     }
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> SecurityForTypesProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _securityForTypesProviders;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> SecurityForPropertiesProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _securityForPropertiesProviders;
+        }
+    }
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> AdditionalEventInformationProviders
     {
         get
@@ -242,6 +265,8 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _eventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>() || _.HasAttribute<EventTypeGenerationForAttribute>()).ToArray();
                 _complianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
                 _complianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
+                _securityForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideSecurityMetadataForType) && _.IsAssignableTo(typeof(ICanProvideSecurityMetadataForType))).ToArray();
+                _securityForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideSecurityMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideSecurityMetadataForProperty))).ToArray();
                 _projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
                 _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
                 _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();

@@ -6,8 +6,8 @@ in-process. They are the default for event-sourced *application* behavior. A
 library or framework repository reaches for one only to test the very engine it
 provides.
 
-Verified against `Cratis.Arc.Testing` `22.10.4` and `Cratis.Chronicle.Testing`
-`17.0.0`.
+Verified against `Cratis.Arc.Testing` `22.16.0` and `Cratis.Chronicle.Testing`
+`18.3.0`.
 
 | Helper | Exercises | Use for |
 | --- | --- | --- |
@@ -43,9 +43,12 @@ public class and_<condition> : Specification
 #endif
 ```
 
-`CommandScenario<TCommand>` itself exposes exactly `Services`, `Context`,
-`Execute`, and `Validate`. Everything else — seeding, the event log, and the
-assertions — arrives as extension members from `Cratis.Arc.Chronicle.Testing`.
+`CommandScenario<TCommand>` itself exposes `Services`, `Context`, `Execute`
+(two overloads), `Validate`, `LastResult`, `Operations`, the operation assertions
+`ShouldHaveExecutedOperation<T>()` / `ShouldHaveCompensatedOperation<T>()` /
+`ShouldHaveNoOperationInvocations()`, and `Dispose`/`DisposeAsync`. Seeding
+(`Given`), the event log and the *event* assertions arrive as extension members
+from `Cratis.Arc.Chronicle.Testing`.
 
 - **Event assertions** are extension methods keyed by command *and* event type:
   `ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId)`, its
@@ -121,9 +124,10 @@ and `ShouldNotHaveConstraintViolations()`,
 `ShouldHaveConcurrencyViolations()` and its negation, `ShouldHaveErrors()` and
 its negation. Assert the constraint **name**, never the message.
 
-⚠️ `EventScenario` wires a no-op concurrency-scope strategy, so a concurrency
-violation can never occur inside it. `ShouldHaveConcurrencyViolations()` cannot
-pass there and its negation passes vacuously — specify concurrency against the
+⚠️ `EventScenario` wires a strategy that always answers `ConcurrencyScope.None`,
+which the validator skips, so an append that lets the strategy choose the scope
+never produces a concurrency violation. `ShouldHaveConcurrencyViolations()`
+cannot pass for such an append and its negation passes vacuously — specify concurrency against the
 real kernel with an out-of-process integration specification instead.
 
 ## `ReadModelScenario<TReadModel>`

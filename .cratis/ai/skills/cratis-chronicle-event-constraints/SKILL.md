@@ -18,9 +18,11 @@ Constraints are discovered automatically. There is no registration call.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle` (client) | `16.45.2` | `[Unique]`, `[RemoveConstraint]`, `IConstraint`, `IConstraintBuilder`, `IUniqueConstraintBuilder`, `ConstraintViolation`, `IAppendResult` |
-| `Cratis.Chronicle` code analysis | `16.45.2` | `CHR0017`, `CHR0018`, `CHR0020` |
-| `Cratis.Chronicle.Testing` | `16.45.2` | `EventScenario` and the `IAppendResult` `Should*` assertions |
+| `Cratis.Chronicle` (client) | `18.3.0` | `[Unique]`, `[RemoveConstraint]`, `IConstraint`, `IConstraintBuilder`, `IUniqueConstraintBuilder`, `ConstraintViolation`, `IAppendResult` |
+| `Cratis.Chronicle` code analysis | `18.3.0` | `CHR0017`, `CHR0018`, `CHR0020` |
+| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario` and the `IAppendResult` `Should*` assertions |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 Reverify against the Chronicle repository before claiming support for another
 version. Never translate an attribute argument order or an assertion name from
@@ -151,9 +153,14 @@ Note the asymmetry: `AppendResult` exposes a singular nullable
 `ConcurrencyViolations`. Only the `HasConcurrencyViolations` flag is on the
 interface.
 
-⚠️ A `[PII]` property's value is encrypted before the constraint index sees it,
-so the claimed value and the violation details hold the encrypted form.
-Uniqueness still works; a human reading the index will not see the plaintext.
+⚠️ Constraints are evaluated and indexed against the **plaintext** of a `[PII]`
+property, not its ciphertext — PII encryption is non-deterministic (a fresh key
+and nonce per value), so hashing the encrypted form would never detect a
+collision. The kernel builds a plaintext copy for the constraint check and
+persists only the encrypted event; on reindex it releases (decrypts) stored
+content to recompute the hashes, and skips subjects whose key has been erased so
+they do not all collide on the hash of an empty value. The index therefore holds
+plaintext-derived hashes, not the personal value itself.
 
 ## Step 6 — Specify the violation
 

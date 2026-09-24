@@ -47,6 +47,7 @@ public class JsonSchema
     volatile IReadOnlyList<JsonSchemaProperty>? _flattenedPropertiesCache;
     volatile Dictionary<string, JsonSchemaProperty>? _flattenedPropertiesByNameCache;
     volatile Cached<bool>? _hasComplianceMetadataCache;
+    volatile Cached<bool>? _hasSecurityMetadataCache;
     volatile Cached<JsonSchema?>? _referenceCache;
     volatile Cached<JsonSchema?>? _itemCache;
 
@@ -441,6 +442,16 @@ public class JsonSchema
     {
         get => _hasComplianceMetadataCache is { } cache ? cache.Value : null;
         set => _hasComplianceMetadataCache = value is { } computed ? new Cached<bool>(computed) : null;
+    }
+
+    /// <summary>
+    /// Gets or sets the memoized answer to whether this schema carries security metadata.
+    /// A getter value of <see langword="null"/> means it has not been computed yet.
+    /// </summary>
+    internal bool? CachedHasSecurityMetadata
+    {
+        get => _hasSecurityMetadataCache is { } cache ? cache.Value : null;
+        set => _hasSecurityMetadataCache = value is { } computed ? new Cached<bool>(computed) : null;
     }
 
     /// <summary>

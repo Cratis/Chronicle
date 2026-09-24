@@ -11,11 +11,7 @@ When the agent finishes a session, verify the work against **fresh signals** bef
 
 ## Pick the path for this repository
 
-- **AI corpus repo** — the changes are only under `.cratis/ai/`, `.github/`, or `.claude/` and there is no .NET solution or frontend to build (e.g. this `cratis/AI` repo). Run the AI-setup validator instead of a code build:
-  ```
-  .cratis/ai/hooks/scripts/validate-ai-setup.sh
-  ```
-  Stop only when it passes (symlinks/adapters healthy, frontmatter present, no broken cross-links). Skip the application gates below.
+- **No .NET solution or frontend** — a documentation or corpus-only repository. Run that repository's own documentation and corpus checks instead of a code build, and `cratis ai status` when the change touched the installed AI corpus or its adapters (a hand-edited managed file is reported as drift). Skip the application gates below.
 
 - **Application repo** — there is a .NET solution and/or a frontend. Run the application gates below.
 

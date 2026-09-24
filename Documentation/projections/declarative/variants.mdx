@@ -1,0 +1,84 @@
+# Variants
+
+Some entities do not have one shape for their whole lifetime — a work item is a backlog entry until a
+pull request exists for it, then it is a pull request until it merges. Modeling that as a single read
+model with a `Status` property and an ever-growing set of nullable columns makes every query filter on
+state before it can trust a field, and a shape meant for one stage leaks properties that only make sense
+in another.
+
+Variants let you declare several mutually exclusive read models for the same logical entity instead. Each
+variant is an ordinary fluent projection with its own shape — only the properties that stage of the
+entity's life actually has. Entering one variant automatically removes the entity from every other variant
+in the group, so at any point in time an entity exists in exactly one of them.
+
+## Declaring a group of variants
+
+Use `.VariantOf<TIdentity>(keyAccessor)` on every projection that represents one stage, and `.EntersOn<TEvent>()`
+to say which event activates that stage. `TIdentity` anchors the group — every projection declaring the
+same identity type is mutually exclusive with every other:
+
+<ChronicleClientTabs snippet="projections/declarative/variants/read-model" />
+
+<ChronicleClientTabs snippet="projections/declarative/variants/events" />
+
+<ChronicleClientTabs snippet="projections/declarative/variants/basic" />
+
+`DecVariantWorkItem` does not have to be a read model itself, and it does not need a common CLR base type
+with any of the variants — its only job is to be a shared type every projection in the group points at.
+AutoMap is enabled by default, exactly as for any other fluent projection, so `Title` and `PullRequestUrl`
+map by convention without an explicit `.Set()` call.
+
+When an `IssueCreated` event is processed, a `DecVariantBacklogItem` is created — its own event, handled
+by its own projection. When a `PullRequestCreated` event is processed for the same entity,
+`DecVariantPullRequestItem` is created **and the `DecVariantBacklogItem` for that entity is removed** — no
+explicit removal call needed, the group takes care of it, cross-wired automatically the first time every
+variant in the group has been discovered. Variants are not required to be entered in any particular order,
+only to be mutually exclusive once entered.
+
+## Only the entering event can create a variant
+
+Everything a variant projects from besides its entering event is declared exactly like an ordinary
+multi-event projection — the same `.From<TEvent>()` call you would use on any projection. The only
+difference is what that mapping is allowed to do: it can update an already-active instance of the
+variant, but it can never create one.
+
+<ChronicleClientTabs snippet="projections/declarative/variants/updating-a-variant" />
+
+`.From<DecVariantUpdatingBuildCompleted>()` looks like an ordinary event subscription, but because
+`DecVariantUpdatingBuildCompleted` is not the event named with `.EntersOn<T>()`, the builder reclassifies
+it into an update-only join — keyed on the same property `.VariantOf<T>(_ => _.Id)` declared — before the
+definition ever reaches the projection engine. The entering event stays the only door into the variant.
+
+:::caution[Why this matters]
+Without that reclassification, an out-of-order or replayed `BuildCompleted` event could **resurrect** a
+pull-request variant for an entity that has since moved on to another variant, or even one that was never
+a pull request at all — the exact bug this feature exists to make structurally impossible. You do not have
+to reason about event ordering to get this guarantee; declaring `.EntersOn<T>()` is what gives it to you.
+:::
+
+## Sharing handlers across variants
+
+Unlike model-bound projections, the fluent API has no equivalent of `[GlobalFor<T>]`. Each fluent
+projection is its own class producing its own definition, so a mapping every variant needs — a title
+every stage keeps up to date, for example — is declared with `.From<TEvent>()` on each variant's builder
+individually. If the same shared handler is repeated across several variants often enough to be a
+maintenance concern, that repetition is itself a reason to reach for
+[model-bound projections](../model-bound/variants) for that group instead.
+
+## Complete example
+
+<ChronicleClientTabs snippet="projections/declarative/variants/full-example" />
+
+## Best practices
+
+1. **Pick an identity type that means something on its own** — `DecVariantWorkItem` in the examples above,
+   not a marker interface with no purpose beyond grouping. It is the type every variant in the group
+   points back to.
+2. **Give every variant only the properties that stage of the entity actually has.** A property every
+   stage needs is still declared on each variant's builder individually — see "Sharing handlers" above.
+3. **Reach for variants when the shapes genuinely diverge.** A single read model with a `Status` property
+   is still the right choice when every stage shares almost all of its properties and differs only in a
+   flag or two — see [Choosing a read-model style](../choosing-a-read-model-style).
+4. **Remember each variant is its own collection.** There is no built-in query that spans a whole group —
+   a caller that needs "this entity, whichever stage it's currently in" queries each variant explicitly
+   rather than assuming a single combined collection.

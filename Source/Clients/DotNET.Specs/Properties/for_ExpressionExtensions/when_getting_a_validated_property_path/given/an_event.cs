@@ -7,5 +7,5 @@ public class an_event : Specification
 {
     public record Owner(string Name);
 
-    public record SomeEvent(string Name, Owner Owner, int Age, bool Active, string Fallback);
+    public record SomeEvent(string Name, Owner Owner, int Age, bool Active, string Fallback, DateTimeOffset Occurred);
 }

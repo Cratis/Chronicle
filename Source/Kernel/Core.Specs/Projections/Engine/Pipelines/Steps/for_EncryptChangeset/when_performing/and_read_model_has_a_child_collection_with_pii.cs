@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
@@ -48,10 +49,13 @@ public class and_read_model_has_a_child_collection_with_pii : Specification
             """);
 
         var typeFormats = new TypeFormats();
-        var complianceManager = new JsonComplianceManager(
-            new KnownInstancesOf<IJsonCompliancePropertyValueHandler>(
-                new PIICompliancePropertyValueHandler(new InMemoryEncryptionKeyStorage(), new Encryption())),
-            NullLogger<JsonComplianceManager>.Instance);
+        var keyStorage = new InMemoryEncryptionKeyStorage();
+        var encryption = new Encryption();
+        var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+        var complianceManager = new JsonSchemaMetadataManager(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
+                new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         var compliance = new ReadModelsCompliance(complianceManager, new ExpandoObjectConverter(typeFormats));
         var objectComparer = new ObjectComparer();
         _step = new EncryptChangeset(compliance, objectComparer, "test-store", "test-namespace");

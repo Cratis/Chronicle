@@ -18,7 +18,7 @@
   href: getting-snapshots.mdx
 - name: Watching Read Models
   href: watching-read-models.mdx
-- name: Releasing PII
+- name: Releasing PII and Encrypted Values
   href: releasing-pii.mdx
 - name: Reacting to Changes
   href: reacting-to-changes.mdx

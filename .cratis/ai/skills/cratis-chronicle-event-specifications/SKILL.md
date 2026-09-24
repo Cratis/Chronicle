@@ -15,8 +15,10 @@ application's constraints discovered and active.
 
 | Package | Version | Purpose |
 | --- | --- | --- |
-| `Cratis.Chronicle.Testing` | `16.45.2` | `EventScenario`, its `Given`/`When` builders, the `IAppendResult` `Should*` assertions |
-| `Cratis.Chronicle` | `16.45.2` | `IEventSequence.Append`/`AppendMany`, `IAppendResult`, `ConstraintViolation` |
+| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario`, its `Given`/`When` builders, the `IAppendResult` `Should*` assertions |
+| `Cratis.Chronicle` | `18.3.0` | `IEventSequence.Append`/`AppendMany`, `IAppendResult`, `ConstraintViolation` |
+
+> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
 
 ```bash
 dotnet add package Cratis.Chronicle.Testing
@@ -44,9 +46,13 @@ version. Never translate an assertion name from memory.
 
 ## When you do not
 
-- **Concurrency violations cannot be provoked here.** `EventScenario` wires a
-  no-op concurrency-scope strategy, so `HasConcurrencyViolations` is never true
-  inside the scenario however the append is shaped. Specify concurrency against
+- **Concurrency violations are not what the scenario's defaults exercise.**
+  `EventScenario` wires a strategy that always answers `ConcurrencyScope.None`,
+  which the validator skips, so an append that lets the strategy pick the scope
+  (`When`, or `EventLog.Append` without a `concurrencyScope`) can never report
+  `HasConcurrencyViolations`. Only an append that passes an explicit scope on
+  `scenario.EventLog.Append(...)` reaches the in-process validator at all — and
+  that is a spec of the scope you hand-built, not of the application's strategy. Specify concurrency against
   the real kernel with an out-of-process integration specification, and do not
   write a scenario specification that looks like it covers it — it would pass
   vacuously, which is worse than not having one.

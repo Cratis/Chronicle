@@ -5,7 +5,6 @@ using System.Text.Json;
 using Cratis.Arc;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Clients;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
@@ -150,7 +149,7 @@ public static class ChronicleServerSiloBuilderExtensions
             return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.Compliance.ComplianceService(
                     grainFactory,
-                    sp.GetRequiredService<IJsonComplianceManager>(),
+                    sp.GetRequiredService<IJsonSchemaMetadataManager>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>()),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventStores.EventStores>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Namespaces.Namespaces>(sp),

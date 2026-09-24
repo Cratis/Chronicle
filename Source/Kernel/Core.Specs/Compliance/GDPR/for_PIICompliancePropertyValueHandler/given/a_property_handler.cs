@@ -3,6 +3,7 @@
 
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler.given;
@@ -12,6 +13,7 @@ public class a_property_handler : Specification
     protected const string Identifier = "39b34712-ad8e-4cde-b879-2719c995aa49";
     protected PIICompliancePropertyValueHandler _handler;
 
+    protected IManagedEncryptionKeyProvisioner _provisioner;
     protected IEncryptionKeyStorage _keyStore;
     protected IEncryption _encryption;
     protected EncryptionKey _key;
@@ -21,7 +23,8 @@ public class a_property_handler : Specification
         _key = new EncryptionKey(Encoding.UTF8.GetBytes("PublicPart"), Encoding.UTF8.GetBytes("PrivatePart"));
         _keyStore = Substitute.For<IEncryptionKeyStorage>();
         _encryption = Substitute.For<IEncryption>();
-        _handler = new(_keyStore, _encryption);
+        _provisioner = new ManagedEncryptionKeyProvisioner(_keyStore, _encryption);
+        _handler = new(_provisioner, _keyStore, _encryption);
         _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult<EncryptionKey?>(_key));
     }
 }

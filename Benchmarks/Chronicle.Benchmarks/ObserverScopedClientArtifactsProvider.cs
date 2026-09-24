@@ -46,6 +46,12 @@ public class ObserverScopedClientArtifactsProvider(params Type[] observers) : IC
     public IEnumerable<Type> ComplianceForPropertiesProviders => _inner.ComplianceForPropertiesProviders;
 
     /// <inheritdoc/>
+    public IEnumerable<Type> SecurityForTypesProviders => _inner.SecurityForTypesProviders;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> SecurityForPropertiesProviders => _inner.SecurityForPropertiesProviders;
+
+    /// <inheritdoc/>
     public IEnumerable<Type> AdditionalEventInformationProviders => _inner.AdditionalEventInformationProviders;
 
     /// <inheritdoc/>

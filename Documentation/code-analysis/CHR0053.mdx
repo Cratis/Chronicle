@@ -1,0 +1,34 @@
+# CHR0053: [PII] and [Encrypted] cannot both apply to the same value
+
+## Rule Description
+
+A property, record parameter, or type resolves both `[PII]` and `[Encrypted]` compliance metadata — for example, both attributes on the same property, or one on a property and the other on its declaring type.
+
+A value needs exactly one protection. Chronicle applies every matching handler for a property in sequence, so a value marked both ways is encrypted first under the PII key and then again under the Encrypted key. Releasing it decrypts with the wrong key against ciphertext, which fails rather than returning the wrong value.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0053/violation" variants="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0053/fix" variants="csharp" />
+
+## Why This Rule Exists
+
+`[PII]` and `[Encrypted]` solve different problems. `[PII]` protects personal data and enrolls it in GDPR right-to-erasure; `[Encrypted]` protects an operational secret that has no data subject and is never erasable. The two attributes provision their keys under deliberately disjoint identities so that erasing a subject's PII can never destroy a secret that was never part of the erasure request — see [Encrypting operational secrets](/chronicle/security/encrypted-values/) for the full contrast.
+
+Combining them on one value asks for both key lifecycles at once, which the shared compliance walk cannot honor: it applies every matching handler for a property in sequence, so the value is encrypted twice, under two different keys, and cannot be released correctly.
+
+This analyzer catches the two directly-visible combinations — both attributes on the same member, or one on the member with the other on its declaring type. `PIIAndEncryptedCombinedNotSupported` is thrown at schema-generation time as the backstop for combinations this static check cannot see, such as one attribute on a referenced concept type.
+
+## Related Rules
+
+- [CHR0034](CHR0034): `[PII]` cannot be applied to an `EventSourceId<T>`.
+- [CHR0052](CHR0052): `[Encrypted]` cannot be applied to an `EventSourceId<T>`.

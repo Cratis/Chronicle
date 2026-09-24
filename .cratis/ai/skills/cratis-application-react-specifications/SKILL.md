@@ -58,7 +58,7 @@ Behavior that can regress without TypeScript catching it:
 - **Component rendering** only when the markup, a disabled state, or wrapper
   behavior is genuinely the point.
 
-Do **not** specify generated Cratis proxies, PrimeReact or framework internals,
+Do **not** specify generated Cratis proxies, Cratis Components or framework internals,
 CSS pixel-perfection, snapshots, or trivial presentational pass-throughs.
 
 ## View-model specification — the default shape
@@ -110,9 +110,9 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, beforeEach, it, vi } from 'vitest';
 
-vi.mock('primereact/dialog', () => ({
-    Dialog: (props: { footer?: React.ReactNode; children?: React.ReactNode }) =>
-        React.createElement('div', null, props.footer, props.children),
+vi.mock('@cratis/components/Dialogs', () => ({
+    Dialog: (props: { buttons?: React.ReactNode; children?: React.ReactNode }) =>
+        React.createElement('div', null, props.children, props.buttons),
 }));
 
 describe('when rendered while busy', () => {

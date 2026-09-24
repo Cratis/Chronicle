@@ -10,7 +10,7 @@ They live under `when_<behavior>/` **inside the behavior's own folder**, not in 
 `for_<Type>/` unit folder: there is no isolated unit, the whole slice is under
 test. Never mix unit and integration specifications in one folder.
 
-Verified against `Cratis.Chronicle.Testing` `17.0.0`.
+Verified against `Cratis.Chronicle.Testing` `18.3.0` (`Cratis.Chronicle.XUnit.Integration` at the same tag).
 
 ## Structure
 
@@ -107,7 +107,9 @@ _collector = StartCollectingAppends();
 await _collector.WaitForCount(2, TimeSpan.FromSeconds(10));
 
 [Fact] void should_append_<event>() =>
-    _collector.ShouldHaveEvent<<EventType>>(appended => appended.<Property> == <expected>);
+    _collector.Last.ShouldHaveEvent<<EventType>>(appended => appended.<Property>.ShouldEqual(<expected>));
+// IEventAppendCollection has no assertions of its own — only All, Last and WaitForCount.
+// ShouldHaveEvent<TEvent>(Action<TEvent>? validate) is an extension on each AppendedEventWithResult.
 
 void Destroy() => _collector.Dispose();
 ```
@@ -121,7 +123,9 @@ deadline, not a sleep — it turns a hang into a named failure.
 - Add the `using context = <full.namespace>.context;` alias at the top of the
   file.
 - `[Collection(ChronicleCollection.Name)]` goes on the outer class and is
-  required for isolation.
+  required for isolation. `ChronicleCollection` is **yours to define** — one
+  `[CollectionDefinition(Name)] public class ChronicleCollection : ICollectionFixture<ChronicleOutOfProcessFixture>`
+  in the specs project (Chronicle ships the fixture, not the collection).
 - `Establish` seeds preconditions; `Because` performs the action under test.
 - Declare `Result` nullable.
 - The outer class receives `context` through xUnit constructor injection.
