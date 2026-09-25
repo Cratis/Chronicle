@@ -27,14 +27,18 @@ internal static class ReactorSideEffectHandlerServiceCollectionExtensions
             new(serviceProvider.GetRequiredService<Cratis.Chronicle.Events.IEventTypes>()));
         services.TryAddScoped<MixedSideEffectsResultHandler>(serviceProvider =>
             new(serviceProvider.GetRequiredService<Cratis.Chronicle.Events.IEventTypes>()));
-        services.TryAddTransient<EventSourceIdValuesProvider>();
-        services.TryAddTransient<EventSourceTypeValuesProvider>();
-        services.TryAddTransient<EventStreamIdValuesProvider>();
-        services.TryAddTransient<EventStreamTypeValuesProvider>();
-        services.TryAddTransient<SubjectValuesProvider>();
-        services.TryAddTransient<EventForEventSourceIdResultHandler>();
-        services.TryAddTransient<EventsForEventSourceIdResultHandler>();
-        services.TryAddTransient<EventsWithConcurrencyScopesResultHandler>();
+        foreach (var type in typeof(ReactorSideEffectHandlers).Assembly.GetTypes()
+                     .Where(type => type.IsClass && !type.IsAbstract && typeof(IReactorContextValuesProvider).IsAssignableFrom(type)))
+        {
+            services.TryAddTransient(type);
+        }
+
+        foreach (var type in typeof(ReactorSideEffectHandlers).Assembly.GetTypes()
+                     .Where(type => type.IsClass && !type.IsAbstract && typeof(IReactorSideEffectHandler).IsAssignableFrom(type))
+                     .Except([typeof(EventResultHandler), typeof(EventsResultHandler), typeof(MixedSideEffectsResultHandler)]))
+        {
+            services.TryAddSingleton(type);
+        }
         services.TryAddScoped<ReactorSideEffectHandlers>();
         services.TryAddScoped<IReactorSideEffectHandlers>(serviceProvider =>
             serviceProvider.GetRequiredService<ReactorSideEffectHandlers>());
