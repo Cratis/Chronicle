@@ -1,10 +1,8 @@
 ```csharp
-using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 [FromEvent<BookAdded>]
 public record Book(
-    [Key]
     BookId Id,
 
     string Title,

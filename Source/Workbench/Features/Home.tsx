@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { EventStoreCard } from 'Components/Common/EventStoreCard';
+import { EventStoreKeyFigures } from 'Components/Common/EventStoreKeyFigures';
 import { HomeViewModel } from './HomeViewModel';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { useRelativePath } from '../Utils/useRelativePath';
@@ -30,7 +31,7 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                             key={eventStore}
                             title={eventStore}
                             path={`${basePath}/${eventStore}`}
-                            description=''
+                            footer={<EventStoreKeyFigures eventStore={eventStore} />}
                         />
                     );
                 })}

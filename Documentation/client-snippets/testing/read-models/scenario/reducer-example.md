@@ -17,8 +17,8 @@ public class TestingReadModelScenarioReducerOrderSummaryReducer : IReducerFor<Te
     public TestingReadModelScenarioReducerOrderSummary OnOrderCreated(TestingReadModelScenarioReducerOrderCreated @event, TestingReadModelScenarioReducerOrderSummary? current, EventContext context) =>
         new(@event.OrderId, 0m);
 
-    public TestingReadModelScenarioReducerOrderSummary OnItemAdded(TestingReadModelScenarioReducerItemAdded @event, TestingReadModelScenarioReducerOrderSummary current, EventContext context) =>
-        current with { Total = current.Total + @event.Price };
+    public TestingReadModelScenarioReducerOrderSummary OnItemAdded(TestingReadModelScenarioReducerItemAdded @event, TestingReadModelScenarioReducerOrderSummary? current, EventContext context) =>
+        current! with { Total = current.Total + @event.Price };
 }
 
 public static class TestingReadModelScenarioReducerExample

@@ -1,4 +1,11 @@
-# Identity Provider Certificate Configuration
+---
+title: "Identity Provider Certificate Configuration"
+description: "The identityProvider.certificate setting, and why Chronicle does not apply it as of 19.6."
+---
+
+:::caution[Not applied as of Chronicle 19.6]
+The kernel accepts the `identityProvider.certificate` settings described below, but does not use them: the identity provider endpoints are served on port 35000 with the top-level [TLS certificate](tls.md), like everything else. Configure the TLS certificate; a dedicated identity provider certificate currently has no effect.
+:::
 
 When Chronicle uses the internal OAuth authority (`authentication.authority` is not set), you can configure a dedicated certificate for identity provider endpoints.
 

@@ -25,7 +25,6 @@ public record DecJoinsMultipleEmployeeSummary(
 public class DecJoinsMultipleEmployeeSummaryProjection : IProjectionFor<DecJoinsMultipleEmployeeSummary>
 {
     public void Define(IProjectionBuilderFor<DecJoinsMultipleEmployeeSummary> builder) => builder
-        .AutoMap()
         .From<DecJoinsMultipleEmployeeAssigned>()
         .Join<DecJoinsMultipleGroupCreated>(j => j.On(m => m.GroupId))
         .Join<DecJoinsMultipleDepartmentCreated>(j => j.On(m => m.DepartmentId))

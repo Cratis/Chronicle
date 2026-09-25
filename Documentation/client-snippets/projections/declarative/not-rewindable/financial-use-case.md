@@ -10,7 +10,6 @@ public class DecNotRewindableTransactionLedgerProjection : IProjectionFor<DecNot
 {
     public void Define(IProjectionBuilderFor<DecNotRewindableLedgerEntry> builder) => builder
         .NotRewindable()
-        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.RecordedAt).ToEventContextProperty(c => c.Occurred))
         .From<DecNotRewindablePaymentProcessed>(_ => _

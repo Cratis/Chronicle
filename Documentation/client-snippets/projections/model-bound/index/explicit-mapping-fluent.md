@@ -9,7 +9,6 @@ public class MbIndexExplicitAccountProjection : IProjectionFor<MbIndexExplicitAc
 {
     public void Define(IProjectionBuilderFor<MbIndexExplicitAccountInfo> builder) => builder
         .From<MbIndexExplicitAccountOpened>(_ => _
-            .Set(m => m.Name).To(e => e.Name)
             .Set(m => m.Balance).To(e => e.InitialBalance));
 }
 

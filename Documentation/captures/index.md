@@ -1,6 +1,19 @@
-# Captures
+---
+title: "Captures"
+description: "Turn changes in external data into Chronicle events with captures, and what the capturing engine supports today."
+---
 
 Captures let you describe Change Data Capture (CDC) pipelines that turn external data changes into Chronicle events.
+
+:::caution[The capturing engine runs a subset of the language]
+Captures parse and compile everything described here, but as of Chronicle 19.6 the engine that runs them supports only part of it:
+
+- Only `api` sources are read. A capture with a `webhook` or `message` source never produces events.
+- Only root-level `append` rules run. `map` operations, `nested` scopes, and `children` scopes are accepted but not applied.
+- An assignment can take a property of the item (`$.path`) or a quoted literal. `$context`, `$env`, and template expressions are rejected at run time, and so are expression-based `when` conditions.
+
+A cycle that hits an unsupported construct fails as a whole and is logged; no event is appended for it.
+:::
 
 ## Overview
 

@@ -34,7 +34,7 @@ Disable AutoMap when a projection should map only the properties you name explic
 Calling the AutoMap enable method is redundant at the top level. It is useful in a child builder scope when the parent projection has disabled AutoMap and the child scope should opt back in.
 
 :::note[Client coverage]
-This scoped re-enable only makes sense in a client that supports child projection scopes at all. Kotlin, Java, Elixir, and TypeScript do not yet support declarative child collections (see [Children](./children)), so there is no child builder scope to re-enable AutoMap on. This example is C#-only until child projection scopes land elsewhere.
+This scoped re-enable is C#-only. Kotlin and Java have child collections in their projection builders, but the child builder has no AutoMap switch, so there is no child scope to re-enable AutoMap on. Elixir and TypeScript do not yet support declarative child collections (see [Children](./children)).
 :::
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/re-enable-child-scope" />

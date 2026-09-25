@@ -36,4 +36,3 @@ public class and_define_contains_foreach_statement : given.a_projection_imperati
 
     [Fact] Task should_report_imperative_code_diagnostic() => _result;
 }
-

@@ -533,7 +533,8 @@ public class ProjectionFactory(
             noAutoMapProperties,
             childProjections,
             projectionDefinition.SubscribesToAllEvents,
-            projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null);
+            projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null,
+            projectionDefinition.Scope);
 
         // Set parent relationships immediately after creation
         // This ensures children have their Parent set before any event resolution
@@ -929,6 +930,28 @@ public class ProjectionFactory(
         // can only be used once for a projection, including child projections.
         var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();
         logger.ResolveEventsForProjectionComplete(distinctEventTypes.Length, projection.Path);
+
+        // An event reached only by subscribing to every event type has no FromDefinition to carry a key, so the
+        // one declared for the from-every clause is resolved here - where the projection it belongs to exists.
+        // Defaulting to the event source id keeps every definition written before a key could be declared keying
+        // exactly as it did.
+        if (projectionDefinition.SubscribesToAllEvents)
+        {
+            var allEventsKey = projectionDefinition.FromEvery.Key;
+
+            // The default key is the event source id expression, which has a resolver of its own and so comes back
+            // from GetKeyResolverFor reporting that it did not resolve to the event source id. It plainly does, and
+            // saying otherwise costs every existing from-every projection its fine-grained locking.
+            var resolvesToEventSourceId =
+                allEventsKey is null ||
+                allEventsKey.Value.Length == 0 ||
+                allEventsKey.Value == WellKnownExpressions.EventSourceId;
+
+            projection.SetAllEventsKeyResolver(
+                GetKeyResolverFor(projection, allEventsKey, actualIdentifiedByProperty).Resolver,
+                resolvesToEventSourceId);
+        }
+
         projection.SetEventTypesWithKeyResolvers(
             distinctEventTypes,
             distinctOwnEventTypes,

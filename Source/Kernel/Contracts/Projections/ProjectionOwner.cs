@@ -21,5 +21,19 @@ public enum ProjectionOwner
     /// <summary>
     /// The projection is owned by the server.
     /// </summary>
-    Server = 2
+    Server = 2,
+
+    /// <summary>
+    /// The projection is owned by a parent projection.
+    /// </summary>
+    Parent = 3,
+
+    /// <summary>
+    /// The projection is owned by the kernel itself.
+    /// </summary>
+    /// <remarks>
+    /// Carried on the wire so a consumer can tell a system projection apart from one a client registered - the
+    /// Workbench uses it to keep replay and retirement off a projection the kernel owns.
+    /// </remarks>
+    Kernel = 4
 }

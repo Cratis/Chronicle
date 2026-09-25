@@ -7,7 +7,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs.given;

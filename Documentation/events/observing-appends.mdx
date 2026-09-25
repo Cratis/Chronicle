@@ -1,7 +1,8 @@
 ---
 uid: Chronicle.Events.ObservingAppends
+title: "Observing Append Operations"
+description: "Observe append operations on an event sequence, and wait for observers to catch up after an append."
 ---
-# Observing Append Operations
 
 `IEventSequence` exposes an `AppendOperations` observable that emits after every `Append` or
 `AppendMany` call on that sequence. Any code can subscribe to this observable to react to appended
@@ -49,6 +50,8 @@ When you need to wait until observers affected by an append operation have compl
 `WaitForCompletion()` from the `Cratis.Chronicle.Observation` namespace.
 
 If any affected observer fails while catching up, the returned result includes failed partitions.
+
+Check the append result before you wait. An append that failed never reached the log, so there is nothing to wait for and the wait reports success. The wait is also bounded: it gives up after five seconds unless you pass a longer `timeout`, and throws when it does. The wait covers every observer on that event sequence, not only those that handle the appended event, so an unrelated observer that is behind — or one that never handles this event type — can hold it until it times out.
 
 Waiting only means something when there are observers behind the connection. The in-process testing
 surfaces (`EventScenario` and `EventStoreForTesting`) run the event sequence without a silo, so an

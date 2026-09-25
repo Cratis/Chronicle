@@ -47,7 +47,9 @@ with the current selection marked), then:
 
 - .NET 10 or later
 - A Chronicle Kernel running on `localhost:35000`
-- The appropriate database backend for your chosen storage type (MongoDB, PostgreSQL, SQL Server, or SQLite)
+- For the SQL variants, a Kernel configured for that storage — see below
+
+The argument to `dotnet run` only selects the sample's default read-model **sink** (`MongoDB` or `SQL`). It does not configure the Kernel: start the Kernel with the matching storage type and connection string first, for example with `Source/Kernel/Server/run.sh postgresql`.
 
 ## Running
 

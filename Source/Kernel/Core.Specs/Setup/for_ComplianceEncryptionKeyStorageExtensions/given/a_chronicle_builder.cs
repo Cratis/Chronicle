@@ -8,7 +8,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
 using ComplianceOptions = Cratis.Chronicle.Configuration.Compliance;
 using EncryptionOptions = Cratis.Chronicle.Configuration.Encryption;
 using KeyStorageOptions = Cratis.Chronicle.Configuration.Storage;

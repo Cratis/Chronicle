@@ -1,9 +1,12 @@
-# Returning Side Effects from Reactor Handler Methods
+---
+title: "Returning Side Effects from Reactor Handler Methods"
+description: "Return events from a reactor handler and let Chronicle append them, and why such handlers are marked [OnceOnly]."
+---
 
 Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
 
 :::note[Client coverage]
-Auto-appending a reactor handler's return value is currently C#-only. Kotlin and Java reactor dispatch (`ReactorsService`) ignores the handler's return value entirely; Elixir's `handle/2` return value (`:ok` / `{:error, reason}`) reports success/failure, not an event to append; TypeScript's dispatch likewise doesn't inspect what the handler returns. In all four other clients, appending a follow-up event from a reactor means calling the append API explicitly inside the handler — see [Getting started with reactors](getting-started) and [Event Processing](event-processing) for what each client's handler can and can't do.
+C#, Kotlin and Java append a reactor handler's return value. Kotlin and Java accept a single event, an `EventForEventSourceId`, or a `List` of either; from `io.cratis:chronicle` 6.5.0 a returned list is appended as one transaction, as in C#, and earlier versions appended its events one at a time. Elixir's `handle/2` return value (`:ok` / `{:error, reason}`) reports success/failure, not an event to append, and TypeScript's dispatch doesn't inspect what the handler returns. In those two clients, appending a follow-up event from a reactor means calling the append API explicitly inside the handler — see [Getting started with reactors](getting-started) and [Event Processing](event-processing) for what each client's handler can and can't do.
 :::
 
 > **Important**: Side-effect appends are not fire-and-forget. If a returned event fails to append — a constraint violation, a concurrency conflict, or an error — the reactor's partition fails with the failure details and is retried per the observer's retry policy. Failures never pass silently. See [Error handling](#error-handling).
@@ -15,6 +18,8 @@ Return a single event directly from a handler method — synchronously or as a `
 <ChronicleClientTabs snippet="reactors/side-effects/basic" />
 
 The returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. No `IEventLog` injection required.
+
+The handlers are marked [`[OnceOnly]`](once-only) because a returned event is a new fact: without it, replaying the reactor appends the same follow-up event again. Analyzer [CHR0022](../code-analysis/CHR0022) reports an event-returning handler that is not marked. `[OnceOnly]` does not cover a retry after the handler failed; see [Delivery identity](delivery-identity).
 
 ## Multiple Side Effects
 

@@ -101,6 +101,8 @@
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Cratis.Orleans" />
+        <PackageReference Include="Cratis.Orleans.Storage.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />

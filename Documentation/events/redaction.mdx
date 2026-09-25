@@ -1,4 +1,7 @@
-# Event Redaction
+---
+title: "Event Redaction"
+description: "Remove an event's content from the log with redaction, what it records, and how observers see it."
+---
 
 Redaction removes the meaningful content of a previously appended event when you need to erase data — for example, to comply with a right-to-erasure request. Rather than deleting the event entirely, Chronicle replaces the event's payload with a redaction marker that preserves the sequence number, original event type, and the full audit context of both the original event and the redaction action itself.
 
@@ -101,4 +104,4 @@ The Workbench lets you redact events without writing any code:
 4. In the dialog that appears, enter the reason for the redaction.
 5. Click **OK** to confirm.
 
-Chronicle immediately replaces the event's content with the redaction marker. The event slot remains visible in the sequence but no longer contains the original data.
+Confirming records the redaction request; a built-in reactor then replaces the event's content with the redaction marker, usually within moments. The event slot remains visible in the sequence but no longer contains the original data. Before you report the data as removed, reopen the event and check that its content has been replaced.

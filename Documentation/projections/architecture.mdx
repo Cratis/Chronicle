@@ -1,4 +1,7 @@
-# Projection Architecture
+---
+title: "Projection Architecture"
+description: "How the projection engine compiles model-bound, declarative, and PDL projections and materializes read models."
+---
 
 Chronicle supports three distinct approaches for defining projections, each designed for different use cases and developer preferences. This page explains the architecture and how these approaches work together.
 
@@ -48,12 +51,10 @@ Typically available from the tooling like Workbench.
 
 
 ```pdl
-projection MyModel
-    from MyEvent
-        set name = $.eventProperty
-        set count = $count + 1
-
-
+projection MyProjection => MyModel
+  from MyEvent
+    name = eventProperty
+    count eventCount
 ```
 
 **Benefits:**

@@ -83,4 +83,3 @@ public class with_existing_webhook_and_authorization_changed : given.a_webhook_r
             Arg.Any<EventStreamType>(),
             Arg.Any<EventStreamId>());
 }
-

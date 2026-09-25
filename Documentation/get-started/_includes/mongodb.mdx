@@ -1,12 +1,17 @@
 ## MongoDB
 
-When leveraging the Reducer and Projection capabilities of Chronicle, your MongoDB Client needs to be configured
-to match how it produces documents and naming conventions. By adding the following code, you'll have something that
-matches:
+When you read Chronicle's read models with the MongoDB driver, the driver has to expect the documents Chronicle
+writes. Three things matter:
+
+- Chronicle adds metadata fields of its own, such as `__subject`, so the driver must ignore elements your type does
+  not declare.
+- Identifiers such as a `Guid` key are stored as standard UUIDs.
+- Element names match your property names exactly as declared, and each collection is named after its read model,
+  pluralized. Chronicle only writes camel-case names if you opt into its
+  [camel case naming policy](/chronicle/configuration/camel-casing/); match the driver to whichever policy you chose,
+  or queries match nothing without reporting an error.
 
 <ChronicleClientTabs snippet="get-started/mongodb/conventions" />
-
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/MongoDBDefaults.cs#L16-L27)
 
 :::note
 These conventions match how Chronicle names and shapes the stored document, but the driver still builds the instance

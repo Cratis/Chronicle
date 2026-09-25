@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Reminders" />
+        <PackageReference Include="Cratis.Orleans.Storage.Sql" />
         <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
         <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
     </ItemGroup>

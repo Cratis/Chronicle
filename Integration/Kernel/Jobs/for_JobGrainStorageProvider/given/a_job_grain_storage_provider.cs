@@ -4,8 +4,8 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Orleans.Jobs;
 using ConceptsEventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 using ConceptsEventStoreNamespaceName = Cratis.Chronicle.Concepts.EventStoreNamespaceName;
 
@@ -18,7 +18,7 @@ public class a_job_grain_storage_provider(ChronicleFixture fixture) : Specificat
 
     protected void Establish()
     {
-        var storage = Services.GetRequiredService<Storage.IStorage>();
+        var storage = Services.GetRequiredService<Cratis.Orleans.Storage.IJobsStorage>();
         _provider = new JobGrainStorageProvider(storage);
         _jobKey = new JobKey(new ConceptsEventStoreName(EventStore.Name.Value), new ConceptsEventStoreNamespaceName(EventStore.Namespace.Value));
     }

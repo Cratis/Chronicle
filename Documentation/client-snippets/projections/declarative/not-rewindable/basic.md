@@ -5,7 +5,6 @@ public class DecNotRewindableAuditLogProjection : IProjectionFor<DecNotRewindabl
 {
     public void Define(IProjectionBuilderFor<DecNotRewindableAuditLogEntry> builder) => builder
         .NotRewindable()
-        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.ProcessedAt).ToEventContextProperty(c => c.Occurred))
         .From<DecNotRewindableUserAction>(_ => _

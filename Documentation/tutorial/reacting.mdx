@@ -26,16 +26,18 @@ Chronicle discovers this by convention — no registration, no wiring. Drop the 
 
 Here's the rule that catches everyone once: **a reactor may run more than once for the same event.** During a replay, a recovery, or a redeploy, Chronicle might hand it `BookReturned` again. If your reactor naively emails the next member every time it runs, that member gets emailed twice. So design the side effect to be *idempotent* — for example, record that a notification was sent and skip it if it already was. Repeatable by design.
 
-For side effects that genuinely must never repeat — a physical letter, a payment — Chronicle gives you `[OnceOnly]`. Put it on the reactor class, or on just one handler method, and that handler is **excluded from replay** entirely: redactions, revisions, and observer rewinds all skip it, so it runs only once per event.
+For side effects that must not repeat when you rebuild — a physical letter, a payment — Chronicle gives you `[OnceOnly]`. Put it on the reactor class, or on just one handler method, and that handler is **excluded from replay**: redactions, revisions, and observer rewinds all skip it.
+
+Replay is not the only way an event comes back, though. If a handler throws, its event source's partition pauses, and recovering that partition delivers the event again as an ordinary observation. `[OnceOnly]` deliberately does not suppress that retry, because re-running the handler is the point of a retry. So `[OnceOnly]` is not exactly-once. When a side effect must also survive a retry, record its [delivery identity](/chronicle/reactors/delivery-identity/) (.NET) as a receipt, or pass it to an API that deduplicates for you.
 
 <ChronicleClientTabs snippet="tutorial/reacting/once-only" />
 
 Elixir and TypeScript don't currently have an equivalent to `[OnceOnly]` — replay/redaction exclusion for a specific handler is available in C#, Kotlin, and Java.
 
-Use it deliberately, though — the same guarantee means a `[OnceOnly]` handler also *won't* run again when you replay on purpose. Idempotent-by-design stays the default; `[OnceOnly]` is for the effects where "again" is worse than "never".
+Use it deliberately, though — the same exclusion means a `[OnceOnly]` handler also *won't* run again when you replay on purpose. Idempotent-by-design stays the default; `[OnceOnly]` is for the effects where "again" is worse than "never".
 
 :::tip[Two things you can do — keep these in mind]
-**Read state — at the right consistency level.** `BookReturned` carries no title, so a friendlier notification ("*The Pragmatic Programmer* is back!") needs the `Book` read model. Just know your [consistency levels](../concepts/consistency.md): the materialized collection you queried last chapter is *eventually* consistent — it may not have caught up with the very event you're handling. When a decision needs current state — and it usually does — go through the strongly consistent `IReadModels` interface instead, which [re-derives the instance from the event log on demand](../read-models/getting-single-instance):
+**Read state — at the right consistency level.** `BookReturned` carries no title, so a friendlier notification ("*The Pragmatic Programmer* is back!") needs the `Book` read model. Just know your [consistency levels](../concepts/consistency.md): the `Book` read model is materialized, so every read of it — the collection you queried last chapter, and `IReadModels.GetInstanceById` below — comes from the sink and is *eventually* consistent. The title never changes after `BookAdded`, so a slightly stale `Book` is fine here. When a decision needs state that includes the event you are handling, mark that read model `[Passive]` so Chronicle [computes it from the events on every read](../read-models/getting-single-instance):
 
 <ChronicleClientTabs snippet="tutorial/reacting/reading-state" />
 
@@ -45,7 +47,7 @@ Kotlin and Java reactor handlers can't currently await Chronicle's asynchronous 
 
 <ChronicleClientTabs snippet="tutorial/reacting/notification-sent-event" />
 
-You can append it yourself — but then **handle the result**, and throw if it failed, so the failure surfaces (and the partition pauses for a retry) instead of the fact silently going missing:
+You can append it yourself — but then **handle the result**, and throw if it failed, so the failure surfaces (and the partition pauses for a retry) instead of the fact silently going missing. The retry runs the whole handler again, notification included, which is one more reason to keep that side effect idempotent:
 
 <ChronicleClientTabs snippet="tutorial/reacting/explicit-append" />
 
@@ -61,7 +63,7 @@ Returning an event for Chronicle to auto-append is a C#-only convention — Kotl
 
 ## Use the event, not a lookup
 
-Notice we didn't query anything to find out *which* book was returned — `context.EventSourceId` told us. That's deliberate. The event carries the truth of what happened; leaning on it (instead of querying back) is what makes reactors fast, order-independent, and safe to replay. And when an event genuinely doesn't carry enough — `BookReturned` has no title — reach for the strongly consistent read shown above, not the eventually consistent collection.
+Notice we didn't query anything to find out *which* book was returned — `context.EventSourceId` told us. That's deliberate. The event carries the truth of what happened; leaning on it (instead of querying back) is what makes reactors fast, order-independent, and safe to replay. And when an event genuinely doesn't carry enough — `BookReturned` has no title — read the read model as shown above, and make it passive if the answer must include the event in hand.
 
 ## You've built a library
 

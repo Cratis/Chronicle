@@ -1,4 +1,7 @@
-# Capture Declaration Language
+---
+title: "Capture Declaration Language"
+description: "Syntax of the Capture Declaration Language, and which parts the capturing engine runs today."
+---
 
 The Capture Declaration Language (CDL) is an indentation-based DSL for defining captures that transform external data changes into Chronicle events.
 
@@ -13,7 +16,33 @@ CDL definitions compile to `CaptureDefinition` and support:
 - Nested object scopes
 - Child collection scopes
 
+:::caution[The capturing engine runs a subset of the language]
+Captures parse and compile everything described here, but as of Chronicle 19.6 the engine that runs them supports only part of it:
+
+- Only `api` sources are read. A capture with a `webhook` or `message` source never produces events.
+- Only root-level `append` rules run. `map` operations, `nested` scopes, and `children` scopes are accepted but not applied.
+- An assignment can take a property of the item (`$.path`) or a quoted literal. `$context`, `$env`, and template expressions are rejected at run time, and so are expression-based `when` conditions.
+
+A cycle that hits an unsupported construct fails as a whole and is logged; no event is appended for it.
+:::
+
 ## Example
+
+This capture polls an API every ten minutes and appends `InvoiceStatusChanged` for each invoice whose `status` changed. It uses only what the engine runs today:
+
+```cdl
+capture InvoiceCapture
+  source api
+    api InvoicingApi
+    route /invoices
+    poll 10m
+  key id
+  append InvoiceStatusChanged
+    when status
+    status = $.status
+```
+
+The full language adds `map` operations, `nested` and `children` scopes, and context expressions. The sections below describe their syntax, which compiles today:
 
 ```cdl
 capture InvoiceCapture

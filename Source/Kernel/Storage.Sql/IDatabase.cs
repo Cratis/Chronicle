@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -40,6 +41,15 @@ public interface IDatabase
     /// <param name="namespace">The name of the namespace.</param>
     /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/> for the specified event store namespace.</returns>
     Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Gets the <see cref="DbContextOptions{JobsDbContext}"/> for the Cratis.Orleans job system's storage in
+    /// the database of an event store namespace - the same database the namespace's own DbContext uses.
+    /// </summary>
+    /// <param name="eventStore">The event store to get for.</param>
+    /// <param name="namespace">The namespace within the event store to get for.</param>
+    /// <returns>The resolved <see cref="DbContextOptions{JobsDbContext}"/>.</returns>
+    DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace);
 
     /// <summary>
     /// Gets a database context scope for a specific unique constraint table within a namespace.

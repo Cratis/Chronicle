@@ -16,8 +16,7 @@ public class TestingReadModelScenarioFluentProductViewProjection : IProjectionFo
 {
     public void Define(IProjectionBuilderFor<TestingReadModelScenarioFluentProductView> builder) =>
         builder
-            .From<TestingReadModelScenarioFluentProductCreated>(_ => _
-                .Set(m => m.Name).To(e => e.Name))
+            .From<TestingReadModelScenarioFluentProductCreated>()
             .From<TestingReadModelScenarioFluentStockAdjusted>(_ => _
                 .Set(m => m.Stock).To(e => e.NewStock));
 }
