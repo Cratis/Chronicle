@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Storage.InMemory.Compliance;
+using Cratis.Orleans.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Setup;
@@ -48,6 +49,7 @@ public static class InMemoryChronicleBuilderExtensions
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IStorage, Cratis.Chronicle.Storage.InMemory.Storage>();
+            services.AddCratisOrleansInMemoryJobsStorage();
         });
 
         return builder;

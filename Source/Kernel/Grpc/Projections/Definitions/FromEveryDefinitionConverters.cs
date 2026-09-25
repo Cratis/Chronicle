@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
@@ -21,7 +22,8 @@ internal static class FromEveryDefinitionConverters
         return new()
         {
             Properties = definition.Properties.ToDictionary(_ => (string)_.Key, _ => _.Value),
-            IncludeChildren = definition.IncludeChildren
+            IncludeChildren = definition.IncludeChildren,
+            Key = definition.Key
         };
     }
 
@@ -32,9 +34,13 @@ internal static class FromEveryDefinitionConverters
     /// <returns>Converted Chronicle version.</returns>
     public static FromEveryDefinition ToChronicle(this Contracts.Projections.FromEveryDefinition contract)
     {
+        // A contract written before the key existed, or by a client that does not know about it, carries no key -
+        // which has to mean the event source id rather than an empty expression the resolver cannot make sense of.
         return new(
             contract.Properties.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value),
-            contract.IncludeChildren
-        );
+            contract.IncludeChildren)
+        {
+            Key = string.IsNullOrEmpty(contract.Key) ? WellKnownExpressions.EventSourceId : contract.Key
+        };
     }
 }

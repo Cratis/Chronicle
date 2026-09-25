@@ -26,6 +26,12 @@
                 "title": "Add Event Store",
                 "name": "Name"
             }
+        },
+        "keyFigures": {
+            "events": "Events",
+            "eventTypes": "Event types",
+            "namespaces": "Namespaces",
+            "unavailable": "Key figures unavailable"
         }
     },
     "connectedClients": {
@@ -79,7 +85,8 @@
             "connectedClients": "Connected Clients",
             "servers": "Servers",
             "developmentTools": "Development Tools"
-        }
+        },
+        "dashboard": "Dashboard"
     },
     "eventStore": {
         "general": {
@@ -801,6 +808,18 @@
                 },
                 "unavailable": "This server was not built with development tools, so there is nothing to do here."
             }
+        },
+        "dashboard": {
+            "title": "Dashboard",
+            "keyFigures": "Key figures",
+            "totalEvents": "Events",
+            "eventTypes": "Event types",
+            "namespaces": "Namespaces",
+            "namespacesSubtitle": "Drill into a namespace",
+            "noNamespaces": "No namespaces yet.",
+            "eventTypeDistribution": "Event type distribution",
+            "eventTypeDistributionSubtitle": "Relative to the most frequent event type",
+            "noEvents": "No events have been appended yet."
         }
     },
     "components": {

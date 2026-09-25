@@ -6,13 +6,13 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Projections;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Observation.for_ObserverRemover.given;
@@ -120,7 +120,7 @@ public class all_dependencies : Specification
     {
         var jobsManager = Substitute.For<IJobsManager>();
         jobsManager.GetAllJobs().Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
-        _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_eventStore, @namespace)).Returns(jobsManager);
+        _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_eventStore.Value, @namespace.Value)).Returns(jobsManager);
         return jobsManager;
     }
 }

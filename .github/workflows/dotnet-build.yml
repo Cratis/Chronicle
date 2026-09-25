@@ -148,14 +148,24 @@ jobs:
           done
           dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
-      - name: Build and push development Docker image
+      # The push is what lets the integration shards, which run on their own runners, get this image.
+      # A Dependabot pull request cannot do it: those runs receive a read-only GITHUB_TOKEN, and the
+      # `permissions` key cannot raise it, so `docker push` ends in "denied: installation not allowed to
+      # Write organization package" and takes the whole build job - build, client packaging, the lot -
+      # down with it. That left every Dependabot pull request permanently red, which is the worst place
+      # to lose a build: a dependency bump is exactly the change that needs one. Build the image either
+      # way so the Dockerfile is still exercised, and push only when the token can.
+      - name: Build development Docker image
         run: |
           dotnet publish Source/Kernel/Server/Server.csproj \
             --configuration Debug \
             --no-restore \
             -o Source/Kernel/Server/out
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
-          docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
+
+      - name: Push development Docker image
+        if: github.actor != 'dependabot[bot]'
+        run: docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
 
       - name: Export cache key and image
         id: export-cache-key
@@ -269,7 +279,12 @@ jobs:
           path: ./coverage-results/
           retention-days: 1
 
+  # Skipped for Dependabot, whose read-only token cannot push the image these shards pull. The rest of the
+  # gate - build, specs, mongodb, and integration-api, which builds its own image from the cached binaries -
+  # still runs, so a bump is checked rather than waved through. A bump that needs the full matrix should be
+  # re-opened as an ordinary pull request, where the token can push.
   integration:
+    if: github.actor != 'dependabot[bot]'
     needs: [dotnet-build, dotnet-build-development]
     permissions:
       contents: read

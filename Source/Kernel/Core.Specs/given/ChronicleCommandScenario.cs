@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Testing.Commands;
 using Cratis.Arc.Validation;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle;
@@ -36,6 +37,15 @@ public static class ChronicleCommandScenario
         var scenario = new CommandScenario<TCommand>();
         scenario.Services.AddSingleton<IDiscoverableValidators>(
             new DiscoverableValidators(new global::Cratis.Types.Types()));
+
+        // A validator whose constructor dependency cannot be resolved is dropped rather than reported, so the
+        // command validates against whatever rules happened to construct and reports success - the same silent
+        // failure the validator lookup above exists to prevent. Kernel validators read the event store to answer
+        // ownership questions, so IStorage has to be resolvable for a scenario to exercise the rule set the
+        // server actually runs. The substitute answers "nothing registered", which is the right starting point;
+        // a spec that needs stored state registers its own on its scenario.
+        scenario.Services.AddSingleton(Substitute.For<IStorage>());
+
         return scenario;
     }
 }

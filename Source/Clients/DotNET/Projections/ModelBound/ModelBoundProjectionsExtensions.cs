@@ -53,4 +53,3 @@ public static class ModelBoundProjectionsExtensions
         attribute is EventSequenceAttribute ||
         attribute is IProjectionAnnotation and not PassiveAttribute;
 }
-

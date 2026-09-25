@@ -74,6 +74,9 @@
         <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Cratis.Orleans" />
+        <PackageReference Include="Cratis.Orleans.Storage" />
+        <PackageReference Include="Cratis.Orleans.Storage.MongoDB" />
         <PackageReference Include="Cratis.Screenplay" />
         <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />

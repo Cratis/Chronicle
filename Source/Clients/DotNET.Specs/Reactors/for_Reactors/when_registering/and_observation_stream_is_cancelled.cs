@@ -9,7 +9,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
-
 using ContractReactors = Cratis.Chronicle.Contracts.Observation.Reactors.IReactors;
 
 namespace Cratis.Chronicle.Reactors.for_Reactors.when_registering;

@@ -78,4 +78,3 @@ public class a_model_bound_code_generator : Specification
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>());
 }
-

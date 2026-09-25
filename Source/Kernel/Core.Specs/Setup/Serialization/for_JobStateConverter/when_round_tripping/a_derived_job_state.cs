@@ -3,15 +3,15 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Setup.Serialization.for_JobStateConverter.when_round_tripping;
 
 /// <summary>
-/// A job grain persists its own derived state type, never the base <see cref="Storage.Jobs.JobState"/>, and the
+/// A job grain persists its own derived state type, never the base <see cref="Cratis.Orleans.Storage.Jobs.JobState"/>, and the
 /// request is declared as the empty marker interface <see cref="IJobRequest"/>. The converter therefore has to own
-/// every type deriving from <see cref="Storage.Jobs.JobState"/> - left to the default converter, a derived state
+/// every type deriving from <see cref="Cratis.Orleans.Storage.Jobs.JobState"/> - left to the default converter, a derived state
 /// writes an empty request and cannot be read back at all.
 /// </summary>
 public class a_derived_job_state : given.a_converter_for_job_states

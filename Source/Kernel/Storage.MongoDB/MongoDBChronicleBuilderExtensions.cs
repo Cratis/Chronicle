@@ -5,10 +5,14 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Serialization;
 using Cratis.Compliance.MongoDB;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.MongoDB;
+using Cratis.Orleans.Storage.MongoDB.Jobs;
+using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Orleans.Providers.MongoDB.Configuration;
 using Orleans.Providers.MongoDB.Utils;
@@ -72,13 +76,35 @@ public static class MongoDBChronicleBuilderExtensions
 
         builder.ConfigureServices(services =>
         {
-            services.AddSingleton<ICustomSerializers, CustomSerializers>();
             services.AddSingleton<IDatabase, Database>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<EncryptionKeyStorage>();
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
+
+            // The Cratis.Orleans job system storage: the same MongoDB client, databases named exactly where
+            // the kernel has always kept its job state, resolved per event store and namespace. Registered
+            // as IJobsStorage - that is the type the package's JobsManager grain and the kernel's storage
+            // trees inject; a registration keyed only on the concrete type leaves IJobsStorage unresolved.
+            services.AddSingleton<Cratis.Orleans.Storage.IJobsStorage>(sp => new MongoDBJobsStorage(
+                sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings),
+                sp.GetRequiredService<IJobTypes>(),
+                sp.GetRequiredService<ICustomSerializers>(),
+                Options.Create(new MongoDBJobsStorageOptions
+                {
+                    DatabaseNameResolver = (scope, @namespace) => Cratis.Chronicle.Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace)
+                })));
+            services.AddSingleton<ICustomSerializers, CustomSerializers>();
+
+            // Auto-registration only considers the assemblies named here, and the package names its own. The
+            // kernel's serializers and serialization providers live in Cratis.Chronicle assemblies, so without
+            // this they are discovered and skipped - the driver then reads those documents its own way, which
+            // throws nothing and shows up only as a document read back in the wrong shape.
+            services.Configure<Cratis.Orleans.Storage.MongoDB.Serialization.CustomSerializersOptions>(
+                _ => _.AssemblyNameFragments.Add("Cratis.Chronicle"));
+
+            services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
 
             services.AddHealthChecks().AddMongoDb(
