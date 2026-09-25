@@ -181,11 +181,7 @@ public class EventSequenceStorage(
                     return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
                 }
 
-                var content = new Dictionary<EventTypeGeneration, ExpandoObject>
-                {
-                    { EventTypeGeneration.First, e.Content }
-                };
-
+                var hash = e.ContentHashes.TryGetValue(e.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
                 var appendedEvent = BuildAppendedEvent(
                     e.SequenceNumber,
                     e.EventSourceType,
@@ -198,8 +194,8 @@ public class EventSequenceStorage(
                     causedByPerEvent[index],
                     e.Tags,
                     e.Occurred,
-                    content,
-                    e.Hash,
+                    e.GenerationalContent,
+                    hash,
                     e.Subject);
 
                 _events.Add(appendedEvent);
@@ -713,10 +709,13 @@ public class EventSequenceStorage(
             hash,
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value));
 
-        var eventContent = content.TryGetValue(EventTypeGeneration.First, out var firstGenContent)
-            ? firstGenContent
+        var eventContent = content.TryGetValue(eventType.Generation, out var generationContent)
+            ? generationContent
             : content.Values.FirstOrDefault() ?? new ExpandoObject();
 
-        return new AppendedEvent(eventContext, eventContent);
+        return new AppendedEvent(eventContext, eventContent)
+        {
+            GenerationalContent = content.ToDictionary(kvp => (int)kvp.Key.Value, kvp => Serialize(kvp.Value))
+        };
     }
 }
