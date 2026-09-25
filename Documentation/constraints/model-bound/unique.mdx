@@ -24,7 +24,7 @@ Both events now participate in the same `UniqueEmail` constraint, so neither `Us
 
 ## Violation message
 
-The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. A custom violation message is currently C#-only — none of the other clients' constraint declarations (model-bound or declarative) support one:
+The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. C# supports a custom violation message, and so do Kotlin and Java from `io.cratis:chronicle` 6.5.0: the client that registered the constraint puts its message on the violations its appends return, with `{detailKey}` placeholders filled in from the violation details. Elixir and TypeScript use Chronicle's default message:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/violation-message" />
 
