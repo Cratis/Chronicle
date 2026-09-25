@@ -4,9 +4,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Setup.Serialization;

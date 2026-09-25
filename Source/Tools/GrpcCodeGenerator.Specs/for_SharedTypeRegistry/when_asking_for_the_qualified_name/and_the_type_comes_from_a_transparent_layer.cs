@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.SharedTypeCatalog;
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_SharedTypeRegistry.when_asking_for_the_qualified_name;
 
 /// <summary>
-/// A type Core reuses from a project it depends on rather than declaring itself - <c language="csharp">Concepts.Jobs.JobStatus</c>
+/// A type Core reuses from a project it depends on rather than declaring itself - <c language="csharp">Cratis.Orleans.Jobs.JobStatus</c>
 /// is the real shape - sits one namespace segment deeper than a Core-declared type. Mapping it with the plain
 /// skip/base transform, unadjusted, sends the file to <c language="csharp">Contracts.Concepts.Jobs</c> instead of
 /// <c language="csharp">Contracts.Jobs</c> - a real defect caught moving <c language="csharp">JobStatus</c> itself, which this guards against

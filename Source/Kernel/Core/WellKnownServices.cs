@@ -108,4 +108,9 @@ public static class WellKnownServices
     /// occupies. See PLAN2.md's "near-miss" section.
     /// </remarks>
     public const string EventSequenceQueries = "EventSequenceQueries";
+
+    /// <summary>
+    /// The statistics service.
+    /// </summary>
+    public const string Statistics = "Statistics";
 }

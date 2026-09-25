@@ -6,7 +6,7 @@ import { ObserverInformation } from 'Features/Observation';
 import { ClearObserverQuarantine, RemoveObserver, ReplayObserver as Replay } from 'Features/Observation';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
-import { ObserverRunningState } from 'Features/Contracts/Observation';
+import { ObserverOwner, ObserverRunningState } from 'Features/Contracts/Observation';
 import { ObserverRemovalOutcome, ObserverRemovalResult } from 'Features/Concepts/Observation';
 import strings from 'Strings';
 
@@ -28,6 +28,17 @@ export class ObserversViewModel {
     }
 
     /**
+     * Whether the selected observer may be replayed.
+     *
+     * An observer the kernel owns maintains state for Chronicle itself and is refused server-side. Reading the
+     * owner here means the button is disabled rather than offering an action that comes back as a validation
+     * error - the server rule stays the authority, this only stops the user finding out the hard way.
+     */
+    get canReplay() {
+        return !!this.selectedObserver && this.selectedObserver.owner !== ObserverOwner.kernel;
+    }
+
+    /**
      * Whether the selected observer is one that may be removed.
      *
      * The kernel is the authority here and refuses a running or still-subscribed observer whatever the Workbench
@@ -40,7 +51,7 @@ export class ObserversViewModel {
     }
 
     async replay(eventStore: string, namespace: string) {
-        if (this.selectedObserver) {
+        if (this.canReplay && this.selectedObserver) {
             const observerId = this.selectedObserver.id;
             const result = await this._dialogs.showConfirmation('Replay?', `Are you sure you want to replay ${observerId}?`, DialogButtons.YesNo);
             if (result == DialogResult.Yes) {

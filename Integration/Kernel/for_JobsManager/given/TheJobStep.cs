@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 
 public class TheJobStep(
     TheJobStepProcessor jobStepProcessor,
-    [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TheJobStepState> state,
     IJobStepThrottle throttle,
     ILogger<JobStep<TheJobStepRequest, TheJobStepResult, TheJobStepState>> logger)
@@ -58,7 +58,7 @@ public class TheJobStep(
                 throw new Exception("Should fail");
             }
 
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Concepts.Jobs.JobStepStatus.CompletedSuccessfully);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Orleans.Jobs.JobStepStatus.CompletedSuccessfully);
             return JobStepResult.Succeeded(new TheJobStepResult());
         }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
@@ -67,14 +67,14 @@ public class TheJobStep(
         }
         catch (Exception ex)
         {
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Concepts.Jobs.JobStepStatus.CompletedWithFailure);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Orleans.Jobs.JobStepStatus.CompletedWithFailure);
             return JobStepResult.Failed(PerformJobStepError.Failed(ex));
         }
 
         async Task<Catch<JobStepResult>> HandleStopped()
         {
             await _selfGrainReference.IncrementStopped();
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Concepts.Jobs.JobStepStatus.Stopped);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Orleans.Jobs.JobStepStatus.Stopped);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
         }
     }

@@ -11,4 +11,6 @@
         <ProjectReference Include="../Compatibility/Compatibility.csproj" />
         <ProjectReference Include="../Contracts/Contracts.csproj" />
     </ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
 </Project>

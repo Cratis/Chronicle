@@ -6,7 +6,8 @@ using Cratis.Arc.Commands;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Jobs.for_ResumeJob.when_validating;
@@ -14,7 +15,7 @@ namespace Cratis.Chronicle.Jobs.for_ResumeJob.when_validating;
 public class and_all_values_are_provided : Specification
 {
     readonly CommandScenario<ResumeJob> _scenario = ChronicleCommandScenario.For<ResumeJob>();
-    readonly Concepts.Jobs.JobId _jobId = Concepts.Jobs.JobId.New();
+    readonly Cratis.Orleans.Jobs.JobId _jobId = Cratis.Orleans.Jobs.JobId.New();
     CommandResult _result;
 
     void Establish()

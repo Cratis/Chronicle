@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -24,4 +24,3 @@ public interface IHandleEventsForObserver : IJobStep<HandleEventsForObserverArgu
     /// </remarks>
     Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber);
 }
-

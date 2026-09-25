@@ -15,4 +15,3 @@ public record FromDefinition(
     IDictionary<PropertyPath, string> Properties,
     PropertyExpression Key,
     PropertyExpression? ParentKey);
-

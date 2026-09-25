@@ -4,10 +4,9 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Events.Constraints;
-using Cratis.Chronicle.Jobs;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Core.Specs.Patches.for_RebuildConstraintIndexes.when_applying_up;
 

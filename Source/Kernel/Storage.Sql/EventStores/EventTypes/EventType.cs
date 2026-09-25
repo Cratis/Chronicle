@@ -44,4 +44,3 @@ public class EventType
     /// </summary>
     public string MigrationsJson { get; set; } = "[]";
 }
-

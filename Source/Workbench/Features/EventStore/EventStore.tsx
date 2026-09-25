@@ -38,6 +38,8 @@ import { AreDevelopmentToolsAvailable } from 'Features/DevelopmentTools';
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 import { Captures } from './General/Captures/Captures';
+import { Dashboard } from './Dashboard/Dashboard';
+import { Dashboard as NamespaceDashboard } from './Namespaces/Dashboard/Dashboard';
 
 export const EventStore = () => {
     // The server decides: development tools are only compiled into development builds, so a
@@ -48,6 +50,7 @@ export const EventStore = () => {
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
+                { label: strings.mainMenu.dashboard, url: ':namespace/dashboard', icon: mdIcons.MdDashboard },
                 { label: strings.mainMenu.recommendations, url: ':namespace/recommendations', icon: mdIcons.MdInfo },
                 { label: strings.mainMenu.jobs, url: ':namespace/jobs', icon: mdIcons.MdGroupWork },
                 { label: strings.mainMenu.sequences, url: ':namespace/sequences', icon: mdIcons.MdDataArray },
@@ -64,6 +67,7 @@ export const EventStore = () => {
         {
             label: strings.mainMenu.general.groupLabel,
             items: [
+                { label: strings.mainMenu.dashboard, url: 'dashboard', icon: mdIcons.MdDashboard },
                 { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdTypeSpecimen },
                 { label: 'Webhooks', url: 'webhooks', icon: mdIcons.MdWebhook },
@@ -100,8 +104,9 @@ export const EventStore = () => {
             <Route path=':eventStore'
                 element={<DefaultLayout menu={menuItems} basePath={`${basePath}/:eventStore`} />}>
 
-                <Route index element={<Navigate to={'Default/recommendations'} replace />} />
+                <Route index element={<Navigate to={'Default/dashboard'} replace />} />
 
+                <Route path={'dashboard'} element={<Dashboard />} />
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'webhooks'} element={<Webhooks />} />
@@ -121,7 +126,8 @@ export const EventStore = () => {
                 <Route path={'development-tools'} element={<DevelopmentTools />} />
 
                 <Route path={':namespace'}>
-                    <Route path={''} element={<Navigate to={'recommendations'} replace />} />
+                    <Route path={''} element={<Navigate to={'dashboard'} replace />} />
+                    <Route path={'dashboard'} element={<NamespaceDashboard />} />
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />

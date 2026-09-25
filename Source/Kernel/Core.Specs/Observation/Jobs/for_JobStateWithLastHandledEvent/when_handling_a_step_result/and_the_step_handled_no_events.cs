@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Jobs;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_JobStateWithLastHandledEvent.when_handling_a_step_result;
 

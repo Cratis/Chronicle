@@ -5,7 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Engine;
-using Cratis.Chronicle.Setup.Serialization;
+using Cratis.Orleans;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 
@@ -35,7 +35,7 @@ public class when_round_tripping_through_orleans : Specification
     {
         var services = new ServiceCollection();
         services.AddSingleton(new JsonSerializerOptions());
-        services.AddConceptSerializer();
+        services.AddCratisOrleansSerializers();
         var serializer = services.BuildServiceProvider().GetRequiredService<Serializer>();
         _result = serializer.Deserialize<SomeProjectionDefinitionsFailedToRegister>(serializer.SerializeToArray(_original));
     }

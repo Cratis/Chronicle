@@ -11,6 +11,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Json;
+using Cratis.Orleans.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 using Orleans.Serialization.Cloning;

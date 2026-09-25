@@ -40,6 +40,7 @@ internal static class GeneratedGrpcServices
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Security.IUsers, global::Cratis.Chronicle.Services.Security.Users>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Seeding.IEventSeeding, global::Cratis.Chronicle.Services.Seeding.EventSeeding>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Sequences.IEventSequences, global::Cratis.Chronicle.Services.Sequences.EventSequences>();
+        services.AddSingleton<global::Cratis.Chronicle.Contracts.Statistics.IStatistics, global::Cratis.Chronicle.Services.Statistics.Statistics>();
 
         return services;
     }
@@ -68,6 +69,7 @@ internal static class GeneratedGrpcServices
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Security.Users>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Seeding.EventSeeding>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Sequences.EventSequences>();
+        endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Statistics.Statistics>();
 
         return endpoints;
     }

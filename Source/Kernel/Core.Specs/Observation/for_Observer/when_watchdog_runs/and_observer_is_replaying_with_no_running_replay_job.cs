@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
