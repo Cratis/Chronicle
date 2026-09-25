@@ -200,8 +200,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
+        var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
 
-        if (string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase))
+        if (isSqlite)
         {
             // SQLite: each event store, namespace, and read-model namespace lives in its own
             // file. The cluster file path is the configured Data Source; the derived files
@@ -231,11 +232,17 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         // populates the cache concurrently with the wipe is overwritten by a final empty cache.
         ClearTableMigrationCache(string.Empty);
 
-        // The job system caches the storage it resolves, and applying its migrations is part of
-        // resolving - so the wipe has just taken its tables away with everything else, and nothing
-        // would make them again. Telling it to forget means the next job resolves a schema that is
-        // actually there; without this the next write says there is no such table as Jobs.
-        serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
+        // Only SQLite drops the job tables - the other backends truncate, so their schema survives
+        // the wipe. The job system caches the storage it resolves, and applying its migrations is
+        // part of resolving, so on SQLite it has to forget: otherwise it holds storage for tables
+        // that are gone and the next write says there is no such table as Jobs. Telling it to
+        // forget where the tables never went away is not harmless - the next job in every event
+        // store and namespace would re-run the migrations, and on a real database server that is
+        // slow enough to push the integration specs past their deadlines.
+        if (isSqlite)
+        {
+            serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
+        }
     }
 
     static string ExtractSqliteDataSource(string connectionString)
