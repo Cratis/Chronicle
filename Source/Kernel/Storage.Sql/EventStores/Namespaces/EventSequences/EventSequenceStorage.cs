@@ -340,6 +340,7 @@ public class EventSequenceStorage(
         var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventType.Id.Value, reason, correlationId, causation, causedByChain, occurred);
 
         eventEntry.Type = GlobalEventTypes.Redaction;
+        eventEntry.Generation = EventTypeGeneration.First.Value;
         eventEntry.Occurred = occurred;
         eventEntry.CorrelationId = correlationId.ToString();
         eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);
@@ -354,7 +355,7 @@ public class EventSequenceStorage(
         // but metadata carries the original type for routing — main's ToAppendedEvent
         // helper would read the synthetic Redaction marker that just replaced it and
         // route to the wrong observer set.
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, originalEventType.Generation);
+        var content = EventEntryConverter.GetContentForGeneration(eventEntry, EventTypeGeneration.First);
         var eventCausation = EventEntryConverter.GetCausation(eventEntry);
         var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -408,6 +409,7 @@ public class EventSequenceStorage(
             var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventTypeId, reason, correlationId, causation, causedByChain, occurred);
 
             eventEntry.Type = GlobalEventTypes.Redaction;
+            eventEntry.Generation = EventTypeGeneration.First.Value;
             eventEntry.Occurred = occurred;
             eventEntry.CorrelationId = correlationId.ToString();
             eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);

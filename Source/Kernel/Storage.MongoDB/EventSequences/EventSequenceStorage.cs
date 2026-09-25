@@ -239,7 +239,8 @@ public class EventSequenceStorage(
                 generationalContent,
                 hashesForStorage,
                 [],
-                subject?.IsSet == true ? subject : null);
+                subject?.IsSet == true ? subject : null,
+                eventType.Generation.Value);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
@@ -345,7 +346,8 @@ public class EventSequenceStorage(
                         { eventToAppend.EventType.Generation.ToString(), eventToAppend.Hash.Value }
                     },
                     [],
-                    Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
+                    Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null,
+                    Generation: eventToAppend.EventType.Generation.Value);
 
                 eventsToInsert.Add(@event);
 
@@ -1084,6 +1086,7 @@ public class EventSequenceStorage(
             Builders<Event>.Filter.Eq(e => e.SequenceNumber, originalRawEvent.SequenceNumber),
             Builders<Event>.Update
                 .Set(e => e.Type, GlobalEventTypes.Redaction)
+                .Set(e => e.Generation, EventTypeGeneration.First.Value)
                 .Set(e => e.Content, generationalContent)
                 .Set(e => e.Occurred, redactionOccurred)
                 .Set(e => e.CorrelationId, redactionCorrelationId)

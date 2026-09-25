@@ -499,15 +499,12 @@ public class EventSequenceStorage(
 
             var original = _events[index];
 
-            // Surface the highest available generation, so observers and projections consuming a newer
-            // generation receive the migrated content — and report that generation on the event type,
-            // exactly as the persistent providers resolve a stored event with several generations.
-            var highestGeneration = content.Keys.MaxBy(_ => _.Value) ?? original.Context.EventType.Generation;
+            // Content added for other generations does not change the generation in which the event was appended.
+            var appendedGeneration = original.Context.EventType.Generation;
 
             _events[index] = original with
             {
-                Context = original.Context with { EventType = new EventType(original.Context.EventType.Id, highestGeneration, false) },
-                Content = content.TryGetValue(highestGeneration, out var migrated) ? migrated : original.Content,
+                Content = content.TryGetValue(appendedGeneration, out var migrated) ? migrated : original.Content,
                 GenerationalContent = content.ToDictionary(_ => (int)_.Key.Value, _ => Serialize(_.Value))
             };
         }

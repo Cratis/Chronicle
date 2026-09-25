@@ -84,6 +84,7 @@ public static class EventEntryConverter
             Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
             CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
             Type = eventType.Id,
+            Generation = eventType.Generation.Value,
             Occurred = occurred,
             EventSourceType = eventSourceType,
             EventSourceId = eventSourceId,
@@ -148,6 +149,7 @@ public static class EventEntryConverter
             Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
             CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
             Type = eventType.Id,
+            Generation = eventType.Generation.Value,
             Occurred = occurred,
             EventSourceType = eventSourceType,
             EventSourceId = eventSourceId,
@@ -245,16 +247,15 @@ public static class EventEntryConverter
     }
 
     /// <summary>
-    /// Get the event type from an event entry. Selects the highest available generation so
-    /// observers and projections subscribed to a newer generation receive the migrated content
-    /// by default — mirrors the MongoDB backend.
+    /// Get the appended event type from an event entry. Legacy entries without a stored
+    /// generation retain their previous highest-available-generation behavior.
     /// </summary>
     /// <param name="entry">The event entry.</param>
     /// <returns>The event type.</returns>
     public static EventType GetEventType(EventEntry entry)
     {
-        var highestGeneration = GetHighestGeneration(entry);
-        return new EventType(entry.Type, new EventTypeGeneration(highestGeneration), false);
+        var generation = entry.Generation ?? GetHighestGeneration(entry);
+        return new EventType(entry.Type, new EventTypeGeneration(generation), false);
     }
 
     /// <summary>

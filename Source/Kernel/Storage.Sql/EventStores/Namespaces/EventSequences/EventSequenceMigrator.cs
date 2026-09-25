@@ -46,6 +46,7 @@ public class EventSequenceMigrator(
                 EventStreamType = table.StringColumn(migrationBuilder, maxLength: 200),
                 EventStreamId = table.StringColumn(migrationBuilder, maxLength: 200),
                 Content = table.StringColumn(migrationBuilder),
+                Generation = table.NumberColumn<uint>(migrationBuilder, nullable: true),
                 ContentHashes = table.StringColumn(migrationBuilder),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
@@ -83,20 +84,28 @@ public class EventSequenceMigrator(
 
     async Task UpgradeTable(EventSequenceDbContext context, string tableName)
     {
-        if (await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Tags)))
         {
-            return;
+            logger.AddingTagsColumn(tableName);
+            migrationBuilder.AddColumn<string>(
+                name: nameof(EventEntry.Tags),
+                table: tableName,
+                nullable: false,
+                defaultValue: string.Empty);
         }
 
-        logger.AddingTagsColumn(tableName);
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Generation)))
+        {
+            migrationBuilder.AddColumn<uint>(
+                name: nameof(EventEntry.Generation),
+                table: tableName,
+                nullable: true);
+        }
 
-        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-        migrationBuilder.AddColumn<string>(
-            name: nameof(EventEntry.Tags),
-            table: tableName,
-            nullable: false,
-            defaultValue: string.Empty);
-
-        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        if (migrationBuilder.Operations.Count > 0)
+        {
+            await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        }
     }
 }

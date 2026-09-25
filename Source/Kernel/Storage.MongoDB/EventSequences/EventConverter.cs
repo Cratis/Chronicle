@@ -125,14 +125,13 @@ public class EventConverter(
             return (new EventType(@event.Type, latest.EventTypeGeneration, false), revisionKey, ParseContent(latest.Content, revisionKey));
         }
 
-        // Use the highest available generation's content so that observers and projections
-        // that consume a newer generation receive the migrated content by default.
-        var highestGeneration = @event.Content.Keys
+        // Legacy documents have no appended generation; retain their previous read behavior.
+        var generation = @event.Generation ?? (uint)@event.Content.Keys
             .Select(k => int.TryParse(k, out var g) ? g : 0)
             .DefaultIfEmpty(1)
             .Max();
-        var generationKey = highestGeneration.ToString();
-        var eventType = new EventType(@event.Type, new EventTypeGeneration((uint)highestGeneration), false);
+        var generationKey = generation.ToString();
+        var eventType = new EventType(@event.Type, new EventTypeGeneration(generation), false);
         return (eventType, generationKey, ParseContent(@event.Content, generationKey));
     }
 

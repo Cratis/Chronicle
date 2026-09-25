@@ -64,6 +64,11 @@ public class EventEntry
     public EventStreamId EventStreamId { get; set; } = EventStreamId.Default;
 
     /// <summary>
+    /// Gets or sets the generation in which the event was appended. Null for events stored before this field existed.
+    /// </summary>
+    public uint? Generation { get; set; }
+
+    /// <summary>
     /// Gets or sets the content per event type generation.
     /// </summary>
     public string Content { get; set; } = string.Empty;

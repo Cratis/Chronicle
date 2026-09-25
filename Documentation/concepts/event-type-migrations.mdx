@@ -89,6 +89,8 @@ This ensures that:
 - Newer consumers can read events with the latest schema
 - No data is lost during schema evolution
 
+The event context reports the generation in which the event was appended, both during live delivery and when reading it later (including catch-up and replay). Its content matches that generation; migrated content for other generations remains available to consumers. For events stored before Chronicle began recording the appended generation, a read continues to report the highest stored content generation. The original generation cannot be recovered reliably from those events, so existing records are not backfilled.
+
 ## Registration
 
 Migrations are automatically discovered and registered when you connect to Chronicle.

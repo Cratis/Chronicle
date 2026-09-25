@@ -90,6 +90,7 @@ public class when_appending_event_with_multiple_generations : given.an_event_seq
 
     [Fact] void should_attempt_to_insert_event() =>
         _collection.Received(1).InsertOneAsync(Arg.Any<Event>(), Arg.Any<InsertOneOptions?>(), Arg.Any<CancellationToken>());
+    [Fact] void should_store_the_appended_generation() => _insertedEvent.Generation.ShouldEqual(1u);
     [Fact] void should_have_content_hash_for_generation_1() => _insertedEvent.ContentHashes["1"].ShouldEqual("hash-gen-1");
     [Fact] void should_have_content_hash_for_generation_2() => _insertedEvent.ContentHashes["2"].ShouldEqual("hash-gen-2");
     [Fact] void should_have_hash_on_appended_event_context() => ((AppendedEvent)_result).Context.Hash.ShouldNotEqual(EventHash.NotSet);
