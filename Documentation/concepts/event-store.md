@@ -1,14 +1,17 @@
-# Event Store
+---
+title: "Event Store"
+description: "What a Chronicle event store holds, and the databases it can be stored in."
+---
 
 Chronicle offers what is called an event store which basically means a special purpose database
 for storing events. The events are stored in [event sequences](./event-sequence.md).
 
 In addition to this, the Chronicle event store also maintains information about things like the
-[event types](./event-type.md), [observers](./observers.md), [projections](./projection.md) and more.
+[event types](./event-type.md), [observers](./observers.mdx), [projections](./projection.md) and more.
 
-The Chronicle event store is built on top of [MongoDB](https://mongodb.com). In a production environment
-you have to bring your own MongoDB environment and configure Chronicle to work with it. For local development,
-Chronicle provides a development Docker image that comes with MongoDB bundled inside it.
+Chronicle stores the event store in a database you provide: [MongoDB](https://mongodb.com), PostgreSQL,
+Microsoft SQL Server, or SQLite — see [Storage configuration](../hosting/configuration/storage.mdx). MongoDB is the
+default. For local development, Chronicle provides a development Docker image that comes with MongoDB bundled inside it.
 
 ```mermaid
 flowchart TB

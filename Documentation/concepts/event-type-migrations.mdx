@@ -1,4 +1,7 @@
-# Event Type Migrations
+---
+title: "Event Type Migrations"
+description: "Evolve an event type through generations with upcast and downcast migrations, and what each stored generation holds."
+---
 
 Event type migrations enable you to evolve your event schemas over time while maintaining
 compatibility with existing events. When an event type changes, you can define **upcasters**
@@ -87,7 +90,7 @@ When an event is appended to the event store:
 This ensures that:
 - Older consumers can still read events in their expected format
 - Newer consumers can read events with the latest schema
-- No data is lost during schema evolution
+- The generation an event was appended as is stored as written, so the original content is never overwritten. The other generations hold only what the migrations produce: the example above splits a name on spaces, so for "Mary Ann Smith" the upcast generation 2 keeps "Mary" and "Ann" and drops "Smith". Write migrations that keep every part a consumer needs.
 
 ## Registration
 

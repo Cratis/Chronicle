@@ -1,26 +1,29 @@
-# Projection with custom properties
+---
+title: "Projection with custom properties"
+description: "Map event properties explicitly with Set() when AutoMap's naming convention does not fit."
+---
 
 When auto-mapping isn't sufficient, you can explicitly map properties from events to your read model. This gives you full control over how data is transformed and mapped.
 
 ## Explicit property mapping
 
-Instead of using `AutoMap()`, use `Set()` methods to explicitly define property mappings:
+Use `Set()` to map a property explicitly — typically because the event and the read model name it differently:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/explicit" />
 
 ## Combining AutoMap with explicit mapping
 
-You can use `AutoMap()` at the top level to automatically map matching properties, then add explicit mappings for specific transformations:
+AutoMap is on by default, so you never call `.AutoMap()` yourself: every property whose name matches is already mapped. Add explicit mappings only for the properties that need a transformation or a different source:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/combined-automap" />
 
-`AutoMap()` works recursively, automatically mapping:
+AutoMap works recursively, automatically mapping:
 
 - Properties with matching names and compatible types
 - Nested objects and their properties
 - Collections and arrays
 
-`AutoMap()`/`NoAutoMap()` are set once at the projection level — there is no per-event-type toggle. Add explicit `.Set()` calls inside a specific `.From<TEvent>()` block for the properties that need custom mapping; AutoMap still fills in every other matching property for that event.
+`NoAutoMap()` turns it off for the projection (and `.AutoMap()` turns it back on inside a child scope) — there is no per-event-type toggle. Add explicit `.Set()` calls inside a specific `.From<TEvent>()` block for the properties that need custom mapping; AutoMap still fills in every other matching property for that event.
 
 ## Read model definition
 

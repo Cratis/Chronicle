@@ -3,15 +3,15 @@ title: Get read models
 description: Retrieve read model instances — one, all, or a page — and observe them change live, picking the right consistency for each read.
 ---
 
-**Goal:** your events project into a read model — now you need it back out. One book, the whole catalog, a page for a grid, or a live stream that updates the UI as events arrive. `IReadModels` (on `IEventStore.ReadModels`) covers all of these; the choice is between **strongly consistent** reads computed from the event log and **eventually consistent** reads served from the materialized sink.
+**Goal:** your events project into a read model — now you need it back out. One book, the whole catalog, a page for a grid, or a live stream that updates the UI as events arrive. `IReadModels` (on `IEventStore.ReadModels`) covers all of these; the choice is between **eventually consistent** reads served from the materialized sink — the default — and **strongly consistent** reads of a passive read model, computed from the event log on every call.
 
 :::note[Client coverage]
-Getting a single strongly-consistent instance (below) is real in every client. Kotlin and Java currently only support that single-instance lookup — no bulk "get all", materialized paging, or live/observable read model API exists in the Kotlin SDK yet. Elixir supports both strongly-consistent "get all" (`Chronicle.all/1`) and materialized paging (`Chronicle.ReadModels.query/2`, with `page`/`page_size`) — see [Designing read models](../concepts/designing-read-models) — but has no live/observable query API. TypeScript is the only client with a live, observable read model query (`readModels.watch()`) in addition to the single/bulk/paged reads.
+Getting a single instance (below) is real in every client. Kotlin and Java currently only support that single-instance lookup — no bulk "get all", materialized paging, or live/observable read model API exists in the Kotlin SDK yet. Elixir supports both "get all" (`Chronicle.all/1`) and materialized paging (`Chronicle.ReadModels.query/2`, with `page`/`page_size`) — see [Designing read models](../concepts/designing-read-models) — but has no live/observable query API. TypeScript is the only client with a live, observable read model query (`readModels.watch()`) in addition to the single/bulk/paged reads.
 :::
 
 ## Get one instance
 
-`GetInstanceById` replays the key's events through the projection or reducer on demand — strongly consistent, reflecting everything appended up to this moment:
+`GetInstanceById` returns the instance for one key. For a materialized read model — the default — it reads the stored instance from the sink, so it is eventually consistent. For a `[Passive]` read model it replays the key's events through the projection or reducer on demand, reflecting everything appended up to this moment:
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/get-one" />
 
@@ -19,7 +19,7 @@ Getting a single strongly-consistent instance (below) is real in every client. K
 
 ## Get all instances
 
-`GetInstances` rebuilds every instance by replaying the event log — strongly consistent, suited to reads where accuracy beats latency. The cost grows with history; filter the result with LINQ:
+`GetInstances` returns every instance in one call — read from the sink for a materialized read model, replayed from the event log for a passive one. Either way the whole set comes back at once, so filter the result with LINQ and keep it for small sets:
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/get-all" />
 

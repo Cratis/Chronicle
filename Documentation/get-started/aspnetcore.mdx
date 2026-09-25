@@ -51,15 +51,15 @@ In a web app you usually append events from a route handler rather than inline. 
 
 <ChronicleClientTabs snippet="get-started/aspnetcore/endpoint" />
 
-The `bookId` from the route is the [event source](../concepts/event-source.md) — the book this fact is about — and `memberName` is the event's payload. That one `Append` is all it takes; the projections pick it up from there — `Book` flips to on loan and a `BorrowedBook` instance appears — along with any reactors.
+The `bookId` from the route is the [event source](../concepts/event-source.md) — the book this fact is about — and `memberName` is the event's payload. That one `Append` is all it takes; the projections pick it up from there — `GetStartedBook` flips to on loan and a `GetStartedBorrowedBook` instance appears — along with any reactors. The append returns once the event is in the log; the materialized read models catch up a moment later.
 
 ## Register your artifacts
 
-Chronicle creates its discovered artifacts — reactors, reducers, projections — through the container, so they need to be registered as services. For a handful, register them explicitly:
+Chronicle creates its discovered artifacts — reactors, reducers, projections — through the container. If an artifact is registered as a service, Chronicle uses that registration; otherwise it constructs the artifact itself and resolves its constructor parameters from the container. Registering the artifact itself is therefore optional — do it when you want to control its lifetime:
 
 <ChronicleClientTabs snippet="get-started/aspnetcore/register-artifact" />
 
-As the solution grows this gets tedious, so Cratis Fundamentals can do it by convention:
+What you must register is everything an artifact depends on, such as the notification service a real waitlist reactor would take. As the solution grows, Cratis Fundamentals can register those services by convention:
 
 <ChronicleClientTabs snippet="get-started/aspnetcore/register-by-convention" />
 
@@ -67,15 +67,15 @@ As the solution grows this gets tedious, so Cratis Fundamentals can do it by con
 
 ## Configure the MongoDB client
 
-The `Books` query reads documents Chronicle wrote, so the MongoDB driver needs to match how Chronicle stores them — register these conventions once at startup:
+The `GetStartedBooks` query reads documents Chronicle wrote, so the MongoDB driver needs to match how Chronicle stores them — register these conventions once at startup:
 
 [!INCLUDE [mongodb](./_includes/mongodb.mdx)]
 
-Then register the database and the collections you want to inject, so a type can take an `IMongoCollection<Book>` dependency without ever touching `MongoClient`:
+Then register the database and the collections you want to inject, so a type can take an `IMongoCollection<GetStartedBook>` dependency without ever touching `MongoClient`:
 
 <ChronicleClientTabs snippet="get-started/aspnetcore/mongo-registration" />
 
-Now the `Books` query from the querying section above resolves its collection straight from the container.
+Now the `GetStartedBooks` query from the querying section above resolves its collection straight from the container.
 
 ## Recap
 

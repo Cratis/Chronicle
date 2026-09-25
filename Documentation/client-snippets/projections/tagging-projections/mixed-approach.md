@@ -13,8 +13,6 @@ public record TaggingExecutiveDashboard(string Kpi, decimal Value);
 public class TaggingExecutiveDashboardProjection : IProjectionFor<TaggingExecutiveDashboard>
 {
     public void Define(IProjectionBuilderFor<TaggingExecutiveDashboard> builder) => builder
-        .From<TaggingKpiRecorded>(_ => _
-            .Set(m => m.Kpi).To(e => e.Kpi)
-            .Set(m => m.Value).To(e => e.Value));
+        .From<TaggingKpiRecorded>();
 }
 ```

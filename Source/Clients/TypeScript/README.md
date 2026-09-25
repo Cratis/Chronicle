@@ -20,239 +20,29 @@ yarn add @cratis/chronicle.contracts
 
 ## Usage
 
-This package provides strongly-typed Chronicle gRPC service clients with Promise-based unary methods and AsyncIterable for streaming, generated from proto definitions using ts-proto and nice-grpc.
+This package contains only the generated contracts: a `*Definition` for every Chronicle gRPC service and a TypeScript type for every message, produced by [ts-proto](https://github.com/stephenh/ts-proto) for [nice-grpc](https://github.com/deeplay-io/nice-grpc). It has no connection string parsing, authentication, or retry handling.
 
-### Quick Start
+**Building an application?** Use the idiomatic TypeScript client, [`@cratis/chronicle`](https://www.npmjs.com/package/@cratis/chronicle), which is built on these contracts. Reach for this package only when you are building a client or tool of your own.
 
-```typescript
-import { ChronicleConnection } from '@cratis/chronicle.contracts';
+### Calling a service
 
-// Create a connection using a connection string
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://localhost:35000'
-});
-
-// Connect to Chronicle
-await connection.connect();
-
-// Use the services with full type safety, IDE completion, and async/await
-const eventStores = await connection.eventStores.getEventStores({});
-console.log('Event stores:', eventStores.items);
-
-// Clean up
-connection.dispose();
-```
-
-### Promise-Based API
-
-All unary RPC methods now return Promises directly, enabling ergonomic async/await:
+The following excerpt shows the shape of a call. It is not a complete program: a real Chronicle server serves TLS on port `35000` — with a self-signed certificate in development — and expects a bearer token on every call, so you supply channel credentials and call metadata that fit your server.
 
 ```typescript
-// Simple Promise-based call
-const namespaces = await connection.namespaces.getNamespaces({
-    eventStore: 'mystore'
-});
+import { createChannel, createClient, ChannelCredentials } from 'nice-grpc';
+import { EventStoresDefinition } from '@cratis/chronicle.contracts';
 
-// Error handling
-try {
-    await connection.recommendations.perform({
-        /* command */
-    });
-} catch (error) {
-    console.error('Recommendation failed:', error);
-}
+const channel = createChannel('localhost:35000', ChannelCredentials.createSsl());
+const eventStores = createClient(EventStoresDefinition, channel);
+
+const response = await eventStores.allEventStores({});
 ```
 
-### Server Streaming
+Each rpc in the `.proto` files becomes a camel-cased method on its client (`AllEventStores` becomes `allEventStores`). Unary calls return a `Promise`; server-streaming calls return an `AsyncIterable`.
 
-Server streaming methods return `AsyncIterable` for easy iteration:
+### Type safety
 
-```typescript
-// Stream event store subscriptions
-for await (const subscription of connection.server.subscribeEvents({
-    /* options */
-})) {
-    console.log('Event:', subscription);
-}
-```
-
-### Connection Strings
-
-Chronicle supports connection strings similar to database connection strings, providing a consistent way to configure connections:
-
-```typescript
-// Basic connection
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://localhost:35000'
-});
-
-// With client credentials (username:password)
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://myuser:mypassword@localhost:35000'
-});
-
-// With API key authentication
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://localhost:35000?apiKey=your-api-key-here'
-});
-
-// With TLS disabled (for development)
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://localhost:35000?disableTls=true'
-});
-```
-
-### Development Connection
-
-For local development, use the built-in development connection with default credentials:
-
-```typescript
-import { ChronicleConnectionString } from '@cratis/chronicle.contracts';
-
-const connection = new ChronicleConnection({
-    connectionString: ChronicleConnectionString.Development
-});
-```
-
-The development connection string uses:
-- **Client ID**: `chronicle-dev-client`
-- **Client Secret**: `chronicle-dev-secret`
-- **Host**: `localhost:35000`
-
-These are the default development credentials that Chronicle Kernel accepts when running in development mode.
-
-### Working with Connection Strings
-
-```typescript
-import { ChronicleConnectionString } from '@cratis/chronicle.contracts';
-
-// Parse a connection string
-const connStr = new ChronicleConnectionString('chronicle://localhost:35000');
-
-// Access connection details
-console.log(connStr.serverAddress.host); // 'localhost'
-console.log(connStr.serverAddress.port); // 35000
-
-// Create new connection strings with modifications
-const withCreds = connStr.withCredentials('myuser', 'mypassword');
-const withApiKey = connStr.withApiKey('my-api-key');
-
-// Convert to string
-console.log(withCreds.toString()); // chronicle://myuser:mypassword@localhost:35000
-```
-
-### Authentication
-
-Chronicle supports two authentication modes. When using Client Credentials, the TypeScript client automatically obtains a bearer token from the authentication authority using OAuth 2.0 client_credentials flow.
-
-#### Client Credentials (OAuth2 client_credentials flow)
-
-The client automatically obtains and refreshes bearer tokens from the Chronicle server (or a custom authority):
-
-```typescript
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://client-id:client-secret@localhost:35000'
-});
-
-// With custom authority
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://client-id:client-secret@localhost:35000',
-    authority: 'https://my-auth-server.com'
-});
-```
-
-The token endpoint is served on the same port as gRPC (the single Chronicle port). The token is
-automatically included as a Bearer token in the authorization header for all gRPC calls.
-
-#### API Key
-
-```typescript
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://localhost:35000?apiKey=your-api-key'
-});
-```
-
-### Using Individual Services
-
-You can also import and use services directly:
-
-```typescript
-import { EventStoresClient } from '@cratis/chronicle.contracts';
-import * as grpc from '@grpc/grpc-js';
-
-const client = new EventStoresClient(
-    'localhost:35000',
-    grpc.credentials.createInsecure()
-);
-
-const response = await client.GetEventStores({});
-console.log('Event stores:', response.items);
-```
-
-### Configuration Options
-
-```typescript
-const connection = new ChronicleConnection({
-    connectionString: 'chronicle://localhost:35000',
-    
-    // Optional: Override credentials from connection string
-    credentials: grpc.credentials.createSsl(),
-    
-    // Optional: connection timeout in ms
-    connectTimeout: 10000,
-    
-    // Optional: message size limits
-    maxReceiveMessageSize: 1024 * 1024 * 10, // 10MB
-    maxSendMessageSize: 1024 * 1024 * 10, // 10MB
-    
-    // Optional: for request tracking
-    correlationId: 'my-correlation-id',
-    
-    // Optional: Custom authentication authority URL
-    // If not set, uses Chronicle server as the authority
-    authority: 'https://my-auth-server.com'
-});
-```
-
-### Legacy Server Address
-
-For backward compatibility, you can still use `serverAddress`:
-
-```typescript
-const connection = new ChronicleConnection({
-    serverAddress: 'localhost:35000'
-});
-```
-
-### Available Services
-
-The `ChronicleConnection` provides access to all Chronicle services:
-
-- `eventStores` - Event store management
-- `namespaces` - Namespace management
-- `recommendations` - Recommendations
-- `identities` - Identity management
-- `eventSequences` - Event sequence operations
-- `eventTypes` - Event type management
-- `constraints` - Event constraints
-- `observers` - Observer management
-- `failedPartitions` - Failed partition handling
-- `reactors` - Reactor management
-- `reducers` - Reducer management
-- `projections` - Projection management
-- `readModels` - Read model operations
-- `jobs` - Job management
-- `eventSeeding` - Event seeding
-- `server` - Server information
-
-### Type Safety
-
-All services are fully typed with TypeScript interfaces generated from proto definitions, providing:
-
-- **IntelliSense** in your IDE
-- **Compile-time type checking**
-- **Auto-completion** for all methods and parameters
-- **Type inference** for request and response objects
+Every service client and message is typed from the proto definitions, including `int64`/`uint64` fields represented as `bigint`.
 
 ## License
 

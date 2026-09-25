@@ -13,8 +13,6 @@ public class ChoosingStyleBookStatusProjection : IProjectionFor<ChoosingStyleBoo
     public void Define(IProjectionBuilderFor<ChoosingStyleBookStatusFluent> builder) => builder
         .From<ChoosingStyleBookRegistered>(_ => _
             .Set(m => m.Id).ToEventSourceId()
-            .Set(m => m.Title).To(e => e.Title)
-            .Set(m => m.Isbn).To(e => e.Isbn)
             .Set(m => m.IsBorrowed).ToValue(false)
             .Clear(m => m.BorrowedBy))
         .From<ChoosingStyleBookBorrowed>(_ => _

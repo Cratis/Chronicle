@@ -1,4 +1,7 @@
-# Event Processing
+---
+title: "Event Processing"
+description: "How Chronicle dispatches events to reactor handlers and resolves the dependencies a handler asks for."
+---
 
 This guide explains how reactors discover methods, which signatures are supported, and how event context and errors are handled.
 
@@ -42,12 +45,12 @@ Beyond the event and `EventContext`, a handler method can take additional parame
 
 <ChronicleClientTabs snippet="reactors/event-processing/dependencies" />
 
-This is currently a C#-only capability. Kotlin, Elixir, and TypeScript reactor handlers accept only the event and, optionally, the event context — there's no mechanism to have Chronicle resolve and inject further parameters (services or strongly-consistent read models) into the handler call.
+This is currently a C#-only capability. Kotlin, Elixir, and TypeScript reactor handlers accept only the event and, optionally, the event context — there's no mechanism to have Chronicle resolve and inject further parameters (services or read models) into the handler call.
 
-Each parameter after the event resolves as follows:
+Each parameter after the event resolves as follows. A type counts as a read model only when a projection or reducer builds it; any other type, including a plain record, is requested from the service provider:
 
 - An `EventContext` parameter receives the event context; its position does not matter.
-- A read model — a type with a reducer or projection — is materialized on demand from that reducer or projection, making it **strongly consistent** when the reactor runs. Read models are resolved directly by Chronicle, never through the service provider.
+- A read model — a type with a reducer or projection — is resolved directly by Chronicle, never through the service provider. A materialized read model (the default) is read from its sink, so it is **eventually consistent** and may not yet include the event being handled. Mark it `[Passive]` when the handler needs it **strongly consistent**: Chronicle then computes it from the events when the reactor runs. That suits a read model keyed by its event source id; a passive read of a projection that joins other event sources or uses a custom key misses their events.
 - Any other type is resolved from the service provider.
 
 ### Resolving the read model key

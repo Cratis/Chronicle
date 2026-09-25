@@ -74,7 +74,7 @@ When it's time to read, Chronicle gives you a ladder — trade consistency for c
 - **`Materialized.GetInstances<T>(skip, take)`** reads what projections have already stored, with paging — cheap and fast, a moment behind. See [Materialized read models](../read-models/materialized-pagination).
 - **Need filtering, sorting, or aggregation?** Go to the sink's native query tools — `IMongoCollection<T>` or your `DbContext` — because a materialized read model is just data in a [database](../sinks/), shaped for exactly this.
 
-Kotlin and Java currently only support the single-instance lookup shown above — there's no way to get all instances or page through materialized storage from those two clients yet.
+Kotlin and Java have the same ladder: `getInstances`, and `materialized.getInstances(skip, take)` for paging, as the tabs show.
 
 ## Keep the read side ignorant of the write side
 

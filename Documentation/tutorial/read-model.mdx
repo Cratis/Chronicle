@@ -44,7 +44,7 @@ Kotlin and Java's model-bound projections don't currently have an equivalent to 
 
 ## Query it
 
-By default Chronicle **materializes** the projection into its configured **sink** storage — MongoDB unless you change it — so the `Book` read model is just a collection you query, exactly what you're used to:
+By default Chronicle **materializes** the projection into its configured **sink** storage — MongoDB unless you change it — so the `Book` read model is just a collection you query, exactly what you're used to. It lives in a collection named after the read model, pluralized (`Books`), in the database named after your event store; [the MongoDB setup in Get started](/chronicle/get-started/console/#configure-the-mongodb-client) shows how to point the driver at it:
 
 <ChronicleClientTabs snippet="tutorial/read-model/query" />
 

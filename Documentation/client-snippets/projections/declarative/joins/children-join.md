@@ -17,7 +17,6 @@ public class DecJoinsChildProjectBoardProjection : IProjectionFor<DecJoinsChildP
     public void Define(IProjectionBuilderFor<DecJoinsChildProjectBoard> builder) => builder
         .Children(m => m.Tasks, children => children
             .IdentifiedBy(e => e.TaskId)
-            .AutoMap()
             .From<DecJoinsChildTaskAssigned>(b => b
                 .UsingKey(e => e.TaskId))
             .Join<DecJoinsChildProjectCreated>(j => j

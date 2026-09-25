@@ -13,7 +13,6 @@ public record DecFunctionsInventory(int Quantity);
 public class DecFunctionsInventoryProjection : IProjectionFor<DecFunctionsInventory>
 {
     public void Define(IProjectionBuilderFor<DecFunctionsInventory> builder) => builder
-        .AutoMap()
         .From<DecFunctionsItemAdded>(_ => _
             .Increment(m => m.Quantity))
         .From<DecFunctionsItemRemoved>(_ => _

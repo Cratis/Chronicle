@@ -22,13 +22,13 @@ Chronicle solves this by separating the *structure* of the event log (which rema
 
 When an event is appended to the event log, Chronicle inspects the event's schema for properties marked as PII. For each such property, the kernel:
 
-1. Looks up the encryption key for the event source identifier associated with the event. If no key exists yet, a new one is generated and stored.
+1. Looks up the encryption key for the event's [subject](../concepts/subject.mdx) — the event source identifier, unless the append names a different subject. If no key exists yet, a new one is generated and stored.
 2. Encrypts the property value using that key.
 3. Stores the ciphertext in place of the plaintext value.
 
 When a projection or observer reads the event, Chronicle performs the reverse: it retrieves the key, decrypts each PII property, and delivers the plaintext value to the consumer. If the key has been deleted (because an erasure was requested), decryption fails gracefully and the value is returned as an empty string — the data is gone, but the event slot and all non-PII fields remain intact.
 
-Encryption keys are managed by the `IPIIManager` grain in the Chronicle kernel. Keys are stored and retrieved by event source identifier, so every individual whose data lives in the event store has their own key. Deleting a key is the Chronicle equivalent of GDPR erasure.
+Encryption keys are managed by the `IPIIManager` grain in the Chronicle kernel. Keys are stored and retrieved by subject, so every individual whose data lives in the event store has their own key. Deleting a key is the Chronicle equivalent of GDPR erasure.
 
 A key belongs to one event store and one namespace, and an event store subscription copies a subject's key into the event store it forwards to. An erasure therefore covers every event store in the namespace it is issued in, and records itself there so that nothing provisions or copies a key for that subject afterwards. [Erasing a subject](erasing-a-subject) walks through the call and what it reaches; [The encryption key lifecycle](key-lifecycle) explains the mechanism and its limits.
 

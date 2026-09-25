@@ -42,14 +42,17 @@ side.
 
 The one decision worth making up front is *when* the read model has to be correct:
 
-| | [Eventual](eventual-consistency) | [Immediate](immediate-projections.md) |
+| | [Materialized (eventual)](eventual-consistency) | [Passive (on demand)](declarative/passive.mdx) |
 | --- | --- | --- |
-| **When it updates** | Shortly after the event is appended (the default) | Synchronously, before the append returns |
-| **Cost** | Cheap, scales freely | More expensive — pay only when you need it |
-| **Use it for** | Almost everything — lists, dashboards, history | A value you must read back correctly *right now* (e.g. a uniqueness check) |
+| **When it updates** | Shortly after the event is appended (the default) | Never stored — computed from its events each time you read it |
+| **Cost** | Cheap reads, scales freely | Each read replays that instance's history |
+| **Use it for** | Almost everything — lists, dashboards, history | A value you must read back correctly *right now*, such as state a command decides on |
 
-Start eventual. Promote a projection to immediate only when a workflow genuinely can't tolerate the
-read model being a moment behind.
+Start materialized. Make a read model passive only when a workflow genuinely can't tolerate it being a
+moment behind. When one caller occasionally needs its own write back, it can instead
+[wait for the append's observers](../read-models/consistency.md#read-after-write--waiting-for-a-materialized-read-model).
+No projection updates synchronously inside the append, and a read cannot enforce uniqueness — use a
+[constraint](../constraints/index.md) for that.
 
 ## Topics
 
@@ -59,7 +62,7 @@ read model being a moment behind.
 | [Choose a read-model style](choosing-a-read-model-style) | Compare model-bound, declarative, and reducer approaches on the same read model |
 | [Model-Bound Projections](model-bound/) | Build read models with attributes — the default style |
 | [Declarative Projections](declarative/) | Build read models with the fluent `IProjectionFor<T>` API |
-| [Immediate Projections](immediate-projections.md) | Strong consistency — the read model updates before the append returns |
+| [Immediate Projections](immediate-projections.md) | Why there is no synchronous projection mode, and what to use instead |
 | [Eventual Consistency](eventual-consistency) | The default — how and when eventual projections catch up |
 | [Registration lifecycle](registration-lifecycle.md) | What happens when projections register, change, fail, or are no longer declared |
 | [Tagging Projections](tagging-projections) | Organize and tag projections |

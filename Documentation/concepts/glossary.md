@@ -55,15 +55,15 @@ An isolation boundary *within* an event store, most often used for multi-tenancy
 
 ## Observer
 
-The umbrella term for anything that *watches* an event sequence and reacts as events arrive. [Projections](./projection.md), [reducers](../reducers/), and [reactors](../reactors/) are all observers; they differ in what they do with the events. See [Observers](./observers.md).
+The umbrella term for anything that *watches* an event sequence and reacts as events arrive. [Projections](./projection.md), [reducers](../reducers/), and [reactors](../reactors/) are all observers; they differ in what they do with the events. See [Observers](./observers.mdx).
 
 ## Projection
 
-An [observer](./observers.md) that builds a [read model](../read-models/) by mapping and merging events into a document — declaratively, with no hand-written update code. Use a projection when the read side is shaped like data. See [Projection](./projection.md).
+An [observer](./observers.mdx) that builds a [read model](../read-models/) by mapping and merging events into a document — declaratively, with no hand-written update code. Use a projection when the read side is shaped like data. See [Projection](./projection.md).
 
 ## Reactor
 
-An [observer](./observers.md) that produces *side effects* — sending a notification, calling an external system, or triggering a command. Reactors do things; they do not build state. They must be idempotent because they may run more than once. See [Reactors](../reactors/).
+An [observer](./observers.mdx) that produces *side effects* — sending a notification, calling an external system, or triggering a command. Reactors do things; they do not build state. They must be idempotent because they may run more than once. See [Reactors](../reactors/).
 
 ## Read Model
 
@@ -71,11 +71,11 @@ A purpose-built, queryable view of state derived from events — the "read" side
 
 ## Reducer
 
-An [observer](./observers.md) that folds events into a value using imperative code you write, for cases a declarative [projection](./projection.md) can't express cleanly. See [Reducers](../reducers/).
+An [observer](./observers.mdx) that folds events into a value using imperative code you write, for cases a declarative [projection](./projection.md) can't express cleanly. See [Reducers](../reducers/).
 
 ## Replay
 
-Re-running an [observer](./observers.md) over historical events to rebuild its [read model](../read-models/) from scratch — for example after changing a projection. Because events are the source of truth, read models are always disposable and rebuildable.
+Re-running an [observer](./observers.mdx) over historical events to rebuild its [read model](../read-models/) from scratch — for example after changing a projection. Because events are the source of truth, read models are always disposable and rebuildable.
 
 ## Sink
 

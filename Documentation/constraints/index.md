@@ -14,6 +14,8 @@ flowchart LR
 
 Use constraints to enforce rules like uniqueness across event types and event sources. Because constraints are evaluated in the kernel, they are consistent and apply to every client.
 
+A constraint is checked within the event sequence an event is appended to, in the namespace it is appended in. It does not span namespaces, so each tenant has its own set of unique values, and it does not span event sequences.
+
 ## Why constraints matter
 
 - Enforce invariants regardless of client behavior

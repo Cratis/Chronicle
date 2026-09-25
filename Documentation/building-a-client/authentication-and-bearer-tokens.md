@@ -1,4 +1,7 @@
-# Authentication and bearer tokens
+---
+title: "Authentication and bearer tokens"
+description: "How a Chronicle client authenticates — client credentials, API keys, or none — and how it obtains and refreshes bearer tokens."
+---
 
 Every call a Chronicle client makes to the Kernel over gRPC needs a bearer token attached to it.
 This page describes the exchange a new client has to implement to get one, keep it fresh, and
@@ -26,9 +29,9 @@ there's no separate flag:
 | None | `?auth=none` query parameter | No credentials presented at all — only works against a server with authentication turned off |
 
 Supplying both client credentials and an API key in the same connection string is an error
-(`AmbiguousAuthenticationMode`); supplying neither and not asking for `auth=none` is also an error
-(`MissingAuthentication`) — except that an *empty* connection string is treated as client
-credentials rather than an error, because of the development default below. See
+(`AmbiguousAuthenticationMode`). Supplying none of them, without asking for `auth=none`, is not: the
+connection string selects client credentials and uses the development default below. Only a partial
+set — a username without a password, or the reverse — is an error (`MissingAuthentication`). See
 [Connection string elements](./connection-string-elements) for the full grammar.
 
 ## Client credentials really means OAuth client-credentials

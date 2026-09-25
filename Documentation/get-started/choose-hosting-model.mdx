@@ -98,7 +98,18 @@ The `latest-development` image bundles MongoDB, so there's nothing else to insta
 command and the kernel is running:
 
 ```shell
-docker run -d -p 27017:27017 -p 35000:35000 cratis/chronicle:latest-development
+docker run -d --name chronicle \
+  -p 127.0.0.1:35000:35000 \
+  -p 127.0.0.1:27017:27017 \
+  cratis/chronicle:latest-development
+```
+
+The `127.0.0.1:` prefixes publish both ports on this machine only. That matters here: the development
+workbench accepts well-known credentials and the bundled MongoDB has no authentication. Wait for the kernel
+to report `Healthy` before connecting to it, and remove it with `docker rm -f chronicle` when you are done:
+
+```shell
+curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 https://localhost:35000/health
 ```
 
 Two ports, two jobs — Chronicle now serves everything on one port, and it's TLS:
@@ -139,13 +150,13 @@ services:
       - Cratis__Chronicle__Storage__Type=MongoDB
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?directConnection=true
     ports:
-      - 35000:35000
+      - 127.0.0.1:35000:35000
 
   mongodb:
     image: mongo:8
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
-      - 27017:27017
+      - 127.0.0.1:27017:27017
 
   mongodb-init:
     image: mongo:8
@@ -190,7 +201,7 @@ services:
       - Cratis__Chronicle__Storage__Type=PostgreSql
       - Cratis__Chronicle__Storage__ConnectionDetails=Host=postgres;Port=5432;Database=chronicle;Username=postgres;Password=postgres
     ports:
-      - 35000:35000
+      - 127.0.0.1:35000:35000
 
   postgres:
     image: postgres:16
@@ -199,7 +210,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - 5432:5432
+      - 127.0.0.1:5432:5432
 ```
 
 </TabItem>
@@ -220,7 +231,7 @@ services:
       - Cratis__Chronicle__Storage__Type=MsSql
       - Cratis__Chronicle__Storage__ConnectionDetails=Server=sqlserver,1433;Database=Chronicle;User Id=sa;Password=Your_strong_password123!;TrustServerCertificate=True;Encrypt=False
     ports:
-      - 35000:35000
+      - 127.0.0.1:35000:35000
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2025-latest
@@ -228,7 +239,7 @@ services:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=Your_strong_password123!
     ports:
-      - 1433:1433
+      - 127.0.0.1:1433:1433
 ```
 
 </TabItem>
@@ -246,7 +257,7 @@ services:
     volumes:
       - chronicle-data:/data
     ports:
-      - 35000:35000
+      - 127.0.0.1:35000:35000
 
 volumes:
   chronicle-data:
@@ -260,6 +271,10 @@ Bring any of these up the usual way, in the background:
 ```shell
 docker compose up -d
 ```
+
+Every published port in these files is bound to `127.0.0.1`, because the credentials in them are
+development placeholders. Drop the prefix only on a network you trust, and never with these credentials.
+`docker compose down` stops the stack; `docker compose down -v` also deletes its data volumes.
 
 Want local observability too — logs, traces, and metrics next to the kernel? The
 [Docker Compose hosting guide](/chronicle/hosting/docker-compose/) adds the Aspire dashboard to the same
@@ -340,7 +355,7 @@ key storage with HashiCorp Vault or Azure Key Vault, and the full AppHost walkth
 
 The kernel is running and listening on `chronicle://localhost:35000`. Now connect your app to it:
 
-- **Just exploring?** The [Get started quickstart](/chronicle/get-started/) scaffolds a ready-to-run app from a template — the fastest way to see the whole loop.
+- **Just exploring?** [Get started](/chronicle/get-started/) shows the whole loop — append, project, react — in every client before you pick a host.
 - **[Console](./console)** — the bare-bones version, no DI container, every connection explicit.
 - **[Worker service](./worker)** — a background host for the reacting side of an event-sourced system.
 - **[ASP.NET Core](./aspnetcore)** — a web API that appends events straight from its endpoints.
