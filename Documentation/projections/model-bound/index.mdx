@@ -1,4 +1,7 @@
-# Model-Bound Projections
+---
+title: "Model-Bound Projections"
+description: "Build read models by putting projection attributes on the read model type itself."
+---
 
 Model-bound projections let the read model describe how it is built. Instead of creating a separate `IProjectionFor<T>` class, you put the projection metadata directly on the read model type and Chronicle builds the projection definition from those attributes.
 
@@ -85,7 +88,7 @@ Use fluent projections (`IProjectionFor<T>`) as a fallback when the projection c
 
 ### Automatic Property Mapping
 
-**Fluent Projection with AutoMap:**
+**Fluent Projection (AutoMap is on by default):**
 
 <ChronicleClientTabs snippet="projections/model-bound/index/automap-fluent" />
 
@@ -93,13 +96,13 @@ Use fluent projections (`IProjectionFor<T>`) as a fallback when the projection c
 
 <ChronicleClientTabs snippet="projections/model-bound/index/automap-model-bound" />
 
-Both approaches produce the same result. Model-bound projections with `FromEvent` are particularly concise when property names match between events and read models, providing the same automatic mapping benefits as `.AutoMap()` in fluent projections.
+Both approaches produce the same result. Model-bound projections with `FromEvent` are particularly concise when property names match between events and read models, providing the same automatic mapping that fluent projections get by default.
 
 ## Reading Your Model-Bound Projections
 
 Once you've defined a model-bound projection, you can retrieve and observe the resulting read models using the `IReadModels` API:
 
-- [Getting a Single Instance](../../read-models/getting-single-instance) - Retrieve a specific instance by key with strong consistency
+- [Getting a Single Instance](../../read-models/getting-single-instance) - Retrieve a specific instance by key
 - [Getting a Collection of Instances](../../read-models/getting-collection-instances) - Retrieve all instances for reporting and analysis
 - [Getting Snapshots](../../read-models/getting-snapshots) - Retrieve historical state snapshots grouped by correlation ID
 - [Watching Read Models](../../read-models/watching-read-models) - Observe real-time changes as events are applied

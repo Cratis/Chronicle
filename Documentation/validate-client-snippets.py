@@ -45,6 +45,9 @@ BODY_SNIPPETS = {
         var customerId = "customer-42";
         var total = 42m;
     """,
+    "concepts/observers/remove": """
+        IEventStore eventStore = default!;
+    """,
     "read-models/getting-single-instance/basic": """
         IEventStore eventStore = default!;
         ReadModelKey accountId = new("account-42");

@@ -13,7 +13,7 @@ public record StructuralDepsBorrowedBook(string BookId);
 public class StructuralDepsBorrowedBooksProjection : IProjectionFor<StructuralDepsBorrowedBook>
 {
     public void Define(IProjectionBuilderFor<StructuralDepsBorrowedBook> builder) => builder
-        .From<StructuralDepsBookBorrowed>(_ => _.Set(m => m.BookId).To(e => e.BookId));
+        .From<StructuralDepsBookBorrowed>();
 }
 
 public class StructuralDepsMyArtifactsProvider : IClientArtifactsProvider

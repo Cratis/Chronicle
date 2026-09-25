@@ -19,7 +19,7 @@ Start with the in-process scenarios. They prove the Chronicle slice—appending,
 |---|---|---|
 | Event appends, constraint violations, sequencing | `EventScenario` | Network serialization, kernel connection, storage write |
 | Read model projection or reducer logic | `ReadModelScenario<T>` | Sink writes, MongoDB queries, change stream subscription |
-| Reactor side effects, idempotence, event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch |
+| Reactor side effects and event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch, redelivery — each event is handed to the reactor once, so a repeated delivery (and the idempotence it requires) needs a spec that delivers the event twice |
 | Actual storage writes, kernel connectivity, change streams | `ChronicleInProcessFixture` / `ChronicleOutOfProcessFixture` | Client isolation—the kernel is shared across tests |
 
 The integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:

@@ -1,8 +1,8 @@
 ---
 uid: Chronicle.ReadModels.ConsistencyModels
+title: "Consistency Models"
+description: "Eventual, on-demand, and read-after-write consistency for read models, and how to choose between them."
 ---
-
-# Consistency Models
 
 Read models in Chronicle can be retrieved with different consistency guarantees, depending on how they are computed and when they reflect the latest events. Understanding these models helps you make the right trade-off between data freshness, query latency, and throughput.
 
@@ -15,8 +15,8 @@ Chronicle offers a spectrum of consistency choices, ranging from strong consiste
 
 ```mermaid
 graph LR
-    A["Strong Consistency\n(On-Demand)"]
-    B["Immediate Projections\n(Synchronous)"]
+    A["Strong Consistency\n(On-Demand, passive)"]
+    B["Read-after-write\n(Materialized + wait)"]
     C["Eventual Consistency\n(Materialized)"]
 
     A --> B --> C
@@ -58,6 +58,8 @@ sequenceDiagram
 
 Because the projection runs inline at query time, you always get a result that is consistent with every event appended so far — including one you may have just appended a millisecond ago.
 
+The replay reads only the events of the event source whose id is the key you asked for. That fits a read model keyed by its event source id. A projection that joins events from other event sources, or sets its key from event content with `UsingKey`, misses those events when read this way — keep it materialized, and wait for the append's observers when you need your own write back.
+
 ### When to Use On-Demand Computation
 
 On-demand computation is the right choice when:
@@ -73,19 +75,13 @@ When those apply, mark the read model passive — see [Passive projections](../p
 
 The cost of on-demand computation grows linearly with the number of events in the history. Short histories are fast; histories that run into thousands of events per instance can become too slow for interactive use cases. For high-volume, frequently accessed data, materialized projections are a better fit.
 
-## Immediate Projections — Synchronous Materialization
+## Read-after-write — waiting for a materialized read model
 
-Immediate projections sit between on-demand computation and eventual consistency. Instead of running the projection at query time, the projection runs synchronously as part of the event append operation itself. The read model is guaranteed to be up to date before the append call returns.
+Chronicle has no mode that updates a materialized read model inside the append itself: an append returns once the event is in the log, without waiting for any projection. When one caller needs to read back what it just appended, and the read model should stay materialized for everyone else, wait for the observers affected by that append before reading. In the .NET client, `WaitForCompletion()` on the append result does this and reports any partition that failed while catching up — see [Waiting for observer completion after append](../events/observing-appends.mdx#waiting-for-observer-completion-after-append). Check that the append succeeded before you wait. The wait covers every observer on that event sequence, not only those that handle the appended event, so an unrelated observer that is behind — or one that never handles this event type — can hold it until it times out.
 
-This model provides strong consistency for subsequent queries without incurring event-replay cost at read time. The trade-off is added latency on writes — every append operation waits for the projection to complete before returning.
+Waiting adds the projection's latency to that one caller, and only that caller. Use it for the occasional read-after-write, not as a default on every append. When nearly every read needs to include the latest event, a passive read model is usually the simpler choice.
 
-Use immediate projections when:
-
-- Strong consistency is required and the read model is accessed far more often than events are appended
-- You need low query latency without bearing event-replay cost on each read
-- The projection logic is fast enough that adding it to the write path is acceptable
-
-For details on configuring and using immediate projections, see [Immediate Projections](../projections/immediate-projections.md).
+There is no *immediate projection* mode that updates a read model during the append. [Immediate projections](../projections/immediate-projections.md) explains what the term does refer to.
 
 ## Eventual Consistency — Materialized Projections
 
@@ -141,9 +137,9 @@ Materialized projections are the right choice when:
 | Scenario | Recommended Model |
 |---|---|
 | Financial or inventory checks requiring exact current state | On-demand computation |
-| Read-after-write in the same request | On-demand computation |
+| Read-after-write in the same request | On-demand computation, or waiting for the append's observers |
 | Command validation against current state | On-demand computation |
-| Low-latency reads with strong consistency | Immediate projections |
+| Rules that must hold when two writers race | A [constraint](../constraints/index.md) — a read, however consistent, cannot stop the race |
 | Dashboards and list views over large datasets | Materialized projections |
 | Real-time UIs observing changes as they happen | Materialized projections with watchers |
 | Infrequently accessed instances with short event histories | On-demand computation |
@@ -153,7 +149,7 @@ Materialized projections are the right choice when:
 | Model | Updated | Consistency | Read Cost |
 |---|---|---|---|
 | On-demand computation (passive) | At query time | Strong | Proportional to event history length |
-| Immediate projections | At event append | Strong | O(1) — stored result |
+| Materialized, read after waiting | Asynchronously; the caller waits | Includes the caller's own append | O(1) read, plus the wait |
 | Materialized projections | Asynchronously | Eventual | O(1) — stored result |
 
-The three models are not mutually exclusive. A real application often uses materialized projections for high-volume list views, on-demand computation for authoritative state checks, and immediate projections for a small number of read models where strong consistency and fast reads are both required.
+These are not mutually exclusive. A real application often uses materialized projections for high-volume list views, passive read models for authoritative state checks, and an explicit wait in the few places where one caller must read its own write.

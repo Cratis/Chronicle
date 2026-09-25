@@ -33,6 +33,15 @@ You need to do more only if you have an assembly you cannot rebuild that calls
 `AddCratisChronicleConnection`. Rebuilding it against 19.x is the fix; there is no
 runtime shim.
 
+:::caution[19.4.8 and later also run Chronicle's analyzers in your build]
+From 19.4.8, the `Cratis.Chronicle` package brings the `CHR` code analysis rules with it;
+earlier packages did not, so for most applications this rebuild is the first time the rules
+run. Code that violates an Error rule stops compiling, and under `TreatWarningsAsErrors` so
+does code that violates a Warning rule. This applies to any upgrade that lands on 19.4.8 or
+later, including one from an earlier 19.x. Fix what the build reports; see
+[Code analysis](../code-analysis/index.md).
+:::
+
 ## If you use a language client
 
 Nothing changed on the wire, so the Kotlin, TypeScript and Elixir clients are unaffected

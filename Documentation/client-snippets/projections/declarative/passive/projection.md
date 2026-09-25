@@ -5,7 +5,6 @@ public class DecPassiveUserSummaryProjection : IProjectionFor<DecPassiveUserSumm
 {
     public void Define(IProjectionBuilderFor<DecPassiveUserSummary> builder) => builder
         .Passive()
-        .AutoMap()
         .From<DecPassiveUserCreated>()
         .From<DecPassiveUserUpdated>();
 }

@@ -90,7 +90,7 @@ Sources: [.NET registration](https://github.com/Cratis/Chronicle/blob/main/Sourc
 
 ### Delivery identity
 
-.NET supplies a `ReactorDelivery` handler parameter with a stable `DeliveryId` suitable for an application's receipt key. Kotlin, Java, TypeScript, and Elixir have no equivalent client-provided delivery identity.
+.NET supplies a `ReactorDelivery` handler parameter with a stable `Id` (of type `DeliveryId`) suitable for an application's receipt key. Kotlin, Java, TypeScript, and Elixir have no equivalent client-provided delivery identity.
 
 Outside .NET, define an idempotency key that distinguishes the event store, namespace, event sequence, reactor, and event position; do not use a sequence number alone across stores or sequences. A key identifies the delivery—it does not make the external effect atomic with recording a receipt.
 

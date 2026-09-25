@@ -1,4 +1,7 @@
-# Counters
+---
+title: "Counters"
+description: "Increment, decrement, and count with model-bound projection attributes."
+---
 
 Model-bound projections provide three counter operations for tracking occurrences and quantities: Increment, Decrement, and Count.
 
@@ -20,7 +23,7 @@ When a `UserConnected` event occurs, `ActiveConnections` increases by 1. When a 
 
 ## Count
 
-The `Count` attribute counts the total number of times an event occurs. Unlike Increment, Count doesn't increment from a current value—it maintains an absolute count.
+The `Count` attribute adds one to the property for every matching event, starting from zero, so on its own it holds the number of times the event occurred. It is not a separate running tally: it adds to whatever the property currently holds, so another attribute that writes the same property changes the number it counts on from.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/count" />
 

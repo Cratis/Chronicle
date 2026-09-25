@@ -11,10 +11,8 @@ services:
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
     ports:
-      - 27017:27017
-      - 11111:11111
-      - 30000:30000
-      - 35000:35000
+      - 127.0.0.1:35000:35000
+      - 127.0.0.1:27017:27017
 
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
@@ -23,11 +21,11 @@ services:
       - ALLOW_UNSECURED_TRANSPORT=true
       - DOTNET_ENVIRONMENT=Development
     ports:
-      - 18888:18888
-      - 4317:18889
+      - 127.0.0.1:18888:18888
+      - 127.0.0.1:4317:18889
 ```
 
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/docker-compose.yml#L2-L23)
+Every port is published on this machine only: the development image's Workbench accepts well-known credentials, its bundled MongoDB has no authentication, and the dashboard allows anonymous access. The Orleans ports (`11111`, `30000`) are left unpublished because a single local node does not need them.
 
 With this setup, Chronicle runs alongside Microsoft Aspire, which provides a dashboard for OpenTelemetry.
 

@@ -9,8 +9,10 @@ You could create those indexes yourself, but you would have to create them again
 container is recreated — and Chronicle recreates it on its own, during a replay.
 
 The `[Index]` attribute moves the decision to where it belongs: onto the read model. You declare
-which properties are indexed, and Chronicle creates them in whichever store the read model is
-persisted to, every time the container is built.
+which properties are indexed, and Chronicle creates them every time the container is built.
+
+Today that applies to the MongoDB sink. The SQL sink creates its tables but not the indexes a read
+model declares, so on SQL storage you still create them yourself.
 
 ## Declaring an index
 

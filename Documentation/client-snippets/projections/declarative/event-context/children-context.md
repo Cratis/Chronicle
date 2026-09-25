@@ -18,7 +18,6 @@ public class DecEventContextUserActivityLogProjection : IProjectionFor<DecEventC
     public void Define(IProjectionBuilderFor<DecEventContextUserWithActivityLog> builder) => builder
         .Children(m => m.ActivityLog, children => children
             .IdentifiedBy(e => e.ActivityId)
-            .AutoMap()
             .From<DecEventContextActivityPerformed>(_ => _
                 .UsingKey(e => e.ActivityId)
                 .Set(m => m.Timestamp).ToEventContextProperty(c => c.Occurred)
