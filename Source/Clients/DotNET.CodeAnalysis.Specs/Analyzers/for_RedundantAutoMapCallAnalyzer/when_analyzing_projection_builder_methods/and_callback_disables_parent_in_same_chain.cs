@@ -5,7 +5,7 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_RedundantAutoMapCallAnalyzer.when_analyzing_projection_builder_methods;
 
-public class and_parent_reenables_before_child : given.a_redundant_auto_map_call_analyzer
+public class and_callback_disables_parent_in_same_chain : given.a_redundant_auto_map_call_analyzer
 {
     const string Usage = """
     public class Child { public string Name { get; set; } }
@@ -13,14 +13,13 @@ public class and_parent_reenables_before_child : given.a_redundant_auto_map_call
     public class MyProjection : Cratis.Chronicle.Projections.IProjectionFor<ReadModel>
     {
         public void Define(Cratis.Chronicle.Projections.IProjectionBuilderFor<ReadModel> builder) =>
-            builder.NoAutoMap().AutoMap().Children(m => m.Children, child => child.AutoMap());
+            builder.Children(m => m.Children, _ => builder.NoAutoMap()).AutoMap();
     }
     """;
 
     Task _result;
 
-    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.RedundantAutoMapCallAnalyzer>.VerifyAnalyzer(
-        CreateSource(Usage));
+    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.RedundantAutoMapCallAnalyzer>.VerifyAnalyzer(CreateSource(Usage));
 
-    [Fact] Task should_not_report_when_parent_disables_auto_map() => _result;
+    [Fact] Task should_not_report_the_parent_call() => _result;
 }

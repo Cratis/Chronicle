@@ -5,16 +5,15 @@ using Cratis.Chronicle.CodeAnalysis.Specs.Testing;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_RedundantAutoMapCallAnalyzer.when_analyzing_projection_builder_methods;
 
-public class and_unrelated_builder_is_disabled : given.a_redundant_auto_map_call_analyzer
+public class and_no_auto_map_uses_conditional_access : given.a_redundant_auto_map_call_analyzer
 {
     const string Usage = """
     public class ReadModel { public string Name { get; set; } }
     public class MyProjection : Cratis.Chronicle.Projections.IProjectionFor<ReadModel>
     {
-        public Cratis.Chronicle.Projections.IProjectionBuilderFor<ReadModel> Other { get; set; }
         public void Define(Cratis.Chronicle.Projections.IProjectionBuilderFor<ReadModel> builder)
         {
-            Other.NoAutoMap();
+            builder?.NoAutoMap();
             builder.AutoMap();
         }
     }
@@ -22,8 +21,7 @@ public class and_unrelated_builder_is_disabled : given.a_redundant_auto_map_call
 
     Task _result;
 
-    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.RedundantAutoMapCallAnalyzer>.VerifyAnalyzer(
-        CreateSource(Usage));
+    void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.RedundantAutoMapCallAnalyzer>.VerifyAnalyzer(CreateSource(Usage));
 
-    [Fact] Task should_not_report_when_any_builder_is_disabled() => _result;
+    [Fact] Task should_not_report_after_conditional_no_auto_map() => _result;
 }
