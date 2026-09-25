@@ -30,6 +30,11 @@ public class JobStateWithLastHandledEvent : JobState
     public bool HandledAllEvents { get; set; }
 
     /// <summary>
+    /// Gets or sets the per-partition replay steps and their successfully handled watermarks.
+    /// </summary>
+    public IList<ReplayPartitionStep> ReplayPartitionSteps { get; set; } = [];
+
+    /// <summary>
     /// Gets a value indicating whether the step completed successfully without handling a single event.
     /// </summary>
     /// <remarks>

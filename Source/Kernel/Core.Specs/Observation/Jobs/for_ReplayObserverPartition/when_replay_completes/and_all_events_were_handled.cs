@@ -22,6 +22,6 @@ public class and_all_events_were_handled : given.a_partition_replay_job
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_notify_observer_of_successful_partition_replay() => _observer.Received(1).PartitionReplayed((Key)"some-partition", _lastHandled);
+    [Fact] void should_notify_observer_of_successful_partition_replay() => _observer.Received(1).PartitionReplayed((Key)"some-partition", _lastHandled, Arg.Any<EventType[]>());
     [Fact] void should_not_notify_observer_of_partial_partition_replay() => _observer.DidNotReceive().PartitionReplayPartiallyCompleted(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>());
 }

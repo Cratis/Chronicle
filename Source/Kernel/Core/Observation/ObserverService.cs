@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Monads;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
@@ -34,7 +35,11 @@ public class ObserverService(
     public async Task ResumeReplayFor(ObserverDetails observerDetails) => await ForEachReplayHandler(handler => handler.ResumeReplayFor(observerDetails));
 
     /// <inheritdoc/>
-    public async Task EndReplayFor(ObserverDetails observerDetails) => await ForEachReplayHandler(handler => handler.EndReplayFor(observerDetails));
+    public async Task EndReplayFor(ObserverDetails observerDetails)
+    {
+        var results = await Task.WhenAll(replayHandlers.Select(handler => handler.EndReplayFor(observerDetails)));
+        EnsureReplayFinalized(results);
+    }
 
     /// <inheritdoc/>
     public async Task BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachReplayHandler(handler => handler.BeginReplayPartitionFor(observerDetails, partition));
@@ -50,6 +55,22 @@ public class ObserverService(
 
     /// <inheritdoc/>
     public async Task EndCatchupFor(ObserverDetails observerDetails) => await ForEachCatchupHandler(handler => handler.EndCatchupFor(observerDetails));
+
+    /// <summary>
+    /// Ensure every applicable replay handler finished successfully.
+    /// </summary>
+    /// <param name="results">The results returned by the replay handlers.</param>
+    /// <exception cref="ReplayFinalizationFailed">A handler reported a finalization error.</exception>
+    internal static void EnsureReplayFinalized(IEnumerable<Result<ICanHandleReplayForObserver.Error>> results)
+    {
+        foreach (var result in results)
+        {
+            if (result.TryGetError(out var error) && error != ICanHandleReplayForObserver.Error.CannotHandle)
+            {
+                throw new ReplayFinalizationFailed(error);
+            }
+        }
+    }
 
     async Task ForEachReplayHandler(Func<ICanHandleReplayForObserver, Task> callback)
     {

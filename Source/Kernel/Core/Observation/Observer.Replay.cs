@@ -41,26 +41,47 @@ public partial class Observer
         ReplayPartitionTo(partition, sequenceNumber, Definition.EventTypes, false);
 
     /// <inheritdoc/>
-    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, false);
+    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), []);
 
     /// <inheritdoc/>
-    public Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, true);
+    public Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes) =>
+        CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes);
 
     /// <inheritdoc/>
-    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, true);
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, []);
 
     /// <inheritdoc/>
-    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, false);
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes) =>
+        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes);
 
-    async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, bool succeeded)
+    /// <inheritdoc/>
+    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, []);
+
+    async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
-        if (succeeded && lastHandledEventSequenceNumber.IsActualValue)
+        var eventTypeIds = replayedEventTypes.Select(_ => _.Id).ToHashSet();
+        if (eventTypeIds.Count > 0 && replayedPartitions.Count > 0)
         {
-            foreach (var failedPartition in Failures.Partitions.Where(_ => _.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber).ToArray())
+            var eventSequenceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).GetEventSequence(_observerKey.EventSequenceId);
+            foreach (var failedPartition in Failures.Partitions.ToArray())
             {
-                await ResolveFailedPartition(failedPartition.Partition);
+                if (!replayedPartitions.TryGetValue(failedPartition.Partition, out var handledTo) ||
+                    !handledTo.IsActualValue || failedPartition.LastAttempt.SequenceNumber > handledTo)
+                {
+                    continue;
+                }
+
+                // The failure record stores a sequence number, not an event type. Check the stored event itself:
+                // a newer event in this partition (or in another partition) does not prove the failed type was read.
+                var failedEvent = await eventSequenceStorage.GetEventAt(failedPartition.LastAttempt.SequenceNumber);
+                if (failedEvent.Context.SequenceNumber == failedPartition.LastAttempt.SequenceNumber &&
+                    failedEvent.Context.EventSourceId == failedPartition.Partition.ToString() &&
+                    eventTypeIds.Contains(failedEvent.Context.EventType.Id))
+                {
+                    await ResolveFailedPartition(failedPartition.Partition);
+                }
             }
         }
 
@@ -74,15 +95,21 @@ public partial class Observer
         await TransitionTo<Routing>();
     }
 
-    async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool succeeded)
+    async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
-        if (succeeded && lastHandledEventSequenceNumber.IsActualValue &&
+        if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
-            await ResolveFailedPartition(partition);
+            var eventSequenceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).GetEventSequence(_observerKey.EventSequenceId);
+            var failedEvent = await eventSequenceStorage.GetEventAt(failure.LastAttempt.SequenceNumber);
+            if (failedEvent.Context.SequenceNumber == failure.LastAttempt.SequenceNumber &&
+                failedEvent.Context.EventSourceId == partition.ToString() && replayedEventTypes.Any(_ => _.Id == failedEvent.Context.EventType.Id))
+            {
+                await ResolveFailedPartition(partition);
+            }
         }
 
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);

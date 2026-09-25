@@ -179,11 +179,13 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
-    /// Notify that the observer replayed all events successfully, including previously failed partitions.
+    /// Notify that the observer replayed events successfully for the given partitions.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled by the replay.</param>
+    /// <param name="replayedPartitions">Partitions and their own successfully handled sequence numbers.</param>
+    /// <param name="replayedEventTypes">The event types read during this replay.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber);
+    Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes);
 
     /// <summary>
     /// Notify that the partition has been replayed.
@@ -192,6 +194,15 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that a partition replay completed for the specified event types.
+    /// </summary>
+    /// <param name="partition">The partition that has been replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event handled by that partition.</param>
+    /// <param name="replayedEventTypes">The event types included in the replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes);
 
     /// <summary>
     /// Notify that a partition replay finished without handling all events.

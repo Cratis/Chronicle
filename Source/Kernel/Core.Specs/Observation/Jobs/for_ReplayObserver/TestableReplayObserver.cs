@@ -35,6 +35,14 @@ public class TestableReplayObserver(
         PrepareSteps(request);
 
     /// <summary>
+    /// Records a step result for testing the replay's per-partition coverage.
+    /// </summary>
+    /// <param name="stepId">The step that completed.</param>
+    /// <param name="result">Its result.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
+
+    /// <summary>
     /// Invokes replay completion after preparing its test state.
     /// </summary>
     /// <returns>Awaitable task.</returns>

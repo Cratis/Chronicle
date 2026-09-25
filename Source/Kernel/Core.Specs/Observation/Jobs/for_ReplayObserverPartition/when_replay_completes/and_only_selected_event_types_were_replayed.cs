@@ -23,6 +23,6 @@ public class and_only_selected_event_types_were_replayed : given.a_partition_rep
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_not_report_failed_partition_as_recovered() => _observer.DidNotReceive().PartitionReplayed(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>());
+    [Fact] void should_not_report_failed_partition_as_recovered() => _observer.DidNotReceive().PartitionReplayed(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventType[]>());
     [Fact] void should_report_partition_replay_as_not_proven_complete() => _observer.Received(1).PartitionReplayPartiallyCompleted((Key)"some-partition", _lastHandled);
 }

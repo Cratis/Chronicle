@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver.when_replay_completes;
 
@@ -22,5 +23,5 @@ public class and_events_were_not_all_handled : given.a_replay_observer_job
     }
 
     [Fact] void should_notify_observer_of_incomplete_replay() => _observer.Received(1).Replayed(_lastHandled);
-    [Fact] void should_not_notify_observer_of_successful_replay() => _observer.DidNotReceive().ReplayedSuccessfully(Arg.Any<EventSequenceNumber>());
+    [Fact] void should_not_notify_observer_of_successful_replay() => _observer.DidNotReceive().ReplayedSuccessfully(Arg.Any<EventSequenceNumber>(), Arg.Any<IReadOnlyDictionary<Key, EventSequenceNumber>>(), Arg.Any<EventType[]>());
 }

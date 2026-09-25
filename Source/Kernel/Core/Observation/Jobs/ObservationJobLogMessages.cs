@@ -22,6 +22,12 @@ internal static partial class ObservationJobLogMessages
     [LoggerMessage(LogLevel.Information, "Replay progress: {CompletedSteps}/{TotalSteps} partitions completed ({PercentComplete:F1}%). Last handled sequence number: {LastSequenceNumber}")]
     internal static partial void ReplayProgress(this ILogger<ReplayObserver> logger, int completedSteps, int totalSteps, double percentComplete, EventSequenceNumber lastSequenceNumber);
 
+    [LoggerMessage(LogLevel.Error, "Could not finalize observer replay; failed partitions will remain unresolved")]
+    internal static partial void ReplayFinalizationFailed(this ILogger<ReplayObserver> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "Could not notify observer that replay completed; replay or recovery must be retried")]
+    internal static partial void ReplayCompletionNotificationFailed(this ILogger<ReplayObserver> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Recovery of failed partition '{Partition}' handled no events but there are still events from sequence number {FromSequenceNumber} to handle. Keeping the partition failed rather than clearing it without running the handler")]
     internal static partial void NotClearingFailedPartitionWithEventsLeftToHandle(this ILogger<IJob> logger, Key partition, EventSequenceNumber fromSequenceNumber);
 

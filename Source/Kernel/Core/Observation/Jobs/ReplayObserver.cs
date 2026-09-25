@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
@@ -58,10 +59,11 @@ public class ReplayObserver(
 
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
+        State.ReplayPartitionSteps.Clear();
 
         await foreach (var key in keys)
         {
-            steps.Add(CreateStep<IHandleEventsForPartition>(
+            var step = CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,
                     request.ObserverType,
@@ -69,7 +71,9 @@ public class ReplayObserver(
                     EventSequenceNumber.First,
                     EventSequenceNumber.Max,
                     EventObservationState.Replay,
-                    request.EventTypes)));
+                    request.EventTypes));
+            steps.Add(step);
+            State.ReplayPartitionSteps.Add(new(step.Id, key, EventSequenceNumber.Unavailable));
         }
 
         return steps.ToImmutableList();
@@ -101,6 +105,20 @@ public class ReplayObserver(
     protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result, jsonSerializerOptions);
+        if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
+            handled?.LastHandledEventSequenceNumber.IsActualValue == true)
+        {
+            for (var index = 0; index < State.ReplayPartitionSteps.Count; index++)
+            {
+                var step = State.ReplayPartitionSteps[index];
+                if (step.Id == jobStepId)
+                {
+                    State.ReplayPartitionSteps[index] = step with { LastHandledEventSequenceNumber = handled.LastHandledEventSequenceNumber };
+                    break;
+                }
+            }
+        }
+
         var progress = State.Progress;
         if (progress.TotalSteps > 0)
         {
@@ -119,21 +137,36 @@ public class ReplayObserver(
     protected override async Task OnFailedToPrepare()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+        try
+        {
+            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+        }
+        catch (Exception exception)
+        {
+            logger.ReplayFinalizationFailed(exception);
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
-        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
-        // Replay(), so Replayed() would be queued and deadlock. Returning first lets the Observer
-        // grain become free to process Replayed().
-        _ = observer.Replayed(EventSequenceNumber.Unavailable);
+        // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
+        _ = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+        var finalized = true;
+        try
+        {
+            await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
+        }
+        catch (Exception exception)
+        {
+            logger.ReplayFinalizationFailed(exception);
+            finalized = false;
+        }
+
         if (!AllStepsCompletedSuccessfully)
         {
             if (State.LastHandledEventSequenceNumber.IsActualValue)
@@ -148,17 +181,58 @@ public class ReplayObserver(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
-        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
-        // Replay(), so the completion call would be queued and deadlock. Returning first lets the Observer
-        // grain become free to process it.
-        _ = AllStepsCompletedSuccessfully && State.HandledAllEvents && State.LastHandledEventSequenceNumber.IsActualValue
-            ? observer.ReplayedSuccessfully(State.LastHandledEventSequenceNumber)
-            : observer.Replayed(State.LastHandledEventSequenceNumber);
+        var canResolve = finalized && AllStepsCompletedSuccessfully && State.HandledAllEvents && State.LastHandledEventSequenceNumber.IsActualValue;
+        Dictionary<Key, EventSequenceNumber> coveredPartitions = [];
+        EventType[] eventTypes = [];
+        if (canResolve)
+        {
+            try
+            {
+                // A projection's single ordered step covers every partition up to its own global watermark.
+                // Reactors and reducers have independent steps: only a successful result from that partition counts.
+                coveredPartitions = Request.ObserverType == ObserverType.Projection
+                    ? (await observer.GetFailedPartitionKeys()).ToDictionary(_ => _, _ => State.LastHandledEventSequenceNumber)
+                    : State.ReplayPartitionSteps
+                        .Where(_ => _.LastHandledEventSequenceNumber.IsActualValue)
+                        .ToDictionary(_ => _.Partition, _ => _.LastHandledEventSequenceNumber);
+
+                // An empty request resolves its event types inside the step at read time. We cannot
+                // prove what that step read from the definition at completion, so retain those failures.
+                eventTypes = Request.EventTypes.ToArray();
+            }
+            catch (Exception exception)
+            {
+                logger.ReplayCompletionNotificationFailed(exception);
+                canResolve = false;
+            }
+        }
+
+        // Do not await from job.Start's turn: Replay() on the observer may still be waiting on us.
+        // Observe faults so a failed completion is logged rather than silently reported as success.
+        _ = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}";
+
+    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
+    {
+        try
+        {
+            if (canResolve)
+            {
+                await observer.ReplayedSuccessfully(lastHandledEventSequenceNumber, coveredPartitions, eventTypes);
+            }
+            else
+            {
+                await observer.Replayed(lastHandledEventSequenceNumber);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.ReplayCompletionNotificationFailed(exception);
+        }
+    }
 
     async Task DeleteAllOtherJobsForObserver()
     {

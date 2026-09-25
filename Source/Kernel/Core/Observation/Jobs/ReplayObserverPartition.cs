@@ -47,7 +47,7 @@ public class ReplayObserverPartition(
         // A selected-type replay cannot prove that it handled the event which failed for this partition.
         if (State.HandledAllEvents && Request.ReplaysAllEventTypes)
         {
-            await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber);
+            await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber, Request.EventTypes.ToArray());
         }
         else
         {
