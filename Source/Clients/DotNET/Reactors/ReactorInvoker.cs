@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
@@ -56,6 +57,7 @@ public class ReactorInvoker(
     IServiceProvider? serviceProvider = null) : IReactorInvoker
 {
     static readonly ConcurrentDictionary<Type, HandlerMethods> _methodsByEventTypeCache = [];
+    static readonly ConditionalWeakTable<IReactorSideEffectHandlers, ConcurrentDictionary<Type, HandlerMethods>> _methodsByHandlersCache = new();
     readonly HandlerMethods _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes, sideEffectHandlers);
     readonly IReactorMethodArgumentsResolver _argumentsResolver = argumentsResolver ?? new ReactorMethodArgumentsResolver();
 
@@ -274,7 +276,8 @@ public class ReactorInvoker(
         public static HandlerMethods Get(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers = null) =>
             sideEffectHandlers is null
                 ? _methodsByEventTypeCache.GetOrAdd(targetType, static (key, keyEventTypes) => Build(key, keyEventTypes, null), eventTypes)
-                : Build(targetType, eventTypes, sideEffectHandlers);
+                : _methodsByHandlersCache.GetValue(sideEffectHandlers, static _ => new ConcurrentDictionary<Type, HandlerMethods>())
+                    .GetOrAdd(targetType, static (key, state) => Build(key, state.EventTypes, state.Handlers), (EventTypes: eventTypes, Handlers: sideEffectHandlers));
 
         static HandlerMethods Build(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers)
         {

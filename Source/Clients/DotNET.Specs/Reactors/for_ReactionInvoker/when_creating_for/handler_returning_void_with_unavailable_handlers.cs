@@ -7,32 +7,30 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_creating_for;
 
-public class handler_returning_a_collection_of_claimed_types : Specification
+public class handler_returning_void_with_unavailable_handlers : Specification
 {
     Exception _error;
-    IReactorSideEffectHandlers _handlers;
     ReactorInvoker _invoker;
+    IReactorSideEffectHandlers _handlers;
 
     void Establish()
     {
         _handlers = Substitute.For<IReactorSideEffectHandlers>();
-        _handlers.CanHandleReturnType(typeof(IEnumerable<Claimed>)).Returns(true);
+        _handlers.CanHandleReturnType(Arg.Any<Type>()).Returns(_ => throw new Exception("Handlers must not be consulted"));
     }
 
     void Because() => _error = Catch.Exception(() => _invoker = new ReactorInvoker(
         new EventTypesForSpecifications([typeof(MyEvent)]),
         Substitute.For<IReactorMiddlewares>(),
-        typeof(ClaimedCollectionReactor),
-        new ActivatedArtifact(new ClaimedCollectionReactor(), typeof(ClaimedCollectionReactor), Substitute.For<ILogger<ActivatedArtifact>>()),
+        typeof(VoidReactor),
+        new ActivatedArtifact(new VoidReactor(), typeof(VoidReactor), Substitute.For<ILogger<ActivatedArtifact>>()),
         Substitute.For<ILogger<ReactorInvoker>>(),
         _handlers));
 
-    [Fact] void should_accept_the_collection() => _error.ShouldBeNull();
+    [Fact] void should_register_without_consulting_handlers() => _error.ShouldBeNull();
 
-    class ClaimedCollectionReactor : IReactor
+    class VoidReactor : IReactor
     {
-        public IEnumerable<Claimed> Handle(MyEvent @event) => [new Claimed()];
+        public void Handle(MyEvent @event) { }
     }
-
-    record Claimed;
 }

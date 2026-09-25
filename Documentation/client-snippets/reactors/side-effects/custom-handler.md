@@ -8,6 +8,8 @@ public record MySpecialResult;
 
 public class MyHandler : IReactorSideEffectHandler
 {
+    public bool CanHandleReturnType(Type type) => type == typeof(MySpecialResult);
+
     public bool CanHandle(ReactorContext reactorContext, object value) =>
         value is MySpecialResult;
 

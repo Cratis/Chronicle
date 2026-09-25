@@ -43,17 +43,15 @@ public static class EventHandlerMethods
 
         var eventTypesList = eventTypes as IList<Type> ?? [.. eventTypes];
 
-        var hasValidReturnType = methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
-                                    methodInfo.ReturnType == typeof(void) ||
-                                    IsValidSyncSideEffectReturnType(methodInfo.ReturnType, eventTypesList, sideEffectHandlers);
-
-        if (!hasValidReturnType)
+        var parameters = methodInfo.GetParameters();
+        if (parameters.Length == 0 || !parameters[0].ParameterType.IsEventType(eventTypesList))
         {
             return false;
         }
 
-        var parameters = methodInfo.GetParameters();
-        return parameters.Length >= 1 && parameters[0].ParameterType.IsEventType(eventTypesList);
+        return methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
+               methodInfo.ReturnType == typeof(void) ||
+               IsValidSyncSideEffectReturnType(methodInfo.ReturnType, eventTypesList, sideEffectHandlers);
     }
 
     /// <summary>
@@ -118,7 +116,6 @@ public static class EventHandlerMethods
             if (elementType == typeof(object)) return true;
             if (elementType == typeof(EventForEventSourceId)) return true;
             if (eventTypes.Contains(elementType)) return true;
-            if (sideEffectHandlers?.CanHandleReturnType(elementType) == true) return true;
         }
 
         return eventTypes.Contains(returnType) || sideEffectHandlers?.CanHandleReturnType(returnType) == true;

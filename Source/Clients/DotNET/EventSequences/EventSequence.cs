@@ -15,6 +15,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -42,6 +43,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
 /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
 /// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
+/// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
 public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -56,7 +58,8 @@ public class EventSequence(
     IUnitOfWorkManager unitOfWorkManager,
     IIdentityProvider identityProvider,
     JsonSerializerOptions jsonSerializerOptions,
-    IActivitySource<EventSequence>? activitySource = null) : IEventSequence
+    IActivitySource<EventSequence>? activitySource = null,
+    IReactorSideEffectHandlers? sideEffectHandlers = null) : IEventSequence
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
@@ -377,7 +380,7 @@ public class EventSequence(
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)
     {
-        var observerEventTypes = ReactorInvoker.GetEventTypesFor(eventTypes, type);
+        var observerEventTypes = ReactorInvoker.GetEventTypesFor(eventTypes, type, sideEffectHandlers);
         return await GetTailSequenceNumber(filterEventTypes: observerEventTypes);
     }
 
