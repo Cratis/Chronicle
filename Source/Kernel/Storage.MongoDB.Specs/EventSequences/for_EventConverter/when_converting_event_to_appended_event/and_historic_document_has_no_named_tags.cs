@@ -10,15 +10,22 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventConverter.whe
 public class and_historic_document_has_no_named_tags : given.an_event_converter
 {
     AppendedEvent _result;
+    bool _removed;
 
     void Establish() => _eventTypesStorage.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>()).Returns(false);
 
     async Task Because()
     {
-        var document = CreateEvent().ToBsonDocument();
-        document.Remove("NamedTags");
+        // Written with a tag, so a document that still carried the element could not read back empty by accident.
+        var document = (CreateEvent() with { NamedTags = [new NamedTagDocument("account", "one")] }).ToBsonDocument();
+
+        // The element name comes from the registered class map, so the naming convention in use decides what is removed.
+        var elementName = BsonClassMap.LookupClassMap(typeof(Event)).GetMemberMap(nameof(Event.NamedTags)).ElementName;
+        _removed = document.Contains(elementName);
+        document.Remove(elementName);
         _result = await _converter.ToAppendedEvent(BsonSerializer.Deserialize<Event>(document));
     }
 
+    [Fact] void should_have_removed_the_named_tags_element() => _removed.ShouldBeTrue();
     [Fact] void should_read_empty_named_tags() => _result.Context.NamedTags.ShouldBeEmpty();
 }
