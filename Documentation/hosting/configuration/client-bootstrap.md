@@ -61,6 +61,8 @@ Cratis__Chronicle__Clients__0__ClientId=my-service
 Cratis__Chronicle__Clients__0__ClientSecret=@Microsoft.KeyVault(SecretUri=https://my-vault.vault.azure.net/secrets/chronicle-client-secret)
 ```
 
+The `@Microsoft.KeyVault(...)` reference is resolved by Azure App Service and Azure Functions when you set it as an application setting — Chronicle does not resolve it. On any other platform the literal text would be used as the value, so inject the resolved secret through that platform's secret mechanism instead, as in the Kubernetes example below.
+
 ### Kubernetes Secrets
 
 ```yaml
