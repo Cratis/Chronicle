@@ -20,6 +20,8 @@ dotnet add package Cratis.Specifications.XUnit
 dotnet add package Cratis.Chronicle.Testing
 ```
 
+No separate Arc package reference is needed for a Chronicle-only test project. The testing package declares the Arc runtime dependencies used by its in-process kernel, so NuGet restores them alongside Chronicle.
+
 ## Basic usage
 
 <ChronicleClientTabs snippet="testing/events/scenario/basic" />

@@ -48,6 +48,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- The embedded Core and gRPC assemblies dispatch through Arc and register Arc query
+             metadata at module load. Keep Arc as a declared dependency so its version unifies
+             with the consumer's Arc packages instead of embedding a second copy. -->
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Core" />
+        <!-- The embedded Core migration engine evaluates JMESPath during scenario replay. -->
+        <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="Microsoft.Extensions.Logging" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <!-- <PackageReference Include="Microsoft.Orleans.BroadcastChannel" PrivateAssets="all"/>
