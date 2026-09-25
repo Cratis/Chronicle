@@ -38,13 +38,7 @@ An observer outlives the code that declared it. Delete a read model and its proj
 
 Removing one deletes exactly that bookkeeping:
 
-```csharp
-var result = await eventStore.Observers.Remove("the-observer");
-if (!result.IsRemoved)
-{
-    Console.WriteLine($"Not removed: {result.Outcome} in namespace {result.BlockingNamespace}");
-}
-```
+<ChronicleClientTabs snippet="concepts/observers/remove" />
 
 The same operation is available in the Workbench, on the **Observers** page under a namespace, and from the CLI:
 

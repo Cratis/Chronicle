@@ -5,7 +5,7 @@ description: "What an event sequence is, how the event log relates to other sequ
 
 Chronicle has the concept of event sequences. These can be looked upon as collections of events.
 Every event gets assigned an incremental unique sequence number, this if the sequence
-number that [observers](./observers.md) uses to maintain their offset.
+number that [observers](./observers.mdx) uses to maintain their offset.
 
 With every event, Chronicle collects additional metadata that is stored together with the event.
 

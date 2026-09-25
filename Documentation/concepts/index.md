@@ -16,7 +16,7 @@ This area contains explanations and guidance on the concepts in Cratis.
 | [Event Store](./event-store.md) | Where your events live — durably persisted in a database |
 | [Namespaces](./namespaces.md) | What are namespaces within an event store |
 | [Event Sequence](./event-sequence.md) | What is an event sequence |
-| [Observer](./observers.md) | What is an observer |
+| [Observer](./observers.mdx) | What is an observer |
 | [Projections, reducers, and reactors](./observer-patterns.md) | The three observer patterns side by side — deriving state from events vs causing side effects |
 | [Projection](./projection.md) | How a projection declaratively maps events onto a read model instance |
 | [Designing read models](./designing-read-models) | Specialize each read model for the query it serves, not for reuse |
