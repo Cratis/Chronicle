@@ -178,10 +178,14 @@ message WaitForObserverCompletionRequest {
    string Namespace = 2;
    string EventSequenceId = 3;
    uint64 TailEventSequenceNumber = 4;
+   repeated EventType EventTypes = 5;
+   int64 TimeoutMilliseconds = 6;
 }
 message WaitForObserverCompletionResponse {
    bool IsSuccess = 1;
    repeated FailedPartition FailedPartitions = 2;
+   bool TimedOut = 3;
+   repeated string OutstandingObservers = 4;
 }
 service FailedPartitions {
    rpc GetFailedPartitions (GetFailedPartitionsRequest) returns (IEnumerable_FailedPartition);

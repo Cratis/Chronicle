@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Grpc.Core;
 using ProtoBuf.Grpc;
@@ -13,7 +14,7 @@ namespace Cratis.Chronicle.Observation;
 public static class AppendResultWaitForCompletionExtensions
 {
     /// <summary>
-    /// Waits for all affected observers to either process up to the append tail sequence number or fail.
+    /// Waits for observers handling the appended event types to process up to the append tail sequence number or fail.
     /// </summary>
     /// <param name="appendResult">The append result to wait for observer completion for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it defaults to 5 seconds.</param>
@@ -35,18 +36,38 @@ public static class AppendResultWaitForCompletionExtensions
             throw new CannotWaitForObserverCompletion(appendResult.EventStore, appendResult.EventSequenceId);
 
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
 
-        var response = await observers.WaitForCompletion(
-            new Contracts.Observation.WaitForObserverCompletionRequest
+        // Allow the server a short grace period to return the outstanding observer names at its deadline.
+        // Older servers ignore the deadline and fall back to the client cancellation below.
+        using var cts = new CancellationTokenSource(timeout.Value + TimeSpan.FromMilliseconds(200));
+
+        try
+        {
+            var response = await observers.WaitForCompletion(
+                new Contracts.Observation.WaitForObserverCompletionRequest
+                {
+                    EventStore = appendResult.EventStore,
+                    Namespace = appendResult.EventStoreNamespace,
+                    EventSequenceId = appendResult.EventSequenceId,
+                    TailEventSequenceNumber = appendResult.TailSequenceNumber,
+                    EventTypes = appendResult.EventTypes.ToContract(),
+                    TimeoutMilliseconds = Math.Max(1, (long)timeout.Value.TotalMilliseconds)
+                },
+                new CallContext(new CallOptions(cancellationToken: cts.Token)));
+
+            return new(response.IsSuccess, response.FailedPartitions.ToClient())
             {
-                EventStore = appendResult.EventStore,
-                Namespace = appendResult.EventStoreNamespace,
-                EventSequenceId = appendResult.EventSequenceId,
-                TailEventSequenceNumber = appendResult.TailSequenceNumber
-            },
-            new CallContext(new CallOptions(cancellationToken: cts.Token)));
-
-        return new(response.IsSuccess, response.FailedPartitions.ToClient());
+                TimedOut = response.TimedOut,
+                OutstandingObservers = response.OutstandingObservers
+            };
+        }
+        catch (RpcException exception) when (cts.IsCancellationRequested && exception.StatusCode is StatusCode.Cancelled or StatusCode.DeadlineExceeded)
+        {
+            return new(false, []) { TimedOut = true };
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            return new(false, []) { TimedOut = true };
+        }
     }
 }

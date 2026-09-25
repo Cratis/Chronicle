@@ -152,6 +152,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
+            EventTypes = [eventType],
             Observers = GetObservers()
         };
         if (_appendedEventsRaised is not null)
@@ -268,6 +269,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
+            EventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).DistinctBy(_ => _.Id).ToArray(),
             Observers = GetObservers()
         };
         NotifyAppendMany(
@@ -501,7 +503,7 @@ public class EventSequence(
     static Contracts.Primitives.SerializableDateTimeOffset ToWireOccurred(DateTimeOffset? occurred) =>
         (Contracts.Primitives.SerializableDateTimeOffset?)occurred ?? new Contracts.Primitives.SerializableDateTimeOffset();
 
-    AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult)
+    AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult, EventType eventType)
     {
         if (batchResult.IsSuccess)
         {
@@ -511,6 +513,7 @@ public class EventSequence(
                 EventStoreNamespace = @namespace,
                 EventSequenceId = eventSequenceId,
                 ConcurrencyCheckPerformed = batchResult.ConcurrencyCheckPerformed,
+                EventTypes = [eventType],
                 Observers = GetObservers()
             };
         }
@@ -525,6 +528,7 @@ public class EventSequence(
             ConcurrencyViolation = batchResult.ConcurrencyViolations.FirstOrDefault(),
             Errors = batchResult.Errors,
             ConcurrencyCheckPerformed = batchResult.ConcurrencyCheckPerformed,
+            EventTypes = [eventType],
             Observers = GetObservers()
         };
     }
@@ -627,6 +631,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
+            EventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).DistinctBy(_ => _.Id).ToArray(),
             Observers = GetObservers()
         };
 
@@ -660,7 +665,7 @@ public class EventSequence(
                     CausedBy = identity
                 };
 
-                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result)));
+                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result, evtType)));
             }
 
             _appendedEventsRaised(allResults);
@@ -740,7 +745,7 @@ public class EventSequence(
                 CausedBy = identity
             };
 
-            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result)));
+            results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result, evtType)));
         }
 
         _appendedEventsRaised(results);
