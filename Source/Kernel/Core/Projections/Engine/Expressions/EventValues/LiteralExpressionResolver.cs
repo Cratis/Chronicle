@@ -37,16 +37,31 @@ public class LiteralExpressionResolver : IEventValueProviderExpressionResolver
             return true;
         }
 
-        if (bool.TryParse(expression, out var boolean))
+        if (expression == "True" || expression == "true" || expression == "False" || expression == "false")
         {
-            value = boolean;
+            value = expression == "True" || expression == "true";
             return true;
         }
 
-        if (double.TryParse(expression, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+        if (expression.Length > 0 && !expression.Any(char.IsWhiteSpace))
         {
-            value = number;
-            return true;
+            if (long.TryParse(expression, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer))
+            {
+                value = integer;
+                return true;
+            }
+
+            if (decimal.TryParse(expression, NumberStyles.Float, CultureInfo.InvariantCulture, out var decimalNumber))
+            {
+                value = decimalNumber;
+                return true;
+            }
+
+            if (double.TryParse(expression, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number))
+            {
+                value = number;
+                return true;
+            }
         }
 
         value = null;

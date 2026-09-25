@@ -33,7 +33,8 @@ public class when_projecting_literal_mappings : given.a_language_service_with_sc
     void Because()
     {
         var definition = CompileGenerateAndRecompile(Declaration).Definition;
-        var mappings = definition.From[(EventType)"UserCreated"].Properties;
+        var mappings = definition.From[(EventType)"UserCreated"].Properties.ToDictionary();
+        mappings[new PropertyPath("largeNumber")] = "9007199254740993";
         var typeFormats = new TypeFormats();
         var valueResolvers = new EventValueProviderExpressionResolvers(typeFormats, NullLogger<EventValueProviderExpressionResolvers>.Instance);
         var resolvers = new ReadModelPropertyExpressionResolvers(valueResolvers, typeFormats, NullLogger<ReadModelPropertyExpressionResolvers>.Instance);
@@ -69,7 +70,7 @@ public class when_projecting_literal_mappings : given.a_language_service_with_sc
                 "rating" or "score" => JsonObjectType.Number,
                 _ => JsonObjectType.Integer
             };
-            var mapper = resolvers.Resolve(property, new JsonSchemaProperty { Type = type }, expression);
+            var mapper = resolvers.Resolve(property, new JsonSchemaProperty { Type = type, Format = property.Path == "largeNumber" ? "int64" : null }, expression);
             mapper(@event, _target, ArrayIndexers.NoIndexers);
         }
     }
@@ -77,6 +78,7 @@ public class when_projecting_literal_mappings : given.a_language_service_with_sc
     [Fact] void should_set_the_string_without_quotes() => ((IDictionary<string, object?>)_target)["status"].ShouldEqual("draft");
     [Fact] void should_set_the_boolean() => ((IDictionary<string, object?>)_target)["isActive"].ShouldEqual(true);
     [Fact] void should_set_the_integer() => ((IDictionary<string, object?>)_target)["age"].ShouldEqual(1);
+    [Fact] void should_preserve_the_large_integer() => ((IDictionary<string, object?>)_target)["largeNumber"].ShouldEqual(9007199254740993L);
     [Fact] void should_set_the_fractional_number() => ((IDictionary<string, object?>)_target)["score"].ShouldEqual(4.5d);
     [Fact] void should_add_the_literal_operand() => ((IDictionary<string, object?>)_target)["version"].ShouldEqual(7);
     [Fact] void should_subtract_the_literal_operand() => ((IDictionary<string, object?>)_target)["rating"].ShouldEqual(4d);

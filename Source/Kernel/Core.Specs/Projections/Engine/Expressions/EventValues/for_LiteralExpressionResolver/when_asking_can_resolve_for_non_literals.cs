@@ -17,7 +17,12 @@ public class when_asking_can_resolve_for_non_literals : Specification
         _resolver.CanResolve("status.code"),
         _resolver.CanResolve("\"unfinished"),
         _resolver.CanResolve("$eventSourceId"),
-        _resolver.CanResolve("1,5")];
+        _resolver.CanResolve("1,5"),
+        _resolver.CanResolve("nan"),
+        _resolver.CanResolve("infinity"),
+        _resolver.CanResolve("true "),
+        _resolver.CanResolve("TRUE"),
+        _resolver.CanResolve("1e400")];
 
     [Fact] void should_not_claim_event_paths_or_unsupported_expressions() => _results.All(_ => !_).ShouldBeTrue();
 }

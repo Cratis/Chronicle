@@ -20,7 +20,7 @@ public class when_resolving_numeric_literals : given.an_appended_event
     }
 
     [Fact] void should_recognize_invariant_numbers() => _resolver.CanResolve("4.5").ShouldBeTrue();
-    [Fact] void should_return_an_integer_literal_as_a_number() => _integer.ShouldEqual(1d);
-    [Fact] void should_return_a_fractional_literal_as_a_number() => _fraction.ShouldEqual(4.5d);
-    [Fact] void should_return_a_negative_literal_as_a_number() => _negative.ShouldEqual(-2d);
+    [Fact] void should_return_an_integer_literal_as_a_number() => _integer.ShouldEqual(1L);
+    [Fact] void should_return_a_fractional_literal_as_a_number() => _fraction.ShouldEqual(4.5m);
+    [Fact] void should_return_a_negative_literal_as_a_number() => _negative.ShouldEqual(-2L);
 }

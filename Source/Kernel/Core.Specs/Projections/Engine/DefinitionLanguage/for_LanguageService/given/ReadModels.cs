@@ -34,7 +34,8 @@ public record UserReadModel(
     DateTimeOffset? UpdatedAt,
     Group[]? Groups,
     string? ContactInfoEmail,
-    string? AddressCity);
+    string? AddressCity,
+    long LargeNumber = 0);
 
 public record GroupReadModel(string Name, string? Description, List<Member> Members);
 

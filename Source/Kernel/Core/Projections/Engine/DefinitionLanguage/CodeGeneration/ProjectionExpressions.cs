@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration;
@@ -59,7 +59,7 @@ public static class ProjectionExpressions
             return new(path, ProjectionOperation.Clear, null);
         }
 
-        return new(path, ProjectionOperation.Set, ReadValue(normalized));
+        return new(path, ProjectionOperation.Set, ReadValue(expression));
     }
 
     /// <summary>
@@ -92,23 +92,18 @@ public static class ProjectionExpressions
             return ReadConstant(constant);
         }
 
-        // A quoted value is text whatever it spells - "1" is the string, not the number - so the
-        // quotes decide the kind rather than what is between them.
-        if (normalized.StartsWith('"'))
+        // Classify only stored literal forms, without trimming: whitespace is not part of a literal.
+        if (LiteralExpressionResolver.TryRead(expression, out var literal))
         {
-            return new(ProjectionValueKind.Text, normalized.Trim('"'));
-        }
-
-        // A bare literal is still a constant - the declaration does not require $value() around one.
-        if (IsBoolean(normalized) || double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
-        {
-            return ReadConstant(normalized);
+            return literal is string text
+                ? new(ProjectionValueKind.Text, text)
+                : ReadConstant(expression);
         }
 
         return new(ProjectionValueKind.EventProperty, normalized);
     }
 
-    static bool IsBoolean(string value) => bool.TryParse(value, out _);
+    static bool IsBoolean(string value) => LiteralExpressionResolver.TryRead(value, out var literal) && literal is bool;
 
     static ProjectionValueSource ReadConstant(string value)
     {
@@ -122,7 +117,7 @@ public static class ProjectionExpressions
             return new(ProjectionValueKind.Literal, value.ToLowerInvariant());
         }
 
-        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+        if (LiteralExpressionResolver.TryRead(value, out var literal) && literal is long or decimal or double)
         {
             return new(ProjectionValueKind.Literal, value);
         }
