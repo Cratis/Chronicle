@@ -7,41 +7,35 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking;
 
-public class handler_returning_an_unclaimed_task_result : Specification
+public class handler_returning_an_unclaimed_item_in_a_collection : Specification
 {
     ReactorInvocationResult _result;
     Exception _error;
     ReactorInvoker _invoker;
-    EventContext _eventContext;
 
     void Establish()
     {
-        var eventTypes = new EventTypesForSpecifications([typeof(MyEvent)]);
-        var reactor = new UnclaimedReactor();
         _invoker = new ReactorInvoker(
-            eventTypes,
+            new EventTypesForSpecifications([typeof(MyEvent)]),
             Substitute.For<IReactorMiddlewares>(),
-            typeof(UnclaimedReactor),
-            new ActivatedArtifact(reactor, typeof(UnclaimedReactor), Substitute.For<ILogger<ActivatedArtifact>>()),
+            typeof(UnclaimedCollectionReactor),
+            new ActivatedArtifact(new UnclaimedCollectionReactor(), typeof(UnclaimedCollectionReactor), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>(),
             Substitute.For<IReactorSideEffectHandlers>(),
             Substitute.For<IEventStore>());
-        _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
     }
 
     async Task Because()
     {
-        _result = await _invoker.Invoke(new MyEvent(), _eventContext);
+        _result = await _invoker.Invoke(new MyEvent(), EventContext.EmptyWithEventSourceId(EventSourceId.New()));
         _result.ExceptionResult.TryGetException(out _error);
     }
 
     [Fact] void should_fail_the_invocation() => _result.IsFailed.ShouldBeTrue();
     [Fact] void should_report_an_unhandled_return_value() => _error.ShouldBeOfExactType<UnhandledReactorReturnValue>();
 
-    class UnclaimedReactor : IReactor
+    class UnclaimedCollectionReactor : IReactor
     {
-        public Task<Unclaimed> Handle(MyEvent @event) => Task.FromResult(new Unclaimed());
+        public IEnumerable<object> Handle(MyEvent @event) => [new object()];
     }
-
-    record Unclaimed;
 }
