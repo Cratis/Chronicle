@@ -6,7 +6,7 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_completion;
 
-public class and_an_older_client_sends_no_event_types : given.all_dependencies
+public class and_an_older_client_sends_no_event_type_tails : given.all_dependencies
 {
     WaitForObserverCompletionResponse _result;
 
@@ -35,6 +35,6 @@ public class and_an_older_client_sends_no_event_types : given.all_dependencies
         TimeoutMilliseconds = 1
     });
 
-    [Fact] void should_still_wait_for_the_unrelated_observer() => _result.TimedOut.ShouldBeTrue();
+    [Fact] void should_time_out_waiting_for_all_observers() => _result.TimedOut.ShouldBeTrue();
     [Fact] void should_name_the_outstanding_observer() => _result.OutstandingObservers.ShouldContain("observer-b");
 }

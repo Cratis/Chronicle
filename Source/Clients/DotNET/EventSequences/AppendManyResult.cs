@@ -68,6 +68,11 @@ public record AppendManyResult : IAppendResult, IAppendResultForObserverCompleti
     internal Contracts.Observation.IObservers? Observers { get; init; }
 
     /// <summary>
+    /// Gets the event types in append order for computing each type's completion target.
+    /// </summary>
+    internal IReadOnlyList<EventType> AppendedEventTypes { get; init; } = [];
+
+    /// <summary>
     /// Create a successful result.
     /// </summary>
     /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>

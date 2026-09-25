@@ -6,7 +6,7 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_waiting_for_completion;
 
-public class and_a_matching_observer_is_behind : given.all_dependencies
+public class and_an_all_events_observer_is_behind : given.all_dependencies
 {
     WaitForObserverCompletionResponse _result;
 
@@ -15,14 +15,14 @@ public class and_a_matching_observer_is_behind : given.all_dependencies
         _observerDefinitionsStorage.GetAll().Returns(
         [
             new ObserverDefinition(
-                "observer-a",
-                [new Concepts.Events.EventType("a-recorded", 2)],
+                "all-events-observer",
+                [],
                 Concepts.EventSequences.EventSequenceId.Log,
-                Concepts.Observation.ObserverType.Reactor,
-                Concepts.Observation.ObserverOwner.Client,
+                Concepts.Observation.ObserverType.Projection,
+                Concepts.Observation.ObserverOwner.Kernel,
                 true)
         ]);
-        _observerStateStorage.GetAll().Returns([new ObserverState { Identifier = "observer-a", LastHandledEventSequenceNumber = 12UL }]);
+        _observerStateStorage.GetAll().Returns([new ObserverState { Identifier = "all-events-observer", LastHandledEventSequenceNumber = 40UL }]);
         _failedPartitionsStorage.GetFor(Arg.Any<IEnumerable<Concepts.Observation.ObserverId>>()).Returns(new Concepts.Observation.FailedPartitions());
     }
 
@@ -36,7 +36,6 @@ public class and_a_matching_observer_is_behind : given.all_dependencies
         TimeoutMilliseconds = 1
     });
 
-    [Fact] void should_report_a_timeout() => _result.TimedOut.ShouldBeTrue();
-    [Fact] void should_name_the_outstanding_observer() => _result.OutstandingObservers.ShouldContain("observer-a");
-    [Fact] void should_not_report_a_failed_partition() => _result.FailedPartitions.ShouldBeEmpty();
+    [Fact] void should_time_out_waiting_for_the_all_events_observer() => _result.TimedOut.ShouldBeTrue();
+    [Fact] void should_name_the_outstanding_observer() => _result.OutstandingObservers.ShouldContain("all-events-observer");
 }

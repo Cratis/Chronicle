@@ -49,7 +49,8 @@ When you need to wait until observers affected by an append operation have compl
 `WaitForCompletion()` from the `Cratis.Chronicle.Observation` namespace.
 
 Only observers subscribed to the appended event types are included. For `AppendMany`, observers of any
-of the events in the batch are included. If an affected observer fails while catching up, the result
+of the events in the batch are included, and each waits only through its last matching event in the batch.
+Observers subscribed to all events are also included. If an affected observer fails while catching up, the result
 includes failed partitions. If the wait expires, `IsSuccess` is false and `TimedOut` is true;
 `OutstandingObservers` names the observers still behind. A connection to an older server may not
 provide those names, but a timeout still returns a named result rather than a gRPC cancellation.

@@ -40,7 +40,7 @@ public class and_an_unrelated_observer_is_behind : given.all_dependencies
             Namespace = "event-store-namespace",
             EventSequenceId = Concepts.EventSequences.EventSequenceId.Log,
             TailEventSequenceNumber = 42UL,
-            EventTypes = [new Contracts.Events.EventType { Id = "a-recorded", Generation = 1 }]
+            EventTypeTails = [new AppendedEventTypeTail { EventType = new Contracts.Events.EventType { Id = "a-recorded", Generation = 1 }, SequenceNumber = 42UL }]
         },
         new CallContext(new CallOptions(cancellationToken: timeout.Token)));
     }

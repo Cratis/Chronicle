@@ -7,6 +7,10 @@ message AllObserversRequest {
    string EventStore = 1;
    string Namespace = 2;
 }
+message AppendedEventTypeTail {
+   EventType EventType = 1;
+   uint64 SequenceNumber = 2;
+}
 message ClearFailedPartitions {
    string EventStore = 1;
    string Namespace = 2;
@@ -178,7 +182,7 @@ message WaitForObserverCompletionRequest {
    string Namespace = 2;
    string EventSequenceId = 3;
    uint64 TailEventSequenceNumber = 4;
-   repeated EventType EventTypes = 5;
+   repeated AppendedEventTypeTail EventTypeTails = 5;
    int64 TimeoutMilliseconds = 6;
 }
 message WaitForObserverCompletionResponse {

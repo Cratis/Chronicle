@@ -48,7 +48,9 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default)
     {
-        var eventTypeIds = request.EventTypes.Select(_ => _.Id).ToHashSet(StringComparer.Ordinal);
+        var eventTypeTails = request.EventTypeTails
+            .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
+            .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
         var stopwatch = Stopwatch.StartNew();
         while (true)
         {
@@ -62,7 +64,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 },
                 context))
                 .Where(_ => _.EventSequenceId == request.EventSequenceId &&
-                    (eventTypeIds.Count == 0 || _.EventTypes.Any(type => eventTypeIds.Contains(type.Id))))
+                    (eventTypeTails.Count == 0 || !_.EventTypes.Any() || _.EventTypes.Any(type => eventTypeTails.ContainsKey(type.Id))))
                 .ToArray();
 
             if (observers.Length == 0)
@@ -83,7 +85,9 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             var outstanding = observers.Where(_ =>
                 !failedObserverIds.Contains(_.Id) &&
                 (!((EventSequenceNumber)_.LastHandledEventSequenceNumber).IsActualValue ||
-                 _.LastHandledEventSequenceNumber < request.TailEventSequenceNumber)).Select(_ => _.Id).ToArray();
+                 _.LastHandledEventSequenceNumber < (eventTypeTails.Count == 0 || !_.EventTypes.Any()
+                     ? request.TailEventSequenceNumber
+                     : _.EventTypes.Where(type => eventTypeTails.ContainsKey(type.Id)).Max(type => eventTypeTails[type.Id])))).Select(_ => _.Id).ToArray();
             if (outstanding.Length == 0)
             {
                 return new WaitForObserverCompletionResponse

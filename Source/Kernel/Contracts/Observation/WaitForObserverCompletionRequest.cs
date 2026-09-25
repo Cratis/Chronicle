@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
-
 namespace Cratis.Chronicle.Contracts.Observation;
 
 /// <summary>
@@ -36,10 +34,10 @@ public class WaitForObserverCompletionRequest
     public ulong TailEventSequenceNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the appended event types. An empty collection waits for all observers for compatibility with older clients.
+    /// Gets or sets the last appended sequence number for each event type. Empty waits for all observers for compatibility with older clients.
     /// </summary>
     [ProtoMember(5)]
-    public IEnumerable<EventType> EventTypes { get; set; } = [];
+    public IEnumerable<AppendedEventTypeTail> EventTypeTails { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the maximum time in milliseconds to wait on the server. Zero retains the legacy unbounded wait.

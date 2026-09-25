@@ -270,6 +270,7 @@ public class EventSequence(
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).DistinctBy(_ => _.Id).ToArray(),
+            AppendedEventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).ToArray(),
             Observers = GetObservers()
         };
         NotifyAppendMany(
@@ -632,6 +633,7 @@ public class EventSequence(
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
             EventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).DistinctBy(_ => _.Id).ToArray(),
+            AppendedEventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).ToArray(),
             Observers = GetObservers()
         };
 
