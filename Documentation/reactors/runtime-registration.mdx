@@ -1,0 +1,13 @@
+# Register a Reactor at Runtime
+
+When a bridge or plugin host discovers its event subscriptions from configuration, it need not create a CLR reactor class for each subscription. Register an in-process reactor with a stable ID, one or more event types (including their generations), and an asynchronous handler:
+
+<ChronicleClientTabs snippet="reactors/runtime-registration/delegate" />
+
+The handler receives the event context and JSON content as delivered by Chronicle, along with the kernel's generation-to-JSON map. It does not deserialize the event into a CLR type or select a different generation's content. The map may contain only some generations; it is not a promise that every subscribed generation is present. On storage reads and catch-up, the context's generation reflects what the kernel delivers, which may differ from the generation originally appended when content was migrated. Do not use it as an immutable original-generation identifier across replay.
+
+Registration observes the event log by default; use `OnEventSequence` to choose another sequence. A reactor is replayable by default; use `NotReplayable` if repeating its side effects is unsafe. The handler must complete successfully before Chronicle acknowledges its partition. If it throws or its task fails, the partition fails without advancing past that event. Make downstream effects idempotent to tolerate retries and reconnects.
+
+Keep the reactor ID stable across restarts so Chronicle can retain its observation position. The returned handler exposes state and failed partitions through the same APIs as a typed reactor; use `GetHandlerById` to look it up later. `Unregister(id)` disconnects the local observation stream and removes the callback from this client. It does not erase the kernel's stored observer state. A still-registered reactor reconnects with its original subscription and callback.
+
+For fixed, CLR-known events, prefer a [typed reactor](getting-started) with discovered handler methods.

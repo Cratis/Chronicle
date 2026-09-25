@@ -1,15 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
+using ProtoBuf.Grpc;
+
+using ContractReactors = Cratis.Chronicle.Contracts.Observation.Reactors.IReactors;
 
 namespace Cratis.Chronicle.Reactors.for_Reactors.given;
 
@@ -25,6 +30,7 @@ public class all_dependencies : Specification
     protected IEventSerializer _eventSerializer;
     protected ICausationManager _causationManager;
     protected IActivitySource<Reactors> _activitySource;
+    System.Diagnostics.ActivitySource _traceSource;
     protected IReactorSideEffectHandlers _sideEffectHandlers;
     protected IReactorContextValuesBuilder _reactorContextValuesBuilder;
     protected ILogger<Reactors> _logger;
@@ -34,7 +40,6 @@ public class all_dependencies : Specification
     protected IObservers _observers;
     protected IConnectionLifecycle _connectionLifecycle;
     protected IIdentityProvider _identityProvider;
-    protected Dictionary<Type, IReactorHandler> _handlers;
     protected Reactors _reactors;
 
     void Establish()
@@ -52,16 +57,22 @@ public class all_dependencies : Specification
         _middlewaresActivator.Activate(Arg.Any<IServiceProvider>()).Returns(_middlewares);
         _eventSerializer = Substitute.For<IEventSerializer>();
         _causationManager = Substitute.For<ICausationManager>();
-        _activitySource = Substitute.For<IActivitySource<Reactors>>();
+        _traceSource = new System.Diagnostics.ActivitySource("reactor-specification");
+        _activitySource = new Cratis.Traces.ActivitySource<Reactors>(_traceSource);
         _sideEffectHandlers = Substitute.For<IReactorSideEffectHandlers>();
         _reactorContextValuesBuilder = Substitute.For<IReactorContextValuesBuilder>();
         _logger = Substitute.For<ILogger<Reactors>>();
         _loggerFactory = Substitute.For<ILoggerFactory>();
 
         _connectionLifecycle = Substitute.For<IConnectionLifecycle>();
+        _connectionLifecycle.ConnectionId.Returns((ConnectionId)"test-connection-id");
         _observers = Substitute.For<IObservers>();
         _services = Substitute.For<IServices>();
         _services.Observers.Returns(_observers);
+        var contractReactors = Substitute.For<ContractReactors>();
+        _services.Reactors.Returns(contractReactors);
+        contractReactors.Observe(Arg.Any<IObservable<ReactorMessage>>(), Arg.Any<CallContext>())
+            .Returns(Observable.Never<EventsToObserve>());
 
         var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
         _servicesAccessor = connection as IChronicleServicesAccessor;
@@ -71,8 +82,6 @@ public class all_dependencies : Specification
         _eventStore.Connection.Returns(connection);
 
         _identityProvider = Substitute.For<IIdentityProvider>();
-
-        _handlers = new();
 
         _clientArtifactsProvider.Reactors.Returns([]);
 
@@ -92,9 +101,7 @@ public class all_dependencies : Specification
             new ReactorMethodArgumentsResolver(),
             _logger,
             _loggerFactory);
-
-        // Use reflection to set the private _handlers field
-        var handlersField = typeof(Reactors).GetField("_handlers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        handlersField?.SetValue(_reactors, _handlers);
     }
+
+    void Destroy() => _traceSource.Dispose();
 }

@@ -5,8 +5,6 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
@@ -22,18 +20,13 @@ public class and_observation_stream_is_cancelled : given.all_dependencies
 
         _connectionLifecycle.ConnectionId.Returns((ConnectionId)"test-connection-id");
 
-        var handler = Substitute.For<IReactorHandler>();
-        handler.Id.Returns((ReactorId)"reactor-id");
-        handler.ReactorType.Returns(typeof(MyReactor));
-        handler.EventSequenceId.Returns((EventSequenceId)"reactor-sequence");
-        handler.EventTypes.Returns([new EventType("my-event", 1)]);
-        handler.CancellationToken.Returns(CancellationToken.None);
-        _handlers[typeof(MyReactor)] = handler;
-
         var reactors = Substitute.For<ContractReactors>();
         _services.Reactors.Returns(reactors);
         reactors.Observe(Arg.Any<IObservable<ReactorMessage>>(), Arg.Any<CallContext>())
             .Returns(Observable.Throw<EventsToObserve>(new OperationCanceledException()));
+        _eventStore.EventTypes.Returns(_eventTypes);
+        _eventTypes.AllClrTypes.Returns([]);
+        _reactors.Register<MyReactor>().GetAwaiter().GetResult();
     }
 
     async Task Because()
@@ -57,8 +50,5 @@ public class and_observation_stream_is_cancelled : given.all_dependencies
                 return arguments.Length > 0 && arguments[0] is LogLevel level && level == LogLevel.Error;
             });
 
-    class MyReactor : IReactor
-    {
-        public Task Handle(MyEvent @event) => Task.CompletedTask;
-    }
+    class MyReactor : IReactor;
 }
