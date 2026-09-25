@@ -36,14 +36,13 @@
     </PropertyGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
-        <!-- Wipe the publish output before each build. `dotnet publish` merges into the target
-             directory rather than replacing it, so a previous publish with different args
-             (e.g. without -r, leaving a RID-specific subfolder) can shadow the RID-targeted
-             assemblies the current publish produces. That manifested as Microsoft.Data.SqlClient
-             throwing PlatformNotSupportedException on linux-arm64 because the leftover root
-             AnyCPU reference was being picked up instead of the unix runtime implementation. -->
-        <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <Exec Command="dotnet publish $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj -c Debug -p:DefineConstants=DEVELOPMENT --no-restore $(_DockerRidArg) -o $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
+        <!-- Publishes through Integration/LocalKernelPublish.proj rather than a local Exec - see
+             Integration/Api/Api.csproj's BuildDocker target for why: this project and Api both publish the
+             same Server/out directory, a solution build runs them in parallel, and two independent
+             `dotnet publish` invocations raced each other's proto generation and wipe of Server/out. Calling
+             the shared target with the same global properties makes MSBuild's build-result cache run the
+             publish once per build; whichever project reaches it first pays for it, the other reuses the result. -->
+        <MSBuild Projects="$(MSBuildThisFileDirectory)../LocalKernelPublish.proj" Targets="PublishKernel" Properties="KernelPublishRid=$(_DockerPublishRid)" />
         <!--
         The integration tests use the slim image: kernel only, no embedded database.
         Every backing store runs in its own container so the local layout matches
