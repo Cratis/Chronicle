@@ -53,6 +53,16 @@ public class when_getting_instance_for_decision : given.all_dependencies
     }
 
     [Fact]
+    public async Task should_fail_closed_when_the_response_has_no_data()
+    {
+        _decisionReadModelsService.GetInstanceForDecision(Arg.Any<GetInstanceForDecisionRequest>())
+            .Returns(QueryResult<DecisionReadModelResponse>.Success(Guid.NewGuid(), null!));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ((IReadModels)_readModels).GetInstanceForDecision<MyModel>("source"));
+    }
+
+    [Fact]
     public async Task should_preserve_the_typed_refusal()
     {
         _decisionReadModelsService.GetInstanceForDecision(Arg.Any<GetInstanceForDecisionRequest>())

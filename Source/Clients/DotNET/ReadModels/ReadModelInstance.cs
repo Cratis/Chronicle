@@ -17,10 +17,12 @@ namespace Cratis.Chronicle.ReadModels;
 public record ReadModelInstance<T>(ReadModelKey Key, T? Instance, EventSequenceNumber SequenceNumber, IReadOnlyList<EventType> EventTypes)
 {
     /// <summary>
-    /// Produces the exact expected concurrency scope for an append protecting this read.
+    /// Produces the expected scope for an append to this same event source only.
     /// </summary>
     /// <returns>A scope narrowed to this event source and the projected event types.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the read is incomplete or cannot form a scope.</exception>
+    /// <remarks>When appending to a different event source, use <see cref="ToConcurrencyScopes"/> instead;
+    /// an append's own scope checks the appended source, not the read key.</remarks>
     public ConcurrencyScope ToConcurrencyScope()
     {
         if (!Key.IsSpecified || EventTypes.Count == 0 ||
@@ -31,4 +33,11 @@ public record ReadModelInstance<T>(ReadModelKey Key, T? Instance, EventSequenceN
 
         return new(SequenceNumber.IsUnavailable ? EventSequenceNumber.BeforeFirst : SequenceNumber, EventSourceId: Key, EventTypes: EventTypes);
     }
+
+    /// <summary>
+    /// Returns a keyed scope for AppendMany, protecting this read even when appending to another source.
+    /// </summary>
+    /// <returns>A concurrency-scopes dictionary indexed by the read event source.</returns>
+    public IDictionary<EventSourceId, ConcurrencyScope> ToConcurrencyScopes() =>
+        new Dictionary<EventSourceId, ConcurrencyScope> { [(EventSourceId)Key.Value] = ToConcurrencyScope() };
 }

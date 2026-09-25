@@ -130,8 +130,16 @@ public class Projection(
     public async Task<DecisionProjectionShape> GetDecisionProjectionShape(EventStoreNamespaceName eventStoreNamespace)
     {
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+
+        // Decision admission is deliberately separate from the engine's IsEventSourceKeyed:
+        // changing that flag would also change pipeline locking and sink watermark guarding.
         return new(
-            projection.IsEventSourceKeyed,
+            State.From.Values.All(from => IsDirectEventSourceKey(from.Key, from.ParentKey)) &&
+            State.RemovedWith.Values.All(removed => IsDirectEventSourceKey(removed.Key, removed.ParentKey)) &&
+            !State.FromDerivatives.Any() && State.FromEventProperty is null &&
+            State.Join.Count == 0 && State.RemovedWithJoin.Count == 0 &&
+            State.Children.Count == 0 && (State.Nested?.Count ?? 0) == 0 &&
+            !projection.SubscribesToAllEvents && projection.EventTypes.Any(),
             State.Join.Count > 0 || State.RemovedWithJoin.Count > 0,
             State.Children.Count > 0 || (State.Nested?.Count ?? 0) > 0,
             projection.SubscribesToAllEvents,
@@ -442,6 +450,10 @@ public class Projection(
 
         return results;
     }
+
+    static bool IsDirectEventSourceKey(PropertyExpression key, PropertyExpression? parentKey) =>
+        (string.IsNullOrEmpty(key.Value) || key.Value == WellKnownExpressions.EventSourceId) &&
+        (parentKey is null || string.IsNullOrEmpty(parentKey.Value) || parentKey.Value == WellKnownExpressions.EventSourceId);
 
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,

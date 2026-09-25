@@ -298,7 +298,6 @@ internal sealed class TestingServices : IServices
         _decisionReadModels = new(() =>
             new KernelDecisionReadModelsService(
                 grainFactory,
-                new ObjectComparer(),
                 compliance.CreateReadModelsCompliance(),
                 jsonSerializerOptions,
                 NullLogger<KernelDecisionReadModelsService>.Instance));

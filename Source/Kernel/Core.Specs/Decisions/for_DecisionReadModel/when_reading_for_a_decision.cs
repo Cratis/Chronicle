@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections;
@@ -26,7 +27,6 @@ public class when_reading_for_a_decision
     readonly IImmediateProjection _immediate = Substitute.For<IImmediateProjection>();
     readonly IGrainFactory _grains = Substitute.For<IGrainFactory>();
     readonly IReadModelsCompliance _compliance = Substitute.For<IReadModelsCompliance>();
-    readonly IObjectComparer _comparer = new ObjectComparer();
 
     public when_reading_for_a_decision()
     {
@@ -66,7 +66,16 @@ public class when_reading_for_a_decision
     }
 
     Task<DecisionReadModel> Read() => DecisionReadModel.GetInstanceForDecision(
-        "store", "namespace", "model", "source", _grains, _comparer, _compliance, new JsonSerializerOptions());
+        "store", "namespace", "model", "source", _grains, _compliance, CreateOptions());
+
+    static JsonSerializerOptions CreateOptions()
+    {
+        var options = new JsonSerializerOptions();
+        options.Converters.Add(new PropertyExpressionDictionaryConverter());
+        options.Converters.Add(new FromDefinitionsConverter());
+        options.Converters.Add(new RemovedWithDefinitionsConverter());
+        return options;
+    }
 
     [Fact]
     public async Task should_return_the_present_instance_and_both_creation_and_removal_types()
@@ -101,6 +110,34 @@ public class when_reading_for_a_decision
     }
 
     [Fact]
+    public async Task should_admit_an_unchanged_populated_definition_and_refuse_a_changed_one()
+    {
+        var definition = await _projection.GetDefinition();
+        var populated = definition with
+        {
+            From = new Dictionary<EventType, FromDefinition>
+            {
+                [_created] = new(new Dictionary<PropertyPath, string> { ["name"] = "$name" }, WellKnownExpressions.EventSourceId, null)
+            },
+            RemovedWith = new Dictionary<EventType, RemovedWithDefinition>
+            {
+                [_removed] = new(WellKnownExpressions.EventSourceId, null)
+            }
+        };
+        _projection.GetDefinition().Returns(populated, populated with { LastUpdated = DateTimeOffset.UtcNow });
+        (await Read()).Refusal.ShouldEqual(DecisionReadRefusal.None);
+
+        _projection.GetDefinition().Returns(populated, populated with
+        {
+            From = new Dictionary<EventType, FromDefinition>
+            {
+                [_created] = new(new Dictionary<PropertyPath, string> { ["name"] = "$changed" }, WellKnownExpressions.EventSourceId, null)
+            }
+        });
+        (await Read()).Refusal.ShouldEqual(DecisionReadRefusal.DefinitionChanged);
+    }
+
+    [Fact]
     public async Task should_refuse_a_reducer()
     {
         var definition = await _readModel.GetDefinition();
@@ -119,7 +156,7 @@ public class when_reading_for_a_decision
     public async Task should_refuse_an_unspecified_key()
     {
         var result = await DecisionReadModel.GetInstanceForDecision(
-            "store", "namespace", "model", ReadModelKey.Unspecified, _grains, _comparer, _compliance, new JsonSerializerOptions());
+            "store", "namespace", "model", ReadModelKey.Unspecified, _grains, _compliance, new JsonSerializerOptions());
         result.Refusal.ShouldEqual(DecisionReadRefusal.UnspecifiedKey);
     }
 

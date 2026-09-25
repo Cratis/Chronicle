@@ -4,7 +4,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Arc.Queries.ModelBound;
-using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
@@ -37,7 +36,6 @@ public record DecisionReadModel(string Instance, ulong SequenceNumber, IEnumerab
     /// <param name="readModelIdentifier">The registered read model identifier.</param>
     /// <param name="key">The event source / read model key.</param>
     /// <param name="grainFactory">Grain factory.</param>
-    /// <param name="objectComparer">Compares the definition before and after projection.</param>
     /// <param name="compliance">Read model compliance release.</param>
     /// <param name="jsonSerializerOptions">Serialization options.</param>
     /// <returns>An exact read or a typed refusal.</returns>
@@ -47,7 +45,6 @@ public record DecisionReadModel(string Instance, ulong SequenceNumber, IEnumerab
         ReadModelIdentifier readModelIdentifier,
         ReadModelKey key,
         IGrainFactory grainFactory,
-        IObjectComparer objectComparer,
         IReadModelsCompliance compliance,
         JsonSerializerOptions jsonSerializerOptions)
     {
@@ -104,12 +101,10 @@ public record DecisionReadModel(string Instance, ulong SequenceNumber, IEnumerab
             var currentShape = await projection.GetDecisionProjectionShape(@namespace);
             if (currentDefinition is null ||
                 currentDefinition.ReadModel != projectionDefinition.ReadModel ||
-                !JsonNode.DeepEquals(projectionDefinition.InitialModelState, currentDefinition.InitialModelState) ||
-                !objectComparer.Compare(
-                    projectionDefinition with { ReadModel = null!, InitialModelState = null!, LastUpdated = null },
-                    currentDefinition with { ReadModel = null!, InitialModelState = null!, LastUpdated = null },
-                    ObjectComparerMode.Loose,
-                    out _) ||
+                !string.Equals(
+                    CanonicalDefinition(projectionDefinition, jsonSerializerOptions),
+                    CanonicalDefinition(currentDefinition, jsonSerializerOptions),
+                    StringComparison.Ordinal) ||
                 !currentShape.EventTypes.SequenceEqual(shape.EventTypes) ||
                 !currentShape.IsEventSourceKeyed || currentShape.HasJoins || currentShape.HasChildren || currentShape.SubscribesToAllEvents)
             {
@@ -138,4 +133,35 @@ public record DecisionReadModel(string Instance, ulong SequenceNumber, IEnumerab
             await immediate.Dehydrate();
         }
     }
+
+    /// <summary>
+    /// Sorts keyed definition dictionaries recursively; array order remains significant.
+    /// </summary>
+    /// <param name="definition">The projection definition.</param>
+    /// <param name="options">Kernel JSON serialization options.</param>
+    /// <returns>A stable serialized definition.</returns>
+    static string CanonicalDefinition(Concepts.Projections.Definitions.ProjectionDefinition definition, JsonSerializerOptions options)
+    {
+        var node = JsonSerializer.SerializeToNode(definition with { LastUpdated = null }, options);
+
+        // The projection JSON dictionary converters use event type IDs as property names; retain
+        // generations explicitly so a generation-only definition edit cannot evade this check.
+        var eventTypeKeys = new[]
+        {
+            definition.From.Keys.Select(type => $"from:{type}"),
+            definition.Join.Keys.Select(type => $"join:{type}"),
+            definition.RemovedWith.Keys.Select(type => $"removed:{type}"),
+            definition.RemovedWithJoin.Keys.Select(type => $"removedJoin:{type}")
+        }.SelectMany(types => types).Order(StringComparer.Ordinal);
+        return Canonicalize(node)!.ToJsonString() + "|" + string.Join('|', eventTypeKeys);
+    }
+
+    static JsonNode? Canonicalize(JsonNode? node) => node switch
+    {
+        JsonObject obj => new JsonObject(obj.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => KeyValuePair.Create(pair.Key, pair.Value is null ? null : Canonicalize(pair.Value)))),
+        JsonArray array => new JsonArray(array.Select(item => item is null ? null : Canonicalize(item)).ToArray()),
+        null => null,
+        _ => node.DeepClone()
+    };
 }

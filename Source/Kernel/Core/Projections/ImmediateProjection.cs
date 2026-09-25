@@ -3,9 +3,11 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
@@ -103,9 +105,21 @@ public class ImmediateProjection(
             var eventTypes = _decisionEventTypes ?? await _projection!.GetEventTypes();
             var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
 
-            // A global event-type tail is not a per-key watermark. Check the event log for this key on
-            // every call, even when the state is cached: only matching events actually folded here may
-            // advance the returned sequence number.
+            var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
+            var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
+            var tail = await eventSequence.GetTailSequenceNumberForEventTypes(eventTypes);
+            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null)
+            {
+                logger.UsingCachedModelInstance();
+                if (!HasReadModel(_initialState))
+                {
+                    return ProjectionResult.Empty with { LastHandledEventSequenceNumber = tail };
+                }
+
+                var initialStateAsJson = expandoObjectConverter.ToJsonObject(_initialState, _readModelDefinition!.GetSchemaForLatestGeneration());
+                return new(initialStateAsJson, 0, tail);
+            }
+
             var modelKey = _projectionKey.ReadModelKey.IsSpecified ? (EventSourceId)_projectionKey.ReadModelKey.Value : null!;
             using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: eventTypes);
             var projectedEventsCount = 0;

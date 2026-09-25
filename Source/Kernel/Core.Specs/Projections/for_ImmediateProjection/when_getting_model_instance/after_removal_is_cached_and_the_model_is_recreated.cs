@@ -26,18 +26,19 @@ public class after_removal_is_cached_and_the_model_is_recreated : given.an_immed
         var created = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_createdEventType, 1);
         var removed = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_removedEventType, 2);
         var recreated = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_recreatedEventType, 3);
+        var tails = new Queue<EventSequenceNumber>([(EventSequenceNumber)2, (EventSequenceNumber)2, (EventSequenceNumber)2, (EventSequenceNumber)3]);
         var createAndRemoveCursor = CreateCursor(created, removed);
-        var firstCachedCursor = CreateCursor();
-        var secondCachedCursor = CreateCursor();
         var recreateCursor = CreateCursor(recreated);
 
         _projection.GetEventTypes().Returns([_createdEventType, _removedEventType, _recreatedEventType]);
+        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>())
+            .Returns(_ => Task.FromResult(tails.Dequeue()));
         _eventSequenceStorage
             .GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
             .Returns(createAndRemoveCursor);
         _eventSequenceStorage
             .GetFromSequenceNumber((EventSequenceNumber)3, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
-            .Returns(firstCachedCursor, secondCachedCursor, recreateCursor);
+            .Returns(recreateCursor);
         _projection
             .ProcessForSingleReadModel(
                 EventStoreNamespaceName.Default,

@@ -14,7 +14,6 @@ namespace Cratis.Chronicle.Services.Decisions;
 /// </summary>
 internal sealed class DecisionReadModels(
     global::Orleans.IGrainFactory grainFactory,
-    global::Cratis.Chronicle.Changes.IObjectComparer objectComparer,
     global::Cratis.Chronicle.ReadModels.IReadModelsCompliance readModelsCompliance,
     global::System.Text.Json.JsonSerializerOptions jsonSerializerOptions,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Decisions.DecisionReadModels> logger) : global::Cratis.Chronicle.Contracts.Decisions.IDecisionReadModels
@@ -24,7 +23,7 @@ internal sealed class DecisionReadModels(
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Decisions.DecisionReadModelResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Decisions.DecisionReadModel.GetInstanceForDecision((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier)request.ReadModelIdentifier, (global::Cratis.Chronicle.Concepts.ReadModels.ReadModelKey)request.Key, grainFactory, objectComparer, readModelsCompliance, jsonSerializerOptions);
+                var result = await global::Cratis.Chronicle.Decisions.DecisionReadModel.GetInstanceForDecision((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier)request.ReadModelIdentifier, (global::Cratis.Chronicle.Concepts.ReadModels.ReadModelKey)request.Key, grainFactory, readModelsCompliance, jsonSerializerOptions);
                 return ToDecisionReadModelResponse(result);
             },
             exception => logger.QueryFailed(exception, "DecisionReadModels", "GetInstanceForDecision"));

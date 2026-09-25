@@ -23,9 +23,17 @@ public class when_reading_for_a_decision
     }
 
     [Fact]
-    public async Task should_refuse_to_invent_a_watermark_for_an_unseeded_key()
+    public async Task should_delegate_an_unseeded_key_to_the_real_decision_read()
     {
-        var wrapper = new ReadModelsForTesting(Substitute.For<IReadModels>());
-        await Assert.ThrowsAsync<NotSupportedException>(() => ((IReadModels)wrapper).GetInstanceForDecision<string>("source"));
+        var inner = Substitute.For<IReadModels, IDecisionReadModels>();
+        var expected = new ReadModelInstance<string>("source", "real", 11, [_created]);
+        ((IDecisionReadModels)inner).GetInstanceForDecision<string>("source").Returns(expected);
+        var wrapper = new ReadModelsForTesting(inner);
+        wrapper.RegisterDecisionInstance(new ReadModelInstance<string>("other", "seed", 9, [_created]));
+
+        var actual = await ((IReadModels)wrapper).GetInstanceForDecision<string>("source");
+
+        actual.ShouldEqual(expected);
+        await ((IDecisionReadModels)inner).Received(1).GetInstanceForDecision<string>("source");
     }
 }

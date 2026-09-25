@@ -261,7 +261,7 @@ public class ReadModels(
             Namespace = eventStore.Namespace,
             ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
             Key = key.Value
-        }).EnsureSuccess();
+        }).EnsureSuccess() ?? throw new InvalidOperationException("The decision read returned no data.");
 
         if (response.Refusal != DecisionReadRefusal.None)
         {

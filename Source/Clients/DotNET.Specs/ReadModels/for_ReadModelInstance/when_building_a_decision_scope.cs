@@ -23,6 +23,16 @@ public class when_building_a_decision_scope
     }
 
     [Fact]
+    public void should_key_the_scope_by_the_read_source_for_an_append_to_another_source()
+    {
+        var read = new ReadModelInstance<string>("read-source", "present", 7, [_created, _removed]);
+        var scopes = read.ToConcurrencyScopes();
+        scopes.Count.ShouldEqual(1);
+        scopes[(EventSourceId)"read-source"].EventSourceId.ShouldEqual((EventSourceId)"read-source");
+        scopes[(EventSourceId)"read-source"].SequenceNumber.ShouldEqual((EventSequenceNumber)7);
+    }
+
+    [Fact]
     public void should_expect_no_matching_event_for_never_created()
     {
         var read = new ReadModelInstance<string>("source", null, EventSequenceNumber.Unavailable, [_created, _removed]);

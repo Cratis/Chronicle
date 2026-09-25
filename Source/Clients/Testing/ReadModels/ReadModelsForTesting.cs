@@ -60,9 +60,9 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels, IDecisionRea
             return Task.FromResult((ReadModelInstance<TReadModel>)decisionRead);
         }
 
-        // This harness intercepts ordinary reads. A missing seed cannot tell never-created from removed,
-        // and a legacy seed carries no event-log watermark: neither is safe to turn into a scope.
-        throw new NotSupportedException("Decision reads in test scenarios require an explicit instance, watermark and event types via RegisterDecisionRead.");
+        // Only explicit decision seeds override the real event-log read. Ordinary seeds carry no
+        // watermark, so they must not be used to answer a decision read.
+        return inner.GetInstanceForDecision<TReadModel>(key);
     }
 
     /// <inheritdoc/>
