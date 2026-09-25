@@ -158,7 +158,8 @@ public class EventStore : IEventStore
             causationManager,
             UnitOfWorkManager,
             identityProvider,
-            jsonSerializerOptions);
+            jsonSerializerOptions,
+            reactorSideEffectHandlers);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);

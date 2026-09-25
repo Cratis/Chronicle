@@ -10,9 +10,8 @@ namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_creating_for;
 public class handler_returning_an_unclaimed_type : Specification
 {
     Exception _error;
-    ReactorInvoker _invoker;
 
-    void Because() => _error = Catch.Exception(() => _invoker = new ReactorInvoker(
+    void Because() => _error = Catch.Exception(() => _ = new ReactorInvoker(
         new EventTypesForSpecifications([typeof(MyEvent)]),
         Substitute.For<IReactorMiddlewares>(),
         typeof(UnclaimedReactor),

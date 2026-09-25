@@ -10,7 +10,6 @@ namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_creating_for;
 public class handler_returning_void_with_unavailable_handlers : Specification
 {
     Exception _error;
-    ReactorInvoker _invoker;
     IReactorSideEffectHandlers _handlers;
 
     void Establish()
@@ -19,7 +18,7 @@ public class handler_returning_void_with_unavailable_handlers : Specification
         _handlers.CanHandleReturnType(Arg.Any<Type>()).Returns(_ => throw new Exception("Handlers must not be consulted"));
     }
 
-    void Because() => _error = Catch.Exception(() => _invoker = new ReactorInvoker(
+    void Because() => _error = Catch.Exception(() => _ = new ReactorInvoker(
         new EventTypesForSpecifications([typeof(MyEvent)]),
         Substitute.For<IReactorMiddlewares>(),
         typeof(VoidReactor),

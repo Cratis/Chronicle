@@ -11,7 +11,6 @@ public class handler_returning_a_collection_of_claimed_types : Specification
 {
     Exception _error;
     IReactorSideEffectHandlers _handlers;
-    ReactorInvoker _invoker;
 
     void Establish()
     {
@@ -19,7 +18,7 @@ public class handler_returning_a_collection_of_claimed_types : Specification
         _handlers.CanHandleReturnType(typeof(IEnumerable<Claimed>)).Returns(true);
     }
 
-    void Because() => _error = Catch.Exception(() => _invoker = new ReactorInvoker(
+    void Because() => _error = Catch.Exception(() => _ = new ReactorInvoker(
         new EventTypesForSpecifications([typeof(MyEvent)]),
         Substitute.For<IReactorMiddlewares>(),
         typeof(ClaimedCollectionReactor),
