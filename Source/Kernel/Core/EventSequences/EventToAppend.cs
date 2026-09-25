@@ -27,4 +27,10 @@ public record EventToAppend(
     IEnumerable<Tag> Tags,
     JsonObject Content,
     DateTimeOffset? Occurred = null,
-    Subject? Subject = null);
+    Subject? Subject = null)
+{
+    /// <summary>
+    /// Gets the structured named tags for this event.
+    /// </summary>
+    public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
+}

@@ -135,7 +135,26 @@ public class EventSequenceStorage(
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
-        Subject? subject = null)
+        Subject? subject = null) =>
+        await Append(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedByChain, tags, occurred, content, contentHashes, subject, []);
+
+    /// <inheritdoc/>
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
+        DateTimeOffset occurred,
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags)
     {
         var causedBy = await identityStorage.GetFor(causedByChain).ConfigureAwait(false);
 
@@ -148,12 +167,15 @@ public class EventSequenceStorage(
             }
 
             var hash = contentHashes.TryGetValue(eventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
-            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject);
+            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject, namedTags);
             _events.Add(appended);
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
         }
     }
+
+    /// <inheritdoc/>
+    public Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendManyWithNamedTags(IEnumerable<EventToAppendToStorage> events) => AppendMany(events);
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(
@@ -200,7 +222,8 @@ public class EventSequenceStorage(
                     e.Occurred,
                     content,
                     e.Hash,
-                    e.Subject);
+                    e.Subject,
+                    e.NamedTags);
 
                 _events.Add(appendedEvent);
                 appended.Add(appendedEvent);
@@ -694,7 +717,8 @@ public class EventSequenceStorage(
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         EventHash hash,
-        Subject? subject = null)
+        Subject? subject = null,
+        IReadOnlyCollection<NamedTag>? namedTags = null)
     {
         var eventContext = new EventContext(
             eventType,
@@ -711,7 +735,10 @@ public class EventSequenceStorage(
             causedBy,
             tags,
             hash,
-            Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value));
+            Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value))
+        {
+            NamedTags = namedTags ?? []
+        };
 
         var eventContent = content.TryGetValue(EventTypeGeneration.First, out var firstGenContent)
             ? firstGenContent

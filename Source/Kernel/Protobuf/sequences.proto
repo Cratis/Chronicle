@@ -17,6 +17,17 @@ message AppendManyForEventSourcesRequest {
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
 }
+message AppendManyForEventSourcesWithNamedTagsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   repeated EventForEventSourceIdWithNamedTags Events = 4;
+   .bcl.Guid CorrelationId = 5;
+   repeated string Tags = 6;
+   repeated Causation Causation = 7;
+   Identity CausedBy = 8;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+}
 message AppendManyRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -41,6 +52,19 @@ message AppendManyResponse {
    repeated ConstraintViolation ConstraintViolations = 8;
    repeated string Errors = 9;
    repeated ConcurrencyViolation ConcurrencyViolations = 10;
+}
+message AppendManyWithNamedTagsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   repeated EventToAppendWithNamedTags Events = 5;
+   .bcl.Guid CorrelationId = 6;
+   repeated string Tags = 7;
+   SerializableDateTimeOffset Occurred = 8;
+   repeated Causation Causation = 9;
+   Identity CausedBy = 10;
+   ConcurrencyScope ConcurrencyScope = 11;
 }
 message AppendRequest {
    string EventStore = 1;
@@ -71,6 +95,25 @@ message AppendResponse {
    repeated ConstraintViolation ConstraintViolations = 8;
    repeated string Errors = 9;
    ConcurrencyViolation ConcurrencyViolation = 10;
+}
+message AppendWithNamedTagsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
+   EventType EventType = 8;
+   string Content = 9;
+   repeated NamedTag NamedTags = 10;
+   .bcl.Guid CorrelationId = 11;
+   repeated string Tags = 12;
+   SerializableDateTimeOffset Occurred = 13;
+   string Subject = 14;
+   repeated Causation Causation = 15;
+   Identity CausedBy = 16;
+   ConcurrencyScope ConcurrencyScope = 17;
 }
 message AppendedEventResponse {
    string Id = 1;
@@ -191,6 +234,7 @@ message EventContext {
    string Hash = 12;
    EventObservationState ObservationState = 13;
    string Subject = 14;
+   repeated NamedTag NamedTags = 15;
 }
 message EventForEventSourceId {
    string EventSourceId = 1;
@@ -202,6 +246,18 @@ message EventForEventSourceId {
    repeated string Tags = 7;
    SerializableDateTimeOffset Occurred = 8;
    string Subject = 9;
+}
+message EventForEventSourceIdWithNamedTags {
+   string EventSourceId = 1;
+   string EventSourceType = 2;
+   string EventStreamType = 3;
+   string EventStreamId = 4;
+   EventType EventType = 5;
+   string Content = 6;
+   repeated string Tags = 7;
+   repeated NamedTag NamedTags = 8;
+   SerializableDateTimeOffset Occurred = 9;
+   string Subject = 10;
 }
 enum EventObservationState {
    EVENT_OBSERVATION_STATE_None = 0;
@@ -233,6 +289,12 @@ message EventToAppend {
    EventType EventType = 1;
    string Content = 2;
    string Subject = 3;
+}
+message EventToAppendWithNamedTags {
+   EventType EventType = 1;
+   string Content = 2;
+   repeated NamedTag NamedTags = 3;
+   string Subject = 4;
 }
 message EventType {
    string Id = 1;
@@ -302,6 +364,10 @@ message Identity {
 }
 message KeyValuePair_Int32_String {
    int32 Key = 1;
+   string Value = 2;
+}
+message NamedTag {
+   string Name = 1;
    string Value = 2;
 }
 message ParseResolutionRequest {
@@ -463,6 +529,9 @@ service EventSequences {
    rpc AppendedEvents (AppendedEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc AppendMany (AppendManyRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSources (AppendManyForEventSourcesRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendManyForEventSourcesWithNamedTags (AppendManyForEventSourcesWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendManyWithNamedTags (AppendManyWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendWithNamedTags (AppendWithNamedTagsRequest) returns (CommandResult_AppendResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_CompleteStreamResponse);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
    rpc ExportEvents (ExportEventsRequest) returns (QueryResult_IEnumerable_ExportedEventResponse);

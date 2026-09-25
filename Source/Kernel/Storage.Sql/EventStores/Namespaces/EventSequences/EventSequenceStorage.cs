@@ -233,6 +233,11 @@ public class EventSequenceStorage(
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
     {
         var eventsArray = events.ToArray();
+        if (eventsArray.Any(@event => @event.NamedTags.Count > 0))
+        {
+            throw new NamedTagsNotSupported();
+        }
+
         if (eventsArray.Length == 0)
         {
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);

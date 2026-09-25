@@ -17,6 +17,32 @@ internal static class EventToAppendConverters
         new(eventToAppend.EventType.ToApi(), eventToAppend.Content, eventToAppend.Subject);
 
     /// <summary>
+    /// Converts a named-tag batch event from the generated contract.
+    /// </summary>
+    /// <param name="eventToAppend">The contract event.</param>
+    /// <returns>The converted event.</returns>
+    public static EventToAppendWithNamedTags ToApi(this Contracts.Sequences.EventToAppendWithNamedTags eventToAppend) =>
+        new(eventToAppend.EventType.ToApi(), eventToAppend.Content, eventToAppend.NamedTags.Select(tag => tag.ToApi()), eventToAppend.Subject);
+
+    /// <summary>
+    /// Converts a named-tag event source event from the generated contract.
+    /// </summary>
+    /// <param name="event">The contract event.</param>
+    /// <returns>The converted event.</returns>
+    public static EventForEventSourceIdWithNamedTags ToApi(this Contracts.Sequences.EventForEventSourceIdWithNamedTags @event) =>
+        new(
+            @event.EventSourceId,
+            @event.EventSourceType,
+            @event.EventStreamType,
+            @event.EventStreamId,
+            @event.EventType.ToApi(),
+            @event.Content,
+            @event.Tags,
+            @event.NamedTags.Select(tag => tag.ToApi()),
+            @event.Occurred,
+            @event.Subject);
+
+    /// <summary>
     /// Converts a contract <see cref="Contracts.Sequences.EventForEventSourceId"/> to an <see cref="EventForEventSourceId"/>.
     /// </summary>
     /// <param name="event">The contract event to convert.</param>

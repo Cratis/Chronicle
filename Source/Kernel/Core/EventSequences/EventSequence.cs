@@ -268,7 +268,25 @@ public class EventSequence(
         IEnumerable<Tag> tags,
         ConcurrencyScope concurrencyScope,
         DateTimeOffset? occurred = null,
-        Subject? subject = null)
+        Subject? subject = null) =>
+        await Append(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, []);
+
+    /// <inheritdoc/>
+    public async Task<AppendResult> Append(
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        IEnumerable<Tag> tags,
+        ConcurrencyScope concurrencyScope,
+        DateTimeOffset? occurred,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags)
     {
         try
         {
@@ -301,7 +319,8 @@ public class EventSequence(
                 compliantContent,
                 constraintContext,
                 occurred,
-                subject);
+                subject,
+                namedTags);
 
             return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
         }
@@ -552,7 +571,10 @@ public class EventSequence(
                 eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
                 compliantEvent,
                 eventHash,
-                eventToAppend.Subject));
+                eventToAppend.Subject)
+            {
+                NamedTags = eventToAppend.NamedTags
+            });
 
             nextSequenceNumber = nextSequenceNumber.Next();
         }
@@ -562,7 +584,9 @@ public class EventSequence(
         {
             HandleFailedAppendManyResult(appendResult, eventsToAppend);
             logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
-            appendResult = await EventSequenceStorage.AppendMany(eventsToAppend);
+            appendResult = eventsToAppend.Exists(@event => @event.NamedTags.Count > 0)
+                ? await EventSequenceStorage.AppendManyWithNamedTags(eventsToAppend)
+                : await EventSequenceStorage.AppendMany(eventsToAppend);
         }
         while (!appendResult.IsSuccess);
 
@@ -619,7 +643,8 @@ public class EventSequence(
         JsonObject compliantContent,
         ConstraintValidationContext constraintContext,
         DateTimeOffset? occurred,
-        Subject? subject)
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags)
     {
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -653,21 +678,38 @@ public class EventSequence(
                     eventSourceId,
                     State.SequenceNumber);
 
-                appendResult = await EventSequenceStorage.Append(
-                    State.SequenceNumber,
-                    eventSourceType,
-                    eventSourceId,
-                    eventStreamType,
-                    eventStreamId,
-                    eventType,
-                    correlationId,
-                    causation,
-                    identity,
-                    tags,
-                    eventOccurred,
-                    migratedContent,
-                    contentHashes,
-                    subject);
+                appendResult = namedTags.Count == 0
+                    ? await EventSequenceStorage.Append(
+                        State.SequenceNumber,
+                        eventSourceType,
+                        eventSourceId,
+                        eventStreamType,
+                        eventStreamId,
+                        eventType,
+                        correlationId,
+                        causation,
+                        identity,
+                        tags,
+                        eventOccurred,
+                        migratedContent,
+                        contentHashes,
+                        subject)
+                    : await EventSequenceStorage.Append(
+                        State.SequenceNumber,
+                        eventSourceType,
+                        eventSourceId,
+                        eventStreamType,
+                        eventStreamId,
+                        eventType,
+                        correlationId,
+                        causation,
+                        identity,
+                        tags,
+                        eventOccurred,
+                        migratedContent,
+                        contentHashes,
+                        subject,
+                        namedTags);
             }
             while (!appendResult.IsSuccess);
 

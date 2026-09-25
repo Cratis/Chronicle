@@ -111,4 +111,10 @@ public class EventContext
     /// </remarks>
     [ProtoMember(16)]
     public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the structured named tags associated with this event.
+    /// </summary>
+    [ProtoMember(17)]
+    public IList<NamedTag> NamedTags { get; set; } = new List<NamedTag>();
 }

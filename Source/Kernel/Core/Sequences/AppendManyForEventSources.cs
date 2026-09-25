@@ -50,12 +50,26 @@ public record AppendManyForEventSources(
     public Task<AppendManyResult> Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor)
+        ICurrentPrincipalAccessor principalAccessor) => HandleWithNamedTags(grainFactory, causation, principalAccessor, null);
+
+    /// <summary>
+    /// Handles the batch with per-event named tags.
+    /// </summary>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="causation">The request causation.</param>
+    /// <param name="principalAccessor">The current principal.</param>
+    /// <param name="namedTagsPerEvent">Named tags, one collection per event.</param>
+    /// <returns>The append result.</returns>
+    internal Task<AppendManyResult> HandleWithNamedTags(
+        IGrainFactory grainFactory,
+        RequestCausation causation,
+        ICurrentPrincipalAccessor principalAccessor,
+        IReadOnlyList<IReadOnlyCollection<Concepts.Events.NamedTag>>? namedTagsPerEvent)
     {
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
         var eventsList = Events.ToList();
-        var events = eventsList.Select(@event =>
+        var events = eventsList.Select((@event, index) =>
         {
             var route = AppendRoute.Resolve(@event.EventSourceType, @event.EventStreamType, @event.EventStreamId);
 
@@ -68,7 +82,10 @@ public record AppendManyForEventSources(
                 (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
                 JsonNode.Parse(@event.Content)!.AsObject(),
                 @event.Occurred,
-                Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject));
+                Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject))
+            {
+                NamedTags = namedTagsPerEvent is null ? [] : namedTagsPerEvent[index]
+            };
         });
 
         var correlationId = CorrelationId ?? Guid.NewGuid();

@@ -205,7 +205,26 @@ public class EventSequenceStorage(
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
-        Subject? subject = null)
+        Subject? subject = null) =>
+        await Append(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedByChain, tags, occurred, content, contentHashes, subject, []);
+
+    /// <inheritdoc/>
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Concepts.Events.Tag> tags,
+        DateTimeOffset occurred,
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags)
     {
         occurred = StoredTimestamps.Normalize(occurred);
         causation = causation.Select(StoredTimestamps.Normalize).ToArray();
@@ -239,7 +258,10 @@ public class EventSequenceStorage(
                 generationalContent,
                 hashesForStorage,
                 [],
-                subject?.IsSet == true ? subject : null);
+                subject?.IsSet == true ? subject : null)
+            {
+                NamedTags = namedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray()
+            };
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
@@ -273,7 +295,10 @@ public class EventSequenceStorage(
                     await identityStorage.GetFor(causedByChain),
                     tags,
                     eventHash,
-                    Subject: resolvedSubject),
+                    Subject: resolvedSubject)
+                {
+                    NamedTags = namedTags
+                },
                 returnContent)
             {
                 GenerationalContent = genContentDict
@@ -291,6 +316,9 @@ public class EventSequenceStorage(
             return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
         }
     }
+
+    /// <inheritdoc/>
+    public Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendManyWithNamedTags(IEnumerable<EventToAppendToStorage> events) => AppendMany(events);
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
@@ -345,7 +373,10 @@ public class EventSequenceStorage(
                         { eventToAppend.EventType.Generation.ToString(), eventToAppend.Hash.Value }
                     },
                     [],
-                    Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
+                    Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null)
+                {
+                    NamedTags = eventToAppend.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray()
+                };
 
                 eventsToInsert.Add(@event);
 
@@ -365,7 +396,10 @@ public class EventSequenceStorage(
                         await identityStorage.GetFor(eventToAppend.CausedByChain),
                         eventToAppend.Tags,
                         eventToAppend.Hash,
-                        Subject: resolvedSubject),
+                        Subject: resolvedSubject)
+                    {
+                        NamedTags = eventToAppend.NamedTags
+                    },
                     eventToAppend.Content));
             }
 

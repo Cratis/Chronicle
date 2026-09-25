@@ -39,4 +39,10 @@ public record EventToAppendToStorage(
     DateTimeOffset Occurred,
     ExpandoObject Content,
     EventHash Hash,
-    Subject? Subject = null);
+    Subject? Subject = null)
+{
+    /// <summary>
+    /// Gets the structured named tags to persist with this event.
+    /// </summary>
+    public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
+}
