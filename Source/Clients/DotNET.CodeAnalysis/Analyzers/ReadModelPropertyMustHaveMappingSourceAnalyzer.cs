@@ -28,6 +28,7 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     const string SetValueAttributeName = "SetValueAttribute";
     const string ChildrenFromAttributeName = "ChildrenFromAttribute";
     const string NestedAttributeName = "NestedAttribute";
+    const string NotProjectedAttributeName = "NotProjectedAttribute";
 
     static readonly HashSet<string> ModelBoundMappingAttributeNames = new(StringComparer.Ordinal)
     {
@@ -115,6 +116,13 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     {
         // Skip members that are explicitly sourced by a mapping attribute or marked as the key.
         if (attributes.Any(IsMappingOrKeyAttribute))
+        {
+            return;
+        }
+
+        // Skip members the author has declared the reader assembles. Having no mapping source is the whole point
+        // of such a member, so reporting it as unmapped says nothing the author does not already know.
+        if (attributes.Any(IsNotProjectedAttribute))
         {
             return;
         }
@@ -321,6 +329,11 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
     static bool IsModelBoundMappingAttribute(AttributeData attribute) =>
         attribute.AttributeClass is { } attributeClass &&
         ModelBoundMappingAttributeNames.Contains(attributeClass.Name) &&
+        attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace;
+
+    static bool IsNotProjectedAttribute(AttributeData attribute) =>
+        attribute.AttributeClass is { } attributeClass &&
+        attributeClass.Name == NotProjectedAttributeName &&
         attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace;
 
     static bool IsMappingOrKeyAttribute(AttributeData attribute) =>
