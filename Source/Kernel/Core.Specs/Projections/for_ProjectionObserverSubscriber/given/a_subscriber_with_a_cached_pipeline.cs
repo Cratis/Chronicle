@@ -69,6 +69,10 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         silo.AddService(Substitute.For<IExpandoObjectConverter>());
         _factory = Substitute.For<IProjectionFactory>();
         _projection = Substitute.For<EngineProjection>();
+
+        // The subscriber skips an event the current definition does not take part in, so a substitute left at
+        // its default of false would silently skip everything. Specifications about skipping override this.
+        _projection.Accepts(Arg.Any<EventType>()).Returns(true);
         _factory.Create(_key.EventStore, _key.Namespace, Arg.Any<ProjectionDefinition>(), readModel, Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(_projection);
         silo.AddService(_factory);
 

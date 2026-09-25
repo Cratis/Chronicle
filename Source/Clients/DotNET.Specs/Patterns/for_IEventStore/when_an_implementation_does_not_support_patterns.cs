@@ -51,6 +51,7 @@ public class when_an_implementation_does_not_support_patterns : Specification
         public IEventLog EventLog => throw new NotSupportedException();
         public IJobs Jobs => throw new NotSupportedException();
         public IReactors Reactors => throw new NotSupportedException();
+        public IObservers Observers => throw new NotSupportedException();
         public IReducers Reducers => throw new NotSupportedException();
         public IProjections Projections => throw new NotSupportedException();
         public IWebhooks Webhooks => throw new NotSupportedException();

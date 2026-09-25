@@ -38,6 +38,17 @@ public interface IObserverStateStorage
     Task Save(ObserverState state);
 
     /// <summary>
+    /// Delete the state of an observer.
+    /// </summary>
+    /// <param name="observerId">The <see cref="ObserverId"/> to delete the state for.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Deleting the state of an observer that has none is not an error - removal has to be safe to repeat after a
+    /// partial failure, and the caller's intent is satisfied either way.
+    /// </remarks>
+    Task Delete(ObserverId observerId);
+
+    /// <summary>
     /// Rename an observer by its current identifier.
     /// </summary>
     /// <param name="currentId">The current <see cref="ObserverId"/>.</param>

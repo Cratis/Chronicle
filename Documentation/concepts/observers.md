@@ -32,6 +32,36 @@ The client exposes `IsResolved` and nullable `IsQuarantined`. A missing quaranti
 
 SQL-backed failed-partition queries observe the shared database at the configured live-query polling interval, including changes made by another instance. They emit only changed snapshots, and unsubscribe when the query consumer disconnects. Resolution and retry activity therefore update the view without a manual refresh, subject to the polling interval.
 
+## Removing an observer
+
+An observer outlives the code that declared it. Delete a read model and its projection, or remove a reactor, and nothing tells the event store — the observer simply stops being reported by any client, settles into `Disconnected` and stays there, keeping its definition, its state and handled counts in every namespace, its failed partitions and, for a projection, its projection definition.
+
+Removing one deletes exactly that bookkeeping:
+
+```csharp
+var result = await eventStore.Observers.Remove("the-observer");
+if (!result.IsRemoved)
+{
+    Console.WriteLine($"Not removed: {result.Outcome} in namespace {result.BlockingNamespace}");
+}
+```
+
+The same operation is available in the Workbench, on the **Observers** page under a namespace, and from the CLI:
+
+```shell
+cratis chronicle observers remove the-observer
+```
+
+Three things are worth knowing before you use it.
+
+**It covers the whole event store, not one namespace.** An observer's definition — and the projection definition it has when it is a projection — are store-level records shared by every namespace. Deleting those while leaving namespaced state behind in the other namespaces would produce the same half-present observer the removal exists to clear up, so the operation reaches every namespace.
+
+**It refuses while the observer is alive.** If the observer is running, or a client is still subscribed to it, in *any* namespace, nothing is deleted and the result names the namespace that blocked it. There is no force flag: stop the application that declares the observer and try again. An observer that is `Disconnected`, `Suspended` or `Quarantined` with no subscribed client is removable — quarantine in particular is where an abandoned observer tends to end up.
+
+**Read models are not touched.** Removal deletes the observer's bookkeeping, never a sink container or the data a projection wrote into it. If you want the read model gone too, delete it separately.
+
+Removal is not a reset. If the code that declared the observer registers it again, the event store treats it as brand new and it replays the sequence from the beginning. To rewind an observer you still have, use replay instead.
+
 ## State management
 
 One of the things you can use an observer for is to maintain application state, typically update

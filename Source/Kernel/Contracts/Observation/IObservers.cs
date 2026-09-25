@@ -59,6 +59,21 @@ public interface IObservers
     Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default);
 
     /// <summary>
+    /// Remove an observer and everything keyed to it.
+    /// </summary>
+    /// <param name="command">The remove command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="RemoveObserverResponse"/> describing what happened.</returns>
+    /// <remarks>
+    /// For the observer whose declaring code is gone - a deleted read model and its projection, a removed reactor -
+    /// whose records would otherwise stay in the store forever. Removal covers the whole event store and refuses while
+    /// the observer is running or a client is still subscribed to it in any namespace, so only an observer no client
+    /// is reporting can be removed. Sink containers and read model data are deliberately left untouched.
+    /// </remarks>
+    [Operation]
+    Task<RemoveObserverResponse> RemoveObserver(RemoveObserver command, CallContext context = default);
+
+    /// <summary>
     /// Get the current details of an observer.
     /// </summary>
     /// <param name="request">The <see cref="GetObserverInformationRequest"/>.</param>

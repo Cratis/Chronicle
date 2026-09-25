@@ -88,6 +88,10 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     }
 
     /// <inheritdoc/>
+    public async Task Delete(ObserverId observerId) =>
+        await _collection.DeleteOneAsync(os => os.Id == observerId).ConfigureAwait(false);
+
+    /// <inheritdoc/>
     public async Task Rename(ObserverId currentId, ObserverId newId)
     {
         var update = Builders<ObserverState>.Update.Set(os => os.Id, newId);
