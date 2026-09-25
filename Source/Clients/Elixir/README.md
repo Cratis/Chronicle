@@ -47,11 +47,13 @@ For example, after generation you can call the generated services like this:
 
 ```elixir
 {:ok, response} =
-  Cratis.Chronicle.Contracts.EventStores.Stub.get_event_stores(
+  Cratis.Chronicle.Contracts.EventStores.Stub.all_event_stores(
     channel,
     Google.Protobuf.Empty.new()
   )
 ```
+
+Function names follow the rpc names in the `.proto` files (`AllEventStores` becomes `all_event_stores`). Check the module name the generator produced for a service before copying a call.
 
 ## Publishing
 

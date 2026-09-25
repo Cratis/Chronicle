@@ -1,4 +1,7 @@
-# Event Sequence
+---
+title: "Event Sequence"
+description: "What an event sequence is, how the event log relates to other sequences, and how events are revised."
+---
 
 Chronicle has the concept of event sequences. These can be looked upon as collections of events.
 Every event gets assigned an incremental unique sequence number, this if the sequence
@@ -43,6 +46,4 @@ type of metadata as for the root event.
 
 This approach help us guarantee a perfect audit trail of the system.
 
-> Note: Revisions are not fully implemented yet, there is no API surface for it.
-> Internally Chronicle has been prepared for it and that is why you'll see the revisions array on every
-> event.
+To revise an event, see [Event revision](../events/revision.md).

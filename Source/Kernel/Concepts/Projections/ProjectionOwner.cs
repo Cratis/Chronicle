@@ -26,5 +26,14 @@ public enum ProjectionOwner
     /// <summary>
     /// The projection is owned by a parent projection.
     /// </summary>
-    Parent = 3
+    Parent = 3,
+
+    /// <summary>
+    /// The projection is owned by the kernel itself.
+    /// </summary>
+    /// <remarks>
+    /// System projections are declared in the kernel rather than registered by a client, are identified with a
+    /// "$system." prefix, and are never replayable - the same rules kernel reactors and pattern capture follow.
+    /// </remarks>
+    Kernel = 4
 }

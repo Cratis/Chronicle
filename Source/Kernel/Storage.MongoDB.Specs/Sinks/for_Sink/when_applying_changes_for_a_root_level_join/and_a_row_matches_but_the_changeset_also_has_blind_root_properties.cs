@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_for_a_root_level_join.given;
 using MongoDB.Bson;
-
 using context = Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_for_a_root_level_join.and_a_row_matches_but_the_changeset_also_has_blind_root_properties.context;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_for_a_root_level_join;

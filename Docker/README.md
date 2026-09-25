@@ -23,19 +23,26 @@ The server images are built for `linux/amd64` and `linux/arm64`. The workbench i
 The development image is the fastest way to get something running — it needs nothing else:
 
 ```shell
-docker run -p 35000:35000 cratis/chronicle:latest-development
+docker run -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
 ```
 
-The Workbench is then on <http://localhost:35000>, and clients connect to the same port.
+The Workbench is then on <https://localhost:35000> — accept the self-signed development certificate — and clients connect to the same port. The `127.0.0.1:` prefix keeps the port on your machine: the development image accepts well-known credentials (`Admin` / `ChangeMeNow!`), so never expose it on a shared network.
 
-For the production image, point it at your own storage:
+The production image generates no certificates and has no default password. Point it at your own storage and give it a TLS certificate and an encryption certificate, or it stops at startup:
 
 ```shell
 docker run -p 35000:35000 \
+  -v /path/to/certs:/certs:ro \
   -e Cratis__Chronicle__Storage__Type=MongoDB \
   -e Cratis__Chronicle__Storage__ConnectionDetails=mongodb://host.docker.internal:27017 \
+  -e Cratis__Chronicle__Tls__CertificatePath=/certs/chronicle.pfx \
+  -e Cratis__Chronicle__Tls__CertificatePassword="$CHRONICLE_CERTIFICATE_PASSWORD" \
+  -e Cratis__Chronicle__EncryptionCertificate__CertificatePath=/certs/encryption-cert.pfx \
+  -e Cratis__Chronicle__EncryptionCertificate__CertificatePassword="$ENCRYPTION_CERTIFICATE_PASSWORD" \
   cratis/chronicle:latest
 ```
+
+Set the initial administrator's password with `Cratis__Chronicle__Authentication__AdminUser__Password` from your secret store; otherwise the first visitor to the Workbench chooses it. The [production hosting guide](https://cratis.io/chronicle/hosting/production/) covers certificates, backups, and clustering.
 
 > MongoDB storage requires a replica set — Chronicle uses transactions and change streams, neither of which a standalone `mongod` supports.
 
@@ -57,12 +64,13 @@ Configuration lives in `chronicle.json`. Every setting can be overridden with an
 | `Cratis__Chronicle__Storage__ConnectionDetails` | `mongodb://localhost:27017` | Connection string for the backend |
 | `Cratis__Chronicle__Port` | `35000` | Port Chronicle listens on |
 | `Cratis__Chronicle__Authentication__Enabled` | `true` | Whether the Workbench and API require authentication |
-| `Cratis__Chronicle__Authentication__DefaultAdminPassword` | `ChangeMeNow!` | Password for the initial admin user — change it |
+| `Cratis__Chronicle__Authentication__AdminUser__Password` | | Initial password for the administrator; supply it from a secret store |
+| `Cratis__Chronicle__Authentication__DefaultAdminPassword` | `ChangeMeNow!` | Development images only: the preset password for the initial admin user |
 | `Cratis__Chronicle__Features__Api` | `true` | Whether the HTTP API is exposed |
 | `Cratis__Chronicle__Features__Workbench` | `true` | Whether the Workbench UI is served |
 | `Cratis__Chronicle__Tls__CertificatePath` | | Certificate used for TLS |
 | `Cratis__Chronicle__Tls__CertificatePassword` | | Password for that certificate |
-| `Cratis__Chronicle__EncryptionCertificate__CertificatePath` | | Certificate used to encrypt values marked as personally identifiable |
+| `Cratis__Chronicle__EncryptionCertificate__CertificatePath` | | Certificate protecting the built-in OAuth authority's keys and values marked `[Encrypted]`; `[PII]` keys are managed separately |
 | `Cratis__Chronicle__EncryptionCertificate__CertificatePassword` | | Password for that certificate |
 
 ## License

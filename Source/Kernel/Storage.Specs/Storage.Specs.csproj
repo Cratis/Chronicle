@@ -10,4 +10,6 @@
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
 </Project>

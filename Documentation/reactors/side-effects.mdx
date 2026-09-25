@@ -1,4 +1,7 @@
-# Returning Side Effects from Reactor Handler Methods
+---
+title: "Returning Side Effects from Reactor Handler Methods"
+description: "Return events from a reactor handler and let Chronicle append them, and why such handlers are marked [OnceOnly]."
+---
 
 Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
 
@@ -15,6 +18,8 @@ Return a single event directly from a handler method — synchronously or as a `
 <ChronicleClientTabs snippet="reactors/side-effects/basic" />
 
 The returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. No `IEventLog` injection required.
+
+The handlers are marked [`[OnceOnly]`](once-only) because a returned event is a new fact: without it, replaying the reactor appends the same follow-up event again. Analyzer [CHR0022](../code-analysis/CHR0022) reports an event-returning handler that is not marked. `[OnceOnly]` does not cover a retry after the handler failed; see [Delivery identity](delivery-identity).
 
 ## Multiple Side Effects
 

@@ -6,6 +6,7 @@ public class WarehouseEventSourceReactor(string warehouseId) : IReactor, ICanPro
 {
     public EventSourceId GetEventSourceId() => warehouseId;
 
+    [OnceOnly]
     public StockDecreased BookReserved(SideEffectsBookReserved @event, EventContext context) =>
         new(@event.Isbn, 1);
 }

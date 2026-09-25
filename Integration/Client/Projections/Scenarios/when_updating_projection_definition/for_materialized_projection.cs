@@ -49,5 +49,3 @@ public class for_materialized_projection(context context) : Given<context>(conte
     [Fact] void should_have_updated_result_with_name() => Context.ResultAfterUpdate.Name.ShouldEqual("Second Name");
     [Fact] void should_have_description_in_updated_result() => Context.ResultAfterUpdate.Description.ShouldEqual("Second Description");
 }
-
-

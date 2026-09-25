@@ -67,7 +67,16 @@ public class ProjectionPipelineManager(
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var replayScopedStorage = new ReplayScopedEventSequenceStorage(namespaceStorage.GetEventSequence(projection.EventSequenceId));
-        var sink = await namespaceStorage.Sinks.GetFor(projection.ReadModel);
+
+        // A projection is observed per namespace whatever its scope - the events it reacts to only exist there.
+        // The scope decides where the result lands. A globally scoped projection resolves its sink against the
+        // NotSet namespace, the same event-store-level sentinel event seeding uses, so every namespace's observer
+        // accumulates into a single instance. Everything else stays namespaced, which is the default and the
+        // behavior every existing projection already has.
+        var sinkStorage = projection.Scope == ProjectionScope.Global
+            ? storage.GetEventStore(eventStore).GetNamespace(EventStoreNamespaceName.NotSet)
+            : namespaceStorage;
+        var sink = await sinkStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
         var futuresTracker = new ProjectionFuturesTracker();

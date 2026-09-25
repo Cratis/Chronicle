@@ -31,7 +31,9 @@ Use the `run.sh` script with a database parameter. It automatically:
 ./run.sh sqlite
 ```
 
-The Kernel starts on gRPC port 5000.
+The Kernel listens on port `35000` — gRPC, the HTTP API, and the Workbench share that one TLS port, served with a self-signed certificate in a Debug build.
+
+> **Warning:** the Compose file publishes MongoDB, PostgreSQL, SQL Server, and an anonymous Aspire dashboard on every network interface, with fixed development passwords. Run it only on a machine and network you trust.
 
 ### Start Infrastructure Only (with `--docker`)
 
@@ -109,43 +111,15 @@ Press p to pause, r to resume, q to quit.
     cratis-connected-clients-12c737d2-e816-46f4-96fd-67fc1bf7108           1
 ```
 
-### Prometheus
+### Aspire dashboard
 
-[Prometheus](https://prometheus.io) has been configured for collecting metrics from the Kernel in the `docker-compose.yml` file.
-It leverages an Open Telemetry exporter that the Kernel connects to with the configuration in `chronicle.json` file as below:
+The `docker-compose.yml` starts the [.NET Aspire dashboard](https://learn.microsoft.com/dotnet/aspire/fundamentals/dashboard/overview) as the OTLP receiver and viewer for metrics, traces, and logs. Point the Kernel at it before starting it:
 
-```json
-{
-    "telemetry": {
-        "type": "open-telemetry",
-        "options": {
-            "endpoint": "http://localhost:4317"
-        }
-    }
-}
+```shell
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
 
-Once the Kernel is running you can navigate to the following location:
-<http://localhost:9090/graph?g0.expr=appended_events&g0.tab=0&g0.stacked=0&g0.show_exemplars=0&g0.range_input=15m>
-
-### Zipkin
-
-[Zipkin](https://zipkin.io) has been configured for collecting metrics from the Kernel in the `docker-compose.yml` file.
-It leverages an Open Telemetry exporter that the Kernel connects to with the configuration in `chronicle.json` file as below:
-
-```json
-{
-    "telemetry": {
-        "type": "open-telemetry",
-        "options": {
-            "endpoint": "http://localhost:4317"
-        }
-    }
-}
-```
-
-Once the Kernel is running you can navigate to the following location:
-<http://localhost:9411/zipkin/?lookback=15m&endTs=1681920441136&limit=10>
+Then open the dashboard at <http://localhost:18888>. See [Open Telemetry](../../../Documentation/hosting/configuration/open-telemetry.md) for the other settings.
 
 ## Resources
 

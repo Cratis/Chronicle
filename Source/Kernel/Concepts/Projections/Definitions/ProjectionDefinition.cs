@@ -34,6 +34,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="Nested">All the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.</param>
 /// <param name="SubscribesToAllEvents">Whether the projection subscribes to all event types in the system.</param>
 /// <param name="NoAutoMapProperties">Read model properties excluded from auto-mapping even when <paramref name="AutoMap"/> is enabled.</param>
+/// <param name="Scope">The <see cref="ProjectionScope"/> the projection materializes its read model in.</param>
 public record ProjectionDefinition(
     ProjectionOwner Owner,
     EventSequenceId EventSequenceId,
@@ -55,8 +56,20 @@ public record ProjectionDefinition(
     AutoMap AutoMap = AutoMap.Enabled,
     IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
     bool SubscribesToAllEvents = false,
-    IEnumerable<PropertyPath>? NoAutoMapProperties = default)
+    IEnumerable<PropertyPath>? NoAutoMapProperties = default,
+    ProjectionScope Scope = ProjectionScope.Namespaced)
 {
+    /// <summary>
+    /// Gets a value indicating whether the projection is owned by the kernel itself.
+    /// </summary>
+    /// <remarks>
+    /// A system projection is declared in the kernel, never registered by a client, and never replayable. Every
+    /// guard that has to refuse an operation on kernel-owned state asks this rather than comparing the identifier
+    /// prefix, so the prefix stays a naming convention rather than a load-bearing parse.
+    /// </remarks>
+    [JsonIgnore]
+    public bool IsKernelOwned => Owner == ProjectionOwner.Kernel;
+
     /// <summary>
     /// Checks if the definition is empty or not. Empty meaning that there is no definition.
     /// </summary>

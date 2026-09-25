@@ -1,6 +1,9 @@
-# Production Hosting
+---
+title: Production hosting
+description: Run the Chronicle production image with durable storage, TLS and encryption certificates, health probes, backups, and clustering.
+---
 
-Chronicle is designed for production deployment using Docker containers with MongoDB as the primary storage backend. The production setup provides a scalable, reliable event store suitable for enterprise workloads.
+The production image differs from the development images in ways that stop a first deployment cold: it has no bundled database, generates no certificates, and creates no default administrator password. This page lists what the production image requires, and how to run, probe, back up, secure, and scale it. MongoDB is the storage used in the examples; the image also supports PostgreSQL, SQL Server, and SQLite through the [storage configuration](configuration/storage.mdx).
 
 ## Docker Image
 
@@ -10,8 +13,8 @@ Chronicle is distributed as a Docker image available on Docker Hub:
 # Latest stable version
 docker pull cratis/chronicle:latest
 
-# Specific version (recommended for production)
-docker pull cratis/chronicle:1.0.0
+# A specific release (recommended for production) - pin the version you tested
+docker pull cratis/chronicle:19.6.1
 ```
 
 [![Docker](https://img.shields.io/docker/v/cratis/chronicle?label=Chronicle&logo=docker&sort=semver)](https://hub.docker.com/r/cratis/chronicle)
@@ -104,8 +107,9 @@ services:
   mongodb:
     image: mongo:8
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
@@ -136,7 +140,7 @@ volumes:
   mongodb_data:
 ```
 
-The `mongodb-init` service is a one-shot container: it waits for `mongod` to answer, initiates the `rs0` replica set if it is not already initiated, and exits. Advertising the member as `localhost:27017` keeps the replica set reachable from host tools such as `mongosh` and Compass, while Chronicle reaches MongoDB over the Compose network with `directConnection=true` so it does not follow that advertised host back into its own container.
+The `mongodb-init` service is a one-shot container: it waits for `mongod` to answer, initiates the `rs0` replica set if it is not already initiated, and exits. This single-node MongoDB is a starting point, not a hardened database: it runs without authentication, so it is published on loopback only. A real deployment enables MongoDB authentication and TLS, or uses a managed replica set, and puts the credentials in the connection string from your secret store. Advertising the member as `localhost:27017` keeps the replica set reachable from host tools such as `mongosh` and Compass, while Chronicle reaches MongoDB over the Compose network with `directConnection=true` so it does not follow that advertised host back into its own container.
 
 If an existing MongoDB data volume was initialized with a different replica-set host, wipe it (`docker compose down -v`) before starting again so `rs.initiate()` can apply the new host.
 
@@ -207,6 +211,8 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 
 - **Network Isolation**: Run Chronicle in a private network with MongoDB
 - **Connection Encryption**: Use TLS for all connections in production
+- **Client certificate validation**: The clients connect over TLS but accept *any* server certificate unless the connection string sets `skipTlsValidation=false`. Set it for every client that reaches a production kernel. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md)
+- **Initial administrator**: The production image creates the administrator without a password and lets the first visitor to the Workbench set one. Supply the initial password from your secret store through `Authentication:AdminUser`, or keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
 - **Access Control**: Implement proper firewall rules for exposed ports
 - **Secrets Management**: Use external secret management for sensitive configuration
 - **Regular Updates**: Keep Chronicle and MongoDB images updated
@@ -290,8 +296,9 @@ services:
   mongodb:
     image: mongo:8
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped

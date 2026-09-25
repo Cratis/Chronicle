@@ -92,6 +92,16 @@ public interface IProjection
     bool IsRewindable { get; }
 
     /// <summary>
+    /// Gets the <see cref="ProjectionScope"/> the projection materializes its read model in.
+    /// </summary>
+    /// <remarks>
+    /// A projection is observed per namespace regardless of scope. What the scope decides is which namespace's
+    /// sink the pipeline writes to - a globally scoped projection resolves its sink at event store level, so
+    /// every namespace's observer accumulates into one instance.
+    /// </remarks>
+    ProjectionScope Scope { get; }
+
+    /// <summary>
     /// Gets whether properties should be auto-mapped from events at the projection level.
     /// </summary>
     AutoMap AutoMap { get; }
@@ -178,6 +188,17 @@ public interface IProjection
     /// <param name="eventType"><see cref="EventType"/> to get for.</param>
     /// <returns><see cref="ProjectionOperationType"/>.</returns>
     ProjectionOperationType GetOperationTypeFor(EventType eventType);
+
+    /// <summary>
+    /// Sets the <see cref="KeyResolver"/> used for events reached by subscribing to every event type.
+    /// </summary>
+    /// <param name="keyResolver">The <see cref="KeyResolver"/> to use.</param>
+    /// <remarks>
+    /// Set after construction rather than through it, because resolving a key expression needs the projection the
+    /// key belongs to - which does not exist yet while that projection is being constructed.
+    /// </remarks>
+    /// <param name="resolvesToEventSourceId">Whether that resolver resolves to the event source id.</param>
+    void SetAllEventsKeyResolver(KeyResolver keyResolver, bool resolvesToEventSourceId);
 
     /// <summary>
     /// Set event types with key resolvers for the projection.

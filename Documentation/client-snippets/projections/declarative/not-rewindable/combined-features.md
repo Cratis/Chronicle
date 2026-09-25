@@ -20,7 +20,6 @@ public class DecNotRewindableRealTimeOrderStatusProjection : IProjectionFor<DecN
         .NotRewindable()
         .FromEventSequence("order-processing")
         .Passive()
-        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.LastUpdatedAt).ToEventContextProperty(c => c.Occurred))
         .From<DecNotRewindableOrderReceived>(_ => _

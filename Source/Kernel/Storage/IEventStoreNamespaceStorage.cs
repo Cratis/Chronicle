@@ -6,7 +6,6 @@ using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
-using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Patterns;
@@ -15,6 +14,7 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Storage;
 

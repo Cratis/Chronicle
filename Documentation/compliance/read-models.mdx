@@ -59,13 +59,14 @@ In this example, `advisorName` is encrypted, released, and erased under `advisor
 
 Deleting an encryption key is the Chronicle mechanism for GDPR erasure:
 
-1. Delete the key for the subject (the data subject's identifier) via the Compliance API.
-2. Trigger a re-projection or re-reduction of the affected read models.
+1. Delete the key for the subject (the data subject's identifier) via the Compliance API — see [Erasing a subject](erasing-a-subject.mdx).
+2. Read models need no further step to stop exposing the data: reading them releases each PII value with the subject's key, and with the key gone the value comes back empty.
 
-After key deletion, decryption of PII properties for that subject fails gracefully — Chronicle writes empty values for erased PII fields. Existing read model documents that were written before erasure continue to contain encrypted ciphertext until they are re-projected.
+Read model documents written before the erasure still hold the ciphertext. Nothing can decrypt it once the key is gone, which is what crypto-shredding relies on.
 
-> [!IMPORTANT]
-> Re-projection is required for a complete, verifiable erasure. Until re-projection runs, the ciphertext remains in the read model store. Chronicle cannot decrypt it, but the ciphertext is still present.
+:::caution[A rebuild does not clear the ciphertext]
+Do not plan on a replay to rewrite those documents. Rebuilding a stored read model re-applies protection to the values it writes, so a rebuild that touches an erased subject asks for that subject's key and is refused for its partition — see [The encryption key lifecycle](key-lifecycle.mdx). If your policy requires the ciphertext itself removed from the read model store, that is a deliberate operation on the store, planned with those limits in mind.
+:::
 
 For full erasure of event content, combine key deletion with [event redaction](../events/redaction).
 

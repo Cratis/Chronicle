@@ -28,4 +28,3 @@ public class projection_with_default_automap : given.a_language_service_with_sch
     [Fact] void should_not_generate_source_hub_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("sourceHubId = sourceHubId");
     [Fact] void should_not_generate_destination_hub_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("destinationHubId = destinationHubId");
 }
-

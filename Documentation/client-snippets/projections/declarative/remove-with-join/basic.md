@@ -21,11 +21,9 @@ public record DecRemoveWithJoinBasicUser(string Name, IEnumerable<DecRemoveWithJ
 public class DecRemoveWithJoinBasicUserProjection : IProjectionFor<DecRemoveWithJoinBasicUser>
 {
     public void Define(IProjectionBuilderFor<DecRemoveWithJoinBasicUser> builder) => builder
-        .AutoMap()
         .From<DecRemoveWithJoinBasicUserCreated>()
         .Children(m => m.Groups, children => children
             .IdentifiedBy(e => e.GroupId)
-            .AutoMap()
             .From<DecRemoveWithJoinBasicUserAddedToGroup>(_ => _
                 .UsingParentKey(e => e.UserId)
                 .Set(m => m.JoinedAt).ToEventContextProperty(c => c.Occurred))

@@ -141,6 +141,8 @@ Cratis__Chronicle__Authentication__AdminUser__Password=@Microsoft.KeyVault(Secre
 Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin=true
 ```
 
+The `@Microsoft.KeyVault(...)` reference is resolved by Azure App Service and Azure Functions when you set it as an application setting — Chronicle does not resolve it. On any other platform the literal text would be used as the value, so inject the resolved secret through that platform's secret mechanism instead, as in the Kubernetes example below.
+
 ### Kubernetes Secrets
 
 ```yaml

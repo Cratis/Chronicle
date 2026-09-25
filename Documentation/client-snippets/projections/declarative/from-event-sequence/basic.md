@@ -5,7 +5,6 @@ public class DecFromEventSequenceOrderProjection : IProjectionFor<DecFromEventSe
 {
     public void Define(IProjectionBuilderFor<DecFromEventSequenceOrder> builder) => builder
         .FromEventSequence("order-management")
-        .AutoMap()
         .From<DecFromEventSequenceOrderCreated>()
         .From<DecFromEventSequenceOrderUpdated>()
         .From<DecFromEventSequenceOrderShipped>();

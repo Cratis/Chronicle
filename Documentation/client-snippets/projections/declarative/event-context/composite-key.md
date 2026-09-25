@@ -18,8 +18,6 @@ public class DecEventContextEventLogProjection : IProjectionFor<DecEventContextE
         .From<DecEventContextUserActionForKey>(_ => _
             .UsingCompositeKey<DecEventContextEventLogKey>(_ => _
                 .Set(k => k.Date).ToEventContextProperty(c => c.Occurred)
-                .Set(k => k.SequenceNumber).ToEventContextProperty(c => c.SequenceNumber))
-            .Set(m => m.ActionType).To(e => e.ActionType)
-            .Set(m => m.UserId).To(e => e.UserId));
+                .Set(k => k.SequenceNumber).ToEventContextProperty(c => c.SequenceNumber)));
 }
 ```

@@ -14,8 +14,6 @@ public record TaggingComplianceReport(string EntryId, string Category);
 public class TaggingComplianceReportProjection : IProjectionFor<TaggingComplianceReport>
 {
     public void Define(IProjectionBuilderFor<TaggingComplianceReport> builder) => builder
-        .From<TaggingAuditEntryRecorded>(_ => _
-            .Set(m => m.EntryId).To(e => e.EntryId)
-            .Set(m => m.Category).To(e => e.Category));
+        .From<TaggingAuditEntryRecorded>();
 }
 ```

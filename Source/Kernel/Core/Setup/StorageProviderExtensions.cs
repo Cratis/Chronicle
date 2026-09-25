@@ -57,8 +57,8 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ObserverDefinitions, CreateResilientStorageFor<Cratis.Chronicle.Observation.ObserverDefinitionGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ObserverState, CreateResilientStorageFor<Cratis.Chronicle.Observation.ObserverStateGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.FailedPartitions, CreateResilientStorageFor<Cratis.Chronicle.Observation.FailedPartitionGrainStorageProvider>);
-            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Jobs, CreateResilientStorageFor<Cratis.Chronicle.Jobs.JobGrainStorageProvider>);
-            services.AddKeyedSingleton(WellKnownGrainStorageProviders.JobSteps, CreateResilientStorageFor<Cratis.Chronicle.Jobs.JobStepGrainStorageProvider>);
+            services.AddKeyedSingleton(Cratis.Orleans.WellKnownGrainStorageProviders.Jobs, CreateResilientStorageFor<Cratis.Orleans.Jobs.JobGrainStorageProvider>);
+            services.AddKeyedSingleton(Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps, CreateResilientStorageFor<Cratis.Orleans.Jobs.JobStepGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Recommendations, CreateResilientStorageFor<Cratis.Chronicle.Recommendations.RecommendationGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Projections, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionDefinitionStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionsManager, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionsManagerStorageProvider>);

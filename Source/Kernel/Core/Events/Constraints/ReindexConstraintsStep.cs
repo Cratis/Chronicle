@@ -6,12 +6,12 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 /// <param name="logger">The logger.</param>
 public class ReindexConstraintsStep(
-    [PersistentState(nameof(ReindexConstraintsStepState), WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<ReindexConstraintsStepState> state,
     IJobStepThrottle throttle,
     IStorage storage,
@@ -110,7 +110,7 @@ public class ReindexConstraintsStep(
             _ = this.GetPrimaryKey(out var key);
             var jobStepKey = (JobStepKey)key!;
 
-            var eventStoreStorage = storage.GetEventStore(jobStepKey.EventStore);
+            var eventStoreStorage = storage.GetEventStore(jobStepKey.Scope);
             var namespaceStorage = eventStoreStorage.GetNamespace(jobStepKey.Namespace);
             var eventSequenceStorage = namespaceStorage.GetEventSequence(currentState.EventSequenceId);
             var uniqueConstraintsStorage = namespaceStorage.GetUniqueConstraintsStorage(currentState.EventSequenceId);
@@ -153,7 +153,7 @@ public class ReindexConstraintsStep(
                     // Constraint hashes must be derived from the original plaintext, so release (decrypt) any
                     // PII before establishing the validation context. The append-time index write already uses
                     // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
-                    var content = await ReleaseContent(jobStepKey.EventStore, jobStepKey.Namespace, @event, eventSchema);
+                    var content = await ReleaseContent(jobStepKey.Scope, jobStepKey.Namespace, @event, eventSchema);
 
                     foreach (var definition in changedDefinitions)
                     {

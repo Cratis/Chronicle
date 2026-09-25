@@ -4,7 +4,6 @@
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Types;
@@ -23,9 +22,9 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// </remarks>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="jsonSerializerOptions">The configured <see cref="JsonSerializerOptions"/> including all concept converters.</param>
-public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage, IDisposable
+public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage, IDisposable
 {
     readonly Subject<IEnumerable<EventStoreName>> _eventStoresSubject = new();
 
@@ -55,7 +54,7 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
-        return new EventStoreStorage(eventStore, database, sinkFactories, jobTypes, jsonSerializerOptions);
+        return new EventStoreStorage(eventStore, database, sinkFactories, jobsStorage, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>

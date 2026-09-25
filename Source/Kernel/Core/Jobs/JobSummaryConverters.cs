@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Jobs;
 
@@ -43,7 +43,7 @@ internal static class JobSummaryConverters
     /// </summary>
     /// <param name="sc">The stored status change.</param>
     /// <returns>The status change.</returns>
-    internal static JobStatusChanged ToStatusChanged(Concepts.Jobs.JobStatusChanged sc) =>
+    internal static JobStatusChanged ToStatusChanged(Cratis.Orleans.Jobs.JobStatusChanged sc) =>
         new()
         {
             Status = (JobStatus)(int)sc.Status,
@@ -57,7 +57,7 @@ internal static class JobSummaryConverters
     /// </summary>
     /// <param name="p">The stored progress.</param>
     /// <returns>The progress.</returns>
-    internal static JobProgress ToProgress(Concepts.Jobs.JobProgress p) =>
+    internal static JobProgress ToProgress(Cratis.Orleans.Jobs.JobProgress p) =>
         new()
         {
             TotalSteps = p.TotalSteps,

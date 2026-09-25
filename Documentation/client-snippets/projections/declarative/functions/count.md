@@ -16,7 +16,6 @@ public record DecFunctionsUserActivity(
 public class DecFunctionsUserActivityProjection : IProjectionFor<DecFunctionsUserActivity>
 {
     public void Define(IProjectionBuilderFor<DecFunctionsUserActivity> builder) => builder
-        .AutoMap()
         .From<DecFunctionsUserLoggedIn>(_ => _
             .Count(m => m.LoginCount))
         .From<DecFunctionsUserPerformedAction>(_ => _
