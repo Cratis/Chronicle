@@ -34,14 +34,14 @@ That is what the convention registration in [Get started](/chronicle/get-started
 
 ## SQL Sink
 
-The SQL sink treats the database as a document store. Each read model type gets its own table with two columns:
+The SQL sink gives each read model type its own table, with columns derived from the read model's schema:
 
-| Column | Type | Description |
-|---|---|---|
-| `Id` | `nvarchar` / `varchar` | The read model key |
-| `Document` | `nvarchar(max)` / `text` | The serialized JSON of the instance |
+- Each scalar property becomes a typed column, and the read model key becomes the table's primary key.
+- Each collection and nested object becomes a single JSON column — `jsonb` on PostgreSQL, `nvarchar(max)` on SQL Server, and `TEXT` on SQLite.
 
-Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
+Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
+
+The SQL sink does not create the indexes a read model declares with `[Index]`; only the MongoDB sink does today. Create any indexes you need on the SQL table yourself.
 
 This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
 
@@ -57,7 +57,7 @@ Or in `appsettings.json`:
 {
   "Cratis": {
     "Chronicle": {
-      "DefaultSinkTypeId": "MongoDB"
+      "DefaultSinkTypeId": "SQL"
     }
   }
 }
