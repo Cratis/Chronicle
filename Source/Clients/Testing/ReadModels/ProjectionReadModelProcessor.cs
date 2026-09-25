@@ -598,7 +598,6 @@ internal static class ProjectionReadModelProcessor
             await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         }
 
-        statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
         foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
         {
             var segments = childRemovedFromAll.ChildrenProperty.Segments.Select(segment => segment.Value).ToArray();
@@ -608,6 +607,7 @@ internal static class ProjectionReadModelProcessor
             }
         }
 
+        statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
         return removed;
     }
 

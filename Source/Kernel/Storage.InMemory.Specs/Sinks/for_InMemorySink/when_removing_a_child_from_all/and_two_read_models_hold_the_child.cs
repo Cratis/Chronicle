@@ -20,6 +20,8 @@ public class and_two_read_models_hold_the_child : Specification
     InMemorySink _sink;
     Key _written;
     Key _other;
+    Key _withoutChildren;
+    bool _missingCollectionWasCreated;
     IEnumerable<string> _remainingOnWritten;
     IEnumerable<string> _remainingOnOther;
 
@@ -27,10 +29,12 @@ public class and_two_read_models_hold_the_child : Specification
     {
         _written = new Key("parent-1", ArrayIndexers.NoIndexers);
         _other = new Key("parent-2", ArrayIndexers.NoIndexers);
+        _withoutChildren = new Key("parent-3", ArrayIndexers.NoIndexers);
         _sink = new InMemorySink(CreateReadModelDefinition(), new TypeFormats());
 
         await _sink.ApplyChanges(_written, ChangesetAddingChildren("shared-child", "kept-on-written"), 1UL);
         await _sink.ApplyChanges(_other, ChangesetAddingChildren("shared-child", "kept-on-other"), 1UL);
+        _sink.Collection[_sink.GetKeyValue(_withoutChildren)] = new ExpandoObject();
     }
 
     async Task Because()
@@ -38,8 +42,10 @@ public class and_two_read_models_hold_the_child : Specification
         await _sink.ApplyChanges(_written, ChangesetRemovingChildFromAll("shared-child", (await _sink.FindOrDefault(_written))!), 2UL);
         _remainingOnWritten = await ChildIdsFor(_written);
         _remainingOnOther = await ChildIdsFor(_other);
+        _missingCollectionWasCreated = ((IDictionary<string, object?>)(await _sink.FindOrDefault(_withoutChildren))!).ContainsKey(ChildrenProperty);
     }
 
+    [Fact] void should_not_create_a_collection_on_an_unrelated_document() => _missingCollectionWasCreated.ShouldBeFalse();
     [Fact] void should_remove_the_child_from_the_read_model_being_written() => _remainingOnWritten.ShouldContainOnly(["kept-on-written"]);
     [Fact] void should_remove_the_child_from_the_other_read_model() => _remainingOnOther.ShouldContainOnly(["kept-on-other"]);
 
