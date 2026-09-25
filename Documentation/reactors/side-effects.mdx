@@ -104,6 +104,8 @@ Apply these attributes to the reactor class for a compile-time stream or source 
 
 Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
 
+Chronicle registers its built-in handlers and reactor metadata providers when you call `AddCratisChronicle`, including in standalone hosts. Handlers discovered from other loaded libraries only participate if that library has registered them with the host; merely loading an assembly does not activate its integration.
+
 <ChronicleClientTabs snippet="reactors/side-effects/custom-handler" />
 
 ## Supported Return Types

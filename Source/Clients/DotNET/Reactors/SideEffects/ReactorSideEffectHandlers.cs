@@ -34,7 +34,9 @@ public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> h
     {
         var allFailures = new List<AppendFailure>();
 
-        foreach (var handler in handlers.Where(h => h.CanHandle(reactorContext, eventStore, value)))
+        // Resolve and classify the complete set before the first append. A discovery or resolution failure
+        // must not leave an append committed and then cause a retry to append it again.
+        foreach (var handler in handlers.Where(h => h.CanHandle(reactorContext, eventStore, value)).ToArray())
         {
             var result = await handler.Handle(reactorContext, eventStore, value);
             if (!result.IsSuccess && result.TryGetError(out var failure) && failure is not null)

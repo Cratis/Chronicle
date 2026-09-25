@@ -3,8 +3,6 @@
 
 using System.Collections;
 using Cratis.Types;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
 /// <summary>
@@ -37,7 +35,13 @@ internal sealed class EventStoreReactorSideEffectHandlerInstances(IServiceProvid
 
         foreach (var type in _otherHandlerTypes)
         {
-            yield return (IReactorSideEffectHandler)serviceProvider.GetRequiredService(type);
+            // Discovery sees loaded libraries whose DI setup may not have run in this host.
+            // Only configured handlers participate; do not instantiate an unconfigured handler whose dependencies
+            // belong to a different integration.
+            if (serviceProvider.GetService(type) is IReactorSideEffectHandler handler)
+            {
+                yield return handler;
+            }
         }
     }
 
