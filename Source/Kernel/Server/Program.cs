@@ -15,6 +15,7 @@ using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -486,6 +487,19 @@ catch (OperationCanceledException)
     // normally. Left uncaught, that reaches AppDomain.CurrentDomain.UnhandledException and the process
     // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
     logger.ServerShutdownDuringStartup();
+}
+catch (IOException exception) when (exception.InnerException is AddressInUseException)
+{
+    // The container intermittently aborts here with "address already in use", but whatever briefly held
+    // the port has always released it by the time the entrypoint's before/after diagnostics run, so the
+    // crash log has never said who it was. Name it at the only moment that can still see it - right here,
+    // before the process terminates - then let the same unhandled-exception crash path run as before. (#4174)
+    foreach (var line in PortDiagnostics.DescribeListeners(chronicleOptions.Port))
+    {
+        logger.PortAlreadyInUseAtBindFailure(chronicleOptions.Port, line);
+    }
+
+    throw;
 }
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)

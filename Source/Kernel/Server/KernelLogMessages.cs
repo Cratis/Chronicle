@@ -58,6 +58,9 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Critical, "Unhandled exception occurred (terminating: {IsTerminating})")]
     internal static partial void UnhandledException(this ILogger<Kernel> logger, Exception exception, bool isTerminating);
 
+    [LoggerMessage(LogLevel.Critical, "Bind to port {Port} failed because it was already in use - {Detail}")]
+    internal static partial void PortAlreadyInUseAtBindFailure(this ILogger<Kernel> logger, int port, string detail);
+
     [LoggerMessage(LogLevel.Error, "Unobserved task exception occurred")]
     internal static partial void UnobservedTaskException(this ILogger<Kernel> logger, Exception exception);
 }
