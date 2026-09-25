@@ -67,4 +67,10 @@ public class EventForEventSourceId
     /// </summary>
     [ProtoMember(9)]
     public string? Subject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Causation.
+    /// </summary>
+    [ProtoMember(10)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation>? Causation { get; set; }
 }

@@ -56,7 +56,7 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
             var appendOperations = operations.GetOperationsOfType<AppendOperation>();
             if (appendOperations.Any())
             {
-                events.AddRange(appendOperations.Select(op => new EventForEventSourceId(eventSourceId, op.Event, op.Causation ?? _causation ?? Causation.Unknown())
+                events.AddRange(appendOperations.Select(op => new EventForEventSourceId(eventSourceId, op.Event, op.Causation ?? _causation)
                 {
                     EventStreamType = op.EventStreamType ?? EventStreamType.All,
                     EventStreamId = op.EventStreamId ?? EventStreamId.Default,
