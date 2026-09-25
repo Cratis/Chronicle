@@ -13,11 +13,17 @@ public class when_redacting_an_event_with_sensitive_causation : given.an_event_s
 {
     const string Secret = "sensitive-command-property";
     Causation _redactionCausation;
+    Causation _originalCausation;
+    CorrelationId _originalCorrelation;
+    DateTimeOffset _originalOccurred;
     EventEntry _stored;
 
     async Task Establish()
     {
         _redactionCausation = new Causation(DateTimeOffset.UtcNow, "redaction", new Dictionary<string, string> { ["actor"] = "operator" });
+        _originalCausation = new Causation(DateTimeOffset.UtcNow, "command", new Dictionary<string, string> { ["apiKey"] = Secret });
+        _originalCorrelation = CorrelationId.New();
+        _originalOccurred = DateTimeOffset.UtcNow;
         await _storage.Append(
             1,
             EventSourceType.Default,
@@ -25,13 +31,13 @@ public class when_redacting_an_event_with_sensitive_causation : given.an_event_s
             EventStreamType.All,
             EventStreamId.Default,
             _eventType,
-            CorrelationId.New(),
-            [new Causation(DateTimeOffset.UtcNow, "command", new Dictionary<string, string> { ["apiKey"] = Secret })],
+            _originalCorrelation,
+            [_originalCausation],
             [],
             [],
-            DateTimeOffset.UtcNow,
+            _originalOccurred,
             new Dictionary<EventTypeGeneration, ExpandoObject> { { EventTypeGeneration.First, new ExpandoObject() } },
-            new Dictionary<EventTypeGeneration, EventHash>());
+            new Dictionary<EventTypeGeneration, EventHash> { [EventTypeGeneration.First] = new EventHash("original-payload-hash") });
     }
 
     async Task Because()
@@ -42,11 +48,19 @@ public class when_redacting_an_event_with_sensitive_causation : given.an_event_s
     }
 
     [Fact] void should_not_retain_the_original_causation_in_content() => _stored.Content.ShouldNotContain(Secret);
+    [Fact] void should_clear_the_original_content_hash() => _stored.ContentHashes.ShouldBeEmpty();
     [Fact] void should_not_retain_the_original_causation_in_the_event_field() => _stored.Causation.ShouldNotContain(Secret);
     [Fact] void should_keep_the_redaction_causation_in_the_event_field() => EventEntryConverter.GetCausation(_stored).Single().Properties["actor"].ShouldEqual("operator");
-    [Fact] void should_keep_the_redaction_causation_type_in_content()
+    [Fact] void should_keep_the_original_context_without_causation_properties_in_content()
     {
         using var document = JsonDocument.Parse(_stored.Content);
-        document.RootElement.GetProperty("1").GetProperty("causation")[0].GetProperty("type").GetString().ShouldEqual("redaction");
+        var content = document.RootElement.GetProperty("1");
+        content.GetProperty("originalEventType").GetString().ShouldEqual(_eventType.Id.Value);
+        content.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalOccurred);
+        content.GetProperty("correlationId").GetString().ShouldEqual(_originalCorrelation.ToString());
+        var cause = content.GetProperty("causation")[0];
+        cause.GetProperty("type").GetString().ShouldEqual("command");
+        cause.GetProperty("occurred").GetDateTimeOffset().ShouldEqual(_originalCausation.Occurred);
+        cause.TryGetProperty("properties", out _).ShouldBeFalse();
     }
 }

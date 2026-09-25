@@ -12,14 +12,16 @@ public class when_building_redaction_content_from_an_event_with_sensitive_causat
 {
     const string Secret = "sensitive-command-property";
     Event _original;
+    Causation _causation;
     RedactionEventContent _content;
 
     void Establish()
     {
+        _causation = new Causation(DateTimeOffset.UtcNow, "command", new Dictionary<string, string> { ["apiKey"] = Secret });
         _original = new Event(
             1,
             CorrelationId.New(),
-            [new Causation(DateTimeOffset.UtcNow, "command", new Dictionary<string, string> { ["apiKey"] = Secret })],
+            [_causation],
             [IdentityId.NotSet],
             "d0b8f8a4-6d0d-4a1a-9a0a-1a2b3c4d5e6f",
             DateTimeOffset.UtcNow,
@@ -35,7 +37,9 @@ public class when_building_redaction_content_from_an_event_with_sensitive_causat
 
     void Because() => _content = EventSequenceStorage.CreateRedactionContent(_original, "contains sensitive data");
 
-    [Fact] void should_erase_the_original_causation() => _content.Causation.ShouldBeEmpty();
+    [Fact] void should_keep_the_original_causation_type() => _content.Causation.Single().Type.ShouldEqual(_causation.Type);
+    [Fact] void should_keep_the_original_causation_time() => _content.Causation.Single().Occurred.ShouldEqual(_causation.Occurred);
+    [Fact] void should_erase_the_original_causation_properties() => _content.Causation.Single().Properties.ShouldBeEmpty();
     [Fact] void should_keep_the_original_event_type() => _content.OriginalEventType.ShouldEqual(_original.Type);
     [Fact] void should_keep_the_original_occurrence() => _content.Occurred.ShouldEqual(_original.Occurred);
     [Fact] void should_keep_the_original_correlation() => _content.CorrelationId.ShouldEqual(_original.CorrelationId);
