@@ -96,6 +96,14 @@ public static class MongoDBChronicleBuilderExtensions
                     DatabaseNameResolver = (scope, @namespace) => Cratis.Chronicle.Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace)
                 })));
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
+
+            // Auto-registration only considers the assemblies named here, and the package names its own. The
+            // kernel's serializers and serialization providers live in Cratis.Chronicle assemblies, so without
+            // this they are discovered and skipped - the driver then reads those documents its own way, which
+            // throws nothing and shows up only as a document read back in the wrong shape.
+            services.Configure<Cratis.Orleans.Storage.MongoDB.Serialization.CustomSerializersOptions>(
+                _ => _.AssemblyNameFragments.Add("Cratis.Chronicle"));
+
             services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
 

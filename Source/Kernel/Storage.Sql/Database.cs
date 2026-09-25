@@ -200,8 +200,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
+        var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
 
-        if (string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase))
+        if (isSqlite)
         {
             // SQLite: each event store, namespace, and read-model namespace lives in its own
             // file. The cluster file path is the configured Data Source; the derived files
@@ -230,6 +231,18 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         // Cache invalidation must happen AFTER the wipe so that any in-flight migration that
         // populates the cache concurrently with the wipe is overwritten by a final empty cache.
         ClearTableMigrationCache(string.Empty);
+
+        // Only SQLite drops the job tables - the other backends truncate, so their schema survives
+        // the wipe. The job system caches the storage it resolves, and applying its migrations is
+        // part of resolving, so on SQLite it has to forget: otherwise it holds storage for tables
+        // that are gone and the next write says there is no such table as Jobs. Telling it to
+        // forget where the tables never went away is not harmless - the next job in every event
+        // store and namespace would re-run the migrations, and on a real database server that is
+        // slow enough to push the integration specs past their deadlines.
+        if (isSqlite)
+        {
+            serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
+        }
     }
 
     static string ExtractSqliteDataSource(string connectionString)

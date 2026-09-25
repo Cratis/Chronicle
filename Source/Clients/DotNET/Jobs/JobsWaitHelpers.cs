@@ -36,6 +36,38 @@ public static class JobsWaitHelpers
     }
 
     /// <summary>
+    /// Looks for jobs whose type contains the specified substring, returning what is there when the wait runs out.
+    /// </summary>
+    /// <param name="jobs"><see cref="IJobs"/> system.</param>
+    /// <param name="typeSubstring">Substring to match against <see cref="Job.Type"/>.</param>
+    /// <param name="timeout">Optional timeout. Defaults to 5 seconds.</param>
+    /// <returns>The matching jobs, or none when the wait ran out.</returns>
+    /// <remarks>
+    /// A job is a transient artifact - it is removed when it completes - so short work can finish before the
+    /// first poll looks for it. Use this where a job carries information worth having when it is still there,
+    /// such as why a replay failed, but where its absence is not itself the failure. Where the job must exist,
+    /// use <see cref="WaitForThereToBeJobOfType"/>, which fails when it does not appear.
+    /// </remarks>
+    public static async Task<IEnumerable<Job>> TryFindJobsOfType(this IJobs jobs, string typeSubstring, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        var deadline = DateTimeOffset.UtcNow + timeout.Value;
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var currentJobs = await jobs.GetJobs();
+            var matching = currentJobs.Where(job => job.Type.Value.Contains(typeSubstring, StringComparison.Ordinal)).ToArray();
+            if (matching.Length != 0)
+            {
+                return matching;
+            }
+
+            await Task.Delay(DefaultDelay);
+        }
+
+        return [];
+    }
+
+    /// <summary>
     /// Waits for a job whose type contains the specified substring.
     /// </summary>
     /// <param name="jobs"><see cref="IJobs"/> system.</param>
