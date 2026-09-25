@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Observation.States;
 /// On entry, every partition recorded as in-flight on the observer state — but that is not already failed,
 /// replaying, or catching up — gets a dedicated catch-up job starting from the next event after
 /// the observer's last confirmed sequence number. The state then transitions to <see cref="Routing"/>
-/// so the observer can resume normal operation. If enqueueing a catch-up job throws, the observer
+/// so the observer can resume normal operation. If enqueueing a catch-up job fails or throws, the observer
 /// transitions to <see cref="QuarantinedObserver"/> rather than silently losing recovery work.
 /// </remarks>
 public class CatchingUpInFlight(
@@ -81,8 +81,15 @@ public class CatchingUpInFlight(
             {
                 logger.StartingInFlightCatchUpForPartition(partition, startFrom);
                 state.CatchingUpPartitions.Add(partition);
-                await jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
+                var startResult = await jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
                     new(observerKey, definitionState.State.Type, partition, startFrom, definitionState.State.EventTypes));
+                if (startResult?.TryGetResult(out _) is not true)
+                {
+                    var error = startResult?.TryGetError(out var startError) is true ? startError : default;
+                    logger.CouldNotStartInFlightCatchUpForPartition(partition, error);
+                    await StateMachine.TransitionTo<QuarantinedObserver>();
+                    return state;
+                }
             }
         }
         catch (Exception ex)
