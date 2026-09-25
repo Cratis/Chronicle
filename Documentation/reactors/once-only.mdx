@@ -37,5 +37,5 @@ covers what is left.
 Reach for the method placement unless the entire reactor exists to do something that must not happen twice.
 
 :::note[Client coverage]
-Elixir and TypeScript have no equivalent marker, so a replay always re-runs the full handler there. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
+TypeScript supports `@onceOnly()` on a handler method or on the reactor class from `@cratis/chronicle` 6.9.0, with the same meaning as `OnceOnly`. Elixir has no equivalent marker, so a replay always re-runs the full handler there. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
 :::
