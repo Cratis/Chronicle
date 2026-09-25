@@ -230,6 +230,12 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         // Cache invalidation must happen AFTER the wipe so that any in-flight migration that
         // populates the cache concurrently with the wipe is overwritten by a final empty cache.
         ClearTableMigrationCache(string.Empty);
+
+        // The job system caches the storage it resolves, and applying its migrations is part of
+        // resolving - so the wipe has just taken its tables away with everything else, and nothing
+        // would make them again. Telling it to forget means the next job resolves a schema that is
+        // actually there; without this the next write says there is no such table as Jobs.
+        serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
     }
 
     static string ExtractSqliteDataSource(string connectionString)
