@@ -12,7 +12,7 @@ public class OrdersBridgeRegistration
 {
     public async Task Register(IEventStore eventStore, IOrdersBridgeForwarder forwarder)
     {
-        var handler = await eventStore.Reactors.Register(
+        await eventStore.Reactors.Register(
             "orders-bridge",
             reactor => reactor
                 .WithEventType(new EventType("OrderPlaced", 1))
@@ -24,9 +24,10 @@ public class OrdersBridgeRegistration
                 // Content is JsonObject; generational content contains raw JSON.
                 await forwarder.Forward(@event.Context.EventType, @event.Content, @event.GenerationalContent, cancellationToken);
             });
+    }
 
-        var state = await handler.GetState();
-        var failedPartitions = await handler.GetFailedPartitions();
+    public void Unregister(IEventStore eventStore)
+    {
         eventStore.Reactors.Unregister("orders-bridge");
     }
 }

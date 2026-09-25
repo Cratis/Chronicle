@@ -22,5 +22,6 @@ public class when_reconnecting_a_delegate : given.a_registered_delegate
     [Fact] void should_disconnect_the_old_handler() => _originalToken.IsCancellationRequested.ShouldBeTrue();
     [Fact] void should_recreate_the_handler() => ReferenceEquals(_reconnected, _handler).ShouldBeFalse();
     [Fact] void should_preserve_both_generations() => _reconnected.EventTypes.Count().ShouldEqual(2);
-    [Fact] void should_preserve_replay_policy() => _definition.IsReplayable.ShouldBeFalse();
+    [Fact] void should_register_on_both_connections() => _definitions.Count.ShouldEqual(2);
+    [Fact] void should_preserve_replay_policy() => _definitions.TrueForAll(_ => !_.IsReplayable).ShouldBeTrue();
 }

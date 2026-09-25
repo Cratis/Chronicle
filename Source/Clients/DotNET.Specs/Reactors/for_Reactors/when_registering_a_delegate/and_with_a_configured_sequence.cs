@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Reactors.for_Reactors;
+namespace Cratis.Chronicle.Reactors.for_Reactors.when_registering_a_delegate;
 
-public class when_registering_a_delegate : given.all_dependencies
+public class and_with_a_configured_sequence : given.all_dependencies
 {
     IReactorHandler _handler;
 

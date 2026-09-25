@@ -121,8 +121,16 @@ public class Reactors : IReactors
         _logger.DiscoverAllReactors();
         lock (_registerLock)
         {
-            var registrations = _clientArtifactsProvider.Reactors.Select(CreateRegistrationFor).ToArray();
+            var reactorTypes = _clientArtifactsProvider.Reactors.ToArray();
             var runtimeRegistrations = _handlers.Values.Where(_ => _.Handle is not null).ToArray();
+            var ids = runtimeRegistrations.Select(_ => _.Handler.Id).Concat(reactorTypes.Select(_ => _.GetReactorId()));
+            var duplicate = ids.GroupBy(_ => _).FirstOrDefault(_ => _.Count() > 1);
+            if (duplicate is not null)
+            {
+                throw new ReactorAlreadyRegistered(duplicate.Key);
+            }
+
+            var registrations = reactorTypes.Select(CreateRegistrationFor).ToArray();
             DisconnectHandlers();
             _registered = false;
             _handlers = registrations.Concat(runtimeRegistrations.Select(RecreateRegistration))
@@ -173,6 +181,8 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task<IReactorHandler> Register(ReactorId id, Action<IReactorDefinitionBuilder> configure, Func<ReactorEvent, CancellationToken, Task> handle)
     {
+        ArgumentNullException.ThrowIfNull(configure);
+        ArgumentNullException.ThrowIfNull(handle);
         var builder = new ReactorDefinitionBuilder();
         configure(builder);
         var definition = builder.Build(id);
@@ -405,7 +415,8 @@ public class Reactors : IReactors
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var messages = new BehaviorSubject<ReactorMessage>(new(new(request)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
-        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, handler.CancellationToken);
+        var cancellationToken = handler.CancellationToken;
+        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
@@ -415,7 +426,7 @@ public class Reactors : IReactors
         // stranded). The 2s delay avoids a hot loop if the stream keeps ending.
         void ScheduleReconnect()
         {
-            if (handler.CancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -424,7 +435,7 @@ public class Reactors : IReactors
             {
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
                     _logger.ReconnectingReactor(handler.Id);
                     RegisterReactor(registration);
                 }
@@ -439,7 +450,7 @@ public class Reactors : IReactors
         eventsToObserve
             .Select(events => Observable.FromAsync(async () =>
             {
-                await ObserverMethod(messages, registration, events);
+                await ObserverMethod(messages, registration, events, cancellationToken);
                 _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
@@ -447,7 +458,7 @@ public class Reactors : IReactors
                 _ => { },
                 ex =>
                 {
-                    if (IsExpectedCancellation(ex, handler.CancellationToken))
+                    if (IsExpectedCancellation(ex, cancellationToken))
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                         messages.Dispose();
@@ -492,7 +503,7 @@ public class Reactors : IReactors
         return false;
     }
 
-    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events)
+    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
         if (events.ReplayState != ReplayState.None)
@@ -519,6 +530,11 @@ public class Reactors : IReactors
         {
             foreach (var @event in events.Events)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
                 try
                 {
@@ -526,8 +542,20 @@ public class Reactors : IReactors
                         @event.Context.ToClient(),
                         JsonNode.Parse(@event.Content)!.AsObject(),
                         new Dictionary<int, string>(@event.GenerationalContent));
-                    await registration.Handle(delivered, handler.CancellationToken);
+                    handler.BeginHandling(delivered.Context);
+                    try
+                    {
+                        await registration.Handle(delivered, cancellationToken);
+                    }
+                    finally
+                    {
+                        handler.EndHandling();
+                    }
                     lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -536,7 +564,10 @@ public class Reactors : IReactors
                 }
             }
 
-            PublishResult();
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                PublishResult();
+            }
             return;
         }
 

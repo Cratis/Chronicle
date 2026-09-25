@@ -84,20 +84,15 @@ public class ReactorHandler(
     {
         try
         {
-            identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
-            causationManager.Add(CausationType, new Dictionary<string, string>
+            BeginHandling(context);
+            try
             {
-                { CausationReactorIdProperty, Id.ToString() },
-                { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
-                { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
-                { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
-                { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
-            });
-
-            var invocationResult = await reactorInvoker.Invoke(content, context);
-
-            identityProvider.ClearCurrentIdentity();
-            return invocationResult;
+                return await reactorInvoker.Invoke(content, context);
+            }
+            finally
+            {
+                EndHandling();
+            }
         }
         catch (Exception ex)
         {
@@ -146,4 +141,26 @@ public class ReactorHandler(
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();
+
+    /// <summary>
+    /// Sets the identity and causation for handling an event.
+    /// </summary>
+    /// <param name="context">The delivered event context.</param>
+    internal void BeginHandling(EventContext context)
+    {
+        identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
+        causationManager.Add(CausationType, new Dictionary<string, string>
+        {
+            { CausationReactorIdProperty, Id.ToString() },
+            { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
+            { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
+            { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
+            { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
+        });
+    }
+
+    /// <summary>
+    /// Clears the identity after handling an event.
+    /// </summary>
+    internal void EndHandling() => identityProvider.ClearCurrentIdentity();
 }

@@ -20,6 +20,7 @@ public class a_registered_delegate : all_dependencies
     protected readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected Subject<EventsToObserve> _observed;
     protected ReactorDefinition _definition;
+    protected readonly List<ReactorDefinition> _definitions = [];
     protected IReactorHandler _handler;
 
     void Establish()
@@ -36,6 +37,7 @@ public class a_registered_delegate : all_dependencies
                     {
                         case RegisterReactor registered:
                             _definition = registered.Reactor;
+                            _definitions.Add(registered.Reactor);
                             break;
                         case ReactorResult result:
                             _result.TrySetResult(result);
