@@ -22,6 +22,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
 {
     protected EventSequenceStorage _storage;
     protected EventType _eventType;
+    protected IMongoCollection<BsonDocument> _rawEvents;
 
     IMongoClient _client;
     string _databaseName;
@@ -37,7 +38,8 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
         var namespaceDatabase = Substitute.For<IEventStoreNamespaceDatabase>();
         namespaceDatabase.Client.Returns(_client);
         namespaceDatabase.GetEventSequenceCollectionFor(Arg.Any<EventSequenceId>()).Returns(collection);
-        namespaceDatabase.GetEventSequenceCollectionAsBsonFor(Arg.Any<EventSequenceId>()).Returns(database.GetCollection<BsonDocument>("event-log"));
+        _rawEvents = database.GetCollection<BsonDocument>("event-log");
+        namespaceDatabase.GetEventSequenceCollectionAsBsonFor(Arg.Any<EventSequenceId>()).Returns(_rawEvents);
 
         var eventTypesStorage = Substitute.For<IEventTypesStorage>();
         eventTypesStorage.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>())
@@ -54,7 +56,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
             "test-namespace",
             EventSequenceId.Log,
             namespaceDatabase,
-            Substitute.For<IEventConverter>(),
+            new EventConverter("test-store", "test-namespace", eventTypesStorage, identityStorage, expandoObjectConverter),
             eventTypesStorage,
             identityStorage,
             expandoObjectConverter,
