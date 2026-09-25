@@ -268,4 +268,9 @@ public static class DiagnosticIds
     /// A property or type resolves both [PII] and [Encrypted] compliance metadata.
     /// </summary>
     public const string PIIAndEncryptedCombined = "CHR0053";
+
+    /// <summary>
+    /// A reactor method has a return type that the runtime cannot discover as a handler.
+    /// </summary>
+    public const string ReactorMethodReturnTypeMustBeSupported = "CHR0054";
 }
