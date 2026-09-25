@@ -13,4 +13,4 @@ public class InvalidReactorHandlerReturnType(Type reactorType, string methodName
     : Exception(
         $"Reactor '{reactorType.FullName}' handler method '{methodName}' has unsupported return type '{actualReturnType.FullName}'. " +
         "A handler method must return 'void', 'Task', an event type, 'EventForEventSourceId', 'EventsWithConcurrencyScopes', an 'IEnumerable' of events, " +
-        "or any of these wrapped in a 'Task'. A custom side-effect type processed by an 'IReactorSideEffectHandler' must be returned as 'Task<T>'.");
+        "a type claimed by a registered 'IReactorSideEffectHandler', an 'IEnumerable' of these, or any of these wrapped in a 'Task'.");

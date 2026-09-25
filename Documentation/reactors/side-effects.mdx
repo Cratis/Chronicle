@@ -106,6 +106,8 @@ Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
 
 <ChronicleClientTabs snippet="reactors/side-effects/custom-handler" />
 
+To return your custom side effect synchronously, implement `CanHandleReturnType(Type)` on the handler to claim its declared type. Existing handlers default to `false` and can still handle asynchronous `Task<T>` results. You can also return `IEnumerable<T>` synchronously when a registered handler claims `T`; the handler must process the collection at invocation time. Returning a type that no handler claims synchronously is rejected during registration.
+
 ## Supported Return Types
 
 | Return type | Handler invoked |

@@ -4,6 +4,7 @@
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Reactors.SideEffects;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -23,7 +24,17 @@ public static class EventHandlerMethods
     /// parameters are treated as dependencies (the <see cref="EventContext"/>, read models, or services) and
     /// are resolved when the method is invoked.
     /// </remarks>
-    public static bool IsEventHandlerMethod(this MethodInfo methodInfo, IEnumerable<Type> eventTypes)
+    public static bool IsEventHandlerMethod(this MethodInfo methodInfo, IEnumerable<Type> eventTypes) =>
+        IsEventHandlerMethod(methodInfo, eventTypes, null);
+
+    /// <summary>
+    /// Checks whether a method is an event handler, including synchronous return types claimed by side-effect handlers.
+    /// </summary>
+    /// <param name="methodInfo">The method to check.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
+    /// <param name="sideEffectHandlers">Handlers that claim synchronous return types.</param>
+    /// <returns>True if the method can handle an event; otherwise false.</returns>
+    public static bool IsEventHandlerMethod(this MethodInfo methodInfo, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers)
     {
         if (methodInfo.IsSpecialName)
         {
@@ -34,7 +45,7 @@ public static class EventHandlerMethods
 
         var hasValidReturnType = methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
                                     methodInfo.ReturnType == typeof(void) ||
-                                    IsValidSyncSideEffectReturnType(methodInfo.ReturnType, eventTypesList);
+                                    IsValidSyncSideEffectReturnType(methodInfo.ReturnType, eventTypesList, sideEffectHandlers);
 
         if (!hasValidReturnType)
         {
@@ -86,7 +97,17 @@ public static class EventHandlerMethods
     /// <param name="returnType">The return <see cref="Type"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is a valid sync side-effect return type, false if not.</returns>
-    public static bool IsValidSyncSideEffectReturnType(Type returnType, IEnumerable<Type> eventTypes)
+    public static bool IsValidSyncSideEffectReturnType(Type returnType, IEnumerable<Type> eventTypes) =>
+        IsValidSyncSideEffectReturnType(returnType, eventTypes, null);
+
+    /// <summary>
+    /// Checks a synchronous return type against built-in types and side-effect handlers.
+    /// </summary>
+    /// <param name="returnType">The return type to check.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
+    /// <param name="sideEffectHandlers">Handlers that claim synchronous return types.</param>
+    /// <returns>True if the return type can be processed; otherwise false.</returns>
+    public static bool IsValidSyncSideEffectReturnType(Type returnType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers)
     {
         if (returnType == typeof(EventForEventSourceId)) return true;
         if (returnType == typeof(EventsWithConcurrencyScopes)) return true;
@@ -97,8 +118,9 @@ public static class EventHandlerMethods
             if (elementType == typeof(object)) return true;
             if (elementType == typeof(EventForEventSourceId)) return true;
             if (eventTypes.Contains(elementType)) return true;
+            if (sideEffectHandlers?.CanHandleReturnType(elementType) == true) return true;
         }
 
-        return eventTypes.Contains(returnType);
+        return eventTypes.Contains(returnType) || sideEffectHandlers?.CanHandleReturnType(returnType) == true;
     }
 }

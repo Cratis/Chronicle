@@ -56,7 +56,7 @@ public class ReactorInvoker(
     IServiceProvider? serviceProvider = null) : IReactorInvoker
 {
     static readonly ConcurrentDictionary<Type, HandlerMethods> _methodsByEventTypeCache = [];
-    readonly HandlerMethods _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes);
+    readonly HandlerMethods _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes, sideEffectHandlers);
     readonly IReactorMethodArgumentsResolver _argumentsResolver = argumentsResolver ?? new ReactorMethodArgumentsResolver();
 
     /// <summary>
@@ -66,7 +66,17 @@ public class ReactorInvoker(
     /// <param name="reactorType">The reactor <see cref="Type"/> to get event types for.</param>
     /// <returns>Collection of discovered <see cref="EventType"/>.</returns>
     public static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type reactorType) =>
-        MethodsByEventType.Get(reactorType, eventTypes.AllClrTypes)
+        GetEventTypesFor(eventTypes, reactorType, null);
+
+    /// <summary>
+    /// Gets the event types for a reactor, including methods returning handler-claimed synchronous side effects.
+    /// </summary>
+    /// <param name="eventTypes">Registry of known event types.</param>
+    /// <param name="reactorType">The reactor type to inspect.</param>
+    /// <param name="sideEffectHandlers">Handlers claiming synchronous return types.</param>
+    /// <returns>The event types handled by the reactor.</returns>
+    public static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type reactorType, IReactorSideEffectHandlers? sideEffectHandlers) =>
+        MethodsByEventType.Get(reactorType, eventTypes.AllClrTypes, sideEffectHandlers)
             .AllEventTypes
             .Select(eventTypes.GetEventTypeFor)
             .ToImmutableList();
@@ -261,13 +271,12 @@ public class ReactorInvoker(
 
     static class MethodsByEventType
     {
-        public static HandlerMethods Get(Type targetType, IEnumerable<Type> eventTypes) =>
-            _methodsByEventTypeCache.GetOrAdd(
-                targetType,
-                static (key, keyEventTypes) => Build(key, keyEventTypes),
-                eventTypes);
+        public static HandlerMethods Get(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers = null) =>
+            sideEffectHandlers is null
+                ? _methodsByEventTypeCache.GetOrAdd(targetType, static (key, keyEventTypes) => Build(key, keyEventTypes, null), eventTypes)
+                : Build(targetType, eventTypes, sideEffectHandlers);
 
-        static HandlerMethods Build(Type targetType, IEnumerable<Type> eventTypes)
+        static HandlerMethods Build(Type targetType, IEnumerable<Type> eventTypes, IReactorSideEffectHandlers? sideEffectHandlers)
         {
             var liveMethodsByEventType = new Dictionary<Type, MethodInfo>();
             var replayMethodsByEventType = new Dictionary<Type, MethodInfo>();
@@ -278,7 +287,7 @@ public class ReactorInvoker(
             // and without this it could overwrite the real handler purely on reflection order.
             foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ByPrecedence())
             {
-                if (!method.IsEventHandlerMethod(eventTypes))
+                if (!method.IsEventHandlerMethod(eventTypes, sideEffectHandlers))
                 {
                     // A public method shaped like a handler (its first parameter is a known event type) but with
                     // an unrecognized return type is almost always a mistake. Left unchecked it is silently
