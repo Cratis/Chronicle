@@ -19,7 +19,7 @@ That first argument is the [event source id](../concepts/event-source.md) — th
 > [!TIP]
 > We use a raw generated id here to keep the quickstart short. In C#, real code would wrap it in a strongly-typed `BookId` so the compiler can't confuse a book's id with a member's — the [tutorial](/chronicle/tutorial/) shows exactly that. Kotlin, Elixir, and TypeScript event source ids are plain strings; those clients don't currently have an equivalent typed-id wrapper.
 
-Run your app, then open the <a href="https://localhost:35000" target="_blank" rel="noopener">workbench</a>, pick your event store, and select **Sequences** — your `BookAdded` is sitting there at sequence number `0`, permanent and in order.
+Run your app, then open the <a href="https://localhost:35000" target="_blank" rel="noopener">workbench</a>, pick your event store, and select **Sequences** — your `GetStartedBookAdded` is sitting there, permanent and in order. In a fresh event store the first event is at sequence number `0`.
 
 > [!NOTE]
 > If you are using the Development or Development-slim image, log in with username **Admin** and password **ChangeMeNow!**. See [Workbench — Development](../workbench/development.md) for details.
@@ -35,13 +35,13 @@ Events are the **write** side — the source of truth. To *read* current state y
 Read the attributes as a sentence: a book comes into the view from `BookAdded`; `OnLoan` is `false` when it's added, `true` when borrowed, `false` again when returned; `BorrowedBy` is whoever borrowed it. You're *declaring* how facts map onto the view — Chronicle replays the events in order and applies the mapping.
 
 > [!NOTE]
-> The class-level `[FromEvent<BookAdded>]` maps event properties onto read model properties **by naming convention** — `BookAdded.Title` flows into `Title` and `BookAdded.Isbn` into `Isbn` without a single per-property attribute. You only reach for `[SetFrom<T>]` when the names differ, the way `BookBorrowed.MemberName` feeds `BorrowedBy` here. Setting a literal value per event type (like `OnLoan` here) isn't currently supported in Kotlin or Java's model-bound projections — only event-property mappings are.
+> The class-level `[FromEvent<GetStartedBookAdded>]` maps event properties onto read model properties **by naming convention** — `Title` and `Isbn` flow across without a single per-property attribute. You only reach for `[SetFrom<T>]` when the names differ, the way `GetStartedBookBorrowed.MemberName` feeds `BorrowedBy` here. Setting a literal value per event type (like `OnLoan` here) isn't currently supported in Kotlin or Java's model-bound projections — only event-property mappings are.
 
-One view rarely answers every question. The librarian's next one is "what's out on loan right now?" — and rather than filtering `Book`, you declare a second, purpose-built read model whose very *existence* tracks the loan:
+One view rarely answers every question. The librarian's next one is "what's out on loan right now?" — and rather than filtering `GetStartedBook`, you declare a second, purpose-built read model whose very *existence* tracks the loan:
 
 <ChronicleClientTabs snippet="get-started/common/borrowed-book-read-model" />
 
-The moment a `BookBorrowed` lands, a `BorrowedBook` instance appears — keyed by the book's id, its `MemberName` mapped by the same naming convention. When the matching `BookReturned` arrives, `[RemovedWith<BookReturned>]` removes the instance from the view again. The collection always holds exactly the books that are out *right now* — no flag to maintain, no filter to remember, no cleanup job. Kotlin and Java don't currently have an equivalent to `[RemovedWith<T>]`.
+The moment a `GetStartedBookBorrowed` lands, a `GetStartedBorrowedBook` instance appears — keyed by the book's id, its `MemberName` mapped by the same naming convention. When the matching `GetStartedBookReturned` arrives, `[RemovedWith<GetStartedBookReturned>]` removes the instance from the view again. The collection always holds exactly the books that are out *right now* — no flag to maintain, no filter to remember, no cleanup job. Kotlin and Java don't currently have an equivalent to `[RemovedWith<T>]`.
 
 ## Query the read models
 
@@ -49,19 +49,25 @@ The most direct way to look at a read model is to ask Chronicle itself. `IReadMo
 
 <ChronicleClientTabs snippet="get-started/common/query-read-models" />
 
-These results are **strongly consistent**: Chronicle replays the read model's events on demand, so what comes back reflects every event appended up to that instant — including the one you appended a moment ago. That replay is also the cost: every call processes *all* the events feeding the read model, which is perfect for a quickstart but not necessarily what you'd put on a hot path in production. You can cap the work by passing an event count — `GetInstances<Book>(eventCount: 1_000)` — but a capped replay can stop before the newest events and hand you incomplete results. [Getting a collection of instances](../read-models/getting-collection-instances) covers the details. Kotlin and Java currently only support fetching a single instance by key (`getInstanceByKey`) — fetching every instance of a read model isn't available yet.
+These instances come from the **sink**. By default Chronicle **materializes** every projection into the sink storage configured for the event store — MongoDB unless you change it. For the default namespace the database is named after the event store (`Quickstart`), and each collection after its read model, pluralized: `GetStartedBooks` and `GetStartedBorrowedBooks`. That makes a query cheap — a database fetch, whatever the length of the history.
 
-By default Chronicle also **materializes** every projection into the **sink** storage configured for the event store — MongoDB unless you change it — under a database named after the event store and a collection named after the read model. Materialization happens in the background as events arrive, so it's **eventually consistent**: a freshly appended event may take a moment to show up. In exchange, a query costs nothing but a database fetch. The `Materialized` API reads those stored instances back, a page at a time. Kotlin and Java don't currently have a materialized/paging query API at all; Elixir's equivalent pages by page number rather than skip/take:
+Materialization happens in the background as events arrive, so these reads are **eventually consistent**. An append completes when the event is in the log, not when the read model has caught up, so a query issued straight after an append can miss it. That is most noticeable the first time a program runs against a fresh event store, while the kernel is still setting up the new projections: the first query can come back empty. Query again a moment later and the book is there.
+
+When a read has to include the event you just appended, you have two tools. Mark the read model **passive**, and Chronicle keeps it out of the sink and computes it from its events on every read. Or keep it materialized and wait for the append's observers to catch up before reading. [Read model consistency](../read-models/consistency.md) compares the two.
+
+[Getting a collection of instances](../read-models/getting-collection-instances) covers the details, including the event count you can pass to replay a read model from the beginning instead. Kotlin and Java currently only support fetching a single instance by key (`getInstanceByKey`) — fetching every instance of a read model isn't available yet.
+
+`GetInstances` returns every stored instance at once. The `Materialized` API reads the same stored instances back a page at a time. Kotlin and Java don't currently have a materialized/paging query API at all; Elixir's equivalent pages by page number rather than skip/take:
 
 <ChronicleClientTabs snippet="get-started/common/materialized-paging" />
 
 `skip` and `take` are plain paging (they default to `0` and `50`), so you can window through a large collection without ever loading all of it — [Materialized read models](../read-models/materialized-pagination) shows the paging and observing patterns.
 
-Neither call filters, though: `GetInstances` returns everything (you'd filter with LINQ in memory), and `Materialized` only pages. When you need to filter efficiently — "which books are on loan?" — query the [sink](../sinks/)'s database directly with its native tools. Our sink is MongoDB, so the `Book` read model is an ordinary collection and the driver does what it does best:
+Neither call filters, though: `GetInstances` returns everything (you'd filter with LINQ in memory), and `Materialized` only pages. When you need to filter efficiently — "which books are on loan?" — query the [sink](../sinks/)'s database directly with its native tools. Our sink is MongoDB, so `GetStartedBooks` is an ordinary collection that your language's MongoDB driver can query (the Chronicle client does not bring one in; add it to your project):
 
 <ChronicleClientTabs snippet="get-started/common/mongo-query" />
 
-Append a `BookBorrowed` against the same `bookId`, query again, and `OnLoan` is `true` with `BorrowedBy` set — and a `BorrowedBook` now sits in its collection. Append a `BookReturned` and both flip back: the flag clears, the `BorrowedBook` disappears. You never wrote an `UPDATE`. The trade-offs between the on-demand and materialized paths are laid out in [read model consistency](../read-models/consistency.md).
+Append a `GetStartedBookBorrowed` against the same `bookId`, query again, and `OnLoan` is `true` with `BorrowedBy` set — and a `GetStartedBorrowedBook` now sits in its collection. Append a `GetStartedBookReturned` and both flip back: the flag clears, the `GetStartedBorrowedBook` disappears. You never wrote an `UPDATE`. The trade-offs between the on-demand and materialized paths are laid out in [read model consistency](../read-models/consistency.md).
 
 ## React when something happens
 
@@ -69,6 +75,6 @@ Projections build *state*. When you need to *do something* the moment a fact lan
 
 <ChronicleClientTabs snippet="get-started/common/reactor" />
 
-No registration, no wiring — drop the class in and every `BookReturned` flows to it. Reactors must be idempotent, because the same event may be delivered more than once (during a replay or a recovery). In a real app you'd inject a notification service here — the [tutorial](/chronicle/tutorial/) and the [Reactors](../reactors/) guide show that, along with how reactors get their dependencies under a host.
+No registration, no wiring — drop the class in and every `GetStartedBookReturned` flows to it. Reactors must be idempotent, because the same event may be delivered more than once (during a replay or a recovery). [Delivery identity](/chronicle/reactors/delivery-identity/) explains what Chronicle does and does not guarantee there. In a real app you'd inject a notification service here — the [tutorial](/chronicle/tutorial/) and the [Reactors](../reactors/) guide show that, along with how reactors get their dependencies under a host.
 
 That's the whole loop — **append → project → react**. The [tutorial](/chronicle/tutorial/) builds exactly this library one concept at a time and explains each as you go; the [Projections](../projections/index.md), [Reducers](../reducers/), and [Reactors](../reactors/) guides go deeper on each piece.
