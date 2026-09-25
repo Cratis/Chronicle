@@ -24,8 +24,8 @@ public class and_reading_the_container_fails : a_sql_read_model
 
     [Fact] void should_report_a_named_sink_error() => _error.ShouldBeOfExactType<FailedToObserveReadModelInstances>();
     [Fact] void should_name_the_read_model() => _error.Message.ShouldContain("test-read-model");
-    [Fact] void should_name_the_container() => _error.Message.ShouldContain("TestReadModel");
-    [Fact] void should_name_the_sink() => _error.Message.ShouldContain("SQL");
+    [Fact] void should_name_the_container() => _error.Message.ShouldContain("observed_read_models");
+    [Fact] void should_name_the_sink() => _error.Message.ShouldEqual("Sink 'SQL' failed to observe read model 'test-read-model' in container 'observed_read_models'.");
     [Fact] void should_keep_the_underlying_error() => _error.InnerException.ShouldBeOfExactType<InvalidOperationException>();
 
     protected override DbConnection CreateConnection() => new SqliteConnection("DataSource=:memory:");

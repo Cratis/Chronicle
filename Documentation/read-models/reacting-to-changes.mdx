@@ -59,7 +59,7 @@ A read model reactor is convenient, not transactional. Design for that:
 **Side effects are best-effort.** Returned events are appended fire-and-forget — a failure is logged, but nothing pauses or retries, because a read model reactor has no partition to fail. Ordering across rapid changes is not guaranteed. Make every handler **idempotent**: it may run again after a reconnect.
 :::
 
-- **Materialized fidelity is reduced.** The materialized API delivers full windows of already-deserialized instances, so the change type is inferred by comparing serialized values keyed by `id`, and the `EventContext` carries only the model key — no event sequence number.
+- **Materialized fidelity is reduced.** The materialized API delivers full windows of already-deserialized instances, so the change type is inferred by comparing serialized values keyed by `id`, and the `EventContext` carries only the model key — no event sequence number. On SQL, several changes within one polling interval can collapse into one `[Materialized]` dispatch.
 - **Reducer-backed read models infer additions client-side.** Reducers compute changesets locally with no server-provided change type, so the first time a key is seen it is reported as `Added` and everything after as `Modified`. Only projection-backed read models carry the precise change type and causing event context.
 
 When you need transactional, ordered, replayable reactions, react to the **domain event** with a [reactor](../reactors/) rather than to the derived read model.

@@ -424,18 +424,19 @@ public class Sink : ISink
     {
         var containerName = occurrence?.Value ?? ActiveTableName;
 
-        // The changeset notifier that feeds Watch only publishes active projection changes, whereas
-        // this sink must also observe direct writes, replay occurrences, and changes from other silos.
-        // Query the database with a fresh context each time rather than relying on EF's change tracker.
-        async Task<IEnumerable<DynamicReadModelEntity>> ReadPage()
+        // Watch notifies projection changes, but misses reducer writes, removals, and the replay
+        // rename swap. Poll stored state like other SQL live queries to observe all of these changes.
+        async Task<IEnumerable<ObservedPage>> ReadPage()
         {
             await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            var totalCount = await scope.DbContext.Entries.CountAsync();
             var keyName = _columns.First(column => column.IsKey).Name;
-            return await scope.DbContext.Entries.AsNoTracking().OrderBy(entry => EF.Property<object>(entry, keyName)).Skip(skip).Take(take).ToArrayAsync();
+            var entries = await scope.DbContext.Entries.AsNoTracking().OrderBy(entry => EF.Property<object>(entry, keyName)).Skip(skip).Take(take).ToArrayAsync();
+            return [new ObservedPage(totalCount, entries)];
         }
 
-        return LiveQuery.Observe(ReadPage, _database.LiveQueryPollingInterval, DynamicReadModelEntityComparer.Instance)
-            .Select(entries => entries.Select(MaterializeExpando).ToArray().AsEnumerable())
+        return LiveQuery.Observe(ReadPage, _database.LiveQueryPollingInterval, ObservedPageComparer.Instance)
+            .Select(pages => pages.Single().Entries.Select(MaterializeExpando).ToArray().AsEnumerable())
             .Catch<IEnumerable<ExpandoObject>, Exception>(error =>
                 Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, containerName, error)));
     }
@@ -1595,6 +1596,20 @@ public class Sink : ISink
         }
 
         return key.Value?.ToString() ?? string.Empty;
+    }
+
+    sealed record ObservedPage(long TotalCount, DynamicReadModelEntity[] Entries);
+
+    sealed class ObservedPageComparer : IEqualityComparer<ObservedPage>
+    {
+        public static readonly ObservedPageComparer Instance = new();
+
+        public bool Equals(ObservedPage? x, ObservedPage? y) =>
+            ReferenceEquals(x, y) ||
+            (x is not null && y is not null && x.TotalCount == y.TotalCount &&
+             x.Entries.SequenceEqual(y.Entries, DynamicReadModelEntityComparer.Instance));
+
+        public int GetHashCode(ObservedPage obj) => HashCode.Combine(obj.TotalCount, obj.Entries.Length);
     }
 
     sealed class DynamicReadModelEntityComparer : IEqualityComparer<DynamicReadModelEntity>

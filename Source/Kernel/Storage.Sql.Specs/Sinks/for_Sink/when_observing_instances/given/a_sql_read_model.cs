@@ -72,8 +72,8 @@ public abstract class a_sql_read_model : Specification
             "test-namespace",
             new ReadModelDefinition(
                 "test-read-model",
-                "TestReadModel",
                 ContainerName,
+                "TestReadModel",
                 ReadModelOwner.Client,
                 ReadModelSource.Code,
                 ReadModelObserverType.Projection,
