@@ -1,0 +1,32 @@
+<Project>
+    <!--
+    Publishes the kernel once into Source/Kernel/Server/out for the local integration images.
+
+    Integration/Api and Integration/Client both need that publish, and a solution build runs them in
+    parallel. When each ran its own `dotnet publish`, the two processes wiped and wrote the same `out`
+    directory and rebuilt the same projects at the same time - and each nested build of Contracts ran
+    the proto generator, which deletes Source/Kernel/Protobuf before writing it, so the two generators
+    tore each other's files down and one aborted (exit 134).
+
+    Both projects now reach this target through the MSBuild task with identical global properties.
+    MSBuild runs a target once per project instance and hands every later caller the cached result, so
+    the wipe and the publish happen exactly once per build, whichever project asks first.
+
+    The nested publish passes DisableProtoGeneration=true: the outer build has already generated the
+    protos from the same contracts, and the image does not contain them.
+    -->
+    <PropertyGroup>
+        <ServerProject>$(MSBuildThisFileDirectory)../Source/Kernel/Server/Server.csproj</ServerProject>
+        <KernelPublishDirectory>$(MSBuildThisFileDirectory)../Source/Kernel/Server/out</KernelPublishDirectory>
+        <_RidArgument Condition="'$(KernelPublishRid)' != ''">-r $(KernelPublishRid) --self-contained false</_RidArgument>
+    </PropertyGroup>
+
+    <Target Name="PublishKernel">
+        <!-- `dotnet publish` merges into the target directory rather than replacing it, so a previous
+             publish with different arguments (e.g. without -r, leaving a RID-specific subfolder) can shadow
+             the RID-targeted assemblies this publish produces. That showed up as Microsoft.Data.SqlClient
+             throwing PlatformNotSupportedException on linux-arm64, from a leftover AnyCPU reference. -->
+        <RemoveDir Directories="$(KernelPublishDirectory)" />
+        <Exec Command="dotnet publish &quot;$(ServerProject)&quot; -c Debug -p:DefineConstants=DEVELOPMENT -p:DisableProtoGeneration=true --no-restore $(_RidArgument) -o &quot;$(KernelPublishDirectory)&quot;" />
+    </Target>
+</Project>
