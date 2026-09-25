@@ -160,6 +160,11 @@ public class InMemorySink(
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
+        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            RemoveChildFromDocument(result, childRemovedFromAll);
+        }
+
         ((dynamic)result).id = key.Value;
         lock (_collectionLock)
         {
@@ -383,13 +388,20 @@ public class InMemorySink(
         {
             foreach (var document in Collection.Values)
             {
-                var children = document.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, childRemoved.ArrayIndexers);
-                var child = children.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
-                if (child is not null)
-                {
-                    children.Remove(child);
-                }
+                RemoveChildFromDocument(document, childRemoved);
             }
+        }
+    }
+
+#pragma warning disable SA1204 // Static elements should appear before instance elements
+    static void RemoveChildFromDocument(ExpandoObject document, ChildRemovedFromAll childRemoved)
+#pragma warning restore SA1204
+    {
+        var children = document.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, childRemoved.ArrayIndexers);
+        var child = children.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
+        if (child is not null)
+        {
+            children.Remove(child);
         }
     }
 
