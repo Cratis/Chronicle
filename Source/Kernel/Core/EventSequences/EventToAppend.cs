@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -27,4 +28,10 @@ public record EventToAppend(
     IEnumerable<Tag> Tags,
     JsonObject Content,
     DateTimeOffset? Occurred = null,
-    Subject? Subject = null);
+    Subject? Subject = null)
+{
+    /// <summary>
+    /// Gets or inits the optional event-specific causation chain. When absent, the batch chain is used.
+    /// </summary>
+    public IEnumerable<Causation>? Causation { get; init; }
+}
