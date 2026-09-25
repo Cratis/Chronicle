@@ -50,7 +50,9 @@ public class and_registration_is_cancelled : given.all_dependencies
             _started.TrySetResult();
             try
             {
-                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                var cancellation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                await using var registration = token.Register(() => cancellation.TrySetCanceled(token));
+                await cancellation.Task;
             }
             finally
             {
