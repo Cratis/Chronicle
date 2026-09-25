@@ -25,11 +25,11 @@ namespace Cratis.Chronicle.Reactors;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="sideEffectHandlers">
 /// Optional <see cref="IReactorSideEffectHandlers"/> used to process events returned by handler methods.
-/// When <see langword="null"/>, any return values are silently discarded.
+/// When <see langword="null"/>, a non-null return value fails the invocation.
 /// </param>
 /// <param name="eventStore">
 /// Optional <see cref="IEventStore"/> supplied to side effect handlers when appending events.
-/// When <see langword="null"/>, any return values are silently discarded even if handlers are registered.
+/// When <see langword="null"/>, a non-null return value fails the invocation even if handlers are registered.
 /// </param>
 /// <param name="reactorContextValuesBuilder">
 /// Optional <see cref="IReactorContextValuesBuilder"/> used to resolve append-metadata for side-effect events.
@@ -148,16 +148,16 @@ public class ReactorInvoker(
                 return null;
             }
 
-            if (sideEffectHandlers is null || eventStore is null)
-            {
-                return null;
-            }
-
             var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
             var result = resultProperty?.GetValue(task);
             if (result is null)
             {
                 return null;
+            }
+
+            if (sideEffectHandlers is null || eventStore is null)
+            {
+                throw new UnhandledReactorReturnValue(targetType, result.GetType());
             }
 
             var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
@@ -174,16 +174,21 @@ public class ReactorInvoker(
             }
             else
             {
-                logger.ReactorReturnValueNotHandled(targetType.GetReactorId(), result.GetType().Name);
+                throw new UnhandledReactorReturnValue(targetType, result.GetType());
             }
 
             return null;
         }
 
         // Synchronous side-effect return value (e.g. TEvent, IEnumerable<T>)
-        if (sideEffectHandlers is null || eventStore is null || returnValue is null)
+        if (returnValue is null)
         {
             return null;
+        }
+
+        if (sideEffectHandlers is null || eventStore is null)
+        {
+            throw new UnhandledReactorReturnValue(targetType, returnValue.GetType());
         }
 
         var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
@@ -200,7 +205,7 @@ public class ReactorInvoker(
         }
         else
         {
-            logger.ReactorReturnValueNotHandled(targetType.GetReactorId(), returnValue.GetType().Name);
+            throw new UnhandledReactorReturnValue(targetType, returnValue.GetType());
         }
 
         return null;
