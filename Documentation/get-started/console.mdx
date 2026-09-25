@@ -33,7 +33,7 @@ Everything in Chronicle is reached through a `ChronicleClient`. From a client yo
 
 <ChronicleClientTabs snippet="get-started/console/connect" />
 
-`ChronicleConnectionString.Development` is the built-in connection string for the local development kernel — the same one `new ChronicleClient()` uses when you call it with no arguments. Spelling it out keeps the console version explicit; point it elsewhere with `ChronicleConnectionString.Default` (no credentials) or your own `new ChronicleConnectionString("chronicle://…")`.
+Each client has a built-in development connection for the local kernel, which carries the kernel's well-known development credentials: `ChronicleConnectionString.Development` in C#, `ChronicleOptions.development()` in Kotlin and TypeScript, and `Chronicle.Connections.ConnectionString.development()` in Elixir. Spell it out as shown. The .NET client also uses these credentials when you call `new ChronicleClient()` with no arguments, but not every client fills them in for a connection string without credentials. To connect to another kernel, pass your own `chronicle://…` connection string.
 
 That single `eventStore` is your handle to everything that follows:
 
