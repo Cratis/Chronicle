@@ -42,6 +42,18 @@ public class when_the_kernel_resolves_it_for_an_event_store_namespace : Specific
         _error = await Catch.Exception(async () =>
         {
             _storage = sqlJobsStorage.GetFor("the-event-store", "the-namespace");
+
+            var jobId = JobId.New();
+            var save = await _storage.Jobs.Save(jobId, new JobState
+            {
+                Id = jobId,
+                Details = new JobDetails("a job"),
+                Type = new JobType("a-job-type"),
+                Status = JobStatus.Running,
+                Created = DateTimeOffset.UtcNow
+            });
+            save.RethrowError();
+
             var read = await _storage.Jobs.GetJobs();
             _jobs = read.Match(jobs => jobs, exception => throw exception);
         });
@@ -59,7 +71,7 @@ public class when_the_kernel_resolves_it_for_an_event_store_namespace : Specific
 
     [Fact] void should_have_the_job_tables() => _error.ShouldBeNull();
 
-    [Fact] void should_read_no_jobs_from_a_database_nothing_has_written_to() => _jobs.ShouldBeEmpty();
+    [Fact] void should_read_back_the_job_it_wrote() => _jobs.Count.ShouldEqual(1);
 
     /// <inheritdoc/>
     public void Dispose()
