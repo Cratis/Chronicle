@@ -42,6 +42,6 @@ public class and_subscribing_to_two_generations(context context) : Given<context
         }
     }
 
-    [Fact] void should_receive_generation_one() => Context.First.Content["number"]!.GetValue<int>().ShouldEqual(1);
-    [Fact] void should_receive_generation_two() => Context.Second.Content["number"]!.GetValue<int>().ShouldEqual(2);
+    [Fact] void should_receive_generation_one() => Context.First.Content.Single().Value!.GetValue<int>().ShouldEqual(1);
+    [Fact] void should_receive_generation_two() => Context.Second.Content.Single().Value!.GetValue<int>().ShouldEqual(2);
 }
