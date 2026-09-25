@@ -4,7 +4,7 @@ uid: Chronicle.ReadModels.Querying
 
 # Querying Read Models
 
-Chronicle's read model API is keyed. You can get an instance by its id, get snapshots of it, watch it, and replay the whole collection. What you cannot do through `IReadModels` is filter, page, or search by a field that is not the key — there is no predicate-taking read and no `IQueryable`.
+Chronicle's read model API is keyed. You can get an instance by its id, get snapshots of it, watch it, and replay the whole collection. What you cannot do through `IReadModels` is filter or search by a field that is not the key — there is no predicate-taking read and no `IQueryable`. Paging is the one exception: `IReadModels.Materialized` reads the stored instances a page at a time, without filtering or sorting — see [Materialized read models](materialized-pagination.mdx).
 
 That is deliberate, and this page says so plainly, because from the outside a missing method looks the same whether it was left out or never intended.
 

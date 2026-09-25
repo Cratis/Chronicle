@@ -1,5 +1,7 @@
 ```csharp
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
 
 public interface IReactorShippingService
@@ -13,9 +15,11 @@ public interface IReactorPricingService
 }
 
 [EventType]
-public record EventProcessingOrderPlaced;
+public record EventProcessingOrderPlaced(decimal Total);
 
-public record EventProcessingOrder(string Id, decimal Total);
+// A read model is resolved by Chronicle only when a projection or reducer builds it.
+[FromEvent<EventProcessingOrderPlaced>]
+public record EventProcessingOrder([Key] string Id, decimal Total);
 
 public class EventProcessingOrderProcessor(IReactorShippingService shipping) : IReactor
 {

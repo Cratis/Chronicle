@@ -22,7 +22,7 @@ A reactor may run more than once for the same event (replay, recovery, redeploy)
 Reach for the event first — it carries the truth of what happened, and `context.EventSourceId` tells you what it happened *to*. But some reactions genuinely need more state. Say the notification should include the book's title — that lives in the read model, not the event.
 
 :::tip
-You *can* read state from a reactor — just mind the consistency level. The **materialized** read model (what the projection writes to the sink) is [eventually consistent](../read-models/consistency.md) and may not have caught up with the very event you're reacting to. `IReadModels.GetInstanceById` is **strongly consistent**: it rebuilds the instance from the event log on demand, so it includes the event in your hand.
+You *can* read state from a reactor — just mind the consistency level. A **materialized** read model (what the projection writes to the sink, and the default) is [eventually consistent](../read-models/consistency.md) and may not have caught up with the very event you're reacting to — whether you read it through `IReadModels.GetInstanceById` or take it as a handler parameter. Mark the read model `[Passive]` when the reaction needs it to include the event in your hand: Chronicle then computes it from the event log on every read.
 :::
 
 <ChronicleClientTabs snippet="scenarios/react-to-an-event/reading-state" />
