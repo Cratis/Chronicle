@@ -33,4 +33,10 @@ public class TestableReplayObserver(
     /// <returns>The prepared steps.</returns>
     public Task<IImmutableList<JobStepDetails>> PrepareStepsForTesting(ReplayObserverRequest request) =>
         PrepareSteps(request);
+
+    /// <summary>
+    /// Invokes replay completion after preparing its test state.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task CompleteForTesting() => OnAllStepsCompleted();
 }

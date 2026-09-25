@@ -146,14 +146,15 @@ public class ReplayObserver(
             }
         }
 
-        // TODO: Do we need to do anything special if any replaying partitions failed?
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
         // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
         // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
-        // Replay(), so Replayed() would be queued and deadlock. Returning first lets the Observer
-        // grain become free to process Replayed().
-        _ = observer.Replayed(State.LastHandledEventSequenceNumber);
+        // Replay(), so the completion call would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process it.
+        _ = AllStepsCompletedSuccessfully && State.HandledAllEvents && State.LastHandledEventSequenceNumber.IsActualValue
+            ? observer.ReplayedSuccessfully(State.LastHandledEventSequenceNumber)
+            : observer.Replayed(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

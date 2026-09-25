@@ -179,12 +179,27 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that the observer replayed all events successfully, including previously failed partitions.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled by the replay.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayedSuccessfully(EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
     /// Notify that the partition has been replayed.
     /// </summary>
     /// <param name="partition">The partition that has been replayed.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that a partition replay finished without handling all events.
+    /// </summary>
+    /// <param name="partition">The partition being replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled before replay stopped.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition has failed.

@@ -22,4 +22,10 @@ public record ReplayObserverPartitionRequest(
     Key Key,
     EventSequenceNumber FromSequenceNumber,
     EventSequenceNumber ToSequenceNumber,
-    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key);
+    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key)
+{
+    /// <summary>
+    /// Gets whether this replay includes all event types, so a successfully replayed partition can resolve an old failure.
+    /// </summary>
+    public bool ReplaysAllEventTypes { get; init; }
+}
