@@ -230,8 +230,9 @@ public class ResolveFutures(
     /// <param name="parentKey">The key value of the parent item being located.</param>
     /// <param name="allIndexers">Receives the full root-to-parent indexer chain when the method returns <see langword="true"/>.</param>
     /// <remarks>
-    /// For a direct child (one array level between root and parent), <paramref name="allIndexers"/>
-    /// receives a single entry for the parent's collection. For deeper hierarchies the method
+    /// For a first-level child the root read model is the parent, so no ancestor indexers are
+    /// needed. For a child of an array element, <paramref name="allIndexers"/> receives a single
+    /// entry for the parent's collection. For deeper hierarchies the method
     /// recurses through each intermediate array, locating the enclosing element at each level and
     /// recording its identifier, so that EnsurePath can navigate the full path
     /// without missing-indexer errors.
@@ -252,16 +253,16 @@ public class ResolveFutures(
 
         if (chain.Count == 0)
         {
-            // The child projection's parent is root, so the resolved item is a direct child of the root.
-            // Use the child projection's ChildrenPropertyPath (e.g. [Configurations]) to find the
-            // collection. ParentPath is PropertyPath.Root for first-level children and cannot be used
-            // directly. The caller adds the child's own ArrayIndexer; no ancestor indexers are needed.
-            var directCollectionValue = childProjection.ChildrenPropertyPath.GetValue(currentState, ArrayIndexers.NoIndexers);
-            var directCollection = AsExpandoCollection(directCollectionValue);
-            if (directCollection is null) return false;
-            var directList = directCollection.ToList();
+            // A first-level child's parent is the root document, not an item in the child collection.
+            // SetInitialState stores the root key on the document even when the read model has no
+            // declared id property. The caller adds the child's own indexer; there are no ancestors.
+            var rootSchema = childProjection.Parent!.TargetReadModelSchema;
+            var rootKeyProperty = rootSchema.HasKeyProperty()
+                ? rootSchema.GetKeyProperty().Name
+                : rootSchema.GetLikelyKeyPropertyName();
+            if (rootKeyProperty is null) return false;
 
-            return directList.Contains(parentIdentifiedByProperty, parentKey);
+            return new[] { currentState }.Contains(new PropertyPath(rootKeyProperty), parentKey);
         }
 
         if (chain.Count == 1)
