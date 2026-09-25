@@ -11,7 +11,7 @@ everything below that is generated:
 Source/Kernel/Core                 Arc artifacts — [Command] / [ReadModel] records with [BelongsTo(service)]
         │                          ← this is the only layer you write
         │  GrpcCodeGenerator       (Source/Tools/GrpcCodeGenerator, run from Core.csproj)
-        ├──────────────────────▶   Source/Kernel/Core/Services   the class serving each contract
+        ├──────────────────────▶   Source/Kernel/Grpc            the class serving each contract
         ├──────────────────────▶   Source/Kernel/Server          its registration and endpoint mapping
         ▼
 Source/Kernel/Contracts            generated C# gRPC contracts — I<Service>.cs + [ProtoContract] DTOs
@@ -121,7 +121,7 @@ Never work around it by declaring a transport type in a Core artifact.
 
 ### What you never write: the class that serves the contract
 
-The generator emits the implementation too — `Source/Kernel/Core/Services/<area>/<Service>.cs`, dispatching each
+The generator emits the implementation too — `Source/Kernel/Grpc/<area>/<Service>.cs`, dispatching each
 operation to its Core artifact — and the registrations that add and map them, in
 `Source/Kernel/Server/GeneratedGrpcServices.cs`. A hand-written service under `Cratis.Chronicle.Services` is an
 area that has not been converted yet, not a pattern to copy: that namespace is what #2908 deletes.
