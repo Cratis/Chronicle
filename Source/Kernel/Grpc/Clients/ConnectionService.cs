@@ -126,6 +126,11 @@ internal sealed class ConnectionService(
     /// Anonymous, because a client that cannot talk to this server should be told so plainly rather than being
     /// turned away as unauthenticated - the whole point is to name the mismatch. The check reads nothing but the
     /// descriptor set the caller sent and the one this server ships.
+    /// <para>
+    /// Ordered by protocol version rather than always treating the caller as the older side - see
+    /// <see cref="ConnectCompatibility"/> for why that distinction matters and what happens when it is
+    /// skipped (#4058).
+    /// </para>
     /// </remarks>
     [AllowAnonymous]
     public Task<CompatibilityResponse> CheckCompatibility(CompatibilityRequest request)
@@ -138,9 +143,11 @@ internal sealed class ConnectionService(
 
         try
         {
-            var report = WireCompatibilityChecker.Check(
+            var report = ConnectCompatibility.Check(
                 WireContractReader.Read(request.DescriptorSet),
-                _wireContract.Value);
+                request.ProtocolVersion,
+                _wireContract.Value,
+                response.ServerProtocolVersion);
 
             response.IsCompatible = report.IsCompatible;
             response.Incompatibilities = [.. report.Incompatibilities.Select(_ => _.ToString())];

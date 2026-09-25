@@ -28,7 +28,7 @@ Each client names the operation in its own idiom, but the inputs are the same: t
 
 If no instance exists for that key, clients return their normal "not found" shape: `null`, `nil`, or an empty result depending on the language. Treat that as "no state exists yet," not as a projection failure. For a materialized read model this covers both a key that was never created and one that has been removed — the observer is authoritative, so Chronicle does not fall back to a replay that would resurrect it.
 
-If the read model type itself is unknown, that is a configuration error. Register the projection, reducer, or read model before querying it.
+If the read model type itself is unknown, that is a configuration error, not a missing instance. The kernel rejects the lookup with an error naming the requested read model identifier. Use the registered identifier rather than its container name, and register the projection, reducer, or read model before querying it.
 
 ## Choosing which you get
 

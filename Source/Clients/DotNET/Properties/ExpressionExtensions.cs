@@ -49,6 +49,13 @@ public static class ExpressionExtensions
     /// lambda parameter. Method calls, string interpolation, arithmetic, conditionals, constants, and expressions that
     /// ignore the parameter (such as <c language="csharp">_ => DateTimeOffset.UtcNow</c>) all return <see langword="false"/>, because the builder
     /// extracts a property path from the expression at definition time rather than executing it.
+    /// <para>
+    /// The one deliberate exception is a call to a well-known <see cref="DerivedPropertyFunctions">derived property
+    /// function</see> — such as <c language="csharp">c => c.Occurred.ISOWeek()</c> — as the outermost call in the
+    /// expression, on a receiver that is itself a supported member-access chain. That is folded into the returned
+    /// <see cref="PropertyPath"/> rather than rejected; any other method call, including a call to an unrecognized
+    /// zero-argument extension method, is still rejected exactly as before.
+    /// </para>
     /// </remarks>
     public static bool TryGetPropertyPath(this Expression expression, out PropertyPath propertyPath)
     {
@@ -66,6 +73,17 @@ public static class ExpressionExtensions
         }
 
         var members = new List<string>();
+
+        if (current is MethodCallExpression methodCall && TryGetDerivedPropertyFunctionReceiver(methodCall, out var receiver))
+        {
+            members.Insert(0, methodCall.Method.Name);
+            current = receiver;
+            if (current is UnaryExpression { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked } receiverUnary)
+            {
+                current = receiverUnary.Operand;
+            }
+        }
+
         while (current is MemberExpression memberExpression)
         {
             members.Insert(0, memberExpression.Member.Name);
@@ -78,6 +96,30 @@ public static class ExpressionExtensions
         }
 
         propertyPath = new PropertyPath(string.Join('.', members));
+        return true;
+    }
+
+    /// <summary>
+    /// Determine if a method call is a recognized, zero-argument <see cref="DerivedPropertyFunctions">derived
+    /// property function</see> invoked as an extension method (for example <c language="csharp">dateTimeOffset.ISOWeek()</c>),
+    /// as opposed to an arbitrary method call - which is still rejected.
+    /// </summary>
+    /// <param name="methodCall">The <see cref="MethodCallExpression"/> to check.</param>
+    /// <param name="receiver">When this method returns <see langword="true"/>, the expression the function was called on.</param>
+    /// <returns>True if the method call is a recognized derived property function, false otherwise.</returns>
+    static bool TryGetDerivedPropertyFunctionReceiver(MethodCallExpression methodCall, out Expression receiver)
+    {
+        receiver = null!;
+
+        if (methodCall.Arguments.Count != 1 ||
+            !methodCall.Method.IsStatic ||
+            !methodCall.Method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), inherit: false) ||
+            !DerivedPropertyFunctions.All.ContainsKey(methodCall.Method.Name))
+        {
+            return false;
+        }
+
+        receiver = methodCall.Arguments[0];
         return true;
     }
 }

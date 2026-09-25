@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
     /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the connection.</param>
     /// <param name="certificatePath">Path to the TLS certificate file.</param>
     /// <param name="certificatePassword">Password for the TLS certificate file.</param>
-    /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect. Useful for short-lived clients such as CLIs.</param>
+    /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect. Useful for short-lived clients such as CLIs. When not specified, falls back to the connection string's <c language="csharp">skipCompatibilityCheck</c> option, defaulting to false.</param>
     /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect. Useful for short-lived clients such as CLIs.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
         bool? skipTlsValidation = null,
         string? certificatePath = null,
         string? certificatePassword = null,
-        bool skipCompatibilityCheck = false,
+        bool? skipCompatibilityCheck = null,
         bool skipKeepAlive = false)
     {
         services.TryAddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
@@ -45,6 +45,7 @@ public static class ServiceCollectionExtensions
         {
             connectionString ??= connectionStringFactory?.Invoke(sp) ?? ChronicleConnectionString.Default;
             skipTlsValidation ??= connectionString.SkipTlsValidation;
+            skipCompatibilityCheck ??= connectionString.SkipCompatibilityCheck;
             var logger = sp.GetService<ILogger<ChronicleConnection>>();
 #pragma warning disable CA1848 // Use the LoggerMessage delegates
             logger?.LogInformation("Configuring Chronicle connection with connection string: {RedactedConnectionString}", connectionString.Redacted);
@@ -91,7 +92,7 @@ public static class ServiceCollectionExtensions
                 certificatePath,
                 certificatePassword,
                 tokenProvider,
-                skipCompatibilityCheck: skipCompatibilityCheck,
+                skipCompatibilityCheck: skipCompatibilityCheck.Value,
                 skipKeepAlive: skipKeepAlive);
         });
 

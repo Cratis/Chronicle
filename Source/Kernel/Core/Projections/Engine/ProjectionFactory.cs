@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -320,6 +321,19 @@ public class ProjectionFactory(
         return schemaProperty;
     }
 
+    /// <summary>
+    /// Answers whether a key expression is a constant rather than something read off the event.
+    /// </summary>
+    /// <param name="key">The <see cref="PropertyExpression"/> to consider.</param>
+    /// <returns>True when the expression is a constant.</returns>
+    /// <remarks>
+    /// Asked of a parent key, because a constant names the parent document outright and therefore has no
+    /// parent event behind it. Uses the same recognition that resolves the expression, so the two cannot
+    /// drift apart.
+    /// </remarks>
+    static bool IsConstantExpression(PropertyExpression? key) =>
+        key is not null && key.Value.Length != 0 && new ValueExpressionResolver().CanResolve(key.Value);
+
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
             CreateInitialState(readModelSchema) :
@@ -517,7 +531,9 @@ public class ProjectionFactory(
             projectionDefinition.IsRewindable,
             projectionDefinition.AutoMap,
             noAutoMapProperties,
-            childProjections);
+            childProjections,
+            projectionDefinition.SubscribesToAllEvents,
+            projectionDefinition.SubscribesToAllEvents ? keyResolvers.FromEventSourceId : null);
 
         // Set parent relationships immediately after creation
         // This ensures children have their Parent set before any event resolution
@@ -579,7 +595,11 @@ public class ProjectionFactory(
                     .AddChildFromEventProperty(childrenAccessorProperty, valueProvider).Subscribe());
         }
 
-        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
+        // Resolved eagerly, not lazily, so that a dynamic property path is validated (and any
+        // DynamicPropertyPathOnNonDynamicProperty raised) at projection-creation time, regardless of whether the
+        // projection has any per-event-type `from` block to piggyback the enumeration on - an `all`-only
+        // projection has none.
+        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
             var fromObservable = SetupFromDefinition(
@@ -604,6 +624,23 @@ public class ProjectionFactory(
                 eventType,
                 isChild,
                 eventTypeSchemas);
+        }
+
+        // A projection that subscribes to all events (the `all` block / .FromAll()) has no per-event-type `From`
+        // registration to hang its every-event mappers off - by design, since the entire point is to also cover
+        // event types that do not exist yet. Give it one subscription against every event instead, skipping event
+        // types already handled by an explicit `from` above so those do not get the every-event mappers applied twice.
+        if (projectionDefinition.SubscribesToAllEvents && !isChild)
+        {
+            var explicitlyHandledEventTypeIds = projectionDefinition.From.Keys.Select(_ => _.Id).ToHashSet();
+            projection.Event
+                .Where(_ => !explicitlyHandledEventTypeIds.Contains(_.Event.Context.EventType.Id))
+                .Project(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty,
+                    propertyMappersForEveryEventType,
+                    childrenAccessorProperty.IsRoot ? null : projection.InitialModelState,
+                    subscriptions: projection.Subscriptions);
         }
 
         SetupRemovedWith(
@@ -761,32 +798,48 @@ public class ProjectionFactory(
 
     PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression)
     {
-        var schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(propertyPath);
-        if (propertyPath.LastSegment is ThisAccessor)
-        {
-            schemaProperty = new JsonSchemaProperty
-            {
-                Type = projection.TargetReadModelSchema.Type,
-                Format = projection.TargetReadModelSchema.Format
-            };
-        }
-        else
-        {
-            if (schemaProperty is null && propertyPath.LastSegment is not ThisAccessor)
-            {
-                schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(propertyPath.LastSegment.Value));
-            }
-
-            schemaProperty ??= new JsonSchemaProperty
-            {
-                Type = JsonObjectType.None
-            };
-        }
-
         // Check if this is a dynamic property path (dictionary with runtime-determined keys)
         // Pattern: propertyName.$eventContext... or propertyName.$causedBy...
         var propertyPathString = propertyPath.Path;
-        if (propertyPathString.Contains(".$", StringComparison.Ordinal))
+        var isDynamicPropertyPath = propertyPathString.Contains(".$", StringComparison.Ordinal);
+
+        JsonSchemaProperty? schemaProperty;
+        if (isDynamicPropertyPath)
+        {
+            // The path's own last segment (e.g. "id" in "eventCountByType.$eventContext.eventType.id") is part of
+            // the dynamic key expression, not a real property on the read model - looking it up by that name would
+            // risk matching an unrelated, identically-named top-level property and inheriting its schema (and
+            // therefore its value type). A dictionary has no declared value schema of its own, so default to the
+            // int64 shape count/increment/decrement/add/subtract need; a concrete base property is still honored
+            // and validated below.
+            schemaProperty = new JsonSchemaProperty { Type = JsonObjectType.Integer, Format = "int64" };
+        }
+        else
+        {
+            schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(propertyPath);
+            if (propertyPath.LastSegment is ThisAccessor)
+            {
+                schemaProperty = new JsonSchemaProperty
+                {
+                    Type = projection.TargetReadModelSchema.Type,
+                    Format = projection.TargetReadModelSchema.Format
+                };
+            }
+            else
+            {
+                if (schemaProperty is null && propertyPath.LastSegment is not ThisAccessor)
+                {
+                    schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(propertyPath.LastSegment.Value));
+                }
+
+                schemaProperty ??= new JsonSchemaProperty
+                {
+                    Type = JsonObjectType.None
+                };
+            }
+        }
+
+        if (isDynamicPropertyPath)
         {
             // Extract the base property name (before .$)
             var dynamicKeyIndex = propertyPathString.IndexOf(".$", StringComparison.Ordinal);
@@ -794,7 +847,30 @@ public class ProjectionFactory(
 
             // Get or create the schema property for the base property and mark it as dynamic
             var baseSchema = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(basePropertyPath));
-            baseSchema?.ActualTypeSchema.MarkAsDynamic();
+            if (baseSchema is not null)
+            {
+                var actualSchema = baseSchema.ActualTypeSchema;
+                if (!actualSchema.IsDynamic())
+                {
+                    if (actualSchema.Type == JsonObjectType.Object && actualSchema.Properties.Count == 0)
+                    {
+                        // Empty object schema - safe to mark as dynamic.
+                        actualSchema.MarkAsDynamic();
+                    }
+                    else if (actualSchema.Type == JsonObjectType.None)
+                    {
+                        // Schema type not yet determined - mark as dynamic.
+                        actualSchema.MarkAsDynamic();
+                    }
+                    else
+                    {
+                        // Property exists and has a concrete, non-dynamic schema - a dynamic key segment is not valid here.
+                        throw new DynamicPropertyPathOnNonDynamicProperty(propertyPath, basePropertyPath);
+                    }
+                }
+            }
+
+            // If baseSchema is null, the property doesn't exist yet and will be created as dynamic.
         }
 
         return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty, expression);
@@ -936,7 +1012,7 @@ public class ProjectionFactory(
         var parentProjection = projection.HasParent ? projection.Parent! : projection;
         var parentIdentifiedByProperty = projection.HasParent ? projection.Parent!.IdentifiedByProperty : actualIdentifiedByProperty;
         var parentKeyResolver = GetParentKeyResolverFor(parentProjection, effectiveParentKey, parentIdentifiedByProperty);
-        keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
+        keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty, IsConstantExpression(effectiveParentKey));
 
         // A parent-hierarchy resolver routes the child event to its parent document, collapsing distinct event
         // sources onto one document, so it is never purely event-source-keyed.

@@ -96,3 +96,7 @@
   href: CHR0050.mdx
 - name: CHR0051 - Reducer current read model parameter must be nullable
   href: CHR0051.mdx
+- name: CHR0052 - [Encrypted] cannot be applied to an EventSourceId<T>
+  href: CHR0052.mdx
+- name: CHR0053 - [PII] and [Encrypted] cannot both apply to the same value
+  href: CHR0053.mdx

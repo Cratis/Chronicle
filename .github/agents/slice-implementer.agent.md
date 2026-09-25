@@ -1,0 +1,1 @@
+../../.cratis/ai/agents/slice-implementer.md

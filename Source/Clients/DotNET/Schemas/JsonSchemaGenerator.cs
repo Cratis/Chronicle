@@ -1,17 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization.Metadata;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Events;
 using Cratis.Geospatial;
 using Cratis.Json;
 using Cratis.Reflection;
 using Cratis.Serialization;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -23,9 +26,11 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 {
     static FieldInfo? _paramDefaultValueField;
 
+    readonly ConcurrentDictionary<Type, JsonSchema> _schemasByType = new();
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
+    readonly ISecurityMetadataResolver _securityMetadataResolver;
     readonly IDerivedTypes _derivedTypes;
     readonly TypeFormats _typeFormats;
 
@@ -35,9 +40,27 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="derivedTypes"><see cref="IDerivedTypes"/> used to recognize polymorphic base types adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the derived types of the current type universe.</param>
+    /// <remarks>
+    /// Preserves the pre-<c language="csharp">[Encrypted]</c> construction shape exactly - an instance built this way never
+    /// resolves or writes security metadata, because it has no provider to resolve it from. Use the overload
+    /// taking an <see cref="ISecurityMetadataResolver"/> for a generator that resolves both.
+    /// </remarks>
     public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy, IDerivedTypes? derivedTypes = null)
+        : this(metadataResolver, new SecurityMetadataResolver(new KnownInstancesOf<ICanProvideSecurityMetadataForType>(), new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>()), namingPolicy, derivedTypes)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JsonSchemaGenerator"/> class.
+    /// </summary>
+    /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
+    /// <param name="securityMetadataResolver"><see cref="ISecurityMetadataResolver"/> for resolving security metadata - required. Security metadata is never optional: a schema that carries an <c language="csharp">[Encrypted]</c> value is resolved through this exactly as unconditionally as a <c language="csharp">[PII]</c> value is resolved through <paramref name="metadataResolver"/>.</param>
+    /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
+    /// <param name="derivedTypes"><see cref="IDerivedTypes"/> used to recognize polymorphic base types adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the derived types of the current type universe.</param>
+    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, ISecurityMetadataResolver securityMetadataResolver, INamingPolicy namingPolicy, IDerivedTypes? derivedTypes = null)
     {
         _metadataResolver = metadataResolver;
+        _securityMetadataResolver = securityMetadataResolver;
         _derivedTypes = derivedTypes ?? TypeUniverse.CurrentDerivedTypes();
         _typeFormats = new TypeFormats();
 
@@ -63,11 +86,34 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     }
 
     /// <inheritdoc/>
-    public JsonSchema Generate(Type type)
-    {
-        var node = _serializerOptions.GetJsonSchemaAsNode(type, _exporterOptions);
-        return new JsonSchema(node.AsObject());
-    }
+    /// <remarks>
+    /// The schema for a type is generated once and then handed out for every subsequent request. Generating one walks
+    /// the whole type graph reflectively - every property, its nullability, its compliance metadata and any derived
+    /// types - which is work that cannot change while the process is running, because the answer is a function of the
+    /// CLR type alone.
+    /// <para>
+    /// Without the memo this is recomputed per call, and the callers that matter call it per *instance* rather than per
+    /// type: the read model compliance release pass asks for the schema once for every instance it releases, so serving
+    /// a collection of a thousand read models generated the same schema a thousand times - measured at roughly a
+    /// quarter of a second of pure waste for a read model of moderate size, on every emission of an observable query,
+    /// for every subscriber.
+    /// </para>
+    /// <para>
+    /// Sharing one instance is consistent with how a <see cref="JsonSchema"/> is already treated everywhere else: the
+    /// client's event-type schemas are cached and read concurrently on the same assumption, that a schema is
+    /// effectively immutable once built. Its own derived answers are memoized internally with release semantics, so
+    /// concurrent readers of a shared instance are safe.
+    /// </para>
+    /// </remarks>
+    public JsonSchema Generate(Type type) =>
+        _schemasByType.GetOrAdd(
+            type,
+            static (typeToGenerate, generator) =>
+            {
+                var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._exporterOptions);
+                return new JsonSchema(node.AsObject());
+            },
+            this);
 
     static FieldInfo GetParameterDefaultValueField(JsonParameterInfo paramInfo)
     {
@@ -110,29 +156,42 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
+    static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata) =>
+        AddSchemaMetadata(schema, SchemaMetadataCategory.Compliance, metadata.Select(item => (item.MetadataType.Value, item.Details)));
+
     /// <summary>
-    /// Adds compliance metadata to a schema node, descending into an object's properties so that the
-    /// metadata always lands on the leaves that actually hold a value.
+    /// Adds security metadata to a schema node, descending into an object's properties for the same reason
+    /// <see cref="AddComplianceMetadata"/> does - security is applied per value, not per container.
     /// </summary>
     /// <param name="schema">The schema node to add to.</param>
-    /// <param name="metadata">The <see cref="ComplianceMetadata"/> to add.</param>
+    /// <param name="metadata">The <see cref="SecurityMetadata"/> to add.</param>
+    static void AddSecurityMetadata(JsonObject schema, IEnumerable<SecurityMetadata> metadata) =>
+        AddSchemaMetadata(schema, SchemaMetadataCategory.Security, metadata.Select(item => (item.MetadataType.Value, item.Details.Value)));
+
+    /// <summary>
+    /// Adds schema metadata for a given <see cref="SchemaMetadataCategory"/> to a schema node, descending into an
+    /// object's properties so that the metadata always lands on the leaves that actually hold a value.
+    /// </summary>
+    /// <param name="schema">The schema node to add to.</param>
+    /// <param name="category">The <see cref="SchemaMetadataCategory"/> the metadata belongs to.</param>
+    /// <param name="metadata">The metadata type/details pairs to add.</param>
     /// <remarks>
-    /// A compliance marker can be declared on something that is not a single value: a <c language="csharp">[PII]</c> attribute
-    /// on a composite value-object type, or on a property whose type is such an object. Compliance is applied
-    /// per value, so leaving the marker on the container would make Chronicle hand the whole JSON object to the
-    /// value handler and store one opaque ciphertext string where the schema still says "object". Releasing that
-    /// gives back a string, not an object, and the read model then fails to materialize. Pushing the metadata
-    /// down to every leaf keeps encryption symmetric with the release walk, keeps each value independently
-    /// encrypted, and preserves the document shape.
+    /// A schema metadata marker can be declared on something that is not a single value: a <c language="csharp">[PII]</c>
+    /// or <c language="csharp">[Encrypted]</c> attribute on a composite value-object type, or on a property whose type
+    /// is such an object. Both are applied per value, so leaving the marker on the container would make Chronicle
+    /// hand the whole JSON object to the value handler and store one opaque ciphertext string where the schema
+    /// still says "object". Releasing that gives back a string, not an object, and the read model then fails to
+    /// materialize. Pushing the metadata down to every leaf keeps encryption symmetric with the release walk,
+    /// keeps each value independently encrypted, and preserves the document shape.
     /// <para>
-    /// An array-typed node is deliberately left as a container: coarse compliance on a whole collection is an
+    /// An array-typed node is deliberately left as a container: coarse metadata on a whole collection is an
     /// established, separately handled behavior (the collection is blob-encrypted and its shape restored on
     /// release). Object members reached *through* an array's item schema are still descended into.
     /// </para>
     /// </remarks>
-    static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata)
+    static void AddSchemaMetadata(JsonObject schema, SchemaMetadataCategory category, IEnumerable<(string MetadataType, string Details)> metadata)
     {
-        var metadataAsArray = metadata as IReadOnlyCollection<ComplianceMetadata> ?? [.. metadata];
+        var metadataAsArray = metadata as IReadOnlyCollection<(string MetadataType, string Details)> ?? [.. metadata];
 
         if (schema["properties"] is JsonObject properties && properties.Count > 0)
         {
@@ -140,30 +199,31 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             {
                 if (propertySchema is JsonObject propertySchemaObject)
                 {
-                    AddComplianceMetadata(propertySchemaObject, metadataAsArray);
+                    AddSchemaMetadata(propertySchemaObject, category, metadataAsArray);
                 }
             }
 
             return;
         }
 
-        if (!schema.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey))
+        var key = category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
+        if (!schema.ContainsKey(key))
         {
-            schema[ComplianceJsonSchemaExtensions.ComplianceKey] = new JsonArray();
+            schema[key] = new JsonArray();
         }
 
-        var complianceArr = schema[ComplianceJsonSchemaExtensions.ComplianceKey]!.AsArray();
-        foreach (var item in metadataAsArray.Where(item => !HasMetadataOfType(complianceArr, item.MetadataType.Value)))
+        var metadataArr = schema[key]!.AsArray();
+        foreach (var item in metadataAsArray.Where(item => !HasMetadataOfType(metadataArr, item.MetadataType)))
         {
-            complianceArr.Add(JsonSerializer.SerializeToNode(
-                new ComplianceSchemaMetadata(item.MetadataType.Value, item.Details)));
+            metadataArr.Add(JsonSerializer.SerializeToNode(
+                new ComplianceSchemaMetadata(item.MetadataType, item.Details)));
         }
     }
 
     /// <summary>
-    /// Checks whether a compliance array already carries metadata of a given type.
+    /// Checks whether a schema metadata array already carries metadata of a given type.
     /// </summary>
-    /// <param name="complianceArray">The compliance array to check.</param>
+    /// <param name="metadataArray">The schema metadata array to check.</param>
     /// <param name="metadataType">The metadata type to look for.</param>
     /// <returns>True when the metadata type is already present, false if not.</returns>
     /// <remarks>
@@ -171,8 +231,8 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// whose type is itself marked <c language="csharp">[PII]</c>. Recording the same metadata type twice adds nothing and makes
     /// the generated schema noisier to read and to diff.
     /// </remarks>
-    static bool HasMetadataOfType(JsonArray complianceArray, string metadataType) =>
-        complianceArray
+    static bool HasMetadataOfType(JsonArray metadataArray, string metadataType) =>
+        metadataArray
             .OfType<JsonObject>()
             .Any(_ => _[nameof(ComplianceSchemaMetadata.metadataType)]?.GetValue<string>() == metadataType);
 
@@ -243,13 +303,21 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
                 var underlyingItemType = elementType.GetConceptValueType();
                 var itemSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingItemType, _exporterOptions);
 
-                // The element concept's own compliance metadata has to be carried onto the item schema. This
-                // branch bypasses the scalar-concept path above, so without it a [PII] concept loses its
-                // classification the moment it is put in a list — and a value that is encrypted as a scalar
-                // would be persisted in the clear as a list element.
-                if (itemSchema is JsonObject itemSchemaObject && _metadataResolver.HasMetadataFor(elementType))
+                // The element concept's own schema metadata has to be carried onto the item schema. This
+                // branch bypasses the scalar-concept path above, so without it a [PII] or [Encrypted] concept
+                // loses its classification the moment it is put in a list — and a value that is encrypted as a
+                // scalar would be persisted in the clear as a list element.
+                if (itemSchema is JsonObject itemSchemaObject)
                 {
-                    AddComplianceMetadata(itemSchemaObject, _metadataResolver.GetMetadataFor(elementType));
+                    if (_metadataResolver.HasMetadataFor(elementType))
+                    {
+                        AddComplianceMetadata(itemSchemaObject, _metadataResolver.GetMetadataFor(elementType));
+                    }
+
+                    if (_securityMetadataResolver.HasMetadataFor(elementType))
+                    {
+                        AddSecurityMetadata(itemSchemaObject, _securityMetadataResolver.GetMetadataFor(elementType));
+                    }
                 }
 
                 return new JsonObject
@@ -327,11 +395,24 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(type));
         }
 
-        // Add compliance metadata for the property
-        if (context.PropertyInfo?.AttributeProvider is PropertyInfo propInfo &&
-            _metadataResolver.HasMetadataFor(propInfo))
+        // Add security metadata for the type
+        if (_securityMetadataResolver.HasMetadataFor(type))
         {
-            AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
+            AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(type));
+        }
+
+        // Add compliance and security metadata for the property
+        if (context.PropertyInfo?.AttributeProvider is PropertyInfo propInfo)
+        {
+            if (_metadataResolver.HasMetadataFor(propInfo))
+            {
+                AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
+            }
+
+            if (_securityMetadataResolver.HasMetadataFor(propInfo))
+            {
+                AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(propInfo));
+            }
         }
         else if (context.PropertyInfo?.AttributeProvider is ParameterInfo paramInfo &&
             paramInfo.Member.DeclaringType is { } recordType)
@@ -339,9 +420,17 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             var recordProp = recordType.GetProperty(
                 paramInfo.Name ?? string.Empty,
                 BindingFlags.Public | BindingFlags.Instance);
-            if (recordProp is not null && _metadataResolver.HasMetadataFor(recordProp))
+            if (recordProp is not null)
             {
-                AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(recordProp));
+                if (_metadataResolver.HasMetadataFor(recordProp))
+                {
+                    AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(recordProp));
+                }
+
+                if (_securityMetadataResolver.HasMetadataFor(recordProp))
+                {
+                    AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(recordProp));
+                }
             }
         }
 
@@ -391,6 +480,11 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         if (_metadataResolver.HasMetadataFor(declaredType))
         {
             AddComplianceMetadata(representedSchemaObject, _metadataResolver.GetMetadataFor(declaredType));
+        }
+
+        if (_securityMetadataResolver.HasMetadataFor(declaredType))
+        {
+            AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
         }
 
         if (PropertyIsNullable(declaredType, context) &&

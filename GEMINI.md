@@ -1,1 +1,0 @@
-@.cratis/PROJECT.md

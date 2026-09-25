@@ -9,8 +9,11 @@ namespace Cratis.Chronicle.Compatibility;
 /// <remarks>
 /// One engine answers both questions Chronicle asks about compatibility, because they are the same question with
 /// different inputs: the release gate asks whether the contract at HEAD still serves the first release of the
-/// current major; the kernel asks, on every connect, whether it still serves the client that just arrived. Both
+/// current major; on every connect, one of the client and the kernel asks whether it still serves the other. Both
 /// reduce to one question - whether everything the older side expects is still there, unchanged, in the newer one.
+/// This method only answers that question for the two contracts it is handed in the order it is handed them - it
+/// does not know or care which one is physically the client and which is the kernel, only which is older. See
+/// <see cref="ConnectCompatibility"/> for how the connect-time caller decides that order.
 /// <para>
 /// Additions are never reported. A newer contract may add services, methods, messages, fields and enum values
 /// freely - an older peer simply does not use them.

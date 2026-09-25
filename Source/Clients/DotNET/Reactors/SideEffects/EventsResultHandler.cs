@@ -52,10 +52,16 @@ public class EventsResultHandler : IReactorSideEffectHandler
     /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
+        var events = ((IEnumerable<object>)value).ToArray();
+        if (events.Length == 0)
+        {
+            return Result.Success<ReactorSideEffectFailure>();
+        }
+
         var eventSourceId = reactorContext.GetEventSourceId();
         var result = await eventStore.EventLog.AppendMany(
             eventSourceId,
-            (IEnumerable<object>)value,
+            events,
             reactorContext.GetEventStreamType(),
             reactorContext.GetEventStreamId(),
             reactorContext.GetEventSourceType(),

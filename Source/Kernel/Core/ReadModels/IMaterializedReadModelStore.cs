@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <remarks>
 /// A read model is materialized when an observer — a projection or a reducer — writes its state to a sink.
 /// The state is then already there to be read, so it does not have to be projected or reduced again, and it
-/// is released of its PII before it leaves the kernel.
+/// is released of its compliance and security fields before it leaves the kernel.
 /// </remarks>
 public interface IMaterializedReadModelStore
 {

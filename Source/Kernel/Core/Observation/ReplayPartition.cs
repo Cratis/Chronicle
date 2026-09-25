@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Observation;
 public record ReplayPartition(string EventStore, string Namespace, string ObserverId, string EventSequenceId, string Partition)
 {
     /// <summary>
-    /// Handles the command by invoking <see cref="IObserver.ReplayPartition"/> on the target observer grain.
+    /// Handles the command by invoking <see cref="IObserver.ReplayPartition(Concepts.Keys.Key)"/> on the target observer grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
     /// <returns>Awaitable task.</returns>

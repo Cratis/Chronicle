@@ -70,8 +70,14 @@
     <Target Name="_SetupPrivateRefPackaging"
             Condition="'@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != ''">
 
-        <!-- Resolve output assembly paths of private project references -->
-        <MSBuild Projects="@(ProjectReference->WithMetadataValue('PrivateAssets','all'))"
+        <!-- Build-only tools are not runtime dependencies, even when PrivateAssets hides them from NuGet. -->
+        <ItemGroup>
+            <_PrivateRuntimeProjectReference Include="@(ProjectReference)"
+                                             Condition="'%(ProjectReference.PrivateAssets)' == 'all' and '%(ProjectReference.ReferenceOutputAssembly)' != 'false'" />
+        </ItemGroup>
+
+        <!-- Resolve output assembly paths of private runtime project references -->
+        <MSBuild Projects="@(_PrivateRuntimeProjectReference)"
                  Targets="GetTargetPath"
                  Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
             <Output TaskParameter="TargetOutputs" ItemName="_PrivateRefTargetPath" />

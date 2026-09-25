@@ -31,7 +31,7 @@ public class FailedPartition
     /// Gets or sets the attempts for the failed partition.
     /// </summary>
     [ProtoMember(4)]
-    public IEnumerable<FailedPartitionAttempt> Attempts { get; set; }
+    public IEnumerable<FailedPartitionAttempt> Attempts { get; set; } = new List<FailedPartitionAttempt>();
 
     /// <summary>
     /// Gets or sets whether the failure has been resolved.

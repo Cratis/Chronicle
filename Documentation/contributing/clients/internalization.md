@@ -15,10 +15,12 @@ To prevent exposing APIs that are not intended for public use, we package our as
 This approach separates compile-time dependencies (what developers see in IntelliSense) from runtime dependencies (what's available at execution time).
 
 The core idea is to:
+
 - **Package SDK assemblies under `lib/`** as compile-time references
 - **Ship Server, Contracts, Services, and other kernel assemblies as runtime-only assets** in the `runtimes/` folder
 
 This means:
+
 - IntelliSense/autocomplete shows only SDK types
 - `using Cratis.Chronicle.Projections;` binds to SDK's IProjection interface
 - Even if consumers manually type internal server type names, they won't compile (no compile-time reference to those DLLs)

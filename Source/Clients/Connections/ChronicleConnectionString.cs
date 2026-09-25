@@ -130,6 +130,15 @@ public class ChronicleConnectionString
     public bool SkipTlsValidation => _builder.SkipTlsValidation;
 
     /// <summary>
+    /// Gets whether to skip the server compatibility check on connect.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="ChronicleConnectionStringBuilder.SkipCompatibilityCheck"/> for what this does and why
+    /// it exists.
+    /// </remarks>
+    public bool SkipCompatibilityCheck => _builder.SkipCompatibilityCheck;
+
+    /// <summary>
     /// Gets the path to the certificate file for TLS.
     /// </summary>
     public string? CertificatePath => _builder.CertificatePath;

@@ -18,13 +18,13 @@ public class EventToAppend
     /// Gets or sets the EventType.
     /// </summary>
     [ProtoMember(1)]
-    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(2)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Subject.

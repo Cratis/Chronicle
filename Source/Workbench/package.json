@@ -24,7 +24,7 @@
         "@cratis/arc.vite": "^22.6.0",
         "@cratis/components": "^4.1.1",
         "@cratis/fundamentals": "^7.18.1",
-        "@cratis/screenplay-language": "^4.6.0",
+        "@cratis/screenplay-language": "^4.14.0",
         "@monaco-editor/react": "^4.7.0",
         "@primereact/core": "^11.1.0",
         "@primereact/headless": "^11.1.0",

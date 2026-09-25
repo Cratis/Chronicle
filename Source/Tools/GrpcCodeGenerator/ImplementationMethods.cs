@@ -33,8 +33,15 @@ public static class ImplementationMethods
         _ = command.Handle
             ?? throw new UnsupportedServiceShape(command.Type.FullName ?? command.Name, "it has no Handle method to dispatch to.");
 
-        var hasRequest = command.Parameters.Count > 0;
+        var additionalProperties = command.AdditionalProperties;
+        var hasRequest = command.Parameters.Count > 0 || additionalProperties.Count > 0;
         var construction = $"new {QualifiedTypeName.For(command.Type)}({string.Join(", ", command.Parameters.Select(RequestArgument))})";
+        if (additionalProperties.Count > 0)
+        {
+            var assignments = additionalProperties.Select(property =>
+                $"{property.Name} = {ImplementationValues.ToDomain($"request.{ImplementationValues.PropertyName(property.Name)}", property.PropertyType, MemberNullability.Of(property))}");
+            construction += $" {{ {string.Join(", ", assignments)} }}";
+        }
         var pipeline = context.Dependencies.NameFor(ResolveCommandPipelineType(command.Type));
 
         var parameters = hasRequest

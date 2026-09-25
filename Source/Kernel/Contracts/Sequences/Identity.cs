@@ -18,19 +18,19 @@ public class Identity
     /// Gets or sets the Subject.
     /// </summary>
     [ProtoMember(1)]
-    public string Subject { get; set; }
+    public string Subject { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Name.
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the UserName.
     /// </summary>
     [ProtoMember(3)]
-    public string UserName { get; set; }
+    public string UserName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the OnBehalfOf.

@@ -149,12 +149,24 @@ public partial class Observer(
     {
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
-            await TransitionTo<Routing>();
+            await ReviveFromQuarantine();
         }
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
+    public async Task<IEnumerable<EventType>> GetEventTypes()
+    {
+        // An observer subscribed to all events has no fixed event type list to return - the whole
+        // point is that it also covers types that did not exist when it subscribed. Resolve the full,
+        // current set from storage each time rather than a snapshot captured at subscribe time.
+        if (State.SubscribesToAllEvents)
+        {
+            var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetLatestForAllEventTypes();
+            return schemas.Select(_ => _.Type);
+        }
+
+        return Definition.EventTypes;
+    }
 
     /// <inheritdoc/>
     public async Task Subscribe<TObserverSubscriber>(
@@ -247,6 +259,7 @@ public partial class Observer(
 
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
+            await ReviveFromQuarantine();
             return;
         }
 
@@ -255,7 +268,14 @@ public partial class Observer(
             return;
         }
         await ResumeJobs();
-        await TryRecoverAllFailedPartitions();
+
+        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
+        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
+        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
+        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
+        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
+        // in a turn of its own.
+        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
         await TransitionTo<CatchingUpInFlight>();
     }
 
@@ -297,6 +317,7 @@ public partial class Observer(
 
         if (State.RunningState == ObserverRunningState.Quarantined)
         {
+            await ReviveFromQuarantine();
             return;
         }
 
@@ -305,7 +326,14 @@ public partial class Observer(
             return;
         }
         await ResumeJobs();
-        await TryRecoverAllFailedPartitions();
+
+        // Recovering failed partitions starts one job per partition through the jobs manager. An observer
+        // that has accumulated hundreds of them - a reactor whose handler was broken for a week - spends
+        // longer than the caller's 30 second grain-call budget in that loop, so the Subscribe never
+        // returned: the client timed out, retried, and the observer was recorded as never subscribed.
+        // Subscribing is about wiring the subscriber up; recovery is work the observer owes afterwards,
+        // in a turn of its own.
+        this.ScheduleInSeparateTurn(TryRecoverAllFailedPartitions);
         await TransitionTo<CatchingUpInFlight>();
     }
 

@@ -1,0 +1,12 @@
+# cratis-ai-managed: hooks/scripts/cratis-nuget-pins.txt
+# Cratis NuGet packages and exact versions the canonical corpus verifies against.
+# One `Id Version` pair per line; the type-reference guard's transitive walk expands
+# each into the full Cratis closure found in the local NuGet cache. Sources: the
+# "Verified product sources" sections of the skills under skills/.
+# Update a pin only together with the skill whose verified version moved.
+Cratis.Arc 22.10.4
+Cratis.Arc.Chronicle 22.10.4
+Cratis.Chronicle 16.45.2
+Cratis.Chronicle 17.0.1
+Cratis.Chronicle.CodeAnalysis 16.45.3
+Cratis.Fundamentals 7.18.2

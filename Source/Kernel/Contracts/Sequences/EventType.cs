@@ -18,7 +18,7 @@ public class EventType
     /// Gets or sets the Id.
     /// </summary>
     [ProtoMember(1)]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the Generation.

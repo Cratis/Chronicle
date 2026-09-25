@@ -17,6 +17,7 @@ using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,17 @@ namespace Orleans.Hosting;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
+/// <remarks>
+/// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
+/// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
+/// an unhandled timeout here terminates the whole host - which is how one slow silo took both
+/// replicas into a reinforcing crash loop: each restart took a new address the other silo then could
+/// not reach either, while consuming applications saw nothing but timeouts. Retrying membership
+/// instability as a class is what breaks that loop, and is why this does not special-case whichever
+/// call site was unlucky enough to be the one that raced. See <see cref="SiblingSiloInstability"/>
+/// for what counts as instability and what is still allowed to fail on the first attempt.
+/// </remarks>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
     IEventTypes eventTypes,
@@ -42,8 +54,24 @@ internal sealed class ChronicleServerStartupTask(
     IProjectionsServiceClient projectionsServiceClient,
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
-    ILogger<ChronicleServerStartupTask> logger) : ILifecycleParticipant<ISiloLifecycle>
+    ILogger<ChronicleServerStartupTask> logger,
+    TimeProvider? timeProvider = null) : ILifecycleParticipant<ISiloLifecycle>
 {
+    /// <summary>
+    /// How many times a step is attempted before its failure is believed.
+    /// </summary>
+    /// <remarks>
+    /// Each attempt already absorbs Orleans' own 30 second response timeout, and the backoff adds
+    /// half a minute on top, so the budget spans several minutes of cluster formation - longer than
+    /// membership normally takes to settle. A step still failing after that is not waiting on a
+    /// sibling silo, so it is allowed to fail the host exactly as it did before.
+    /// </remarks>
+    const int MaxAttempts = 5;
+
+    static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
+
+    readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
     {
@@ -57,37 +85,37 @@ internal sealed class ChronicleServerStartupTask(
     {
         // Apply patches first before anything else starts
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
-        await patchManager.ApplyPatches();
+        await Step(nameof(IPatchManager.ApplyPatches), patchManager.ApplyPatches);
 
-        await grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault();
+        await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
         // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
-        await reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default);
+        await Step("DiscoverAndRegisterSystemReactors", () => reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default));
 
         var allEventStores = await storage.GetEventStores();
         foreach (var eventStore in allEventStores)
         {
-            await eventTypes.DiscoverAndRegister(eventStore);
+            await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
-            await namespaces.EnsureDefault();
+            await Step("EnsureDefaultNamespace", namespaces.EnsureDefault);
 
             var eventStoreSubscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(eventStore);
-            await eventStoreSubscriptionsManager.Ensure();
+            await Step("EnsureEventStoreSubscriptions", eventStoreSubscriptionsManager.Ensure);
 
             var readModelsManager = grainFactory.GetGrain<IReadModelsManager>(eventStore);
-            await readModelsManager.Ensure();
+            await Step("EnsureReadModels", readModelsManager.Ensure);
 
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
-            await projectionsManager.Ensure();
+            await Step("EnsureProjections", projectionsManager.Ensure);
 
             var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
-            await webhooksManager.Ensure();
+            await Step("EnsureWebhooks", webhooksManager.Ensure);
 
             var capturesManager = grainFactory.GetGrain<ICapturesManager>(eventStore);
-            await capturesManager.Ensure();
+            await Step("EnsureCaptures", capturesManager.Ensure);
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
-            await RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions);
+            await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
 
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
@@ -102,13 +130,13 @@ internal sealed class ChronicleServerStartupTask(
                     return;
                 }
 
-                await reactors.DiscoverAndRegister(eventStore, namespaceName);
-                await patternCapture.Subscribe(eventStore, namespaceName);
+                await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName));
+                await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
-                await jobsManager.Rehydrate();
-                await grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate();
-                await RehydrateReducerAndReactorObservers(eventStore, namespaceName);
+                await Step("RehydrateJobs", jobsManager.Rehydrate);
+                await Step("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
+                await Step("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
             });
             await Task.WhenAll(rehydrateAll);
         }
@@ -120,6 +148,57 @@ internal sealed class ChronicleServerStartupTask(
 #endif
     }
 
+    /// <summary>
+    /// Runs one startup step, riding out a sibling silo that has not stabilized yet.
+    /// </summary>
+    /// <param name="step">The name of the step, for the operator reading the log.</param>
+    /// <param name="action">The work to perform.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> recognizes are retried.
+    /// Anything else - and anything still failing once the budget is spent - propagates, so a
+    /// genuine defect still fails the host on startup rather than being started around.
+    /// </remarks>
+    async Task Step(string step, Func<Task> action)
+    {
+        var delay = _initialRetryDelay;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await action();
+                return;
+            }
+            catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception) && attempt < MaxAttempts)
+            {
+                logger.RetryingStartupStep(exception, step, attempt, MaxAttempts, delay);
+                await Task.Delay(delay, _timeProvider);
+                delay += delay;
+            }
+            catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception))
+            {
+                logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
+                throw;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Registers the persisted projection definitions for an event store with the local silo.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the definitions belong to.</param>
+    /// <param name="projectionDefinitions">The persisted <see cref="ProjectionDefinition"/> instances to register.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This call is the most expensive one in <see cref="Execute"/>, because registering fans out a
+    /// subscribe across every observer in the store rather than doing the work of a single grain -
+    /// a production store was observed fanning out to 782 of them inside one call. Since the whole
+    /// fan-out has to answer within Orleans' one response timeout, the budget effectively shrinks as
+    /// a store grows, and the call is therefore the likeliest in the task to exceed it. It must go
+    /// through <see cref="Step"/> for the same reason every other call here does: an unhandled
+    /// timeout terminates the host, and a host that cannot start cannot start on the next attempt
+    /// either, so the store stays down until someone intervenes.
+    /// </remarks>
     async Task RegisterPersistedProjectionDefinitions(EventStoreName eventStore, IEnumerable<ProjectionDefinition> projectionDefinitions)
     {
         var result = await projectionsServiceClient.Register(eventStore, projectionDefinitions);

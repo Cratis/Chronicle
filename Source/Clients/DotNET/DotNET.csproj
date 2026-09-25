@@ -40,11 +40,28 @@
 
     <Target Name="GrpcClients" BeforeTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(NoBuild)' != 'true' ">
         <Message Text="Generating gRPC clients" Importance="high" />
-        <Exec Command="dotnet run &quot;$(TargetDir)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
+        <Exec Command="dotnet &quot;@(GrpcClientGeneratorAssembly)&quot; &quot;$(TargetDir)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" />
     </Target>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" ReferenceOutputAssembly="false" />
+        <!-- Public package dependency for consumers: PrivateAssets deliberately omits "all" so
+             Cratis.Chronicle.CodeAnalysis lands in the nuspec and a consumer actually receives the CHR
+             analyzers.
+
+             Chronicle does not run these analyzers over its own source. CHR0001 and CHR0002 ask whether a
+             type carries [EventType], which cannot be answered about the open generic parameters the client's
+             own plumbing is written in - they are questions about application code, asked of the library that
+             defines the attribute. Making this assembly analyzer-clean is its own piece of work. -->
+        <ProjectReference Include="../DotNET.CodeAnalysis.Package/DotNET.CodeAnalysis.Package.csproj"
+                          PrivateAssets="compile;runtime" />
+        <!-- Build the generator once through the MSBuild project graph. Nested dotnet run invocations raced
+             while net8/net9/net10 packaging copied runtime dependencies into the same tool directory. -->
+        <ProjectReference Include="../../Tools/GrpcClients/GrpcClients.csproj"
+                          ReferenceOutputAssembly="false"
+                          PrivateAssets="all"
+                          OutputItemType="GrpcClientGeneratorAssembly"
+                          SkipGetTargetFrameworkProperties="true"
+                          GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;IsPackaging" />
     </ItemGroup>
 
     <ItemGroup>

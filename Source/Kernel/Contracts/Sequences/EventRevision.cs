@@ -24,23 +24,23 @@ public class EventRevision
     /// Gets or sets the CorrelationId.
     /// </summary>
     [ProtoMember(2)]
-    public string CorrelationId { get; set; }
+    public string CorrelationId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the CausedBy.
     /// </summary>
     [ProtoMember(3)]
-    public global::Cratis.Chronicle.Contracts.Sequences.Identity CausedBy { get; set; }
+    public global::Cratis.Chronicle.Contracts.Sequences.Identity CausedBy { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Occurred.
     /// </summary>
     [ProtoMember(4)]
-    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the Content.
     /// </summary>
     [ProtoMember(5)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 }

@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
-/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting PII fields.</param>
+/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 public class ReducerPipelineFactory(
     IGrainFactory grainFactory,

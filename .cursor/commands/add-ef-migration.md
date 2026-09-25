@@ -1,0 +1,1 @@
+../../.cratis/ai/prompts/add-ef-migration.prompt.md

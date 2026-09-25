@@ -8,6 +8,11 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// <summary>
 /// Defines a type-safe builder for event migration property transformations using expressions.
 /// </summary>
+/// <remarks>
+/// Chronicle resolves each accessed member using its <see cref="System.Text.Json.Serialization.JsonPropertyNameAttribute"/>
+/// when present, otherwise the client's JSON naming policy. The resolved paths reach the raw builder without
+/// further name conversion. Expressions describe member paths; they are not executed as transformations.
+/// </remarks>
 /// <typeparam name="TTarget">The target event type of the migration.</typeparam>
 /// <typeparam name="TSource">The source event type of the migration.</typeparam>
 public interface IEventMigrationPropertyBuilder<TTarget, TSource>

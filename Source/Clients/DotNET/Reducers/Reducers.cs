@@ -426,7 +426,8 @@ public class Reducers : IReducers
                     FilterTags = handler.ReducerType.GetFilterTags().ToArray(),
                     EventSourceType = handler.ReducerType.GetEventSourceType().Value,
                     EventStreamType = handler.ReducerType.GetEventStreamType().Value
-                }
+                },
+                Hash = ReducerFingerprint.Create(handler.ReducerType)
             }
         };
 

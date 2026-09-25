@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -45,6 +46,7 @@ public class KotlinProjectionCodeGenerator : IProjectionCodeGenerator
         var blocks = new List<string>();
         AppendFromBlocks(definition.From, readModelName, blocks);
         AppendJoinBlocks(definition.Join, readModelName, blocks);
+        AppendFromEveryBlocks(definition.FromEvery, definition.SubscribesToAllEvents, readModelName, blocks);
         AppendRemovedWithBlocks(definition.RemovedWith, blocks);
 
         if (blocks.Count == 0)
@@ -110,6 +112,36 @@ public class KotlinProjectionCodeGenerator : IProjectionCodeGenerator
                 blocks.Add($"    {BuilderCall(ProjectionExpressions.ReadMapping(property, expression), readModelName)}");
             }
 
+            blocks.Add("}");
+        }
+    }
+
+    static void AppendFromEveryBlocks(FromEveryDefinition fromEvery, bool subscribesToAllEvents, string readModelName, List<string> blocks)
+    {
+        if (!subscribesToAllEvents || fromEvery.Properties.Count == 0)
+        {
+            return;
+        }
+
+        var inner = new List<string>();
+
+        foreach (var (property, expression) in fromEvery.Properties)
+        {
+            var mapping = ProjectionExpressions.ReadMapping(property, expression);
+
+            // Skip dynamic dictionary keys for now - Kotlin client doesn't have that API yet
+            if (property.Path.Contains($".{WellKnownExpressions.EventContext}."))
+            {
+                continue;
+            }
+
+            inner.Add(BuilderCall(mapping, readModelName));
+        }
+
+        if (inner.Count > 0)
+        {
+            blocks.Add(".fromAll {");
+            blocks.AddRange(inner.Select(call => $"    {call}"));
             blocks.Add("}");
         }
     }

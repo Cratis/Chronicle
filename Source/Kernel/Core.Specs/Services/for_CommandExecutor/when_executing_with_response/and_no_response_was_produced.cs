@@ -33,6 +33,6 @@ public class and_no_response_was_produced : given.a_command_pipeline
 
     [Fact] void should_not_be_successful() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_not_map_a_response() => _mapperInvoked.ShouldBeFalse();
-    [Fact] void should_not_have_a_response() => _result.Response.ShouldBeNull();
+    [Fact] void should_have_an_empty_response() => _result.Response.ShouldBeEmpty();
     [Fact] void should_carry_the_validation_result() => _result.ValidationResults[0].Message.ShouldEqual("Name is required.");
 }

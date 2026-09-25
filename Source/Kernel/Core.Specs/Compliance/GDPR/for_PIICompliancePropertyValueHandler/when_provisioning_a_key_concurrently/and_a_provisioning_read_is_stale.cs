@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler.when_provisioning_a_key_concurrently;
 
@@ -27,7 +28,11 @@ public class and_a_provisioning_read_is_stale : given.a_key_store_with_read_afte
     string _modelAReleased;
     int _revisionCount;
 
-    void Establish() => _handler = new(_keyStore, new Encryption());
+    void Establish()
+    {
+        var encryption = new Encryption();
+        _handler = new(new ManagedEncryptionKeyProvisioner(_keyStore, encryption), _keyStore, encryption);
+    }
 
     async Task Because()
     {

@@ -1,0 +1,1 @@
+../../.cratis/ai/prompts/write-specs.prompt.md

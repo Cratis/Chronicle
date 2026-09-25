@@ -2,15 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Migrations;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventMigrationPropertyBuilder"/>.
 /// </summary>
-public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
+/// <param name="namingPolicy">The naming policy for typed accessors. Raw property paths are preserved verbatim.</param>
+public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEventMigrationPropertyBuilder, IResolveMigrationPropertyNames
 {
     const string SplitExpression = "$split";
     const string CombineExpression = "$combine";
@@ -21,6 +24,13 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     readonly Dictionary<PropertyExpression, JsonNode> _properties = [];
 
     /// <summary>
+    /// Initializes a new instance of <see cref="EventMigrationPropertyBuilder"/> using the default naming policy.
+    /// </summary>
+    public EventMigrationPropertyBuilder() : this(null)
+    {
+    }
+
+    /// <summary>
     /// Gets the configured properties.
     /// </summary>
     public IReadOnlyDictionary<PropertyExpression, JsonNode> Properties => _properties;
@@ -28,11 +38,11 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void Split(PropertyName targetProperty, PropertyName sourceProperty, PropertySeparator separator, SplitPartIndex part)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
             [SplitExpression] = new JsonObject
             {
-                ["source"] = (string)sourceProperty,
+                ["source"] = sourceProperty.Value,
                 ["separator"] = (string)separator,
                 ["part"] = (int)part
             }
@@ -42,11 +52,11 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void Combine(PropertyName targetProperty, PropertySeparator separator, params PropertyName[] sourceProperties)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
             [CombineExpression] = new JsonObject
             {
-                ["sources"] = new JsonArray(sourceProperties.Select(p => JsonValue.Create((string)p)).ToArray()),
+                ["sources"] = new JsonArray(sourceProperties.Select(p => JsonValue.Create(p.Value)).ToArray()),
                 ["separator"] = (string)separator
             }
         };
@@ -55,16 +65,16 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void RenamedFrom(PropertyName targetProperty, PropertyName oldName)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
-            [RenameExpression] = (string)oldName
+            [RenameExpression] = oldName.Value
         };
     }
 
     /// <inheritdoc/>
     public void DefaultValue(PropertyName targetProperty, object value)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
             [DefaultValueExpression] = JsonValue.Create(value)
         };
@@ -73,15 +83,19 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void MapValues(PropertyName targetProperty, PropertyName sourceProperty, IEnumerable<ValueMapping> mappings)
     {
-        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
             [MapValuesExpression] = new JsonObject
             {
-                ["source"] = (string)sourceProperty,
+                ["source"] = sourceProperty.Value,
                 ["mappings"] = new JsonArray([.. mappings.Select(ToMappingNode)])
             }
         };
     }
+
+    /// <inheritdoc/>
+    PropertyName IResolveMigrationPropertyNames.ResolvePropertyName(LambdaExpression expression) =>
+        MigrationPropertyNames.Resolve(expression, namingPolicy?.JsonPropertyNamingPolicy);
 
     static JsonNode ToMappingNode(ValueMapping mapping) => new JsonObject
     {

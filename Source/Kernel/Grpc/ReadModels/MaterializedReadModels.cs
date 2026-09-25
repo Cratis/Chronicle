@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
-/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting compliance and security fields.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
@@ -26,7 +26,7 @@ internal sealed class MaterializedReadModels(
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-        var definition = await readModel.GetDefinition();
+        var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
         var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
@@ -47,7 +47,7 @@ internal sealed class MaterializedReadModels(
             request.EventStore,
             request.Namespace,
             schema,
-            instances ?? []);
+            instances);
 
         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()
@@ -65,7 +65,7 @@ internal sealed class MaterializedReadModels(
         return Observable.FromAsync(async () =>
         {
             var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-            var definition = await readModel.GetDefinition();
+            var definition = await readModel.GetKnownDefinition(request.ReadModel);
             var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
             var sink = await sinks.GetFor(definition);
             var skip = Math.Max(0, request.Page * request.PageSize);

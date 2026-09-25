@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -10,6 +11,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Recommendations;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Placement;
@@ -26,6 +28,7 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="reducerDefinitionComparer"><see cref="IReducerDefinitionComparer"/> for comparing reducer definitions.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
+/// <param name="storage"><see cref="IStorage"/> containing event history.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 [PreferLocalPlacement]
@@ -33,6 +36,7 @@ public class Reducer(
     IReducerDefinitionComparer reducerDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
     IOptions<ChronicleOptions> options,
+    IStorage storage,
     ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer
 {
     IObserver? _observer;
@@ -53,7 +57,8 @@ public class Reducer(
     public async Task SetDefinitionAndSubscribe(ReducerDefinition definition)
     {
         var key = ReducerKey.Parse(this.GetPrimaryKeyString());
-        var compareResult = await reducerDefinitionComparer.Compare(key, State, definition);
+        var previousDefinition = State;
+        var compareResult = await reducerDefinitionComparer.Compare(key, previousDefinition, definition);
 
         State = definition;
         await WriteStateAsync();
@@ -67,16 +72,7 @@ public class Reducer(
             }
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
-            // Schedule replay as a separate grain turn so that SetDefinition() returns immediately,
-            // keeping registration fast and replay as a separate concern.
-            if (options.Value.Observers.ReplayOnDefinitionChange)
-            {
-                this.ScheduleInSeparateTurn(() => ReplayForAllNamespaces(key, namespaceNames));
-            }
-            else
-            {
-                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
-            }
+            await EvolveForAllNamespaces(key, namespaceNames, previousDefinition, definition);
         }
 
         if (!_subscribed && definition.IsActive)
@@ -133,30 +129,82 @@ public class Reducer(
         }
     }
 
-    async Task ReplayForAllNamespaces(ReducerKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    async Task EvolveForAllNamespaces(
+        ReducerKey key,
+        IEnumerable<EventStoreNamespaceName> namespaces,
+        ReducerDefinition previousDefinition,
+        ReducerDefinition currentDefinition)
     {
+        var addedEventTypes = ReducerDefinitionEvolution.GetAddedEventTypesIfOnlyEventTypesChanged(previousDefinition, currentDefinition);
+        var policy = options.Value.Observers.DefinitionEvolution;
+
         foreach (var @namespace in namespaces)
         {
-            logger.AutoReplayingReducer(key.EventStore, key.ReducerId, key.EventSequenceId, @namespace);
-            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId));
-            await observer.Replay();
+            var plan = DefinitionEvolutionPlan.FullReplay;
+            if (addedEventTypes.Length > 0)
+            {
+                var eventSequence = storage.GetEventStore(key.EventStore).GetNamespace(@namespace).GetEventSequence(currentDefinition.EventSequenceId);
+
+                var existingEventTypes = previousDefinition.EventTypes.Select(_ => _.EventType);
+                var usesEventSourcePartitions = currentDefinition.EventTypes.All(_ => _.Key.Value == WellKnownExpressions.EventSourceId);
+                plan = await DefinitionEvolutionPlan.ForAddedReducerEventTypes(
+                    eventSequence,
+                    addedEventTypes,
+                    existingEventTypes,
+                    usesEventSourcePartitions);
+            }
+
+            switch (plan.Operation)
+            {
+                case DefinitionEvolutionOperation.NoAction:
+                    logger.ReducerEvolutionNeedsNoAction(key.EventStore, key.ReducerId, key.EventSequenceId, @namespace);
+                    break;
+                case DefinitionEvolutionOperation.PartialReplay when policy.Allows(plan.Operation):
+                    this.ScheduleInSeparateTurn(() => ReplayReducerPartitions(key, @namespace, plan.AffectedEventSources, plan.AffectedEventTypes));
+                    break;
+                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation):
+                    this.ScheduleInSeparateTurn(() => ReplayReducer(key, @namespace));
+                    break;
+                default:
+                    await AddReplayRecommendation(key, @namespace);
+                    break;
+            }
         }
     }
 
-    async Task AddReplayRecommendationForAllNamespaces(ReducerKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    async Task ReplayReducer(ReducerKey key, EventStoreNamespaceName @namespace)
     {
-        foreach (var @namespace in namespaces)
+        logger.AutoReplayingReducer(key.EventStore, key.ReducerId, key.EventSequenceId, @namespace);
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId));
+        await observer.Replay();
+    }
+
+    async Task ReplayReducerPartitions(
+        ReducerKey key,
+        EventStoreNamespaceName @namespace,
+        IEnumerable<EventSourceId> eventSourceIds,
+        IEnumerable<EventType> eventTypes)
+    {
+        var affectedEventSources = eventSourceIds.ToArray();
+        logger.PartiallyReplayingReducer(key.EventStore, key.ReducerId, key.EventSequenceId, @namespace, affectedEventSources.Length);
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId));
+        foreach (var eventSourceId in affectedEventSources)
         {
-            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
-            await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
-                "Reducer definition has changed.",
-                new()
-                {
-                    ObserverId = key.ReducerId,
-                    ObserverKey = new(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId),
-                    ObserverType = ObserverType.Reducer,
-                    Reasons = [new ReducerDefinitionChangedReplayCandidateReason()]
-                });
+            await observer.ReplayPartition(eventSourceId, eventTypes);
         }
+    }
+
+    async Task AddReplayRecommendation(ReducerKey key, EventStoreNamespaceName @namespace)
+    {
+        var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
+        await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+            "Reducer definition has changed.",
+            new()
+            {
+                ObserverId = key.ReducerId,
+                ObserverKey = new(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId),
+                ObserverType = ObserverType.Reducer,
+                Reasons = [new ReducerDefinitionChangedReplayCandidateReason()]
+            });
     }
 }

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <!-- Package-only project: it carries no source of its own, only the 'Cratis.Chronicle.CodeAnalysis'
+             package identity that bundles the analyzer assembly (DotNET.CodeAnalysis.csproj).
+
+             It exists because a project cannot both set DevelopmentDependency and be emitted as a dependency
+             of another package. While the analyzer project packed itself, NuGet dropped it from
+             Cratis.Chronicle's nuspec, so every CHR analyzer was published and delivered to nobody - a
+             consumer had to know the package existed and reference it by hand, and none did. Same shape
+             Cratis.Arc.Chronicle already uses for its ARCCHR analyzers. -->
+        <PackageId>Cratis.Chronicle.CodeAnalysis</PackageId>
+        <AssemblyName>Cratis.Chronicle.CodeAnalysis.Package</AssemblyName>
+        <Description>Roslyn analyzers (CHR*) for the Cratis Chronicle client.</Description>
+        <PackageTags>cratis;chronicle;event-sourcing;analyzers;roslyn;codeanalysis</PackageTags>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <IncludeSymbols>false</IncludeSymbols>
+        <IncludeSource>false</IncludeSource>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
+        <NoWarn>$(NoWarn);NU5128</NoWarn>
+    </PropertyGroup>
+
+    <!-- The repository's implicit references target modern TFMs and cannot restore against netstandard2.0;
+         DotNET.CodeAnalysis.csproj drops the same two for the same reason. -->
+    <ItemGroup>
+        <PackageReference Remove="Cratis.Fundamentals" />
+        <PackageReference Remove="System.Text.Json" />
+    </ItemGroup>
+
+    <!-- Build-order-only reference: the analyzer assembly is not linked into this project's own (empty)
+         compilation, it only has to exist in bin before Pack runs.
+
+         PrivateAssets is deliberately left unset. This directory's _SetupPrivateRefPackaging target keys off
+         PrivateAssets='all' and would try to pack $(AssemblyName).dll into ref/, which a project with
+         IncludeBuildOutput=false never produces. SuppressDependenciesWhenPacking already keeps the reference
+         out of the nuspec. -->
+    <ItemGroup>
+        <ProjectReference Include="../DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj"
+                          ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../DotNET.CodeAnalysis/bin/$(Configuration)/netstandard2.0/Cratis.Chronicle.CodeAnalysis.dll"
+              Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    </ItemGroup>
+</Project>

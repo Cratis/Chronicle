@@ -147,7 +147,8 @@ public class EventSequenceStorage(
                 return Result<AppendedEvent, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
             }
 
-            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, subject);
+            var hash = contentHashes.TryGetValue(eventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
+            var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, causedBy, tags, occurred, content, hash, subject);
             _events.Add(appended);
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(appended);
@@ -198,6 +199,7 @@ public class EventSequenceStorage(
                     e.Tags,
                     e.Occurred,
                     content,
+                    e.Hash,
                     e.Subject);
 
                 _events.Add(appendedEvent);
@@ -430,13 +432,14 @@ public class EventSequenceStorage(
     public Task<IEventCursor> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
         IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
-        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes, tags)
+        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags)
             .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
             .OrderBy(_ => _.Context.SequenceNumber)
             .ToList();
@@ -690,6 +693,7 @@ public class EventSequenceStorage(
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
+        EventHash hash,
         Subject? subject = null)
     {
         var eventContext = new EventContext(
@@ -706,7 +710,7 @@ public class EventSequenceStorage(
             causation,
             causedBy,
             tags,
-            EventHash.NotSet,
+            hash,
             Subject: subject?.IsSet is true ? subject : new Subject(eventSourceId.Value));
 
         var eventContent = content.TryGetValue(EventTypeGeneration.First, out var firstGenContent)

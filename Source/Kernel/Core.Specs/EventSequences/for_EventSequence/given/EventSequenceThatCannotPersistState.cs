@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Cratis.Traces;
@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
-/// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
+/// <param name="jsonComplianceManagerProvider"><see cref="IJsonSchemaMetadataManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
@@ -38,7 +38,7 @@ public class EventSequenceThatCannotPersistState(
     IEventTypeMigrations eventTypeMigrations,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<EventSequence> activitySource,
-    IJsonComplianceManager jsonComplianceManagerProvider,
+    IJsonSchemaMetadataManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,

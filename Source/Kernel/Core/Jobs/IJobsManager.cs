@@ -47,8 +47,13 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// Resume a job.
     /// </summary>
     /// <param name="jobId"><see cref="JobId"/> to resume.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Resume(JobId jobId);
+    /// <returns>True if the job was taken forward - resumed, already running, or finalized as completed - false if nothing took it.</returns>
+    /// <remarks>
+    /// A refusal matters to the caller. Resuming can decline because the job was never prepared or its observer is
+    /// no longer subscribed, and a job nobody took stays exactly as it was: it will not run, will not finalize, and
+    /// will never report back. A caller that treats that as success waits forever for something that is not coming.
+    /// </remarks>
+    Task<bool> Resume(JobId jobId);
 
     /// <summary>
     /// Stop a job if running.

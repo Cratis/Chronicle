@@ -1,0 +1,38 @@
+---
+title: Security
+description: Protect operational secrets at rest with plain-confidentiality encryption, deliberately separate from GDPR compliance.
+---
+
+Some values in an event log are sensitive without being personal data — an API key exchanged with a partner, a webhook signing secret, a third-party access token. They need to be unreadable in storage. They have no data subject, and there is no lawful erasure request that could ever be about them.
+
+## Without `[Encrypted]`
+
+Without a dedicated mechanism, a team reaches for one of two wrong tools:
+
+- **Store it in plaintext**, and it sits in the event log — and every backup, replica, and read model built from it — readable by anyone with database access, forever, because the event log is immutable.
+- **Mark it `[PII]`**, because that is the encryption mechanism Chronicle already has. This is worse than it looks: `[PII]` enrolls the value in GDPR right-to-erasure. A secret that was never personal data becomes destroyable by a request that was never about it — and if the same subject also has real personal data, the two would share one stored key, so erasing the subject's PII would destroy the secret too.
+
+## With `[Encrypted]`
+
+`[Encrypted]` is a security measure, not a compliance one. It encrypts a value at rest exactly like `[PII]` does — same shared key-provisioning and value-encoding machinery under the hood — but it is provisioned under a **deliberately disjoint key identity**, and there is no erasure path for it at all: nothing reachable from `[Encrypted]`'s key can delete it. A subject that carries both a `[PII]` value and an `[Encrypted]` value has the two protected under genuinely different keys, and erasing the subject's PII leaves the `[Encrypted]` value fully readable.
+
+<ChronicleClientTabs snippet="confidentiality/encrypted/with-encrypted-overview" />
+
+## Choosing between `[PII]` and `[Encrypted]`
+
+| | `[PII]` | `[Encrypted]` |
+|---|---|---|
+| Protects | Personal data about a natural person | An operational secret with no data subject |
+| Erasable | Yes — GDPR right-to-erasure | **No** — there is no lawful basis for erasure, and no API exposes a way to delete the key |
+| Key identity | The compliance subject (or event source id when none is set) | Disjoint from PII, even for the same subject |
+| Lives under | `Cratis.Chronicle.Compliance.GDPR` | `Cratis.Chronicle.ProtectedValues` |
+
+The two attributes cannot both apply to the same value — see [Encrypting operational secrets](encrypted-values) and [CHR0053](/chronicle/code-analysis/CHR0053/).
+
+## Related topics
+
+| Topic | Description |
+|---|---|
+| [Encrypting operational secrets](encrypted-values) | The `[Encrypted]` attribute — rules, usage, and constraints |
+| [Releasing PII and encrypted values](/chronicle/read-models/releasing-pii/) | How an `[Encrypted]` value is decrypted for you automatically, and how to release one manually |
+| [Compliance](/chronicle/compliance/) | `[PII]` and GDPR right-to-erasure — the mechanism `[Encrypted]` deliberately does not share |

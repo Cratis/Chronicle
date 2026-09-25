@@ -23,5 +23,6 @@ internal static class ReducerDefinitionConverters
             reducerDefinition.ReadModel,
             reducerDefinition.IsActive,
             reducerDefinition.Tags,
-            reducerDefinition.Filters.ToChronicle());
+            reducerDefinition.Filters.ToChronicle(),
+            reducerDefinition.Hash);
 }
