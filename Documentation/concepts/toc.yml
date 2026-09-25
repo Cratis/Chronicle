@@ -19,7 +19,7 @@
 - name: Event Sequence
   href: event-sequence.md
 - name: Observers
-  href: observers.md
+  href: observers.mdx
 - name: Projections, reducers, and reactors
   href: observer-patterns.md
 - name: Projection

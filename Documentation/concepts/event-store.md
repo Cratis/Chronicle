@@ -7,7 +7,7 @@ Chronicle offers what is called an event store which basically means a special p
 for storing events. The events are stored in [event sequences](./event-sequence.md).
 
 In addition to this, the Chronicle event store also maintains information about things like the
-[event types](./event-type.md), [observers](./observers.md), [projections](./projection.md) and more.
+[event types](./event-type.md), [observers](./observers.mdx), [projections](./projection.md) and more.
 
 Chronicle stores the event store in a database you provide: [MongoDB](https://mongodb.com), PostgreSQL,
 Microsoft SQL Server, or SQLite — see [Storage configuration](../hosting/configuration/storage.mdx). MongoDB is the
