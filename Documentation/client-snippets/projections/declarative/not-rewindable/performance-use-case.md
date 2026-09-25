@@ -8,7 +8,6 @@ public class DecNotRewindablePerformanceMetricProjection : IProjectionFor<DecNot
 {
     public void Define(IProjectionBuilderFor<DecNotRewindablePerformanceMetric> builder) => builder
         .NotRewindable()
-        .AutoMap()
         .From<DecNotRewindableApiRequestCompleted>(_ => _
             .Set(m => m.Timestamp).ToEventContextProperty(c => c.Occurred));
 }

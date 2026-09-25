@@ -103,11 +103,11 @@ Do **not** use the `Materialized` API when:
 
 | | `ReadModels.GetInstances<T>()` | `ReadModels.Materialized.GetInstances<T>()` |
 |---|---|---|
-| **Data source** | Event log replay | Materialized sink (database) |
-| **Consistency** | Strong — always current | Eventual — milliseconds behind |
-| **Performance** | Proportional to event history | O(1) — direct database lookup |
+| **Data source** | The sink for a materialized read model; an event log replay for a passive one, or when you pass an event count | Materialized sink (database) |
+| **Consistency** | Eventual for a materialized read model; strong for a passive one | Eventual — milliseconds behind |
+| **Performance** | Reads every stored instance, or replays every event for a passive one | O(1) — direct database lookup |
 | **Pagination** | No | Yes — skip/take |
-| **Large datasets** | Slow — replays all events | Fast — loads only the requested page |
+| **Large datasets** | Slow — returns everything in one call | Fast — loads only the requested page |
 | **Filtering/sorting** | Post-fetch with LINQ | Not supported — query the sink directly |
 
 ## Related Topics

@@ -52,7 +52,7 @@ The two calls are independent, so you can point both at the same `.pfx` if one c
 | `WithTlsCertificate` | `Cratis__Chronicle__Tls__CertificatePath` / `Cratis__Chronicle__Tls__CertificatePassword` | `Cratis:Chronicle:Tls:CertificatePath` / `Cratis:Chronicle:Tls:CertificatePassword` |
 | `WithEncryptionCertificate` | `Cratis__Chronicle__EncryptionCertificate__CertificatePath` / `Cratis__Chronicle__EncryptionCertificate__CertificatePassword` | `Cratis:Chronicle:EncryptionCertificate:CertificatePath` / `Cratis:Chronicle:EncryptionCertificate:CertificatePassword` |
 
-The password argument is optional, but supply it: Chronicle reads the file as PKCS#12 only when a password is present, and a TLS listener needs the private key inside that PKCS#12 container. [Local Certificate Setup](./local-certificates) shows how to generate a suitable `.pfx` with `dotnet dev-certs` or OpenSSL; [Production Hosting](./production.md) covers what a real deployment should use instead of a self-signed one.
+The password argument is optional: Chronicle always reads the file as PKCS#12, which carries the private key the TLS listener needs, and an unprotected `.pfx` loads without one. Protect the file with a password for any real deployment. [Local Certificate Setup](./local-certificates) shows how to generate a suitable `.pfx` with `dotnet dev-certs` or OpenSSL; [Production Hosting](./production.md) covers what a real deployment should use instead of a self-signed one.
 
 #### Rotating the encryption certificate
 
@@ -114,6 +114,8 @@ If you would rather define the container yourself, the same recipe written out i
 For SQLite, provide the connection string directly (SQLite is file-based and does not require a network resource):
 
 <ChronicleClientTabs snippet="hosting/aspire/sqlite" />
+
+The database file lives inside the Chronicle container at the path you give. Unless you mount a writable volume there — `ChronicleResource` is an Aspire container resource, so the standard `WithVolume` applies — the directory must exist in the image and the data goes away with the container.
 
 ## Connecting a .NET Client
 

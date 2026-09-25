@@ -122,5 +122,5 @@ Point the Workbench at the `Backoffice` event store, then:
   `StaffActivity` counts what each person got through. Its empty columns say the same thing the patterns do.
 - **Event sequences** — the raw history, spread across the whole period rather than bunched at the end.
 
-The `N` key in the console asks the same question the heatmap's panel asks, through `IPatterns.GetPatterns` — a
+The `N` key in the console asks the same question the heatmap's panel asks, through `IPatterns.GetPatternsAt` — a
 useful way to see that the Workbench view and the client API are the same answer.

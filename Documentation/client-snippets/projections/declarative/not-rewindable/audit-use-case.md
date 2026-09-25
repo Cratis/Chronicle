@@ -16,7 +16,6 @@ public class DecNotRewindableSecurityAuditProjection : IProjectionFor<DecNotRewi
 {
     public void Define(IProjectionBuilderFor<DecNotRewindableSecurityAuditEntry> builder) => builder
         .NotRewindable()
-        .AutoMap()
         .FromEvery(_ => _
             .Set(m => m.AuditedAt).ToEventContextProperty(c => c.Occurred)
             .Set(m => m.SequenceNumber).ToEventContextProperty(c => c.SequenceNumber))

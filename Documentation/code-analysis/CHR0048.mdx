@@ -1,4 +1,7 @@
-# CHR0048: A clear is declared for a member that cannot hold null
+---
+title: "CHR0048: A clear is declared for a member that cannot hold null"
+description: "CHR0048 reports a clear declared for a read model member that cannot hold null."
+---
 
 ## Rule Description
 
@@ -17,7 +20,7 @@ Not reported: a class-level `[ClearWith]` on a nested type, or one on the member
 
 Warning — **scheduled to become an error in the next major release.**
 
-Warning rather than error for its first release, following the precedent recorded on the retired [CHR0047](CHR0047): these analyzers ship inside the `Cratis.Chronicle` package, so under `TreatWarningsAsErrors` — the Cratis default — a new warning already breaks a consumer build on upgrade. An error is a strictly stronger break and buys little, because the declaration it reports never worked in the first place.
+Warning rather than error for its first release, following the precedent recorded on the retired [CHR0047](CHR0047): these analyzers arrive with the `Cratis.Chronicle` package (through its `Cratis.Chronicle.CodeAnalysis` dependency, from 19.4.8), so under `TreatWarningsAsErrors` — the Cratis default — a new warning already breaks a consumer build on upgrade. An error is a strictly stronger break and buys little, because the declaration it reports never worked in the first place.
 
 The declaration has no correct reading, so the escalation to an error is announced here rather than sprung later. Treat this warning as a build failure in waiting, and note that it is the *softer* of the two signals: building the projection refuses the declaration outright (see below), so leaving the warning unaddressed fails at application startup instead of at build time.
 

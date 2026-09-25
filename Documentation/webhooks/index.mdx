@@ -9,7 +9,11 @@ A webhook forwards events Chronicle observes to an external HTTP endpoint — us
 
 <ChronicleClientTabs snippet="webhooks/index/register" />
 
-If no event types are configured, the webhook forwards every event type registered for the client.
+If no event types are configured, the webhook forwards the event types the client knows about when it registers the webhook. An event type the client does not have is not forwarded; the list is refreshed the next time the client registers the webhook.
+
+:::caution[An error response does not fail the delivery]
+Chronicle treats a delivery as failed only when the HTTP call itself fails — the endpoint cannot be reached, the connection drops, or the call times out. An HTTP error status such as `400` or `500` is not checked: the batch counts as delivered and the webhook moves on without retrying it. Make the receiving endpoint accept every well-formed batch, and handle its own failures, rather than relying on an error status to trigger a retry.
+:::
 
 ## Query registered webhooks
 

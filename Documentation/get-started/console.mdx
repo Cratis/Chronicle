@@ -21,10 +21,11 @@ Create a folder for your project, then a .NET console project inside it:
 dotnet new console
 ```
 
-Add a reference to the [Chronicle client package](https://www.nuget.org/packages/Cratis.Chronicle):
+Add a reference to the [Chronicle client package](https://www.nuget.org/packages/Cratis.Chronicle), and the MongoDB driver for the step that queries the read models' database directly:
 
 ```shell
 dotnet add package Cratis.Chronicle
+dotnet add package MongoDB.Driver
 ```
 
 ## Connect the client
@@ -48,15 +49,15 @@ flowchart LR
 
 ## Configure the MongoDB client
 
-The `Books` query above reads documents Chronicle wrote. For your `IMongoCollection<Book>` to deserialize them, the MongoDB driver needs to match how Chronicle stores documents — register these conventions once at startup:
+The `GetStartedBooks` query above reads documents Chronicle wrote. With no container to hand you an `IMongoCollection<GetStartedBook>`, you create one yourself: connect a `MongoClient` to `mongodb://localhost:27017`, open the `Quickstart` database, and get the `GetStartedBooks` collection. For the driver to deserialize those documents, it also needs to match how Chronicle stores them — register these conventions once at startup, before the first query:
 
 [!INCLUDE [mongodb](./_includes/mongodb.mdx)]
 
-With the conventions registered, the `Books` query reads the projection's documents exactly as written.
+With the conventions registered, the `GetStartedBooks` query reads the projection's documents exactly as written.
 
 ## Recap
 
-You wired Chronicle into a bare console app by hand: created a `ChronicleClient`, opened the `Quickstart` event store, appended events for a small library domain, projected them into the `Book` and `BorrowedBook` read models with model-bound attributes, queried them both on demand and from the materialized sink, and reacted to one with a reactor. Because there was no DI container, every connection was explicit and in plain sight.
+You wired Chronicle into a bare console app by hand: created a `ChronicleClient`, opened the `Quickstart` event store, appended events for a small library domain, projected them into the `GetStartedBook` and `GetStartedBorrowedBook` read models with model-bound attributes, queried them through Chronicle and straight from the MongoDB sink, and reacted to one with a reactor. Because there was no DI container, every connection was explicit and in plain sight.
 
 ## Where to go next
 

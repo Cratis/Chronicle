@@ -1,26 +1,22 @@
-# Immediate Projections
+---
+title: Immediate projections
+description: Chronicle has no synchronous projection mode. How to get a read model that includes the event you just appended.
+---
 
-> **Status**: This documentation is in progress and will be updated soon.
+You may have been told that an *immediate projection* updates its read model synchronously, inside the append, so the read model is current before the append returns. **Chronicle has no such mode.** Every append returns once the event is in the log, and materialized read models catch up afterwards.
 
-Immediate projections allow you to work with projections that provide strong consistency by processing events synchronously during the event append operation.
+"Immediate projection" is the name of the kernel component that computes a read model on demand when you read a **passive** read model. You never declare or configure it yourself.
 
-## Overview
+## Getting a read model that includes the latest event
 
-While most projections in Chronicle operate with eventual consistency, immediate projections process events synchronously, ensuring that the read model is updated before the event append operation completes.
+You have two tools, and neither makes the append slower for anyone else:
 
-## When to Use Immediate Projections
+- **Mark the read model passive.** It is not stored; Chronicle computes it from its events when you read it, so each read includes everything appended up to that call. The first read replays the instance's history; while it stays in memory, later reads apply only newer events. This works for a read model keyed by its event source id: reading a passive instance only replays events from that event source, so a projection that joins other event sources or uses a custom key misses their events — keep that one materialized. See [Passive projections](declarative/passive.mdx) and [Getting a single instance](../read-models/getting-single-instance.mdx).
+- **Keep it materialized, and wait after the append.** The caller that needs its own write back waits for the append's observers to catch up, then reads the stored instance. In the .NET client this is `WaitForCompletion()` on the append result — see [Observing appends](../events/observing-appends.mdx#waiting-for-observer-completion-after-append). The wait covers every observer on that event sequence, not only those that handle the appended event, so an unrelated observer that is behind — or one that never handles this event type — can hold it until it times out.
 
-Immediate projections are useful when:
+To stop two writers from both succeeding, use a [constraint](../constraints/index.md) instead: a read, however consistent, is taken before the append and cannot stop a race.
 
-- You need strong consistency guarantees
-- The read model must be immediately available after an event
-- You're building critical business flows that require synchronous state updates
+## See also
 
-## Performance Considerations
-
-Because immediate projections run synchronously, they can impact the performance of your event append operations. Use them judiciously and only when strong consistency is required.
-
-## See Also
-
-- [Eventual Consistency](eventual-consistency) - Learn about eventual consistency in projections
-- [Model-Bound Projections](model-bound/) - How to work with model-bound projections
+- [Read model consistency](../read-models/consistency.md) — the trade-offs in full
+- [Eventual consistency](eventual-consistency.mdx) — designing for the default

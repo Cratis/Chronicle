@@ -18,7 +18,7 @@ Read models are **derived data** — the [event log](../concepts/event-sequence.
    cratis chronicle observers replay <observer-id>
    ```
 
-   See [`cratis chronicle observers replay`](/cli/chronicle/observers/#replay) for the full command reference. [Chronicle Workbench](/chronicle/workbench/) provides inspection of observers and read models but does not trigger replays or mutations.
+   See [`cratis chronicle observers replay`](/cli/chronicle/observers/#replay) for the full command reference. The [Chronicle Workbench](/chronicle/workbench/) can also replay an observer, and clear an observer's quarantine, from its observers view for a user who is allowed to.
 
 3. Query the read model and confirm it reflects the new logic.
 

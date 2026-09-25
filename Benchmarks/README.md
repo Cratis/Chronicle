@@ -23,7 +23,7 @@ There are two suites:
 
 This will:
 1. Build the benchmark project (which also builds the Chronicle Docker image)
-2. Run all benchmarks (TestContainers will automatically start Chronicle and MongoDB)
+2. Run all benchmarks (TestContainers automatically starts the Chronicle container, which embeds MongoDB)
 3. Generate results in `results/` directory
 4. Clean up infrastructure automatically
 
@@ -31,7 +31,7 @@ This will:
 
 The benchmarks use **TestContainers** to automatically manage the Chronicle infrastructure:
 - Chronicle Kernel container is built from the local source using `cratis/chronicle:local-development` image
-- MongoDB container is automatically started and linked
+- MongoDB runs inside that same container; its port is published alongside Chronicle's
 - All containers are cleaned up automatically after benchmarks complete
 
 This approach matches the Integration test strategy used in the `Integration/Api` project.
