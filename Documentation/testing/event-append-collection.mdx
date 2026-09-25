@@ -3,8 +3,9 @@ uid: Chronicle.Testing.EventAppendCollection
 ---
 # Event Append Collection
 
-`IEventAppendCollection` is a scoped collector that captures every event appended to the event log
-while it is active. It is the primary tool for asserting on appended events in integration tests.
+`IEventAppendCollection` is a scoped collector that captures every event appended through your client's
+event log while it is active. It sees the appends this client makes, not appends made by another
+process or client against the same event store. It is the primary tool for asserting on appended events in integration tests.
 
 ## How It Works
 

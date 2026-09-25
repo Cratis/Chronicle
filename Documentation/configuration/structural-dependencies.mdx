@@ -1,4 +1,7 @@
-# Structural Dependencies
+---
+title: "Structural Dependencies"
+description: "Supply custom resolvers and providers to the .NET client, and how they differ from options bound from configuration."
+---
 
 `ChronicleOptions` is designed to hold **runtime configuration** that can be bound from `appsettings.json` or environment variables — connection strings, timeouts, TLS settings, naming policies, and so on.
 
@@ -33,7 +36,7 @@ The same pattern works with `WebApplicationBuilder` in ASP.NET Core:
 <ChronicleClientTabs snippet="configuration/structural-dependencies/aspnetcore-builder" />
 
 The two callbacks are intentionally separate:
-- `configureOptions` feeds the options pipeline and can be overridden by `appsettings.json` or `IConfiguration`.
+- `configureOptions` feeds the options pipeline. It runs after `appsettings.json` and `IConfiguration` are bound, so a value it sets overrides the configured one.
 - `configure` sets structural dependencies at registration time and is not overridable by configuration.
 
 ## IChronicleBuilder fluent methods
