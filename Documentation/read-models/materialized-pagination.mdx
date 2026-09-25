@@ -75,10 +75,10 @@ The parameters use strongly-typed concepts that convert implicitly from `int`:
 Observation relies on the sink's change stream mechanism:
 
 - **MongoDB** — uses native MongoDB change streams
-- **SQL** — uses polling-based change detection via `DbContext`
+- **SQL (PostgreSQL, SQL Server, SQLite)** — reads the current page on subscription, then polls the stored rows for changes. Pages are ordered by the read model key. Several writes between polls can appear as one updated snapshot; use `IReadModels.Watch<T>()` if you need each projection changeset. If observation is unavailable, load the page with `Materialized.GetInstances<T>()` and apply the changesets from `Watch<T>()` to keep it current.
 
 > [!NOTE]
-> Always dispose observation subscriptions when the consumer is torn down to prevent resource leaks and keep change streams closed.
+> Always dispose observation subscriptions when the consumer is torn down to close change streams or stop SQL polling.
 
 ### Observing in a Service
 

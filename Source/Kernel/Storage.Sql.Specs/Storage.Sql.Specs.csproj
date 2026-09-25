@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Testcontainers" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <!-- The shared ISink contract specifications live here and run against this implementation. -->
