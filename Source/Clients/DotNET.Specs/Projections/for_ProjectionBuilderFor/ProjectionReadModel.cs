@@ -3,4 +3,9 @@
 
 namespace Cratis.Chronicle.Projections.for_ProjectionBuilderFor;
 
-public record ProjectionReadModel;
+public record ProjectionReadModel
+{
+    public string Name { get; init; } = string.Empty;
+    public Guid LastEventSourceId { get; init; }
+    public int EventCount { get; init; }
+}
