@@ -152,7 +152,10 @@ public class RedundantAutoMapCallAnalyzer : DiagnosticAnalyzer
             // parameter cannot establish that AutoMap is still enabled.
             if (preceding.DescendantNodes().OfType<VariableDeclaratorSyntax>().Any(_ =>
                 _.Initializer?.Value.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>().Any(name =>
-                    SymbolEqualityComparer.Default.Equals(semanticModel.GetSymbolInfo(name).Symbol, parameter)) == true))
+                    SymbolEqualityComparer.Default.Equals(semanticModel.GetSymbolInfo(name).Symbol, parameter)) == true) ||
+                preceding.DescendantNodes().OfType<ArgumentSyntax>().Any(_ =>
+                    _.Expression.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>().Any(name =>
+                        SymbolEqualityComparer.Default.Equals(semanticModel.GetSymbolInfo(name).Symbol, parameter))))
             {
                 return AutoMapState.Unknown;
             }
