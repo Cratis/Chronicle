@@ -80,6 +80,38 @@ public class ProjectionValidator(
         return schema;
     }
 
+    /// <summary>
+    /// Reports any block the projection definition visitor cannot lower, regardless of whether schemas are available.
+    /// </summary>
+    /// <param name="blocks">The projection blocks to check.</param>
+    /// <param name="errors">The compiler errors collection to add errors to.</param>
+    internal static void ValidateSupportedBlocks(IEnumerable<ProjectionBlockSyntax> blocks, CompilerErrors errors)
+    {
+        foreach (var block in blocks)
+        {
+            switch (block)
+            {
+                case ChildrenSyntax children:
+                    ValidateSupportedBlocks(children.Blocks, errors);
+                    break;
+                case NestedSyntax nested:
+                    ValidateSupportedBlocks(nested.Blocks, errors);
+                    break;
+                case FromSyntax:
+                case EverySyntax:
+                case AllSyntax:
+                case JoinSyntax:
+                case RemoveWithSyntax:
+                case RemoveViaJoinSyntax:
+                case ClearWithSyntax:
+                    break;
+                default:
+                    errors.Add($"Projection block of type '{block.GetType().Name}' is not supported", block.Location.Line, block.Location.Column);
+                    break;
+            }
+        }
+    }
+
     static string LowercaseFirstLetter(string value)
     {
         if (string.IsNullOrEmpty(value))
