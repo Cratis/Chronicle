@@ -599,6 +599,15 @@ internal static class ProjectionReadModelProcessor
         }
 
         statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
+        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            var segments = childRemovedFromAll.ChildrenProperty.Segments.Select(segment => segment.Value).ToArray();
+            foreach (var parentState in statesByKey.Values)
+            {
+                RemoveFromCollection(parentState, segments, 0, childRemovedFromAll.IdentifiedByProperty.Path, childRemovedFromAll.Key);
+            }
+        }
+
         return removed;
     }
 
